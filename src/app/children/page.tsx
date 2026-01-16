@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useChildren, CreateChildData } from '@/hooks/useChildren';
+import { useChildProfile } from '@/hooks/useChildProfile';
 
 export default function ChildrenManagementPage() {
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
   const { children, loading, error, createChild, deleteChild } = useChildren();
+  const { profileExists } = useChildProfile();
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
@@ -64,17 +66,19 @@ export default function ChildrenManagementPage() {
         avatar: avatar || undefined,
       };
 
-      await createChild(childData);
+      const newChildId = await createChild(childData);
 
-      // Reset form
-      setName('');
-      setDateOfBirth('');
-      setAvatar(null);
-      setAvatarPreview('');
-      setShowAddForm(false);
+      // Check if profile exists for this child
+      const hasProfile = await profileExists(newChildId);
+
+      // Redirect to onboarding if no profile, otherwise to profile page
+      if (!hasProfile) {
+        router.push(`/children/onboard/${newChildId}`);
+      } else {
+        router.push(`/children/${newChildId}/profile`);
+      }
     } catch (err: any) {
       setFormError(err.message || 'Failed to add child');
-    } finally {
       setFormLoading(false);
     }
   };
