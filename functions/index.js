@@ -740,3 +740,210 @@ function calculateEmotionalTrend(entries) {
   if (positiveCount >= entries.length / 2) return "positive";
   return "neutral";
 }
+
+/**
+ * Generate Strategic Plan - Create personalized 30-90 day plan based on child profile
+ */
+exports.generateStrategicPlan = onCall(
+    {
+      secrets: ["ANTHROPIC_API_KEY"],
+      timeoutSeconds: 540, // 9 minutes - plan generation is complex
+      memory: "512MiB",
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+      const {buildPlanPrompt} = require("./planPrompts");
+
+      // Verify authentication
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const {childId} = request.data;
+      if (!childId) {
+        throw new Error("childId is required");
+      }
+
+      // Get user data
+      const userDoc = await admin.firestore()
+          .collection("users")
+          .doc(request.auth.uid)
+          .get();
+
+      const userData = userDoc.data();
+      if (!userData || userData.role !== "parent") {
+        throw new Error("Only parents can generate strategic plans");
+      }
+
+      const familyId = userData.familyId;
+      logger.info(`Strategic plan generation for child ${childId}, family ${familyId}`);
+
+      try {
+        // 1. Fetch child profile
+        const profileSnapshot = await admin.firestore()
+            .collection("child_profiles")
+            .where("familyId", "==", familyId)
+            .where("childId", "==", childId)
+            .limit(1)
+            .get();
+
+        if (profileSnapshot.empty) {
+          throw new Error("Child profile not found. Please complete onboarding first.");
+        }
+
+        const profileDoc = profileSnapshot.docs[0];
+        const childProfile = {
+          profileId: profileDoc.id,
+          ...profileDoc.data(),
+        };
+
+        // 2. Fetch child details
+        const childDoc = await admin.firestore()
+            .collection("users")
+            .doc(childId)
+            .get();
+
+        if (!childDoc.exists) {
+          throw new Error("Child not found");
+        }
+
+        const child = {
+          userId: childDoc.id,
+          ...childDoc.data(),
+        };
+
+        // 3. Fetch all children in family (for context)
+        const childrenSnapshot = await admin.firestore()
+            .collection("users")
+            .where("familyId", "==", familyId)
+            .where("role", "==", "child")
+            .get();
+
+        const children = childrenSnapshot.docs.map((doc) => ({
+          userId: doc.id,
+          ...doc.data(),
+        }));
+
+        // 4. Fetch recent journal entries (last 30 days)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const journalSnapshot = await admin.firestore()
+            .collection("journal_entries")
+            .where("familyId", "==", familyId)
+            .where("createdAt", ">=", admin.firestore.Timestamp.fromDate(thirtyDaysAgo))
+            .orderBy("createdAt", "desc")
+            .limit(20)
+            .get();
+
+        const journalEntries = journalSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          text: doc.data().text,
+          category: doc.data().category,
+          date: doc.data().createdAt.toDate().toLocaleDateString(),
+          tags: doc.data().tags || [],
+        }));
+
+        // 5. Fetch knowledge base items
+        const knowledgeSnapshot = await admin.firestore()
+            .collection("knowledge_base")
+            .where("familyId", "==", familyId)
+            .orderBy("timestamp", "desc")
+            .limit(10)
+            .get();
+
+        const knowledgeItems = knowledgeSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        // 6. Build prompt for Claude
+        const prompt = buildPlanPrompt(childProfile, journalEntries, knowledgeItems, children);
+
+        logger.info("Calling Claude to generate strategic plan");
+
+        // 7. Call Claude 3.5 Sonnet for complex reasoning
+        const client = getAnthropic();
+        const response = await client.messages.create({
+          model: "claude-3-5-sonnet-20241022",
+          max_tokens: 8000,
+          temperature: 0.7,
+          messages: [{
+            role: "user",
+            content: prompt,
+          }],
+        });
+
+        const responseText = response.content[0].text;
+        logger.info("Claude response received, parsing JSON");
+
+        // 8. Parse the JSON response
+        let planData;
+        try {
+          // Extract JSON from response (in case Claude added extra text)
+          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) {
+            throw new Error("No valid JSON found in response");
+          }
+          planData = JSON.parse(jsonMatch[0]);
+        } catch (parseError) {
+          logger.error("Failed to parse Claude response:", responseText);
+          throw new Error(`Failed to parse plan data: ${parseError.message}`);
+        }
+
+        // 9. Get all parents in family for approval workflow
+        const parentsSnapshot = await admin.firestore()
+            .collection("users")
+            .where("familyId", "==", familyId)
+            .where("role", "==", "parent")
+            .get();
+
+        const approvalRequired = parentsSnapshot.docs.map((doc) => doc.id);
+
+        // 10. Create strategic plan document
+        const planRef = await admin.firestore()
+            .collection("strategic_plans")
+            .add({
+              familyId,
+              childId,
+              profileId: childProfile.profileId,
+              title: planData.title,
+              description: planData.description,
+              targetChallenge: planData.targetChallenge,
+              duration: planData.duration,
+              phases: planData.phases,
+              milestones: planData.milestones,
+              status: "pending_approval",
+              parentApprovals: {}, // Empty initially
+              approvalRequired,
+              generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+              aiReasoning: planData.aiReasoning,
+              relatedKnowledgeIds: planData.relatedKnowledgeIds || [],
+              relatedJournalEntries: journalEntries.slice(0, 5).map((e) => e.id),
+              adaptations: [],
+            });
+
+        logger.info(`Strategic plan created: ${planRef.id}`);
+
+        // 11. TODO: Send notification to all parents for approval
+        // This would be implemented when notification system is added
+
+        return {
+          success: true,
+          planId: planRef.id,
+          plan: {
+            planId: planRef.id,
+            title: planData.title,
+            description: planData.description,
+            duration: planData.duration,
+            phasesCount: planData.phases.length,
+            milestonesCount: planData.milestones.length,
+            approvalRequired,
+          },
+        };
+      } catch (error) {
+        logger.error("Error generating strategic plan:", error);
+        throw error;
+      }
+    }
+);
