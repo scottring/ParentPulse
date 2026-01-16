@@ -31,8 +31,23 @@ service cloud.firestore {
       // Only the user themselves can create their document (during registration)
       allow create: if isSignedIn() && request.auth.uid == userId;
 
+      // Parents can create child documents in their family
+      allow create: if isParent() &&
+                       request.resource.data.role == 'child' &&
+                       request.resource.data.familyId == getUserData().familyId;
+
       // Users can update their own document
       allow update: if isSignedIn() && request.auth.uid == userId;
+
+      // Parents can update child documents in their family
+      allow update: if isParent() &&
+                       resource.data.role == 'child' &&
+                       resource.data.familyId == getUserData().familyId;
+
+      // Parents can delete child documents in their family
+      allow delete: if isParent() &&
+                       resource.data.role == 'child' &&
+                       resource.data.familyId == getUserData().familyId;
 
       // Parents can read all users in their family
       allow read: if isSignedIn() && isParent() &&
@@ -44,8 +59,9 @@ service cloud.firestore {
       // Family members can read their family document
       allow read: if belongsToFamily(familyId);
 
-      // Parents can create family documents
-      allow create: if isParent();
+      // Allow authenticated users to create family documents during registration
+      // (User document doesn't exist yet, so we can't check isParent())
+      allow create: if isSignedIn();
 
       // Parents in the family can update it
       allow update: if isParent() && belongsToFamily(familyId);
@@ -88,8 +104,11 @@ service cloud.firestore {
       // Family members can read their chip economy
       allow read: if belongsToFamily(familyId);
 
-      // Parents can manage chip economy
-      allow write: if isParent() && belongsToFamily(familyId);
+      // Allow authenticated users to create chip economy during registration
+      allow create: if isSignedIn();
+
+      // Parents can manage chip economy after creation
+      allow update, delete: if isParent() && belongsToFamily(familyId);
     }
 
     // Chip transactions collection
@@ -120,6 +139,69 @@ service cloud.firestore {
 
       // Cloud Functions can create insights (using admin SDK)
       // Parents cannot directly create/edit insights
+    }
+
+    // Tasks collection
+    match /tasks/{taskId} {
+      // Parents can read all tasks in their family
+      allow read: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can create/update/delete tasks
+      allow create, update, delete: if isParent() && belongsToFamily(request.resource.data.familyId);
+    }
+
+    // Rewards collection
+    match /rewards/{rewardId} {
+      // Parents can read all rewards in their family
+      allow read: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can create/update/delete rewards
+      allow create, update, delete: if isParent() && belongsToFamily(request.resource.data.familyId);
+    }
+
+    // Chip transactions collection
+    match /chip_transactions/{transactionId} {
+      // Parents and children can read transactions in their family
+      allow read: if request.auth != null && belongsToFamily(resource.data.familyId);
+
+      // Only parents can create transactions
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+    }
+
+    // Knowledge base collection
+    match /knowledge_base/{knowledgeId} {
+      // Parents can read all knowledge items in their family
+      allow read: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can create knowledge items for their family
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+
+      // Parents can update/delete knowledge items they added
+      allow update, delete: if isParent()
+        && belongsToFamily(resource.data.familyId)
+        && resource.data.addedByParentId == request.auth.uid;
+    }
+
+    // Daily actions collection
+    match /daily_actions/{actionId} {
+      // Parents can read actions in their family
+      allow read: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can update actions (mark complete, skip, add notes)
+      allow update: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can manually create actions
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+
+      // Cloud Functions can create actions (using admin SDK)
+    }
+
+    // Daily analyses collection
+    match /daily_analyses/{analysisId} {
+      // Parents can read analyses in their family
+      allow read: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Cloud Functions can create analyses (using admin SDK)
     }
   }
 }

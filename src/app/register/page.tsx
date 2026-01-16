@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register, user, loading: authLoading } = useAuth();
+  const { register, user, loading: authLoading, error: authError } = useAuth();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -167,7 +167,7 @@ export default function RegisterPage() {
               Start your intentional parenting journey today
             </p>
 
-            {error && (
+            {(error || authError) && (
               <div
                 className="mb-6 p-4 rounded-lg animate-fade-in-up"
                 style={{
@@ -176,7 +176,7 @@ export default function RegisterPage() {
                   color: '#991B1B'
                 }}
               >
-                <p className="text-sm font-medium">{error}</p>
+                <p className="text-sm font-medium">{error || authError}</p>
               </div>
             )}
 
@@ -198,6 +198,7 @@ export default function RegisterPage() {
                     fontSize: '16px'
                   }}
                   placeholder="John Doe"
+                  autoComplete="name"
                   disabled={loading}
                   onFocus={(e) => e.target.style.borderColor = 'var(--parent-primary)'}
                   onBlur={(e) => e.target.style.borderColor = 'var(--parent-border)'}
@@ -221,6 +222,7 @@ export default function RegisterPage() {
                     fontSize: '16px'
                   }}
                   placeholder="you@example.com"
+                  autoComplete="email"
                   disabled={loading}
                   onFocus={(e) => e.target.style.borderColor = 'var(--parent-primary)'}
                   onBlur={(e) => e.target.style.borderColor = 'var(--parent-border)'}
@@ -244,6 +246,7 @@ export default function RegisterPage() {
                     fontSize: '16px'
                   }}
                   placeholder="The Smith Family"
+                  autoComplete="organization"
                   disabled={loading}
                   onFocus={(e) => e.target.style.borderColor = 'var(--parent-primary)'}
                   onBlur={(e) => e.target.style.borderColor = 'var(--parent-border)'}
@@ -267,6 +270,7 @@ export default function RegisterPage() {
                     fontSize: '16px'
                   }}
                   placeholder="••••••••"
+                  autoComplete="new-password"
                   disabled={loading}
                   onFocus={(e) => e.target.style.borderColor = 'var(--parent-primary)'}
                   onBlur={(e) => e.target.style.borderColor = 'var(--parent-border)'}
@@ -291,6 +295,7 @@ export default function RegisterPage() {
                     fontSize: '16px'
                   }}
                   placeholder="••••••••"
+                  autoComplete="new-password"
                   disabled={loading}
                   onFocus={(e) => e.target.style.borderColor = 'var(--parent-primary)'}
                   onBlur={(e) => e.target.style.borderColor = 'var(--parent-border)'}

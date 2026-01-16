@@ -12,7 +12,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '@/lib/firebase';
+import { firestore, storage } from '@/lib/firebase';
 import { User } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 
@@ -42,7 +42,7 @@ export function useChildren() {
       setError(null);
 
       const q = query(
-        collection(db, 'users'),
+        collection(firestore, 'users'),
         where('familyId', '==', user.familyId),
         where('role', '==', 'child')
       );
@@ -105,11 +105,11 @@ export function useChildren() {
         updatedAt: serverTimestamp(),
       };
 
-      const docRef = await addDoc(collection(db, 'users'), childData);
+      const docRef = await addDoc(collection(firestore, 'users'), childData);
 
       // Update family document to include child ID
-      const familyRef = doc(db, 'families', user.familyId);
-      const familyDoc = await getDocs(query(collection(db, 'families'), where('__name__', '==', user.familyId)));
+      const familyRef = doc(firestore, 'families', user.familyId);
+      const familyDoc = await getDocs(query(collection(firestore, 'families'), where('__name__', '==', user.familyId)));
 
       if (!familyDoc.empty) {
         const currentChildIds = familyDoc.docs[0].data().childIds || [];
@@ -135,7 +135,7 @@ export function useChildren() {
     updates: Partial<CreateChildData>
   ): Promise<void> => {
     try {
-      const childRef = doc(db, 'users', childId);
+      const childRef = doc(firestore, 'users', childId);
 
       const updateData: any = {
         updatedAt: serverTimestamp(),
@@ -174,11 +174,11 @@ export function useChildren() {
     }
 
     try {
-      const childRef = doc(db, 'users', childId);
+      const childRef = doc(firestore, 'users', childId);
 
       // Remove child ID from family document
-      const familyRef = doc(db, 'families', user.familyId);
-      const familyDoc = await getDocs(query(collection(db, 'families'), where('__name__', '==', user.familyId)));
+      const familyRef = doc(firestore, 'families', user.familyId);
+      const familyDoc = await getDocs(query(collection(firestore, 'families'), where('__name__', '==', user.familyId)));
 
       if (!familyDoc.empty) {
         const currentChildIds = familyDoc.docs[0].data().childIds || [];
@@ -205,7 +205,7 @@ export function useChildren() {
   // Award chips to a child
   const awardChips = async (childId: string, amount: number, reason: string): Promise<void> => {
     try {
-      const childRef = doc(db, 'users', childId);
+      const childRef = doc(firestore, 'users', childId);
       const child = children.find((c) => c.userId === childId);
 
       if (!child) {
@@ -220,7 +220,7 @@ export function useChildren() {
       });
 
       // Create transaction record
-      await addDoc(collection(db, 'chip_transactions'), {
+      await addDoc(collection(firestore, 'chip_transactions'), {
         familyId: user?.familyId,
         childId,
         type: 'earn',

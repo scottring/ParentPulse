@@ -116,7 +116,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         if (firebaseUser) {
           const userData = await fetchUserData(firebaseUser);
-          setUser(userData);
+
+          // Handle orphaned auth users (auth user exists but no Firestore document)
+          if (!userData) {
+            console.warn('Found orphaned auth user, signing out');
+            await signOut(auth);
+            setUser(null);
+            setError(
+              'Your account setup is incomplete. Please register again or contact support if this problem persists.'
+            );
+          } else {
+            setUser(userData);
+          }
         } else {
           setUser(null);
         }
@@ -135,12 +146,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // ==================== Parent Authentication ====================
 
   const register = async (data: RegistrationData): Promise<void> => {
+    let userCredential: any = null;
+
     try {
       setLoading(true);
       setError(null);
 
       // Create Firebase auth user
-      const userCredential = await createUserWithEmailAndPassword(
+      userCredential = await createUserWithEmailAndPassword(
         auth,
         data.email,
         data.password
@@ -178,9 +191,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setUser(userData);
     } catch (err: any) {
-      console.error('Registration error:', err);
-      setError(err.message);
-      throw err;
+      console.error('Registration error:', err.code || err.message);
+
+      // If we created a Firebase auth user but failed to create Firestore documents,
+      // delete the auth user to prevent orphaned accounts
+      if (userCredential?.user && err.code !== 'auth/email-already-in-use') {
+        try {
+          await userCredential.user.delete();
+          console.log('Cleaned up orphaned auth user');
+        } catch (deleteErr) {
+          console.error('Failed to cleanup auth user:', deleteErr);
+        }
+      }
+
+      // Translate Firebase error codes to user-friendly messages
+      let errorMessage = 'Failed to create account. Please try again.';
+
+      if (err.code === 'auth/email-already-in-use') {
+        errorMessage = 'This email is already registered. Please sign in or use a different email address.';
+      } else if (err.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak. Please use a stronger password.';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address. Please check and try again.';
+      } else if (err.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
+      const friendlyError = new Error(errorMessage);
+      throw friendlyError;
     } finally {
       setLoading(false);
     }
@@ -205,9 +246,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setUser(userData);
     } catch (err: any) {
-      console.error('Login error:', err);
-      setError(err.message);
-      throw err;
+      console.error('Login error:', err.code || err.message);
+
+      // Translate Firebase error codes to user-friendly messages
+      let errorMessage = 'Failed to sign in. Please try again.';
+
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+        errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address. Please check and try again.';
+      } else if (err.code === 'auth/user-disabled') {
+        errorMessage = 'This account has been disabled. Please contact support.';
+      } else if (err.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (err.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many failed login attempts. Please try again later or reset your password.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
+      const friendlyError = new Error(errorMessage);
+      throw friendlyError;
     } finally {
       setLoading(false);
     }

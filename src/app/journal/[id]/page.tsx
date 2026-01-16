@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useJournal } from '@/hooks/useJournal';
 import { useChildren } from '@/hooks/useChildren';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { firestore } from '@/lib/firebase';
 import { JournalEntry, JournalCategory } from '@/types';
 
 export default function JournalDetailPage({ params }: { params: { id: string } }) {
@@ -37,7 +37,7 @@ export default function JournalDetailPage({ params }: { params: { id: string } }
 
       try {
         setLoading(true);
-        const entryDoc = await getDoc(doc(db, 'journal_entries', params.id));
+        const entryDoc = await getDoc(doc(firestore, 'journal_entries', params.id));
 
         if (!entryDoc.exists()) {
           setError('Journal entry not found');

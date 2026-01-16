@@ -12,6 +12,7 @@ export interface User {
   email?: string;           // Optional for children
   dateOfBirth?: Timestamp;  // For children
   avatarUrl?: string;
+  chipBalance?: number;     // For children - chip economy balance
   createdAt: Timestamp;
   settings: {
     notifications: boolean;
@@ -64,17 +65,19 @@ export interface JournalEntry {
   entryId: string;
   familyId: string;
   authorId: string;
+  authorName?: string;
   childId?: string;
-  timestamp: Timestamp;
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
 
   // Entry content
   text: string;
-  voiceRecordingUrl?: string;
+  voiceNoteUrl?: string;
   photoUrls?: string[];
 
   // Metadata
   category: JournalCategory;
-  tags: string[];
+  tags?: string[];
   context: JournalContext;
 
   // AI Analysis (populated by Cloud Function)
@@ -205,6 +208,53 @@ export interface KnowledgeBase {
   // Linking
   relatedJournalEntries: string[];
   tags: string[];
+}
+
+// ==================== Daily Action Items ====================
+
+export type ActionPriority = 'low' | 'medium' | 'high';
+export type ActionStatus = 'pending' | 'completed' | 'skipped';
+
+export interface DailyAction {
+  actionId: string;
+  familyId: string;
+  generatedAt: Timestamp;
+  targetDate: Timestamp; // The day this action is for
+
+  // Action details
+  title: string;
+  description: string;
+  estimatedMinutes: number; // Realistic time estimate
+  priority: ActionPriority;
+
+  // Context from AI analysis
+  reasoning: string; // Why this action matters
+  relatedJournalEntries: string[]; // IDs of relevant journal entries
+  relatedKnowledgeIds: string[]; // IDs of relevant knowledge base items
+
+  // Completion tracking
+  status: ActionStatus;
+  completedAt?: Timestamp;
+  parentNotes?: string; // Optional notes after completion
+}
+
+export interface DailyAnalysis {
+  analysisId: string;
+  familyId: string;
+  generatedAt: Timestamp;
+  analysisDate: Timestamp; // The date being analyzed
+
+  // AI-generated insights
+  summary: string; // Overall summary of the day
+  themes: string[]; // Key themes identified
+  emotionalTrend: 'positive' | 'neutral' | 'challenging';
+
+  // Recommended actions for tomorrow
+  actionIds: string[]; // References to DailyAction documents
+
+  // Source material
+  journalEntriesAnalyzed: string[];
+  knowledgeItemsReferenced: string[];
 }
 
 // ==================== AI Insights Types ====================
@@ -367,6 +417,8 @@ export const COLLECTIONS = {
   CHIP_TRANSACTIONS: 'chip_transactions',
   KNOWLEDGE_BASE: 'knowledge_base',
   AI_INSIGHTS: 'ai_insights',
+  DAILY_ACTIONS: 'daily_actions',
+  DAILY_ANALYSES: 'daily_analyses',
 } as const;
 
 // ==================== Firebase Storage Paths ====================

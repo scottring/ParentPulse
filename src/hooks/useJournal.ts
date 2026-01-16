@@ -13,7 +13,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { db, storage } from '@/lib/firebase';
+import { firestore, storage } from '@/lib/firebase';
 import { JournalEntry, JournalCategory } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 
@@ -56,7 +56,7 @@ export function useJournal() {
       setError(null);
 
       let q = query(
-        collection(db, 'journal_entries'),
+        collection(firestore, 'journal_entries'),
         where('familyId', '==', user.familyId),
         orderBy('createdAt', 'desc')
       );
@@ -134,21 +134,23 @@ export function useJournal() {
       }
 
       // Create journal entry document
-      const entryData = {
+      const entryData: any = {
         familyId: user.familyId,
         authorId: user.userId,
         authorName: user.name,
-        childId: data.childId || null,
         text: data.text,
         category: data.category,
         context: data.context,
-        photoUrls,
-        voiceNoteUrl,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
 
-      const docRef = await addDoc(collection(db, 'journal_entries'), entryData);
+      // Only include optional fields if they have values
+      if (data.childId) entryData.childId = data.childId;
+      if (photoUrls.length > 0) entryData.photoUrls = photoUrls;
+      if (voiceNoteUrl) entryData.voiceNoteUrl = voiceNoteUrl;
+
+      const docRef = await addDoc(collection(firestore, 'journal_entries'), entryData);
 
       // Refresh entries list
       await fetchEntries();
@@ -166,7 +168,7 @@ export function useJournal() {
     updates: Partial<CreateJournalEntryData>
   ): Promise<void> => {
     try {
-      const entryRef = doc(db, 'journal_entries', entryId);
+      const entryRef = doc(firestore, 'journal_entries', entryId);
 
       const updateData: any = {
         updatedAt: serverTimestamp(),
@@ -190,7 +192,7 @@ export function useJournal() {
   // Delete journal entry
   const deleteEntry = async (entryId: string): Promise<void> => {
     try {
-      const entryRef = doc(db, 'journal_entries', entryId);
+      const entryRef = doc(firestore, 'journal_entries', entryId);
 
       // TODO: Also delete associated files from Storage
       // This requires storing file paths in the entry document

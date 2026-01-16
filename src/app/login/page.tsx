@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, user, loading: authLoading } = useAuth();
+  const { login, user, loading: authLoading, error: authError } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -122,7 +122,7 @@ export default function LoginPage() {
               Sign in to continue your parenting journey
             </p>
 
-            {error && (
+            {(error || authError) && (
               <div
                 className="mb-6 p-4 rounded-lg animate-fade-in-up"
                 style={{
@@ -131,7 +131,7 @@ export default function LoginPage() {
                   color: '#991B1B'
                 }}
               >
-                <p className="text-sm font-medium">{error}</p>
+                <p className="text-sm font-medium">{error || authError}</p>
               </div>
             )}
 
@@ -157,6 +157,7 @@ export default function LoginPage() {
                     fontSize: '16px'
                   }}
                   placeholder="you@example.com"
+                  autoComplete="email"
                   disabled={loading}
                   onFocus={(e) => e.target.style.borderColor = 'var(--parent-primary)'}
                   onBlur={(e) => e.target.style.borderColor = 'var(--parent-border)'}
@@ -193,6 +194,7 @@ export default function LoginPage() {
                     fontSize: '16px'
                   }}
                   placeholder="••••••••"
+                  autoComplete="current-password"
                   disabled={loading}
                   onFocus={(e) => e.target.style.borderColor = 'var(--parent-primary)'}
                   onBlur={(e) => e.target.style.borderColor = 'var(--parent-border)'}

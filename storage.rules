@@ -80,6 +80,18 @@ service firebase.storage {
       allow delete: if isParent() && belongsToFamily(familyId);
     }
 
+    // Knowledge base files (PDFs, documents, etc.)
+    match /knowledge/{familyId}/{filename} {
+      // Authenticated users can upload knowledge base files
+      // Firestore rules control who can actually create knowledge_base documents
+      allow write: if isSignedIn() &&
+                      request.resource.size < 10 * 1024 * 1024; // Max 10MB
+
+      // Authenticated users can read
+      // Firestore rules control who can see knowledge_base documents
+      allow read: if isSignedIn();
+    }
+
     // Parent profile pictures
     match /families/{familyId}/parents/{parentId}/{filename} {
       // Parents can upload their own avatar
