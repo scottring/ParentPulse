@@ -5,7 +5,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useChildProfile } from '@/hooks/useChildProfile';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { firestore } from '@/lib/firebase';
 import { COLLECTIONS, User } from '@/types';
 import Link from 'next/link';
 
@@ -26,7 +26,7 @@ export default function ChildProfilePage() {
     if (!childId || !user?.familyId) return;
 
     const fetchChild = async () => {
-      const childDoc = await getDoc(doc(db, COLLECTIONS.USERS, childId));
+      const childDoc = await getDoc(doc(firestore, COLLECTIONS.USERS, childId));
       if (childDoc.exists()) {
         setChild({ userId: childDoc.id, ...childDoc.data() } as User);
       }

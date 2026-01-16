@@ -8,7 +8,6 @@ import { useJournal } from '@/hooks/useJournal';
 import { useDailyActions } from '@/hooks/useDailyActions';
 import { JournalCategory, JournalEntry, DailyAction } from '@/types';
 import { useState } from 'react';
-import TestActionGeneration from '@/components/TestActionGeneration';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -83,9 +82,6 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* Test Action Generation - Remove after testing */}
-        <TestActionGeneration />
-
         {/* Today's Action Items from AI */}
         {!actionsLoading && pendingActions.length > 0 && (
           <div className="mb-8 animate-fade-in-up" style={{ animationDelay: '0.05s' }}>
@@ -141,7 +137,7 @@ export default function DashboardPage() {
         )}
 
         {/* Primary Actions - Large Cards */}
-        <div className="grid lg:grid-cols-2 gap-6 mb-8 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+        <div className="grid lg:grid-cols-3 gap-6 mb-8 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
           {/* Journal Card */}
           <Link href="/journal/new" className="parent-card p-8 text-left hover:shadow-lg transition-all duration-300 group block">
             <div className="flex items-start justify-between mb-4">
@@ -171,6 +167,39 @@ export default function DashboardPage() {
               <span>Start writing</span>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            </div>
+          </Link>
+
+          {/* AI Coach Card */}
+          <Link href="/coach" className="parent-card p-8 text-left hover:shadow-lg transition-all duration-300 group block">
+            <div className="flex items-start justify-between mb-4">
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl transition-transform group-hover:scale-110"
+                style={{ backgroundColor: '#E3F2FD' }}
+              >
+                💬
+              </div>
+              <svg
+                className="w-6 h-6 transition-transform group-hover:translate-x-1"
+                style={{ color: 'var(--parent-accent)' }}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+            <h3 className="parent-heading text-2xl mb-2" style={{ color: 'var(--parent-text)' }}>
+              AI Parenting Coach
+            </h3>
+            <p className="text-sm leading-relaxed" style={{ color: 'var(--parent-text-light)' }}>
+              Ask questions about your journey. I know your journal entries, saved articles, and what's worked for you before.
+            </p>
+            <div className="mt-6 inline-flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--parent-accent)' }}>
+              <span>Start chatting</span>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
             </div>
           </Link>

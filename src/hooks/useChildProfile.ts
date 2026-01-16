@@ -12,7 +12,7 @@ import {
   orderBy,
   Timestamp
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { firestore } from '@/lib/firebase';
 import {
   ChildBaselineProfile,
   ChildChallenge,
@@ -39,7 +39,7 @@ export function useChildProfile(childId?: string) {
 
       try {
         const q = query(
-          collection(db, COLLECTIONS.CHILD_PROFILES),
+          collection(firestore, COLLECTIONS.CHILD_PROFILES),
           where('familyId', '==', user.familyId),
           where('childId', '==', childId)
         );
@@ -75,7 +75,7 @@ export function useChildProfile(childId?: string) {
 
     try {
       const q = query(
-        collection(db, COLLECTIONS.CHILD_PROFILES),
+        collection(firestore, COLLECTIONS.CHILD_PROFILES),
         where('familyId', '==', user.familyId),
         orderBy('updatedAt', 'desc')
       );
@@ -119,7 +119,7 @@ export function useChildProfile(childId?: string) {
       };
 
       const docRef = await addDoc(
-        collection(db, COLLECTIONS.CHILD_PROFILES),
+        collection(firestore, COLLECTIONS.CHILD_PROFILES),
         newProfile
       );
 
@@ -148,7 +148,7 @@ export function useChildProfile(childId?: string) {
     setError(null);
 
     try {
-      const profileRef = doc(db, COLLECTIONS.CHILD_PROFILES, profileId);
+      const profileRef = doc(firestore, COLLECTIONS.CHILD_PROFILES, profileId);
 
       // Increment version and update timestamp
       const updateData = {
@@ -184,7 +184,7 @@ export function useChildProfile(childId?: string) {
     setError(null);
 
     try {
-      await deleteDoc(doc(db, COLLECTIONS.CHILD_PROFILES, profileId));
+      await deleteDoc(doc(firestore, COLLECTIONS.CHILD_PROFILES, profileId));
       setProfile(null);
     } catch (err: any) {
       console.error('Error deleting profile:', err);
@@ -287,7 +287,7 @@ export function useChildProfile(childId?: string) {
 
     try {
       const q = query(
-        collection(db, COLLECTIONS.CHILD_PROFILES),
+        collection(firestore, COLLECTIONS.CHILD_PROFILES),
         where('familyId', '==', user.familyId),
         where('childId', '==', childId)
       );
