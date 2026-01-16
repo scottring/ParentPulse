@@ -234,6 +234,15 @@ export interface DailyAction {
   relatedJournalEntries: string[]; // IDs of relevant journal entries
   relatedKnowledgeIds: string[]; // IDs of relevant knowledge base items
 
+  // Enhanced: Detailed implementation
+  detailedScript?: ActionScript;
+  resources: ActionResource[];
+
+  // Strategic plan integration
+  strategicPlanId?: string;
+  phaseId?: string;
+  contributesToMilestone?: string;
+
   // Completion tracking
   status: ActionStatus;
   completedAt?: Timestamp;
@@ -424,6 +433,264 @@ export type ChildStackParamList = {
   Settings: undefined;
 };
 
+// ==================== Child Profile & Strategic Planning Types ====================
+
+// Child Baseline Profile Types
+export type LearningStyle = 'visual' | 'auditory' | 'kinesthetic' | 'reading-writing' | 'mixed';
+export type ChallengeCategory = 'adhd' | 'anxiety' | 'sensory' | 'behavioral' | 'learning' | 'social' | 'other';
+export type ChallengeSeverity = 'mild' | 'moderate' | 'significant';
+export type TriggerConfidence = 'low' | 'medium' | 'high';
+export type StrategySourceType = 'parent_discovery' | 'professional' | 'knowledge_base' | 'ai_suggestion';
+export type PatternConfidence = 'emerging' | 'consistent' | 'validated';
+export type ProgressNoteCategory = 'improvement' | 'challenge' | 'insight' | 'milestone';
+export type ProgressNoteSource = 'ai' | 'parent';
+
+export interface ChildChallenge {
+  id: string;
+  category: ChallengeCategory;
+  description: string;
+  severity: ChallengeSeverity;
+  diagnosed: boolean;
+  professionalSupport: boolean;
+  notes?: string;
+  identifiedDate: Timestamp;
+}
+
+export interface Trigger {
+  id: string;
+  description: string;
+  context: string;
+  typicalResponse: string;
+  identifiedDate: Timestamp;
+  confidence: TriggerConfidence;
+}
+
+export interface Strategy {
+  id: string;
+  description: string;
+  effectiveness: 1 | 2 | 3 | 4 | 5;
+  context: string;
+  sourceType: StrategySourceType;
+  sourceId?: string;
+  addedDate: Timestamp;
+}
+
+export interface Pattern {
+  id: string;
+  description: string;
+  frequency: string;
+  firstObserved: Timestamp;
+  lastObserved: Timestamp;
+  confidence: PatternConfidence;
+  relatedEntries: string[];
+}
+
+export interface ProgressNote {
+  id: string;
+  date: Timestamp;
+  note: string;
+  category: ProgressNoteCategory;
+  generatedBy: ProgressNoteSource;
+}
+
+export interface ChildBaselineProfile {
+  profileId: string;
+  familyId: string;
+  childId: string;
+
+  // Comprehensive assessment data
+  challenges: ChildChallenge[];
+  strengths: string[];
+  interests: string[];
+  learningStyle: LearningStyle;
+  triggers: Trigger[];
+  whatWorks: Strategy[];
+  whatDoesntWork: Strategy[];
+
+  // School/environment
+  schoolInfo?: {
+    grade?: string;
+    specialServices?: string[];
+    iepOrFiveOFour?: boolean;
+  };
+
+  // Living document metadata
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  version: number;
+
+  // AI-discovered patterns from journals
+  emergingPatterns: Pattern[];
+  progressNotes: ProgressNote[];
+
+  // References
+  relatedJournalEntries: string[];
+  relatedKnowledgeIds: string[];
+}
+
+// Strategic Plan Types
+export type PlanStatus = 'draft' | 'pending_approval' | 'active' | 'paused' | 'completed' | 'cancelled';
+export type PlanFrequency = 'daily' | 'every_other_day' | 'twice_week' | 'weekly';
+export type ResourceType = 'physical_item' | 'printable' | 'article' | 'video' | 'app';
+export type ResourceCost = 'free' | 'low' | 'medium' | 'high';
+export type AdaptationTrigger = 'parent_request' | 'ai_analysis' | 'milestone_failure';
+export type ProgressAssessment = 'behind' | 'on_track' | 'ahead' | 'needs_adjustment';
+
+export interface Resource {
+  type: ResourceType;
+  name: string;
+  description?: string;
+  url?: string;
+  knowledgeId?: string;
+  cost?: ResourceCost;
+}
+
+export interface PhaseActivity {
+  activityId: string;
+  title: string;
+  description: string;
+  frequency: PlanFrequency;
+  estimatedMinutes: number;
+  requiredResources: Resource[];
+}
+
+export interface PlanPhase {
+  phaseId: string;
+  title: string;
+  description: string;
+  weekStart: number;
+  weekEnd: number;
+  focus: string;
+  activities: PhaseActivity[];
+  successCriteria: string[];
+}
+
+export interface Milestone {
+  milestoneId: string;
+  title: string;
+  description: string;
+  targetWeek: number;
+  achieved: boolean;
+  achievedAt?: Timestamp;
+  notes?: string;
+}
+
+export interface PlanAdaptation {
+  adaptationId: string;
+  timestamp: Timestamp;
+  reason: string;
+  changesMade: string;
+  triggeredBy: AdaptationTrigger;
+}
+
+export interface ParentApproval {
+  approved: boolean;
+  timestamp: Timestamp;
+  notes?: string;
+}
+
+export interface StrategicPlan {
+  planId: string;
+  familyId: string;
+  childId: string;
+  profileId: string;
+
+  // Plan details
+  title: string;
+  description: string;
+  targetChallenge: string;
+  duration: number; // Days (30, 60, or 90)
+
+  // Plan structure
+  phases: PlanPhase[];
+  milestones: Milestone[];
+
+  // Status & tracking
+  status: PlanStatus;
+  startDate?: Timestamp;
+  endDate?: Timestamp;
+
+  // Parent interaction
+  parentApprovals: {
+    [parentId: string]: ParentApproval;
+  };
+  approvalRequired: string[]; // Array of parent IDs that need to approve
+
+  // Generation context
+  generatedAt: Timestamp;
+  aiReasoning: string;
+
+  // Related data
+  relatedKnowledgeIds: string[];
+  relatedJournalEntries: string[];
+
+  // Adaptations
+  adaptations: PlanAdaptation[];
+}
+
+export interface WeeklySnapshot {
+  week: number;
+  startDate: Timestamp;
+  endDate: Timestamp;
+  phaseId: string;
+  actionsCompleted: number;
+  actionsSkipped: number;
+  journalEntriesCount: number;
+  progressAssessment: ProgressAssessment;
+  insights: string;
+  recommendedAdjustments?: string;
+}
+
+export interface PlanProgress {
+  progressId: string;
+  familyId: string;
+  planId: string;
+  childId: string;
+
+  weeklySnapshots: WeeklySnapshot[];
+
+  totalActionsGenerated: number;
+  totalActionsCompleted: number;
+  completionRate: number;
+  milestonesAchieved: number;
+  milestonesTotal: number;
+
+  parentSatisfaction?: 1 | 2 | 3 | 4 | 5;
+  lastUpdatedAt: Timestamp;
+}
+
+// Enhanced Daily Action Types
+export interface TroubleshootingTip {
+  scenario: string;
+  response: string;
+}
+
+export interface ScriptStep {
+  stepNumber: number;
+  action: string;
+  wordForWordScript?: string;
+  visualAid?: string;
+  duration?: string;
+}
+
+export interface ActionScript {
+  situation: string;
+  steps: ScriptStep[];
+  expectedOutcome: string;
+  troubleshooting?: TroubleshootingTip[];
+}
+
+export type ActionResourceType = 'article' | 'video' | 'printable' | 'product' | 'app' | 'book';
+
+export interface ActionResource {
+  type: ActionResourceType;
+  title: string;
+  description: string;
+  url?: string;
+  knowledgeId?: string;
+  isPrimary: boolean;
+}
+
 // ==================== Component Props Types ====================
 
 export interface ChildProfile {
@@ -473,6 +740,9 @@ export const COLLECTIONS = {
   AI_INSIGHTS: 'ai_insights',
   DAILY_ACTIONS: 'daily_actions',
   DAILY_ANALYSES: 'daily_analyses',
+  CHILD_PROFILES: 'child_profiles',
+  STRATEGIC_PLANS: 'strategic_plans',
+  PLAN_PROGRESS: 'plan_progress',
 } as const;
 
 // ==================== Firebase Storage Paths ====================

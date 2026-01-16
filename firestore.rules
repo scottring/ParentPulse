@@ -203,5 +203,39 @@ service cloud.firestore {
 
       // Cloud Functions can create analyses (using admin SDK)
     }
+
+    // Child profiles collection
+    match /child_profiles/{profileId} {
+      // Parents can read profiles in their family
+      allow read: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can create profiles for children in their family
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+
+      // Parents can update profiles in their family
+      allow update: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can delete profiles in their family
+      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
+    // Strategic plans collection
+    match /strategic_plans/{planId} {
+      // Parents can read plans in their family
+      allow read: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can update plans (approve, request changes, add notes)
+      allow update: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Cloud Functions create plans (using admin SDK)
+
+      // Plan progress subcollection
+      match /plan_progress/{progressId} {
+        // Parents can read progress in their family
+        allow read: if isParent() && belongsToFamily(resource.data.familyId);
+
+        // Cloud Functions update progress (using admin SDK)
+      }
+    }
   }
 }
