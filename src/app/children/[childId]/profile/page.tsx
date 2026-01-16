@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useChildProfile } from '@/hooks/useChildProfile';
+import { useStrategicPlans } from '@/hooks/useStrategicPlans';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { COLLECTIONS, User } from '@/types';
@@ -18,9 +19,12 @@ export default function ChildProfilePage() {
 
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading } = useChildProfile(childId);
+  const { generatePlan, planExists, loading: planLoading } = useStrategicPlans();
 
   const [child, setChild] = useState<User | null>(null);
   const [showSuccess, setShowSuccess] = useState(!!newProfile);
+  const [existingPlan, setExistingPlan] = useState(false);
+  const [checkingPlan, setCheckingPlan] = useState(true);
 
   useEffect(() => {
     if (!childId || !user?.familyId) return;
@@ -41,6 +45,38 @@ export default function ChildProfilePage() {
       return () => clearTimeout(timer);
     }
   }, [showSuccess]);
+
+  useEffect(() => {
+    if (!childId) return;
+
+    const checkForPlan = async () => {
+      setCheckingPlan(true);
+      const hasPlan = await planExists(childId, 'active');
+      const hasPending = await planExists(childId, 'pending_approval');
+      setExistingPlan(hasPlan || hasPending);
+      setCheckingPlan(false);
+    };
+
+    checkForPlan();
+  }, [childId, planExists]);
+
+  const handleGeneratePlan = async () => {
+    if (!childId) return;
+
+    if (!confirm(`Generate a strategic plan for ${child?.name}? This will create a personalized 30-90 day plan based on their profile.`)) {
+      return;
+    }
+
+    try {
+      const newPlan = await generatePlan(childId);
+      if (newPlan) {
+        router.push(`/plans/review/${newPlan.planId}`);
+      }
+    } catch (error) {
+      console.error('Error generating plan:', error);
+      alert('Failed to generate plan. Please try again.');
+    }
+  };
 
   if (authLoading || profileLoading || !child) {
     return (
@@ -338,18 +374,32 @@ export default function ChildProfilePage() {
         {/* Generate Plan CTA */}
         <div className="mt-12 p-8 rounded-lg text-center" style={{ backgroundColor: 'var(--parent-bg)' }}>
           <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--parent-text)' }}>
-            Ready for a Strategic Plan?
+            {existingPlan ? 'Strategic Plan Active' : 'Ready for a Strategic Plan?'}
           </h2>
           <p className="text-base mb-6" style={{ color: 'var(--parent-text-light)' }}>
-            Based on {child.name}'s profile, we can create a personalized 30-90 day strategic plan to address their challenges.
+            {existingPlan
+              ? `${child.name} has an active or pending strategic plan.`
+              : `Based on ${child.name}'s profile, we can create a personalized 30-90 day strategic plan to address their challenges.`
+            }
           </p>
-          <button
-            className="px-8 py-3 rounded-lg transition-colors"
-            style={{ backgroundColor: 'var(--parent-accent)', color: 'white' }}
-            disabled
-          >
-            Generate Strategic Plan (Coming Soon)
-          </button>
+          {existingPlan ? (
+            <Link
+              href="/plans"
+              className="inline-block px-8 py-3 rounded-lg transition-colors"
+              style={{ backgroundColor: 'var(--parent-accent)', color: 'white' }}
+            >
+              View Strategic Plans →
+            </Link>
+          ) : (
+            <button
+              onClick={handleGeneratePlan}
+              disabled={planLoading || checkingPlan}
+              className="px-8 py-3 rounded-lg transition-colors disabled:opacity-50"
+              style={{ backgroundColor: 'var(--parent-accent)', color: 'white' }}
+            >
+              {planLoading ? 'Generating Plan...' : checkingPlan ? 'Loading...' : '✨ Generate Strategic Plan'}
+            </button>
+          )}
         </div>
       </main>
     </div>
