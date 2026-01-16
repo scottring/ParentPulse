@@ -214,6 +214,7 @@ export interface KnowledgeBase {
 
 export type ActionPriority = 'low' | 'medium' | 'high';
 export type ActionStatus = 'pending' | 'completed' | 'skipped';
+export type SkipReason = 'too_busy' | 'not_relevant' | 'already_done' | 'too_hard' | 'other';
 
 export interface DailyAction {
   actionId: string;
@@ -226,6 +227,7 @@ export interface DailyAction {
   description: string;
   estimatedMinutes: number; // Realistic time estimate
   priority: ActionPriority;
+  category?: string; // e.g., 'one-on-one', 'self-care', 'discipline'
 
   // Context from AI analysis
   reasoning: string; // Why this action matters
@@ -235,7 +237,18 @@ export interface DailyAction {
   // Completion tracking
   status: ActionStatus;
   completedAt?: Timestamp;
+  skippedAt?: Timestamp;
+  skipReason?: SkipReason;
   parentNotes?: string; // Optional notes after completion
+
+  // Feedback (collected after completion)
+  feedback?: {
+    useful: boolean; // Quick thumbs up/down
+    difficulty: 1 | 2 | 3 | 4 | 5; // How hard was it? (1=easy, 5=very hard)
+    timeActual?: number; // Actual minutes spent
+    comment?: string; // Optional free text
+    collectedAt: Timestamp;
+  };
 }
 
 export interface DailyAnalysis {
@@ -255,6 +268,47 @@ export interface DailyAnalysis {
   // Source material
   journalEntriesAnalyzed: string[];
   knowledgeItemsReferenced: string[];
+}
+
+export interface ActionAnalytics {
+  analyticsId: string;
+  familyId: string;
+  weekStartDate: Timestamp;
+  weekEndDate: Timestamp;
+
+  // Completion metrics
+  totalActions: number;
+  completedActions: number;
+  skippedActions: number;
+  completionRate: number; // 0-1
+
+  // Timing analysis
+  averageEstimatedMinutes: number;
+  averageActualMinutes: number;
+  timeAccuracyScore: number; // 0-1, how accurate time estimates are
+
+  // Priority breakdown
+  priorityBreakdown: {
+    high: { total: number; completed: number; };
+    medium: { total: number; completed: number; };
+    low: { total: number; completed: number; };
+  };
+
+  // Feedback aggregation
+  usefulCount: number; // Actions rated as useful
+  notUsefulCount: number; // Actions rated as not useful
+  averageDifficulty: number; // 1-5 scale
+
+  // Skip reasons
+  skipReasons: {
+    too_busy: number;
+    not_relevant: number;
+    already_done: number;
+    too_hard: number;
+    other: number;
+  };
+
+  generatedAt: Timestamp;
 }
 
 // ==================== AI Insights Types ====================

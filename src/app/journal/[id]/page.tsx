@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
@@ -10,7 +10,8 @@ import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { JournalEntry, JournalCategory } from '@/types';
 
-export default function JournalDetailPage({ params }: { params: { id: string } }) {
+export default function JournalDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { deleteEntry } = useJournal();
@@ -33,11 +34,11 @@ export default function JournalDetailPage({ params }: { params: { id: string } }
 
   useEffect(() => {
     const fetchEntry = async () => {
-      if (!params.id) return;
+      if (!id) return;
 
       try {
         setLoading(true);
-        const entryDoc = await getDoc(doc(firestore, 'journal_entries', params.id));
+        const entryDoc = await getDoc(doc(firestore, 'journal_entries', id));
 
         if (!entryDoc.exists()) {
           setError('Journal entry not found');
@@ -59,7 +60,7 @@ export default function JournalDetailPage({ params }: { params: { id: string } }
     if (user) {
       fetchEntry();
     }
-  }, [params.id, user]);
+  }, [id, user]);
 
   const handleDelete = async () => {
     if (!entry) return;

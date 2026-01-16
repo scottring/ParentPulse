@@ -1,15 +1,18 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useDailyActions } from '@/hooks/useDailyActions';
+import { useInsights } from '@/hooks/useInsights';
 
 export default function AIInsightsPage() {
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
   const { completedActions } = useDailyActions();
+  const { insights, loading: insightsLoading, dismissInsight } = useInsights();
+  const [selectedType, setSelectedType] = useState<string>('');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -73,17 +76,45 @@ export default function AIInsightsPage() {
           />
           <StatCard
             icon="📈"
-            value="0"
+            value={insights.filter(i => i.type === 'pattern').length}
             label="Patterns Detected"
             color="#E3F2FD"
           />
           <StatCard
             icon="💡"
-            value="0"
+            value={insights.length}
             label="Active Insights"
             color="#FFF9C4"
           />
         </div>
+
+        {/* Filter Tabs */}
+        {insights.length > 0 && (
+          <div className="mb-6 animate-fade-in-up" style={{ animationDelay: '0.05s' }}>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: '', label: 'All', emoji: '🔍' },
+                { value: 'pattern', label: 'Patterns', emoji: '🔁' },
+                { value: 'recommendation', label: 'Recommendations', emoji: '💡' },
+                { value: 'summary', label: 'Summaries', emoji: '📊' },
+                { value: 'progress', label: 'Progress', emoji: '📈' },
+              ].map((type) => (
+                <button
+                  key={type.value}
+                  onClick={() => setSelectedType(type.value)}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:shadow-md"
+                  style={{
+                    backgroundColor: selectedType === type.value ? 'var(--parent-primary)' : 'var(--parent-card)',
+                    color: selectedType === type.value ? 'white' : 'var(--parent-text)',
+                    border: `1px solid ${selectedType === type.value ? 'var(--parent-primary)' : 'var(--parent-border)'}`,
+                  }}
+                >
+                  {type.emoji} {type.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Insight Categories */}
         <div className="grid lg:grid-cols-2 gap-6 mb-8 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
@@ -113,36 +144,127 @@ export default function AIInsightsPage() {
           />
         </div>
 
-        {/* Empty State / Coming Soon */}
-        <div className="parent-card p-12 text-center paper-texture animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-          <div className="text-6xl mb-4 opacity-40">🤖</div>
-          <p className="text-lg mb-2" style={{ color: 'var(--parent-text)' }}>
-            Building Your Insights Profile
-          </p>
-          <p className="text-sm mb-6 max-w-md mx-auto" style={{ color: 'var(--parent-text-light)' }}>
-            As you continue journaling and completing actions, AI will begin detecting patterns and generating personalized insights.
-            Keep journaling consistently for the best results.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link
-              href="/journal/new"
-              className="inline-block px-6 py-3 rounded-lg font-semibold text-white transition-all hover:shadow-lg"
-              style={{ backgroundColor: 'var(--parent-accent)' }}
-            >
-              Write Journal Entry
-            </Link>
-            <Link
-              href="/dashboard"
-              className="inline-block px-6 py-3 rounded-lg font-semibold transition-all hover:shadow-lg"
-              style={{
-                border: '1px solid var(--parent-border)',
-                color: 'var(--parent-text)'
-              }}
-            >
-              View Today's Actions
-            </Link>
+        {/* Insights List */}
+        {insightsLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="w-12 h-12 spinner"></div>
           </div>
-        </div>
+        ) : insights.length === 0 ? (
+          <div className="parent-card p-12 text-center paper-texture animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+            <div className="text-6xl mb-4 opacity-40">🤖</div>
+            <p className="text-lg mb-2" style={{ color: 'var(--parent-text)' }}>
+              Building Your Insights Profile
+            </p>
+            <p className="text-sm mb-6 max-w-md mx-auto" style={{ color: 'var(--parent-text-light)' }}>
+              As you continue journaling and completing actions, AI will begin detecting patterns and generating personalized insights.
+              Keep journaling consistently for the best results.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link
+                href="/journal/new"
+                className="inline-block px-6 py-3 rounded-lg font-semibold text-white transition-all hover:shadow-lg"
+                style={{ backgroundColor: 'var(--parent-accent)' }}
+              >
+                Write Journal Entry
+              </Link>
+              <Link
+                href="/dashboard"
+                className="inline-block px-6 py-3 rounded-lg font-semibold transition-all hover:shadow-lg"
+                style={{
+                  border: '1px solid var(--parent-border)',
+                  color: 'var(--parent-text)'
+                }}
+              >
+                View Today's Actions
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4 mb-8">
+            {insights
+              .filter(i => !selectedType || i.type === selectedType)
+              .map((insight, index) => (
+                <div
+                  key={insight.insightId}
+                  className="parent-card p-6 hover:shadow-lg transition-all duration-300 animate-fade-in-up"
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="text-4xl flex-shrink-0">
+                      {{
+                        pattern: '🔁',
+                        recommendation: '💡',
+                        summary: '📊',
+                        progress: '📈',
+                      }[insight.type]}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-4 mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-lg" style={{ color: 'var(--parent-text)' }}>
+                              {insight.title}
+                            </h3>
+                            <span
+                              className="px-2 py-1 rounded text-xs font-medium"
+                              style={{
+                                backgroundColor: insight.priority === 'high' ? '#FEE2E2' :
+                                                 insight.priority === 'medium' ? '#FEF3C7' : '#DBEAFE',
+                                color: insight.priority === 'high' ? '#991B1B' :
+                                       insight.priority === 'medium' ? '#92400E' : '#1E3A8A',
+                              }}
+                            >
+                              {insight.priority === 'high' ? '🔴 High' :
+                               insight.priority === 'medium' ? '🟡 Medium' : '🟢 Low'}
+                            </span>
+                          </div>
+                          <p className="text-xs capitalize" style={{ color: 'var(--parent-text-light)' }}>
+                            {insight.type} • {insight.timeframe.start.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {insight.timeframe.end.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={() => dismissInsight(insight.insightId)}
+                          className="px-3 py-1 rounded text-xs font-medium transition-all hover:shadow-md"
+                          style={{
+                            backgroundColor: 'var(--parent-bg)',
+                            color: 'var(--parent-text-light)',
+                            border: '1px solid var(--parent-border)',
+                          }}
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+
+                      <p className="text-sm leading-relaxed mb-3" style={{ color: 'var(--parent-text)' }}>
+                        {insight.description}
+                      </p>
+
+                      {insight.category && (
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="px-3 py-1 rounded-lg text-xs font-medium"
+                            style={{
+                              backgroundColor: 'var(--parent-bg)',
+                              color: 'var(--parent-secondary)',
+                            }}
+                          >
+                            {insight.category}
+                          </span>
+                          {insight.relatedEntryIds.length > 0 && (
+                            <span className="text-xs" style={{ color: 'var(--parent-text-light)' }}>
+                              Based on {insight.relatedEntryIds.length} {insight.relatedEntryIds.length === 1 ? 'entry' : 'entries'}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
 
         {/* How Insights Work */}
         <div

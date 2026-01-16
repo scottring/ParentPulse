@@ -1,19 +1,19 @@
 const {onSchedule} = require("firebase-functions/v2/scheduler");
 const {onCall} = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
-const OpenAI = require("openai");
+const Anthropic = require("@anthropic-ai/sdk");
 
 admin.initializeApp();
 
-// Initialize OpenAI client lazily (only when function runs)
-let openai;
-function getOpenAI() {
-  if (!openai) {
-    openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+// Initialize Anthropic client lazily (only when function runs)
+let anthropic;
+function getAnthropic() {
+  if (!anthropic) {
+    anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
     });
   }
-  return openai;
+  return anthropic;
 }
 
 /**
@@ -25,7 +25,7 @@ exports.generateDailyActions = onSchedule(
       schedule: "0 21 * * *", // 9 PM daily
       timeZone: "America/Los_Angeles", // Adjust to your timezone
       memory: "512MiB",
-      secrets: ["OPENAI_API_KEY"], // Or ANTHROPIC_API_KEY if using Claude
+      secrets: ["ANTHROPIC_API_KEY"],
     },
     async (event) => {
       const logger = require("firebase-functions/logger");
@@ -66,7 +66,7 @@ exports.generateDailyActions = onSchedule(
  */
 exports.generateDailyActionsManual = onCall(
     {
-      secrets: ["OPENAI_API_KEY"],
+      secrets: ["ANTHROPIC_API_KEY"],
     },
     async (request) => {
       const logger = require("firebase-functions/logger");
@@ -98,6 +98,272 @@ exports.generateDailyActionsManual = onCall(
       }
     }
 );
+
+/**
+ * AI Chat Coach - conversational AI that knows your parenting journey
+ * Uses RAG to search journal entries, knowledge base, actions, and insights
+ */
+exports.chatWithCoach = onCall(
+    {
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      // Verify authentication
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const {message, conversationId} = request.data;
+      if (!message) {
+        throw new Error("Message is required");
+      }
+
+      // Get user data
+      const userDoc = await admin.firestore()
+          .collection("users")
+          .doc(request.auth.uid)
+          .get();
+
+      const userData = userDoc.data();
+      if (!userData || userData.role !== "parent") {
+        throw new Error("Only parents can use the AI coach");
+      }
+
+      const familyId = userData.familyId;
+      logger.info(`Chat request from user ${request.auth.uid}, family ${familyId}`);
+
+      try {
+        // Retrieve relevant context from the user's data
+        const context = await retrieveChatContext(familyId, message);
+
+        // Get or create conversation
+        let conversation = null;
+        let conversationRef = null;
+
+        if (conversationId) {
+          conversationRef = admin.firestore()
+              .collection("chat_conversations")
+              .doc(conversationId);
+          const conversationDoc = await conversationRef.get();
+          if (conversationDoc.exists) {
+            conversation = conversationDoc.data();
+          }
+        }
+
+        if (!conversation) {
+          // Create new conversation
+          conversationRef = admin.firestore()
+              .collection("chat_conversations")
+              .doc();
+          conversation = {
+            familyId,
+            userId: request.auth.uid,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            messages: [],
+          };
+        }
+
+        // Build chat messages for Claude
+        const messages = [...conversation.messages];
+        messages.push({
+          role: "user",
+          content: message,
+        });
+
+        // Call Claude with context
+        const response = await generateChatResponse(messages, context);
+
+        // Add assistant response to messages
+        messages.push({
+          role: "assistant",
+          content: response,
+        });
+
+        // Save conversation
+        await conversationRef.set({
+          ...conversation,
+          messages,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        logger.info(`Chat response generated for conversation ${conversationRef.id}`);
+
+        return {
+          success: true,
+          conversationId: conversationRef.id,
+          response,
+          context: {
+            journalEntriesFound: context.journalEntries.length,
+            knowledgeItemsFound: context.knowledgeItems.length,
+            actionsFound: context.actions.length,
+          },
+        };
+      } catch (error) {
+        logger.error("Error in chat:", error);
+        throw error;
+      }
+    }
+);
+
+/**
+ * Retrieve relevant context for chat based on user's message
+ */
+async function retrieveChatContext(familyId, userMessage) {
+  const logger = require("firebase-functions/logger");
+
+  // Get recent journal entries (last 30 days)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const journalSnapshot = await admin.firestore()
+      .collection("journal_entries")
+      .where("familyId", "==", familyId)
+      .where("createdAt", ">=", admin.firestore.Timestamp.fromDate(thirtyDaysAgo))
+      .orderBy("createdAt", "desc")
+      .limit(20)
+      .get();
+
+  const journalEntries = journalSnapshot.docs.map((doc) => ({
+    id: doc.id,
+    text: doc.data().text,
+    category: doc.data().category,
+    date: doc.data().createdAt.toDate().toLocaleDateString(),
+    tags: doc.data().tags || [],
+  }));
+
+  // Get knowledge base items
+  const knowledgeSnapshot = await admin.firestore()
+      .collection("knowledge_base")
+      .where("familyId", "==", familyId)
+      .orderBy("timestamp", "desc")
+      .limit(15)
+      .get();
+
+  const knowledgeItems = knowledgeSnapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      title: data.title,
+      excerpt: data.excerpt,
+      sourceType: data.sourceType,
+      tags: data.tags || [],
+    };
+  });
+
+  // Get recent actions (both pending and completed)
+  const actionsSnapshot = await admin.firestore()
+      .collection("daily_actions")
+      .where("familyId", "==", familyId)
+      .orderBy("generatedAt", "desc")
+      .limit(10)
+      .get();
+
+  const actions = actionsSnapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      title: data.title,
+      description: data.description,
+      status: data.status,
+      category: data.category,
+      reasoning: data.reasoning,
+    };
+  });
+
+  logger.info(`Context: ${journalEntries.length} journals, ${knowledgeItems.length} knowledge items, ${actions.length} actions`);
+
+  return {
+    journalEntries,
+    knowledgeItems,
+    actions,
+  };
+}
+
+/**
+ * Generate chat response using Claude with context
+ */
+async function generateChatResponse(messages, context) {
+  const logger = require("firebase-functions/logger");
+
+  // Build system message with context
+  const systemMessage = buildChatSystemMessage(context);
+
+  logger.info("Calling Claude for chat response");
+
+  try {
+    const anthropicClient = getAnthropic();
+    const response = await anthropicClient.messages.create({
+      model: "claude-3-haiku-20240307",
+      max_tokens: 1500,
+      temperature: 0.7,
+      system: systemMessage,
+      messages: messages,
+    });
+
+    return response.content[0].text;
+  } catch (error) {
+    logger.error("Error calling Claude for chat:", error);
+    throw error;
+  }
+}
+
+/**
+ * Build system message with relevant context
+ */
+function buildChatSystemMessage(context) {
+  let systemMessage = `You are an empathetic AI parenting coach with access to this parent's personal parenting journey. You can reference their journal entries, saved knowledge, and action items to provide personalized advice.
+
+Your role:
+- Provide supportive, non-judgmental guidance
+- Reference specific entries, articles, or actions when relevant
+- Help parents see patterns in their experiences
+- Suggest practical strategies based on what has worked for them before
+- Acknowledge the challenges they're facing
+- Be conversational and warm
+
+Available Context:
+
+`;
+
+  // Add journal entries
+  if (context.journalEntries.length > 0) {
+    systemMessage += `## Recent Journal Entries (${context.journalEntries.length}):\n`;
+    context.journalEntries.slice(0, 10).forEach((entry, i) => {
+      systemMessage += `${i + 1}. [${entry.date}] ${entry.category}: ${entry.text.substring(0, 200)}${entry.text.length > 200 ? "..." : ""}\n`;
+    });
+    systemMessage += "\n";
+  }
+
+  // Add knowledge base
+  if (context.knowledgeItems.length > 0) {
+    systemMessage += `## Saved Parenting Resources (${context.knowledgeItems.length}):\n`;
+    context.knowledgeItems.slice(0, 8).forEach((item, i) => {
+      systemMessage += `${i + 1}. "${item.title}" (${item.sourceType}): ${item.excerpt}\n`;
+    });
+    systemMessage += "\n";
+  }
+
+  // Add actions
+  if (context.actions.length > 0) {
+    systemMessage += `## Recent Action Items (${context.actions.length}):\n`;
+    context.actions.slice(0, 8).forEach((action, i) => {
+      systemMessage += `${i + 1}. [${action.status}] ${action.title}: ${action.description}\n`;
+    });
+    systemMessage += "\n";
+  }
+
+  systemMessage += `When answering questions:
+- Cite specific journal entries or knowledge items when relevant
+- Remind them of strategies that worked before
+- Help connect their experiences to broader patterns
+- Be concise but thorough
+- Use a warm, supportive tone`;
+
+  return systemMessage;
+}
 
 /**
  * Process daily analysis for a single family
@@ -171,8 +437,24 @@ async function processFamilyAnalysis(familyId) {
   // Generate actions using AI with knowledge context
   const actions = await generateActionsWithAI(entries, children, knowledgeItems);
 
+  // Delete old pending actions for this family before creating new ones
+  // This ensures we don't accumulate stale or generic actions
+  const oldActionsSnapshot = await admin.firestore()
+      .collection("daily_actions")
+      .where("familyId", "==", familyId)
+      .where("status", "==", "pending")
+      .get();
+
+  logger.info(`Found ${oldActionsSnapshot.size} old pending actions to clean up`);
+
   // Save actions to Firestore
   const batch = admin.firestore().batch();
+
+  // Delete old pending actions
+  oldActionsSnapshot.docs.forEach((doc) => {
+    batch.delete(doc.ref);
+  });
+
   const nextDay = new Date(tomorrow);
 
   for (const action of actions) {
@@ -211,8 +493,8 @@ async function processFamilyAnalysis(familyId) {
 }
 
 /**
- * Generate actions using OpenAI GPT-4o-mini
- * This is the recommended, cost-effective option
+ * Generate actions using Anthropic Claude 3.5 Sonnet
+ * More reliable and excellent at empathetic parenting advice
  */
 async function generateActionsWithAI(entries, children, knowledgeItems = []) {
   const logger = require("firebase-functions/logger");
@@ -220,16 +502,15 @@ async function generateActionsWithAI(entries, children, knowledgeItems = []) {
   // Build context-rich prompt with knowledge base
   const prompt = buildAnalysisPrompt(entries, children, knowledgeItems);
 
-  logger.info("Calling OpenAI API for action generation");
+  logger.info("Calling Anthropic Claude API for action generation");
 
   try {
-    const openaiClient = getOpenAI();
-    const completion = await openaiClient.chat.completions.create({
-      model: "gpt-4o-mini", // Cost-effective, excellent quality
-      messages: [
-        {
-          role: "system",
-          content: `You are an empathetic AI parenting coach. Your role is to analyze a parent's daily journal entries and generate 2-5 specific, actionable items for the next day.
+    const anthropicClient = getAnthropic();
+    const message = await anthropicClient.messages.create({
+      model: "claude-3-haiku-20240307",
+      max_tokens: 2000,
+      temperature: 0.7,
+      system: `You are an empathetic AI parenting coach. Your role is to analyze a parent's daily journal entries and generate 2-5 specific, actionable items for the next day.
 
 Key principles:
 1. FEASIBLE: Each action should take 5-30 minutes
@@ -242,22 +523,33 @@ Key principles:
 
 When referencing knowledge base items, explain HOW to apply the concepts to the parent's actual situation.
 
-You must respond with valid JSON only, no additional text.`,
-        },
+You must respond with valid JSON only, no additional text. Format:
+{
+  "actions": [
+    {
+      "title": "string",
+      "description": "string",
+      "estimatedMinutes": number (5-30),
+      "priority": "low" | "medium" | "high",
+      "reasoning": "string explaining why this action matters"
+    }
+  ]
+}`,
+      messages: [
         {
           role: "user",
           content: prompt,
         },
       ],
-      temperature: 0.7,
-      response_format: {type: "json_object"},
     });
 
-    const response = completion.choices[0].message.content;
+    const response = message.content[0].text;
     const parsed = JSON.parse(response);
 
     // Validate and normalize the response
     const actions = parsed.actions || [];
+
+    logger.info(`Claude generated ${actions.length} actions`);
 
     return actions.map((action) => ({
       title: action.title || "Untitled Action",
@@ -266,12 +558,35 @@ You must respond with valid JSON only, no additional text.`,
       priority: ["low", "medium", "high"].includes(action.priority) ?
         action.priority : "medium",
       reasoning: action.reasoning || "",
+      category: extractCategory(action.title, action.description),
     }));
   } catch (error) {
-    logger.error("Error calling OpenAI:", error);
+    logger.error("Error calling Anthropic Claude:", error);
     // Fallback to basic actions if API fails
     return generateFallbackActions(entries);
   }
+}
+
+/**
+ * Extract action category from title and description
+ */
+function extractCategory(title, description) {
+  const text = `${title} ${description}`.toLowerCase();
+
+  if (text.match(/one-on-one|quality time|special time|individual/))
+    return "one-on-one";
+  if (text.match(/discipline|boundary|consequence|rule|limit/))
+    return "discipline";
+  if (text.match(/self-care|break|rest|yourself|recharge/))
+    return "self-care";
+  if (text.match(/read|research|learn|knowledge|strategy/))
+    return "learning";
+  if (text.match(/routine|schedule|habit|consistent|bedtime/))
+    return "routine";
+  if (text.match(/emotion|feeling|empathy|validate|listen/))
+    return "emotional";
+
+  return "general";
 }
 
 /**
@@ -366,6 +681,17 @@ function generateFallbackActions(entries) {
       estimatedMinutes: 5,
       priority: "medium",
       reasoning: "You're actively journaling, which shows commitment. Reflecting on positives builds resilience.",
+    });
+  }
+
+  // Always provide at least one action when entries exist
+  if (actions.length === 0 && entries.length > 0) {
+    actions.push({
+      title: "Review today's journal entry",
+      description: "Take a moment to reflect on what you wrote today. Consider what went well and what you might approach differently tomorrow.",
+      estimatedMinutes: 10,
+      priority: "medium",
+      reasoning: "You took time to journal today. Reflecting on your thoughts helps identify patterns and growth opportunities.",
     });
   }
 
