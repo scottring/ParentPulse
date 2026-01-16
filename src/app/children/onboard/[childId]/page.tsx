@@ -102,7 +102,9 @@ export default function OnboardingPage() {
       // Convert onboardingData to profile format
       const profileData: Omit<ChildBaselineProfile, 'profileId' | 'createdAt' | 'updatedAt' | 'version'> = {
         familyId: user!.familyId,
-        childId: child.userId,
+        relationshipType: 'children',
+        relationshipMemberId: child.userId,
+        childId: child.userId, // Backward compatibility
         challenges: onboardingData.challenges,
         strengths: onboardingData.strengths,
         interests: onboardingData.interests,

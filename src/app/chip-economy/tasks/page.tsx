@@ -32,10 +32,10 @@ export default function TasksPage() {
 
     try {
       await addTask({
-        name: taskName.trim(),
-        description: taskDescription.trim() || undefined,
+        title: taskName.trim(),
+        description: taskDescription.trim() || '',
         chipValue: parseInt(chipValue),
-        isRecurring,
+        recurring: isRecurring,
       });
 
       setShowAddModal(false);

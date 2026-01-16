@@ -128,6 +128,8 @@ export interface ChipTask {
   category: TaskCategory;
   icon: string;
   active: boolean;
+  isRecurring?: boolean;  // Whether the task repeats
+  recurring?: boolean;    // Alias for backwards compatibility
 }
 
 export interface ChipReward {
@@ -433,7 +435,306 @@ export type ChildStackParamList = {
   Settings: undefined;
 };
 
+// ==================== Universal Relationship Types ====================
+
+/**
+ * Universal Relationship System
+ * Supports operating manuals for any important relationship:
+ * - Children (parenting challenges, development)
+ * - Spouse/Partner (communication, emotional needs)
+ * - Elderly Parents (care needs, memory support)
+ * - Friends (boundaries, interaction preferences)
+ * - Professional (work style, communication)
+ */
+
+export type RelationType = 'children' | 'spouse' | 'parent' | 'friend' | 'professional';
+
+// Base profile interface - shared across all relationship types
+export interface BaseRelationshipProfile {
+  profileId: string;
+  familyId: string;
+  relationshipMemberId: string; // The person this profile is about
+  relationshipType: RelationType;
+
+  // Common elements across all relationships
+  triggers: Trigger[];
+  whatWorks: Strategy[];
+  whatDoesntWork: Strategy[];
+
+  // Living document metadata
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  version: number;
+
+  // AI-discovered patterns from journals
+  emergingPatterns: Pattern[];
+  progressNotes: ProgressNote[];
+
+  // References
+  relatedJournalEntries: string[];
+  relatedKnowledgeIds: string[];
+}
+
+// Spouse/Partner Profile
+export type CommunicationStyle = 'direct' | 'indirect' | 'reflective' | 'emotional' | 'logical';
+export type ConflictStyle = 'avoider' | 'accommodator' | 'competitor' | 'compromiser' | 'collaborator';
+export type LoveLanguage = 'words_of_affirmation' | 'quality_time' | 'receiving_gifts' | 'acts_of_service' | 'physical_touch';
+export type StressLevel = 1 | 2 | 3 | 4 | 5;
+
+export interface EmotionalTrigger {
+  id: string;
+  description: string;
+  context: string;
+  typicalResponse: string; // What happens when triggered
+  deescalationStrategy?: string; // What helps in the moment
+  identifiedDate: Timestamp;
+  severity: 'mild' | 'moderate' | 'significant';
+}
+
+export interface Boundary {
+  id: string;
+  description: string;
+  category: 'immovable' | 'negotiable' | 'preference';
+  context?: string;
+  consequences?: string; // What happens if crossed
+  addedDate: Timestamp;
+}
+
+export interface QualityTimePreference {
+  id: string;
+  activity: string;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  idealDuration: string; // e.g., "30 minutes", "2 hours"
+  energyLevel: 'low' | 'medium' | 'high'; // Energy required
+  notes?: string;
+}
+
+export interface SpouseProfile extends BaseRelationshipProfile {
+  relationshipType: 'spouse';
+
+  // Communication & conflict
+  communicationStyle: CommunicationStyle;
+  conflictStyle: ConflictStyle;
+  processingTime: 'immediate' | 'hours' | 'days'; // Time needed to process emotions
+  feedbackPreference: 'direct' | 'gentle' | 'sandwich_method';
+
+  // Emotional landscape
+  emotionalTriggers: EmotionalTrigger[];
+  stressIndicators: string[]; // Early warning signs of stress
+  supportPreference: 'help' | 'space' | 'listen' | 'problem_solve';
+
+  // Connection & intimacy
+  loveLanguages: LoveLanguage[]; // Primary and secondary
+  qualityTimePreferences: QualityTimePreference[];
+  appreciationStyle: string[]; // How they like to be appreciated
+
+  // Boundaries & values
+  boundaries: Boundary[];
+  coreValues: string[];
+  dealbreakers: string[];
+
+  // Practical considerations
+  energyPatterns?: {
+    morningPerson: boolean;
+    bestTimeForDifficultConversations?: string;
+    rechargeMethod: 'alone' | 'social' | 'activity';
+  };
+}
+
+// Elderly Parent Profile
+export type CareLevel = 'independent' | 'some_assistance' | 'significant_support' | 'full_care';
+export type MemoryStatus = 'sharp' | 'mild_decline' | 'moderate_decline' | 'significant_decline';
+
+export interface HealthCondition {
+  id: string;
+  condition: string;
+  diagnosed: boolean;
+  severity: 'mild' | 'moderate' | 'severe';
+  medications?: string[];
+  specialConsiderations?: string;
+  diagnosedDate?: Timestamp;
+}
+
+export interface CareNeed {
+  id: string;
+  category: 'medical' | 'mobility' | 'cognitive' | 'emotional' | 'social' | 'daily_living';
+  description: string;
+  frequency: 'constant' | 'daily' | 'weekly' | 'as_needed';
+  supportRequired: string;
+  notes?: string;
+}
+
+export interface ParentProfile extends BaseRelationshipProfile {
+  relationshipType: 'parent';
+
+  // Care level & health
+  careLevel: CareLevel;
+  memoryStatus: MemoryStatus;
+  healthConditions: HealthCondition[];
+  mobility: 'full' | 'walker' | 'wheelchair' | 'bedridden';
+
+  // Care needs
+  careNeeds: CareNeed[];
+  dailyRoutine?: string; // Important routines and schedules
+
+  // Communication
+  hearingStatus: 'good' | 'mild_loss' | 'significant_loss' | 'deaf';
+  visionStatus: 'good' | 'mild_loss' | 'significant_loss' | 'blind';
+  communicationAdjustments: string[]; // e.g., "Speak slowly", "Use large print"
+
+  // Memory support (for cognitive decline)
+  memoryAids?: {
+    importantPeople: Array<{ name: string; relationship: string; photoUrl?: string }>;
+    favoriteMusicEra?: string;
+    lifeStoryHighlights: string[];
+    validationTechniques: string[];
+  };
+
+  // Dignity & personhood
+  preferences: string[]; // Things they love and want to maintain
+  dignityConsiderations: string[]; // What's important to preserve
+  lifeLongInterests: string[];
+
+  // Practical
+  livingSituation: 'independent' | 'with_family' | 'assisted_living' | 'nursing_home';
+  emergencyContacts: Array<{ name: string; relationship: string; phone: string }>;
+}
+
+// Friend Profile
+export type FriendshipIntensity = 'acquaintance' | 'casual' | 'close' | 'best_friend';
+export type InteractionFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'occasional';
+
+export interface InteractionPreference {
+  id: string;
+  type: 'one_on_one' | 'small_group' | 'large_group' | 'activity_based';
+  preference: 'loves' | 'enjoys' | 'tolerates' | 'dislikes';
+  notes?: string;
+}
+
+export interface FriendProfile extends BaseRelationshipProfile {
+  relationshipType: 'friend';
+
+  // Friendship dynamics
+  friendshipIntensity: FriendshipIntensity;
+  interactionFrequency: InteractionFrequency;
+  interactionPreferences: InteractionPreference[];
+
+  // Communication
+  communicationStyle: 'texter' | 'caller' | 'in_person_only' | 'social_media';
+  responseTimeExpectation: 'immediate' | 'same_day' | 'flexible' | 'sporadic';
+  depthOfConversation: 'surface' | 'moderate' | 'deep' | 'varies';
+
+  // Boundaries
+  boundaries: Boundary[];
+  topicsToAvoid: string[];
+  comfortWithVulnerability: 'high' | 'medium' | 'low';
+
+  // Shared interests
+  sharedInterests: string[];
+  preferredActivities: string[];
+
+  // Support style
+  supportNeeds: 'frequent_checkins' | 'crisis_only' | 'mutual' | 'independent';
+  givesAdvice: boolean;
+  wantsAdvice: boolean;
+}
+
+// Professional Relationship Profile
+export type ProfessionalRelationship = 'colleague' | 'manager' | 'direct_report' | 'client' | 'vendor' | 'mentor';
+export type WorkStyle = 'collaborative' | 'independent' | 'structured' | 'flexible' | 'detail_oriented' | 'big_picture';
+
+export interface WorkingPreference {
+  id: string;
+  aspect: string;
+  preference: string;
+  reasoning?: string;
+}
+
+export interface ProfessionalProfile extends BaseRelationshipProfile {
+  relationshipType: 'professional';
+
+  // Professional context
+  relationship: ProfessionalRelationship;
+  organizationRole?: string;
+  workingRelationshipDuration?: string;
+
+  // Work style
+  workStyle: WorkStyle[];
+  communicationPreference: 'email' | 'slack' | 'phone' | 'in_person' | 'video_call';
+  meetingPreference: 'agenda_required' | 'flexible' | 'standing_only' | 'minimize';
+  feedbackStyle: 'direct' | 'constructive' | 'gentle';
+
+  // Boundaries
+  boundaries: Boundary[];
+  workLifeBalance: 'strict' | 'flexible' | 'permeable';
+  availabilityExpectations: string;
+
+  // Working preferences
+  workingPreferences: WorkingPreference[];
+  petPeeves: string[];
+  strengths: string[];
+
+  // Collaboration
+  decisionMakingStyle: 'decisive' | 'consultative' | 'consensus' | 'delegator';
+  conflictApproach: 'direct_discussion' | 'email_followup' | 'third_party' | 'avoid';
+}
+
+// Union type for all profile types
+export type RelationshipProfile = SpouseProfile | ParentProfile | FriendProfile | ProfessionalProfile | ChildBaselineProfile;
+
+// Relationship Member Entity (replaces child-specific User)
+export interface RelationshipMember {
+  memberId: string;
+  familyId: string;
+  relationshipType: RelationType;
+
+  // Basic info
+  name: string;
+  dateOfBirth?: Timestamp;
+  avatarUrl?: string;
+
+  // Profile reference
+  hasProfile: boolean;
+  profileId?: string;
+
+  // Strategic plan reference
+  hasActivePlan: boolean;
+  activePlanId?: string;
+
+  // Metadata
+  addedAt: Timestamp;
+  addedByUserId: string;
+
+  // Relationship-specific data
+  childData?: {
+    chipBalance: number;
+    lastCheckInMood?: ChildMood;
+  };
+
+  spouseData?: {
+    anniversaryDate?: Timestamp;
+    yearsKnown?: number;
+  };
+
+  parentData?: {
+    livingWith: boolean;
+    primaryCaregiver?: string; // user ID
+  };
+
+  friendData?: {
+    metDate?: Timestamp;
+    lastContact?: Timestamp;
+  };
+
+  professionalData?: {
+    company?: string;
+    position?: string;
+  };
+}
+
 // ==================== Child Profile & Strategic Planning Types ====================
+// NOTE: These types are kept for backward compatibility
+// New implementations should use RelationshipProfile types above
 
 // Child Baseline Profile Types
 export type LearningStyle = 'visual' | 'auditory' | 'kinesthetic' | 'reading-writing' | 'mixed';
@@ -493,19 +794,19 @@ export interface ProgressNote {
   generatedBy: ProgressNoteSource;
 }
 
-export interface ChildBaselineProfile {
-  profileId: string;
-  familyId: string;
-  childId: string;
+export interface ChildBaselineProfile extends BaseRelationshipProfile {
+  relationshipType: 'children';
+  relationshipMemberId: string; // Maps to child's user ID
+
+  // Backward compatibility
+  /** @deprecated Use relationshipMemberId instead */
+  childId?: string;
 
   // Comprehensive assessment data
   challenges: ChildChallenge[];
   strengths: string[];
   interests: string[];
   learningStyle: LearningStyle;
-  triggers: Trigger[];
-  whatWorks: Strategy[];
-  whatDoesntWork: Strategy[];
 
   // School/environment
   schoolInfo?: {
@@ -514,18 +815,9 @@ export interface ChildBaselineProfile {
     iepOrFiveOFour?: boolean;
   };
 
-  // Living document metadata
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  version: number;
-
-  // AI-discovered patterns from journals
-  emergingPatterns: Pattern[];
-  progressNotes: ProgressNote[];
-
-  // References
-  relatedJournalEntries: string[];
-  relatedKnowledgeIds: string[];
+  // Note: triggers, whatWorks, whatDoesntWork, emergingPatterns, progressNotes,
+  // relatedJournalEntries, relatedKnowledgeIds, createdAt, updatedAt, version
+  // are inherited from BaseRelationshipProfile
 }
 
 // Strategic Plan Types
@@ -592,13 +884,18 @@ export interface ParentApproval {
 export interface StrategicPlan {
   planId: string;
   familyId: string;
-  childId: string;
+  relationshipMemberId: string; // The person this plan is for
+  relationshipType: RelationType; // Type of relationship
   profileId: string;
+
+  // Backward compatibility (deprecated - use relationshipMemberId)
+  /** @deprecated Use relationshipMemberId instead */
+  childId?: string;
 
   // Plan details
   title: string;
   description: string;
-  targetChallenge: string;
+  targetChallenge: string; // e.g., "ADHD focus issues" or "Communication during conflict"
   duration: number; // Days (30, 60, or 90)
 
   // Plan structure
@@ -645,7 +942,12 @@ export interface PlanProgress {
   progressId: string;
   familyId: string;
   planId: string;
-  childId: string;
+  relationshipMemberId: string; // The person this plan is for
+  relationshipType: RelationType;
+
+  // Backward compatibility
+  /** @deprecated Use relationshipMemberId instead */
+  childId?: string;
 
   weeklySnapshots: WeeklySnapshot[];
 
@@ -740,7 +1042,13 @@ export const COLLECTIONS = {
   AI_INSIGHTS: 'ai_insights',
   DAILY_ACTIONS: 'daily_actions',
   DAILY_ANALYSES: 'daily_analyses',
-  CHILD_PROFILES: 'child_profiles',
+
+  // Universal Relationship System
+  RELATIONSHIP_MEMBERS: 'relationship_members', // New: Universal entity for all relationships
+  RELATIONSHIP_PROFILES: 'relationship_profiles', // New: Universal profiles (spouse, parent, friend, professional, child)
+
+  // Legacy (backward compatibility)
+  CHILD_PROFILES: 'child_profiles', // Deprecated: Use RELATIONSHIP_PROFILES with relationshipType: 'children'
   STRATEGIC_PLANS: 'strategic_plans',
   PLAN_PROGRESS: 'plan_progress',
 } as const;

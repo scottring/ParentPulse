@@ -12,9 +12,7 @@ export default function ChipHistoryPage({ params }: { params: Promise<{ childId:
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
   const { children } = useChildren();
-  const { fetchChildTransactions, loading: transactionsLoading } = useChipEconomy();
-
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const { transactions, fetchChildTransactions, loading: transactionsLoading } = useChipEconomy();
 
   const child = children.find(c => c.userId === childId);
 
@@ -28,15 +26,13 @@ export default function ChipHistoryPage({ params }: { params: Promise<{ childId:
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    const loadTransactions = async () => {
-      if (childId) {
-        const txns = await fetchChildTransactions(childId);
-        setTransactions(txns);
-      }
-    };
-
-    if (user) {
-      loadTransactions();
+    if (user && childId) {
+      const unsubscribe = fetchChildTransactions(childId);
+      return () => {
+        if (unsubscribe) {
+          unsubscribe();
+        }
+      };
     }
   }, [childId, user, fetchChildTransactions]);
 
@@ -117,8 +113,8 @@ export default function ChipHistoryPage({ params }: { params: Promise<{ childId:
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xl">
-                        {transaction.transactionType === 'earn' ? '✨' :
-                         transaction.transactionType === 'spend' ? '🎁' : '⚡'}
+                        {transaction.type === 'earn' ? '✨' :
+                         transaction.type === 'spend' ? '🎁' : '⚡'}
                       </span>
                       <span className="font-semibold" style={{ color: 'var(--parent-text)' }}>
                         {transaction.reason}
@@ -138,14 +134,14 @@ export default function ChipHistoryPage({ params }: { params: Promise<{ childId:
                   <div className="text-right">
                     <div
                       className={`text-xl font-bold ${
-                        transaction.transactionType === 'earn'
+                        transaction.type === 'earn'
                           ? 'text-green-600'
-                          : transaction.transactionType === 'spend'
+                          : transaction.type === 'spend'
                           ? 'text-red-600'
                           : 'text-blue-600'
                       }`}
                     >
-                      {transaction.transactionType === 'earn' || transaction.transactionType === 'adjust'
+                      {transaction.type === 'earn' || transaction.type === 'adjust'
                         ? '+'
                         : '-'}
                       {Math.abs(transaction.amount)}

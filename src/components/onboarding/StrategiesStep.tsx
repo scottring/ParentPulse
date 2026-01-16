@@ -40,7 +40,7 @@ const exampleWorks = [
 const exampleDoesntWork = [
   'Yelling or raising my voice',
   'Taking away all privileges at once',
-  'Long explanations when they're upset',
+  "Long explanations when they're upset",
   'Comparing to siblings',
   'Punishment without explanation'
 ];

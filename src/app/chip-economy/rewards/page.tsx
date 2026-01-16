@@ -31,9 +31,10 @@ export default function RewardsPage() {
 
     try {
       await addReward({
-        name: rewardName.trim(),
-        description: rewardDescription.trim() || undefined,
+        title: rewardName.trim(),
+        description: rewardDescription.trim() || '',
         chipCost: parseInt(chipCost),
+        available: true,
       });
 
       setShowAddModal(false);

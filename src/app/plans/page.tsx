@@ -34,7 +34,7 @@ export default function PlansPage() {
 
     const fetchChildren = async () => {
       const map = new Map<string, User>();
-      const uniqueChildIds = [...new Set(plans.map(p => p.childId))];
+      const uniqueChildIds = [...new Set(plans.map(p => p.childId).filter((id): id is string => id !== undefined))];
 
       for (const childId of uniqueChildIds) {
         const childDoc = await getDoc(doc(firestore, COLLECTIONS.USERS, childId));
@@ -204,7 +204,7 @@ export default function PlansPage() {
         {!loading && plans.length > 0 && (
           <div className="grid gap-6">
             {plans.map((plan, index) => {
-              const child = childrenMap.get(plan.childId);
+              const child = plan.childId ? childrenMap.get(plan.childId) : undefined;
               const statusBadge = getStatusBadge(plan.status);
               const progress = plan.startDate && plan.status === 'active'
                 ? Math.min(

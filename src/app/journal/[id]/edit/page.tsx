@@ -59,7 +59,7 @@ export default function EditJournalPage({ params }: { params: Promise<{ id: stri
         setEntry(entryData);
         setText(entryData.text);
         setCategory(entryData.category);
-        setChildId(entryData.childId);
+        setChildId(entryData.childId || '');
         setStressLevel(entryData.context.stressLevel);
         setTimeOfDay(entryData.context.timeOfDay);
       } catch (err: any) {

@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useRelationshipMembers } from '@/hooks/useRelationshipMembers';
+import { RelationshipMember } from '@/types';
 
 /**
  * Family Operating Manual Dashboard
@@ -16,50 +18,18 @@ import { useAuth } from '@/context/AuthContext';
  * - Quick actions and recent activity
  */
 
-interface RelationshipMember {
-  id: string;
-  name: string;
-  type: 'children' | 'spouse' | 'parent' | 'friend' | 'professional';
-  avatarUrl?: string;
-  hasProfile: boolean;
-  hasActivePlan: boolean;
-}
-
 export default function FamilyDashboard() {
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
 
-  // Mock data - replace with actual data fetching
-  const [members, setMembers] = useState<RelationshipMember[]>([
-    {
-      id: '1',
-      name: 'Emma',
-      type: 'children',
-      hasProfile: true,
-      hasActivePlan: true
-    },
-    {
-      id: '2',
-      name: 'Oliver',
-      type: 'children',
-      hasProfile: true,
-      hasActivePlan: false
-    },
-    {
-      id: '3',
-      name: 'Sarah',
-      type: 'spouse',
-      hasProfile: false,
-      hasActivePlan: false
-    },
-    {
-      id: '4',
-      name: 'Margaret',
-      type: 'parent',
-      hasProfile: true,
-      hasActivePlan: true
-    }
-  ]);
+  // Fetch all relationship members for the family
+  const {
+    members,
+    loading: membersLoading,
+    error: membersError,
+    totalCount,
+    countByType
+  } = useRelationshipMembers();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -109,8 +79,8 @@ export default function FamilyDashboard() {
   };
 
   const groupedMembers = members.reduce((acc, member) => {
-    if (!acc[member.type]) acc[member.type] = [];
-    acc[member.type].push(member);
+    if (!acc[member.relationshipType]) acc[member.relationshipType] = [];
+    acc[member.relationshipType].push(member);
     return acc;
   }, {} as Record<string, RelationshipMember[]>);
 
@@ -559,8 +529,8 @@ export default function FamilyDashboard() {
                 <div className="members-grid">
                   {typeMembers.map((member) => (
                     <Link
-                      key={member.id}
-                      href={`/relationships/${type}/${member.id}/profile`}
+                      key={member.memberId}
+                      href={`/relationships/${type}/${member.memberId}/profile`}
                       className="member-card"
                       style={{
                         '--member-color': getTypeColor(type),

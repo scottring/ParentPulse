@@ -15,7 +15,11 @@ import {
 } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
-import { Task, Reward, ChipTransaction, TransactionType } from '@/types';
+import { ChipTask, ChipReward, ChipTransaction, TransactionType } from '@/types';
+
+// Type aliases for backward compatibility
+type Task = ChipTask;
+type Reward = ChipReward;
 
 interface AddTaskData {
   title: string;

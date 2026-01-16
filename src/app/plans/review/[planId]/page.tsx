@@ -41,9 +41,11 @@ export default function PlanReviewPage() {
           setPlan(planData);
 
           // Fetch child details
-          const childDoc = await getDoc(doc(firestore, COLLECTIONS.USERS, planData.childId));
-          if (childDoc.exists()) {
-            setChild({userId: childDoc.id, ...childDoc.data()} as User);
+          if (planData.childId) {
+            const childDoc = await getDoc(doc(firestore, COLLECTIONS.USERS, planData.childId));
+            if (childDoc.exists()) {
+              setChild({userId: childDoc.id, ...childDoc.data()} as User);
+            }
           }
         }
       } catch (error) {

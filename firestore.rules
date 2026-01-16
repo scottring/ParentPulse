@@ -237,5 +237,103 @@ service cloud.firestore {
         // Cloud Functions update progress (using admin SDK)
       }
     }
+
+    // ==================== Universal Relationship System ====================
+
+    // Relationship members collection (universal entity for all relationships)
+    match /relationship_members/{memberId} {
+      // Parents can read all relationship members in their family
+      allow read: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can create relationship members in their family
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+
+      // Parents can update relationship members in their family
+      allow update: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can delete relationship members in their family
+      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
+    // Relationship profiles collection (universal profiles for all relationship types)
+    match /relationship_profiles/{profileId} {
+      // Parents can read profiles in their family
+      allow read: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can create profiles for relationship members in their family
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+
+      // Parents can update profiles in their family
+      allow update: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can delete profiles in their family
+      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
+    // ==================== Person-Centric Operating Manual System ====================
+
+    // People collection (core entities - everyone in the family network)
+    match /people/{personId} {
+      // Family members can read all people in their family
+      allow read: if belongsToFamily(resource.data.familyId);
+
+      // Parents can create people in their family
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+
+      // Parents can update people in their family
+      allow update: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can delete people in their family
+      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
+    // Person manuals collection (one manual per person)
+    match /person_manuals/{manualId} {
+      // Family members can read manuals in their family
+      allow read: if belongsToFamily(resource.data.familyId);
+
+      // Parents can create manuals for people in their family
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+
+      // Family members can update manuals (collaborative editing)
+      allow update: if belongsToFamily(resource.data.familyId);
+
+      // Parents can delete manuals in their family
+      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
+    // Role sections collection (sections within a person's manual)
+    match /role_sections/{roleSectionId} {
+      // Helper to check if user is a contributor to this role section
+      function isContributor() {
+        return request.auth.uid in resource.data.contributors;
+      }
+
+      // Family members can read role sections in their family
+      allow read: if belongsToFamily(resource.data.familyId);
+
+      // Contributors can create role sections
+      allow create: if isSignedIn() && belongsToFamily(request.resource.data.familyId);
+
+      // Contributors can update role sections they're part of
+      allow update: if belongsToFamily(resource.data.familyId) && isContributor();
+
+      // Parents can delete role sections in their family
+      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
+    // Role-based strategic plans collection
+    match /role_based_strategic_plans/{planId} {
+      // Family members can read plans in their family
+      allow read: if belongsToFamily(resource.data.familyId);
+
+      // Cloud Functions create plans (using admin SDK)
+
+      // Contributors (people in the role) can update to approve
+      allow update: if belongsToFamily(resource.data.familyId);
+
+      // Parents can delete plans in their family
+      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
   }
 }
