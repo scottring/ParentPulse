@@ -1,0 +1,524 @@
+/**
+ * LifeManual Design System
+ * "Operating manuals for the people you love"
+ *
+ * Combines warm, personal aesthetics with technical owner's manual visual language
+ * - Typography: Handwritten headings + clean body text (like annotated manuals)
+ * - Iconography: Warning labels, specification tables, technical diagrams
+ * - Colors: Warm, relationship-specific palettes
+ * - Textures: Paper grain, manual-like feel
+ */
+
+/* ==================== Import Fonts ==================== */
+@import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Nunito:wght@400;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+/* ==================== Core Design Tokens ==================== */
+
+:root {
+  /* Brand Typography */
+  --font-heading: 'Kalam', 'Comic Sans MS', cursive;
+  --font-body: 'Nunito', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Fira Code', 'Courier New', monospace;
+  --font-technical: 'Courier New', monospace; /* For spec tables */
+
+  /* Brand Colors - Base Palette */
+  --brand-primary: #2d5f4e;      /* Deep forest - trust, growth */
+  --brand-accent: #4a9d7f;       /* Sage green - wisdom, nurturing */
+  --brand-secondary: #e8a958;    /* Warm gold - value, care */
+
+  /* Neutral Palette - Warm grays */
+  --neutral-50: #fafaf9;
+  --neutral-100: #f5f5f4;
+  --neutral-200: #e7e5e4;
+  --neutral-300: #d6d3d1;
+  --neutral-400: #a8a29e;
+  --neutral-500: #78716c;
+  --neutral-600: #57534e;
+  --neutral-700: #44403c;
+  --neutral-800: #292524;
+  --neutral-900: #1c1917;
+
+  /* Semantic Colors */
+  --success: #16a34a;
+  --warning: #ea580c;
+  --danger: #dc2626;
+  --info: #0284c7;
+
+  /* Owner's Manual Warning Colors */
+  --hazard-critical: #dc2626;    /* ⚡ Electrical hazard red */
+  --hazard-warning: #ea580c;     /* ⚠️ Warning orange */
+  --hazard-caution: #eab308;     /* ⚠️ Caution yellow */
+  --hazard-safe: #16a34a;        /* ✓ Safe/recommended green */
+
+  /* Shadows */
+  --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-medium: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-strong: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  --shadow-manual: 0 2px 8px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+
+  /* Border Radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Spacing Scale */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  /* Paper Texture */
+  --texture-grain: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+  --texture-intensity: 0.03;
+
+  /* Manual Grid Pattern (for backgrounds) */
+  --grid-pattern: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 19px,
+    #e7e5e4 19px,
+    #e7e5e4 20px
+  ),
+  repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 19px,
+    #e7e5e4 19px,
+    #e7e5e4 20px
+  );
+}
+
+/* ==================== Base Styles ==================== */
+
+body {
+  font-family: var(--font-body);
+  color: var(--neutral-900);
+  background: var(--neutral-50);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Paper texture overlay on all pages */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background-image: var(--texture-grain);
+  opacity: var(--texture-intensity);
+  z-index: 9998;
+}
+
+/* ==================== Typography System ==================== */
+
+.manual-heading {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--brand-primary);
+  line-height: 1.2;
+}
+
+.manual-heading-xl {
+  font-size: 48px;
+  letter-spacing: -0.02em;
+}
+
+.manual-heading-lg {
+  font-size: 36px;
+  letter-spacing: -0.01em;
+}
+
+.manual-heading-md {
+  font-size: 24px;
+}
+
+.manual-heading-sm {
+  font-size: 18px;
+}
+
+.manual-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--neutral-600);
+}
+
+.manual-spec-label {
+  font-family: var(--font-technical);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--neutral-700);
+}
+
+.manual-body {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--neutral-800);
+}
+
+.manual-body-sm {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--neutral-700);
+}
+
+/* ==================== Card Components ==================== */
+
+.manual-card {
+  background: white;
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.manual-card:hover {
+  box-shadow: var(--shadow-medium);
+  transform: translateY(-2px);
+}
+
+/* Manual card with technical border */
+.manual-card-technical {
+  background: white;
+  border: 2px solid var(--neutral-300);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-manual);
+  position: relative;
+}
+
+.manual-card-technical::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--neutral-900) 0px,
+    var(--neutral-900) 10px,
+    var(--warning) 10px,
+    var(--warning) 20px
+  );
+}
+
+/* ==================== Button System ==================== */
+
+.manual-button-primary {
+  background: var(--brand-accent);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-soft);
+  text-transform: none;
+}
+
+.manual-button-primary:hover {
+  background: #3a7a63;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-medium);
+}
+
+.manual-button-primary:active {
+  transform: translateY(0);
+}
+
+.manual-button-secondary {
+  background: white;
+  color: var(--brand-primary);
+  border: 2px solid var(--brand-accent);
+  padding: 10px 22px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.manual-button-secondary:hover {
+  background: #f0f7f4;
+  border-color: var(--brand-primary);
+}
+
+/* ==================== Warning Label System ==================== */
+
+.warning-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 2px solid;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.warning-label-critical {
+  background: #fef2f2;
+  border-color: var(--hazard-critical);
+  color: #7f1d1d;
+}
+
+.warning-label-warning {
+  background: #fff7ed;
+  border-color: var(--hazard-warning);
+  color: #7c2d12;
+}
+
+.warning-label-caution {
+  background: #fefce8;
+  border-color: #fbbf24;
+  color: #713f12;
+}
+
+.warning-label-safe {
+  background: #f0fdf4;
+  border-color: var(--hazard-safe);
+  color: #14532d;
+}
+
+.warning-icon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+}
+
+/* ==================== Specification Table ==================== */
+
+.spec-table {
+  border: 2px solid var(--neutral-300);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: white;
+  box-shadow: var(--shadow-soft);
+}
+
+.spec-table-header {
+  background: var(--neutral-900);
+  color: white;
+  padding: 12px 16px;
+  font-family: var(--font-technical);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 3px solid var(--warning);
+}
+
+.spec-table-row {
+  display: grid;
+  grid-template-columns: 40% 60%;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--neutral-200);
+  font-size: 14px;
+}
+
+.spec-table-row:nth-child(even) {
+  background: var(--neutral-50);
+}
+
+.spec-table-row:last-child {
+  border-bottom: none;
+}
+
+.spec-label {
+  font-family: var(--font-technical);
+  font-weight: 600;
+  color: var(--neutral-700);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+
+.spec-value {
+  font-weight: 500;
+  color: var(--neutral-900);
+}
+
+/* ==================== Badge Components ==================== */
+
+.manual-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.badge-profile-complete {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge-profile-incomplete {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge-active-plan {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+/* ==================== Animations ==================== */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out both;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Staggered animations for lists */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+
+/* ==================== Utility Classes ==================== */
+
+.paper-texture {
+  position: relative;
+  background: white;
+}
+
+.paper-texture::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: var(--texture-grain);
+  opacity: var(--texture-intensity);
+  pointer-events: none;
+}
+
+.grid-background {
+  background-image: var(--grid-pattern);
+  background-size: 20px 20px;
+}
+
+.manual-divider {
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--neutral-300) 0px,
+    var(--neutral-300) 5px,
+    transparent 5px,
+    transparent 10px
+  );
+  margin: var(--space-lg) 0;
+}
+
+/* ==================== Spinner/Loading ==================== */
+
+.spinner {
+  border: 3px solid var(--neutral-200);
+  border-top-color: var(--brand-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==================== Responsive Breakpoints ==================== */
+
+@media (max-width: 768px) {
+  .manual-heading-xl {
+    font-size: 36px;
+  }
+
+  .manual-heading-lg {
+    font-size: 28px;
+  }
+
+  .manual-heading-md {
+    font-size: 20px;
+  }
+
+  .spec-table-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .spec-label {
+    font-size: 10px;
+  }
+}

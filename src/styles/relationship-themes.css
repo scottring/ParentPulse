@@ -1,0 +1,345 @@
+/**
+ * RelationshipPulse Design System
+ * Contextual theming for different relationship types
+ * Maintains warm, personal aesthetic while providing subtle distinction
+ */
+
+/* ==================== Core Design Tokens ==================== */
+
+:root {
+  /* Base Typography - Handwritten & Warm */
+  --font-heading: 'Kalam', 'Comic Sans MS', cursive;
+  --font-body: 'Nunito', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Fira Code', 'Courier New', monospace;
+
+  /* Shared Neutrals - Warm Gray Scale */
+  --neutral-50: #fafaf9;
+  --neutral-100: #f5f5f4;
+  --neutral-200: #e7e5e4;
+  --neutral-300: #d6d3d1;
+  --neutral-600: #78716c;
+  --neutral-700: #57534e;
+  --neutral-900: #1c1917;
+
+  /* Shared Effects */
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadow-strong: 0 8px 24px rgba(0, 0, 0, 0.16);
+
+  /* Paper Textures - Base */
+  --texture-intensity: 0.03;
+  --texture-grain: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+}
+
+/* ==================== Relationship Type: Children ==================== */
+
+[data-relationship-type="children"],
+.theme-children {
+  /* Primary Palette - Nurturing Greens */
+  --relationship-primary: #2d5f4e;      /* Deep forest green */
+  --relationship-primary-light: #3a7a63;
+  --relationship-primary-dark: #234a3d;
+
+  /* Accent Palette - Warm & Playful */
+  --relationship-accent: #4a9d7f;       /* Sage green */
+  --relationship-accent-light: #6bb399;
+  --relationship-secondary: #e8a958;     /* Warm gold */
+
+  /* Background & Surface */
+  --relationship-bg: #f0f7f4;           /* Soft mint */
+  --relationship-card: #ffffff;
+  --relationship-border: #d4e8df;
+
+  /* Text Colors */
+  --relationship-text: #1e3a32;
+  --relationship-text-light: #5a7268;
+  --relationship-text-muted: #8a9d95;
+
+  /* Texture Intensity */
+  --texture-intensity: 0.04;
+
+  /* Icon/Emoji */
+  --relationship-icon: '🌱';
+  --relationship-emoji: '👨‍👩‍👧‍👦';
+}
+
+/* ==================== Relationship Type: Spouse/Partner ==================== */
+
+[data-relationship-type="spouse"],
+.theme-spouse {
+  /* Primary Palette - Intimate & Deep */
+  --relationship-primary: #8b4049;      /* Deep rose/burgundy */
+  --relationship-primary-light: #a15560;
+  --relationship-primary-dark: #6d3239;
+
+  /* Accent Palette - Warm & Connected */
+  --relationship-accent: #c86b7a;       /* Dusty rose */
+  --relationship-accent-light: #d98694;
+  --relationship-secondary: #d4a574;     /* Warm sand */
+
+  /* Background & Surface */
+  --relationship-bg: #faf5f3;           /* Warm cream */
+  --relationship-card: #ffffff;
+  --relationship-border: #ead9d4;
+
+  /* Text Colors */
+  --relationship-text: #3a2329;
+  --relationship-text-light: #6b5157;
+  --relationship-text-muted: #9a858b;
+
+  /* Texture - More subtle, refined */
+  --texture-intensity: 0.02;
+
+  /* Icon/Emoji */
+  --relationship-icon: '💑';
+  --relationship-emoji: '💕';
+}
+
+/* ==================== Relationship Type: Elderly Parent ==================== */
+
+[data-relationship-type="parent"],
+.theme-parent {
+  /* Primary Palette - Gentle & Respectful */
+  --relationship-primary: #7a6b8f;      /* Soft purple/lavender */
+  --relationship-primary-light: #9186a6;
+  --relationship-primary-dark: #5f5373;
+
+  /* Accent Palette - Warm & Dignified */
+  --relationship-accent: #a594bd;       /* Gentle lavender */
+  --relationship-accent-light: #bbaacc;
+  --relationship-secondary: #d4b896;     /* Warm beige */
+
+  /* Background & Surface */
+  --relationship-bg: #f7f5f9;           /* Soft lavender tint */
+  --relationship-card: #ffffff;
+  --relationship-border: #e5dfe9;
+
+  /* Text Colors */
+  --relationship-text: #342d3a;
+  --relationship-text-light: #625968;
+  --relationship-text-muted: #938a9a;
+
+  /* Texture - Classic, refined */
+  --texture-intensity: 0.025;
+
+  /* Icon/Emoji */
+  --relationship-icon: '👵';
+  --relationship-emoji: '🏡';
+}
+
+/* ==================== Relationship Type: Close Friend ==================== */
+
+[data-relationship-type="friend"],
+.theme-friend {
+  /* Primary Palette - Social & Vibrant */
+  --relationship-primary: #d97536;      /* Warm orange */
+  --relationship-primary-light: #e68b4f;
+  --relationship-primary-dark: #c05d25;
+
+  /* Accent Palette - Energetic & Warm */
+  --relationship-accent: #f0a660;       /* Bright orange */
+  --relationship-accent-light: #f5b87a;
+  --relationship-secondary: #e8c468;     /* Sunny yellow */
+
+  /* Background & Surface */
+  --relationship-bg: #fff8f0;           /* Warm cream */
+  --relationship-card: #ffffff;
+  --relationship-border: #f0e5d4;
+
+  /* Text Colors */
+  --relationship-text: #3a2d1e;
+  --relationship-text-light: #6b5640;
+  --relationship-text-muted: #9a8770;
+
+  /* Texture - Energetic, visible */
+  --texture-intensity: 0.045;
+
+  /* Icon/Emoji */
+  --relationship-icon: '🤝';
+  --relationship-emoji: '👯';
+}
+
+/* ==================== Relationship Type: Professional ==================== */
+
+[data-relationship-type="professional"],
+.theme-professional {
+  /* Primary Palette - Structured & Warm */
+  --relationship-primary: #3d5a6b;      /* Warm navy */
+  --relationship-primary-light: #507080;
+  --relationship-primary-dark: #2d4551;
+
+  /* Accent Palette - Professional but Warm */
+  --relationship-accent: #5d8396;       /* Slate blue */
+  --relationship-accent-light: #7699ab;
+  --relationship-secondary: #a89968;     /* Warm olive */
+
+  /* Background & Surface */
+  --relationship-bg: #f5f7f8;           /* Cool white */
+  --relationship-card: #ffffff;
+  --relationship-border: #dde3e6;
+
+  /* Text Colors */
+  --relationship-text: #1e2d35;
+  --relationship-text-light: #4a5a63;
+  --relationship-text-muted: #7a8a93;
+
+  /* Texture - Minimal, refined */
+  --texture-intensity: 0.015;
+
+  /* Icon/Emoji */
+  --relationship-icon: '💼';
+  --relationship-emoji: '🤝';
+}
+
+/* ==================== Global Relationship Styling ==================== */
+
+.relationship-page {
+  background: var(--relationship-bg);
+  color: var(--relationship-text);
+  position: relative;
+  min-height: 100vh;
+}
+
+/* Paper Texture Overlay */
+.relationship-page::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background-image: var(--texture-grain);
+  opacity: var(--texture-intensity);
+  z-index: 0;
+}
+
+.relationship-card {
+  background: var(--relationship-card);
+  border: 1px solid var(--relationship-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-soft);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.relationship-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--relationship-accent),
+    var(--relationship-secondary)
+  );
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.relationship-card:hover {
+  box-shadow: var(--shadow-medium);
+  transform: translateY(-2px);
+}
+
+.relationship-card:hover::before {
+  transform: scaleX(1);
+}
+
+.relationship-heading {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--relationship-primary);
+  line-height: 1.2;
+}
+
+.relationship-button-primary {
+  background: var(--relationship-accent);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.relationship-button-primary:hover {
+  background: var(--relationship-accent-light);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.relationship-button-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* ==================== Relationship Type Badge ==================== */
+
+.relationship-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  background: linear-gradient(
+    135deg,
+    var(--relationship-accent),
+    var(--relationship-secondary)
+  );
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.relationship-badge::before {
+  content: var(--relationship-icon);
+  font-size: 16px;
+}
+
+/* ==================== Animations ==================== */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Staggered animations for lists */
+.stagger-child:nth-child(1) { animation-delay: 0.05s; }
+.stagger-child:nth-child(2) { animation-delay: 0.1s; }
+.stagger-child:nth-child(3) { animation-delay: 0.15s; }
+.stagger-child:nth-child(4) { animation-delay: 0.2s; }
+.stagger-child:nth-child(5) { animation-delay: 0.25s; }
+.stagger-child:nth-child(6) { animation-delay: 0.3s; }
