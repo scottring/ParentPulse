@@ -1,0 +1,100 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper function to check if user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper function to get user data from Firestore
+    function getUserData() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Helper function to check if user is a parent
+    function isParent() {
+      return isSignedIn() && getUserData().role == 'parent';
+    }
+
+    // Helper function to check if user belongs to the family
+    function belongsToFamily(familyId) {
+      return isSignedIn() && getUserData().familyId == familyId;
+    }
+
+    // Journal entry attachments (photos, voice notes)
+    match /families/{familyId}/journal_entries/{entryId}/{filename} {
+      // Parents in the family can upload
+      allow create: if isParent() && belongsToFamily(familyId) &&
+                       request.resource.size < 10 * 1024 * 1024 && // Max 10MB
+                       request.resource.contentType.matches('image/.*|audio/.*');
+
+      // Family members can read
+      allow read: if belongsToFamily(familyId);
+
+      // Parents can delete their own uploads
+      allow delete: if isParent() && belongsToFamily(familyId);
+    }
+
+    // Child check-in attachments (voice messages, drawings)
+    match /families/{familyId}/child_checkins/{checkinId}/{filename} {
+      // Children can upload their own check-in attachments
+      allow create: if isSignedIn() && belongsToFamily(familyId) &&
+                       request.resource.size < 5 * 1024 * 1024 && // Max 5MB
+                       request.resource.contentType.matches('audio/.*|image/.*');
+
+      // Parents can read check-in attachments
+      allow read: if isParent() && belongsToFamily(familyId);
+
+      // Children can read their own attachments
+      allow read: if isSignedIn() && belongsToFamily(familyId);
+    }
+
+    // Child avatars
+    match /families/{familyId}/children/{childId}/{filename} {
+      // Parents can upload child avatars
+      allow create, update: if isParent() && belongsToFamily(familyId) &&
+                               request.resource.size < 2 * 1024 * 1024 && // Max 2MB
+                               request.resource.contentType.matches('image/.*') &&
+                               filename.matches('avatar\\.(jpg|jpeg|png|gif|webp)');
+
+      // Family members can read
+      allow read: if belongsToFamily(familyId);
+
+      // Parents can delete
+      allow delete: if isParent() && belongsToFamily(familyId);
+    }
+
+    // Reward images for chip economy
+    match /families/{familyId}/rewards/{filename} {
+      // Parents can upload reward images
+      allow create, update: if isParent() && belongsToFamily(familyId) &&
+                               request.resource.size < 2 * 1024 * 1024 && // Max 2MB
+                               request.resource.contentType.matches('image/.*');
+
+      // Family members can read
+      allow read: if belongsToFamily(familyId);
+
+      // Parents can delete
+      allow delete: if isParent() && belongsToFamily(familyId);
+    }
+
+    // Parent profile pictures
+    match /families/{familyId}/parents/{parentId}/{filename} {
+      // Parents can upload their own avatar
+      allow create, update: if isParent() && belongsToFamily(familyId) &&
+                               request.auth.uid == parentId &&
+                               request.resource.size < 2 * 1024 * 1024 && // Max 2MB
+                               request.resource.contentType.matches('image/.*') &&
+                               filename.matches('avatar\\.(jpg|jpeg|png|gif|webp)');
+
+      // Family members can read
+      allow read: if belongsToFamily(familyId);
+
+      // Parents can delete their own avatar
+      allow delete: if isParent() && belongsToFamily(familyId) &&
+                      request.auth.uid == parentId;
+    }
+  }
+}

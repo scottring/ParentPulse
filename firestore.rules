@@ -1,0 +1,125 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper function to get user data
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Helper function to check if user is a parent
+    function isParent() {
+      return isSignedIn() && getUserData().role == 'parent';
+    }
+
+    // Helper function to check if user belongs to the family
+    function belongsToFamily(familyId) {
+      return isSignedIn() && getUserData().familyId == familyId;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Users can read their own document
+      allow read: if isSignedIn() && request.auth.uid == userId;
+
+      // Only the user themselves can create their document (during registration)
+      allow create: if isSignedIn() && request.auth.uid == userId;
+
+      // Users can update their own document
+      allow update: if isSignedIn() && request.auth.uid == userId;
+
+      // Parents can read all users in their family
+      allow read: if isSignedIn() && isParent() &&
+                     resource.data.familyId == getUserData().familyId;
+    }
+
+    // Families collection
+    match /families/{familyId} {
+      // Family members can read their family document
+      allow read: if belongsToFamily(familyId);
+
+      // Parents can create family documents
+      allow create: if isParent();
+
+      // Parents in the family can update it
+      allow update: if isParent() && belongsToFamily(familyId);
+    }
+
+    // Journal entries collection
+    match /journal_entries/{entryId} {
+      // Parents can read entries in their family
+      allow read: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can create entries in their family
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+
+      // Parents can update their own entries
+      allow update: if isParent() &&
+                       belongsToFamily(resource.data.familyId) &&
+                       resource.data.authorId == request.auth.uid;
+
+      // Parents can delete their own entries
+      allow delete: if isParent() &&
+                       belongsToFamily(resource.data.familyId) &&
+                       resource.data.authorId == request.auth.uid;
+    }
+
+    // Child check-ins collection
+    match /child_checkins/{checkinId} {
+      // Children can create their own check-ins
+      allow create: if isSignedIn() &&
+                       request.resource.data.childId == request.auth.uid;
+
+      // Children can read their own check-ins
+      allow read: if isSignedIn() && resource.data.childId == request.auth.uid;
+
+      // Parents can read check-ins in their family
+      allow read: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
+    // Chip economy collection
+    match /chip_economy/{familyId} {
+      // Family members can read their chip economy
+      allow read: if belongsToFamily(familyId);
+
+      // Parents can manage chip economy
+      allow write: if isParent() && belongsToFamily(familyId);
+    }
+
+    // Chip transactions collection
+    match /chip_transactions/{transactionId} {
+      // Children can read their own transactions
+      allow read: if isSignedIn() && resource.data.childId == request.auth.uid;
+
+      // Parents can read transactions in their family
+      allow read: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can create transactions
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+    }
+
+    // Knowledge base collection
+    match /knowledge_base/{knowledgeId} {
+      // Family members can read knowledge in their family
+      allow read: if belongsToFamily(resource.data.familyId);
+
+      // Parents can manage knowledge
+      allow write: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
+    // AI insights collection
+    match /ai_insights/{insightId} {
+      // Parents can read insights in their family
+      allow read: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Cloud Functions can create insights (using admin SDK)
+      // Parents cannot directly create/edit insights
+    }
+  }
+}
