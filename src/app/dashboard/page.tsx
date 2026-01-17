@@ -204,14 +204,14 @@ export default function DashboardPage() {
             </div>
           </Link>
 
-          {/* Children Card */}
-          <Link href="/children" className="parent-card p-8 text-left hover:shadow-lg transition-all duration-300 group block">
+          {/* People Card */}
+          <Link href="/people" className="parent-card p-8 text-left hover:shadow-lg transition-all duration-300 group block">
             <div className="flex items-start justify-between mb-4">
               <div
                 className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl transition-transform group-hover:scale-110"
                 style={{ backgroundColor: '#FFF3E0' }}
               >
-                👨‍👩‍👧‍👦
+                👥
               </div>
               <svg
                 className="w-6 h-6 transition-transform group-hover:translate-x-1"
@@ -224,13 +224,13 @@ export default function DashboardPage() {
               </svg>
             </div>
             <h3 className="parent-heading text-2xl mb-2" style={{ color: 'var(--parent-text)' }}>
-              Your Children
+              People
             </h3>
             <p className="text-sm leading-relaxed" style={{ color: 'var(--parent-text-light)' }}>
-              Add children to your family, review their daily check-ins, and manage the chip economy to encourage growth.
+              Create operating manuals for everyone who matters - children, spouse, parents, friends, and more.
             </p>
             <div className="mt-6 inline-flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--parent-accent)' }}>
-              <span>Manage family</span>
+              <span>Manage people</span>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>

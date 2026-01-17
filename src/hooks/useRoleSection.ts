@@ -88,6 +88,7 @@ export function useRoleSections(manualId?: string): UseRoleSectionsReturn {
 
         const q = query(
           collection(firestore, PERSON_MANUAL_COLLECTIONS.ROLE_SECTIONS),
+          where('familyId', '==', user.familyId),
           where('manualId', '==', manualId),
           orderBy('createdAt', 'desc')
         );
@@ -148,9 +149,14 @@ export function useRoleSections(manualId?: string): UseRoleSectionsReturn {
         relatedKnowledgeIds: roleSectionData.relatedKnowledgeIds || []
       };
 
+      // Remove undefined fields to avoid Firestore errors
+      const cleanedSection = Object.fromEntries(
+        Object.entries(newSection).filter(([_, value]) => value !== undefined)
+      );
+
       const docRef = await addDoc(
         collection(firestore, PERSON_MANUAL_COLLECTIONS.ROLE_SECTIONS),
-        newSection
+        cleanedSection
       );
 
       // Update local state

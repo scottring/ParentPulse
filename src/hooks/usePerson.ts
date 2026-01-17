@@ -119,9 +119,14 @@ export function usePerson(): UsePersonReturn {
         hasManual: false
       };
 
+      // Remove undefined fields to avoid Firestore errors
+      const cleanedPerson = Object.fromEntries(
+        Object.entries(newPerson).filter(([_, value]) => value !== undefined)
+      );
+
       const docRef = await addDoc(
         collection(firestore, PERSON_MANUAL_COLLECTIONS.PEOPLE),
-        newPerson
+        cleanedPerson
       );
 
       // Update local state

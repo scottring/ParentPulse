@@ -20,7 +20,7 @@ export default function DemoPage() {
   const { people, addPerson, loading: peopleLoading } = usePerson();
   const [selectedPersonId, setSelectedPersonId] = useState<string>('');
   const { manual, createManual, loading: manualLoading } = usePersonManual(selectedPersonId);
-  const { roleSections, createRoleSection, addTrigger, addStrategy } = useRoleSections(manual?.manualId);
+  const { roleSections, createRoleSection, deleteRoleSection, addTrigger, addStrategy } = useRoleSections(manual?.manualId);
 
   const [newPersonName, setNewPersonName] = useState('');
   const [newRoleTitle, setNewRoleTitle] = useState('');
@@ -240,9 +240,36 @@ export default function DemoPage() {
             {roleSections.map(section => (
               <div
                 key={section.roleSectionId}
-                style={{ padding: '20px', background: '#fafaf9', border: '2px solid #e7e5e4', borderRadius: '8px' }}
+                style={{ padding: '20px', background: '#fafaf9', border: '2px solid #e7e5e4', borderRadius: '8px', position: 'relative' }}
               >
-                <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '8px', color: '#292524' }}>
+                <button
+                  onClick={async () => {
+                    if (confirm(`Remove role section "${section.roleTitle}"?`)) {
+                      try {
+                        await deleteRoleSection(section.roleSectionId);
+                        alert('Role section removed!');
+                      } catch (err) {
+                        alert('Failed to remove role section');
+                      }
+                    }
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: '16px',
+                    right: '16px',
+                    padding: '6px 12px',
+                    background: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    fontWeight: '600'
+                  }}
+                >
+                  Remove
+                </button>
+                <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '8px', color: '#292524', paddingRight: '80px' }}>
                   {section.roleTitle}
                 </div>
                 <div style={{ fontSize: '14px', color: '#78716c', marginBottom: '12px' }}>

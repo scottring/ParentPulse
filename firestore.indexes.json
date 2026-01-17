@@ -314,6 +314,24 @@
           "order": "ASCENDING"
         },
         {
+          "fieldPath": "manualId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "role_sections",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "roleType",
           "order": "ASCENDING"
         }
