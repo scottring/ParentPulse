@@ -100,8 +100,9 @@ exports.generateDailyActionsManual = onCall(
 );
 
 /**
- * AI Chat Coach - conversational AI that knows your parenting journey
+ * AI Chat Coach - conversational AI that knows your personal journey
  * Uses RAG to search journal entries, knowledge base, actions, and insights
+ * Provides guidance on all relationships: parenting, partnerships, friendships, family, and personal growth
  */
 exports.chatWithCoach = onCall(
     {
@@ -314,15 +315,16 @@ async function generateChatResponse(messages, context) {
  * Build system message with relevant context
  */
 function buildChatSystemMessage(context) {
-  let systemMessage = `You are an empathetic AI parenting coach with access to this parent's personal parenting journey. You can reference their journal entries, saved knowledge, and action items to provide personalized advice.
+  let systemMessage = `You are an empathetic AI relationship coach with access to this person's personal journey. You can reference their journal entries, saved knowledge, and action items to provide personalized advice on all relationships - parenting, partnerships, friendships, family dynamics, and personal growth.
 
 Your role:
-- Provide supportive, non-judgmental guidance
+- Provide supportive, non-judgmental guidance on any relationship topic
 - Reference specific entries, articles, or actions when relevant
-- Help parents see patterns in their experiences
+- Help people see patterns in their experiences and relationships
 - Suggest practical strategies based on what has worked for them before
-- Acknowledge the challenges they're facing
-- Be conversational and warm
+- Acknowledge the challenges they're facing in any relationship context
+- Be conversational, warm, and adaptable to any relationship topic
+- Cover parenting, romantic relationships, friendships, family, work relationships, and self-relationship
 
 Available Context:
 
@@ -339,7 +341,7 @@ Available Context:
 
   // Add knowledge base
   if (context.knowledgeItems.length > 0) {
-    systemMessage += `## Saved Parenting Resources (${context.knowledgeItems.length}):\n`;
+    systemMessage += `## Saved Resources & Articles (${context.knowledgeItems.length}):\n`;
     context.knowledgeItems.slice(0, 8).forEach((item, i) => {
       systemMessage += `${i + 1}. "${item.title}" (${item.sourceType}): ${item.excerpt}\n`;
     });
@@ -947,3 +949,171 @@ exports.generateStrategicPlan = onCall(
       }
     }
 );
+
+/**
+ * Generate Initial Manual Content
+ * Uses Claude 3.5 Sonnet to generate structured manual content from user's conversational answers
+ */
+exports.generateInitialManualContent = onCall(
+    {
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      // Verify authentication
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const {familyId, personId, personName, relationshipType, answers} = request.data;
+
+      // Validate input
+      if (!familyId || !personId || !personName || !relationshipType || !answers) {
+        throw new Error("Missing required parameters");
+      }
+
+      logger.info(`Generating manual content for ${personName} (${relationshipType})`);
+
+      try {
+        // Build prompt from user's answers
+        const prompt = buildManualContentPrompt(personName, relationshipType, answers);
+
+        // Call Claude 3.5 Sonnet for complex reasoning and structured generation
+        const client = getAnthropic();
+        const response = await client.messages.create({
+          model: "claude-3-5-sonnet-20241022",
+          max_tokens: 6000,
+          temperature: 0.7,
+          messages: [{
+            role: "user",
+            content: prompt,
+          }],
+        });
+
+        const responseText = response.content[0].text;
+        logger.info("Claude response received, parsing JSON");
+
+        // Parse the JSON response
+        let content;
+        try {
+          // Extract JSON from markdown code blocks if present
+          const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) ||
+                           responseText.match(/```\s*([\s\S]*?)\s*```/);
+          const jsonText = jsonMatch ? jsonMatch[1] : responseText;
+
+          content = JSON.parse(jsonText);
+          logger.info("Successfully parsed generated content");
+        } catch (parseError) {
+          logger.error("Error parsing Claude response:", parseError);
+          logger.error("Response text:", responseText);
+          throw new Error("Failed to parse AI response as JSON");
+        }
+
+        // Return generated content
+        return {
+          success: true,
+          content: content,
+        };
+      } catch (error) {
+        logger.error("Error generating manual content:", error);
+        return {
+          success: false,
+          error: error.message,
+          errorDetails: error.stack,
+        };
+      }
+    }
+);
+
+/**
+ * Build prompt for generating initial manual content
+ */
+function buildManualContentPrompt(personName, relationshipType, answers) {
+  // Format answers into readable text
+  const formattedAnswers = Object.entries(answers)
+      .map(([sectionId, sectionAnswers]) => {
+        const questions = Object.entries(sectionAnswers)
+            .filter(([_, answer]) => answer && answer.trim().length > 0)
+            .map(([questionId, answer]) => `${questionId}: ${answer}`)
+            .join("\n");
+        return questions ? `\n${sectionId.toUpperCase()}:\n${questions}` : "";
+      })
+      .filter((section) => section.length > 0)
+      .join("\n");
+
+  return `You are helping create an operating manual for understanding and supporting a person.
+
+Person: ${personName}
+Relationship Type: ${relationshipType}
+
+Based on the following information provided by someone who knows ${personName} well, generate structured content for their operating manual.
+
+USER RESPONSES:
+${formattedAnswers}
+
+Generate a JSON response with the following structure:
+
+{
+  "roleOverview": "A 2-3 paragraph narrative description of how ${personName} shows up in this ${relationshipType} relationship, based on the user's answers. This should read like a rich, personal description written by someone who knows them well in this specific role.",
+  "overview": {
+    "likes": ["thing they like 1", "thing they like 2", ...],
+    "dislikes": ["thing they dislike 1", "thing they dislike 2", ...],
+    "motivations": ["motivation 1", "motivation 2", ...],
+    "comfortFactors": ["what makes them comfortable 1", ...],
+    "discomfortFactors": ["what makes them uncomfortable 1", ...]
+  },
+  "triggers": [
+    {
+      "description": "Brief description of the trigger",
+      "context": "When/where this happens",
+      "typicalResponse": "How they typically react",
+      "deescalationStrategy": "What helps (optional)",
+      "severity": "mild" | "moderate" | "significant"
+    }
+  ],
+  "whatWorks": [
+    {
+      "description": "Strategy description",
+      "context": "When to use this",
+      "effectiveness": 3-5,
+      "notes": "Additional context (optional)"
+    }
+  ],
+  "whatDoesntWork": [
+    {
+      "description": "What doesn't work",
+      "context": "Why to avoid",
+      "notes": "Context (optional)"
+    }
+  ],
+  "boundaries": [
+    {
+      "description": "Boundary description",
+      "category": "immovable" | "negotiable" | "preference",
+      "context": "Context (optional)",
+      "consequences": "What happens if crossed (optional)"
+    }
+  ],
+  "strengths": ["strength 1", "strength 2", ...],
+  "challenges": ["challenge 1", "challenge 2", ...],
+  "importantContext": ["important context 1", "important context 2", ...]
+}
+
+Important Guidelines:
+1. Base content ONLY on the information provided in the user responses
+2. Be specific and actionable - avoid generic advice
+3. Use ${personName}'s name naturally where appropriate
+4. Maintain a supportive, respectful, empathetic tone
+5. Generate 2-4 items per array where appropriate (don't over-generate)
+6. If a section wasn't answered or has minimal info, return fewer items or empty array
+7. For "effectiveness" in whatWorks, rate 3-5 (only include strategies that seem genuinely effective based on the description)
+8. For trigger "severity", infer from the description and typical response
+9. For boundary "category", infer based on how firmly the boundary was described
+10. Break down compound answers into separate items when appropriate
+11. The overview section should distill the user's answers into clear, concise points
+12. The roleOverview should be a cohesive narrative (2-3 paragraphs) that synthesizes all the information into a personal, warm description of ${personName} in this ${relationshipType} role
+
+Return ONLY the JSON object, no additional text or explanation.`;
+}
+

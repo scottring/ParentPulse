@@ -65,6 +65,18 @@ service cloud.firestore {
 
       // Parents in the family can update it
       allow update: if isParent() && belongsToFamily(familyId);
+
+      // Family Manual subcollection
+      match /family_manual/{documentId} {
+        // Family members can read the family manual
+        allow read: if belongsToFamily(familyId);
+
+        // Parents can create and update the family manual
+        allow create, update: if isParent() && belongsToFamily(familyId);
+
+        // Parents can delete the family manual
+        allow delete: if isParent() && belongsToFamily(familyId);
+      }
     }
 
     // Journal entries collection

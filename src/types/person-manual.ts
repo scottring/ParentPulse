@@ -18,6 +18,21 @@
 
 import { Timestamp } from 'firebase/firestore';
 
+// ==================== Relationship Types ====================
+
+/**
+ * Relationship Type - Used to determine which section templates a person gets
+ * This is separate from RoleType which describes roles within manual sections
+ */
+export type RelationshipType =
+  | 'child'
+  | 'spouse'
+  | 'elderly_parent'
+  | 'friend'
+  | 'professional'
+  | 'sibling'
+  | 'other';
+
 // ==================== Core Person Entity ====================
 
 export interface Person {
@@ -29,6 +44,9 @@ export interface Person {
   dateOfBirth?: Timestamp;
   avatarUrl?: string;
   pronouns?: string;
+
+  // Relationship context - determines which section templates they get
+  relationshipType?: RelationshipType;
 
   // Manual reference
   hasManual: boolean;
@@ -85,6 +103,10 @@ export interface RoleSection {
   roleType: RoleType;
   roleTitle: string; // "Father to Ella", "Spouse to Iris", "Manager of Team"
   roleDescription?: string;
+
+  // Role-specific overview (collaborative description of the person in this role)
+  roleOverview?: string; // Rich text description of how this person shows up in this role
+  // Contributors can each add their perspective on the person in this relationship
 
   // Relationship context
   relatedPersonId?: string; // The other person in this relationship (if applicable)
@@ -361,6 +383,72 @@ export function getContributorPermissions(
     canSeePrivateNotes: isOwner,
     isRoleOwner: isOwner
   };
+}
+
+// ==================== Family Manual ====================
+
+/**
+ * Family Manual - Separate from person-centric manuals
+ * Contains family-wide content like house rules, values, routines, and traditions
+ */
+export interface FamilyManual {
+  familyId: string;
+
+  // Sections
+  houseRules: FamilyHouseRule[];
+  familyValues: FamilyValue[];
+  routines: FamilyRoutine[];
+  traditions: FamilyTradition[];
+
+  // Metadata
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  version: number;
+  lastEditedBy: string; // User ID
+}
+
+export interface FamilyHouseRule {
+  id: string;
+  rule: string;
+  reasoning: string;
+  consequences: string;
+  appliesTo: 'everyone' | 'adults' | 'children' | 'specific';
+  specificPeople?: string[]; // Person IDs if appliesTo is 'specific'
+  nonNegotiable: boolean;
+  addedDate: Timestamp;
+  addedBy: string; // User ID
+}
+
+export interface FamilyValue {
+  id: string;
+  value: string;
+  description: string;
+  howWeShowIt: string; // How this value manifests in daily life
+  addedDate: Timestamp;
+  addedBy: string; // User ID
+}
+
+export interface FamilyRoutine {
+  id: string;
+  title: string;
+  description: string;
+  frequency: 'daily' | 'weekly' | 'monthly' | 'seasonal' | 'annual';
+  timing: string; // e.g., "7:00 AM", "Sunday evenings", "Every spring"
+  steps?: string[];
+  notes?: string;
+  addedDate: Timestamp;
+  addedBy: string; // User ID
+}
+
+export interface FamilyTradition {
+  id: string;
+  title: string;
+  description: string;
+  occasion: string; // "Birthday", "Christmas", "First day of school", etc.
+  howWeCelebrate: string;
+  significance: string; // Why this matters to the family
+  addedDate: Timestamp;
+  addedBy: string; // User ID
 }
 
 // ==================== Firestore Collections ====================

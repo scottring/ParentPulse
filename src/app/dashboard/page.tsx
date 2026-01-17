@@ -191,10 +191,10 @@ export default function DashboardPage() {
               </svg>
             </div>
             <h3 className="parent-heading text-2xl mb-2" style={{ color: 'var(--parent-text)' }}>
-              AI Parenting Coach
+              AI Life Coach
             </h3>
             <p className="text-sm leading-relaxed" style={{ color: 'var(--parent-text-light)' }}>
-              Ask questions about your journey. I know your journal entries, saved articles, and what's worked for you before.
+              Get personalized guidance on parenting, relationships, and personal growth. I know your full journey.
             </p>
             <div className="mt-6 inline-flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--parent-accent)' }}>
               <span>Start chatting</span>
@@ -233,6 +233,39 @@ export default function DashboardPage() {
               <span>Manage people</span>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </div>
+          </Link>
+
+          {/* Family Manual Card */}
+          <Link href="/family-manual" className="parent-card p-8 text-left hover:shadow-lg transition-all duration-300 group block">
+            <div className="flex items-start justify-between mb-4">
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl transition-transform group-hover:scale-110"
+                style={{ backgroundColor: '#E3F2FD' }}
+              >
+                🏠
+              </div>
+              <svg
+                className="w-6 h-6 transition-transform group-hover:translate-x-1"
+                style={{ color: 'var(--parent-primary)' }}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+            <h3 className="parent-heading text-2xl mb-2" style={{ color: 'var(--parent-text)' }}>
+              Family Manual
+            </h3>
+            <p className="text-sm leading-relaxed" style={{ color: 'var(--parent-text-light)' }}>
+              House rules, core values, daily routines, and traditions that define your family.
+            </p>
+            <div className="mt-6 inline-flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--parent-accent)' }}>
+              <span>View family manual</span>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </div>
           </Link>

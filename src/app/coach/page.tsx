@@ -53,8 +53,10 @@ export default function CoachPage() {
   const suggestedQuestions = [
     "What patterns have you noticed in my journal entries?",
     "What strategies have worked well for me in the past?",
-    "Can you help me with the challenges I've been writing about?",
+    "How can I improve my relationship with my partner?",
     "What should I focus on based on my recent entries?",
+    "Help me understand the challenges I've been facing",
+    "What have I learned about myself recently?",
   ];
 
   return (
@@ -69,10 +71,10 @@ export default function CoachPage() {
               </Link>
               <div>
                 <h1 className="parent-heading text-2xl sm:text-3xl" style={{ color: 'var(--parent-accent)' }}>
-                  💬 AI Parenting Coach
+                  💬 AI Life Coach
                 </h1>
                 <p className="text-sm mt-1" style={{ color: 'var(--parent-text-light)' }}>
-                  Ask questions about your parenting journey
+                  Get guidance on parenting, relationships, and personal growth
                 </p>
               </div>
             </div>
@@ -135,10 +137,10 @@ export default function CoachPage() {
             <div className="text-center py-12 animate-fade-in">
               <div className="text-6xl mb-4">🤖</div>
               <h2 className="parent-heading text-2xl mb-3" style={{ color: 'var(--parent-text)' }}>
-                Welcome to Your AI Parenting Coach
+                Welcome to Your AI Life Coach
               </h2>
               <p className="text-sm mb-6 max-w-lg mx-auto" style={{ color: 'var(--parent-text-light)' }}>
-                I have access to your journal entries, saved articles, and action history. Ask me anything about your parenting journey!
+                I have access to your journal entries, saved articles, and action history. Ask me about parenting, relationships, personal growth, or any challenge you're facing!
               </p>
               <div className="space-y-2">
                 <p className="text-xs font-semibold mb-2" style={{ color: 'var(--parent-secondary)' }}>
@@ -235,7 +237,7 @@ export default function CoachPage() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask me anything about your parenting journey..."
+              placeholder="Ask about relationships, parenting, personal growth, or any challenge..."
               disabled={loading}
               className="flex-1 px-4 py-3 rounded-lg text-sm transition-all disabled:opacity-50"
               style={{

@@ -1,18 +1,38 @@
 'use client';
 
-import { use, useEffect } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { usePersonById } from '@/hooks/usePerson';
-import { useRoleSection } from '@/hooks/useRoleSection';
+import { usePersonManual } from '@/hooks/usePersonManual';
+import { useRoleSection, useRoleSections } from '@/hooks/useRoleSection';
+import { AddTriggerModal } from '@/components/manual/AddTriggerModal';
+import { AddStrategyModal } from '@/components/manual/AddStrategyModal';
+import { AddBoundaryModal } from '@/components/manual/AddBoundaryModal';
 
 export default function RoleSectionDetailPage({ params }: { params: Promise<{ personId: string; roleId: string }> }) {
   const { personId, roleId } = use(params);
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { person, loading: personLoading } = usePersonById(personId);
+  const { manual, loading: manualLoading } = usePersonManual(personId);
   const { roleSection, loading: sectionLoading } = useRoleSection(roleId);
+
+  // Get CRUD methods from useRoleSections
+  const {
+    addTrigger,
+    addStrategy,
+    addBoundary,
+    removeTrigger,
+    removeStrategy,
+    removeBoundary
+  } = useRoleSections(manual?.manualId);
+
+  // Modal states
+  const [showTriggerModal, setShowTriggerModal] = useState(false);
+  const [showStrategyModal, setShowStrategyModal] = useState<'works' | 'doesntWork' | null>(null);
+  const [showBoundaryModal, setShowBoundaryModal] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -20,7 +40,7 @@ export default function RoleSectionDetailPage({ params }: { params: Promise<{ pe
     }
   }, [user, authLoading, router]);
 
-  if (authLoading || personLoading || sectionLoading || !user || !person || !roleSection) {
+  if (authLoading || personLoading || manualLoading || sectionLoading || !user || !person || !manual || !roleSection) {
     return (
       <div className="min-h-screen flex items-center justify-center parent-page">
         <div className="w-16 h-16 spinner"></div>
@@ -79,13 +99,13 @@ export default function RoleSectionDetailPage({ params }: { params: Promise<{ pe
               </span>
             </h2>
             <button
+              onClick={() => setShowTriggerModal(true)}
               className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:shadow-md"
               style={{
                 backgroundColor: 'var(--parent-bg)',
                 color: 'var(--parent-accent)',
                 border: '1px solid var(--parent-primary)'
               }}
-              disabled
             >
               + Add Trigger
             </button>
@@ -145,13 +165,13 @@ export default function RoleSectionDetailPage({ params }: { params: Promise<{ pe
               </span>
             </h2>
             <button
+              onClick={() => setShowStrategyModal('works')}
               className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:shadow-md"
               style={{
                 backgroundColor: 'var(--parent-bg)',
                 color: 'var(--parent-accent)',
                 border: '1px solid var(--parent-primary)'
               }}
-              disabled
             >
               + Add Strategy
             </button>
@@ -212,13 +232,13 @@ export default function RoleSectionDetailPage({ params }: { params: Promise<{ pe
               </span>
             </h2>
             <button
+              onClick={() => setShowStrategyModal('doesntWork')}
               className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:shadow-md"
               style={{
                 backgroundColor: 'var(--parent-bg)',
                 color: 'var(--parent-accent)',
                 border: '1px solid var(--parent-primary)'
               }}
-              disabled
             >
               + Add Strategy
             </button>
@@ -321,16 +341,35 @@ export default function RoleSectionDetailPage({ params }: { params: Promise<{ pe
         </div>
 
         {/* Boundaries Section */}
-        {roleSection.boundaries && roleSection.boundaries.length > 0 && (
-          <div className="mb-8 animate-fade-in-up" style={{ animationDelay: '0.35s' }}>
-            <h2 className="parent-heading text-2xl flex items-center gap-2 mb-4" style={{ color: 'var(--parent-text)' }}>
+        <div className="mb-8 animate-fade-in-up" style={{ animationDelay: '0.35s' }}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="parent-heading text-2xl flex items-center gap-2" style={{ color: 'var(--parent-text)' }}>
               <span className="text-3xl">🛡️</span>
               <span>Boundaries</span>
               <span className="text-lg font-normal" style={{ color: 'var(--parent-text-light)' }}>
-                ({roleSection.boundaries.length})
+                ({roleSection.boundaries?.length || 0})
               </span>
             </h2>
+            <button
+              onClick={() => setShowBoundaryModal(true)}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:shadow-md"
+              style={{
+                backgroundColor: 'var(--parent-bg)',
+                color: 'var(--parent-accent)',
+                border: '1px solid var(--parent-primary)'
+              }}
+            >
+              + Add Boundary
+            </button>
+          </div>
 
+          {!roleSection.boundaries || roleSection.boundaries.length === 0 ? (
+            <div className="parent-card p-8 text-center">
+              <p className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
+                No boundaries defined yet. Add boundaries to establish important limits.
+              </p>
+            </div>
+          ) : (
             <div className="space-y-3">
               {roleSection.boundaries.map((boundary, index) => (
                 <div
@@ -369,23 +408,42 @@ export default function RoleSectionDetailPage({ params }: { params: Promise<{ pe
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* Coming Soon Notice */}
-        <div
-          className="mt-12 p-8 rounded-2xl text-center animate-fade-in-up"
-          style={{
-            backgroundImage: 'linear-gradient(135deg, rgba(124, 144, 130, 0.08) 0%, rgba(212, 165, 116, 0.08) 100%)',
-            animationDelay: '0.4s'
-          }}
-        >
-          <p className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-            💡 <strong>Coming Soon:</strong> Add, edit, and remove triggers, strategies, boundaries, and more directly from this page.
-            For now, you can manage these in the <Link href="/demo" className="underline" style={{ color: 'var(--parent-accent)' }}>demo page</Link>.
-          </p>
+          )}
         </div>
+
       </main>
+
+      {/* Modals */}
+      <AddTriggerModal
+        isOpen={showTriggerModal}
+        onClose={() => setShowTriggerModal(false)}
+        onSave={async (trigger) => {
+          await addTrigger(roleId, trigger);
+          window.location.reload(); // Refresh to show new content
+        }}
+        personName={person.name}
+      />
+
+      <AddStrategyModal
+        isOpen={showStrategyModal !== null}
+        onClose={() => setShowStrategyModal(null)}
+        onSave={async (strategy) => {
+          await addStrategy(roleId, strategy, showStrategyModal === 'works' ? 'works' : 'doesnt');
+          window.location.reload(); // Refresh to show new content
+        }}
+        personName={person.name}
+        type={showStrategyModal === 'works' ? 'works' : 'doesntWork'}
+      />
+
+      <AddBoundaryModal
+        isOpen={showBoundaryModal}
+        onClose={() => setShowBoundaryModal(false)}
+        onSave={async (boundary) => {
+          await addBoundary(roleId, boundary);
+          window.location.reload(); // Refresh to show new content
+        }}
+        personName={person.name}
+      />
     </div>
   );
 }

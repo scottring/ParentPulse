@@ -23,7 +23,8 @@ import {
 } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
-import { PersonManual, PERSON_MANUAL_COLLECTIONS } from '@/types/person-manual';
+import { PersonManual, RelationshipType, PERSON_MANUAL_COLLECTIONS } from '@/types/person-manual';
+import { createManualSections } from '@/utils/manual-initialization';
 
 interface UsePersonManualReturn {
   manual: PersonManual | null;
@@ -31,7 +32,7 @@ interface UsePersonManualReturn {
   error: string | null;
 
   // CRUD operations
-  createManual: (personId: string, personName: string) => Promise<string>;
+  createManual: (personId: string, personName: string, relationshipType?: RelationshipType) => Promise<string>;
   updateManual: (manualId: string, updates: Partial<PersonManual>) => Promise<void>;
   deleteManual: (manualId: string) => Promise<void>;
 
@@ -124,12 +125,13 @@ export function usePersonManual(personId?: string): UsePersonManualReturn {
   };
 
   // Create new manual
-  const createManual = async (pid: string, personName: string): Promise<string> => {
+  const createManual = async (pid: string, personName: string, relationshipType?: RelationshipType): Promise<string> => {
     if (!user?.familyId || !user?.userId) {
       throw new Error('User must be authenticated');
     }
 
     try {
+      // Create the manual document
       const newManual: Omit<PersonManual, 'manualId'> = {
         familyId: user.familyId,
         personId: pid,
@@ -151,12 +153,37 @@ export function usePersonManual(personId?: string): UsePersonManualReturn {
         newManual
       );
 
+      const manualId = docRef.id;
+
+      // Auto-create role sections based on relationship type
+      const createdSectionIds = await createManualSections({
+        manualId,
+        personId: pid,
+        personName,
+        familyId: user.familyId,
+        userId: user.userId,
+        relationshipType
+      });
+
+      // Update the manual with the correct section count
+      if (createdSectionIds.length > 0) {
+        const manualRef = doc(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS, manualId);
+        await updateDoc(manualRef, {
+          roleSectionCount: createdSectionIds.length,
+          activeRoles: createdSectionIds
+        });
+
+        // Update local state with correct counts
+        newManual.roleSectionCount = createdSectionIds.length;
+        newManual.activeRoles = createdSectionIds;
+      }
+
       setManual({
-        manualId: docRef.id,
+        manualId,
         ...newManual
       });
 
-      return docRef.id;
+      return manualId;
     } catch (err) {
       console.error('Error creating person manual:', err);
       throw new Error('Failed to create manual');
