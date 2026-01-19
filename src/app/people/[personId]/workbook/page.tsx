@@ -11,6 +11,7 @@ import { ParentBehaviorGoal, DailyActivity, WeeklyReflection, ACTIVITY_TEMPLATES
 import { Timestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
+import MainLayout from '@/components/layout/MainLayout';
 
 export default function WeeklyWorkbookPage({ params }: { params: Promise<{ personId: string }> }) {
   const { personId } = use(params);
@@ -137,25 +138,27 @@ export default function WeeklyWorkbookPage({ params }: { params: Promise<{ perso
 
   if (authLoading || personLoading || workbookLoading || manualLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FFF8F0' }}>
-        <div className="text-center">
-          <div className="manual-spinner"></div>
-          <p className="mt-4 font-mono text-sm text-slate-600">Loading workbook...</p>
+      <MainLayout>
+        <div className="flex items-center justify-center py-32">
+          <div className="text-center">
+            <div className="manual-spinner"></div>
+            <p className="mt-4 font-mono text-sm text-slate-600">Loading workbook...</p>
+          </div>
+          <style jsx>{`
+            .manual-spinner {
+              width: 48px;
+              height: 48px;
+              border: 4px solid #1e293b;
+              border-top-color: #d97706;
+              border-radius: 50%;
+              animation: spin 1s linear infinite;
+            }
+            @keyframes spin {
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
         </div>
-        <style jsx>{`
-          .manual-spinner {
-            width: 48px;
-            height: 48px;
-            border: 4px solid #1e293b;
-            border-top-color: #d97706;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
+      </MainLayout>
     );
   }
 
@@ -166,15 +169,17 @@ export default function WeeklyWorkbookPage({ params }: { params: Promise<{ perso
   // If no workbook exists yet, show create prompt
   if (!workbook) {
     return (
-      <div className="min-h-screen" style={{ backgroundColor: '#FFF8F0' }}>
-        <div className="blueprint-grid"></div>
-
-        <header className="relative border-b-2 border-slate-800 bg-white">
+      <MainLayout>
+        <div className="relative">
+        <header className="relative border-b-4 border-slate-800 bg-white shadow-[0px_4px_0px_0px_rgba(0,0,0,1)]">
           <div className="max-w-6xl mx-auto px-6 lg:px-8 py-8">
-            <div className="flex items-center gap-4">
+            <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-amber-600"></div>
+            <div className="absolute top-0 right-0 w-16 h-16 border-t-4 border-r-4 border-amber-600"></div>
+
+            <div className="flex items-center gap-6">
               <Link
                 href={`/people/${personId}/manual`}
-                className="text-3xl hover:text-amber-600 transition-colors font-mono"
+                className="font-mono text-3xl font-bold text-slate-800 hover:text-amber-600 transition-colors"
               >
                 ←
               </Link>
@@ -182,7 +187,7 @@ export default function WeeklyWorkbookPage({ params }: { params: Promise<{ perso
                 <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-2">
                   WEEKLY WORKBOOK SYSTEM
                 </div>
-                <h1 className="font-mono text-3xl font-bold tracking-tight">
+                <h1 className="font-mono text-3xl font-bold text-slate-900">
                   {person.name}'s Operating Manual
                 </h1>
               </div>
@@ -252,20 +257,8 @@ export default function WeeklyWorkbookPage({ params }: { params: Promise<{ perso
             </div>
           </div>
         </main>
-
-        <style jsx>{`
-          .blueprint-grid {
-            position: fixed;
-            inset: 0;
-            background-image:
-              linear-gradient(rgba(30, 58, 95, 0.03) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(30, 58, 95, 0.03) 1px, transparent 1px);
-            background-size: 20px 20px;
-            pointer-events: none;
-            z-index: 0;
-          }
-        `}</style>
-      </div>
+        </div>
+      </MainLayout>
     );
   }
 
@@ -341,17 +334,18 @@ export default function WeeklyWorkbookPage({ params }: { params: Promise<{ perso
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#FFF8F0' }}>
-      {/* Blueprint grid background */}
-      <div className="blueprint-grid"></div>
-
+    <MainLayout>
+      <div className="relative">
       {/* Header */}
-      <header className="relative border-b-2 border-slate-800 bg-white">
+      <header className="relative border-b-4 border-slate-800 bg-white shadow-[0px_4px_0px_0px_rgba(0,0,0,1)]">
         <div className="max-w-6xl mx-auto px-6 lg:px-8 py-8">
-          <div className="flex items-center gap-4 mb-6">
+          <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-purple-600"></div>
+          <div className="absolute top-0 right-0 w-16 h-16 border-t-4 border-r-4 border-purple-600"></div>
+
+          <div className="flex items-center gap-6 mb-6">
             <Link
               href={`/people/${personId}/manual`}
-              className="text-3xl hover:text-amber-600 transition-colors font-mono"
+              className="font-mono text-3xl font-bold text-slate-800 hover:text-purple-600 transition-colors"
               data-testid="back-to-manual-button"
             >
               ←
@@ -365,7 +359,7 @@ export default function WeeklyWorkbookPage({ params }: { params: Promise<{ perso
                   STATUS: ACTIVE
                 </div>
               </div>
-              <h1 className="font-mono text-3xl font-bold tracking-tight">
+              <h1 className="font-mono text-3xl font-bold text-slate-900">
                 {person.name}'s Weekly Workbook
               </h1>
               <p className="font-mono text-sm text-slate-600 mt-1" data-testid="week-date-range">
@@ -660,17 +654,6 @@ export default function WeeklyWorkbookPage({ params }: { params: Promise<{ perso
       </main>
 
       <style jsx>{`
-        .blueprint-grid {
-          position: fixed;
-          inset: 0;
-          background-image:
-            linear-gradient(rgba(30, 58, 95, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(30, 58, 95, 0.03) 1px, transparent 1px);
-          background-size: 20px 20px;
-          pointer-events: none;
-          z-index: 0;
-        }
-
         .stamp-animation {
           animation: stamp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
@@ -689,6 +672,7 @@ export default function WeeklyWorkbookPage({ params }: { params: Promise<{ perso
           }
         }
       `}</style>
-    </div>
+      </div>
+    </MainLayout>
   );
 }

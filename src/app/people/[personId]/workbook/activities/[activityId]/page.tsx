@@ -12,7 +12,12 @@ import {
   ChoiceBoardResponse,
   DailyWinResponse,
   VisualScheduleResponse,
-  ScheduleTask
+  ScheduleTask,
+  StrengthReflectionResponse,
+  CourageMomentResponse,
+  AffirmationPracticeResponse,
+  GrowthMindsetReflectionResponse,
+  AccomplishmentTrackerResponse
 } from '@/types/workbook';
 
 export default function ActivityPage({
@@ -101,30 +106,42 @@ export default function ActivityPage({
         return <GratitudeActivity response={response} setResponse={setResponse} personName={person.name} />;
       case 'feeling-thermometer':
         return <FeelingThermometerActivity response={response} setResponse={setResponse} personName={person.name} />;
+      case 'strength-reflection':
+        return <StrengthReflectionActivity response={response} setResponse={setResponse} personName={person.name} />;
+      case 'courage-moment':
+        return <CourageMomentActivity response={response} setResponse={setResponse} personName={person.name} />;
+      case 'affirmation-practice':
+        return <AffirmationPracticeActivity response={response} setResponse={setResponse} personName={person.name} />;
+      case 'growth-mindset-reflection':
+        return <GrowthMindsetReflectionActivity response={response} setResponse={setResponse} personName={person.name} />;
+      case 'accomplishment-tracker':
+        return <AccomplishmentTrackerActivity response={response} setResponse={setResponse} personName={person.name} />;
       default:
         return <div>Unknown activity type</div>;
     }
   };
 
   return (
-    <div className="min-h-screen parent-page">
+    <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <header className="border-b paper-texture" style={{ borderColor: 'var(--parent-border)', backgroundColor: 'var(--parent-card)' }}>
-        <div className="max-w-4xl mx-auto px-6 py-6">
-          <div className="flex items-center gap-4">
+      <header className="relative border-b-4 border-slate-800 bg-white shadow-[0px_4px_0px_0px_rgba(0,0,0,1)]">
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-purple-600"></div>
+          <div className="absolute top-0 right-0 w-16 h-16 border-t-4 border-r-4 border-purple-600"></div>
+
+          <div className="flex items-center gap-6">
             <button
               onClick={() => router.back()}
-              className="text-3xl transition-transform hover:scale-110"
-              style={{ color: 'var(--parent-text)' }}
+              className="font-mono text-3xl font-bold text-slate-800 hover:text-purple-600 transition-colors"
             >
               ←
             </button>
             <div className="flex-1 text-center">
-              <div className="text-5xl mb-2">{template.emoji}</div>
-              <h1 className="parent-heading text-3xl" style={{ color: 'var(--parent-accent)' }}>
+              <div className="text-6xl mb-3">{template.emoji}</div>
+              <h1 className="font-mono text-3xl font-bold text-slate-900 mb-2">
                 {template.title}
               </h1>
-              <p className="text-sm mt-2" style={{ color: 'var(--parent-text-light)' }}>
+              <p className="font-mono text-sm text-slate-600">
                 {template.parentInstructions}
               </p>
             </div>
@@ -137,15 +154,17 @@ export default function ActivityPage({
         {renderActivity()}
 
         {/* Parent Notes */}
-        <div className="mt-8 parent-card p-6">
-          <label className="block font-medium mb-3 text-lg" style={{ color: 'var(--parent-text)' }}>
+        <div className="relative bg-white border-4 border-slate-800 p-6 mt-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+          <div className="absolute -top-3 -left-3 w-10 h-10 bg-amber-600 text-white font-mono font-bold flex items-center justify-center border-2 border-amber-800">
+            📝
+          </div>
+          <label className="block font-mono text-xs text-slate-500 uppercase tracking-wider mb-3">
             Parent Notes (Optional)
           </label>
           <textarea
             value={parentNotes}
             onChange={(e) => setParentNotes(e.target.value)}
-            className="w-full p-4 rounded-lg border text-lg"
-            style={{ borderColor: 'var(--parent-border)', color: 'var(--parent-text)' }}
+            className="w-full p-4 border-2 border-slate-300 font-mono text-lg text-slate-900 focus:outline-none focus:border-purple-600"
             rows={3}
             placeholder="Any observations or thoughts?"
           />
@@ -156,10 +175,9 @@ export default function ActivityPage({
           <button
             onClick={handleComplete}
             disabled={saving || !response}
-            className="px-16 py-6 rounded-xl font-bold text-white text-2xl transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: 'var(--parent-accent)' }}
+            className="px-16 py-6 border-4 border-green-600 bg-green-600 text-white font-mono font-bold text-2xl hover:bg-green-700 hover:border-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[8px_8px_0px_0px_rgba(22,101,52,1)]"
           >
-            {saving ? 'Saving...' : 'Done! ✓'}
+            {saving ? 'SAVING...' : 'DONE! ✓'}
           </button>
         </div>
       </main>
@@ -765,6 +783,654 @@ function FeelingThermometerActivity({
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ==================== Self-Worth Activity Components ====================
+
+function StrengthReflectionActivity({
+  response,
+  setResponse,
+  personName
+}: {
+  response: StrengthReflectionResponse | null;
+  setResponse: (r: StrengthReflectionResponse) => void;
+  personName: string;
+}) {
+  const [strengths, setStrengths] = useState<string[]>(response?.strengths || ['', '', '']);
+  const [category, setCategory] = useState<'academic' | 'social' | 'creative' | 'physical' | 'other'>(
+    response?.category || 'other'
+  );
+
+  const categories = [
+    { value: 'academic' as const, emoji: '📚', label: 'SCHOOL/LEARNING' },
+    { value: 'social' as const, emoji: '🤝', label: 'FRIENDS/SOCIAL' },
+    { value: 'creative' as const, emoji: '🎨', label: 'CREATIVE/ARTS' },
+    { value: 'physical' as const, emoji: '⚽', label: 'PHYSICAL/SPORTS' },
+    { value: 'other' as const, emoji: '⭐', label: 'OTHER' }
+  ];
+
+  const updateStrength = (index: number, value: string) => {
+    const newStrengths = [...strengths];
+    newStrengths[index] = value;
+    setStrengths(newStrengths);
+    if (newStrengths.some(s => s.trim())) {
+      setResponse({ strengths: newStrengths, category });
+    }
+  };
+
+  const handleCategoryChange = (newCategory: typeof category) => {
+    setCategory(newCategory);
+    setResponse({ strengths, category: newCategory });
+  };
+
+  return (
+    <div>
+      <div className="relative bg-white border-4 border-slate-800 p-8 mb-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+        <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-purple-600"></div>
+        <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-purple-600"></div>
+
+        <div className="inline-block px-3 py-1 bg-purple-600 text-white font-mono text-xs mb-4">
+          SPECIFICATION: CATEGORY
+        </div>
+        <h2 className="font-mono text-2xl font-bold text-slate-900 mb-6">
+          What is {personName} good at?
+        </h2>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {categories.map((cat) => (
+            <button
+              key={cat.value}
+              onClick={() => handleCategoryChange(cat.value)}
+              className={`relative p-6 border-4 transition-all font-mono ${
+                category === cat.value
+                  ? 'bg-purple-50 border-purple-600 shadow-[4px_4px_0px_0px_rgba(147,51,234,1)]'
+                  : 'bg-white border-slate-300 hover:border-slate-800 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]'
+              }`}
+            >
+              <div className="text-5xl mb-2">{cat.emoji}</div>
+              <div className="text-xs font-bold text-slate-900">
+                {cat.label}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Strength Inputs */}
+      <div className="space-y-6">
+        {strengths.map((strength, index) => (
+          <div key={index} className="relative bg-white border-4 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+            <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-purple-600">
+              {String(index + 1).padStart(2, '0')}
+            </div>
+            <label className="block font-mono text-xs text-slate-500 uppercase tracking-wider mb-3">
+              Strength {index + 1}:
+            </label>
+            <input
+              type="text"
+              value={strength}
+              onChange={(e) => updateStrength(index, e.target.value)}
+              className="w-full p-4 border-2 border-slate-300 font-mono text-lg text-slate-900 focus:outline-none focus:border-purple-600"
+              placeholder="e.g., helping others, drawing, running fast"
+              autoFocus={index === 0}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CourageMomentActivity({
+  response,
+  setResponse,
+  personName
+}: {
+  response: CourageMomentResponse | null;
+  setResponse: (r: CourageMomentResponse) => void;
+  personName: string;
+}) {
+  const [description, setDescription] = useState(response?.description || '');
+  const [feeling, setFeeling] = useState<'proud' | 'nervous' | 'excited' | 'scared-but-did-it'>(
+    response?.feeling || 'proud'
+  );
+
+  const feelings = [
+    { value: 'proud' as const, emoji: '😊', label: 'PROUD' },
+    { value: 'nervous' as const, emoji: '😬', label: 'NERVOUS' },
+    { value: 'excited' as const, emoji: '🤩', label: 'EXCITED' },
+    { value: 'scared-but-did-it' as const, emoji: '🦁', label: 'SCARED BUT DID IT!' }
+  ];
+
+  const handleDescriptionChange = (value: string) => {
+    setDescription(value);
+    if (value.trim()) {
+      setResponse({ description: value, feeling });
+    }
+  };
+
+  const handleFeelingChange = (newFeeling: typeof feeling) => {
+    setFeeling(newFeeling);
+    if (description.trim()) {
+      setResponse({ description, feeling: newFeeling });
+    }
+  };
+
+  return (
+    <div>
+      {/* Description */}
+      <div className="relative bg-white border-4 border-slate-800 p-8 mb-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+        <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-purple-600"></div>
+        <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-purple-600"></div>
+
+        <div className="inline-block px-3 py-1 bg-purple-600 text-white font-mono text-xs mb-4">
+          DOCUMENTATION: BRAVE ACTION
+        </div>
+        <h2 className="font-mono text-2xl font-bold text-slate-900 mb-6">
+          Tell me about something brave {personName} did!
+        </h2>
+
+        <label className="block font-mono text-xs text-slate-500 uppercase tracking-wider mb-3">
+          What brave thing did they do?
+        </label>
+        <textarea
+          value={description}
+          onChange={(e) => handleDescriptionChange(e.target.value)}
+          className="w-full p-4 border-2 border-slate-300 font-mono text-lg text-slate-900 focus:outline-none focus:border-purple-600"
+          rows={4}
+          placeholder="e.g., Tried a new food, made a new friend, spoke up in class..."
+          autoFocus
+        />
+      </div>
+
+      {/* Feeling Selection */}
+      {description.trim() && (
+        <div className="relative bg-white border-4 border-slate-800 p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+          <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-purple-600"></div>
+          <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-purple-600"></div>
+
+          <div className="inline-block px-3 py-1 bg-purple-600 text-white font-mono text-xs mb-4">
+            EMOTIONAL STATE
+          </div>
+          <p className="font-mono text-sm text-slate-600 mb-6">
+            How did they feel?
+          </p>
+
+          <div className="grid grid-cols-2 gap-4">
+            {feelings.map((feel) => (
+              <button
+                key={feel.value}
+                onClick={() => handleFeelingChange(feel.value)}
+                className={`p-6 border-4 transition-all font-mono ${
+                  feeling === feel.value
+                    ? 'bg-purple-50 border-purple-600 shadow-[4px_4px_0px_0px_rgba(147,51,234,1)]'
+                    : 'bg-white border-slate-300 hover:border-slate-800 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]'
+                }`}
+              >
+                <div className="text-5xl mb-2">{feel.emoji}</div>
+                <div className="text-xs font-bold text-slate-900">
+                  {feel.label}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AffirmationPracticeActivity({
+  response,
+  setResponse,
+  personName
+}: {
+  response: AffirmationPracticeResponse | null;
+  setResponse: (r: AffirmationPracticeResponse) => void;
+  personName: string;
+}) {
+  const [affirmations, setAffirmations] = useState<string[]>(response?.affirmations || ['', '', '']);
+  const [favorite, setFavorite] = useState<string | undefined>(response?.favorite);
+
+  const updateAffirmation = (index: number, value: string) => {
+    const newAffirmations = [...affirmations];
+    newAffirmations[index] = value;
+    setAffirmations(newAffirmations);
+    if (newAffirmations.some(a => a.trim())) {
+      setResponse({ affirmations: newAffirmations, favorite });
+    }
+  };
+
+  const selectFavorite = (affirmation: string) => {
+    setFavorite(affirmation);
+    setResponse({ affirmations, favorite: affirmation });
+  };
+
+  return (
+    <div>
+      {/* Instructions */}
+      <div className="relative bg-white border-4 border-slate-800 p-8 mb-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+        <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-purple-600"></div>
+        <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-purple-600"></div>
+
+        <div className="inline-block px-3 py-1 bg-purple-600 text-white font-mono text-xs mb-4">
+          AFFIRMATION PROTOCOL
+        </div>
+        <h2 className="font-mono text-2xl font-bold text-slate-900 mb-4">
+          Help {personName} create positive "I am..." statements
+        </h2>
+        <p className="font-mono text-sm text-slate-600">
+          Examples: "I am kind", "I am creative", "I am brave"
+        </p>
+      </div>
+
+      {/* Affirmation Inputs */}
+      <div className="space-y-6 mb-8">
+        {affirmations.map((affirmation, index) => (
+          <div key={index} className="relative bg-white border-4 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+            <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-purple-600">
+              {String(index + 1).padStart(2, '0')}
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <label className="block font-mono text-xs text-slate-500 uppercase tracking-wider mb-3">
+                  I AM...
+                </label>
+                <input
+                  type="text"
+                  value={affirmation}
+                  onChange={(e) => updateAffirmation(index, e.target.value)}
+                  className="w-full p-4 border-2 border-slate-300 font-mono text-lg text-slate-900 focus:outline-none focus:border-purple-600"
+                  placeholder="kind, creative, strong, smart..."
+                  autoFocus={index === 0}
+                />
+              </div>
+              {affirmation.trim() && (
+                <button
+                  onClick={() => selectFavorite(affirmation)}
+                  className={`mt-8 px-4 py-3 border-4 font-mono font-bold transition-all ${
+                    favorite === affirmation
+                      ? 'bg-yellow-100 border-yellow-600 shadow-[4px_4px_0px_0px_rgba(202,138,4,1)]'
+                      : 'bg-white border-slate-300 hover:border-slate-800 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]'
+                  }`}
+                >
+                  <span className="text-2xl">{favorite === affirmation ? '⭐' : '☆'}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Favorite Instruction */}
+      {affirmations.some(a => a.trim()) && (
+        <div className="relative bg-purple-50 border-4 border-purple-600 p-6 shadow-[6px_6px_0px_0px_rgba(147,51,234,1)]">
+          <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-purple-600"></div>
+          <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-purple-600"></div>
+          <p className="text-center font-mono text-sm text-slate-900">
+            ⭐ Click the star next to your favorite one!
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GrowthMindsetReflectionActivity({
+  response,
+  setResponse,
+  personName
+}: {
+  response: GrowthMindsetReflectionResponse | null;
+  setResponse: (r: GrowthMindsetReflectionResponse) => void;
+  personName: string;
+}) {
+  const [challenge, setChallenge] = useState(response?.challenge || '');
+  const [whatLearned, setWhatLearned] = useState(response?.whatLearned || '');
+  const [nextTime, setNextTime] = useState(response?.nextTime || '');
+  const [mindsetShift, setMindsetShift] = useState<'fixed' | 'growth' | 'mixed'>(
+    response?.mindsetShift || 'mixed'
+  );
+
+  const updateResponse = (updates: Partial<GrowthMindsetReflectionResponse>) => {
+    const newResponse = {
+      challenge: updates.challenge !== undefined ? updates.challenge : challenge,
+      whatLearned: updates.whatLearned !== undefined ? updates.whatLearned : whatLearned,
+      nextTime: updates.nextTime !== undefined ? updates.nextTime : nextTime,
+      mindsetShift: updates.mindsetShift !== undefined ? updates.mindsetShift : mindsetShift
+    };
+
+    if (newResponse.challenge.trim() && newResponse.whatLearned.trim()) {
+      setResponse(newResponse);
+    }
+  };
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="relative bg-white border-4 border-slate-800 p-8 mb-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+        <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-purple-600"></div>
+        <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-purple-600"></div>
+
+        <div className="inline-block px-3 py-1 bg-purple-600 text-white font-mono text-xs mb-4">
+          GROWTH MINDSET PROTOCOL
+        </div>
+        <h2 className="font-mono text-2xl font-bold text-slate-900">
+          Turn challenges into learning moments
+        </h2>
+      </div>
+
+      <div className="space-y-6">
+        {/* Challenge */}
+        <div className="relative bg-white border-4 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+          <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-purple-600">
+            01
+          </div>
+          <label className="block font-mono text-xs text-slate-500 uppercase tracking-wider mb-3">
+            What was hard for {personName}?
+          </label>
+          <textarea
+            value={challenge}
+            onChange={(e) => {
+              setChallenge(e.target.value);
+              updateResponse({ challenge: e.target.value });
+            }}
+            className="w-full p-4 border-2 border-slate-300 font-mono text-lg text-slate-900 focus:outline-none focus:border-purple-600"
+            rows={3}
+            placeholder="Describe something that was difficult or frustrating..."
+            autoFocus
+          />
+        </div>
+
+        {/* What Learned */}
+        {challenge.trim() && (
+          <div className="relative bg-white border-4 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+            <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-purple-600">
+              02
+            </div>
+            <label className="block font-mono text-xs text-slate-500 uppercase tracking-wider mb-3">
+              What did they learn from it?
+            </label>
+            <textarea
+              value={whatLearned}
+              onChange={(e) => {
+                setWhatLearned(e.target.value);
+                updateResponse({ whatLearned: e.target.value });
+              }}
+              className="w-full p-4 border-2 border-slate-300 font-mono text-lg text-slate-900 focus:outline-none focus:border-purple-600"
+              rows={3}
+              placeholder="What did they discover or figure out?"
+            />
+          </div>
+        )}
+
+        {/* Next Time */}
+        {challenge.trim() && whatLearned.trim() && (
+          <div className="relative bg-white border-4 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+            <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-purple-600">
+              03
+            </div>
+            <label className="block font-mono text-xs text-slate-500 uppercase tracking-wider mb-3">
+              What will they try next time?
+            </label>
+            <textarea
+              value={nextTime}
+              onChange={(e) => {
+                setNextTime(e.target.value);
+                updateResponse({ nextTime: e.target.value });
+              }}
+              className="w-full p-4 border-2 border-slate-300 font-mono text-lg text-slate-900 focus:outline-none focus:border-purple-600"
+              rows={2}
+              placeholder="What strategy or approach will they use?"
+            />
+          </div>
+        )}
+
+        {/* Mindset Shift */}
+        {challenge.trim() && whatLearned.trim() && (
+          <div className="relative bg-white border-4 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+            <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-purple-600">
+              04
+            </div>
+            <div className="inline-block px-3 py-1 bg-purple-600 text-white font-mono text-xs mb-4">
+              MINDSET ASSESSMENT
+            </div>
+            <p className="font-mono text-sm text-slate-600 mb-6">
+              Growth mindset level:
+            </p>
+            <div className="grid grid-cols-3 gap-4">
+              <button
+                onClick={() => {
+                  setMindsetShift('fixed');
+                  updateResponse({ mindsetShift: 'fixed' });
+                }}
+                className={`p-6 border-4 transition-all font-mono ${
+                  mindsetShift === 'fixed'
+                    ? 'bg-purple-50 border-purple-600 shadow-[4px_4px_0px_0px_rgba(147,51,234,1)]'
+                    : 'bg-white border-slate-300 hover:border-slate-800 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]'
+                }`}
+              >
+                <div className="text-4xl mb-2">😞</div>
+                <div className="text-xs font-bold text-slate-900 uppercase">
+                  Still frustrated
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  setMindsetShift('mixed');
+                  updateResponse({ mindsetShift: 'mixed' });
+                }}
+                className={`p-6 border-4 transition-all font-mono ${
+                  mindsetShift === 'mixed'
+                    ? 'bg-purple-50 border-purple-600 shadow-[4px_4px_0px_0px_rgba(147,51,234,1)]'
+                    : 'bg-white border-slate-300 hover:border-slate-800 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]'
+                }`}
+              >
+                <div className="text-4xl mb-2">🤔</div>
+                <div className="text-xs font-bold text-slate-900 uppercase">
+                  Learning
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  setMindsetShift('growth');
+                  updateResponse({ mindsetShift: 'growth' });
+                }}
+                className={`p-6 border-4 transition-all font-mono ${
+                  mindsetShift === 'growth'
+                    ? 'bg-purple-50 border-purple-600 shadow-[4px_4px_0px_0px_rgba(147,51,234,1)]'
+                    : 'bg-white border-slate-300 hover:border-slate-800 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]'
+                }`}
+              >
+                <div className="text-4xl mb-2">🌱</div>
+                <div className="text-xs font-bold text-slate-900 uppercase">
+                  Growing!
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AccomplishmentTrackerActivity({
+  response,
+  setResponse,
+  personName
+}: {
+  response: AccomplishmentTrackerResponse | null;
+  setResponse: (r: AccomplishmentTrackerResponse) => void;
+  personName: string;
+}) {
+  const [accomplishments, setAccomplishments] = useState<Array<{
+    description: string;
+    day: string;
+    category: 'academic' | 'social' | 'creative' | 'physical' | 'personal';
+  }>>(response?.accomplishments || []);
+
+  const [newItem, setNewItem] = useState('');
+  const [newDay, setNewDay] = useState('monday');
+  const [newCategory, setNewCategory] = useState<'academic' | 'social' | 'creative' | 'physical' | 'personal'>('personal');
+
+  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+  const categories = [
+    { value: 'academic' as const, emoji: '📚', label: 'School' },
+    { value: 'social' as const, emoji: '🤝', label: 'Social' },
+    { value: 'creative' as const, emoji: '🎨', label: 'Creative' },
+    { value: 'physical' as const, emoji: '⚽', label: 'Physical' },
+    { value: 'personal' as const, emoji: '⭐', label: 'Personal' }
+  ];
+
+  const addAccomplishment = () => {
+    if (!newItem.trim()) return;
+
+    const newAccomplishments = [
+      ...accomplishments,
+      { description: newItem, day: newDay, category: newCategory }
+    ];
+
+    setAccomplishments(newAccomplishments);
+    setResponse({ accomplishments: newAccomplishments });
+    setNewItem('');
+  };
+
+  const removeAccomplishment = (index: number) => {
+    const newAccomplishments = accomplishments.filter((_, i) => i !== index);
+    setAccomplishments(newAccomplishments);
+    setResponse({ accomplishments: newAccomplishments });
+  };
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="relative bg-white border-4 border-slate-800 p-8 mb-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+        <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-purple-600"></div>
+        <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-purple-600"></div>
+
+        <div className="inline-block px-3 py-1 bg-purple-600 text-white font-mono text-xs mb-4">
+          ACCOMPLISHMENT TRACKER
+        </div>
+        <h2 className="font-mono text-2xl font-bold text-slate-900 mb-2">
+          {personName}'s Weekly Wins 🏆
+        </h2>
+        <p className="font-mono text-sm text-slate-600">
+          Track all the great things {personName} accomplished this week!
+        </p>
+      </div>
+
+      {/* Add New Accomplishment */}
+      <div className="relative bg-white border-4 border-slate-800 p-6 mb-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+        <div className="absolute -top-3 -left-3 w-10 h-10 bg-green-600 text-white font-mono font-bold flex items-center justify-center border-2 border-green-800">
+          +
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="block font-mono text-xs text-slate-500 uppercase tracking-wider mb-2">
+              What did they accomplish?
+            </label>
+            <input
+              type="text"
+              value={newItem}
+              onChange={(e) => setNewItem(e.target.value)}
+              className="w-full p-3 border-2 border-slate-300 font-mono text-lg text-slate-900 focus:outline-none focus:border-purple-600"
+              placeholder="e.g., Finished homework on time, helped a friend..."
+              onKeyPress={(e) => e.key === 'Enter' && addAccomplishment()}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block font-mono text-xs text-slate-500 uppercase tracking-wider mb-2">
+                Day:
+              </label>
+              <select
+                value={newDay}
+                onChange={(e) => setNewDay(e.target.value)}
+                className="w-full p-3 border-2 border-slate-300 font-mono text-sm text-slate-900 focus:outline-none focus:border-purple-600"
+              >
+                {days.map(day => (
+                  <option key={day} value={day}>
+                    {day.charAt(0).toUpperCase() + day.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block font-mono text-xs text-slate-500 uppercase tracking-wider mb-2">
+                Category:
+              </label>
+              <select
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value as any)}
+                className="w-full p-3 border-2 border-slate-300 font-mono text-sm text-slate-900 focus:outline-none focus:border-purple-600"
+              >
+                {categories.map(cat => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.emoji} {cat.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <button
+            onClick={addAccomplishment}
+            disabled={!newItem.trim()}
+            className="w-full px-6 py-3 border-4 border-green-600 bg-green-600 text-white font-mono font-bold hover:bg-green-700 hover:border-green-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-[4px_4px_0px_0px_rgba(22,101,52,1)]"
+          >
+            + ADD ACCOMPLISHMENT
+          </button>
+        </div>
+      </div>
+
+      {/* Accomplishments List */}
+      {accomplishments.length > 0 && (
+        <div>
+          <div className="relative bg-purple-50 border-4 border-purple-600 p-4 mb-6 shadow-[6px_6px_0px_0px_rgba(147,51,234,1)]">
+            <h3 className="font-mono text-lg font-bold text-slate-900 uppercase">
+              This Week's Wins:
+            </h3>
+          </div>
+          <div className="space-y-3">
+            {accomplishments.map((item, index) => {
+              const categoryData = categories.find(c => c.value === item.category);
+              return (
+                <div
+                  key={index}
+                  className="relative bg-white border-4 border-slate-800 p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                >
+                  <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-purple-600">
+                    {String(index + 1).padStart(2, '0')}
+                  </div>
+                  <div className="flex items-start gap-4">
+                    <div className="text-3xl">{categoryData?.emoji || '⭐'}</div>
+                    <div className="flex-1">
+                      <div className="font-mono font-bold text-lg text-slate-900">
+                        {item.description}
+                      </div>
+                      <div className="font-mono text-xs text-slate-500 mt-1 uppercase">
+                        {item.day.charAt(0).toUpperCase() + item.day.slice(1)} • {categoryData?.label}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => removeAccomplishment(index)}
+                      className="text-2xl font-bold hover:scale-110 transition-transform text-red-600 hover:text-red-700"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { AddTriggerModal } from '@/components/manual/AddTriggerModal';
 import { AddStrategyModal } from '@/components/manual/AddStrategyModal';
 import { AddBoundaryModal } from '@/components/manual/AddBoundaryModal';
 import { SelfWorthAssessmentModal } from '@/components/manual/SelfWorthAssessmentModal';
+import MainLayout from '@/components/layout/MainLayout';
 
 type ContentTab = 'overview' | 'triggers' | 'strategies' | 'boundaries' | 'patterns';
 
@@ -90,10 +91,8 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
   ];
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#FFF8F0' }}>
-      {/* Blueprint grid background */}
-      <div className="blueprint-grid"></div>
-
+    <MainLayout>
+      <div className="relative">
       {/* Technical Header */}
       <header className="relative border-b-4 border-slate-800 bg-white shadow-[0px_4px_0px_0px_rgba(0,0,0,1)]">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
@@ -936,23 +935,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
           </div>
         </div>
       )}
-
-      {/* Blueprint grid CSS */}
-      <style jsx>{`
-        .blueprint-grid {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-image:
-            linear-gradient(rgba(30, 58, 95, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(30, 58, 95, 0.03) 1px, transparent 1px);
-          background-size: 20px 20px;
-          pointer-events: none;
-          z-index: 0;
-        }
-      `}</style>
-    </div>
+      </div>
+    </MainLayout>
   );
 }
