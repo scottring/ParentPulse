@@ -27,7 +27,25 @@ firebase deploy --only firestore:rules    # Deploy security rules
 firebase deploy --only firestore:indexes  # Deploy Firestore indexes
 firebase deploy --only functions          # Deploy Cloud Functions
 firebase deploy                           # Deploy all
+
+# Vercel deployment (see VERCEL_DEPLOYMENT.md for full guide)
+vercel                                    # Deploy to Vercel
+vercel --prod                             # Deploy to production
 ```
+
+## Deployment
+
+### Vercel (Frontend)
+The Next.js frontend can be deployed to Vercel for optimal performance and automatic deployments. See [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md) for the complete guide.
+
+**Quick start:**
+1. Deploy Firebase Cloud Functions first: `firebase deploy --only functions`
+2. Connect your Git repository to Vercel at [vercel.com/new](https://vercel.com/new)
+3. Add environment variables from `.env.local`
+4. Deploy automatically on every push to main
+
+### Firebase (Backend)
+Cloud Functions, Firestore, and Authentication remain on Firebase. See [DEPLOYMENT.md](DEPLOYMENT.md) for Firebase-specific deployment instructions.
 
 ## High-Level Architecture
 
