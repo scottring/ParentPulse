@@ -165,9 +165,32 @@ export function usePerson(): UsePersonReturn {
     }
   };
 
-  // Delete person
+  // Delete person (with cascade delete of manual and workbooks)
   const deletePerson = async (personId: string): Promise<void> => {
     try {
+      // First, delete associated manual if it exists
+      const manualsQuery = query(
+        collection(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS),
+        where('personId', '==', personId)
+      );
+      const manualsSnapshot = await getDocs(manualsQuery);
+
+      for (const manualDoc of manualsSnapshot.docs) {
+        await deleteDoc(doc(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS, manualDoc.id));
+      }
+
+      // Delete weekly workbooks
+      const workbooksQuery = query(
+        collection(firestore, 'weekly_workbooks'),
+        where('personId', '==', personId)
+      );
+      const workbooksSnapshot = await getDocs(workbooksQuery);
+
+      for (const workbookDoc of workbooksSnapshot.docs) {
+        await deleteDoc(doc(firestore, 'weekly_workbooks', workbookDoc.id));
+      }
+
+      // Finally, delete the person
       const personRef = doc(firestore, PERSON_MANUAL_COLLECTIONS.PEOPLE, personId);
       await deleteDoc(personRef);
 

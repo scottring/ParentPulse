@@ -28,7 +28,8 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
     deleteStrategy,
     addBoundary,
     deleteBoundary,
-    deletePattern
+    deletePattern,
+    deleteManual
   } = usePersonManual(personId);
   const [activeTab, setActiveTab] = useState<ContentTab>('overview');
 
@@ -44,6 +45,8 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
   const [deletingStrategy, setDeletingStrategy] = useState<{ id: string; type: 'whatWorks' | 'whatDoesntWork' } | null>(null);
   const [deletingBoundary, setDeletingBoundary] = useState<string | null>(null);
   const [deletingPattern, setDeletingPattern] = useState<string | null>(null);
+  const [showDeleteManual, setShowDeleteManual] = useState(false);
+  const [isDeletingManual, setIsDeletingManual] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -81,6 +84,21 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
       </div>
     );
   }
+
+  const handleDeleteManual = async () => {
+    if (!manual) return;
+
+    setIsDeletingManual(true);
+    try {
+      await deleteManual(manual.manualId);
+      // Redirect to people page after successful deletion
+      router.push('/people');
+    } catch (err) {
+      console.error('Failed to delete manual:', err);
+      alert('Failed to delete manual. Please try again.');
+      setIsDeletingManual(false);
+    }
+  };
 
   const tabs: Array<{ id: ContentTab; label: string; icon: string; count?: number }> = [
     { id: 'overview', label: 'Overview', icon: '📋' },
@@ -146,6 +164,13 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                 >
                   EDIT MANUAL
                 </Link>
+                <button
+                  onClick={() => setShowDeleteManual(true)}
+                  className="px-4 py-2 border-2 border-red-600 bg-red-50 font-mono text-xs font-bold text-red-900 hover:bg-red-600 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(220,38,38,1)]"
+                  data-testid="delete-manual-button"
+                >
+                  🗑️ DELETE MANUAL
+                </button>
               </div>
 
               <div className="flex items-center gap-4 font-mono text-xs text-slate-600">
@@ -930,6 +955,66 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                 className="flex-1 px-4 py-3 bg-red-600 text-white font-mono text-xs font-bold hover:bg-red-700 transition-all"
               >
                 DELETE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Manual Confirmation Modal */}
+      {showDeleteManual && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+          onClick={() => !isDeletingManual && setShowDeleteManual(false)}
+        >
+          <div
+            className="relative bg-white border-4 border-red-600 p-8 max-w-md w-full shadow-[12px_12px_0px_0px_rgba(220,38,38,1)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-slate-800"></div>
+            <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-slate-800"></div>
+            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-slate-800"></div>
+            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-slate-800"></div>
+
+            <div className="inline-block px-3 py-1 bg-red-600 text-white font-mono text-xs mb-6">
+              ⚠ CRITICAL WARNING
+            </div>
+            <h3 className="font-mono text-2xl font-bold mb-2 text-red-600">
+              Delete Entire Manual?
+            </h3>
+            <p className="font-mono text-sm text-slate-900 mb-4">
+              You are about to permanently delete <strong>{person.name}&apos;s Operating Manual</strong>.
+            </p>
+            <div className="mb-4 p-3 bg-red-50 border-2 border-red-600">
+              <p className="font-mono text-xs text-red-700 mb-2">
+                ⚠ THIS WILL DELETE:
+              </p>
+              <ul className="font-mono text-xs text-red-700 space-y-1 list-disc list-inside">
+                <li>{manual.triggers?.length || 0} Triggers</li>
+                <li>{manual.whatWorks?.length || 0} Strategies</li>
+                <li>{manual.boundaries?.length || 0} Boundaries</li>
+                <li>{manual.emergingPatterns?.length || 0} Patterns</li>
+                <li>All progress notes and assessments</li>
+              </ul>
+            </div>
+            <p className="font-mono text-xs text-slate-600 mb-6">
+              This action CANNOT be undone. The person record will remain, but all manual content will be permanently destroyed.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => !isDeletingManual && setShowDeleteManual(false)}
+                className="flex-1 px-4 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-700 hover:border-slate-800 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]"
+                disabled={isDeletingManual}
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={handleDeleteManual}
+                className="flex-1 px-4 py-3 bg-red-600 text-white font-mono text-xs font-bold hover:bg-red-700 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50"
+                disabled={isDeletingManual}
+              >
+                {isDeletingManual ? 'DELETING...' : 'DELETE MANUAL'}
               </button>
             </div>
           </div>
