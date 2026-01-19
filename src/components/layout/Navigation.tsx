@@ -44,7 +44,7 @@ export default function Navigation() {
                 DOCUMENTATION SYSTEM
               </div>
               <div className="font-mono text-xl font-bold text-slate-900 tracking-tight">
-                LifeManual
+                Relish
               </div>
             </div>
           </Link>

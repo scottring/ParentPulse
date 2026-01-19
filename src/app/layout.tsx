@@ -9,13 +9,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "LifeManual - Operating Manuals for the People You Love",
+  title: "Relish - Operating Manuals for the People You Love",
   description: "Create comprehensive operating manuals for the important people in your life",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "LifeManual",
+    title: "Relish",
   },
 };
 

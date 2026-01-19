@@ -62,7 +62,7 @@ export default function LoginPage() {
           </div>
 
           <h1 className="parent-heading text-6xl mb-6" style={{ color: 'var(--parent-accent)' }}>
-            LifeManual
+            Relish
           </h1>
 
           <p className="text-2xl leading-relaxed mb-4" style={{ color: 'var(--parent-text)' }}>
@@ -113,7 +113,7 @@ export default function LoginPage() {
           <div className="lg:hidden text-center mb-8">
             <div className="text-5xl mb-3 animate-bounce-gentle">📖</div>
             <h1 className="parent-heading text-3xl" style={{ color: 'var(--parent-accent)' }}>
-              LifeManual
+              Relish
             </h1>
             <p className="text-sm mt-2" style={{ color: 'var(--parent-text-light)' }}>
               Operating manuals for the people you love
