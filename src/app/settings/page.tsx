@@ -4,15 +4,23 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useFamily } from '@/hooks/useFamily';
 
 export default function SettingsPage() {
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
+  const { family, inviteParent, removeInvite } = useFamily();
 
   const [notifications, setNotifications] = useState(true);
   const [dailyReminder, setDailyReminder] = useState(true);
   const [weeklyInsights, setWeeklyInsights] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Invitation state
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -28,6 +36,38 @@ export default function SettingsPage() {
     // TODO: Implement settings save to Firestore
     await new Promise(resolve => setTimeout(resolve, 1000));
     setSaving(false);
+  };
+
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviteError(null);
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(inviteEmail)) {
+      setInviteError('Please enter a valid email address');
+      return;
+    }
+
+    try {
+      setInviteLoading(true);
+      await inviteParent(inviteEmail);
+      setInviteEmail('');
+      setShowInviteForm(false);
+    } catch (err: any) {
+      setInviteError(err.message || 'Failed to send invitation');
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const handleRemoveInvite = async (email: string) => {
+    if (confirm(`Remove invitation for ${email}?`)) {
+      try {
+        await removeInvite(email);
+      } catch (err: any) {
+        alert(err.message || 'Failed to remove invitation');
+      }
+    }
   };
 
   if (authLoading || !user) {
@@ -262,17 +302,17 @@ export default function SettingsPage() {
             Family
           </h2>
           <div className="parent-card p-6 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: 'var(--parent-border)' }}>
               <div>
                 <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
-                  Manage Children
+                  Manage People
                 </div>
                 <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Add, edit, or remove children from your family
+                  Add, edit, or remove people and their manuals
                 </div>
               </div>
               <Link
-                href="/children"
+                href="/people"
                 className="text-sm font-medium px-4 py-2 rounded-lg transition-all hover:shadow-md"
                 style={{
                   backgroundColor: 'var(--parent-accent)',
@@ -281,6 +321,123 @@ export default function SettingsPage() {
               >
                 Manage
               </Link>
+            </div>
+
+            {/* Family Members Section */}
+            <div className="pt-2">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
+                    Family Members
+                  </div>
+                  <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
+                    {family?.members?.length || 1} member{(family?.members?.length || 1) !== 1 ? 's' : ''}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowInviteForm(!showInviteForm)}
+                  className="text-sm font-medium px-4 py-2 rounded-lg transition-all hover:shadow-md"
+                  style={{
+                    border: '1px solid var(--parent-accent)',
+                    color: 'var(--parent-accent)'
+                  }}
+                >
+                  + Invite Member
+                </button>
+              </div>
+
+              {/* Invite Form */}
+              {showInviteForm && (
+                <div className="mb-4 p-4 rounded-lg" style={{ backgroundColor: 'var(--parent-bg)' }}>
+                  <form onSubmit={handleInvite} className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        placeholder="family@example.com"
+                        className="w-full px-3 py-2 rounded-lg"
+                        style={{
+                          border: '1.5px solid var(--parent-border)',
+                          backgroundColor: 'white',
+                          color: 'var(--parent-text)'
+                        }}
+                        disabled={inviteLoading}
+                      />
+                    </div>
+
+                    {inviteError && (
+                      <div className="text-sm p-2 rounded" style={{ backgroundColor: '#FEE2E2', color: '#991B1B' }}>
+                        {inviteError}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={inviteLoading || !inviteEmail}
+                        className="px-4 py-2 rounded-lg font-medium text-white transition-all hover:shadow-md disabled:opacity-50"
+                        style={{ backgroundColor: 'var(--parent-accent)' }}
+                      >
+                        {inviteLoading ? 'Sending...' : 'Send Invite'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowInviteForm(false);
+                          setInviteEmail('');
+                          setInviteError(null);
+                        }}
+                        className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md"
+                        style={{
+                          border: '1px solid var(--parent-border)',
+                          color: 'var(--parent-text)'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* Pending Invites */}
+              {family?.pendingInvites && family.pendingInvites.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <div className="text-sm font-medium" style={{ color: 'var(--parent-text-light)' }}>
+                    Pending Invitations
+                  </div>
+                  {family.pendingInvites.map((invite) => (
+                    <div
+                      key={invite.email}
+                      className="flex items-center justify-between p-3 rounded-lg"
+                      style={{ backgroundColor: 'var(--parent-bg)' }}
+                    >
+                      <div>
+                        <div className="text-sm font-medium" style={{ color: 'var(--parent-text)' }}>
+                          {invite.email}
+                        </div>
+                        <div className="text-xs" style={{ color: 'var(--parent-text-light)' }}>
+                          Invited {invite.sentAt.toDate().toLocaleDateString()}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveInvite(invite.email)}
+                        className="text-sm px-3 py-1 rounded transition-all hover:shadow-md"
+                        style={{
+                          backgroundColor: '#FEE2E2',
+                          color: '#991B1B'
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

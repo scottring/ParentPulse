@@ -15,6 +15,10 @@ import {
   setDoc,
   serverTimestamp,
   collection,
+  getDocs,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
 } from 'firebase/firestore';
 import { auth, firestore } from '../lib/firebase';
 import {
@@ -170,6 +174,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setError(null);
       isRegistering.current = true; // Set flag to prevent orphaned check
 
+      // Check for pending invites for this email
+      const familiesRef = collection(firestore, COLLECTIONS.FAMILIES);
+      const familiesSnapshot = await getDocs(familiesRef);
+
+      let existingFamilyId: string | null = null;
+      let pendingInvite: any = null;
+
+      for (const familyDoc of familiesSnapshot.docs) {
+        const familyData = familyDoc.data();
+        const invite = familyData.pendingInvites?.find(
+          (inv: any) => inv.email.toLowerCase() === data.email.toLowerCase()
+        );
+        if (invite) {
+          existingFamilyId = familyData.familyId;
+          pendingInvite = invite;
+          break;
+        }
+      }
+
       // Create Firebase auth user
       userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -182,22 +205,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         displayName: data.name,
       });
 
-      // Create family document
-      const familyId = doc(collection(firestore, COLLECTIONS.FAMILIES)).id;
-      const familyDocRef = doc(firestore, COLLECTIONS.FAMILIES, familyId);
+      let familyId: string;
 
-      await setDoc(familyDocRef, {
-        familyId,
-        name: data.familyName,
-        createdAt: serverTimestamp(),
-        parentIds: [userCredential.user.uid],
-        childIds: [],
-        settings: {
-          chipSystemEnabled: true,
-          dailyCheckInReminder: true,
-          weeklyInsightsEnabled: true,
-        },
-      });
+      if (existingFamilyId && pendingInvite) {
+        // Join existing family
+        familyId = existingFamilyId;
+        const familyDocRef = doc(firestore, COLLECTIONS.FAMILIES, familyId);
+
+        // Add user to family members and remove invite
+        await updateDoc(familyDocRef, {
+          members: arrayUnion(userCredential.user.uid),
+          pendingInvites: arrayRemove(pendingInvite),
+        });
+      } else {
+        // Create new family document
+        familyId = doc(collection(firestore, COLLECTIONS.FAMILIES)).id;
+        const familyDocRef = doc(firestore, COLLECTIONS.FAMILIES, familyId);
+
+        await setDoc(familyDocRef, {
+          familyId,
+          name: data.familyName,
+          createdBy: userCredential.user.uid,
+          members: [userCredential.user.uid],
+          pendingInvites: [],
+          createdAt: serverTimestamp(),
+          // Legacy fields for backward compatibility
+          parentIds: [userCredential.user.uid],
+          childIds: [],
+          settings: {
+            chipSystemEnabled: true,
+            dailyCheckInReminder: true,
+            weeklyInsightsEnabled: true,
+          },
+        });
+      }
 
       // Create user document
       const userData = await createUserDocument(
