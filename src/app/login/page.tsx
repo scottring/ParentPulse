@@ -49,7 +49,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen parent-page flex">
-      {/* Left side - Welcome message with floating illustration */}
+      {/* Left side - Welcome message with manual aesthetic */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden p-16 items-center justify-center">
         <div className="absolute inset-0 bg-gradient-to-br from-[#7C9082] via-[#98B4A0] to-[#D4A574] opacity-10"></div>
         <div className="paper-texture absolute inset-0"></div>
@@ -57,44 +57,48 @@ export default function LoginPage() {
         <div className="relative z-10 max-w-lg animate-fade-in-up">
           <div className="mb-8">
             <div className="inline-block animate-float">
-              <div className="text-8xl mb-4">🌱</div>
+              <div className="text-8xl mb-4">📖</div>
             </div>
           </div>
 
           <h1 className="parent-heading text-6xl mb-6" style={{ color: 'var(--parent-accent)' }}>
-            Welcome to ParentPulse
+            LifeManual
           </h1>
 
-          <p className="text-xl leading-relaxed" style={{ color: 'var(--parent-text-light)' }}>
-            Your thoughtful companion for intentional parenting. Journal your moments,
-            discover insights, and grow alongside your family.
+          <p className="text-2xl leading-relaxed mb-4" style={{ color: 'var(--parent-text)' }}>
+            Operating manuals for the people you love
           </p>
 
-          <div className="mt-12 space-y-4">
+          <p className="text-lg leading-relaxed mb-12" style={{ color: 'var(--parent-text-light)' }}>
+            Create personalized guides to understand and support your children, spouse,
+            friends, and family members. Think of it as an owner's manual for relationships.
+          </p>
+
+          <div className="space-y-4">
             <div className="flex items-start gap-4">
-              <div className="text-3xl">📖</div>
+              <div className="text-3xl">⚡</div>
               <div>
-                <div className="font-semibold mb-1">Daily Journaling</div>
+                <div className="font-semibold mb-1">Triggers & Strategies</div>
                 <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Capture parenting moments with AI-powered insights
+                  Document what causes stress and what actually works
                 </div>
               </div>
             </div>
             <div className="flex items-start gap-4">
-              <div className="text-3xl">💡</div>
+              <div className="text-3xl">🎯</div>
               <div>
-                <div className="font-semibold mb-1">Knowledge Library</div>
+                <div className="font-semibold mb-1">Weekly Goals</div>
                 <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Organize wisdom from books, podcasts, and research
+                  AI-generated action plans based on your manual
                 </div>
               </div>
             </div>
             <div className="flex items-start gap-4">
-              <div className="text-3xl">👨‍👩‍👧‍👦</div>
+              <div className="text-3xl">📊</div>
               <div>
-                <div className="font-semibold mb-1">Family Connection</div>
+                <div className="font-semibold mb-1">Patterns & Insights</div>
                 <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Track check-ins and celebrate growth together
+                  Track progress and discover what makes each person unique
                 </div>
               </div>
             </div>
@@ -107,10 +111,13 @@ export default function LoginPage() {
         <div className="w-full max-w-md animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
-            <div className="text-5xl mb-3 animate-bounce-gentle">🌱</div>
+            <div className="text-5xl mb-3 animate-bounce-gentle">📖</div>
             <h1 className="parent-heading text-3xl" style={{ color: 'var(--parent-accent)' }}>
-              ParentPulse
+              LifeManual
             </h1>
+            <p className="text-sm mt-2" style={{ color: 'var(--parent-text-light)' }}>
+              Operating manuals for the people you love
+            </p>
           </div>
 
           {/* Login card */}
@@ -119,7 +126,7 @@ export default function LoginPage() {
               Welcome back
             </h2>
             <p className="mb-8" style={{ color: 'var(--parent-text-light)' }}>
-              Sign in to continue your parenting journey
+              Sign in to access your manuals
             </p>
 
             {(error || authError) && (
@@ -242,7 +249,7 @@ export default function LoginPage() {
 
           {/* Trust indicators */}
           <div className="mt-6 text-center text-sm" style={{ color: 'var(--parent-text-light)' }}>
-            <p>Your family's data is private and secure 🔒</p>
+            <p>Your data is private and secure 🔒</p>
           </div>
         </div>
       </div>

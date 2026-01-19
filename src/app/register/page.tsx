@@ -96,23 +96,22 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen parent-page flex">
-      {/* Left side - Motivational message */}
+      {/* Left side - Getting started guide */}
       <div className="hidden lg:flex lg:w-2/5 relative overflow-hidden p-16 items-center justify-center">
         <div className="absolute inset-0 bg-gradient-to-br from-[#D4A574] via-[#B8956F] to-[#7C9082] opacity-10"></div>
         <div className="paper-texture absolute inset-0"></div>
 
         <div className="relative z-10 max-w-lg animate-fade-in-up">
           <div className="mb-8">
-            <div className="text-7xl mb-6 animate-float">✨</div>
+            <div className="text-7xl mb-6 animate-float">📋</div>
           </div>
 
           <h1 className="parent-heading text-5xl mb-6" style={{ color: 'var(--parent-accent)' }}>
-            Begin Your Journey
+            Create Your Manual Library
           </h1>
 
           <p className="text-xl leading-relaxed mb-8" style={{ color: 'var(--parent-text-light)' }}>
-            Every intentional parent starts somewhere. Create your family's space to reflect,
-            learn, and grow together.
+            Build personalized guides to better understand the important people in your life.
           </p>
 
           <div className="space-y-6">
@@ -122,7 +121,7 @@ export default function RegisterPage() {
               </div>
               <div className="flex-1">
                 <div className="font-semibold mb-1">Create your account</div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>Set up your family profile in minutes</div>
+                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>Set up your manual library in minutes</div>
               </div>
             </div>
             <div className="flex gap-4 items-center">
@@ -130,8 +129,8 @@ export default function RegisterPage() {
                 <span className="text-xl">2</span>
               </div>
               <div className="flex-1">
-                <div className="font-semibold mb-1">Start journaling</div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>Capture your parenting moments</div>
+                <div className="font-semibold mb-1">Add people & build manuals</div>
+                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>Document triggers, strategies, and what works</div>
               </div>
             </div>
             <div className="flex gap-4 items-center">
@@ -139,8 +138,8 @@ export default function RegisterPage() {
                 <span className="text-xl text-white">3</span>
               </div>
               <div className="flex-1">
-                <div className="font-semibold mb-1">Gain insights</div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>Let AI help you become more intentional</div>
+                <div className="font-semibold mb-1">Get AI-powered guidance</div>
+                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>Weekly goals and insights based on your manuals</div>
               </div>
             </div>
           </div>
@@ -152,10 +151,13 @@ export default function RegisterPage() {
         <div className="w-full max-w-lg animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
-            <div className="text-5xl mb-3 animate-bounce-gentle">🌱</div>
+            <div className="text-5xl mb-3 animate-bounce-gentle">📖</div>
             <h1 className="parent-heading text-3xl" style={{ color: 'var(--parent-accent)' }}>
-              ParentPulse
+              LifeManual
             </h1>
+            <p className="text-sm mt-2" style={{ color: 'var(--parent-text-light)' }}>
+              Operating manuals for the people you love
+            </p>
           </div>
 
           {/* Registration card */}
@@ -164,7 +166,7 @@ export default function RegisterPage() {
               Create your account
             </h2>
             <p className="mb-6" style={{ color: 'var(--parent-text-light)' }}>
-              Start your intentional parenting journey today
+              Start building your manual library
             </p>
 
             {(error || authError) && (
@@ -340,7 +342,7 @@ export default function RegisterPage() {
 
           {/* Privacy note */}
           <div className="mt-6 text-center text-xs" style={{ color: 'var(--parent-text-light)' }}>
-            <p>By creating an account, you agree to keep your family's journey private and secure</p>
+            <p>Your data is private and secure</p>
           </div>
         </div>
       </div>
