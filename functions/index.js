@@ -334,7 +334,32 @@ async function retrieveChatContext(familyId, userMessage, personId = null) {
     });
   }
 
-  logger.info(`Context: ${journalEntries.length} journals, ${knowledgeItems.length} knowledge items, ${actions.length} actions${personManual ? `, 1 manual for ${personName}` : ""}${workbooks.length > 0 ? `, ${workbooks.length} workbooks` : ""}`);
+  // Get past coaching conversations (for historical context)
+  const conversationsSnapshot = await admin.firestore()
+      .collection("chat_conversations")
+      .where("familyId", "==", familyId)
+      .orderBy("updatedAt", "desc")
+      .limit(12)
+      .get();
+
+  const pastConversations = conversationsSnapshot.docs.map((doc) => {
+    const data = doc.data();
+    const messages = data.messages || [];
+    // Extract last 4-6 messages for context (focus on assistant responses)
+    const recentMessages = messages.slice(-6);
+    return {
+      id: doc.id,
+      date: data.updatedAt ? data.updatedAt.toDate().toLocaleDateString() : "Unknown",
+      messageCount: messages.length,
+      recentMessages: recentMessages.map((msg) => ({
+        role: msg.role,
+        content: msg.content
+      })),
+      personId: data.personId || null
+    };
+  }).filter((conv) => conv.messageCount > 2); // Only include conversations with substance
+
+  logger.info(`Context: ${journalEntries.length} journals, ${knowledgeItems.length} knowledge items, ${actions.length} actions${personManual ? `, 1 manual for ${personName}` : ""}${workbooks.length > 0 ? `, ${workbooks.length} workbooks` : ""}${pastConversations.length > 0 ? `, ${pastConversations.length} past conversations` : ""}`);
 
   return {
     journalEntries,
@@ -342,6 +367,7 @@ async function retrieveChatContext(familyId, userMessage, personId = null) {
     actions,
     personManual,
     workbooks,
+    pastConversations,
   };
 }
 
@@ -399,6 +425,25 @@ Available Context:
       systemMessage += `${i + 1}. [${entry.date}] ${entry.category}: ${entry.text.substring(0, 200)}${entry.text.length > 200 ? "..." : ""}\n`;
     });
     systemMessage += "\n";
+  }
+
+  // Add past coaching conversations
+  if (context.pastConversations && context.pastConversations.length > 0) {
+    systemMessage += `## Past Coaching Conversations (${context.pastConversations.length}):\n`;
+    systemMessage += `These are your previous coaching sessions with this family. Use them to recognize patterns, remember past advice, and provide continuity.\n\n`;
+    context.pastConversations.slice(0, 8).forEach((conv, i) => {
+      systemMessage += `${i + 1}. Conversation from ${conv.date} (${conv.messageCount} messages):\n`;
+      // Show last 3-4 message pairs (focusing on key insights)
+      const messagesToShow = conv.recentMessages.slice(-4);
+      messagesToShow.forEach((msg) => {
+        if (msg.role === "assistant") {
+          // Only show assistant messages (they contain the insights/advice)
+          const excerpt = msg.content.substring(0, 150);
+          systemMessage += `   → ${excerpt}${msg.content.length > 150 ? "..." : ""}\n`;
+        }
+      });
+      systemMessage += "\n";
+    });
   }
 
   // Add knowledge base
