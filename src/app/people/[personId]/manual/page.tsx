@@ -9,6 +9,7 @@ import { usePersonManual } from '@/hooks/usePersonManual';
 import { AddTriggerModal } from '@/components/manual/AddTriggerModal';
 import { AddStrategyModal } from '@/components/manual/AddStrategyModal';
 import { AddBoundaryModal } from '@/components/manual/AddBoundaryModal';
+import { SelfWorthAssessmentModal } from '@/components/manual/SelfWorthAssessmentModal';
 
 type ContentTab = 'overview' | 'triggers' | 'strategies' | 'boundaries' | 'patterns';
 
@@ -34,6 +35,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
   const [showAddTrigger, setShowAddTrigger] = useState(false);
   const [showAddStrategy, setShowAddStrategy] = useState(false);
   const [showAddBoundary, setShowAddBoundary] = useState(false);
+  const [showSelfWorthAssessment, setShowSelfWorthAssessment] = useState(false);
   const [strategyType, setStrategyType] = useState<'whatWorks' | 'whatDoesntWork'>('whatWorks');
 
   // Delete confirmation states
@@ -131,6 +133,13 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                 >
                   🤖 ASK COACH
                 </Link>
+                <button
+                  onClick={() => setShowSelfWorthAssessment(true)}
+                  className="px-4 py-2 border-2 border-purple-600 bg-purple-50 font-mono text-xs font-bold text-purple-900 hover:bg-purple-600 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(147,51,234,1)]"
+                  data-testid="self-worth-assessment-button"
+                >
+                  {(manual as any).assessmentScores?.selfWorth ? '🔄 UPDATE' : '➕ ADD'} SELF-WORTH
+                </button>
                 <Link
                   href={`/people/${personId}/manual/onboard`}
                   className="px-4 py-2 border-2 border-slate-800 bg-white font-mono text-xs font-bold text-slate-800 hover:bg-slate-800 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
@@ -324,6 +333,33 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                         <li key={idx} className="flex items-start gap-3">
                           <span className="font-mono text-slate-400 flex-shrink-0">[{String(idx + 1).padStart(2, '0')}]</span>
                           <span className="font-mono text-sm text-slate-700">{strength}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {manual.coreInfo?.selfWorthInsights && manual.coreInfo.selfWorthInsights.length > 0 && (
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <h4 className="font-mono font-bold text-sm text-purple-600 uppercase tracking-wider">
+                        Self-Worth Insights
+                      </h4>
+                      {(manual as any).assessmentScores?.selfWorth && (
+                        <span className={`px-2 py-1 font-mono text-xs font-bold ${
+                          (manual as any).assessmentScores.selfWorth.category === 'high' ? 'bg-green-100 text-green-700 border border-green-600' :
+                          (manual as any).assessmentScores.selfWorth.category === 'moderate' ? 'bg-yellow-100 text-yellow-700 border border-yellow-600' :
+                          'bg-red-100 text-red-700 border border-red-600'
+                        }`}>
+                          {(manual as any).assessmentScores.selfWorth.category.toUpperCase()} ({(manual as any).assessmentScores.selfWorth.totalScore}/24)
+                        </span>
+                      )}
+                    </div>
+                    <ul className="space-y-2">
+                      {manual.coreInfo.selfWorthInsights.map((insight, idx) => (
+                        <li key={idx} className="flex items-start gap-3">
+                          <span className="font-mono text-purple-400 flex-shrink-0">[{String(idx + 1).padStart(2, '0')}]</span>
+                          <span className="font-mono text-sm text-slate-700">{insight}</span>
                         </li>
                       ))}
                     </ul>
@@ -768,6 +804,17 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
         }}
         personName={person.name}
       />
+
+      {manual.manualId && manual.relationshipType && (
+        <SelfWorthAssessmentModal
+          isOpen={showSelfWorthAssessment}
+          onClose={() => setShowSelfWorthAssessment(false)}
+          personId={personId}
+          personName={person.name}
+          manualId={manual.manualId}
+          relationshipType={manual.relationshipType}
+        />
+      )}
 
       {/* Delete Confirmation Modals */}
       {deletingTrigger && (

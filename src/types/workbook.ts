@@ -149,7 +149,12 @@ export type ActivityType =
   | 'daily-win'
   | 'visual-schedule'
   | 'gratitude'
-  | 'feeling-thermometer';
+  | 'feeling-thermometer'
+  | 'strength-reflection'        // Child identifies their strengths
+  | 'courage-moment'             // Child recalls a brave action
+  | 'affirmation-practice'       // Daily positive self-statements
+  | 'growth-mindset-reflection'  // Reframe challenges as learning
+  | 'accomplishment-tracker';    // Track weekly wins
 
 export interface DailyActivity {
   id: string;
@@ -158,7 +163,16 @@ export interface DailyActivity {
   completed: boolean;
 
   // Child's response (varies by activity type)
-  childResponse?: EmotionCheckinResponse | ChoiceBoardResponse | DailyWinResponse | VisualScheduleResponse;
+  childResponse?:
+    | EmotionCheckinResponse
+    | ChoiceBoardResponse
+    | DailyWinResponse
+    | VisualScheduleResponse
+    | StrengthReflectionResponse
+    | CourageMomentResponse
+    | AffirmationPracticeResponse
+    | GrowthMindsetReflectionResponse
+    | AccomplishmentTrackerResponse;
 
   // Parent notes
   parentNotes?: string;
@@ -196,6 +210,36 @@ export interface VisualScheduleResponse {
   tasks: ScheduleTask[]; // Custom schedule with times
   tasksCompleted: string[]; // IDs of completed tasks
   totalTasks: number;
+}
+
+export interface StrengthReflectionResponse {
+  strengths: string[];  // List of strengths they identified
+  category: 'academic' | 'social' | 'creative' | 'physical' | 'other';
+}
+
+export interface CourageMomentResponse {
+  description: string;  // What brave thing they did
+  feeling: 'proud' | 'nervous' | 'excited' | 'scared-but-did-it';
+}
+
+export interface AffirmationPracticeResponse {
+  affirmations: string[];  // 3 positive "I am..." statements
+  favorite?: string;       // Which one felt best
+}
+
+export interface GrowthMindsetReflectionResponse {
+  challenge: string;              // Something that was hard
+  whatLearned: string;           // What they learned from it
+  nextTime: string;              // What they'll try next time
+  mindsetShift: 'fixed' | 'growth' | 'mixed';  // Did they show growth mindset?
+}
+
+export interface AccomplishmentTrackerResponse {
+  accomplishments: Array<{
+    description: string;
+    day: string;  // 'monday', 'tuesday', etc.
+    category: 'academic' | 'social' | 'creative' | 'physical' | 'personal';
+  }>;
 }
 
 // ==================== Weekly Reflection ====================
@@ -281,6 +325,51 @@ export const ACTIVITY_TEMPLATES: Record<ActivityType, ActivityTemplate> = {
     description: 'How big is this feeling?',
     emoji: '🌡️',
     parentInstructions: 'Help your child rate the intensity of their current emotion.',
+    estimatedMinutes: 3,
+    ageAppropriate: { minAge: 5 }
+  },
+  'strength-reflection': {
+    type: 'strength-reflection',
+    title: 'My Strengths',
+    description: 'What are you good at?',
+    emoji: '💪',
+    parentInstructions: 'Help your child list 3 things they do well - can be anything!',
+    estimatedMinutes: 5,
+    ageAppropriate: { minAge: 5 }
+  },
+  'courage-moment': {
+    type: 'courage-moment',
+    title: 'Brave Thing I Did',
+    description: 'Tell me about something brave you did',
+    emoji: '🦁',
+    parentInstructions: 'Ask about a time they tried something new or hard',
+    estimatedMinutes: 5,
+    ageAppropriate: { minAge: 4 }
+  },
+  'affirmation-practice': {
+    type: 'affirmation-practice',
+    title: 'I Am...',
+    description: 'Practice positive self-talk',
+    emoji: '⭐',
+    parentInstructions: 'Help your child create 3 positive "I am..." statements (e.g., "I am kind", "I am creative")',
+    estimatedMinutes: 5,
+    ageAppropriate: { minAge: 5 }
+  },
+  'growth-mindset-reflection': {
+    type: 'growth-mindset-reflection',
+    title: 'What I Learned',
+    description: 'Turn challenges into learning',
+    emoji: '🌱',
+    parentInstructions: 'Ask about something hard they did and what they learned from it',
+    estimatedMinutes: 7,
+    ageAppropriate: { minAge: 6 }
+  },
+  'accomplishment-tracker': {
+    type: 'accomplishment-tracker',
+    title: 'My Weekly Wins',
+    description: 'Track your accomplishments',
+    emoji: '🏆',
+    parentInstructions: 'Each day, add one thing your child accomplished or is proud of',
     estimatedMinutes: 3,
     ageAppropriate: { minAge: 5 }
   }

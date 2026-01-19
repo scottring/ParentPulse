@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useFamily } from '@/hooks/useFamily';
+import MainLayout from '@/components/layout/MainLayout';
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, loading: authLoading, logout } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { family, inviteParent, removeInvite } = useFamily();
 
   const [notifications, setNotifications] = useState(true);
@@ -72,47 +73,48 @@ export default function SettingsPage() {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center parent-page">
-        <div className="w-16 h-16 spinner"></div>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FFF8F0' }}>
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-slate-800 border-t-amber-600 rounded-full animate-spin"></div>
+          <p className="mt-4 font-mono text-sm text-slate-600">LOADING SETTINGS...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen parent-page">
-      {/* Header */}
-      <header className="border-b paper-texture" style={{ borderColor: 'var(--parent-border)', backgroundColor: 'var(--parent-card)' }}>
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <Link href="/dashboard" className="text-2xl transition-transform hover:scale-110">
+    <MainLayout>
+      <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Page Header */}
+        <header className="mb-12">
+          <div className="relative bg-white border-4 border-slate-800 p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            {/* Corner brackets */}
+            <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-amber-600"></div>
+            <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-amber-600"></div>
+            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-amber-600"></div>
+            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-amber-600"></div>
+
+            <div className="flex items-start gap-6">
+              <Link href="/dashboard" className="mt-2 font-mono text-3xl font-bold text-slate-800 hover:text-amber-600 transition-colors">
                 ←
               </Link>
-              <div>
-                <h1 className="parent-heading text-2xl sm:text-3xl" style={{ color: 'var(--parent-accent)' }}>
+
+              <div className="flex-1">
+                <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-3">
+                  SYSTEM CONFIGURATION
+                </div>
+
+                <h1 className="font-mono text-4xl font-bold tracking-tight text-slate-900 mb-2">
                   Settings
                 </h1>
-                <p className="text-sm mt-1" style={{ color: 'var(--parent-text-light)' }}>
-                  Manage your account and preferences
+
+                <p className="font-mono text-sm text-slate-600">
+                  CONFIGURE SYSTEM PARAMETERS AND USER PREFERENCES
                 </p>
               </div>
             </div>
-            <button
-              onClick={logout}
-              className="text-sm font-medium px-4 py-2 rounded-lg transition-all hover:shadow-md"
-              style={{
-                color: 'var(--parent-text-light)',
-                border: '1px solid var(--parent-border)'
-              }}
-            >
-              Logout
-            </button>
           </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-6 lg:px-8 py-8 lg:py-12">
+        </header>
         {/* Account Section */}
         <div className="mb-8 animate-fade-in-up">
           <h2 className="parent-heading text-xl mb-4" style={{ color: 'var(--parent-text)' }}>
@@ -502,8 +504,8 @@ export default function SettingsPage() {
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
-      </main>
-    </div>
+      </div>
+    </MainLayout>
   );
 }
 

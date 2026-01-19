@@ -83,7 +83,9 @@ export default function WeeklyWorkbookPage({ params }: { params: Promise<{ perso
           undefined,
         triggers: manual.triggers || [],
         whatWorks: manual.whatWorks || [],
-        boundaries: manual.boundaries || []
+        boundaries: manual.boundaries || [],
+        assessmentScores: (manual as any).assessmentScores || undefined,  // Self-worth & VIA scores
+        coreInfo: manual.coreInfo || undefined  // Includes selfWorthInsights
       });
 
       if (!result.data.success || !result.data.content) {

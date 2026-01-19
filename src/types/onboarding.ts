@@ -125,6 +125,19 @@ export interface GeneratedManualContent {
         domain: string;  // e.g., "Wisdom & Knowledge"
       };
     };
+    selfWorth?: {
+      items: {
+        [questionId: string]: {
+          score: number;
+          qualitative?: string;
+          domain: string;  // e.g., "Global Self-Worth", "Social Competence"
+        };
+      };
+      totalScore: number;      // Sum of all item scores (6-24 for 6 items)
+      averageScore: number;    // Average score across items (1.0-4.0)
+      category: 'low' | 'moderate' | 'high';  // low: <13, moderate: 13-18, high: 19-24
+      questionCount: number;   // Number of questions answered (should be 6)
+    };
     // Future: adhd, bigFive, etc.
   };
 }

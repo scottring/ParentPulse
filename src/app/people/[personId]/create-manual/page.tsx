@@ -57,10 +57,14 @@ export default function CreateManualPage({ params }: { params: Promise<{ personI
     setIsCreating(true);
     try {
       // Create simplified manual structure
-      await createManual(personId, person.name, selectedType);
+      const manualId = await createManual(personId, person.name, selectedType);
 
-      // Update person document with relationship type
-      await updatePerson({ relationshipType: selectedType });
+      // Update person document with relationship type and manual link
+      await updatePerson({
+        relationshipType: selectedType,
+        hasManual: true,
+        manualId
+      });
 
       // Navigate to onboarding wizard
       router.push(`/people/${personId}/manual/onboard`);

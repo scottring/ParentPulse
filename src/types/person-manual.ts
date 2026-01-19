@@ -80,6 +80,7 @@ export interface PersonManual {
     sensoryNeeds?: string[];
     interests?: string[];
     strengths?: string[];
+    selfWorthInsights?: string[];  // AI-generated insights about self-perception and confidence
     notes?: string;
   };
 
@@ -97,6 +98,30 @@ export interface PersonManual {
   totalTriggers: number;
   totalStrategies: number;
   totalBoundaries: number;
+
+  // Assessment scores (from onboarding)
+  assessmentScores?: {
+    via?: {
+      [strengthName: string]: {
+        score: number;
+        qualitative?: string;
+        domain: string;
+      };
+    };
+    selfWorth?: {
+      items: {
+        [questionId: string]: {
+          score: number;
+          qualitative?: string;
+          domain: string;
+        };
+      };
+      totalScore: number;
+      averageScore: number;
+      category: 'low' | 'moderate' | 'high';
+      questionCount: number;
+    };
+  };
 
   // References
   relatedJournalEntries: string[];

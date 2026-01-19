@@ -201,6 +201,124 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
     ]
   },
   {
+    sectionId: 'self_worth',
+    sectionName: 'Self-Worth & Confidence',
+    sectionDescription: 'Understanding how {{personName}} feels about themselves',
+    icon: 'SparklesIcon',
+    emoji: '✨',
+    skippable: false,
+    questions: [
+      {
+        id: 'sw_global',
+        question: 'On the whole, {{personName}} is satisfied with themselves',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 4,
+          minLabel: 'Strongly Disagree',
+          maxLabel: 'Strongly Agree',
+          midLabel: 'Neutral',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'What makes you say this? Any specific examples?',
+        clinicalSource: 'RSES Item 1',
+        scoringDomain: 'Global Self-Worth',
+        required: true
+      },
+      {
+        id: 'sw_qualities',
+        question: '{{personName}} feels that they have a number of good qualities',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 4,
+          minLabel: 'Strongly Disagree',
+          maxLabel: 'Strongly Agree',
+          midLabel: 'Neutral',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'What qualities does {{personName}} recognize in themselves?',
+        clinicalSource: 'RSES Item 3',
+        scoringDomain: 'Self-Perception',
+        required: true
+      },
+      {
+        id: 'sw_efficacy',
+        question: '{{personName}} is able to do things as well as most other people',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 4,
+          minLabel: 'Strongly Disagree',
+          maxLabel: 'Strongly Agree',
+          midLabel: 'Neutral',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'In what areas does {{personName}} feel competent?',
+        clinicalSource: 'RSES Item 4',
+        scoringDomain: 'Self-Efficacy',
+        required: true
+      },
+      {
+        id: 'sw_acceptance',
+        question: '{{personName}} takes a positive attitude toward themselves',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 4,
+          minLabel: 'Strongly Disagree',
+          maxLabel: 'Strongly Agree',
+          midLabel: 'Neutral',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'How does {{personName}} typically talk about or treat themselves?',
+        clinicalSource: 'RSES Item 7',
+        scoringDomain: 'Self-Acceptance',
+        required: true
+      },
+      {
+        id: 'sw_social',
+        question: '{{personName}} feels they are a person of worth, at least on an equal plane with others',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 4,
+          minLabel: 'Strongly Disagree',
+          maxLabel: 'Strongly Agree',
+          midLabel: 'Neutral',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'How does {{personName}} compare themselves to peers or others?',
+        clinicalSource: 'RSES Item 2',
+        scoringDomain: 'Social Competence',
+        required: true
+      },
+      {
+        id: 'sw_physical',
+        question: '{{personName}} feels comfortable with their body and physical abilities',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 4,
+          minLabel: 'Strongly Disagree',
+          maxLabel: 'Strongly Agree',
+          midLabel: 'Neutral',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'How does {{personName}} feel about their physical self?',
+        clinicalSource: 'Physical Self-Concept',
+        scoringDomain: 'Physical Competence',
+        required: true
+      }
+    ]
+  },
+  {
     sectionId: 'strengths',
     sectionName: 'Character Strengths (VIA Survey)',
     sectionDescription: 'Rate how well each characteristic describes {{personName}}',

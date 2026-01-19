@@ -82,6 +82,12 @@ export function useSaveManualContent(): UseSaveManualContentReturn {
           coreInfo.notes = notes.join('\n\n');
         }
       }
+
+      // Add self-worth insights from AI-generated content
+      if ((content as any).coreInfo?.selfWorthInsights && (content as any).coreInfo.selfWorthInsights.length > 0) {
+        coreInfo.selfWorthInsights = (content as any).coreInfo.selfWorthInsights;
+      }
+
       if (Object.keys(coreInfo).length > 0) {
         updates.coreInfo = coreInfo;
       }
@@ -148,6 +154,11 @@ export function useSaveManualContent(): UseSaveManualContentReturn {
           addedBy: user.userId
         }));
         updates.totalBoundaries = content.boundaries.length;
+      }
+
+      // Add assessment scores (self-worth, VIA, etc.)
+      if ((content as any).assessmentScores) {
+        updates.assessmentScores = (content as any).assessmentScores;
       }
 
       // Save to Firestore

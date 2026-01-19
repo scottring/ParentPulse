@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { usePerson } from '@/hooks/usePerson';
-import Navigation from '@/components/layout/Navigation';
+import MainLayout from '@/components/layout/MainLayout';
 import Link from 'next/link';
 
 export default function DashboardPage() {
@@ -48,13 +48,8 @@ export default function DashboardPage() {
   const pendingSetupCount = people.filter(p => !p.hasManual).length;
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#FFF8F0' }}>
-      {/* Blueprint grid background */}
-      <div className="blueprint-grid"></div>
-
-      <Navigation />
-
-      <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <MainLayout>
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Technical Header */}
         <header className="mb-12">
           <div className="relative bg-white border-4 border-slate-800 p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
@@ -319,24 +314,7 @@ export default function DashboardPage() {
             )}
           </div>
         )}
-      </main>
-
-      {/* Blueprint grid CSS */}
-      <style jsx>{`
-        .blueprint-grid {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-image:
-            linear-gradient(rgba(30, 58, 95, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(30, 58, 95, 0.03) 1px, transparent 1px);
-          background-size: 20px 20px;
-          pointer-events: none;
-          z-index: 0;
-        }
-      `}</style>
-    </div>
+      </div>
+    </MainLayout>
   );
 }

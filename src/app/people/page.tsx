@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { usePerson } from '@/hooks/usePerson';
+import MainLayout from '@/components/layout/MainLayout';
 
 export default function PeoplePage() {
   const router = useRouter();
-  const { user, loading: authLoading, logout } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { people, loading: peopleLoading, addPerson, updatePerson, deletePerson } = usePerson();
   const [showAddModal, setShowAddModal] = useState(false);
   const [newPersonName, setNewPersonName] = useState('');
@@ -107,24 +108,27 @@ export default function PeoplePage() {
   const peopleWithoutManuals = people.filter(p => !p.hasManual);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#FFF8F0' }}>
-      {/* Blueprint grid background */}
-      <div className="blueprint-grid"></div>
+    <MainLayout>
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Page Header */}
+        <header className="mb-12">
+          <div className="relative bg-white border-4 border-slate-800 p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            {/* Corner brackets */}
+            <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-amber-600"></div>
+            <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-amber-600"></div>
+            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-amber-600"></div>
+            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-amber-600"></div>
 
-      {/* Technical Header */}
-      <header className="relative border-b-4 border-slate-800 bg-white shadow-[0px_4px_0px_0px_rgba(0,0,0,1)]">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
-          <div className="flex justify-between items-start">
             <div className="flex items-start gap-6">
               <Link
                 href="/dashboard"
-                className="mt-2 font-mono text-2xl font-bold text-slate-800 hover:text-amber-600 transition-colors"
+                className="mt-2 font-mono text-3xl font-bold text-slate-800 hover:text-amber-600 transition-colors"
                 data-testid="back-to-dashboard"
               >
                 ←
               </Link>
 
-              <div>
+              <div className="flex-1">
                 <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-3">
                   PERSONNEL DATABASE
                 </div>
@@ -133,25 +137,13 @@ export default function PeoplePage() {
                   People Management System
                 </h1>
 
-                <p className="font-mono text-xs text-slate-600">
+                <p className="font-mono text-sm text-slate-600">
                   CREATE AND MANAGE OPERATING MANUALS FOR ALL REGISTERED INDIVIDUALS
                 </p>
               </div>
             </div>
-
-            <button
-              onClick={logout}
-              className="px-4 py-2 border-2 border-slate-800 bg-white font-mono text-xs font-bold text-slate-800 hover:bg-slate-800 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-              data-testid="logout-button"
-            >
-              LOGOUT
-            </button>
           </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="relative max-w-7xl mx-auto px-6 lg:px-8 py-12">
+        </header>
         {/* Technical Statistics Panel */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           {/* Stat 1: Total People */}
@@ -312,7 +304,7 @@ export default function PeoplePage() {
             )}
           </div>
         )}
-      </main>
+      </div>
 
       {/* Add Person Modal */}
       {showAddModal && (
@@ -512,24 +504,7 @@ export default function PeoplePage() {
           </div>
         </div>
       )}
-
-      {/* Blueprint grid CSS */}
-      <style jsx>{`
-        .blueprint-grid {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-image:
-            linear-gradient(rgba(30, 58, 95, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(30, 58, 95, 0.03) 1px, transparent 1px);
-          background-size: 20px 20px;
-          pointer-events: none;
-          z-index: 0;
-        }
-      `}</style>
-    </div>
+    </MainLayout>
   );
 }
 

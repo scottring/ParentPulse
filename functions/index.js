@@ -1258,6 +1258,21 @@ function getVIADomain(questionId) {
 }
 
 /**
+ * Map self-worth question IDs to their RSES domains
+ */
+function getSelfWorthDomain(questionId) {
+  const domains = {
+    "sw_global": "Global Self-Worth",
+    "sw_qualities": "Self-Perception",
+    "sw_efficacy": "Self-Efficacy",
+    "sw_acceptance": "Self-Acceptance",
+    "sw_social": "Social Competence",
+    "sw_physical": "Physical Competence",
+  };
+  return domains[questionId] || "Unknown";
+}
+
+/**
  * Extract assessment scores from structured answers for storage and analysis
  */
 function extractAssessmentScores(answers) {
@@ -1369,6 +1384,39 @@ function extractAssessmentScores(answers) {
     }
   }
 
+  // Self-Worth Assessment (RSES)
+  if (answers.self_worth) {
+    const selfWorthItems = {};
+    let totalScore = 0;
+    let questionCount = 0;
+
+    Object.entries(answers.self_worth).forEach(([questionId, answer]) => {
+      if (questionId.startsWith("sw_") && typeof answer === "object" && answer !== null && answer.primary !== undefined) {
+        const score = typeof answer.primary === "number" ? answer.primary : parseInt(answer.primary);
+        selfWorthItems[questionId] = {
+          score: score,
+          qualitative: answer.qualitative || undefined,
+          domain: getSelfWorthDomain(questionId),
+        };
+        totalScore += score;
+        questionCount++;
+      }
+    });
+
+    if (Object.keys(selfWorthItems).length > 0) {
+      const averageScore = questionCount > 0 ? (totalScore / questionCount).toFixed(2) : 0;
+      const category = totalScore < 13 ? "low" : totalScore < 19 ? "moderate" : "high";
+
+      scores.selfWorth = {
+        items: selfWorthItems,
+        totalScore: totalScore,
+        averageScore: parseFloat(averageScore),
+        category: category,
+        questionCount: questionCount,
+      };
+    }
+  }
+
   return scores;
 }
 
@@ -1411,6 +1459,9 @@ Generate a JSON response with the following structure:
     "motivations": ["motivation 1", "motivation 2", ...],
     "comfortFactors": ["what makes them comfortable 1", ...],
     "discomfortFactors": ["what makes them uncomfortable 1", ...]
+  },
+  "coreInfo": {
+    "selfWorthInsights": ["insight about self-perception 1", "insight about confidence 2", ...]
   },
   "triggers": [
     {
@@ -1462,6 +1513,7 @@ Important Guidelines:
 10. Break down compound answers into separate items when appropriate
 11. The overview section should distill the user's answers into clear, concise points
 12. The roleOverview should be a cohesive narrative (2-3 paragraphs) that synthesizes all the information into a personal, warm description of ${personName} in this ${relationshipType} role
+13. For selfWorthInsights in coreInfo: Analyze self-worth assessment responses to generate 2-4 actionable insights about their self-perception, confidence, and areas to support. Focus on patterns, strengths to build on, and specific ways to nurture their sense of self-worth.
 
 Return ONLY the JSON object, no additional text or explanation.`;
 }
@@ -1676,6 +1728,8 @@ exports.generateWeeklyWorkbook = onCall(
         whatWorks,
         boundaries,
         previousWeekReflection,
+        assessmentScores,    // NEW: Assessment scores from onboarding
+        coreInfo,           // NEW: Core info including selfWorthInsights
       } = request.data;
 
       // Validate input
@@ -1694,7 +1748,9 @@ exports.generateWeeklyWorkbook = onCall(
             triggers || [],
             whatWorks || [],
             boundaries || [],
-            previousWeekReflection
+            previousWeekReflection,
+            assessmentScores,   // NEW: Pass assessment scores
+            coreInfo           // NEW: Pass core info
         );
 
         // Call Claude 3.5 Sonnet for complex reasoning and goal generation
@@ -1754,7 +1810,9 @@ function buildWorkbookGenerationPrompt(
     triggers,
     whatWorks,
     boundaries,
-    previousWeekReflection
+    previousWeekReflection,
+    assessmentScores,   // NEW: Assessment scores (via, selfWorth, etc.)
+    coreInfo           // NEW: Core info (selfWorthInsights, etc.)
 ) {
   // Format triggers
   const triggersText = triggers.length > 0 ?
@@ -1787,6 +1845,17 @@ Insights Learned: ${previousWeekReflection.insightsLearned || "N/A"}
 Adjustments Needed: ${previousWeekReflection.adjustmentsForNextWeek || "N/A"}
 ` : "";
 
+  // Format self-worth assessment if available
+  const selfWorthText = assessmentScores?.selfWorth ?
+    `
+SELF-WORTH ASSESSMENT (Rosenberg Scale):
+Total Score: ${assessmentScores.selfWorth.totalScore}/24 (${assessmentScores.selfWorth.category})
+Average: ${assessmentScores.selfWorth.averageScore}/4.0
+
+Self-Worth Insights:
+${coreInfo?.selfWorthInsights?.map((insight, idx) => `${idx + 1}. ${insight}`).join('\n') || 'None documented yet.'}
+` : "";
+
   return `You are helping a parent create a weekly workbook for supporting and understanding ${personName}.
 
 CONTEXT:
@@ -1804,7 +1873,7 @@ WHAT WORKS (Effective Strategies):
 ${strategiesText}
 
 BOUNDARIES & LIMITS:
-${boundariesText}${reflectionText}
+${boundariesText}${selfWorthText}${reflectionText}
 
 YOUR TASK:
 Generate a weekly workbook with:
@@ -1819,7 +1888,8 @@ CRITICAL GUIDELINES FOR PARENT GOALS:
 - Link to specific triggers/strategies from the manual when possible
 - Focus on ONE major challenge area per week
 - Consider what parent behaviors might help address the documented triggers
-- Examples: "Use calm, low voice during meltdowns", "Praise successful transitions immediately", "Take 3 deep breaths before responding"
+- If self-worth is low-moderate (score < 18), prioritize at least ONE goal focused on effort-based praise, process acknowledgment, strength highlighting, or brave moment recognition
+- Examples: "Use calm, low voice during meltdowns", "Praise successful transitions immediately", "Take 3 deep breaths before responding", "Acknowledge one effort your child made (daily)"
 
 ACTIVITY SELECTION GUIDELINES:
 Choose from these activity types based on ${personName}'s age and documented challenges:
@@ -1829,6 +1899,13 @@ Choose from these activity types based on ${personName}'s age and documented cha
 - visual-schedule: Ages 3-10, helps with routines (2 min)
 - gratitude: Ages 5+, thankfulness practice (5 min)
 - feeling-thermometer: Ages 5+, emotion intensity rating (3 min)
+- strength-reflection: Ages 5+, identifies personal strengths (5 min) [SELF-WORTH]
+- courage-moment: Ages 4+, recalls brave actions (5 min) [SELF-WORTH]
+- affirmation-practice: Ages 5+, positive self-statements (5 min) [SELF-WORTH]
+- growth-mindset-reflection: Ages 6+, reframes challenges as learning (7 min) [SELF-WORTH]
+- accomplishment-tracker: Ages 5+, tracks weekly wins (3 min) [SELF-WORTH]
+
+If self-worth score < 18: Prioritize one of the [SELF-WORTH] activities based on ${personName}'s specific self-worth challenges
 
 Generate a JSON response with this structure:
 
