@@ -1,0 +1,56 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - generic [ref=e8]: 🌱
+      - heading "Welcome to ParentPulse" [level=1] [ref=e9]
+      - paragraph [ref=e10]: Your thoughtful companion for intentional parenting. Journal your moments, discover insights, and grow alongside your family.
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - generic [ref=e13]: 📖
+          - generic [ref=e14]:
+            - generic [ref=e15]: Daily Journaling
+            - generic [ref=e16]: Capture parenting moments with AI-powered insights
+        - generic [ref=e17]:
+          - generic [ref=e18]: 💡
+          - generic [ref=e19]:
+            - generic [ref=e20]: Knowledge Library
+            - generic [ref=e21]: Organize wisdom from books, podcasts, and research
+        - generic [ref=e22]:
+          - generic [ref=e23]: 👨‍👩‍👧‍👦
+          - generic [ref=e24]:
+            - generic [ref=e25]: Family Connection
+            - generic [ref=e26]: Track check-ins and celebrate growth together
+    - generic [ref=e28]:
+      - generic [ref=e29]:
+        - heading "Welcome back" [level=2] [ref=e30]
+        - paragraph [ref=e31]: Sign in to continue your parenting journey
+        - paragraph [ref=e33]: Too many failed login attempts. Please try again later or reset your password.
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - generic [ref=e36]: Email Address
+            - textbox "Email Address" [ref=e37]:
+              - /placeholder: you@example.com
+              - text: test@example.com
+          - generic [ref=e38]:
+            - generic [ref=e39]:
+              - generic [ref=e40]: Password
+              - link "Forgot?" [ref=e41]:
+                - /url: "#"
+            - textbox "Password" [ref=e42]:
+              - /placeholder: ••••••••
+              - text: testpassword
+          - button "Sign In" [ref=e43]
+        - paragraph [ref=e45]:
+          - text: Don't have an account?
+          - link "Create one now" [ref=e46]:
+            - /url: /register
+      - paragraph [ref=e48]: Your family's data is private and secure 🔒
+  - button "Open Next.js Dev Tools" [ref=e54] [cursor=pointer]:
+    - img [ref=e55]
+  - alert [ref=e60]
+  - iframe [ref=e61]:
+    
+```

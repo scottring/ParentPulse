@@ -1,0 +1,350 @@
+/**
+ * Child Manual Onboarding Questions
+ * Comprehensive questionnaire for creating initial child manual
+ */
+
+export interface Question {
+  id: string;
+  text: string;
+  type: 'text' | 'textarea' | 'scale' | 'multipleChoice' | 'checkboxes';
+  placeholder?: string;
+  helpText?: string;
+  required: boolean;
+  options?: { value: string; label: string }[];
+  scaleLabels?: { min: string; max: string };
+}
+
+export interface QuestionSection {
+  id: string;
+  title: string;
+  description: string;
+  questions: Question[];
+}
+
+export const childOnboardingQuestions: QuestionSection[] = [
+  {
+    id: 'background',
+    title: 'Background & Context',
+    description: "Let's start with some basic information about {{childName}}.",
+    questions: [
+      {
+        id: 'diagnosis',
+        text: 'Has {{childName}} been evaluated or diagnosed with any developmental, behavioral, or learning differences?',
+        type: 'textarea',
+        placeholder: 'Examples: ADHD, autism, anxiety, sensory processing disorder, dyslexia, etc. Include any formal diagnoses or observations from teachers/doctors.',
+        helpText: 'If not formally diagnosed, you can describe suspected or observed patterns.',
+        required: false,
+      },
+      {
+        id: 'medical',
+        text: 'Any significant medical history, allergies, or medications we should know about?',
+        type: 'textarea',
+        placeholder: 'Include medications, allergies, chronic conditions, or anything that affects daily life.',
+        required: false,
+      },
+      {
+        id: 'routine',
+        text: "Describe {{childName}}'s typical daily routine. When do the hardest moments usually happen?",
+        type: 'textarea',
+        placeholder: 'Example: "Mornings are chaos - getting dressed and breakfast are battles. After school is good. Bedtime is a 2-hour ordeal."',
+        helpText: 'Be specific about times of day and which activities are smooth vs. difficult.',
+        required: true,
+      },
+    ],
+  },
+
+  {
+    id: 'adhd-specific',
+    title: 'ADHD-Related Patterns',
+    description: "These questions help us understand {{childName}}'s attention, impulse control, and activity levels.",
+    questions: [
+      {
+        id: 'adhd-hyperactivity',
+        text: 'How would you describe {{childName}}\'s activity level and ability to sit still?',
+        type: 'textarea',
+        placeholder: 'Example: "Constantly moving, fidgeting, can\'t sit through a meal. Climbs on furniture. Always touching things." Or "Can sit for videos but not homework."',
+        helpText: 'Describe when they can vs. cannot sit still, and what the movement looks like.',
+        required: true,
+      },
+      {
+        id: 'adhd-impulsivity',
+        text: 'Does {{childName}} act impulsively or have trouble thinking before acting?',
+        type: 'textarea',
+        placeholder: 'Example: "Blurts out answers, interrupts constantly, grabs things without asking, runs into street without looking."',
+        helpText: 'Include specific examples of impulsive behaviors.',
+        required: true,
+      },
+      {
+        id: 'adhd-attention-span',
+        text: 'How long can {{childName}} focus on different types of activities?',
+        type: 'textarea',
+        placeholder: 'Example: "Legos for 45 minutes, video games for hours, homework for 2 minutes, conversations for 30 seconds."',
+        helpText: 'Compare attention span for preferred activities vs. non-preferred tasks.',
+        required: true,
+      },
+      {
+        id: 'adhd-distractibility',
+        text: 'What distracts {{childName}} most easily? How do they respond to interruptions?',
+        type: 'textarea',
+        placeholder: 'Example: "Any noise derails them. Forgets what they were doing if someone talks. Sees a toy and abandons current task."',
+        required: true,
+      },
+      {
+        id: 'adhd-waiting',
+        text: 'How well does {{childName}} wait their turn or handle delays?',
+        type: 'textarea',
+        placeholder: 'Example: "Can\'t wait in line without melting down. Interrupts constantly. Needs to be first always."',
+        helpText: 'Describe situations where waiting is hard and any strategies that help.',
+        required: true,
+      },
+      {
+        id: 'adhd-task-completion',
+        text: 'Does {{childName}} finish tasks they start? What happens with multi-step directions?',
+        type: 'textarea',
+        placeholder: 'Example: "Starts 10 projects, finishes none. Give 3-step direction, they forget step 2. Clean your room = stare at toys for 30 minutes."',
+        helpText: 'Include how they handle chores, homework, getting ready, etc.',
+        required: true,
+      },
+      {
+        id: 'adhd-organization',
+        text: 'How organized is {{childName}}? Do they lose or forget things often?',
+        type: 'textarea',
+        placeholder: 'Example: "Loses jacket every day. Forgets homework at school. Room is a disaster. Can never find their shoes."',
+        required: true,
+      },
+      {
+        id: 'adhd-talking',
+        text: 'Does {{childName}} talk excessively or have trouble with quiet activities?',
+        type: 'textarea',
+        placeholder: 'Example: "Talks nonstop, narrates everything, can\'t whisper, asks 1000 questions."',
+        required: false,
+      },
+    ],
+  },
+
+  {
+    id: 'emotional-regulation',
+    title: 'Emotional Regulation',
+    description: "Let's understand how {{childName}} handles emotions and stress.",
+    questions: [
+      {
+        id: 'escalation-speed',
+        text: 'How quickly does {{childName}} go from calm to upset?',
+        type: 'scale',
+        scaleLabels: {
+          min: 'Gradual buildup (you see it coming)',
+          max: 'Instant explosion (0 to 100 in seconds)',
+        },
+        required: true,
+      },
+      {
+        id: 'triggers',
+        text: 'What are the most common triggers for meltdowns or frustration?',
+        type: 'textarea',
+        placeholder: 'Example: "Being told no, transitions, hunger, being rushed, losing at games, sibling touching their stuff, loud noises."',
+        helpText: 'Be as specific as possible. Include times, situations, and people.',
+        required: true,
+      },
+      {
+        id: 'meltdown-behavior',
+        text: 'When {{childName}} is upset, what does it look like?',
+        type: 'checkboxes',
+        options: [
+          { value: 'yelling', label: 'Yelling/screaming' },
+          { value: 'crying', label: 'Crying' },
+          { value: 'hitting', label: 'Hitting/kicking/physical aggression' },
+          { value: 'throwing', label: 'Throwing things' },
+          { value: 'shutting-down', label: 'Shutting down/withdrawing' },
+          { value: 'running', label: 'Running away/hiding' },
+          { value: 'self-harm', label: 'Self-harming behaviors' },
+          { value: 'destroying', label: 'Destroying property' },
+          { value: 'other', label: 'Other (describe below)' },
+        ],
+        required: true,
+      },
+      {
+        id: 'meltdown-other',
+        text: 'If you selected "Other" above, please describe:',
+        type: 'textarea',
+        required: false,
+      },
+      {
+        id: 'calming-time',
+        text: 'How long does it typically take {{childName}} to calm down once upset?',
+        type: 'multipleChoice',
+        options: [
+          { value: '1-5min', label: '1-5 minutes' },
+          { value: '5-15min', label: '5-15 minutes' },
+          { value: '15-30min', label: '15-30 minutes' },
+          { value: '30-60min', label: '30-60 minutes' },
+          { value: '1hr+', label: 'Over an hour' },
+          { value: 'varies', label: 'Varies greatly' },
+        ],
+        required: true,
+      },
+      {
+        id: 'calming-strategies',
+        text: 'What helps {{childName}} calm down when upset? What makes it worse?',
+        type: 'textarea',
+        placeholder: 'HELPS: "Alone time in their room, deep pressure hugs, fidget toys, listening to music."\n\nMAKES WORSE: "Talking to them, following them, trying to problem-solve, sending to timeout."',
+        required: true,
+      },
+    ],
+  },
+
+  {
+    id: 'transitions-routines',
+    title: 'Transitions & Daily Routines',
+    description: "Let's dive into daily routines and transitions.",
+    questions: [
+      {
+        id: 'hard-transitions',
+        text: 'Which daily transitions are hardest for {{childName}}?',
+        type: 'checkboxes',
+        options: [
+          { value: 'waking-up', label: 'Waking up in the morning' },
+          { value: 'getting-dressed', label: 'Getting dressed' },
+          { value: 'leaving-house', label: 'Leaving the house' },
+          { value: 'arriving-school', label: 'Arriving at school/daycare' },
+          { value: 'after-school', label: 'Coming home from school' },
+          { value: 'homework', label: 'Starting homework' },
+          { value: 'dinner', label: 'Dinner time' },
+          { value: 'bath', label: 'Bath/shower time' },
+          { value: 'bedtime', label: 'Bedtime routine' },
+          { value: 'stopping-play', label: 'Stopping play/screen time' },
+          { value: 'other', label: 'Other transitions' },
+        ],
+        required: true,
+      },
+      {
+        id: 'transition-strategies',
+        text: 'What strategies help with difficult transitions?',
+        type: 'textarea',
+        placeholder: 'Example: "10-minute warnings, timers, choices (red shirt or blue?), visual schedules, songs, making it a race."',
+        helpText: 'Include what works and what doesn\'t.',
+        required: true,
+      },
+      {
+        id: 'morning-routine',
+        text: 'Describe a typical morning routine. What works? What\'s a struggle?',
+        type: 'textarea',
+        placeholder: 'Example: "Wake at 7, battle over getting out of bed for 20 min. Breakfast is fine if I give 2 choices. Getting dressed takes 45 min of reminders. Forget to brush teeth daily."',
+        required: true,
+      },
+      {
+        id: 'bedtime-routine',
+        text: 'Describe a typical bedtime routine. What works? What\'s a struggle?',
+        type: 'textarea',
+        placeholder: 'Example: "Start at 8pm, goal is 8:30. But they fight bath, won\'t brush teeth, need water 5x, can\'t fall asleep until 10pm. Scared of dark."',
+        required: true,
+      },
+    ],
+  },
+
+  {
+    id: 'behavior-cooperation',
+    title: 'Behavior & Cooperation',
+    description: "Help us understand when {{childName}} cooperates and when they struggle.",
+    questions: [
+      {
+        id: 'listening-best',
+        text: 'When does {{childName}} listen and cooperate best? What conditions help?',
+        type: 'textarea',
+        placeholder: 'Example: "After exercise, when well-fed, one-on-one time with Dad, during calm mornings, when given choices, when they feel in control."',
+        required: true,
+      },
+      {
+        id: 'listening-worst',
+        text: 'When is cooperation hardest? What patterns do you notice?',
+        type: 'textarea',
+        placeholder: 'Example: "End of day when tired, when hungry, after school, when overstimulated, when sibling is around, during transitions."',
+        required: true,
+      },
+      {
+        id: 'request-types',
+        text: 'How does {{childName}} respond to different types of requests?',
+        type: 'textarea',
+        placeholder: 'Example: "Direct commands = immediate no. Choices work better. Gentle reminders ignored. Firm tone gets defiance. Making it a game works great."',
+        helpText: 'Describe what communication styles work vs. don\'t work.',
+        required: true,
+      },
+    ],
+  },
+
+  {
+    id: 'sensory-physical',
+    title: 'Sensory & Physical Needs',
+    description: "Let's understand {{childName}}'s sensory sensitivities and physical needs.",
+    questions: [
+      {
+        id: 'sensory-sensitivities',
+        text: 'Is {{childName}} sensitive to sounds, textures, lights, smells, or other sensory input?',
+        type: 'textarea',
+        placeholder: 'Example: "Hates tags in shirts, covers ears at loud noises, gags at certain food textures, sensitive to bright lights, can\'t stand scratchy fabrics."',
+        helpText: 'Include both oversensitivities (avoids) and under-sensitivities (seeks out).',
+        required: false,
+      },
+      {
+        id: 'physical-activity',
+        text: 'Does physical activity help or hinder {{childName}}\'s behavior? How much movement do they need daily?',
+        type: 'textarea',
+        placeholder: 'Example: "Needs to run outside for 30+ min daily or they\'re a disaster. After trampoline time, homework goes better. Too much activity makes them wild."',
+        required: true,
+      },
+    ],
+  },
+
+  {
+    id: 'strengths-interests',
+    title: 'Strengths & Interests',
+    description: "Let's focus on what makes {{childName}} special.",
+    questions: [
+      {
+        id: 'strengths',
+        text: 'What is {{childName}} naturally good at? What are their strengths?',
+        type: 'textarea',
+        placeholder: 'Example: "Creative, amazing at building, kind to younger kids, funny, great memory for facts, persistent, athletic."',
+        helpText: 'Think beyond academics - include personality, social, creative, physical strengths.',
+        required: true,
+      },
+      {
+        id: 'interests',
+        text: 'What does {{childName}} love to do? What captures their interest?',
+        type: 'textarea',
+        placeholder: 'Example: "Obsessed with dinosaurs, loves Legos, spends hours drawing, talks about Minecraft constantly, enjoys soccer."',
+        required: true,
+      },
+      {
+        id: 'best-moments',
+        text: 'When is {{childName}} happiest? Describe times when you see them at their best.',
+        type: 'textarea',
+        placeholder: 'Example: "Playing with the dog, building with Dad, one-on-one time at park, reading together before bed, helping cook dinner."',
+        required: true,
+      },
+    ],
+  },
+
+  {
+    id: 'what-works',
+    title: 'What Works & What Doesn\'t',
+    description: 'Finally, let\'s capture what you\'ve learned through experience.',
+    questions: [
+      {
+        id: 'successful-strategies',
+        text: 'What parenting strategies have worked well with {{childName}}? Be specific.',
+        type: 'textarea',
+        placeholder: 'Example: "Offering 2 choices, 10-minute warnings, using timers, positive reinforcement with stickers, letting them help make decisions, physical affection, special one-on-one time."',
+        helpText: 'Include discipline, motivation, communication strategies.',
+        required: true,
+      },
+      {
+        id: 'failed-strategies',
+        text: 'What strategies have failed or made things worse?',
+        type: 'textarea',
+        placeholder: 'Example: "Yelling, time-outs, taking away screens, reasoning with them mid-meltdown, saying \'just calm down\', comparing to sibling."',
+        helpText: 'This is just as important as what works!',
+        required: true,
+      },
+    ],
+  },
+];

@@ -74,39 +74,29 @@ export default function ChipEconomyPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 animate-fade-in-up">
             {children.map((child, index) => (
               <div
-                key={child.userId}
+                key={child.childId}
                 className="parent-card p-6 hover:shadow-lg transition-all duration-300"
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-16 h-16 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--parent-primary)' }}>
-                    {child.avatarUrl ? (
-                      <img src={child.avatarUrl} alt={child.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-3xl">
-                        👤
-                      </div>
-                    )}
+                    <div className="w-full h-full flex items-center justify-center text-3xl">
+                      👤
+                    </div>
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold text-lg" style={{ color: 'var(--parent-text)' }}>
                       {child.name}
                     </h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-2xl">🎮</span>
-                      <span className="font-bold text-xl" style={{ color: 'var(--parent-secondary)' }}>
-                        {child.chipBalance || 0}
-                      </span>
-                      <span className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                        chips
-                      </span>
-                    </div>
+                    <p className="text-sm mt-1" style={{ color: 'var(--parent-text-light)' }}>
+                      {child.age ? `Age ${child.age}` : ''}
+                    </p>
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
-                      setSelectedChild(child.userId);
+                      setSelectedChild(child.childId);
                       setShowAwardModal(true);
                     }}
                     className="flex-1 py-2 rounded-lg text-sm font-medium transition-all hover:shadow-md"
@@ -118,7 +108,7 @@ export default function ChipEconomyPage() {
                     Award Chips
                   </button>
                   <button
-                    onClick={() => router.push(`/chip-economy/history/${child.userId}`)}
+                    onClick={() => router.push(`/chip-economy/history/${child.childId}`)}
                     className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:shadow-md"
                     style={{
                       border: '1px solid var(--parent-border)',
@@ -290,7 +280,7 @@ export default function ChipEconomyPage() {
 
             <div className="mb-4">
               <p className="text-sm mb-2" style={{ color: 'var(--parent-text)' }}>
-                Awarding chips to: <strong>{children.find(c => c.userId === selectedChild)?.name}</strong>
+                Awarding chips to: <strong>{children.find(c => c.childId === selectedChild)?.name}</strong>
               </p>
             </div>
 

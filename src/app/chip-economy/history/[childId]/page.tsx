@@ -14,7 +14,7 @@ export default function ChipHistoryPage({ params }: { params: Promise<{ childId:
   const { children } = useChildren();
   const { transactions, fetchChildTransactions, loading: transactionsLoading } = useChipEconomy();
 
-  const child = children.find(c => c.userId === childId);
+  const child = children.find(c => c.childId === childId);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -83,16 +83,7 @@ export default function ChipHistoryPage({ params }: { params: Promise<{ childId:
         {child && (
           <div className="parent-card p-6 mb-8 text-center animate-fade-in-up">
             <p className="text-sm font-semibold mb-2" style={{ color: 'var(--parent-text-light)' }}>
-              Current Balance
-            </p>
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-4xl">🎮</span>
-              <span className="text-5xl font-bold" style={{ color: 'var(--parent-secondary)' }}>
-                {child.chipBalance}
-              </span>
-            </div>
-            <p className="text-sm mt-2" style={{ color: 'var(--parent-text-light)' }}>
-              chips
+              Transaction History
             </p>
           </div>
         )}

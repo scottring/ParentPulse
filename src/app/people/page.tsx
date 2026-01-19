@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { usePerson } from '@/hooks/usePerson';
-import { usePersonManual } from '@/hooks/usePersonManual';
 
 export default function PeoplePage() {
   const router = useRouter();
@@ -32,8 +31,11 @@ export default function PeoplePage() {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center parent-page">
-        <div className="w-16 h-16 spinner"></div>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FFF8F0' }}>
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-slate-800 border-t-amber-600 rounded-full animate-spin"></div>
+          <p className="mt-4 font-mono text-sm text-slate-600">LOADING DATABASE...</p>
+        </div>
       </div>
     );
   }
@@ -105,166 +107,208 @@ export default function PeoplePage() {
   const peopleWithoutManuals = people.filter(p => !p.hasManual);
 
   return (
-    <div className="min-h-screen parent-page">
-      {/* Header */}
-      <header className="border-b paper-texture" style={{ borderColor: 'var(--parent-border)', backgroundColor: 'var(--parent-card)' }}>
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <Link href="/dashboard" className="text-2xl transition-transform hover:scale-110">
+    <div className="min-h-screen" style={{ backgroundColor: '#FFF8F0' }}>
+      {/* Blueprint grid background */}
+      <div className="blueprint-grid"></div>
+
+      {/* Technical Header */}
+      <header className="relative border-b-4 border-slate-800 bg-white shadow-[0px_4px_0px_0px_rgba(0,0,0,1)]">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
+          <div className="flex justify-between items-start">
+            <div className="flex items-start gap-6">
+              <Link
+                href="/dashboard"
+                className="mt-2 font-mono text-2xl font-bold text-slate-800 hover:text-amber-600 transition-colors"
+                data-testid="back-to-dashboard"
+              >
                 ←
               </Link>
+
               <div>
-                <h1 className="parent-heading text-2xl sm:text-3xl" style={{ color: 'var(--parent-accent)' }}>
-                  People in Your Life
+                <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-3">
+                  PERSONNEL DATABASE
+                </div>
+
+                <h1 className="font-mono text-4xl font-bold tracking-tight text-slate-900 mb-2">
+                  People Management System
                 </h1>
-                <p className="text-sm mt-1" style={{ color: 'var(--parent-text-light)' }}>
-                  Create and manage operating manuals for everyone who matters
+
+                <p className="font-mono text-xs text-slate-600">
+                  CREATE AND MANAGE OPERATING MANUALS FOR ALL REGISTERED INDIVIDUALS
                 </p>
               </div>
             </div>
+
             <button
               onClick={logout}
-              className="text-sm font-medium px-4 py-2 rounded-lg transition-all hover:shadow-md"
-              style={{
-                color: 'var(--parent-text-light)',
-                border: '1px solid var(--parent-border)'
-              }}
+              className="px-4 py-2 border-2 border-slate-800 bg-white font-mono text-xs font-bold text-slate-800 hover:bg-slate-800 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+              data-testid="logout-button"
             >
-              Logout
+              LOGOUT
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 lg:px-8 py-8 lg:py-12">
-        {/* Stats Overview */}
-        <div className="grid sm:grid-cols-3 gap-4 mb-8 animate-fade-in-up">
-          <div className="parent-card p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="text-3xl">👥</div>
-              <div>
-                <p className="text-2xl font-bold" style={{ color: 'var(--parent-text)' }}>
-                  {people.length}
-                </p>
-                <p className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Total People
-                </p>
+      <main className="relative max-w-7xl mx-auto px-6 lg:px-8 py-12">
+        {/* Technical Statistics Panel */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          {/* Stat 1: Total People */}
+          <div className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]" data-testid="total-people-stat">
+            <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-amber-600">
+              1
+            </div>
+            <div className="font-mono text-xs text-slate-600 mb-2 uppercase tracking-wider">
+              REGISTRY COUNT
+            </div>
+            <div className="flex items-baseline gap-3">
+              <div className="text-5xl font-bold font-mono text-slate-900">
+                {people.length}
+              </div>
+              <div className="font-mono text-sm text-slate-600">
+                TOTAL<br/>PEOPLE
               </div>
             </div>
           </div>
 
-          <div className="parent-card p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="text-3xl">📖</div>
-              <div>
-                <p className="text-2xl font-bold" style={{ color: 'var(--parent-accent)' }}>
-                  {peopleWithManuals.length}
-                </p>
-                <p className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Active Manuals
-                </p>
+          {/* Stat 2: Active Manuals */}
+          <div className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]" data-testid="active-manuals-stat">
+            <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-green-600">
+              2
+            </div>
+            <div className="font-mono text-xs text-slate-600 mb-2 uppercase tracking-wider">
+              OPERATIONAL STATUS
+            </div>
+            <div className="flex items-baseline gap-3">
+              <div className="text-5xl font-bold font-mono text-green-700">
+                {peopleWithManuals.length}
+              </div>
+              <div className="font-mono text-sm text-slate-600">
+                ACTIVE<br/>MANUALS
               </div>
             </div>
           </div>
 
-          <div className="parent-card p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="text-3xl">✨</div>
-              <div>
-                <p className="text-2xl font-bold" style={{ color: 'var(--parent-secondary)' }}>
-                  {peopleWithoutManuals.length}
-                </p>
-                <p className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Awaiting Setup
-                </p>
+          {/* Stat 3: Awaiting Setup */}
+          <div className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]" data-testid="awaiting-setup-stat">
+            <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-amber-600">
+              3
+            </div>
+            <div className="font-mono text-xs text-slate-600 mb-2 uppercase tracking-wider">
+              PENDING INIT
+            </div>
+            <div className="flex items-baseline gap-3">
+              <div className="text-5xl font-bold font-mono text-amber-600">
+                {peopleWithoutManuals.length}
+              </div>
+              <div className="font-mono text-sm text-slate-600">
+                AWAITING<br/>SETUP
               </div>
             </div>
           </div>
         </div>
 
-        {/* Add Person Button */}
-        <div className="flex justify-between items-center mb-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-          <h2 className="parent-heading text-2xl" style={{ color: 'var(--parent-text)' }}>
-            Your People
-          </h2>
+        {/* Action Bar */}
+        <div className="flex justify-between items-center mb-8">
+          <div className="inline-block px-3 py-1 bg-amber-600 text-white font-mono text-xs">
+            PERSONNEL REGISTRY
+          </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="px-6 py-3 rounded-lg font-semibold text-white transition-all hover:shadow-lg flex items-center gap-2"
-            style={{ backgroundColor: 'var(--parent-accent)' }}
+            className="px-6 py-3 bg-slate-800 text-white font-mono font-bold hover:bg-amber-600 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
+            data-testid="add-person-button"
           >
-            <span className="text-xl">+</span>
-            <span>Add Person</span>
+            + ADD PERSON
           </button>
         </div>
 
-        {/* People Grid */}
+        {/* People Content */}
         {peopleLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="w-12 h-12 spinner"></div>
+          <div className="flex items-center justify-center py-16">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-slate-800 border-t-amber-600 rounded-full animate-spin"></div>
+              <p className="mt-4 font-mono text-sm text-slate-600">LOADING REGISTRY...</p>
+            </div>
           </div>
         ) : people.length === 0 ? (
-          <div className="parent-card p-12 text-center paper-texture animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-            <div className="text-6xl mb-4 opacity-40">👋</div>
-            <h3 className="parent-heading text-2xl mb-3" style={{ color: 'var(--parent-text)' }}>
-              Start Building Your Operating Manuals
-            </h3>
-            <p className="text-base mb-6 max-w-md mx-auto" style={{ color: 'var(--parent-text-light)' }}>
-              Add the important people in your life - children, spouse, elderly parents, close friends -
-              and create personalized manuals to understand what works for each relationship.
+          <div className="relative bg-amber-50 border-4 border-amber-600 p-16 text-center shadow-[8px_8px_0px_0px_rgba(217,119,6,1)]">
+            <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-slate-800"></div>
+            <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-slate-800"></div>
+            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-slate-800"></div>
+            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-slate-800"></div>
+
+            <div className="inline-block px-3 py-1 bg-amber-600 text-white font-mono text-xs mb-6">
+              DATABASE EMPTY
+            </div>
+            <h2 className="font-mono text-3xl font-bold mb-4 text-slate-900">
+              NO PERSONNEL REGISTERED
+            </h2>
+            <p className="font-mono text-sm text-slate-700 mb-8 max-w-md mx-auto">
+              Initialize the personnel database by adding your first person and creating their operating manual
             </p>
             <button
               onClick={() => setShowAddModal(true)}
-              className="px-8 py-4 rounded-lg font-semibold text-white transition-all hover:shadow-lg inline-flex items-center gap-2"
-              style={{ backgroundColor: 'var(--parent-accent)' }}
+              className="px-8 py-4 bg-slate-800 text-white font-mono font-bold hover:bg-amber-600 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              data-testid="add-first-person-button"
             >
-              <span className="text-2xl">+</span>
-              <span>Add Your First Person</span>
+              ADD FIRST PERSON →
             </button>
           </div>
         ) : (
-          <div className="space-y-8">
-            {/* People with Manuals */}
+          <div className="space-y-12">
+            {/* Active Manuals Section */}
             {peopleWithManuals.length > 0 && (
-              <div className="animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--parent-text)' }}>
-                  <span className="text-2xl">📖</span>
-                  <span>Active Manuals ({peopleWithManuals.length})</span>
-                </h3>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <section>
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs">
+                    SECTION 1
+                  </div>
+                  <h2 className="font-mono text-2xl font-bold">
+                    Active Manuals ({peopleWithManuals.length})
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {peopleWithManuals.map((person, index) => (
                     <PersonCard
                       key={person.personId}
                       person={person}
-                      animationDelay={`${0.2 + index * 0.05}s`}
+                      index={index}
+                      hasManual={true}
                       onEdit={() => openEditModal(person)}
                       onDelete={() => setDeletingPerson(person)}
                     />
                   ))}
                 </div>
-              </div>
+              </section>
             )}
 
-            {/* People without Manuals */}
+            {/* Ready for Setup Section */}
             {peopleWithoutManuals.length > 0 && (
-              <div className="animate-fade-in-up" style={{ animationDelay: `${0.2 + peopleWithManuals.length * 0.05}s` }}>
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--parent-text)' }}>
-                  <span className="text-2xl">✨</span>
-                  <span>Ready for Setup ({peopleWithoutManuals.length})</span>
-                </h3>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <section>
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="inline-block px-3 py-1 bg-amber-600 text-white font-mono text-xs">
+                    SECTION 2
+                  </div>
+                  <h2 className="font-mono text-2xl font-bold">
+                    Ready for Setup ({peopleWithoutManuals.length})
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {peopleWithoutManuals.map((person, index) => (
                     <PersonCard
                       key={person.personId}
                       person={person}
-                      animationDelay={`${0.2 + (peopleWithManuals.length + index) * 0.05}s`}
+                      index={index}
+                      hasManual={false}
                       onEdit={() => openEditModal(person)}
                       onDelete={() => setDeletingPerson(person)}
                     />
                   ))}
                 </div>
-              </div>
+              </section>
             )}
           </div>
         )}
@@ -273,60 +317,68 @@ export default function PeoplePage() {
       {/* Add Person Modal */}
       {showAddModal && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
           onClick={() => !isAdding && setShowAddModal(false)}
         >
           <div
-            className="parent-card p-8 max-w-md w-full animate-fade-in-up"
+            className="relative bg-white border-4 border-slate-800 p-8 max-w-md w-full shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]"
             onClick={(e) => e.stopPropagation()}
-            style={{ animationDelay: '0s' }}
+            data-testid="add-person-modal"
           >
-            <h3 className="parent-heading text-2xl mb-4" style={{ color: 'var(--parent-text)' }}>
-              Add a New Person
+            {/* Corner brackets */}
+            <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-amber-600"></div>
+            <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-amber-600"></div>
+            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-amber-600"></div>
+            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-amber-600"></div>
+
+            <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-6">
+              NEW ENTRY
+            </div>
+            <h3 className="font-mono text-2xl font-bold mb-2 text-slate-900">
+              Add Person to Registry
             </h3>
-            <p className="text-sm mb-6" style={{ color: 'var(--parent-text-light)' }}>
-              Enter the name of someone you'd like to create an operating manual for.
+            <p className="font-mono text-xs text-slate-600 mb-6">
+              Enter the name of someone you'd like to create an operating manual for
             </p>
 
-            <input
-              type="text"
-              value={newPersonName}
-              onChange={(e) => setNewPersonName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !isAdding) {
-                  handleAddPerson();
-                }
-              }}
-              placeholder="e.g., Scott, Iris, Ella, Caleb"
-              className="w-full px-4 py-3 rounded-lg mb-6 text-base"
-              style={{
-                border: '2px solid var(--parent-border)',
-                color: 'var(--parent-text)',
-                backgroundColor: 'var(--parent-bg)'
-              }}
-              autoFocus
-              disabled={isAdding}
-            />
+            <div className="mb-6">
+              <label className="font-mono text-xs text-slate-600 mb-2 block uppercase tracking-wider">
+                Full Name:
+              </label>
+              <input
+                type="text"
+                value={newPersonName}
+                onChange={(e) => setNewPersonName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isAdding) {
+                    handleAddPerson();
+                  }
+                }}
+                placeholder="e.g., SCOTT, IRIS, ELLA, CALEB"
+                className="w-full px-4 py-3 font-mono text-sm border-2 border-slate-800 focus:outline-none focus:border-amber-600"
+                style={{ backgroundColor: '#FFF8F0' }}
+                autoFocus
+                disabled={isAdding}
+                data-testid="person-name-input"
+              />
+            </div>
 
             <div className="flex gap-3">
               <button
                 onClick={() => !isAdding && setShowAddModal(false)}
-                className="flex-1 px-4 py-3 rounded-lg font-semibold transition-all"
-                style={{
-                  border: '1px solid var(--parent-border)',
-                  color: 'var(--parent-text-light)'
-                }}
+                className="flex-1 px-4 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-700 hover:border-slate-800 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]"
                 disabled={isAdding}
+                data-testid="cancel-add-button"
               >
-                Cancel
+                CANCEL
               </button>
               <button
                 onClick={handleAddPerson}
-                className="flex-1 px-4 py-3 rounded-lg font-semibold text-white transition-all hover:shadow-lg disabled:opacity-50"
-                style={{ backgroundColor: 'var(--parent-accent)' }}
+                className="flex-1 px-4 py-3 bg-slate-800 text-white font-mono text-xs font-bold hover:bg-amber-600 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50"
                 disabled={isAdding || !newPersonName.trim()}
+                data-testid="submit-add-button"
               >
-                {isAdding ? 'Adding...' : 'Add Person'}
+                {isAdding ? 'PROCESSING...' : 'ADD PERSON'}
               </button>
             </div>
           </div>
@@ -336,59 +388,67 @@ export default function PeoplePage() {
       {/* Edit Person Modal */}
       {editingPerson && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
           onClick={() => !isUpdating && setEditingPerson(null)}
         >
           <div
-            className="parent-card p-8 max-w-md w-full animate-fade-in-up"
+            className="relative bg-white border-4 border-slate-800 p-8 max-w-md w-full shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]"
             onClick={(e) => e.stopPropagation()}
+            data-testid="edit-person-modal"
           >
-            <h3 className="parent-heading text-2xl mb-4" style={{ color: 'var(--parent-text)' }}>
-              Edit Person
+            <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-amber-600"></div>
+            <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-amber-600"></div>
+            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-amber-600"></div>
+            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-amber-600"></div>
+
+            <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-6">
+              EDIT RECORD
+            </div>
+            <h3 className="font-mono text-2xl font-bold mb-2 text-slate-900">
+              Update Person Details
             </h3>
-            <p className="text-sm mb-6" style={{ color: 'var(--parent-text-light)' }}>
-              Update the name for {editingPerson.name}.
+            <p className="font-mono text-xs text-slate-600 mb-6">
+              Modify the name for {editingPerson.name}
             </p>
 
-            <input
-              type="text"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !isUpdating) {
-                  handleEditPerson();
-                }
-              }}
-              placeholder="Enter name"
-              className="w-full px-4 py-3 rounded-lg mb-6 text-base"
-              style={{
-                border: '2px solid var(--parent-border)',
-                color: 'var(--parent-text)',
-                backgroundColor: 'var(--parent-bg)'
-              }}
-              autoFocus
-              disabled={isUpdating}
-            />
+            <div className="mb-6">
+              <label className="font-mono text-xs text-slate-600 mb-2 block uppercase tracking-wider">
+                Full Name:
+              </label>
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isUpdating) {
+                    handleEditPerson();
+                  }
+                }}
+                placeholder="Enter name"
+                className="w-full px-4 py-3 font-mono text-sm border-2 border-slate-800 focus:outline-none focus:border-amber-600"
+                style={{ backgroundColor: '#FFF8F0' }}
+                autoFocus
+                disabled={isUpdating}
+                data-testid="edit-name-input"
+              />
+            </div>
 
             <div className="flex gap-3">
               <button
                 onClick={() => !isUpdating && setEditingPerson(null)}
-                className="flex-1 px-4 py-3 rounded-lg font-semibold transition-all"
-                style={{
-                  border: '1px solid var(--parent-border)',
-                  color: 'var(--parent-text-light)'
-                }}
+                className="flex-1 px-4 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-700 hover:border-slate-800 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]"
                 disabled={isUpdating}
+                data-testid="cancel-edit-button"
               >
-                Cancel
+                CANCEL
               </button>
               <button
                 onClick={handleEditPerson}
-                className="flex-1 px-4 py-3 rounded-lg font-semibold text-white transition-all hover:shadow-lg disabled:opacity-50"
-                style={{ backgroundColor: 'var(--parent-accent)' }}
+                className="flex-1 px-4 py-3 bg-slate-800 text-white font-mono text-xs font-bold hover:bg-amber-600 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50"
                 disabled={isUpdating || !editName.trim()}
+                data-testid="submit-edit-button"
               >
-                {isUpdating ? 'Saving...' : 'Save Changes'}
+                {isUpdating ? 'UPDATING...' : 'SAVE CHANGES'}
               </button>
             </div>
           </div>
@@ -398,66 +458,91 @@ export default function PeoplePage() {
       {/* Delete Confirmation Modal */}
       {deletingPerson && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
           onClick={() => !isDeleting && setDeletingPerson(null)}
         >
           <div
-            className="parent-card p-8 max-w-md w-full animate-fade-in-up"
+            className="relative bg-white border-4 border-red-600 p-8 max-w-md w-full shadow-[12px_12px_0px_0px_rgba(220,38,38,1)]"
             onClick={(e) => e.stopPropagation()}
+            data-testid="delete-person-modal"
           >
-            <h3 className="parent-heading text-2xl mb-4 text-red-600">
+            <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-slate-800"></div>
+            <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-slate-800"></div>
+            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-slate-800"></div>
+            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-slate-800"></div>
+
+            <div className="inline-block px-3 py-1 bg-red-600 text-white font-mono text-xs mb-6">
+              ⚠ WARNING
+            </div>
+            <h3 className="font-mono text-2xl font-bold mb-2 text-red-600">
               Delete Person?
             </h3>
-            <p className="text-base mb-6" style={{ color: 'var(--parent-text)' }}>
-              Are you sure you want to delete <strong>{deletingPerson.name}</strong>?
-              {deletingPerson.hasManual && (
-                <span className="block mt-2 text-red-600">
-                  Warning: This person has an operating manual that will also be affected.
-                </span>
-              )}
+            <p className="font-mono text-sm text-slate-900 mb-4">
+              Confirm deletion of <strong>{deletingPerson.name}</strong>
             </p>
-            <p className="text-sm mb-6" style={{ color: 'var(--parent-text-light)' }}>
-              This action cannot be undone.
+            {deletingPerson.hasManual && (
+              <div className="mb-4 p-3 bg-red-50 border-2 border-red-600">
+                <p className="font-mono text-xs text-red-700">
+                  ⚠ THIS PERSON HAS AN OPERATING MANUAL THAT WILL BE AFFECTED
+                </p>
+              </div>
+            )}
+            <p className="font-mono text-xs text-slate-600 mb-6">
+              This action cannot be undone. All associated data will be permanently removed from the system.
             </p>
 
             <div className="flex gap-3">
               <button
                 onClick={() => !isDeleting && setDeletingPerson(null)}
-                className="flex-1 px-4 py-3 rounded-lg font-semibold transition-all"
-                style={{
-                  border: '1px solid var(--parent-border)',
-                  color: 'var(--parent-text-light)'
-                }}
+                className="flex-1 px-4 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-700 hover:border-slate-800 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]"
                 disabled={isDeleting}
+                data-testid="cancel-delete-button"
               >
-                Cancel
+                CANCEL
               </button>
               <button
                 onClick={handleDeletePerson}
-                className="flex-1 px-4 py-3 rounded-lg font-semibold text-white transition-all hover:shadow-lg disabled:opacity-50"
-                style={{ backgroundColor: '#dc2626' }}
+                className="flex-1 px-4 py-3 bg-red-600 text-white font-mono text-xs font-bold hover:bg-red-700 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50"
                 disabled={isDeleting}
+                data-testid="confirm-delete-button"
               >
-                {isDeleting ? 'Deleting...' : 'Delete'}
+                {isDeleting ? 'DELETING...' : 'DELETE PERSON'}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Blueprint grid CSS */}
+      <style jsx>{`
+        .blueprint-grid {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-image:
+            linear-gradient(rgba(30, 58, 95, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(30, 58, 95, 0.03) 1px, transparent 1px);
+          background-size: 20px 20px;
+          pointer-events: none;
+          z-index: 0;
+        }
+      `}</style>
     </div>
   );
 }
 
 interface PersonCardProps {
   person: any;
-  animationDelay: string;
+  index: number;
+  hasManual: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-function PersonCard({ person, animationDelay, onEdit, onDelete }: PersonCardProps) {
+function PersonCard({ person, index, hasManual, onEdit, onDelete }: PersonCardProps) {
   const router = useRouter();
-  const hasManual = person.hasManual;
   const [showMenu, setShowMenu] = useState(false);
 
   const handleClick = () => {
@@ -482,86 +567,107 @@ function PersonCard({ person, animationDelay, onEdit, onDelete }: PersonCardProp
 
   return (
     <div className="relative">
-      <button
+      <div
         onClick={handleClick}
-        className="parent-card p-6 text-left hover:shadow-lg transition-all duration-300 group w-full animate-fade-in-up"
-        style={{ animationDelay }}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
+        className={`relative cursor-pointer transition-all ${
+          hasManual
+            ? 'bg-white border-2 border-slate-300 hover:border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]'
+            : 'bg-amber-50 border-2 border-amber-600 hover:border-slate-800 shadow-[4px_4px_0px_0px_rgba(217,119,6,0.5)] hover:shadow-[6px_6px_0px_0px_rgba(217,119,6,1)]'
+        }`}
+        data-testid="person-card"
       >
-        <div className="flex items-start justify-between mb-4">
-          <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl transition-transform group-hover:scale-110"
-            style={{ backgroundColor: hasManual ? '#E8F5E9' : '#FFF3E0' }}
-          >
-            {hasManual ? '📖' : '✨'}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowMenu(!showMenu);
-              }}
-              className="p-2 rounded-lg transition-all hover:bg-opacity-10 hover:bg-black"
-              style={{ color: 'var(--parent-text-light)' }}
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-              </svg>
-            </button>
-          </div>
+        {/* Card number label */}
+        <div className={`absolute -top-3 -left-3 w-10 h-10 text-white font-mono font-bold flex items-center justify-center border-2 ${
+          hasManual ? 'bg-slate-800 border-green-600' : 'bg-amber-600 border-slate-800'
+        }`}>
+          {String(index + 1).padStart(2, '0')}
         </div>
 
-        <h3 className="parent-heading text-xl mb-2" style={{ color: 'var(--parent-text)' }}>
-          {person.name}
-        </h3>
+        {/* Menu button */}
+        <div className="absolute top-2 right-2 z-10">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMenu(!showMenu);
+            }}
+            className="p-2 hover:bg-slate-100 rounded font-mono text-slate-600 hover:text-slate-900"
+            data-testid="person-menu-button"
+          >
+            ⋮
+          </button>
+        </div>
 
-        {person.pronouns && (
-          <p className="text-sm mb-2" style={{ color: 'var(--parent-text-light)' }}>
-            {person.pronouns}
+        <div className="p-6">
+          {/* Status badge */}
+          <div className={`inline-block px-2 py-1 font-mono text-xs mb-4 ${
+            hasManual ? 'bg-green-600 text-white' : 'bg-slate-800 text-white'
+          }`}>
+            {hasManual ? 'ACTIVE' : 'PENDING'}
+          </div>
+
+          {/* Person info */}
+          <h3 className="font-mono text-xl font-bold mb-1 text-slate-900">
+            {person.name}
+          </h3>
+          <p className="font-mono text-xs text-slate-600 uppercase tracking-wider mb-6">
+            {person.relationshipType || 'UNSPECIFIED'}
           </p>
-        )}
 
-        {hasManual ? (
-          <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--parent-accent)' }}>
-            <span>✓</span>
-            <span>Has operating manual</span>
+          {/* Technical details */}
+          <div className={`space-y-2 mb-6 pb-6 border-b ${hasManual ? 'border-slate-200' : 'border-amber-200'}`}>
+            <div className="flex justify-between font-mono text-xs">
+              <span className="text-slate-500">PERSON ID:</span>
+              <span className="text-slate-900">{person.personId.slice(0, 8).toUpperCase()}</span>
+            </div>
+            <div className="flex justify-between font-mono text-xs">
+              <span className="text-slate-500">STATUS:</span>
+              <span className={hasManual ? 'text-green-700' : 'text-amber-700'}>
+                {hasManual ? 'OPERATIONAL' : 'UNINITIALIZED'}
+              </span>
+            </div>
           </div>
-        ) : (
-          <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--parent-secondary)' }}>
-            <span>→</span>
-            <span>Create manual</span>
+
+          {/* Action */}
+          <div className={`text-center font-mono text-xs font-bold ${
+            hasManual ? 'text-slate-800' : 'text-amber-600'
+          }`}>
+            {hasManual ? 'VIEW MANUAL →' : 'CREATE MANUAL →'}
           </div>
-        )}
-      </button>
+        </div>
+      </div>
 
       {/* Dropdown Menu */}
       {showMenu && (
         <>
           <div
-            className="fixed inset-0 z-10"
+            className="fixed inset-0 z-20"
             onClick={() => setShowMenu(false)}
           />
           <div
-            className="absolute right-2 top-14 z-20 parent-card py-2 min-w-[140px] shadow-lg"
+            className="absolute right-2 top-12 z-30 bg-white border-2 border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] min-w-[140px]"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={handleEdit}
-              className="w-full px-4 py-2 text-left text-sm hover:bg-opacity-10 hover:bg-black transition-colors flex items-center gap-2"
-              style={{ color: 'var(--parent-text)' }}
+              className="w-full px-4 py-3 text-left font-mono text-xs hover:bg-slate-100 transition-colors border-b border-slate-200 text-slate-900"
+              data-testid="edit-person-button"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              <span>Edit</span>
+              ✎ EDIT
             </button>
             <button
               onClick={handleDelete}
-              className="w-full px-4 py-2 text-left text-sm hover:bg-opacity-10 hover:bg-red-100 transition-colors flex items-center gap-2 text-red-600"
+              className="w-full px-4 py-3 text-left font-mono text-xs hover:bg-red-50 transition-colors text-red-600"
+              data-testid="delete-person-button"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              <span>Delete</span>
+              ✕ DELETE
             </button>
           </div>
         </>

@@ -34,6 +34,7 @@ import {
   RoleBoundary,
   RolePattern,
   RoleProgressNote,
+  RoleOverviewContribution,
   RoleType,
   PERSON_MANUAL_COLLECTIONS,
   getContributorPermissions
@@ -62,6 +63,11 @@ interface UseRoleSectionsReturn {
   removeBoundary: (roleSectionId: string, boundaryId: string) => Promise<void>;
 
   addProgressNote: (roleSectionId: string, note: Omit<RoleProgressNote, 'id' | 'date' | 'addedBy'>) => Promise<void>;
+
+  // Overview contributions (multi-contributor perspectives)
+  addOverviewContribution: (roleSectionId: string, contribution: Omit<RoleOverviewContribution, 'id' | 'addedAt' | 'updatedAt' | 'contributorName'>) => Promise<void>;
+  updateOverviewContribution: (roleSectionId: string, contributionId: string, updates: { perspective?: string; relationshipToSubject?: string; closenessWeight?: 1 | 2 | 3 | 4 | 5 }) => Promise<void>;
+  removeOverviewContribution: (roleSectionId: string, contributionId: string) => Promise<void>;
 
   // Getters
   getById: (roleSectionId: string) => RoleSection | undefined;
@@ -398,6 +404,67 @@ export function useRoleSections(manualId?: string): UseRoleSectionsReturn {
     });
   };
 
+  // Add overview contribution (perspective)
+  const addOverviewContribution = async (
+    roleSectionId: string,
+    contribution: Omit<RoleOverviewContribution, 'id' | 'addedAt' | 'updatedAt' | 'contributorName'>
+  ): Promise<void> => {
+    if (!user?.userId || !user?.name) throw new Error('User must be authenticated');
+
+    const section = getById(roleSectionId);
+    if (!section) throw new Error('Role section not found');
+
+    const newContribution: RoleOverviewContribution = {
+      id: `contribution_${Date.now()}`,
+      contributorName: user.name,
+      addedAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+      ...contribution
+    };
+
+    await updateRoleSection(roleSectionId, {
+      roleOverviewContributions: [...(section.roleOverviewContributions || []), newContribution]
+    });
+  };
+
+  // Update overview contribution
+  const updateOverviewContribution = async (
+    roleSectionId: string,
+    contributionId: string,
+    updates: { perspective?: string; relationshipToSubject?: string; closenessWeight?: 1 | 2 | 3 | 4 | 5 }
+  ): Promise<void> => {
+    const section = getById(roleSectionId);
+    if (!section) throw new Error('Role section not found');
+
+    const updatedContributions = (section.roleOverviewContributions || []).map(c => {
+      if (c.id === contributionId) {
+        return {
+          ...c,
+          ...updates,
+          updatedAt: Timestamp.now()
+        };
+      }
+      return c;
+    });
+
+    await updateRoleSection(roleSectionId, {
+      roleOverviewContributions: updatedContributions
+    });
+  };
+
+  // Remove overview contribution
+  const removeOverviewContribution = async (
+    roleSectionId: string,
+    contributionId: string
+  ): Promise<void> => {
+    const section = getById(roleSectionId);
+    if (!section) throw new Error('Role section not found');
+
+    await updateRoleSection(roleSectionId, {
+      roleOverviewContributions: (section.roleOverviewContributions || []).filter(c => c.id !== contributionId)
+    });
+  };
+
   return {
     roleSections,
     loading,
@@ -414,6 +481,9 @@ export function useRoleSections(manualId?: string): UseRoleSectionsReturn {
     addBoundary,
     removeBoundary,
     addProgressNote,
+    addOverviewContribution,
+    updateOverviewContribution,
+    removeOverviewContribution,
     getById,
     getByRoleType
   };
@@ -434,30 +504,51 @@ export function useRoleSection(roleSectionId?: string) {
       return;
     }
 
+    if (!user?.familyId) {
+      console.warn('useRoleSection: No familyId available for user');
+      setLoading(false);
+      return;
+    }
+
     const fetchRoleSection = async () => {
       try {
         setLoading(true);
+        setError(null);
+        console.log('Fetching role section:', roleSectionId, 'for family:', user.familyId);
+
         const docRef = doc(firestore, PERSON_MANUAL_COLLECTIONS.ROLE_SECTIONS, roleSectionId);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          setRoleSection({
-            roleSectionId: docSnap.id,
-            ...docSnap.data()
-          } as RoleSection);
+          const data = docSnap.data() as RoleSection;
+          console.log('Role section found:', data);
+
+          // Verify the role section belongs to the user's family
+          if (data.familyId !== user.familyId) {
+            console.error('Role section familyId mismatch:', data.familyId, 'vs user familyId:', user.familyId);
+            setError('You do not have permission to view this role section');
+            setRoleSection(null);
+          } else {
+            setRoleSection({
+              ...data,
+              roleSectionId: docSnap.id
+            } as RoleSection);
+          }
         } else {
+          console.warn('Role section not found:', roleSectionId);
           setRoleSection(null);
+          setError('Role section not found');
         }
       } catch (err) {
         console.error('Error fetching role section:', err);
-        setError('Failed to load role section');
+        setError('Failed to load role section. Check browser console for details.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchRoleSection();
-  }, [roleSectionId]);
+  }, [roleSectionId, user]);
 
   return {
     roleSection,

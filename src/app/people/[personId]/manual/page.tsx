@@ -6,17 +6,41 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { usePersonById } from '@/hooks/usePerson';
 import { usePersonManual } from '@/hooks/usePersonManual';
-import { useRoleSections } from '@/hooks/useRoleSection';
-import { RoleType, RoleSection } from '@/types/person-manual';
+import { AddTriggerModal } from '@/components/manual/AddTriggerModal';
+import { AddStrategyModal } from '@/components/manual/AddStrategyModal';
+import { AddBoundaryModal } from '@/components/manual/AddBoundaryModal';
+
+type ContentTab = 'overview' | 'triggers' | 'strategies' | 'boundaries' | 'patterns';
 
 export default function ManualPage({ params }: { params: Promise<{ personId: string }> }) {
   const { personId } = use(params);
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { person, loading: personLoading } = usePersonById(personId);
-  const { manual, loading: manualLoading } = usePersonManual(personId);
-  const { roleSections, loading: sectionsLoading } = useRoleSections(manual?.manualId);
-  const [showAddRoleModal, setShowAddRoleModal] = useState(false);
+  const {
+    manual,
+    loading: manualLoading,
+    addTrigger,
+    deleteTrigger,
+    addStrategy,
+    deleteStrategy,
+    addBoundary,
+    deleteBoundary,
+    deletePattern
+  } = usePersonManual(personId);
+  const [activeTab, setActiveTab] = useState<ContentTab>('overview');
+
+  // Modal states
+  const [showAddTrigger, setShowAddTrigger] = useState(false);
+  const [showAddStrategy, setShowAddStrategy] = useState(false);
+  const [showAddBoundary, setShowAddBoundary] = useState(false);
+  const [strategyType, setStrategyType] = useState<'whatWorks' | 'whatDoesntWork'>('whatWorks');
+
+  // Delete confirmation states
+  const [deletingTrigger, setDeletingTrigger] = useState<string | null>(null);
+  const [deletingStrategy, setDeletingStrategy] = useState<{ id: string; type: 'whatWorks' | 'whatDoesntWork' } | null>(null);
+  const [deletingBoundary, setDeletingBoundary] = useState<string | null>(null);
+  const [deletingPattern, setDeletingPattern] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -33,45 +57,97 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
 
   if (authLoading || personLoading || manualLoading || !user || !person || !manual) {
     return (
-      <div className="min-h-screen flex items-center justify-center parent-page">
-        <div className="w-16 h-16 spinner"></div>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FFF8F0' }}>
+        <div className="text-center">
+          <div className="manual-spinner"></div>
+          <p className="mt-4 font-mono text-sm text-slate-600">LOADING MANUAL...</p>
+        </div>
+        <style jsx>{`
+          .manual-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #1e293b;
+            border-top-color: #d97706;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
 
+  const tabs: Array<{ id: ContentTab; label: string; icon: string; count?: number }> = [
+    { id: 'overview', label: 'Overview', icon: '📋' },
+    { id: 'triggers', label: 'Triggers', icon: '⚡', count: manual.triggers?.length || 0 },
+    { id: 'strategies', label: 'What Works', icon: '✨', count: manual.whatWorks?.length || 0 },
+    { id: 'boundaries', label: 'Boundaries', icon: '🛡️', count: manual.boundaries?.length || 0 },
+    { id: 'patterns', label: 'Patterns', icon: '🔍', count: manual.emergingPatterns?.length || 0 },
+  ];
+
   return (
-    <div className="min-h-screen parent-page">
-      {/* Header */}
-      <header className="border-b paper-texture" style={{ borderColor: 'var(--parent-border)', backgroundColor: 'var(--parent-card)' }}>
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-start">
-            <div className="flex items-start gap-4">
-              <Link href="/people" className="text-2xl transition-transform hover:scale-110 mt-1">
-                ←
-              </Link>
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="parent-heading text-2xl sm:text-3xl" style={{ color: 'var(--parent-accent)' }}>
-                    {person.name}'s Operating Manual
-                  </h1>
-                  <span
-                    className="text-xs px-3 py-1 rounded-full font-medium"
-                    style={{
-                      backgroundColor: 'var(--parent-bg)',
-                      color: 'var(--parent-accent)',
-                      border: '1px solid var(--parent-primary)'
-                    }}
-                  >
-                    v{manual.version}
-                  </span>
+    <div className="min-h-screen" style={{ backgroundColor: '#FFF8F0' }}>
+      {/* Blueprint grid background */}
+      <div className="blueprint-grid"></div>
+
+      {/* Technical Header */}
+      <header className="relative border-b-4 border-slate-800 bg-white shadow-[0px_4px_0px_0px_rgba(0,0,0,1)]">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
+          <div className="flex items-start gap-6">
+            <Link
+              href="/dashboard"
+              className="mt-2 font-mono text-2xl font-bold text-slate-800 hover:text-amber-600 transition-colors"
+              data-testid="back-to-dashboard"
+            >
+              ←
+            </Link>
+
+            <div className="flex-1">
+              <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-3">
+                TECHNICAL DOCUMENTATION
+              </div>
+
+              <div className="flex items-center gap-4 mb-2">
+                <h1 className="font-mono text-4xl font-bold tracking-tight text-slate-900">
+                  {person.name}'s Operating Manual
+                </h1>
+                <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 border-2 border-amber-600 font-mono text-xs font-bold">
+                  <span className="text-slate-600">VERSION</span>
+                  <span className="text-amber-600">{manual.version}</span>
                 </div>
-                <p className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Last updated {manual.updatedAt.toDate().toLocaleDateString('en-US', {
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
-                </p>
+                <Link
+                  href={`/people/${personId}/workbook`}
+                  className="px-4 py-2 border-2 border-emerald-600 bg-emerald-50 font-mono text-xs font-bold text-emerald-900 hover:bg-emerald-600 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(5,150,105,1)]"
+                  data-testid="weekly-workbook-button"
+                >
+                  📅 WEEKLY WORKBOOK
+                </Link>
+                <Link
+                  href={`/people/${personId}/coach`}
+                  className="px-4 py-2 border-2 border-amber-600 bg-amber-50 font-mono text-xs font-bold text-amber-900 hover:bg-amber-600 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(217,119,6,1)]"
+                  data-testid="ask-coach-button"
+                >
+                  🤖 ASK COACH
+                </Link>
+                <Link
+                  href={`/people/${personId}/manual/onboard`}
+                  className="px-4 py-2 border-2 border-slate-800 bg-white font-mono text-xs font-bold text-slate-800 hover:bg-slate-800 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                  data-testid="edit-manual-button"
+                >
+                  EDIT MANUAL
+                </Link>
+              </div>
+
+              <div className="flex items-center gap-4 font-mono text-xs text-slate-600">
+                <span>MANUAL ID: {personId.slice(0, 12).toUpperCase()}</span>
+                <span>•</span>
+                <span>LAST UPDATED: {manual.updatedAt.toDate().toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                }).toUpperCase()}</span>
               </div>
             </div>
           </div>
@@ -79,238 +155,757 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 lg:px-8 py-8 lg:py-12">
-        {/* Stats Cards */}
-        <div className="grid sm:grid-cols-3 gap-4 mb-8 animate-fade-in-up">
-          <div className="parent-card p-6">
-            <div className="flex items-center gap-3">
-              <div className="text-3xl">🎭</div>
-              <div>
-                <p className="text-2xl font-bold" style={{ color: 'var(--parent-text)' }}>
-                  {roleSections.length}
-                </p>
-                <p className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Role {roleSections.length === 1 ? 'Section' : 'Sections'}
-                </p>
+      <main className="relative max-w-7xl mx-auto px-6 lg:px-8 py-12">
+        {/* Technical Specification Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+          {/* Stat 1: Triggers */}
+          <div className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]" data-testid="triggers-stat">
+            <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-red-600">
+              1
+            </div>
+            <div className="font-mono text-xs text-slate-600 mb-2 uppercase tracking-wider">
+              SPECIFICATION
+            </div>
+            <div className="flex items-baseline gap-3">
+              <div className="text-5xl font-bold font-mono text-red-600">
+                {manual.totalTriggers || 0}
+              </div>
+              <div className="font-mono text-sm text-slate-600">
+                TRIGGERS<br/>DOCUMENTED
               </div>
             </div>
           </div>
 
-          <div className="parent-card p-6">
-            <div className="flex items-center gap-3">
-              <div className="text-3xl">⚡</div>
-              <div>
-                <p className="text-2xl font-bold" style={{ color: 'var(--parent-accent)' }}>
-                  {roleSections.reduce((sum, section) => sum + section.triggers.length, 0)}
-                </p>
-                <p className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Known Triggers
-                </p>
+          {/* Stat 2: Strategies */}
+          <div className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]" data-testid="strategies-stat">
+            <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-green-600">
+              2
+            </div>
+            <div className="font-mono text-xs text-slate-600 mb-2 uppercase tracking-wider">
+              SPECIFICATION
+            </div>
+            <div className="flex items-baseline gap-3">
+              <div className="text-5xl font-bold font-mono text-green-700">
+                {manual.totalStrategies || 0}
+              </div>
+              <div className="font-mono text-sm text-slate-600">
+                EFFECTIVE<br/>STRATEGIES
               </div>
             </div>
           </div>
 
-          <div className="parent-card p-6">
-            <div className="flex items-center gap-3">
-              <div className="text-3xl">✨</div>
-              <div>
-                <p className="text-2xl font-bold" style={{ color: 'var(--parent-secondary)' }}>
-                  {roleSections.reduce((sum, section) => sum + section.whatWorks.length, 0)}
-                </p>
-                <p className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Effective Strategies
-                </p>
+          {/* Stat 3: Boundaries */}
+          <div className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]" data-testid="boundaries-stat">
+            <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-amber-600">
+              3
+            </div>
+            <div className="font-mono text-xs text-slate-600 mb-2 uppercase tracking-wider">
+              SPECIFICATION
+            </div>
+            <div className="flex items-baseline gap-3">
+              <div className="text-5xl font-bold font-mono text-amber-600">
+                {manual.totalBoundaries || 0}
+              </div>
+              <div className="font-mono text-sm text-slate-600">
+                BOUNDARIES<br/>ESTABLISHED
+              </div>
+            </div>
+          </div>
+
+          {/* Stat 4: Patterns */}
+          <div className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]" data-testid="patterns-stat">
+            <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-blue-600">
+              4
+            </div>
+            <div className="font-mono text-xs text-slate-600 mb-2 uppercase tracking-wider">
+              SPECIFICATION
+            </div>
+            <div className="flex items-baseline gap-3">
+              <div className="text-5xl font-bold font-mono text-blue-700">
+                {manual.emergingPatterns?.length || 0}
+              </div>
+              <div className="font-mono text-sm text-slate-600">
+                PATTERNS<br/>IDENTIFIED
               </div>
             </div>
           </div>
         </div>
 
-        {/* Add Role Section Button */}
-        <div className="flex justify-between items-center mb-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-          <h2 className="parent-heading text-2xl" style={{ color: 'var(--parent-text)' }}>
-            Role Sections
-          </h2>
-          <button
-            onClick={() => setShowAddRoleModal(true)}
-            className="px-6 py-3 rounded-lg font-semibold text-white transition-all hover:shadow-lg flex items-center gap-2"
-            style={{ backgroundColor: 'var(--parent-accent)' }}
-          >
-            <span className="text-xl">+</span>
-            <span>Add Role Section</span>
-          </button>
-        </div>
-
-        {/* Role Sections */}
-        {sectionsLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="w-12 h-12 spinner"></div>
+        {/* Technical Section Navigation */}
+        <div className="mb-8">
+          <div className="inline-block px-3 py-1 bg-amber-600 text-white font-mono text-xs mb-4">
+            SECTION NAVIGATOR
           </div>
-        ) : roleSections.length === 0 ? (
-          <div className="parent-card p-12 text-center paper-texture animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-            <div className="text-6xl mb-4 opacity-40">🎭</div>
-            <h3 className="parent-heading text-2xl mb-3" style={{ color: 'var(--parent-text)' }}>
-              No Role Sections Yet
-            </h3>
-            <p className="text-base mb-6 max-w-md mx-auto" style={{ color: 'var(--parent-text-light)' }}>
-              Create role sections to capture context-specific information about {person.name}.
-              For example: "{user.name} as Parent to {person.name}" or "{person.name} as Student".
-            </p>
-            <button
-              onClick={() => setShowAddRoleModal(true)}
-              className="px-8 py-4 rounded-lg font-semibold text-white transition-all hover:shadow-lg inline-flex items-center gap-2"
-              style={{ backgroundColor: 'var(--parent-accent)' }}
-            >
-              <span className="text-2xl">+</span>
-              <span>Add First Role Section</span>
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-            {roleSections.map((section, index) => (
-              <RoleSectionCard
-                key={section.roleSectionId}
-                section={section}
-                personName={person.name}
-                animationDelay={`${0.2 + index * 0.05}s`}
-              />
+          <div className="flex flex-wrap gap-3">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`relative px-6 py-3 font-mono font-bold transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-slate-800 text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                    : 'bg-white border-2 border-slate-300 text-slate-700 hover:border-slate-800 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]'
+                }`}
+                data-testid={`tab-${tab.id}`}
+              >
+                <span className="mr-2">{tab.icon}</span>
+                {tab.label}
+                {tab.count !== undefined && (
+                  <span
+                    className={`ml-2 px-2 py-1 text-xs font-bold ${
+                      activeTab === tab.id
+                        ? 'bg-white text-slate-800'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+              </button>
             ))}
           </div>
-        )}
-      </main>
-
-      {/* Add Role Modal - Coming Soon */}
-      {showAddRoleModal && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowAddRoleModal(false)}
-        >
-          <div
-            className="parent-card p-8 max-w-md w-full animate-fade-in-up"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="parent-heading text-2xl mb-4" style={{ color: 'var(--parent-text)' }}>
-              Add Role Section
-            </h3>
-            <p className="text-sm mb-6" style={{ color: 'var(--parent-text-light)' }}>
-              This feature is coming soon! For now, use the demo page at <code>/demo</code> to add role sections.
-            </p>
-            <button
-              onClick={() => setShowAddRoleModal(false)}
-              className="w-full px-4 py-3 rounded-lg font-semibold text-white transition-all hover:shadow-lg"
-              style={{ backgroundColor: 'var(--parent-accent)' }}
-            >
-              Got It
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface RoleSectionCardProps {
-  section: RoleSection;
-  personName: string;
-  animationDelay: string;
-}
-
-function RoleSectionCard({ section, personName, animationDelay }: RoleSectionCardProps) {
-  const router = useRouter();
-
-  const roleTypeEmojis: Record<RoleType, string> = {
-    parent: '👨‍👩‍👧',
-    child: '👶',
-    spouse: '💑',
-    sibling: '👫',
-    friend: '🤝',
-    professional: '💼',
-    caregiver: '🩺',
-    pet_owner: '🐾',
-    other: '👤'
-  };
-
-  const roleTypeColors: Record<RoleType, string> = {
-    parent: '#E8F5E9',
-    child: '#FFF3E0',
-    spouse: '#FCE4EC',
-    sibling: '#E3F2FD',
-    friend: '#FFF9C4',
-    professional: '#E0F2F1',
-    caregiver: '#F3E5F5',
-    pet_owner: '#FFEBEE',
-    other: '#F5F5F5'
-  };
-
-  return (
-    <button
-      onClick={() => router.push(`/people/${section.manualId.split('_')[0]}/roles/${section.roleSectionId}`)}
-      className="parent-card p-6 text-left w-full hover:shadow-lg transition-all duration-300 group animate-fade-in-up"
-      style={{ animationDelay }}
-    >
-      <div className="flex items-start gap-4">
-        <div
-          className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 transition-transform group-hover:scale-110"
-          style={{ backgroundColor: roleTypeColors[section.roleType] }}
-        >
-          {roleTypeEmojis[section.roleType]}
         </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="font-semibold text-lg" style={{ color: 'var(--parent-text)' }}>
-              {section.roleTitle}
-            </h3>
-            <span
-              className="text-xs px-2 py-1 rounded-full capitalize"
-              style={{
-                backgroundColor: 'var(--parent-bg)',
-                color: 'var(--parent-text-light)',
-                border: '1px solid var(--parent-border)'
-              }}
-            >
-              {section.roleType}
-            </span>
-          </div>
+        {/* Section Content */}
+        <div>
+          {activeTab === 'overview' && (
+            <div className="space-y-8">
+              {/* Core Information Section */}
+              <div className="relative bg-white border-4 border-slate-800 p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                {/* Corner brackets */}
+                <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-amber-600"></div>
+                <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-amber-600"></div>
+                <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-amber-600"></div>
+                <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-amber-600"></div>
 
-          <p className="text-sm mb-3" style={{ color: 'var(--parent-text-light)' }}>
-            {section.roleDescription || `${personName} in this role`}
-          </p>
+                <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-6">
+                  SECTION 1: CORE INFORMATION
+                </div>
 
-          {/* Contributors */}
-          {section.contributorNames.length > 0 && (
-            <div className="flex items-center gap-2 mb-3 text-xs" style={{ color: 'var(--parent-text-light)' }}>
-              <span>👥</span>
-              <span>Contributors: {section.contributorNames.join(', ')}</span>
+                {manual.coreInfo?.sensoryNeeds && manual.coreInfo.sensoryNeeds.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="font-mono font-bold text-sm text-amber-600 mb-3 uppercase tracking-wider">
+                      Sensory Requirements
+                    </h4>
+                    <ul className="space-y-2">
+                      {manual.coreInfo.sensoryNeeds.map((need, idx) => (
+                        <li key={idx} className="flex items-start gap-3">
+                          <span className="font-mono text-slate-400 flex-shrink-0">[{String(idx + 1).padStart(2, '0')}]</span>
+                          <span className="font-mono text-sm text-slate-700">{need}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {manual.coreInfo?.interests && manual.coreInfo.interests.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="font-mono font-bold text-sm text-amber-600 mb-3 uppercase tracking-wider">
+                      Primary Interests
+                    </h4>
+                    <ul className="space-y-2">
+                      {manual.coreInfo.interests.map((interest, idx) => (
+                        <li key={idx} className="flex items-start gap-3">
+                          <span className="font-mono text-slate-400 flex-shrink-0">[{String(idx + 1).padStart(2, '0')}]</span>
+                          <span className="font-mono text-sm text-slate-700">{interest}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {manual.coreInfo?.strengths && manual.coreInfo.strengths.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="font-mono font-bold text-sm text-amber-600 mb-3 uppercase tracking-wider">
+                      Core Strengths
+                    </h4>
+                    <ul className="space-y-2">
+                      {manual.coreInfo.strengths.map((strength, idx) => (
+                        <li key={idx} className="flex items-start gap-3">
+                          <span className="font-mono text-slate-400 flex-shrink-0">[{String(idx + 1).padStart(2, '0')}]</span>
+                          <span className="font-mono text-sm text-slate-700">{strength}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {manual.coreInfo?.notes && (
+                  <div>
+                    <h4 className="font-mono font-bold text-sm text-amber-600 mb-3 uppercase tracking-wider">
+                      Additional Notes
+                    </h4>
+                    <p className="font-mono text-sm text-slate-700 leading-relaxed">{manual.coreInfo.notes}</p>
+                  </div>
+                )}
+
+                {(!manual.coreInfo || Object.values(manual.coreInfo).every(v => !v || (Array.isArray(v) && v.length === 0))) && (
+                  <div className="text-center py-12">
+                    <div className="inline-block px-4 py-2 bg-amber-50 border-2 border-amber-600 font-mono text-xs text-amber-700 mb-4">
+                      NO DATA AVAILABLE
+                    </div>
+                    <p className="font-mono text-sm text-slate-600">
+                      No core information has been documented yet.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Manual Summary Section */}
+              <div className="relative bg-white border-4 border-slate-800 p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-amber-600"></div>
+                <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-amber-600"></div>
+                <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-amber-600"></div>
+                <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-amber-600"></div>
+
+                <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-6">
+                  SECTION 2: DOCUMENT SUMMARY
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-8">
+                  <div>
+                    <h4 className="font-mono font-bold text-sm text-amber-600 mb-4 uppercase tracking-wider">
+                      Content Overview
+                    </h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between font-mono text-sm">
+                        <span className="text-slate-500">TRIGGERS:</span>
+                        <span className="text-slate-900 font-bold">{manual.totalTriggers || 0}</span>
+                      </div>
+                      <div className="flex justify-between font-mono text-sm">
+                        <span className="text-slate-500">STRATEGIES:</span>
+                        <span className="text-slate-900 font-bold">{manual.totalStrategies || 0}</span>
+                      </div>
+                      <div className="flex justify-between font-mono text-sm">
+                        <span className="text-slate-500">BOUNDARIES:</span>
+                        <span className="text-slate-900 font-bold">{manual.totalBoundaries || 0}</span>
+                      </div>
+                      <div className="flex justify-between font-mono text-sm">
+                        <span className="text-slate-500">PATTERNS:</span>
+                        <span className="text-slate-900 font-bold">{manual.emergingPatterns?.length || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-mono font-bold text-sm text-amber-600 mb-4 uppercase tracking-wider">
+                      Document Metadata
+                    </h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between font-mono text-sm">
+                        <span className="text-slate-500">VERSION:</span>
+                        <span className="text-slate-900 font-bold">{manual.version}</span>
+                      </div>
+                      <div className="flex justify-between font-mono text-sm">
+                        <span className="text-slate-500">CREATED:</span>
+                        <span className="text-slate-900">{manual.createdAt.toDate().toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex justify-between font-mono text-sm">
+                        <span className="text-slate-500">LAST EDIT:</span>
+                        <span className="text-slate-900">{manual.lastEditedAt.toDate().toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex justify-between font-mono text-sm">
+                        <span className="text-slate-500">STATUS:</span>
+                        <span className="text-green-700 font-bold">OPERATIONAL</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-3 gap-3 text-xs">
-            <div className="flex items-center gap-1" style={{ color: 'var(--parent-text-light)' }}>
-              <span>⚡</span>
-              <span>{section.triggers.length} triggers</span>
+          {activeTab === 'triggers' && (
+            <div className="space-y-6">
+              {/* Add Trigger Button */}
+              <div className="flex justify-end mb-6">
+                <button
+                  onClick={() => setShowAddTrigger(true)}
+                  className="px-6 py-3 bg-slate-800 text-white font-mono font-bold hover:bg-red-600 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                  data-testid="add-trigger-button"
+                >
+                  + ADD TRIGGER
+                </button>
+              </div>
+
+              {manual.triggers && manual.triggers.length > 0 ? (
+                manual.triggers.map((trigger, index) => (
+                  <div key={trigger.id} className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]" data-testid="trigger-card">
+                    <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-red-600">
+                      {String(index + 1).padStart(2, '0')}
+                    </div>
+
+                    <div className="flex items-start gap-4 mb-4">
+                      <div
+                        className={`px-3 py-1 font-mono text-xs font-bold ${
+                          trigger.severity === 'significant' ? 'bg-red-600 text-white' :
+                          trigger.severity === 'moderate' ? 'bg-yellow-500 text-slate-900' :
+                          'bg-green-600 text-white'
+                        }`}
+                      >
+                        {trigger.severity.toUpperCase()}
+                      </div>
+                    </div>
+
+                    <h4 className="font-mono font-bold text-lg mb-4 text-slate-900">
+                      {trigger.description}
+                    </h4>
+
+                    <div className="space-y-3 mb-4">
+                      <div>
+                        <span className="font-mono text-xs text-slate-500 uppercase tracking-wider">Context:</span>
+                        <p className="font-mono text-sm text-slate-700 mt-1">{trigger.context}</p>
+                      </div>
+
+                      <div>
+                        <span className="font-mono text-xs text-slate-500 uppercase tracking-wider">Typical Response:</span>
+                        <p className="font-mono text-sm text-slate-700 mt-1">{trigger.typicalResponse}</p>
+                      </div>
+
+                      {trigger.deescalationStrategy && (
+                        <div>
+                          <span className="font-mono text-xs text-amber-600 uppercase tracking-wider font-bold">Recommended Action:</span>
+                          <p className="font-mono text-sm text-slate-700 mt-1">{trigger.deescalationStrategy}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
+                      <span className="font-mono text-xs text-slate-500">
+                        DOCUMENTED: {trigger.identifiedDate.toDate().toLocaleDateString()}
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setDeletingTrigger(trigger.id)}
+                          className="px-3 py-1 border-2 border-red-300 bg-white font-mono text-xs text-red-600 hover:border-red-600 transition-all"
+                          data-testid="delete-trigger-button"
+                        >
+                          DELETE
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="relative bg-amber-50 border-4 border-amber-600 p-16 text-center shadow-[8px_8px_0px_0px_rgba(217,119,6,1)]">
+                  <div className="inline-block px-3 py-1 bg-amber-600 text-white font-mono text-xs mb-6">
+                    NO DATA FOUND
+                  </div>
+                  <p className="font-mono text-sm text-slate-700">
+                    No triggers have been documented in this manual yet.
+                  </p>
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-1" style={{ color: 'var(--parent-text-light)' }}>
-              <span>✨</span>
-              <span>{section.whatWorks.length} works</span>
+          )}
+
+          {activeTab === 'strategies' && (
+            <div className="space-y-6">
+              {/* Add Strategy Button */}
+              <div className="flex justify-end mb-6">
+                <button
+                  onClick={() => setShowAddStrategy(true)}
+                  className="px-6 py-3 bg-slate-800 text-white font-mono font-bold hover:bg-green-600 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                  data-testid="add-strategy-button"
+                >
+                  + ADD STRATEGY
+                </button>
+              </div>
+
+              {manual.whatWorks && manual.whatWorks.length > 0 ? (
+                manual.whatWorks.map((strategy, index) => (
+                  <div key={strategy.id} className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]" data-testid="strategy-card">
+                    <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-green-600">
+                      {String(index + 1).padStart(2, '0')}
+                    </div>
+
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className="flex items-center gap-2 px-3 py-1 bg-green-50 border-2 border-green-600 font-mono text-xs font-bold">
+                        <span className="text-slate-600">EFFECTIVENESS:</span>
+                        <span className="text-green-700">{strategy.effectiveness}/5</span>
+                      </div>
+                    </div>
+
+                    <h4 className="font-mono font-bold text-lg mb-4 text-slate-900">
+                      {strategy.description}
+                    </h4>
+
+                    <div className="space-y-3 mb-4">
+                      <div>
+                        <span className="font-mono text-xs text-slate-500 uppercase tracking-wider">Application Context:</span>
+                        <p className="font-mono text-sm text-slate-700 mt-1">{strategy.context}</p>
+                      </div>
+
+                      {strategy.notes && (
+                        <div>
+                          <span className="font-mono text-xs text-slate-500 uppercase tracking-wider">Technical Notes:</span>
+                          <p className="font-mono text-sm text-slate-700 mt-1">{strategy.notes}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
+                      <div className="flex items-center gap-4 font-mono text-xs text-slate-500">
+                        <span>SOURCE: {strategy.sourceType.replace('_', ' ').toUpperCase()}</span>
+                        <span>•</span>
+                        <span>ADDED: {strategy.addedDate.toDate().toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setDeletingStrategy({ id: strategy.id, type: 'whatWorks' })}
+                          className="px-3 py-1 border-2 border-red-300 bg-white font-mono text-xs text-red-600 hover:border-red-600 transition-all"
+                          data-testid="delete-strategy-button"
+                        >
+                          DELETE
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="relative bg-amber-50 border-4 border-amber-600 p-16 text-center shadow-[8px_8px_0px_0px_rgba(217,119,6,1)]">
+                  <div className="inline-block px-3 py-1 bg-amber-600 text-white font-mono text-xs mb-6">
+                    NO DATA FOUND
+                  </div>
+                  <p className="font-mono text-sm text-slate-700">
+                    No strategies have been documented in this manual yet.
+                  </p>
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-1" style={{ color: 'var(--parent-text-light)' }}>
-              <span>🚫</span>
-              <span>{section.whatDoesntWork.length} doesn't work</span>
+          )}
+
+          {activeTab === 'boundaries' && (
+            <div className="space-y-6">
+              {/* Add Boundary Button */}
+              <div className="flex justify-end mb-6">
+                <button
+                  onClick={() => setShowAddBoundary(true)}
+                  className="px-6 py-3 bg-slate-800 text-white font-mono font-bold hover:bg-amber-600 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                  data-testid="add-boundary-button"
+                >
+                  + ADD BOUNDARY
+                </button>
+              </div>
+
+              {manual.boundaries && manual.boundaries.length > 0 ? (
+                manual.boundaries.map((boundary, index) => (
+                  <div key={boundary.id} className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]" data-testid="boundary-card">
+                    <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-amber-600">
+                      {String(index + 1).padStart(2, '0')}
+                    </div>
+
+                    <div className="flex items-start gap-4 mb-4">
+                      <div
+                        className={`px-3 py-1 font-mono text-xs font-bold ${
+                          boundary.category === 'immovable' ? 'bg-red-600 text-white' :
+                          boundary.category === 'negotiable' ? 'bg-yellow-500 text-slate-900' :
+                          'bg-blue-600 text-white'
+                        }`}
+                      >
+                        {boundary.category.toUpperCase()}
+                      </div>
+                    </div>
+
+                    <h4 className="font-mono font-bold text-lg mb-4 text-slate-900">
+                      {boundary.description}
+                    </h4>
+
+                    <div className="space-y-3 mb-4">
+                      {boundary.context && (
+                        <div>
+                          <span className="font-mono text-xs text-slate-500 uppercase tracking-wider">Context:</span>
+                          <p className="font-mono text-sm text-slate-700 mt-1">{boundary.context}</p>
+                        </div>
+                      )}
+
+                      {boundary.consequences && (
+                        <div>
+                          <span className="font-mono text-xs text-red-600 uppercase tracking-wider font-bold">If Violated:</span>
+                          <p className="font-mono text-sm text-slate-700 mt-1">{boundary.consequences}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
+                      <span className="font-mono text-xs text-slate-500">
+                        ESTABLISHED: {boundary.addedDate.toDate().toLocaleDateString()}
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setDeletingBoundary(boundary.id)}
+                          className="px-3 py-1 border-2 border-red-300 bg-white font-mono text-xs text-red-600 hover:border-red-600 transition-all"
+                          data-testid="delete-boundary-button"
+                        >
+                          DELETE
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="relative bg-amber-50 border-4 border-amber-600 p-16 text-center shadow-[8px_8px_0px_0px_rgba(217,119,6,1)]">
+                  <div className="inline-block px-3 py-1 bg-amber-600 text-white font-mono text-xs mb-6">
+                    NO DATA FOUND
+                  </div>
+                  <p className="font-mono text-sm text-slate-700">
+                    No boundaries have been documented in this manual yet.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'patterns' && (
+            <div className="space-y-6">
+              {/* Add Pattern Button - Patterns are AI-generated, so just show info */}
+              <div className="flex justify-end mb-6">
+                <div className="px-6 py-3 bg-blue-50 border-2 border-blue-600 font-mono text-xs text-blue-700">
+                  ℹ️ PATTERNS ARE AUTO-IDENTIFIED BY AI
+                </div>
+              </div>
+
+              {manual.emergingPatterns && manual.emergingPatterns.length > 0 ? (
+                manual.emergingPatterns.map((pattern, index) => (
+                  <div key={pattern.id} className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]" data-testid="pattern-card">
+                    <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-blue-600">
+                      {String(index + 1).padStart(2, '0')}
+                    </div>
+
+                    <div className="flex items-start gap-4 mb-4">
+                      <div
+                        className={`px-3 py-1 font-mono text-xs font-bold ${
+                          pattern.confidence === 'validated' ? 'bg-green-600 text-white' :
+                          pattern.confidence === 'consistent' ? 'bg-blue-600 text-white' :
+                          'bg-slate-600 text-white'
+                        }`}
+                      >
+                        {pattern.confidence.toUpperCase()}
+                      </div>
+                    </div>
+
+                    <h4 className="font-mono font-bold text-lg mb-4 text-slate-900">
+                      {pattern.description}
+                    </h4>
+
+                    <div className="space-y-3 mb-4">
+                      <div>
+                        <span className="font-mono text-xs text-slate-500 uppercase tracking-wider">Frequency:</span>
+                        <p className="font-mono text-sm text-slate-700 mt-1">{pattern.frequency}</p>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
+                      <div className="flex flex-wrap gap-2 font-mono text-xs text-slate-500">
+                        <span>FIRST: {pattern.firstObserved.toDate().toLocaleDateString()}</span>
+                        <span>•</span>
+                        <span>LAST: {pattern.lastObserved.toDate().toLocaleDateString()}</span>
+                        <span>•</span>
+                        <span>BY: {pattern.identifiedBy}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setDeletingPattern(pattern.id)}
+                          className="px-3 py-1 border-2 border-red-300 bg-white font-mono text-xs text-red-600 hover:border-red-600 transition-all"
+                          data-testid="delete-pattern-button"
+                        >
+                          DELETE
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="relative bg-amber-50 border-4 border-amber-600 p-16 text-center shadow-[8px_8px_0px_0px_rgba(217,119,6,1)]">
+                  <div className="inline-block px-3 py-1 bg-amber-600 text-white font-mono text-xs mb-6">
+                    NO DATA FOUND
+                  </div>
+                  <p className="font-mono text-sm text-slate-700">
+                    No patterns have been identified in this manual yet.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Modals */}
+      <AddTriggerModal
+        isOpen={showAddTrigger}
+        onClose={() => setShowAddTrigger(false)}
+        onSave={async (triggerData) => {
+          if (!manual?.manualId) return;
+          await addTrigger(manual.manualId, triggerData);
+          setShowAddTrigger(false);
+        }}
+        personName={person.name}
+      />
+
+      <AddStrategyModal
+        isOpen={showAddStrategy}
+        onClose={() => setShowAddStrategy(false)}
+        onSave={async (strategyData) => {
+          if (!manual?.manualId) return;
+          await addStrategy(manual.manualId, {
+            ...strategyData,
+            effectiveness: strategyData.effectiveness as 1 | 2 | 3 | 4 | 5,
+            sourceType: 'discovered'
+          }, 'whatWorks');
+          setShowAddStrategy(false);
+        }}
+        personName={person.name}
+        type="works"
+      />
+
+      <AddBoundaryModal
+        isOpen={showAddBoundary}
+        onClose={() => setShowAddBoundary(false)}
+        onSave={async (boundaryData) => {
+          if (!manual?.manualId) return;
+          await addBoundary(manual.manualId, boundaryData);
+          setShowAddBoundary(false);
+        }}
+        personName={person.name}
+      />
+
+      {/* Delete Confirmation Modals */}
+      {deletingTrigger && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+          onClick={() => setDeletingTrigger(null)}
+        >
+          <div
+            className="relative bg-white border-4 border-red-600 p-8 max-w-md w-full shadow-[12px_12px_0px_0px_rgba(220,38,38,1)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="inline-block px-3 py-1 bg-red-600 text-white font-mono text-xs mb-6">
+              ⚠ CONFIRM DELETE
+            </div>
+            <h3 className="font-mono text-2xl font-bold mb-4 text-red-600">
+              Delete Trigger?
+            </h3>
+            <p className="font-mono text-sm text-slate-700 mb-6">
+              This will permanently remove this trigger from the manual.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeletingTrigger(null)}
+                className="flex-1 px-4 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-700 hover:border-slate-800 transition-all"
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={async () => {
+                  if (!manual?.manualId) return;
+                  await deleteTrigger(manual.manualId, deletingTrigger);
+                  setDeletingTrigger(null);
+                }}
+                className="flex-1 px-4 py-3 bg-red-600 text-white font-mono text-xs font-bold hover:bg-red-700 transition-all"
+              >
+                DELETE
+              </button>
             </div>
           </div>
         </div>
+      )}
 
-        <svg
-          className="w-6 h-6 transition-transform group-hover:translate-x-1 flex-shrink-0 mt-1"
-          style={{ color: 'var(--parent-primary)' }}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
+      {deletingStrategy && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+          onClick={() => setDeletingStrategy(null)}
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </div>
-    </button>
+          <div
+            className="relative bg-white border-4 border-red-600 p-8 max-w-md w-full shadow-[12px_12px_0px_0px_rgba(220,38,38,1)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="inline-block px-3 py-1 bg-red-600 text-white font-mono text-xs mb-6">
+              ⚠ CONFIRM DELETE
+            </div>
+            <h3 className="font-mono text-2xl font-bold mb-4 text-red-600">
+              Delete Strategy?
+            </h3>
+            <p className="font-mono text-sm text-slate-700 mb-6">
+              This will permanently remove this strategy from the manual.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeletingStrategy(null)}
+                className="flex-1 px-4 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-700 hover:border-slate-800 transition-all"
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={async () => {
+                  if (!manual?.manualId) return;
+                  await deleteStrategy(manual.manualId, deletingStrategy.id, deletingStrategy.type);
+                  setDeletingStrategy(null);
+                }}
+                className="flex-1 px-4 py-3 bg-red-600 text-white font-mono text-xs font-bold hover:bg-red-700 transition-all"
+              >
+                DELETE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deletingBoundary && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+          onClick={() => setDeletingBoundary(null)}
+        >
+          <div
+            className="relative bg-white border-4 border-red-600 p-8 max-w-md w-full shadow-[12px_12px_0px_0px_rgba(220,38,38,1)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="inline-block px-3 py-1 bg-red-600 text-white font-mono text-xs mb-6">
+              ⚠ CONFIRM DELETE
+            </div>
+            <h3 className="font-mono text-2xl font-bold mb-4 text-red-600">
+              Delete Boundary?
+            </h3>
+            <p className="font-mono text-sm text-slate-700 mb-6">
+              This will permanently remove this boundary from the manual.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeletingBoundary(null)}
+                className="flex-1 px-4 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-700 hover:border-slate-800 transition-all"
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={async () => {
+                  if (!manual?.manualId) return;
+                  await deleteBoundary(manual.manualId, deletingBoundary);
+                  setDeletingBoundary(null);
+                }}
+                className="flex-1 px-4 py-3 bg-red-600 text-white font-mono text-xs font-bold hover:bg-red-700 transition-all"
+              >
+                DELETE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Blueprint grid CSS */}
+      <style jsx>{`
+        .blueprint-grid {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-image:
+            linear-gradient(rgba(30, 58, 95, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(30, 58, 95, 0.03) 1px, transparent 1px);
+          background-size: 20px 20px;
+          pointer-events: none;
+          z-index: 0;
+        }
+      `}</style>
+    </div>
   );
 }

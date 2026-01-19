@@ -161,6 +161,7 @@ export default function LoginPage() {
                   disabled={loading}
                   onFocus={(e) => e.target.style.borderColor = 'var(--parent-primary)'}
                   onBlur={(e) => e.target.style.borderColor = 'var(--parent-border)'}
+                  data-testid="email-input"
                 />
               </div>
 
@@ -198,6 +199,7 @@ export default function LoginPage() {
                   disabled={loading}
                   onFocus={(e) => e.target.style.borderColor = 'var(--parent-primary)'}
                   onBlur={(e) => e.target.style.borderColor = 'var(--parent-border)'}
+                  data-testid="password-input"
                 />
               </div>
 
@@ -211,6 +213,7 @@ export default function LoginPage() {
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#234946'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--parent-accent)'}
+                data-testid="login-button"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">

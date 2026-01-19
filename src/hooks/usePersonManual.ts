@@ -1,8 +1,8 @@
 /**
- * usePersonManual Hook
+ * usePersonManual Hook (Phase 1 - Simplified)
  *
- * Manages a person's operating manual - the container for all their role sections
- * One manual per person, contains metadata and references to role sections
+ * Manages a person's operating manual with content stored directly
+ * One manual per person, all content in single document
  */
 
 'use client';
@@ -13,18 +13,27 @@ import {
   query,
   where,
   getDocs,
-  getDoc,
   doc,
   addDoc,
   updateDoc,
   deleteDoc,
   Timestamp,
-  limit
+  limit,
+  arrayUnion,
+  arrayRemove
 } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
-import { PersonManual, RelationshipType, PERSON_MANUAL_COLLECTIONS } from '@/types/person-manual';
-import { createManualSections } from '@/utils/manual-initialization';
+import {
+  PersonManual,
+  RelationshipType,
+  ManualTrigger,
+  ManualStrategy,
+  ManualBoundary,
+  ManualPattern,
+  ManualProgressNote,
+  PERSON_MANUAL_COLLECTIONS
+} from '@/types/person-manual';
 
 interface UsePersonManualReturn {
   manual: PersonManual | null;
@@ -36,18 +45,33 @@ interface UsePersonManualReturn {
   updateManual: (manualId: string, updates: Partial<PersonManual>) => Promise<void>;
   deleteManual: (manualId: string) => Promise<void>;
 
-  // Role tracking
-  incrementRoleSectionCount: (manualId: string) => Promise<void>;
-  decrementRoleSectionCount: (manualId: string) => Promise<void>;
-  addActiveRole: (manualId: string, roleId: string) => Promise<void>;
-  removeActiveRole: (manualId: string, roleId: string) => Promise<void>;
+  // Core Info
+  updateCoreInfo: (manualId: string, coreInfo: Partial<PersonManual['coreInfo']>) => Promise<void>;
 
-  // Statistics
-  updateStatistics: (manualId: string, stats: {
-    totalTriggers?: number;
-    totalStrategies?: number;
-    activePlansCount?: number;
-  }) => Promise<void>;
+  // Trigger management
+  addTrigger: (manualId: string, trigger: Omit<ManualTrigger, 'id' | 'identifiedDate' | 'identifiedBy' | 'confirmedBy'>) => Promise<void>;
+  updateTrigger: (manualId: string, triggerId: string, updates: Partial<ManualTrigger>) => Promise<void>;
+  deleteTrigger: (manualId: string, triggerId: string) => Promise<void>;
+  confirmTrigger: (manualId: string, triggerId: string) => Promise<void>;
+
+  // Strategy management
+  addStrategy: (manualId: string, strategy: Omit<ManualStrategy, 'id' | 'addedDate' | 'addedBy'>, type: 'whatWorks' | 'whatDoesntWork') => Promise<void>;
+  updateStrategy: (manualId: string, strategyId: string, updates: Partial<ManualStrategy>, type: 'whatWorks' | 'whatDoesntWork') => Promise<void>;
+  deleteStrategy: (manualId: string, strategyId: string, type: 'whatWorks' | 'whatDoesntWork') => Promise<void>;
+
+  // Boundary management
+  addBoundary: (manualId: string, boundary: Omit<ManualBoundary, 'id' | 'addedDate' | 'addedBy'>) => Promise<void>;
+  updateBoundary: (manualId: string, boundaryId: string, updates: Partial<ManualBoundary>) => Promise<void>;
+  deleteBoundary: (manualId: string, boundaryId: string) => Promise<void>;
+
+  // Pattern management
+  addPattern: (manualId: string, pattern: Omit<ManualPattern, 'id'>) => Promise<void>;
+  updatePattern: (manualId: string, patternId: string, updates: Partial<ManualPattern>) => Promise<void>;
+  deletePattern: (manualId: string, patternId: string) => Promise<void>;
+
+  // Progress notes
+  addProgressNote: (manualId: string, note: Omit<ManualProgressNote, 'id' | 'date' | 'addedBy'>) => Promise<void>;
+  deleteProgressNote: (manualId: string, noteId: string) => Promise<void>;
 
   // Utility
   manualExists: (personId: string) => Promise<boolean>;
@@ -124,28 +148,44 @@ export function usePersonManual(personId?: string): UsePersonManualReturn {
     }
   };
 
-  // Create new manual
+  // Create new manual (Phase 1 - Simplified)
   const createManual = async (pid: string, personName: string, relationshipType?: RelationshipType): Promise<string> => {
     if (!user?.familyId || !user?.userId) {
       throw new Error('User must be authenticated');
     }
 
     try {
-      // Create the manual document
+      // Create the manual document with empty content arrays
       const newManual: Omit<PersonManual, 'manualId'> = {
         familyId: user.familyId,
         personId: pid,
         personName,
+        relationshipType,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
         version: 1,
-        roleSectionCount: 0,
-        activeRoles: [],
         lastEditedAt: Timestamp.now(),
         lastEditedBy: user.userId,
+
+        // Core information
+        coreInfo: {},
+
+        // Content arrays (empty initially)
+        triggers: [],
+        whatWorks: [],
+        whatDoesntWork: [],
+        boundaries: [],
+        emergingPatterns: [],
+        progressNotes: [],
+
+        // Statistics
         totalTriggers: 0,
         totalStrategies: 0,
-        activePlansCount: 0
+        totalBoundaries: 0,
+
+        // References
+        relatedJournalEntries: [],
+        relatedKnowledgeIds: []
       };
 
       const docRef = await addDoc(
@@ -154,29 +194,6 @@ export function usePersonManual(personId?: string): UsePersonManualReturn {
       );
 
       const manualId = docRef.id;
-
-      // Auto-create role sections based on relationship type
-      const createdSectionIds = await createManualSections({
-        manualId,
-        personId: pid,
-        personName,
-        familyId: user.familyId,
-        userId: user.userId,
-        relationshipType
-      });
-
-      // Update the manual with the correct section count
-      if (createdSectionIds.length > 0) {
-        const manualRef = doc(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS, manualId);
-        await updateDoc(manualRef, {
-          roleSectionCount: createdSectionIds.length,
-          activeRoles: createdSectionIds
-        });
-
-        // Update local state with correct counts
-        newManual.roleSectionCount = createdSectionIds.length;
-        newManual.activeRoles = createdSectionIds;
-      }
 
       setManual({
         manualId,
@@ -237,51 +254,372 @@ export function usePersonManual(personId?: string): UsePersonManualReturn {
     }
   };
 
-  // Increment role section count
-  const incrementRoleSectionCount = async (manualId: string): Promise<void> => {
-    if (!manual) throw new Error('Manual not loaded');
-    await updateManual(manualId, {
-      roleSectionCount: manual.roleSectionCount + 1
-    });
-  };
-
-  // Decrement role section count
-  const decrementRoleSectionCount = async (manualId: string): Promise<void> => {
-    if (!manual) throw new Error('Manual not loaded');
-    await updateManual(manualId, {
-      roleSectionCount: Math.max(0, manual.roleSectionCount - 1)
-    });
-  };
-
-  // Add active role
-  const addActiveRole = async (manualId: string, roleId: string): Promise<void> => {
-    if (!manual) throw new Error('Manual not loaded');
-    if (manual.activeRoles.includes(roleId)) return; // Already exists
-
-    await updateManual(manualId, {
-      activeRoles: [...manual.activeRoles, roleId]
-    });
-  };
-
-  // Remove active role
-  const removeActiveRole = async (manualId: string, roleId: string): Promise<void> => {
-    if (!manual) throw new Error('Manual not loaded');
-
-    await updateManual(manualId, {
-      activeRoles: manual.activeRoles.filter(id => id !== roleId)
-    });
-  };
-
-  // Update statistics
-  const updateStatistics = async (
+  // === CORE INFO ===
+  const updateCoreInfo = async (
     manualId: string,
-    stats: {
-      totalTriggers?: number;
-      totalStrategies?: number;
-      activePlansCount?: number;
-    }
+    coreInfo: Partial<PersonManual['coreInfo']>
   ): Promise<void> => {
-    await updateManual(manualId, stats);
+    if (!manual) throw new Error('Manual not loaded');
+
+    const updatedCoreInfo = {
+      ...manual.coreInfo,
+      ...coreInfo
+    };
+
+    await updateManual(manualId, { coreInfo: updatedCoreInfo });
+  };
+
+  // === TRIGGER MANAGEMENT ===
+  const addTrigger = async (
+    manualId: string,
+    trigger: Omit<ManualTrigger, 'id' | 'identifiedDate' | 'identifiedBy' | 'confirmedBy'>
+  ): Promise<void> => {
+    if (!manual || !user?.userId) throw new Error('Manual not loaded or user not authenticated');
+
+    const newTrigger: ManualTrigger = {
+      ...trigger,
+      id: `trigger-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      identifiedDate: Timestamp.now(),
+      identifiedBy: user.userId,
+      confirmedBy: []
+    };
+
+    const manualRef = doc(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS, manualId);
+    await updateDoc(manualRef, {
+      triggers: arrayUnion(newTrigger),
+      totalTriggers: manual.triggers.length + 1,
+      updatedAt: Timestamp.now(),
+      lastEditedAt: Timestamp.now(),
+      lastEditedBy: user.userId,
+      version: manual.version + 1
+    });
+
+    // Update local state
+    setManual({
+      ...manual,
+      triggers: [...manual.triggers, newTrigger],
+      totalTriggers: manual.triggers.length + 1,
+      version: manual.version + 1
+    });
+  };
+
+  const updateTrigger = async (
+    manualId: string,
+    triggerId: string,
+    updates: Partial<ManualTrigger>
+  ): Promise<void> => {
+    if (!manual || !user?.userId) throw new Error('Manual not loaded or user not authenticated');
+
+    const updatedTriggers = manual.triggers.map(t =>
+      t.id === triggerId ? { ...t, ...updates } : t
+    );
+
+    await updateManual(manualId, { triggers: updatedTriggers });
+  };
+
+  const deleteTrigger = async (manualId: string, triggerId: string): Promise<void> => {
+    if (!manual || !user?.userId) throw new Error('Manual not loaded or user not authenticated');
+
+    const updatedTriggers = manual.triggers.filter(t => t.id !== triggerId);
+
+    const manualRef = doc(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS, manualId);
+    await updateDoc(manualRef, {
+      triggers: updatedTriggers,
+      totalTriggers: Math.max(0, manual.triggers.length - 1),
+      updatedAt: Timestamp.now(),
+      lastEditedAt: Timestamp.now(),
+      lastEditedBy: user.userId,
+      version: manual.version + 1
+    });
+
+    // Update local state
+    setManual({
+      ...manual,
+      triggers: updatedTriggers,
+      totalTriggers: Math.max(0, manual.triggers.length - 1),
+      version: manual.version + 1
+    });
+  };
+
+  const confirmTrigger = async (manualId: string, triggerId: string): Promise<void> => {
+    if (!manual || !user?.userId) throw new Error('Manual not loaded or user not authenticated');
+
+    const updatedTriggers = manual.triggers.map(t => {
+      if (t.id === triggerId && !t.confirmedBy.includes(user.userId)) {
+        return { ...t, confirmedBy: [...t.confirmedBy, user.userId] };
+      }
+      return t;
+    });
+
+    await updateManual(manualId, { triggers: updatedTriggers });
+  };
+
+  // === STRATEGY MANAGEMENT ===
+  const addStrategy = async (
+    manualId: string,
+    strategy: Omit<ManualStrategy, 'id' | 'addedDate' | 'addedBy'>,
+    type: 'whatWorks' | 'whatDoesntWork'
+  ): Promise<void> => {
+    if (!manual || !user?.userId) throw new Error('Manual not loaded or user not authenticated');
+
+    const newStrategy: ManualStrategy = {
+      ...strategy,
+      id: `strategy-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      addedDate: Timestamp.now(),
+      addedBy: user.userId
+    };
+
+    const currentStrategies = manual[type];
+    const manualRef = doc(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS, manualId);
+
+    await updateDoc(manualRef, {
+      [type]: arrayUnion(newStrategy),
+      totalStrategies: manual.totalStrategies + 1,
+      updatedAt: Timestamp.now(),
+      lastEditedAt: Timestamp.now(),
+      lastEditedBy: user.userId,
+      version: manual.version + 1
+    });
+
+    // Update local state
+    setManual({
+      ...manual,
+      [type]: [...currentStrategies, newStrategy],
+      totalStrategies: manual.totalStrategies + 1,
+      version: manual.version + 1
+    });
+  };
+
+  const updateStrategy = async (
+    manualId: string,
+    strategyId: string,
+    updates: Partial<ManualStrategy>,
+    type: 'whatWorks' | 'whatDoesntWork'
+  ): Promise<void> => {
+    if (!manual) throw new Error('Manual not loaded');
+
+    const updatedStrategies = manual[type].map(s =>
+      s.id === strategyId ? { ...s, ...updates } : s
+    );
+
+    await updateManual(manualId, { [type]: updatedStrategies });
+  };
+
+  const deleteStrategy = async (
+    manualId: string,
+    strategyId: string,
+    type: 'whatWorks' | 'whatDoesntWork'
+  ): Promise<void> => {
+    if (!manual || !user?.userId) throw new Error('Manual not loaded or user not authenticated');
+
+    const updatedStrategies = manual[type].filter(s => s.id !== strategyId);
+
+    const manualRef = doc(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS, manualId);
+    await updateDoc(manualRef, {
+      [type]: updatedStrategies,
+      totalStrategies: Math.max(0, manual.totalStrategies - 1),
+      updatedAt: Timestamp.now(),
+      lastEditedAt: Timestamp.now(),
+      lastEditedBy: user.userId,
+      version: manual.version + 1
+    });
+
+    // Update local state
+    setManual({
+      ...manual,
+      [type]: updatedStrategies,
+      totalStrategies: Math.max(0, manual.totalStrategies - 1),
+      version: manual.version + 1
+    });
+  };
+
+  // === BOUNDARY MANAGEMENT ===
+  const addBoundary = async (
+    manualId: string,
+    boundary: Omit<ManualBoundary, 'id' | 'addedDate' | 'addedBy'>
+  ): Promise<void> => {
+    if (!manual || !user?.userId) throw new Error('Manual not loaded or user not authenticated');
+
+    const newBoundary: ManualBoundary = {
+      ...boundary,
+      id: `boundary-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      addedDate: Timestamp.now(),
+      addedBy: user.userId
+    };
+
+    const manualRef = doc(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS, manualId);
+    await updateDoc(manualRef, {
+      boundaries: arrayUnion(newBoundary),
+      totalBoundaries: manual.boundaries.length + 1,
+      updatedAt: Timestamp.now(),
+      lastEditedAt: Timestamp.now(),
+      lastEditedBy: user.userId,
+      version: manual.version + 1
+    });
+
+    // Update local state
+    setManual({
+      ...manual,
+      boundaries: [...manual.boundaries, newBoundary],
+      totalBoundaries: manual.boundaries.length + 1,
+      version: manual.version + 1
+    });
+  };
+
+  const updateBoundary = async (
+    manualId: string,
+    boundaryId: string,
+    updates: Partial<ManualBoundary>
+  ): Promise<void> => {
+    if (!manual) throw new Error('Manual not loaded');
+
+    const updatedBoundaries = manual.boundaries.map(b =>
+      b.id === boundaryId ? { ...b, ...updates } : b
+    );
+
+    await updateManual(manualId, { boundaries: updatedBoundaries });
+  };
+
+  const deleteBoundary = async (manualId: string, boundaryId: string): Promise<void> => {
+    if (!manual || !user?.userId) throw new Error('Manual not loaded or user not authenticated');
+
+    const updatedBoundaries = manual.boundaries.filter(b => b.id !== boundaryId);
+
+    const manualRef = doc(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS, manualId);
+    await updateDoc(manualRef, {
+      boundaries: updatedBoundaries,
+      totalBoundaries: Math.max(0, manual.boundaries.length - 1),
+      updatedAt: Timestamp.now(),
+      lastEditedAt: Timestamp.now(),
+      lastEditedBy: user.userId,
+      version: manual.version + 1
+    });
+
+    // Update local state
+    setManual({
+      ...manual,
+      boundaries: updatedBoundaries,
+      totalBoundaries: Math.max(0, manual.boundaries.length - 1),
+      version: manual.version + 1
+    });
+  };
+
+  // === PATTERN MANAGEMENT ===
+  const addPattern = async (
+    manualId: string,
+    pattern: Omit<ManualPattern, 'id'>
+  ): Promise<void> => {
+    if (!manual || !user?.userId) throw new Error('Manual not loaded or user not authenticated');
+
+    const newPattern: ManualPattern = {
+      ...pattern,
+      id: `pattern-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    };
+
+    const manualRef = doc(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS, manualId);
+    await updateDoc(manualRef, {
+      emergingPatterns: arrayUnion(newPattern),
+      updatedAt: Timestamp.now(),
+      lastEditedAt: Timestamp.now(),
+      lastEditedBy: user.userId,
+      version: manual.version + 1
+    });
+
+    // Update local state
+    setManual({
+      ...manual,
+      emergingPatterns: [...manual.emergingPatterns, newPattern],
+      version: manual.version + 1
+    });
+  };
+
+  const updatePattern = async (
+    manualId: string,
+    patternId: string,
+    updates: Partial<ManualPattern>
+  ): Promise<void> => {
+    if (!manual) throw new Error('Manual not loaded');
+
+    const updatedPatterns = manual.emergingPatterns.map(p =>
+      p.id === patternId ? { ...p, ...updates } : p
+    );
+
+    await updateManual(manualId, { emergingPatterns: updatedPatterns });
+  };
+
+  const deletePattern = async (manualId: string, patternId: string): Promise<void> => {
+    if (!manual || !user?.userId) throw new Error('Manual not loaded or user not authenticated');
+
+    const updatedPatterns = manual.emergingPatterns.filter(p => p.id !== patternId);
+
+    const manualRef = doc(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS, manualId);
+    await updateDoc(manualRef, {
+      emergingPatterns: updatedPatterns,
+      updatedAt: Timestamp.now(),
+      lastEditedAt: Timestamp.now(),
+      lastEditedBy: user.userId,
+      version: manual.version + 1
+    });
+
+    // Update local state
+    setManual({
+      ...manual,
+      emergingPatterns: updatedPatterns,
+      version: manual.version + 1
+    });
+  };
+
+  // === PROGRESS NOTES ===
+  const addProgressNote = async (
+    manualId: string,
+    note: Omit<ManualProgressNote, 'id' | 'date' | 'addedBy'>
+  ): Promise<void> => {
+    if (!manual || !user?.userId) throw new Error('Manual not loaded or user not authenticated');
+
+    const newNote: ManualProgressNote = {
+      ...note,
+      id: `note-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      date: Timestamp.now(),
+      addedBy: user.userId
+    };
+
+    const manualRef = doc(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS, manualId);
+    await updateDoc(manualRef, {
+      progressNotes: arrayUnion(newNote),
+      updatedAt: Timestamp.now(),
+      lastEditedAt: Timestamp.now(),
+      lastEditedBy: user.userId,
+      version: manual.version + 1
+    });
+
+    // Update local state
+    setManual({
+      ...manual,
+      progressNotes: [...manual.progressNotes, newNote],
+      version: manual.version + 1
+    });
+  };
+
+  const deleteProgressNote = async (manualId: string, noteId: string): Promise<void> => {
+    if (!manual || !user?.userId) throw new Error('Manual not loaded or user not authenticated');
+
+    const updatedNotes = manual.progressNotes.filter(n => n.id !== noteId);
+
+    const manualRef = doc(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS, manualId);
+    await updateDoc(manualRef, {
+      progressNotes: updatedNotes,
+      updatedAt: Timestamp.now(),
+      lastEditedAt: Timestamp.now(),
+      lastEditedBy: user.userId,
+      version: manual.version + 1
+    });
+
+    // Update local state
+    setManual({
+      ...manual,
+      progressNotes: updatedNotes,
+      version: manual.version + 1
+    });
   };
 
   return {
@@ -291,11 +629,22 @@ export function usePersonManual(personId?: string): UsePersonManualReturn {
     createManual,
     updateManual,
     deleteManual,
-    incrementRoleSectionCount,
-    decrementRoleSectionCount,
-    addActiveRole,
-    removeActiveRole,
-    updateStatistics,
+    updateCoreInfo,
+    addTrigger,
+    updateTrigger,
+    deleteTrigger,
+    confirmTrigger,
+    addStrategy,
+    updateStrategy,
+    deleteStrategy,
+    addBoundary,
+    updateBoundary,
+    deleteBoundary,
+    addPattern,
+    updatePattern,
+    deletePattern,
+    addProgressNote,
+    deleteProgressNote,
     manualExists,
     fetchByPersonId
   };

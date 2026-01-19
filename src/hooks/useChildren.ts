@@ -1,258 +1,260 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import {
   collection,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
   query,
   where,
   getDocs,
+  doc,
+  getDoc,
   setDoc,
+  updateDoc,
+  deleteDoc,
   serverTimestamp,
+  Timestamp,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { firestore, storage } from '@/lib/firebase';
-import { User } from '@/types';
-import { useAuth } from '@/context/AuthContext';
+import { firestore } from '../lib/firebase';
+import { useAuth } from '../context/AuthContext';
+import { Child, AddChildForm } from '../types/child-manual';
+import { COLLECTIONS } from '../types';
 
-export interface CreateChildData {
-  name: string;
-  dateOfBirth: Date;
-  avatar?: File;
-  username?: string;
-  pin?: string;
+interface UseChildrenReturn {
+  children: Child[];
+  loading: boolean;
+  error: string | null;
+
+  // Methods
+  addChild: (childData: AddChildForm) => Promise<Child>;
+  updateChild: (childId: string, updates: Partial<Child>) => Promise<void>;
+  deleteChild: (childId: string) => Promise<void>;
+  getChild: (childId: string) => Promise<Child | null>;
+  refreshChildren: () => Promise<void>;
 }
 
-export function useChildren() {
+export const useChildren = (): UseChildrenReturn => {
   const { user } = useAuth();
-  const [children, setChildren] = useState<User[]>([]);
+  const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch all children in the family
-  const fetchChildren = async () => {
+  // Fetch children when user changes
+  useEffect(() => {
     if (!user?.familyId) {
+      setChildren([]);
       setLoading(false);
       return;
     }
 
+    const fetchChildren = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const childrenQuery = query(
+          collection(firestore, COLLECTIONS.CHILDREN),
+          where('familyId', '==', user.familyId)
+        );
+
+        const querySnapshot = await getDocs(childrenQuery);
+        const childrenData: Child[] = [];
+
+        querySnapshot.forEach(doc => {
+          childrenData.push(doc.data() as Child);
+        });
+
+        setChildren(childrenData);
+      } catch (err: any) {
+        console.error('Error fetching children:', err);
+        setError(err.message || 'Failed to load children');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchChildren();
+  }, [user?.familyId]);
+
+  /**
+   * Add a new child
+   */
+  const addChild = async (childData: AddChildForm): Promise<Child> => {
+    if (!user || !user.familyId) {
+      throw new Error('User must be logged in');
+    }
+
+    if (user.role !== 'parent') {
+      throw new Error('Only parents can add children');
+    }
+
     try {
-      setLoading(true);
       setError(null);
 
-      const q = query(
-        collection(firestore, 'users'),
-        where('familyId', '==', user.familyId),
-        where('role', '==', 'child')
-      );
+      const childId = doc(collection(firestore, COLLECTIONS.CHILDREN)).id;
+      const childRef = doc(firestore, COLLECTIONS.CHILDREN, childId);
 
-      const querySnapshot = await getDocs(q);
-      const fetchedChildren: User[] = [];
-
-      querySnapshot.forEach((doc) => {
-        fetchedChildren.push({
-          userId: doc.id,
-          ...doc.data(),
-        } as User);
-      });
-
-      // Sort by date of birth (youngest first)
-      fetchedChildren.sort((a, b) => {
-        if (!a.dateOfBirth || !b.dateOfBirth) return 0;
-        return b.dateOfBirth.toDate().getTime() - a.dateOfBirth.toDate().getTime();
-      });
-
-      setChildren(fetchedChildren);
-    } catch (err: any) {
-      console.error('Error fetching children:', err);
-      setError(err.message || 'Failed to fetch children');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Create new child account
-  const createChild = async (data: CreateChildData): Promise<string> => {
-    if (!user?.familyId) {
-      throw new Error('User must be logged in with a family');
-    }
-
-    try {
-      // Upload avatar if provided
-      let avatarUrl: string | undefined;
-      if (data.avatar) {
-        const avatarRef = ref(
-          storage,
-          `families/${user.familyId}/children/${Date.now()}_${data.avatar.name}`
-        );
-        await uploadBytes(avatarRef, data.avatar);
-        avatarUrl = await getDownloadURL(avatarRef);
-      }
-
-      // Create child user document
-      const childData = {
+      // Build child object, only including optional fields if they have values
+      const newChild: any = {
+        childId,
         familyId: user.familyId,
-        role: 'child' as const,
-        name: data.name,
-        email: '', // Children don't have email
-        dateOfBirth: data.dateOfBirth,
-        avatarUrl: avatarUrl || null,
-        username: data.username || null,
-        pin: data.pin || null,
-        chipBalance: 0,
+        name: childData.name,
+        createdBy: user.userId,
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
       };
 
-      const docRef = await addDoc(collection(firestore, 'users'), childData);
-
-      // Update family document to include child ID
-      const familyRef = doc(firestore, 'families', user.familyId);
-      const familyDoc = await getDocs(query(collection(firestore, 'families'), where('__name__', '==', user.familyId)));
-
-      if (!familyDoc.empty) {
-        const currentChildIds = familyDoc.docs[0].data().childIds || [];
-        await updateDoc(familyRef, {
-          childIds: [...currentChildIds, docRef.id],
-          updatedAt: serverTimestamp(),
-        });
+      // Only add optional fields if they're provided
+      if (childData.age !== undefined && childData.age !== null) {
+        newChild.age = childData.age;
+      }
+      if (childData.dateOfBirth) {
+        newChild.dateOfBirth = Timestamp.fromDate(new Date(childData.dateOfBirth));
+      }
+      if (childData.pronouns) {
+        newChild.pronouns = childData.pronouns;
       }
 
-      // Refresh children list
-      await fetchChildren();
+      // Clean the object to remove any undefined values
+      const cleanedChild = Object.fromEntries(
+        Object.entries(newChild).filter(([_, value]) => value !== undefined)
+      ) as Partial<Child>;
 
-      return docRef.id;
+      await setDoc(childRef, cleanedChild);
+
+      // Refresh children list
+      await refreshChildren();
+
+      return newChild as Child;
     } catch (err: any) {
-      console.error('Error creating child:', err);
-      throw new Error(err.message || 'Failed to create child account');
+      console.error('Error adding child:', err);
+      setError(err.message || 'Failed to add child');
+      throw err;
     }
   };
 
-  // Update child information
+  /**
+   * Update child information
+   */
   const updateChild = async (
     childId: string,
-    updates: Partial<CreateChildData>
+    updates: Partial<Child>
   ): Promise<void> => {
+    if (!user || user.role !== 'parent') {
+      throw new Error('Only parents can update child information');
+    }
+
     try {
-      const childRef = doc(firestore, 'users', childId);
+      setError(null);
 
-      const updateData: any = {
-        updatedAt: serverTimestamp(),
-      };
+      const childRef = doc(firestore, COLLECTIONS.CHILDREN, childId);
 
-      if (updates.name !== undefined) updateData.name = updates.name;
-      if (updates.dateOfBirth !== undefined) updateData.dateOfBirth = updates.dateOfBirth;
-      if (updates.username !== undefined) updateData.username = updates.username;
-      if (updates.pin !== undefined) updateData.pin = updates.pin;
+      // Don't allow updating these fields
+      const { childId: _, familyId: __, createdBy: ___, createdAt: ____, ...safeUpdates } = updates as any;
 
-      // Handle avatar upload if provided
-      if (updates.avatar) {
-        const avatarRef = ref(
-          storage,
-          `families/${user?.familyId}/children/${childId}_${updates.avatar.name}`
-        );
-        await uploadBytes(avatarRef, updates.avatar);
-        const avatarUrl = await getDownloadURL(avatarRef);
-        updateData.avatarUrl = avatarUrl;
-      }
-
-      await updateDoc(childRef, updateData);
+      await updateDoc(childRef, safeUpdates);
 
       // Refresh children list
-      await fetchChildren();
+      await refreshChildren();
     } catch (err: any) {
       console.error('Error updating child:', err);
-      throw new Error(err.message || 'Failed to update child');
+      setError(err.message || 'Failed to update child');
+      throw err;
     }
   };
 
-  // Delete child account
+  /**
+   * Delete a child (and their manual if it exists)
+   */
   const deleteChild = async (childId: string): Promise<void> => {
-    if (!user?.familyId) {
-      throw new Error('User must be logged in with a family');
+    if (!user || user.role !== 'parent') {
+      throw new Error('Only parents can delete children');
     }
 
     try {
-      const childRef = doc(firestore, 'users', childId);
+      setError(null);
 
-      // Remove child ID from family document
-      const familyRef = doc(firestore, 'families', user.familyId);
-      const familyDoc = await getDocs(query(collection(firestore, 'families'), where('__name__', '==', user.familyId)));
+      // Get the child to check for manual
+      const childRef = doc(firestore, COLLECTIONS.CHILDREN, childId);
+      const childDoc = await getDoc(childRef);
 
-      if (!familyDoc.empty) {
-        const currentChildIds = familyDoc.docs[0].data().childIds || [];
-        await updateDoc(familyRef, {
-          childIds: currentChildIds.filter((id: string) => id !== childId),
-          updatedAt: serverTimestamp(),
-        });
-      }
-
-      // Delete child user document
-      await deleteDoc(childRef);
-
-      // TODO: Also delete child's check-ins and transactions
-      // This should be done in a Cloud Function for data consistency
-
-      // Refresh children list
-      await fetchChildren();
-    } catch (err: any) {
-      console.error('Error deleting child:', err);
-      throw new Error(err.message || 'Failed to delete child');
-    }
-  };
-
-  // Award chips to a child
-  const awardChips = async (childId: string, amount: number, reason: string): Promise<void> => {
-    try {
-      const childRef = doc(firestore, 'users', childId);
-      const child = children.find((c) => c.userId === childId);
-
-      if (!child) {
+      if (!childDoc.exists()) {
         throw new Error('Child not found');
       }
 
-      const newBalance = (child.chipBalance || 0) + amount;
+      const childData = childDoc.data() as Child;
 
-      await updateDoc(childRef, {
-        chipBalance: newBalance,
-        updatedAt: serverTimestamp(),
-      });
+      // Delete the manual if it exists and has a valid ID
+      if (childData.manualId && typeof childData.manualId === 'string' && childData.manualId.trim() !== '') {
+        const manualRef = doc(firestore, COLLECTIONS.CHILD_MANUALS, childData.manualId);
+        await deleteDoc(manualRef);
+      }
 
-      // Create transaction record
-      await addDoc(collection(firestore, 'chip_transactions'), {
-        familyId: user?.familyId,
-        childId,
-        type: 'earn',
-        amount,
-        reason,
-        balanceAfter: newBalance,
-        createdAt: serverTimestamp(),
-      });
+      // Delete the child
+      await deleteDoc(childRef);
 
       // Refresh children list
-      await fetchChildren();
+      await refreshChildren();
     } catch (err: any) {
-      console.error('Error awarding chips:', err);
-      throw new Error(err.message || 'Failed to award chips');
+      console.error('Error deleting child:', err);
+      setError(err.message || 'Failed to delete child');
+      throw err;
     }
   };
 
-  // Load children on mount
-  useEffect(() => {
-    if (user?.familyId) {
-      fetchChildren();
+  /**
+   * Get a single child by ID
+   */
+  const getChild = async (childId: string): Promise<Child | null> => {
+    try {
+      const childRef = doc(firestore, COLLECTIONS.CHILDREN, childId);
+      const childDoc = await getDoc(childRef);
+
+      if (childDoc.exists()) {
+        return childDoc.data() as Child;
+      }
+
+      return null;
+    } catch (err: any) {
+      console.error('Error getting child:', err);
+      return null;
     }
-  }, [user?.familyId]);
+  };
+
+  /**
+   * Refresh children list
+   */
+  const refreshChildren = async (): Promise<void> => {
+    if (!user?.familyId) {
+      return;
+    }
+
+    try {
+      const childrenQuery = query(
+        collection(firestore, COLLECTIONS.CHILDREN),
+        where('familyId', '==', user.familyId)
+      );
+
+      const querySnapshot = await getDocs(childrenQuery);
+      const childrenData: Child[] = [];
+
+      querySnapshot.forEach(doc => {
+        childrenData.push(doc.data() as Child);
+      });
+
+      setChildren(childrenData);
+    } catch (err: any) {
+      console.error('Error refreshing children:', err);
+      setError(err.message || 'Failed to refresh children');
+    }
+  };
 
   return {
     children,
     loading,
     error,
-    fetchChildren,
-    createChild,
+    addChild,
     updateChild,
     deleteChild,
-    awardChips,
+    getChild,
+    refreshChildren,
   };
-}
+};

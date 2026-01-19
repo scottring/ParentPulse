@@ -7,19 +7,65 @@
 
 import { RelationshipType } from '@/types/person-manual';
 
+// ==================== Question Type System ====================
+
+export type QuestionType =
+  | 'text'              // Free-form textarea (default/legacy)
+  | 'likert'            // 1-7 scale (Strongly Disagree → Strongly Agree)
+  | 'frequency'         // Never/Rarely/Sometimes/Often/Always
+  | 'severity'          // Mild/Moderate/Significant
+  | 'rating'            // 1-5 stars/numbers
+  | 'multiple_choice'   // Single selection
+  | 'checkbox'          // Multiple selections
+  | 'yes_no'            // Binary
+  | 'forced_choice'     // Pick one from pair (Love Languages style)
+  | 'composite';        // Multiple sub-questions
+
+export interface QuestionOption {
+  value: string | number;
+  label: string;
+  description?: string;
+}
+
+export interface ScaleConfig {
+  min: number;
+  max: number;
+  minLabel: string;
+  maxLabel: string;
+  midLabel?: string;
+  type: 'numeric' | 'semantic';
+}
+
 export interface OnboardingQuestion {
   id: string;
   question: string;
-  placeholder: string;
+  questionType?: QuestionType;  // Defaults to 'text' for backward compatibility
+
+  // Legacy text question fields (still supported)
+  placeholder?: string;
   helperText?: string;
   required?: boolean;
+
+  // Type-specific configurations
+  options?: QuestionOption[];        // For multiple_choice, checkbox, forced_choice
+  scale?: ScaleConfig;               // For likert, frequency, severity, rating
+  subQuestions?: OnboardingQuestion[]; // For composite questions
+
+  // Qualitative embellishment
+  allowQualitativeComment?: boolean;  // Allow optional text after structured answer
+  qualitativePlaceholder?: string;    // Placeholder for qualitative comment
+
+  // Clinical metadata
+  clinicalSource?: string;     // e.g., "VIA-IS Item 7", "Vanderbilt ADHD Item 3"
+  scoringDomain?: string;      // e.g., "Openness", "Inattention", "Attachment Anxiety"
 }
 
 export interface OnboardingSection {
   sectionId: string;
   sectionName: string;
   sectionDescription: string;
-  emoji: string;
+  icon: string; // Heroicon name
+  emoji?: string; // Optional emoji for section indicator
   questions: OnboardingQuestion[];
   skippable: boolean;
 }
@@ -31,7 +77,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
     sectionId: 'overview',
     sectionName: 'Overview',
     sectionDescription: 'A personal introduction to help others understand them',
-    emoji: '👤',
+    icon: 'UserCircleIcon',
     skippable: false,
     questions: [
       {
@@ -68,7 +114,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
     sectionId: 'triggers',
     sectionName: 'Triggers & Patterns',
     sectionDescription: 'Help us understand what causes stress or challenges',
-    emoji: '⚡',
+    icon: 'BoltIcon',
     skippable: false,
     questions: [
       {
@@ -98,7 +144,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
     sectionId: 'what_works',
     sectionName: 'What Works',
     sectionDescription: 'Share strategies that have been effective',
-    emoji: '✨',
+    icon: 'SparklesIcon',
     skippable: false,
     questions: [
       {
@@ -128,7 +174,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
     sectionId: 'boundaries',
     sectionName: 'Boundaries & Important Context',
     sectionDescription: 'What boundaries and context are important to know',
-    emoji: '🛡️',
+    icon: 'ShieldCheckIcon',
     skippable: true,
     questions: [
       {
@@ -156,24 +202,191 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
   },
   {
     sectionId: 'strengths',
-    sectionName: 'Strengths & Challenges',
-    sectionDescription: 'Their unique strengths and areas of difficulty',
+    sectionName: 'Character Strengths (VIA Survey)',
+    sectionDescription: 'Rate how well each characteristic describes {{personName}}',
+    icon: 'FireIcon',
     emoji: '💪',
-    skippable: true,
+    skippable: false,
     questions: [
       {
-        id: 'strengths_q1',
-        question: 'What are {{personName}}\'s greatest strengths?',
-        placeholder: 'Example: Creative problem-solver, empathetic, persistent, great sense of humor...',
-        helperText: 'What do they do well? What makes them special?',
-        required: false
+        id: 'via_creativity',
+        question: '{{personName}} thinks of new and original ways to do things',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 5,
+          minLabel: 'Very Unlike Them',
+          maxLabel: 'Very Like Them',
+          midLabel: 'Neutral',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'Describe a specific example of their creativity...',
+        clinicalSource: 'VIA-IS Creativity',
+        scoringDomain: 'Wisdom & Knowledge',
+        required: true
       },
       {
-        id: 'strengths_q2',
-        question: 'What areas does {{personName}} find challenging?',
-        placeholder: 'Example: Following multi-step directions, emotional regulation, social cues...',
-        helperText: 'Where do they struggle or need extra support?',
-        required: false
+        id: 'via_curiosity',
+        question: '{{personName}} is curious about many different things',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 5,
+          minLabel: 'Very Unlike Them',
+          maxLabel: 'Very Like Them',
+          midLabel: 'Neutral',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'What topics or areas are they most curious about?',
+        clinicalSource: 'VIA-IS Curiosity',
+        scoringDomain: 'Wisdom & Knowledge',
+        required: true
+      },
+      {
+        id: 'via_perseverance',
+        question: '{{personName}} finishes what they start despite obstacles',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 5,
+          minLabel: 'Very Unlike Them',
+          maxLabel: 'Very Like Them',
+          midLabel: 'Neutral',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'Describe a time they persevered through difficulty...',
+        clinicalSource: 'VIA-IS Perseverance',
+        scoringDomain: 'Courage',
+        required: true
+      },
+      {
+        id: 'via_kindness',
+        question: '{{personName}} is kind and generous to others',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 5,
+          minLabel: 'Very Unlike Them',
+          maxLabel: 'Very Like Them',
+          midLabel: 'Neutral',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'Share an example of their kindness...',
+        clinicalSource: 'VIA-IS Kindness',
+        scoringDomain: 'Humanity',
+        required: true
+      },
+      {
+        id: 'via_social_intelligence',
+        question: '{{personName}} is aware of what other people are thinking and feeling',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 5,
+          minLabel: 'Very Unlike Them',
+          maxLabel: 'Very Like Them',
+          midLabel: 'Neutral',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'How do they demonstrate social awareness?',
+        clinicalSource: 'VIA-IS Social Intelligence',
+        scoringDomain: 'Humanity',
+        required: true
+      },
+      {
+        id: 'via_teamwork',
+        question: '{{personName}} works well as part of a group or team',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 5,
+          minLabel: 'Very Unlike Them',
+          maxLabel: 'Very Like Them',
+          midLabel: 'Neutral',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'Describe their teamwork style...',
+        clinicalSource: 'VIA-IS Teamwork',
+        scoringDomain: 'Justice',
+        required: true
+      },
+      {
+        id: 'via_fairness',
+        question: '{{personName}} treats everyone fairly and gives them a chance',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 5,
+          minLabel: 'Very Unlike Them',
+          maxLabel: 'Very Like Them',
+          midLabel: 'Neutral',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'How do they show fairness?',
+        clinicalSource: 'VIA-IS Fairness',
+        scoringDomain: 'Justice',
+        required: true
+      },
+      {
+        id: 'via_self_regulation',
+        question: '{{personName}} controls their emotions and impulses',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 5,
+          minLabel: 'Very Unlike Them',
+          maxLabel: 'Very Like Them',
+          midLabel: 'Neutral',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'Describe their self-control abilities...',
+        clinicalSource: 'VIA-IS Self-Regulation',
+        scoringDomain: 'Temperance',
+        required: true
+      },
+      {
+        id: 'via_gratitude',
+        question: '{{personName}} is aware of and thankful for good things that happen',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 5,
+          minLabel: 'Very Unlike Them',
+          maxLabel: 'Very Like Them',
+          midLabel: 'Neutral',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'How do they express gratitude?',
+        clinicalSource: 'VIA-IS Gratitude',
+        scoringDomain: 'Transcendence',
+        required: true
+      },
+      {
+        id: 'via_hope',
+        question: '{{personName}} expects the best and works to achieve it',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 5,
+          minLabel: 'Very Unlike Them',
+          maxLabel: 'Very Like Them',
+          midLabel: 'Neutral',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'Describe their optimistic outlook...',
+        clinicalSource: 'VIA-IS Hope',
+        scoringDomain: 'Transcendence',
+        required: true
       }
     ]
   }
@@ -181,12 +394,334 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
 
 // ==================== Child-Specific Sections ====================
 
-export const CHILD_SPECIFIC_SECTIONS: OnboardingSection[] = [
+// Screening section - determines if detailed neurodivergence sections are shown
+export const CHILD_SCREENING_SECTION: OnboardingSection = {
+  sectionId: 'screening',
+  sectionName: 'Background & Context',
+  sectionDescription: 'Let\'s start with some basic information about {{personName}}',
+  icon: 'ClipboardDocumentCheckIcon',
+  emoji: '📋',
+  skippable: false,
+  questions: [
+    {
+      id: 'screening_level',
+      question: 'Which best describes {{personName}}?',
+      questionType: 'multiple_choice',
+      helperText: 'This helps us tailor the questionnaire to focus on relevant areas.',
+      required: true,
+      options: [
+        {
+          value: 'typical',
+          label: 'Typical development – no major concerns',
+          description: 'Generally developing as expected with no significant challenges'
+        },
+        {
+          value: 'mild',
+          label: 'Some behavioral challenges, but manageable',
+          description: 'Occasional difficulties that don\'t significantly impact daily life'
+        },
+        {
+          value: 'moderate',
+          label: 'Moderate challenges with attention, behavior, or emotions',
+          description: 'Regular challenges that require specific strategies'
+        },
+        {
+          value: 'significant',
+          label: 'Significant challenges that impact daily life',
+          description: 'Ongoing difficulties that affect home, school, or social situations'
+        },
+        {
+          value: 'diagnosed',
+          label: 'Has formal diagnosis (ADHD, autism, etc.)',
+          description: 'Has been diagnosed with a neurodevelopmental or behavioral condition'
+        },
+        {
+          value: 'unsure',
+          label: 'I don\'t know',
+          description: 'I\'m not sure which category best describes them'
+        },
+        {
+          value: 'prefer_not_say',
+          label: 'Prefer not to say',
+          description: 'I would rather not specify at this time'
+        }
+      ]
+    }
+  ]
+};
+
+// Detailed neurodivergence sections - only shown if screening indicates need
+export const CHILD_NEURODIVERGENCE_SECTIONS: OnboardingSection[] = [
+  {
+    sectionId: 'adhd_screening',
+    sectionName: 'Attention & Focus',
+    sectionDescription: 'Understanding their attention patterns and focus challenges',
+    icon: 'SparklesIcon',
+    emoji: '🎯',
+    skippable: false,
+    questions: [
+      {
+        id: 'adhd_inattention',
+        question: 'How often does {{personName}} have difficulty sustaining attention during tasks or activities?',
+        questionType: 'frequency',
+        scale: {
+          min: 0,
+          max: 4,
+          minLabel: 'Never',
+          maxLabel: 'Very Often',
+          type: 'semantic'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'Describe specific situations where this happens...',
+        clinicalSource: 'Vanderbilt ADHD - Inattention',
+        scoringDomain: 'Inattention',
+        required: true
+      },
+      {
+        id: 'adhd_organization',
+        question: 'How often does {{personName}} have difficulty organizing tasks and activities?',
+        questionType: 'frequency',
+        scale: {
+          min: 0,
+          max: 4,
+          minLabel: 'Never',
+          maxLabel: 'Very Often',
+          type: 'semantic'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'What organizational challenges do you notice?',
+        clinicalSource: 'Vanderbilt ADHD - Organization',
+        scoringDomain: 'Executive Function',
+        required: true
+      },
+      {
+        id: 'adhd_hyperactivity',
+        question: 'How often does {{personName}} fidget, tap hands/feet, or seem unable to stay still?',
+        questionType: 'frequency',
+        scale: {
+          min: 0,
+          max: 4,
+          minLabel: 'Never',
+          maxLabel: 'Very Often',
+          type: 'semantic'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'Describe their movement patterns...',
+        clinicalSource: 'Vanderbilt ADHD - Hyperactivity',
+        scoringDomain: 'Hyperactivity',
+        required: true
+      },
+      {
+        id: 'adhd_impulsivity',
+        question: 'How often does {{personName}} blurt out answers before questions are completed or interrupt others?',
+        questionType: 'frequency',
+        scale: {
+          min: 0,
+          max: 4,
+          minLabel: 'Never',
+          maxLabel: 'Very Often',
+          type: 'semantic'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'Give examples of impulsive behaviors...',
+        clinicalSource: 'Vanderbilt ADHD - Impulsivity',
+        scoringDomain: 'Impulsivity',
+        required: true
+      }
+    ]
+  },
+  {
+    sectionId: 'sensory_processing',
+    sectionName: 'Sensory Processing',
+    sectionDescription: 'How they experience and respond to sensory input',
+    icon: 'EyeIcon',
+    emoji: '👂',
+    skippable: false,
+    questions: [
+      {
+        id: 'sensory_tactile',
+        question: 'How sensitive is {{personName}} to touch, textures, or clothing?',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 5,
+          minLabel: 'Not Sensitive',
+          maxLabel: 'Extremely Sensitive',
+          midLabel: 'Moderately',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'Describe specific tactile sensitivities (tags, fabrics, textures)...',
+        scoringDomain: 'Tactile Sensitivity',
+        required: true
+      },
+      {
+        id: 'sensory_auditory',
+        question: 'How does {{personName}} respond to loud noises or busy environments?',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 5,
+          minLabel: 'No Issues',
+          maxLabel: 'Very Distressed',
+          midLabel: 'Somewhat Bothered',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'What sounds or environments are challenging?',
+        scoringDomain: 'Auditory Sensitivity',
+        required: true
+      },
+      {
+        id: 'sensory_visual',
+        question: 'Does {{personName}} have visual sensitivities (bright lights, busy patterns)?',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 5,
+          minLabel: 'No Sensitivity',
+          maxLabel: 'Highly Sensitive',
+          midLabel: 'Some Sensitivity',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'Describe visual sensitivities...',
+        scoringDomain: 'Visual Sensitivity',
+        required: true
+      }
+    ]
+  },
+  {
+    sectionId: 'executive_function',
+    sectionName: 'Executive Function',
+    sectionDescription: 'Planning, transitions, and self-regulation abilities',
+    icon: 'CogIcon',
+    emoji: '🧠',
+    skippable: false,
+    questions: [
+      {
+        id: 'ef_transitions',
+        question: 'How does {{personName}} handle transitions between activities?',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 5,
+          minLabel: 'Very Smoothly',
+          maxLabel: 'Very Difficult',
+          midLabel: 'Somewhat Challenging',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'Describe what happens during transitions...',
+        scoringDomain: 'Task Switching',
+        required: true
+      },
+      {
+        id: 'ef_planning',
+        question: 'How well does {{personName}} plan ahead or think through consequences?',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 5,
+          minLabel: 'Plans Well',
+          maxLabel: 'Struggles Significantly',
+          midLabel: 'Needs Support',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'Give examples of planning challenges or successes...',
+        scoringDomain: 'Planning & Foresight',
+        required: true
+      },
+      {
+        id: 'ef_working_memory',
+        question: 'How well does {{personName}} remember multi-step instructions?',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 5,
+          minLabel: 'Remembers Easily',
+          maxLabel: 'Forgets Quickly',
+          midLabel: 'Needs Reminders',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'How many steps can they typically remember?',
+        scoringDomain: 'Working Memory',
+        required: true
+      }
+    ]
+  },
+  {
+    sectionId: 'emotional_regulation',
+    sectionName: 'Emotional Regulation',
+    sectionDescription: 'How they experience and manage strong emotions',
+    icon: 'HeartIcon',
+    emoji: '💙',
+    skippable: false,
+    questions: [
+      {
+        id: 'emotion_intensity',
+        question: 'How intense are {{personName}}\'s emotional reactions?',
+        questionType: 'likert',
+        scale: {
+          min: 1,
+          max: 5,
+          minLabel: 'Mild',
+          maxLabel: 'Very Intense',
+          midLabel: 'Moderate',
+          type: 'numeric'
+        },
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'Describe what their big emotions look like...',
+        scoringDomain: 'Emotional Intensity',
+        required: true
+      },
+      {
+        id: 'emotion_recovery',
+        question: 'How long does it typically take {{personName}} to calm down after being upset?',
+        questionType: 'multiple_choice',
+        options: [
+          { value: '1-5', label: '1-5 minutes', description: 'Recovers quickly with minimal support' },
+          { value: '5-15', label: '5-15 minutes', description: 'Needs some time and support' },
+          { value: '15-30', label: '15-30 minutes', description: 'Requires extended co-regulation' },
+          { value: '30-60', label: '30-60 minutes', description: 'Long recovery period needed' },
+          { value: '60+', label: 'More than an hour', description: 'Very extended recovery time' },
+          { value: 'varies', label: 'Varies significantly', description: 'Recovery time differs greatly depending on the situation' },
+          { value: 'dont_know', label: 'I don\'t know', description: 'I haven\'t observed this enough to say' }
+        ],
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'What helps them recover?',
+        scoringDomain: 'Emotional Recovery',
+        required: true
+      },
+      {
+        id: 'emotion_coregulation',
+        question: 'What level of support does {{personName}} need to calm down?',
+        questionType: 'multiple_choice',
+        options: [
+          { value: 'independent', label: 'Can self-soothe independently', description: 'Uses own strategies effectively' },
+          { value: 'verbal', label: 'Needs verbal reassurance', description: 'Benefits from talking through feelings' },
+          { value: 'physical', label: 'Needs physical comfort', description: 'Requires hugs, holding, or physical presence' },
+          { value: 'full', label: 'Needs full co-regulation', description: 'Requires active adult support and presence throughout' },
+          { value: 'varies', label: 'Varies by situation', description: 'Support needs differ depending on the context' },
+          { value: 'dont_know', label: 'I don\'t know', description: 'I haven\'t observed this enough to say' }
+        ],
+        allowQualitativeComment: true,
+        qualitativePlaceholder: 'Describe what works best...',
+        scoringDomain: 'Co-regulation Needs',
+        required: true
+      }
+    ]
+  }
+];
+
+export const CHILD_BASIC_SECTIONS: OnboardingSection[] = [
   {
     sectionId: 'development',
     sectionName: 'Development & Learning',
     sectionDescription: 'How they learn and any developmental considerations',
-    emoji: '📚',
+    icon: 'BookOpenIcon',
     skippable: true,
     questions: [
       {
@@ -214,7 +749,7 @@ export const SPOUSE_SPECIFIC_SECTIONS: OnboardingSection[] = [
     sectionId: 'love_languages',
     sectionName: 'Love Languages & Connection',
     sectionDescription: 'How they feel loved and connected',
-    emoji: '💝',
+    icon: 'HeartIcon',
     skippable: true,
     questions: [
       {
@@ -242,7 +777,7 @@ export const ELDERLY_PARENT_SPECIFIC_SECTIONS: OnboardingSection[] = [
     sectionId: 'health',
     sectionName: 'Health & Care Needs',
     sectionDescription: 'Medical and care considerations',
-    emoji: '🏥',
+    icon: 'HeartIcon',
     skippable: true,
     questions: [
       {
@@ -270,7 +805,7 @@ export const FRIEND_SPECIFIC_SECTIONS: OnboardingSection[] = [
     sectionId: 'connection',
     sectionName: 'Connection & Communication',
     sectionDescription: 'How you stay connected and communicate',
-    emoji: '📱',
+    icon: 'ChatBubbleLeftRightIcon',
     skippable: true,
     questions: [
       {
@@ -298,7 +833,7 @@ export const PROFESSIONAL_SPECIFIC_SECTIONS: OnboardingSection[] = [
     sectionId: 'work_style',
     sectionName: 'Work Style & Collaboration',
     sectionDescription: 'How they work best professionally',
-    emoji: '💼',
+    icon: 'BriefcaseIcon',
     skippable: true,
     questions: [
       {
@@ -326,7 +861,7 @@ export const SIBLING_SPECIFIC_SECTIONS: OnboardingSection[] = [
     sectionId: 'dynamics',
     sectionName: 'Relationship Dynamics',
     sectionDescription: 'Your relationship patterns and dynamics',
-    emoji: '👫',
+    icon: 'UsersIcon',
     skippable: true,
     questions: [
       {
@@ -351,13 +886,17 @@ export const SIBLING_SPECIFIC_SECTIONS: OnboardingSection[] = [
 
 /**
  * Get all onboarding sections for a relationship type
+ * For children, returns screening section first - detailed sections added dynamically based on screening response
  */
 export function getOnboardingSections(relationshipType: RelationshipType): OnboardingSection[] {
   const sections = [...UNIVERSAL_ONBOARDING_SECTIONS];
 
   switch (relationshipType) {
     case 'child':
-      sections.push(...CHILD_SPECIFIC_SECTIONS);
+      // Start with screening section - determines if neurodivergence sections are shown
+      sections.unshift(CHILD_SCREENING_SECTION);
+      // Basic development section always included
+      sections.push(...CHILD_BASIC_SECTIONS);
       break;
     case 'spouse':
       sections.push(...SPOUSE_SPECIFIC_SECTIONS);
@@ -383,6 +922,18 @@ export function getOnboardingSections(relationshipType: RelationshipType): Onboa
 }
 
 /**
+ * Get neurodivergence sections for children based on screening response
+ * Returns detailed sections if screening indicates moderate/significant challenges or diagnosis
+ */
+export function getNeurodivergenceSections(screeningResponse: string): OnboardingSection[] {
+  // Show detailed neurodivergence sections for moderate, significant, or diagnosed
+  if (['moderate', 'significant', 'diagnosed'].includes(screeningResponse)) {
+    return CHILD_NEURODIVERGENCE_SECTIONS;
+  }
+  return [];
+}
+
+/**
  * Replace {{personName}} placeholder with actual name in questions
  */
 export function personalizeQuestions(
@@ -394,7 +945,7 @@ export function personalizeQuestions(
     questions: section.questions.map(q => ({
       ...q,
       question: q.question.replace(/\{\{personName\}\}/g, personName),
-      placeholder: q.placeholder.replace(/\{\{personName\}\}/g, personName),
+      placeholder: q.placeholder?.replace(/\{\{personName\}\}/g, personName),
       helperText: q.helperText?.replace(/\{\{personName\}\}/g, personName)
     }))
   }));

@@ -13,6 +13,7 @@ export interface User {
   dateOfBirth?: Timestamp;  // For children
   avatarUrl?: string;
   chipBalance?: number;     // For children - chip economy balance
+  isAdmin?: boolean;        // Admin privileges for accessing admin dashboard
   createdAt: Timestamp;
   settings: {
     notifications: boolean;
@@ -1051,6 +1052,12 @@ export const COLLECTIONS = {
   CHILD_PROFILES: 'child_profiles', // Deprecated: Use RELATIONSHIP_PROFILES with relationshipType: 'children'
   STRATEGIC_PLANS: 'strategic_plans',
   PLAN_PROGRESS: 'plan_progress',
+
+  // NEW: Child Manual System (MVP v1)
+  CHILDREN: 'children',
+  CHILD_MANUALS: 'child_manuals',
+  DAILY_OBSERVATIONS: 'daily_observations',
+  COACHING_SESSIONS: 'coaching_sessions',
 } as const;
 
 // ==================== Firebase Storage Paths ====================
@@ -1068,4 +1075,14 @@ export const STORAGE_PATHS = {
     `avatars/${userId}/avatar.jpg`,
   REWARD_IMAGES: (familyId: string, rewardId: string) =>
     `families/${familyId}/rewards/${rewardId}/image.jpg`,
+  WORKBOOK_OBSERVATIONS_PHOTOS: (familyId: string, observationId: string, photoId: string) =>
+    `families/${familyId}/workbook-photos/${observationId}/${photoId}.jpg`,
+  WORKBOOK_OBSERVATIONS_VOICE: (familyId: string, observationId: string) =>
+    `families/${familyId}/workbook-voice/${observationId}/note.m4a`,
+  WEEKLY_REFLECTION_AUDIO: (familyId: string, workbookId: string) =>
+    `families/${familyId}/weekly-reflections/${workbookId}/reflection.m4a`,
 } as const;
+
+// ==================== Weekly Workbooks System ====================
+
+export * from './workbook';

@@ -1,0 +1,597 @@
+'use client';
+
+import { use, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase';
+import { useAuth } from '@/context/AuthContext';
+import { usePersonById } from '@/hooks/usePerson';
+import { usePersonManual } from '@/hooks/usePersonManual';
+import { getChildOnboardingQuestions, QuestionSection, Question } from '@/config/child-onboarding-questions';
+
+export default function ManualOnboardingPage({ params }: { params: Promise<{ personId: string }> }) {
+  const { personId } = use(params);
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const { person, loading: personLoading } = usePersonById(personId);
+  const { manual, loading: manualLoading } = usePersonManual(personId);
+
+  const [currentStep, setCurrentStep] = useState<'welcome' | 'questions' | 'complete'>('welcome');
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [hasSavedProgress, setHasSavedProgress] = useState(false);
+  const [sections, setSections] = useState<QuestionSection[]>([]);
+
+  // Check auth
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
+
+  // Check if manual exists
+  useEffect(() => {
+    if (!manualLoading && !manual) {
+      router.push(`/people/${personId}/create-manual`);
+    }
+  }, [manual, manualLoading, personId, router]);
+
+  // Load saved progress from localStorage
+  useEffect(() => {
+    if (personId) {
+      const savedProgress = localStorage.getItem(`onboarding-progress-${personId}`);
+      if (savedProgress) {
+        try {
+          const { step, sectionIndex, questionIndex, answers: savedAnswers } = JSON.parse(savedProgress);
+          setCurrentStep(step);
+          setCurrentSectionIndex(sectionIndex || 0);
+          setCurrentQuestionIndex(questionIndex || 0);
+          setAnswers(savedAnswers || {});
+          setHasSavedProgress(true);
+        } catch (error) {
+          console.error('Error loading saved progress:', error);
+        }
+      }
+    }
+  }, [personId]);
+
+  // Auto-save progress to localStorage
+  useEffect(() => {
+    if (personId && currentStep === 'questions') {
+      const progress = {
+        step: currentStep,
+        sectionIndex: currentSectionIndex,
+        questionIndex: currentQuestionIndex,
+        answers
+      };
+      localStorage.setItem(`onboarding-progress-${personId}`, JSON.stringify(progress));
+    }
+  }, [personId, currentStep, currentSectionIndex, currentQuestionIndex, answers]);
+
+  // Load appropriate question set based on developmental-concerns answer
+  useEffect(() => {
+    const developmentalConcern = answers['developmental-concerns'];
+    const newSections = getChildOnboardingQuestions(developmentalConcern);
+
+    // Only update if sections actually changed
+    if (newSections.length !== sections.length) {
+      const wasOnBackgroundOnly = sections.length === 1;
+      setSections(newSections);
+
+      // If we just expanded from background-only to full sections,
+      // and user is still in background section, stay there
+      // The navigation will naturally move them forward
+      if (wasOnBackgroundOnly && currentSectionIndex === 0) {
+        // Stay in section 0, let natural progression handle moving forward
+      }
+    }
+  }, [answers['developmental-concerns'], sections.length, currentSectionIndex]);
+
+  // Initialize sections on mount
+  useEffect(() => {
+    if (sections.length === 0) {
+      setSections(getChildOnboardingQuestions());
+    }
+  }, []);
+
+  const currentSection = sections[currentSectionIndex];
+  const currentQuestion = currentSection?.questions[currentQuestionIndex];
+
+  if (authLoading || personLoading || manualLoading || !user || !person || !manual || sections.length === 0 || !currentSection) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FFF8F0' }}>
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-slate-800 border-t-amber-600 rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 font-mono text-sm text-slate-600">LOADING...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate progress
+  const totalQuestions = sections.reduce((sum, section) => sum + section.questions.length, 0);
+  const answeredQuestions = Object.keys(answers).length;
+  const progressPercent = (answeredQuestions / totalQuestions) * 100;
+
+  // Personalize text
+  const personalizeText = (text: string) => {
+    return text.replace(/\{\{childName\}\}/g, person.name);
+  };
+
+  const handleAnswer = (questionId: string, value: any) => {
+    setAnswers(prev => ({ ...prev, [questionId]: value }));
+  };
+
+  const handleNext = () => {
+    if (currentQuestionIndex < currentSection.questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else if (currentSectionIndex < sections.length - 1) {
+      setCurrentSectionIndex(currentSectionIndex + 1);
+      setCurrentQuestionIndex(0);
+    } else {
+      setCurrentStep('complete');
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+    } else if (currentSectionIndex > 0) {
+      setCurrentSectionIndex(currentSectionIndex - 1);
+      const prevSection = sections[currentSectionIndex - 1];
+      setCurrentQuestionIndex(prevSection.questions.length - 1);
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!manual?.manualId || !user?.userId) return;
+
+    try {
+      // Convert structured answers into manual summary
+      const summaryParts: string[] = [];
+
+      // Extract key insights from answers
+      Object.entries(answers).forEach(([questionId, value]) => {
+        const question = sections
+          .flatMap(s => s.questions)
+          .find(q => q.id === questionId);
+
+        if (!question || !value) return;
+
+        // Format based on question type
+        if (question.type === 'checkboxes' && Array.isArray(value)) {
+          const selectedLabels = value.map(v =>
+            question.options?.find(opt => opt.value === v)?.label || v
+          ).join(', ');
+          summaryParts.push(`${question.text}: ${selectedLabels}`);
+        } else if (question.type === 'multipleChoice') {
+          const selectedLabel = question.options?.find(opt => opt.value === value)?.label || value;
+          summaryParts.push(`${question.text}: ${selectedLabel}`);
+        } else if (question.type === 'scale') {
+          summaryParts.push(`${question.text}: ${value}/7`);
+        } else if (typeof value === 'string' && value.trim()) {
+          summaryParts.push(`${question.text}: ${value}`);
+        }
+      });
+
+      // Save summary to manual's core info notes
+      const manualRef = doc(firestore, 'person_manuals', manual.manualId);
+      await updateDoc(manualRef, {
+        'coreInfo.notes': summaryParts.join('\n\n'),
+        updatedAt: Timestamp.now(),
+        lastEditedAt: Timestamp.now(),
+        lastEditedBy: user.userId,
+        version: manual.version + 1
+      });
+
+      console.log('✅ Onboarding answers saved to manual');
+
+      // Clear saved progress
+      localStorage.removeItem(`onboarding-progress-${personId}`);
+
+      // Navigate to manual
+      router.push(`/people/${personId}/manual`);
+    } catch (error) {
+      console.error('Error saving onboarding answers:', error);
+      alert('Failed to save answers. Please try again or contact support.');
+    }
+  };
+
+  const handleSaveAndExit = () => {
+    // Progress is already auto-saved, just navigate back
+    router.push(`/people/${personId}/manual`);
+  };
+
+  // Welcome Screen
+  if (currentStep === 'welcome') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8" style={{ backgroundColor: '#FFF8F0' }}>
+        <div className="blueprint-grid"></div>
+
+        <div className="relative max-w-3xl w-full">
+          <div className="relative bg-white border-4 border-slate-800 p-12 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+            {/* Corner brackets */}
+            <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-amber-600"></div>
+            <div className="absolute top-0 right-0 w-16 h-16 border-t-4 border-r-4 border-amber-600"></div>
+            <div className="absolute bottom-0 left-0 w-16 h-16 border-b-4 border-l-4 border-amber-600"></div>
+            <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 border-amber-600"></div>
+
+            <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-6">
+              MANUAL ONBOARDING SYSTEM
+            </div>
+
+            <h1 className="font-mono text-5xl font-bold mb-6 text-slate-900">
+              {person.name}'s Manual
+            </h1>
+
+            <p className="font-mono text-lg text-slate-700 mb-8 leading-relaxed">
+              Let's get started building {person.name}'s operating manual. This questionnaire will help us understand their patterns, strengths, and needs.
+            </p>
+
+            {hasSavedProgress && (
+              <div className="mb-8 p-4 bg-blue-50 border-2 border-blue-600">
+                <div className="flex items-center gap-2 font-mono text-sm text-blue-900">
+                  <span className="text-2xl">💾</span>
+                  <div>
+                    <div className="font-bold">SAVED PROGRESS FOUND</div>
+                    <div className="text-xs">You can continue from where you left off.</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-4 mb-10 p-6 bg-amber-50 border-2 border-amber-600">
+              <div className="flex items-center gap-3 font-mono text-sm">
+                <span className="text-3xl">📋</span>
+                <div>
+                  <div className="font-bold text-slate-900">TOTAL SECTIONS:</div>
+                  <div className="text-slate-700">{sections.length} sections</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 font-mono text-sm">
+                <span className="text-3xl">⏱️</span>
+                <div>
+                  <div className="font-bold text-slate-900">ESTIMATED TIME:</div>
+                  <div className="text-slate-700">15-25 minutes</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 font-mono text-sm">
+                <span className="text-3xl">✅</span>
+                <div>
+                  <div className="font-bold text-slate-900">FORMAT:</div>
+                  <div className="text-slate-700">Multiple choice, scales, and checkboxes</div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setCurrentStep('questions')}
+              className="w-full py-4 bg-slate-800 text-white font-mono font-bold text-lg hover:bg-amber-600 transition-all shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-1 active:translate-y-1"
+              data-testid="get-started-button"
+            >
+              GET STARTED →
+            </button>
+
+            <div className="mt-6 text-center">
+              <Link
+                href={`/people/${personId}/manual`}
+                className="font-mono text-sm text-slate-500 hover:text-slate-800 underline"
+              >
+                ← Back to Manual
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <style jsx>{`
+          .blueprint-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+              linear-gradient(rgba(30, 58, 95, 0.03) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(30, 58, 95, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            z-index: 0;
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // Complete Screen
+  if (currentStep === 'complete') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8" style={{ backgroundColor: '#FFF8F0' }}>
+        <div className="blueprint-grid"></div>
+
+        <div className="relative max-w-3xl w-full">
+          <div className="relative bg-white border-4 border-green-600 p-12 shadow-[12px_12px_0px_0px_rgba(22,163,74,1)] text-center">
+            <div className="inline-block px-3 py-1 bg-green-600 text-white font-mono text-xs mb-6">
+              ✓ ONBOARDING COMPLETE
+            </div>
+
+            <div className="text-7xl mb-6">📖</div>
+
+            <h1 className="font-mono text-5xl font-bold mb-6 text-slate-900">
+              Manual Initialized
+            </h1>
+
+            <p className="font-mono text-lg text-slate-700 mb-10">
+              You've completed the onboarding questionnaire. {person.name}'s manual is now ready to use.
+            </p>
+
+            <button
+              onClick={handleComplete}
+              className="w-full py-4 bg-green-600 text-white font-mono font-bold text-lg hover:bg-green-700 transition-all shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
+              data-testid="view-manual-button"
+            >
+              VIEW MANUAL →
+            </button>
+          </div>
+        </div>
+
+        <style jsx>{`
+          .blueprint-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+              linear-gradient(rgba(30, 58, 95, 0.03) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(30, 58, 95, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            z-index: 0;
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // Questions Screen
+  return (
+    <div className="min-h-screen" style={{ backgroundColor: '#FFF8F0' }}>
+      <div className="blueprint-grid"></div>
+
+      {/* Progress Bar */}
+      <div className="fixed top-0 left-0 right-0 h-2 bg-slate-200 z-50">
+        <div
+          className="h-full bg-amber-600 transition-all duration-300"
+          style={{ width: `${progressPercent}%` }}
+        ></div>
+      </div>
+
+      {/* Header */}
+      <header className="border-b-4 border-slate-800 bg-white shadow-[0px_4px_0px_0px_rgba(0,0,0,1)] pt-8 pb-6">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="inline-block px-3 py-1 bg-amber-600 text-white font-mono text-xs mb-3">
+            SECTION {currentSectionIndex + 1} OF {sections.length}
+          </div>
+          <h2 className="font-mono text-2xl font-bold text-slate-900 mb-2">
+            {personalizeText(currentSection.title)}
+          </h2>
+          <p className="font-mono text-sm text-slate-600">
+            {personalizeText(currentSection.description)}
+          </p>
+        </div>
+      </header>
+
+      {/* Question Display */}
+      <main className="relative max-w-4xl mx-auto px-6 py-16">
+        <div className="relative bg-white border-4 border-slate-800 p-10 shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]">
+          {/* Question Number */}
+          <div className="absolute -top-4 -left-4 w-16 h-16 bg-slate-800 text-white font-mono font-bold flex items-center justify-center text-2xl border-4 border-amber-600">
+            {currentQuestionIndex + 1}
+          </div>
+
+          {/* Question */}
+          <div className="mb-8">
+            <h3 className="font-mono text-3xl font-bold text-slate-900 leading-snug mb-4">
+              {personalizeText(currentQuestion.text)}
+            </h3>
+            {currentQuestion.helpText && (
+              <p className="font-mono text-sm text-slate-600 p-4 bg-amber-50 border-l-4 border-amber-600">
+                💡 {personalizeText(currentQuestion.helpText)}
+              </p>
+            )}
+          </div>
+
+          {/* Answer Input */}
+          <div className="mb-8">
+            {renderQuestionInput(currentQuestion, answers[currentQuestion.id], (value) => handleAnswer(currentQuestion.id, value))}
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="flex gap-4">
+            {(currentSectionIndex > 0 || currentQuestionIndex > 0) && (
+              <button
+                onClick={handlePrevious}
+                className="px-6 py-3 border-2 border-slate-300 bg-white font-mono font-bold text-slate-700 hover:border-slate-800 transition-all"
+                data-testid="previous-button"
+              >
+                ← PREVIOUS
+              </button>
+            )}
+            <button
+              onClick={handleNext}
+              disabled={currentQuestion.required && !answers[currentQuestion.id]}
+              className="flex-1 px-6 py-3 bg-slate-800 text-white font-mono font-bold hover:bg-amber-600 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-800"
+              data-testid="continue-button"
+            >
+              {currentSectionIndex === sections.length - 1 && currentQuestionIndex === currentSection.questions.length - 1
+                ? 'COMPLETE →'
+                : 'NEXT →'}
+            </button>
+          </div>
+
+          {/* Save & Exit Button */}
+          <div className="mt-4 text-center">
+            <button
+              onClick={handleSaveAndExit}
+              className="font-mono text-sm text-slate-600 hover:text-slate-900 underline"
+              data-testid="save-exit-button"
+            >
+              💾 Save & Exit (Resume Later)
+            </button>
+          </div>
+
+          {/* Skip Option (for non-required questions) */}
+          {!currentQuestion.required && !answers[currentQuestion.id] && (
+            <div className="mt-4 text-center">
+              <button
+                onClick={handleNext}
+                className="font-mono text-sm text-slate-500 hover:text-slate-800 underline"
+              >
+                Skip this question
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Section Progress */}
+        <div className="mt-6 text-center font-mono text-sm text-slate-600">
+          Question {currentQuestionIndex + 1} of {currentSection.questions.length} in this section
+        </div>
+      </main>
+
+      <style jsx>{`
+        .blueprint-grid {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-image:
+            linear-gradient(rgba(30, 58, 95, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(30, 58, 95, 0.03) 1px, transparent 1px);
+          background-size: 20px 20px;
+          pointer-events: none;
+          z-index: 0;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// Render different question types
+function renderQuestionInput(question: Question, value: any, onChange: (value: any) => void) {
+  switch (question.type) {
+    case 'multipleChoice':
+      return (
+        <div className="space-y-3">
+          {question.options?.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => onChange(option.value)}
+              className={`w-full p-4 text-left border-2 font-mono transition-all ${
+                value === option.value
+                  ? 'border-amber-600 bg-amber-50 shadow-[4px_4px_0px_0px_rgba(217,119,6,1)]'
+                  : 'border-slate-300 bg-white hover:border-slate-800'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                  value === option.value ? 'border-amber-600 bg-amber-600' : 'border-slate-300'
+                }`}>
+                  {value === option.value && <div className="w-3 h-3 bg-white rounded-full"></div>}
+                </div>
+                <span className={value === option.value ? 'font-bold' : ''}>{option.label}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      );
+
+    case 'checkboxes':
+      return (
+        <div className="space-y-3">
+          {question.options?.map((option) => {
+            const selectedValues = value || [];
+            const isSelected = selectedValues.includes(option.value);
+            return (
+              <button
+                key={option.value}
+                onClick={() => {
+                  if (isSelected) {
+                    onChange(selectedValues.filter((v: string) => v !== option.value));
+                  } else {
+                    onChange([...selectedValues, option.value]);
+                  }
+                }}
+                className={`w-full p-4 text-left border-2 font-mono transition-all ${
+                  isSelected
+                    ? 'border-amber-600 bg-amber-50 shadow-[4px_4px_0px_0px_rgba(217,119,6,1)]'
+                    : 'border-slate-300 bg-white hover:border-slate-800'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-6 h-6 border-2 flex items-center justify-center ${
+                    isSelected ? 'border-amber-600 bg-amber-600' : 'border-slate-300'
+                  }`}>
+                    {isSelected && <span className="text-white text-sm font-bold">✓</span>}
+                  </div>
+                  <span className={isSelected ? 'font-bold' : ''}>{option.label}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      );
+
+    case 'scale':
+      return (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center gap-2">
+            {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+              <button
+                key={num}
+                onClick={() => onChange(num)}
+                className={`flex-1 aspect-square flex items-center justify-center font-mono text-2xl font-bold border-2 transition-all ${
+                  value === num
+                    ? 'border-amber-600 bg-amber-600 text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                    : 'border-slate-300 bg-white hover:border-slate-800'
+                }`}
+              >
+                {num}
+              </button>
+            ))}
+          </div>
+          {question.scaleLabels && (
+            <div className="flex justify-between font-mono text-xs text-slate-600">
+              <span className="text-left max-w-[40%]">{question.scaleLabels.min}</span>
+              <span className="text-right max-w-[40%]">{question.scaleLabels.max}</span>
+            </div>
+          )}
+        </div>
+      );
+
+    case 'textarea':
+      return (
+        <textarea
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={question.placeholder}
+          rows={6}
+          className="w-full p-4 border-2 border-slate-300 font-mono text-base focus:border-slate-800 focus:outline-none"
+        />
+      );
+
+    default:
+      return (
+        <input
+          type="text"
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={question.placeholder}
+          className="w-full p-4 border-2 border-slate-300 font-mono text-base focus:border-slate-800 focus:outline-none"
+        />
+      );
+  }
+}

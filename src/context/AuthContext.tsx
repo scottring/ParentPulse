@@ -26,6 +26,7 @@ import {
   ChildRegistrationData,
   COLLECTIONS,
 } from '../types';
+import { createUserOwnManual } from '../utils/user-manual-setup';
 
 // ==================== Context Types ====================
 
@@ -62,6 +63,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const isRegistering = React.useRef(false); // Flag to prevent orphaned check during registration
 
   // ==================== Helper Functions ====================
 
@@ -73,7 +75,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (userDoc.exists()) {
         return userDoc.data() as User;
       } else {
-        console.error('User document not found in Firestore');
+        // Log details to help with debugging
+        console.warn(
+          'User document not found in Firestore',
+          '\n  UID:', firebaseUser.uid,
+          '\n  Email:', firebaseUser.email,
+          '\n  Display Name:', firebaseUser.displayName,
+          '\n  Created:', firebaseUser.metadata.creationTime
+        );
         return null;
       }
     } catch (err) {
@@ -118,16 +127,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const userData = await fetchUserData(firebaseUser);
 
           // Handle orphaned auth users (auth user exists but no Firestore document)
-          if (!userData) {
-            console.warn('Found orphaned auth user, signing out');
+          // BUT skip this check if we're currently in the registration process
+          if (!userData && !isRegistering.current) {
+            console.warn(
+              '⚠️ Found orphaned auth user - signing out for security',
+              '\nThis occurs when Firebase Auth succeeds but Firestore document creation fails.',
+              '\nThe user will need to register again.',
+              '\nTo diagnose: run "node scripts/check-orphaned-users.js"',
+              '\nTo cleanup: run "node scripts/cleanup-orphaned-users.js"'
+            );
             await signOut(auth);
             setUser(null);
             setError(
               'Your account setup is incomplete. Please register again or contact support if this problem persists.'
             );
-          } else {
+          } else if (userData) {
             setUser(userData);
           }
+          // If isRegistering.current is true, we wait for registration to complete
         } else {
           setUser(null);
         }
@@ -151,6 +168,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
+      isRegistering.current = true; // Set flag to prevent orphaned check
 
       // Create Firebase auth user
       userCredential = await createUserWithEmailAndPassword(
@@ -189,9 +207,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         familyId
       );
 
+      // Auto-create the user's own Person + Manual for family collaboration
+      try {
+        await createUserOwnManual(familyId, userCredential.user.uid, data.name);
+        console.log('Successfully created user own manual during registration');
+      } catch (manualError) {
+        // Don't fail registration if manual creation fails - they can create it later
+        console.error('Failed to create user own manual (non-fatal):', manualError);
+      }
+
       setUser(userData);
+      isRegistering.current = false; // Clear flag after successful registration
     } catch (err: any) {
       console.error('Registration error:', err.code || err.message);
+      isRegistering.current = false; // Clear flag on error
 
       // If we created a Firebase auth user but failed to create Firestore documents,
       // delete the auth user to prevent orphaned accounts
@@ -224,6 +253,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       throw friendlyError;
     } finally {
       setLoading(false);
+      isRegistering.current = false; // Ensure flag is always cleared
     }
   };
 

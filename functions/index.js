@@ -116,7 +116,7 @@ exports.chatWithCoach = onCall(
         throw new Error("Authentication required");
       }
 
-      const {message, conversationId} = request.data;
+      const {message, conversationId, personId} = request.data;
       if (!message) {
         throw new Error("Message is required");
       }
@@ -133,11 +133,11 @@ exports.chatWithCoach = onCall(
       }
 
       const familyId = userData.familyId;
-      logger.info(`Chat request from user ${request.auth.uid}, family ${familyId}`);
+      logger.info(`Chat request from user ${request.auth.uid}, family ${familyId}${personId ? `, person ${personId}` : ""}`);
 
       try {
-        // Retrieve relevant context from the user's data
-        const context = await retrieveChatContext(familyId, message);
+        // Retrieve relevant context from the user's data (includes manual if personId provided)
+        const context = await retrieveChatContext(familyId, message, personId);
 
         // Get or create conversation
         let conversation = null;
@@ -200,6 +200,8 @@ exports.chatWithCoach = onCall(
             journalEntriesFound: context.journalEntries.length,
             knowledgeItemsFound: context.knowledgeItems.length,
             actionsFound: context.actions.length,
+            manualsFound: context.personManual ? 1 : 0,
+            workbooksFound: context.workbooks ? context.workbooks.length : 0,
           },
         };
       } catch (error) {
@@ -212,7 +214,7 @@ exports.chatWithCoach = onCall(
 /**
  * Retrieve relevant context for chat based on user's message
  */
-async function retrieveChatContext(familyId, userMessage) {
+async function retrieveChatContext(familyId, userMessage, personId = null) {
   const logger = require("firebase-functions/logger");
 
   // Get recent journal entries (last 30 days)
@@ -274,12 +276,72 @@ async function retrieveChatContext(familyId, userMessage) {
     };
   });
 
-  logger.info(`Context: ${journalEntries.length} journals, ${knowledgeItems.length} knowledge items, ${actions.length} actions`);
+  // Get person manual if personId provided
+  let personManual = null;
+  let personName = null;
+  if (personId) {
+    // Get person data
+    const personDoc = await admin.firestore()
+        .collection("people")
+        .doc(personId)
+        .get();
+
+    if (personDoc.exists) {
+      personName = personDoc.data().name;
+
+      // Get person's manual
+      const manualSnapshot = await admin.firestore()
+          .collection("person_manuals")
+          .where("personId", "==", personId)
+          .where("familyId", "==", familyId)
+          .limit(1)
+          .get();
+
+      if (!manualSnapshot.empty) {
+        const manualData = manualSnapshot.docs[0].data();
+        personManual = {
+          personName: personName,
+          triggers: manualData.triggers || [],
+          whatWorks: manualData.whatWorks || [],
+          whatDoesntWork: manualData.whatDoesntWork || [],
+          boundaries: manualData.boundaries || [],
+          patterns: manualData.emergingPatterns || [],
+          coreInfo: manualData.coreInfo || {},
+        };
+      }
+    }
+  }
+
+  // Get weekly workbooks if personId provided
+  let workbooks = [];
+  if (personId) {
+    const workbooksSnapshot = await admin.firestore()
+        .collection("weekly_workbooks")
+        .where("personId", "==", personId)
+        .where("familyId", "==", familyId)
+        .orderBy("startDate", "desc")
+        .limit(3)
+        .get();
+
+    workbooks = workbooksSnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        weekNumber: data.weekNumber,
+        status: data.status,
+        parentGoals: data.parentGoals || [],
+        dailyActivities: data.dailyActivities || [],
+      };
+    });
+  }
+
+  logger.info(`Context: ${journalEntries.length} journals, ${knowledgeItems.length} knowledge items, ${actions.length} actions${personManual ? `, 1 manual for ${personName}` : ""}${workbooks.length > 0 ? `, ${workbooks.length} workbooks` : ""}`);
 
   return {
     journalEntries,
     knowledgeItems,
     actions,
+    personManual,
+    workbooks,
   };
 }
 
@@ -357,11 +419,81 @@ Available Context:
     systemMessage += "\n";
   }
 
+  // Add person manual if available
+  if (context.personManual) {
+    systemMessage += `## ${context.personManual.personName}'s Operating Manual:\n`;
+
+    if (context.personManual.triggers.length > 0) {
+      systemMessage += `\n### Triggers (${context.personManual.triggers.length}):\n`;
+      context.personManual.triggers.slice(0, 5).forEach((trigger, i) => {
+        systemMessage += `${i + 1}. ${trigger.description} (${trigger.severity})\n`;
+        systemMessage += `   Context: ${trigger.context}\n`;
+        systemMessage += `   Response: ${trigger.typicalResponse}\n`;
+        if (trigger.deescalationStrategy) {
+          systemMessage += `   What helps: ${trigger.deescalationStrategy}\n`;
+        }
+      });
+    }
+
+    if (context.personManual.whatWorks.length > 0) {
+      systemMessage += `\n### What Works (${context.personManual.whatWorks.length}):\n`;
+      context.personManual.whatWorks.slice(0, 5).forEach((strategy, i) => {
+        systemMessage += `${i + 1}. ${strategy.description} (effectiveness: ${strategy.effectiveness || "N/A"}/5)\n`;
+        systemMessage += `   Context: ${strategy.context}\n`;
+      });
+    }
+
+    if (context.personManual.whatDoesntWork.length > 0) {
+      systemMessage += `\n### What Doesn't Work (${context.personManual.whatDoesntWork.length}):\n`;
+      context.personManual.whatDoesntWork.slice(0, 3).forEach((strategy, i) => {
+        systemMessage += `${i + 1}. ${strategy.description}\n`;
+      });
+    }
+
+    if (context.personManual.boundaries.length > 0) {
+      systemMessage += `\n### Boundaries (${context.personManual.boundaries.length}):\n`;
+      context.personManual.boundaries.slice(0, 5).forEach((boundary, i) => {
+        systemMessage += `${i + 1}. [${boundary.category}] ${boundary.description}\n`;
+        if (boundary.context) {
+          systemMessage += `   Context: ${boundary.context}\n`;
+        }
+      });
+    }
+
+    if (context.personManual.coreInfo && Object.keys(context.personManual.coreInfo).length > 0) {
+      systemMessage += `\n### Core Info:\n`;
+      if (context.personManual.coreInfo.interests) {
+        systemMessage += `Interests: ${context.personManual.coreInfo.interests.join(", ")}\n`;
+      }
+      if (context.personManual.coreInfo.strengths) {
+        systemMessage += `Strengths: ${context.personManual.coreInfo.strengths.join(", ")}\n`;
+      }
+      if (context.personManual.coreInfo.sensoryNeeds) {
+        systemMessage += `Sensory Needs: ${context.personManual.coreInfo.sensoryNeeds.join(", ")}\n`;
+      }
+    }
+    systemMessage += "\n";
+  }
+
+  // Add workbooks if available
+  if (context.workbooks && context.workbooks.length > 0) {
+    systemMessage += `## Recent Weekly Workbooks (${context.workbooks.length}):\n`;
+    context.workbooks.forEach((workbook, i) => {
+      systemMessage += `Week ${workbook.weekNumber} (${workbook.status}):\n`;
+      if (workbook.parentGoals && workbook.parentGoals.length > 0) {
+        systemMessage += `  Parent Goals: ${workbook.parentGoals.map((g) => g.description).join("; ")}\n`;
+      }
+    });
+    systemMessage += "\n";
+  }
+
   systemMessage += `When answering questions:
-- Cite specific journal entries or knowledge items when relevant
+- Cite specific journal entries, manual items, or knowledge when relevant
+- Reference their person's triggers, strategies, and boundaries directly
 - Remind them of strategies that worked before
 - Help connect their experiences to broader patterns
 - Be concise but thorough
+- When suggesting new strategies or triggers, make them specific and actionable
 - Use a warm, supportive tone`;
 
   return systemMessage;
@@ -867,7 +999,7 @@ exports.generateStrategicPlan = onCall(
         // 7. Call Claude 3.5 Sonnet for complex reasoning
         const client = getAnthropic();
         const response = await client.messages.create({
-          model: "claude-3-5-sonnet-20241022",
+          model: "claude-sonnet-4-5-20250929",
           max_tokens: 8000,
           temperature: 0.7,
           messages: [{
@@ -982,7 +1114,7 @@ exports.generateInitialManualContent = onCall(
         // Call Claude 3.5 Sonnet for complex reasoning and structured generation
         const client = getAnthropic();
         const response = await client.messages.create({
-          model: "claude-3-5-sonnet-20241022",
+          model: "claude-sonnet-4-5-20250929",
           max_tokens: 6000,
           temperature: 0.7,
           messages: [{
@@ -1010,10 +1142,16 @@ exports.generateInitialManualContent = onCall(
           throw new Error("Failed to parse AI response as JSON");
         }
 
-        // Return generated content
+        // Extract assessment scores for storage and future analysis
+        const assessmentScores = extractAssessmentScores(answers);
+
+        // Return generated content with assessment scores
         return {
           success: true,
-          content: content,
+          content: {
+            ...content,
+            assessmentScores: Object.keys(assessmentScores).length > 0 ? assessmentScores : undefined,
+          },
         };
       } catch (error) {
         logger.error("Error generating manual content:", error);
@@ -1027,6 +1165,169 @@ exports.generateInitialManualContent = onCall(
 );
 
 /**
+ * Format an answer for AI prompt - handles both string and structured answers
+ */
+function formatAnswerForPrompt(answer) {
+  // Handle string answers (legacy)
+  if (typeof answer === "string") {
+    return answer.trim();
+  }
+
+  // Handle StructuredAnswer (clinical assessments)
+  if (typeof answer === "object" && answer !== null) {
+    const parts = [];
+
+    // Add primary value (rating, selection, etc.)
+    if (answer.primary !== undefined && answer.primary !== null) {
+      parts.push(`Rating: ${answer.primary}`);
+    }
+
+    // Add qualitative comment if present
+    if (answer.qualitative && typeof answer.qualitative === "string" && answer.qualitative.trim().length > 0) {
+      parts.push(`Context: ${answer.qualitative.trim()}`);
+    }
+
+    return parts.length > 0 ? parts.join(" | ") : "";
+  }
+
+  return "";
+}
+
+/**
+ * Map VIA question IDs to their character strength domains
+ */
+function getVIADomain(questionId) {
+  const domains = {
+    "via_creativity": "Wisdom & Knowledge",
+    "via_curiosity": "Wisdom & Knowledge",
+    "via_perseverance": "Courage",
+    "via_kindness": "Humanity",
+    "via_social_intelligence": "Humanity",
+    "via_teamwork": "Justice",
+    "via_fairness": "Justice",
+    "via_self_regulation": "Temperance",
+    "via_gratitude": "Transcendence",
+    "via_hope": "Transcendence",
+  };
+  return domains[questionId] || "Unknown";
+}
+
+/**
+ * Extract assessment scores from structured answers for storage and analysis
+ */
+function extractAssessmentScores(answers) {
+  const scores = {};
+
+  // Screening level (for children)
+  if (answers.screening && answers.screening.screening_level) {
+    const screeningAnswer = answers.screening.screening_level;
+    const screeningValue = typeof screeningAnswer === "object" && screeningAnswer.primary
+        ? screeningAnswer.primary
+        : screeningAnswer;
+    scores.screeningLevel = screeningValue;
+  }
+
+  // ADHD Screening (Vanderbilt-style)
+  if (answers.adhd_screening) {
+    const adhdScores = {};
+    let totalScore = 0;
+    let questionCount = 0;
+
+    Object.entries(answers.adhd_screening).forEach(([questionId, answer]) => {
+      if (questionId.startsWith("adhd_") && typeof answer === "object" && answer !== null && answer.primary !== undefined) {
+        adhdScores[questionId] = {
+          score: answer.primary,
+          qualitative: answer.qualitative || undefined,
+        };
+        totalScore += Number(answer.primary);
+        questionCount++;
+      }
+    });
+
+    if (Object.keys(adhdScores).length > 0) {
+      scores.adhd = {
+        items: adhdScores,
+        totalScore,
+        averageScore: questionCount > 0 ? (totalScore / questionCount).toFixed(2) : 0,
+        questionCount,
+      };
+    }
+  }
+
+  // Sensory Processing
+  if (answers.sensory_processing) {
+    const sensoryScores = {};
+    Object.entries(answers.sensory_processing).forEach(([questionId, answer]) => {
+      if (questionId.startsWith("sensory_") && typeof answer === "object" && answer !== null && answer.primary !== undefined) {
+        sensoryScores[questionId] = {
+          score: answer.primary,
+          qualitative: answer.qualitative || undefined,
+        };
+      }
+    });
+
+    if (Object.keys(sensoryScores).length > 0) {
+      scores.sensory = sensoryScores;
+    }
+  }
+
+  // Executive Function
+  if (answers.executive_function) {
+    const efScores = {};
+    Object.entries(answers.executive_function).forEach(([questionId, answer]) => {
+      if (questionId.startsWith("ef_") && typeof answer === "object" && answer !== null && answer.primary !== undefined) {
+        efScores[questionId] = {
+          score: answer.primary,
+          qualitative: answer.qualitative || undefined,
+        };
+      }
+    });
+
+    if (Object.keys(efScores).length > 0) {
+      scores.executiveFunction = efScores;
+    }
+  }
+
+  // Emotional Regulation
+  if (answers.emotional_regulation) {
+    const emotionScores = {};
+    Object.entries(answers.emotional_regulation).forEach(([questionId, answer]) => {
+      if (questionId.startsWith("emotion_") && typeof answer === "object" && answer !== null) {
+        // Handle both numeric and string primary values
+        emotionScores[questionId] = {
+          value: answer.primary,
+          qualitative: answer.qualitative || undefined,
+        };
+      }
+    });
+
+    if (Object.keys(emotionScores).length > 0) {
+      scores.emotionalRegulation = emotionScores;
+    }
+  }
+
+  // VIA Character Strengths
+  if (answers.strengths) {
+    const viaScores = {};
+    Object.entries(answers.strengths).forEach(([questionId, answer]) => {
+      if (questionId.startsWith("via_") && typeof answer === "object" && answer !== null && answer.primary !== undefined) {
+        viaScores[questionId] = {
+          score: answer.primary,
+          qualitative: answer.qualitative || undefined,
+          domain: getVIADomain(questionId),
+        };
+      }
+    });
+
+    if (Object.keys(viaScores).length > 0) {
+      scores.via = viaScores;
+    }
+  }
+
+  return scores;
+}
+
+/**
  * Build prompt for generating initial manual content
  */
 function buildManualContentPrompt(personName, relationshipType, answers) {
@@ -1034,8 +1335,11 @@ function buildManualContentPrompt(personName, relationshipType, answers) {
   const formattedAnswers = Object.entries(answers)
       .map(([sectionId, sectionAnswers]) => {
         const questions = Object.entries(sectionAnswers)
-            .filter(([_, answer]) => answer && answer.trim().length > 0)
-            .map(([questionId, answer]) => `${questionId}: ${answer}`)
+            .map(([questionId, answer]) => {
+              const formatted = formatAnswerForPrompt(answer);
+              return formatted.length > 0 ? `${questionId}: ${formatted}` : null;
+            })
+            .filter((q) => q !== null)
             .join("\n");
         return questions ? `\n${sectionId.toUpperCase()}:\n${questions}` : "";
       })
@@ -1117,3 +1421,893 @@ Important Guidelines:
 Return ONLY the JSON object, no additional text or explanation.`;
 }
 
+/**
+ * Generate Relationship Manual Content
+ * Uses Claude 3.5 Sonnet to generate structured relationship manual content from conversational answers
+ */
+exports.generateRelationshipManualContent = onCall(
+    {
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      // Verify authentication
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const {familyId, relationshipId, relationshipType, participantNames, answers} = request.data;
+
+      // Validate input
+      if (!familyId || !relationshipId || !relationshipType || !participantNames || !answers) {
+        throw new Error("Missing required parameters");
+      }
+
+      const namesString = participantNames.join(" & ");
+      logger.info(`Generating relationship manual content for ${namesString} (${relationshipType})`);
+
+      try {
+        // Build prompt from user's answers
+        const prompt = buildRelationshipManualContentPrompt(participantNames, relationshipType, answers);
+
+        // Call Claude 3.5 Sonnet for complex reasoning and structured generation
+        const client = getAnthropic();
+        const response = await client.messages.create({
+          model: "claude-sonnet-4-5-20250929",
+          max_tokens: 6000,
+          temperature: 0.7,
+          messages: [{
+            role: "user",
+            content: prompt,
+          }],
+        });
+
+        const responseText = response.content[0].text;
+        logger.info("Claude response received, parsing JSON");
+
+        // Parse the JSON response
+        let content;
+        try {
+          // Extract JSON from markdown code blocks if present
+          const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) ||
+                           responseText.match(/```\s*([\s\S]*?)\s*```/);
+          const jsonText = jsonMatch ? jsonMatch[1] : responseText;
+
+          content = JSON.parse(jsonText);
+          logger.info("Successfully parsed generated content");
+        } catch (parseError) {
+          logger.error("Error parsing Claude response:", parseError);
+          logger.error("Response text:", responseText);
+          throw new Error("Failed to parse AI response as JSON");
+        }
+
+        return {
+          success: true,
+          content: content,
+        };
+      } catch (error) {
+        logger.error("Error generating relationship manual content:", error);
+        return {
+          success: false,
+          error: error.message,
+          errorDetails: error.stack,
+        };
+      }
+    }
+);
+
+/**
+ * Build prompt for generating relationship manual content
+ */
+function buildRelationshipManualContentPrompt(participantNames, relationshipType, answers) {
+  // Format answers into readable text
+  const formattedAnswers = Object.entries(answers)
+      .map(([sectionId, sectionAnswers]) => {
+        const questions = Object.entries(sectionAnswers)
+            .map(([questionId, answer]) => {
+              const formatted = formatAnswerForPrompt(answer);
+              return formatted.length > 0 ? `${questionId}: ${formatted}` : null;
+            })
+            .filter((q) => q !== null)
+            .join("\n");
+        return questions ? `\n${sectionId.toUpperCase()}:\n${questions}` : "";
+      })
+      .filter((section) => section.length > 0)
+      .join("\n");
+
+  const namesString = participantNames.join(" & ");
+
+  return `You are helping create a relationship manual for understanding and supporting a relationship between people.
+
+Participants: ${namesString}
+Relationship Type: ${relationshipType}
+
+Based on the following information provided about this relationship, generate structured content for their relationship manual.
+
+USER RESPONSES:
+${formattedAnswers}
+
+Generate a JSON response with the following structure:
+
+{
+  "relationshipOverview": "A 2-3 paragraph narrative describing this relationship, its strengths, dynamics, and what makes it work. This should read like a warm, personal description of the relationship.",
+  "sharedGoals": [
+    {
+      "title": "Goal title",
+      "description": "What this goal means and why it matters",
+      "category": "financial|family|personal_growth|health|career|relationship|other",
+      "timeline": "When they hope to achieve this (e.g., 'This year', 'Next 5 years', 'Ongoing')",
+      "milestones": ["Milestone 1", "Milestone 2", ...] or null
+    }
+  ],
+  "rituals": [
+    {
+      "title": "Ritual name",
+      "description": "What they do",
+      "frequency": "daily|weekly|monthly|occasional",
+      "timing": "When they do this (e.g., 'Sunday mornings', 'Every evening', 'Monthly')",
+      "significance": "Why this matters to the relationship"
+    }
+  ],
+  "traditions": [
+    {
+      "title": "Tradition name",
+      "description": "Full description of what they do",
+      "occasion": "When this happens (e.g., 'Birthdays', 'Holidays', 'Anniversaries')",
+      "howWeCelebrate": "How they mark this occasion",
+      "yearStarted": year (number) or null
+    }
+  ],
+  "conflictPatterns": [
+    {
+      "pattern": "Description of typical conflict pattern",
+      "triggerSituations": ["What starts this pattern", "Trigger 2", ...],
+      "typicalOutcome": "How it usually plays out",
+      "whatHelps": ["Strategies that break the pattern", "Strategy 2", ...],
+      "whatMakesWorse": ["Things that escalate", "Thing 2", ...],
+      "severity": "minor|moderate|significant"
+    }
+  ],
+  "connectionStrategies": [
+    {
+      "strategy": "Strategy description",
+      "context": "When/why to use this",
+      "effectiveness": 1-5 (number),
+      "notes": "Additional context" or null
+    }
+  ],
+  "importantMilestones": [
+    {
+      "title": "Milestone title",
+      "description": "What happened",
+      "date": "Date string (e.g., 'June 2020', 'Summer 2018') or 'Unknown'",
+      "significance": "Why this matters to the relationship"
+    }
+  ]
+}
+
+Important Guidelines:
+1. Base content ONLY on the information provided in the user responses
+2. Be specific and actionable - avoid generic relationship advice
+3. Generate 1-3 items per array where appropriate (don't over-generate from limited info)
+4. If a section wasn't answered or has minimal info, return empty array
+5. For "effectiveness" in connectionStrategies, rate 3-5 (only include strategies that seem effective)
+6. For conflictPattern "severity", infer from description and outcome
+7. For sharedGoals "category", choose the most appropriate category
+8. The relationshipOverview should be a cohesive, warm narrative (2-3 paragraphs) that synthesizes the information
+9. Break down compound answers into separate items when appropriate
+10. Maintain a supportive, respectful tone that honors the relationship
+
+Return ONLY the JSON object, no additional text or explanation.`;
+}
+
+
+
+/**
+ * Generate Weekly Workbook
+ * Uses Claude 3.5 Sonnet to analyze manual content and generate parent behavior goals + activity suggestions
+ */
+exports.generateWeeklyWorkbook = onCall(
+    {
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      // Verify authentication
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const {
+        familyId,
+        personId,
+        personName,
+        manualId,
+        relationshipType,
+        personAge,
+        triggers,
+        whatWorks,
+        boundaries,
+        previousWeekReflection,
+      } = request.data;
+
+      // Validate input
+      if (!familyId || !personId || !personName || !manualId || !relationshipType) {
+        throw new Error("Missing required parameters");
+      }
+
+      logger.info(`Generating weekly workbook for ${personName} (${relationshipType})`);
+
+      try {
+        // Build prompt from manual content
+        const prompt = buildWorkbookGenerationPrompt(
+            personName,
+            relationshipType,
+            personAge,
+            triggers || [],
+            whatWorks || [],
+            boundaries || [],
+            previousWeekReflection
+        );
+
+        // Call Claude 3.5 Sonnet for complex reasoning and goal generation
+        const client = getAnthropic();
+        const response = await client.messages.create({
+          model: "claude-sonnet-4-5-20250929",
+          max_tokens: 4000,
+          temperature: 0.7,
+          messages: [{
+            role: "user",
+            content: prompt,
+          }],
+        });
+
+        const responseText = response.content[0].text;
+        logger.info("Claude response received, parsing JSON");
+
+        // Parse the JSON response
+        let content;
+        try {
+          // Extract JSON from markdown code blocks if present
+          const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) ||
+                           responseText.match(/```\s*([\s\S]*?)\s*```/);
+          const jsonText = jsonMatch ? jsonMatch[1] : responseText;
+
+          content = JSON.parse(jsonText);
+          logger.info("Successfully parsed generated workbook content");
+        } catch (parseError) {
+          logger.error("Error parsing Claude response:", parseError);
+          logger.error("Response text:", responseText);
+          throw new Error("Failed to parse AI response as JSON");
+        }
+
+        // Return generated workbook content
+        return {
+          success: true,
+          content: content,
+        };
+      } catch (error) {
+        logger.error("Error generating weekly workbook:", error);
+        return {
+          success: false,
+          error: error.message,
+          errorDetails: error.stack,
+        };
+      }
+    }
+);
+
+/**
+ * Build prompt for generating weekly workbook from manual content
+ */
+function buildWorkbookGenerationPrompt(
+    personName,
+    relationshipType,
+    personAge,
+    triggers,
+    whatWorks,
+    boundaries,
+    previousWeekReflection
+) {
+  // Format triggers
+  const triggersText = triggers.length > 0 ?
+    triggers.map((t, idx) => `${idx + 1}. ${t.description} (Severity: ${t.severity})
+   Context: ${t.context || "N/A"}
+   Typical Response: ${t.typicalResponse || "N/A"}
+   Deescalation: ${t.deescalationStrategy || "N/A"}`).join("\n\n") :
+    "No triggers documented yet.";
+
+  // Format strategies
+  const strategiesText = whatWorks.length > 0 ?
+    whatWorks.map((s, idx) => `${idx + 1}. ${s.description} (Effectiveness: ${s.effectiveness}/5)
+   Context: ${s.context || "N/A"}
+   Notes: ${s.notes || "N/A"}`).join("\n\n") :
+    "No strategies documented yet.";
+
+  // Format boundaries
+  const boundariesText = boundaries.length > 0 ?
+    boundaries.map((b, idx) => `${idx + 1}. ${b.description} (Category: ${b.category})
+   Context: ${b.context || "N/A"}`).join("\n\n") :
+    "No boundaries documented yet.";
+
+  // Format previous week reflection if available
+  const reflectionText = previousWeekReflection ?
+    `
+PREVIOUS WEEK'S REFLECTION:
+What Worked Well: ${previousWeekReflection.whatWorkedWell || "N/A"}
+What Was Challenging: ${previousWeekReflection.whatWasChallenging || "N/A"}
+Insights Learned: ${previousWeekReflection.insightsLearned || "N/A"}
+Adjustments Needed: ${previousWeekReflection.adjustmentsForNextWeek || "N/A"}
+` : "";
+
+  return `You are helping a parent create a weekly workbook for supporting and understanding ${personName}.
+
+CONTEXT:
+Person: ${personName}
+Relationship: ${relationshipType}${personAge ? `\nAge: ${personAge} years old` : ""}
+
+This is a parent-driven weekly workbook where the parent tracks their own behavior changes and does simple activities with ${personName}.
+
+MANUAL CONTENT TO ANALYZE:
+
+TRIGGERS & PATTERNS:
+${triggersText}
+
+WHAT WORKS (Effective Strategies):
+${strategiesText}
+
+BOUNDARIES & LIMITS:
+${boundariesText}${reflectionText}
+
+YOUR TASK:
+Generate a weekly workbook with:
+1. 3-5 specific, measurable PARENT behavior goals (not child goals!)
+2. 2-3 suggested daily activities appropriate for ${personName}'s age and challenges
+3. A brief weekly focus summary
+
+CRITICAL GUIDELINES FOR PARENT GOALS:
+- Goals are for the PARENT to do, not the child
+- Must be specific and actionable (e.g., "Give 5-minute warning before transitions" not "Help with transitions")
+- Must be measurable (Daily, 3x per week, etc.)
+- Link to specific triggers/strategies from the manual when possible
+- Focus on ONE major challenge area per week
+- Consider what parent behaviors might help address the documented triggers
+- Examples: "Use calm, low voice during meltdowns", "Praise successful transitions immediately", "Take 3 deep breaths before responding"
+
+ACTIVITY SELECTION GUIDELINES:
+Choose from these activity types based on ${personName}'s age and documented challenges:
+- emotion-checkin: Ages 3-12, helps with emotional awareness (5 min)
+- choice-board: Ages 3+, helps when upset/overwhelmed (5 min)
+- daily-win: Ages 4+, bedtime positivity ritual (5 min)
+- visual-schedule: Ages 3-10, helps with routines (2 min)
+- gratitude: Ages 5+, thankfulness practice (5 min)
+- feeling-thermometer: Ages 5+, emotion intensity rating (3 min)
+
+Generate a JSON response with this structure:
+
+{
+  "weeklyFocus": "Brief 1-2 sentence summary of this week's focus area based on triggers/strategies",
+  "parentGoals": [
+    {
+      "description": "Specific parent behavior to practice",
+      "targetFrequency": "Daily" | "3x per week" | "5x per week" | etc.,
+      "rationale": "Why this goal (link to trigger/strategy)",
+      "relatedTriggerId": "trigger ID if applicable" | null,
+      "relatedStrategyId": "strategy ID if applicable" | null
+    }
+  ],
+  "dailyActivities": [
+    {
+      "type": "emotion-checkin" | "choice-board" | "daily-win" | "visual-schedule" | "gratitude" | "feeling-thermometer",
+      "suggestedTime": "morning" | "afternoon" | "evening" | "bedtime" | "when-upset",
+      "customization": "Specific suggestions for ${personName} (optional)"
+    }
+  ],
+  "parentNotes": "Brief encouragement or tips for the parent (1-2 sentences)"
+}
+
+IMPORTANT:
+- Generate 3-5 parent goals (not more)
+- Generate 2-3 activity suggestions (not more)
+- Be specific to ${personName}'s documented triggers and strategies
+- If triggers mention specific times/situations, create goals for those situations
+- If strategies are highly effective (4-5/5), prioritize goals that practice those strategies
+- Goals should be achievable and realistic for one week
+- Activities should be age-appropriate
+${previousWeekReflection ? "- Consider previous week's reflection when generating goals (keep what worked, adjust what didn't)" : ""}
+
+Return ONLY the JSON object, no additional text or explanation.`;
+}
+
+
+// Child Manual Generation
+const {generateChildManualContent} = require("./generateChildManual");
+exports.generateChildManualContent = generateChildManualContent;
+
+// Pattern Analysis
+const {analyzePatterns} = require("./analyzePatterns");
+exports.analyzePatterns = analyzePatterns;
+
+// Child Manual AI Coach
+const {chatChildCoach} = require("./chatChildCoach");
+exports.chatChildCoach = chatChildCoach;
+
+// =============================================================================
+// ADMIN FUNCTIONS
+// =============================================================================
+
+/**
+ * Admin function: List all users in a family
+ */
+exports.admin_listUsers = onCall(
+    {
+      enforceAppCheck: false,
+      memory: "256MiB",
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      try {
+        // Check authentication
+        if (!request.auth) {
+          throw new Error("Authentication required");
+        }
+
+        // Check admin privileges
+        const adminUserDoc = await admin.firestore()
+            .collection("users")
+            .doc(request.auth.uid)
+            .get();
+
+        if (!adminUserDoc.exists || !adminUserDoc.data().isAdmin) {
+          throw new Error("Admin privileges required");
+        }
+
+        const {familyId} = request.data;
+
+        if (!familyId) {
+          throw new Error("familyId is required");
+        }
+
+        // Query users by familyId
+        const usersSnapshot = await admin.firestore()
+            .collection("users")
+            .where("familyId", "==", familyId)
+            .get();
+
+        const users = [];
+        usersSnapshot.forEach((doc) => {
+          const data = doc.data();
+          users.push({
+            id: doc.id,
+            email: data.email || "",
+            displayName: data.displayName || "",
+            role: data.role || "parent",
+            familyId: data.familyId,
+            createdAt: data.createdAt,
+          });
+        });
+
+        logger.info(`Listed ${users.length} users for family ${familyId}`);
+
+        return {
+          success: true,
+          users,
+        };
+      } catch (error) {
+        logger.error("Error listing users:", error);
+        return {
+          success: false,
+          error: error.message,
+          users: [],
+        };
+      }
+    },
+);
+
+/**
+ * Admin function: List all person manuals in a family
+ */
+exports.admin_listManuals = onCall(
+    {
+      enforceAppCheck: false,
+      memory: "256MiB",
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      try {
+        // Check authentication
+        if (!request.auth) {
+          throw new Error("Authentication required");
+        }
+
+        // Check admin privileges
+        const adminUserDoc = await admin.firestore()
+            .collection("users")
+            .doc(request.auth.uid)
+            .get();
+
+        if (!adminUserDoc.exists || !adminUserDoc.data().isAdmin) {
+          throw new Error("Admin privileges required");
+        }
+
+        const {familyId} = request.data;
+
+        if (!familyId) {
+          throw new Error("familyId is required");
+        }
+
+        // Query manuals by familyId
+        const manualsSnapshot = await admin.firestore()
+            .collection("person_manuals")
+            .where("familyId", "==", familyId)
+            .get();
+
+        const manuals = [];
+        manualsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          manuals.push({
+            id: doc.id,
+            personId: data.personId || "",
+            personName: data.personName || "Unknown",
+            relationshipType: data.relationshipType || "",
+            createdAt: data.createdAt,
+            lastModified: data.lastModified,
+          });
+        });
+
+        logger.info(`Listed ${manuals.length} manuals for family ${familyId}`);
+
+        return {
+          success: true,
+          manuals,
+        };
+      } catch (error) {
+        logger.error("Error listing manuals:", error);
+        return {
+          success: false,
+          error: error.message,
+          manuals: [],
+        };
+      }
+    },
+);
+
+/**
+ * Admin function: Delete a user
+ */
+exports.admin_deleteUser = onCall(
+    {
+      enforceAppCheck: false,
+      memory: "256MiB",
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      try {
+        // Check authentication
+        if (!request.auth) {
+          throw new Error("Authentication required");
+        }
+
+        // Check admin privileges
+        const adminUserDoc = await admin.firestore()
+            .collection("users")
+            .doc(request.auth.uid)
+            .get();
+
+        if (!adminUserDoc.exists || !adminUserDoc.data().isAdmin) {
+          throw new Error("Admin privileges required");
+        }
+
+        const {userId} = request.data;
+
+        if (!userId) {
+          throw new Error("userId is required");
+        }
+
+        // Delete user document
+        await admin.firestore()
+            .collection("users")
+            .doc(userId)
+            .delete();
+
+        // Try to delete auth user (may fail if user doesn't exist in auth)
+        try {
+          await admin.auth().deleteUser(userId);
+        } catch (authError) {
+          logger.warn(`Could not delete auth user ${userId}:`, authError.message);
+        }
+
+        logger.info(`Deleted user ${userId}`);
+
+        return {
+          success: true,
+        };
+      } catch (error) {
+        logger.error("Error deleting user:", error);
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+    },
+);
+
+/**
+ * Admin function: Delete a person manual
+ */
+exports.admin_deleteManual = onCall(
+    {
+      enforceAppCheck: false,
+      memory: "256MiB",
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      try {
+        // Check authentication
+        if (!request.auth) {
+          throw new Error("Authentication required");
+        }
+
+        // Check admin privileges
+        const adminUserDoc = await admin.firestore()
+            .collection("users")
+            .doc(request.auth.uid)
+            .get();
+
+        if (!adminUserDoc.exists || !adminUserDoc.data().isAdmin) {
+          throw new Error("Admin privileges required");
+        }
+
+        const {manualId} = request.data;
+
+        if (!manualId) {
+          throw new Error("manualId is required");
+        }
+
+        // Delete manual document
+        await admin.firestore()
+            .collection("person_manuals")
+            .doc(manualId)
+            .delete();
+
+        // Also delete related workbooks
+        const workbooksSnapshot = await admin.firestore()
+            .collection("weekly_workbooks")
+            .where("manualId", "==", manualId)
+            .get();
+
+        const batch = admin.firestore().batch();
+        workbooksSnapshot.forEach((doc) => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+
+        logger.info(`Deleted manual ${manualId} and ${workbooksSnapshot.size} related workbooks`);
+
+        return {
+          success: true,
+        };
+      } catch (error) {
+        logger.error("Error deleting manual:", error);
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+    },
+);
+
+/**
+ * Admin function: Reset entire database for a family
+ */
+exports.admin_resetDatabase = onCall(
+    {
+      enforceAppCheck: false,
+      memory: "512MiB",
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      try {
+        // Check authentication
+        if (!request.auth) {
+          throw new Error("Authentication required");
+        }
+
+        // Check admin privileges
+        const adminUserDoc = await admin.firestore()
+            .collection("users")
+            .doc(request.auth.uid)
+            .get();
+
+        if (!adminUserDoc.exists || !adminUserDoc.data().isAdmin) {
+          throw new Error("Admin privileges required");
+        }
+
+        const {familyId} = request.data;
+
+        if (!familyId) {
+          throw new Error("familyId is required");
+        }
+
+        let deletedUsers = 0;
+        let deletedManuals = 0;
+
+        // Delete all users in family
+        const usersSnapshot = await admin.firestore()
+            .collection("users")
+            .where("familyId", "==", familyId)
+            .get();
+
+        for (const doc of usersSnapshot.docs) {
+          await doc.ref.delete();
+          // Try to delete from auth
+          try {
+            await admin.auth().deleteUser(doc.id);
+          } catch (authError) {
+            logger.warn(`Could not delete auth user ${doc.id}:`, authError.message);
+          }
+          deletedUsers++;
+        }
+
+        // Delete all manuals in family
+        const manualsSnapshot = await admin.firestore()
+            .collection("person_manuals")
+            .where("familyId", "==", familyId)
+            .get();
+
+        const batch = admin.firestore().batch();
+        manualsSnapshot.forEach((doc) => {
+          batch.delete(doc.ref);
+          deletedManuals++;
+        });
+        await batch.commit();
+
+        // Delete all workbooks for this family
+        const workbooksSnapshot = await admin.firestore()
+            .collection("weekly_workbooks")
+            .where("familyId", "==", familyId)
+            .get();
+
+        const workbookBatch = admin.firestore().batch();
+        workbooksSnapshot.forEach((doc) => {
+          workbookBatch.delete(doc.ref);
+        });
+        await workbookBatch.commit();
+
+        // Delete all people for this family
+        const peopleSnapshot = await admin.firestore()
+            .collection("people")
+            .where("familyId", "==", familyId)
+            .get();
+
+        const peopleBatch = admin.firestore().batch();
+        peopleSnapshot.forEach((doc) => {
+          peopleBatch.delete(doc.ref);
+        });
+        await peopleBatch.commit();
+
+        logger.info(`Reset database for family ${familyId}: deleted ${deletedUsers} users, ${deletedManuals} manuals`);
+
+        return {
+          success: true,
+          deleted: {
+            users: deletedUsers,
+            manuals: deletedManuals,
+          },
+        };
+      } catch (error) {
+        logger.error("Error resetting database:", error);
+        return {
+          success: false,
+          error: error.message,
+          deleted: {
+            users: 0,
+            manuals: 0,
+          },
+        };
+      }
+    },
+);
+
+/**
+ * Admin function: Reset all data for a specific user
+ */
+exports.admin_resetUserData = onCall(
+    {
+      enforceAppCheck: false,
+      memory: "256MiB",
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      try {
+        // Check authentication
+        if (!request.auth) {
+          throw new Error("Authentication required");
+        }
+
+        // Check admin privileges
+        const adminUserDoc = await admin.firestore()
+            .collection("users")
+            .doc(request.auth.uid)
+            .get();
+
+        if (!adminUserDoc.exists || !adminUserDoc.data().isAdmin) {
+          throw new Error("Admin privileges required");
+        }
+
+        const {userId} = request.data;
+
+        if (!userId) {
+          throw new Error("userId is required");
+        }
+
+        let deletedManuals = 0;
+
+        // Get user's familyId
+        const userDoc = await admin.firestore()
+            .collection("users")
+            .doc(userId)
+            .get();
+
+        if (!userDoc.exists) {
+          throw new Error("User not found");
+        }
+
+        const familyId = userDoc.data().familyId;
+
+        // Delete all manuals created by this user (where createdBy matches)
+        const manualsSnapshot = await admin.firestore()
+            .collection("person_manuals")
+            .where("familyId", "==", familyId)
+            .where("createdBy", "==", userId)
+            .get();
+
+        const batch = admin.firestore().batch();
+        manualsSnapshot.forEach((doc) => {
+          batch.delete(doc.ref);
+          deletedManuals++;
+        });
+        await batch.commit();
+
+        // Delete related workbooks
+        for (const manualDoc of manualsSnapshot.docs) {
+          const workbooksSnapshot = await admin.firestore()
+              .collection("weekly_workbooks")
+              .where("manualId", "==", manualDoc.id)
+              .get();
+
+          const workbookBatch = admin.firestore().batch();
+          workbooksSnapshot.forEach((doc) => {
+            workbookBatch.delete(doc.ref);
+          });
+          await workbookBatch.commit();
+        }
+
+        logger.info(`Reset data for user ${userId}: deleted ${deletedManuals} manuals`);
+
+        return {
+          success: true,
+          deleted: {
+            manuals: deletedManuals,
+          },
+        };
+      } catch (error) {
+        logger.error("Error resetting user data:", error);
+        return {
+          success: false,
+          error: error.message,
+          deleted: {
+            manuals: 0,
+          },
+        };
+      }
+    },
+);

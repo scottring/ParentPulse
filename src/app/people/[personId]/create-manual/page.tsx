@@ -7,9 +7,6 @@ import { useAuth } from '@/context/AuthContext';
 import { usePersonById } from '@/hooks/usePerson';
 import { usePersonManual } from '@/hooks/usePersonManual';
 import { RelationshipType } from '@/types/person-manual';
-import { getManualSectionsPreview } from '@/utils/manual-initialization';
-
-type Step = 'select_type' | 'review';
 
 const RELATIONSHIP_OPTIONS: Array<{
   type: RelationshipType;
@@ -32,7 +29,6 @@ export default function CreateManualPage({ params }: { params: Promise<{ personI
   const { user, loading: authLoading } = useAuth();
   const { person, loading: personLoading, updatePerson } = usePersonById(personId);
   const { manual, createManual, loading: manualLoading } = usePersonManual(personId);
-  const [step, setStep] = useState<Step>('select_type');
   const [selectedType, setSelectedType] = useState<RelationshipType>('other');
   const [isCreating, setIsCreating] = useState(false);
 
@@ -60,13 +56,13 @@ export default function CreateManualPage({ params }: { params: Promise<{ personI
   const handleCreateManual = async () => {
     setIsCreating(true);
     try {
-      // Create manual with sections
-      const manualId = await createManual(personId, person.name, selectedType);
+      // Create simplified manual structure
+      await createManual(personId, person.name, selectedType);
 
       // Update person document with relationship type
       await updatePerson({ relationshipType: selectedType });
 
-      // Navigate to onboarding wizard instead of manual view
+      // Navigate to onboarding wizard
       router.push(`/people/${personId}/manual/onboard`);
     } catch (err) {
       console.error('Failed to create manual:', err);
@@ -75,7 +71,6 @@ export default function CreateManualPage({ params }: { params: Promise<{ personI
     }
   };
 
-  const preview = getManualSectionsPreview(selectedType);
   const selectedOption = RELATIONSHIP_OPTIONS.find(opt => opt.type === selectedType);
 
   return (
@@ -101,190 +96,74 @@ export default function CreateManualPage({ params }: { params: Promise<{ personI
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-6 lg:px-8 py-12">
-        {/* Step Indicator */}
-        <div className="flex items-center justify-center gap-4 mb-8">
-          <div className="flex items-center gap-2">
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                step === 'select_type' ? 'text-white' : 'text-white opacity-50'
-              }`}
-              style={{ backgroundColor: 'var(--parent-accent)' }}
-            >
-              1
+        <div className="animate-fade-in-up">
+          <div className="parent-card p-8 mb-8">
+            <h2 className="parent-heading text-2xl mb-4 text-center" style={{ color: 'var(--parent-text)' }}>
+              What's your relationship to {person.name}?
+            </h2>
+            <p className="text-sm mb-6 text-center max-w-2xl mx-auto" style={{ color: 'var(--parent-text-light)' }}>
+              This helps personalize the manual content for your specific relationship.
+            </p>
+
+            <div className="grid md:grid-cols-2 gap-3 mb-6">
+              {RELATIONSHIP_OPTIONS.map((option) => (
+                <button
+                  key={option.type}
+                  onClick={() => setSelectedType(option.type)}
+                  className={`parent-card p-4 text-left transition-all hover:shadow-md ${
+                    selectedType === option.type ? 'ring-2' : ''
+                  }`}
+                  style={{
+                    borderColor: selectedType === option.type ? 'var(--parent-accent)' : 'var(--parent-border)',
+                    '--tw-ring-color': 'var(--parent-accent)'
+                  } as React.CSSProperties}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="text-3xl flex-shrink-0">{option.emoji}</div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold mb-1" style={{ color: 'var(--parent-text)' }}>
+                        {option.label}
+                      </h4>
+                      <p className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
+                        {option.description}
+                      </p>
+                    </div>
+                    {selectedType === option.type && (
+                      <div className="text-2xl" style={{ color: 'var(--parent-accent)' }}>✓</div>
+                    )}
+                  </div>
+                </button>
+              ))}
             </div>
-            <span className={`text-sm font-medium ${step === 'select_type' ? '' : 'opacity-50'}`} style={{ color: 'var(--parent-text)' }}>
-              Select Relationship
-            </span>
+
+            <div
+              className="p-4 rounded-lg"
+              style={{ backgroundColor: 'rgba(124, 144, 130, 0.08)' }}
+            >
+              <p className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
+                💡 <strong>What's next:</strong> After creating the manual, you'll answer a few questions to generate initial content. You can always add more details later.
+              </p>
+            </div>
           </div>
-          <div className="w-12 h-0.5" style={{ backgroundColor: 'var(--parent-border)' }}></div>
-          <div className="flex items-center gap-2">
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                step === 'review' ? 'text-white' : 'text-white opacity-50'
-              }`}
+
+          <div className="flex justify-between">
+            <Link
+              href="/people"
+              className="px-6 py-3 rounded-lg font-medium transition-all hover:shadow-md"
+              style={{ border: '1px solid var(--parent-border)', color: 'var(--parent-text-light)' }}
+            >
+              Cancel
+            </Link>
+            <button
+              onClick={handleCreateManual}
+              disabled={isCreating}
+              className="px-8 py-3 rounded-lg font-semibold text-white transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ backgroundColor: 'var(--parent-accent)' }}
             >
-              2
-            </div>
-            <span className={`text-sm font-medium ${step === 'review' ? '' : 'opacity-50'}`} style={{ color: 'var(--parent-text)' }}>
-              Review & Create
-            </span>
+              {isCreating ? 'Creating Manual...' : `Create Manual & Continue`}
+            </button>
           </div>
         </div>
-
-        {/* Step 1: Select Relationship Type */}
-        {step === 'select_type' && (
-          <div className="animate-fade-in-up">
-            <div className="parent-card p-8 mb-8">
-              <h2 className="parent-heading text-2xl mb-4 text-center" style={{ color: 'var(--parent-text)' }}>
-                What's your relationship to {person.name}?
-              </h2>
-              <p className="text-sm mb-6 text-center max-w-2xl mx-auto" style={{ color: 'var(--parent-text-light)' }}>
-                This helps us create the right sections for your manual. Each relationship type gets customized sections that fit your needs.
-              </p>
-
-              <div className="grid md:grid-cols-2 gap-3">
-                {RELATIONSHIP_OPTIONS.map((option) => (
-                  <button
-                    key={option.type}
-                    onClick={() => setSelectedType(option.type)}
-                    className={`parent-card p-4 text-left transition-all hover:shadow-md ${
-                      selectedType === option.type ? 'ring-2' : ''
-                    }`}
-                    style={{
-                      borderColor: selectedType === option.type ? 'var(--parent-accent)' : 'var(--parent-border)',
-                      ringColor: 'var(--parent-accent)'
-                    }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="text-3xl flex-shrink-0">{option.emoji}</div>
-                      <div className="flex-1">
-                        <h4 className="font-semibold mb-1" style={{ color: 'var(--parent-text)' }}>
-                          {option.label}
-                        </h4>
-                        <p className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                          {option.description}
-                        </p>
-                      </div>
-                      {selectedType === option.type && (
-                        <div className="text-2xl" style={{ color: 'var(--parent-accent)' }}>✓</div>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex justify-between">
-              <Link
-                href="/people"
-                className="px-6 py-3 rounded-lg font-medium transition-all hover:shadow-md"
-                style={{ border: '1px solid var(--parent-border)', color: 'var(--parent-text-light)' }}
-              >
-                Cancel
-              </Link>
-              <button
-                onClick={() => setStep('review')}
-                className="px-8 py-3 rounded-lg font-semibold text-white transition-all hover:shadow-lg"
-                style={{ backgroundColor: 'var(--parent-accent)' }}
-              >
-                Continue to Review
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 2: Review & Create */}
-        {step === 'review' && (
-          <div className="animate-fade-in-up">
-            <div className="parent-card p-8 mb-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="text-4xl">{selectedOption?.emoji}</div>
-                <div>
-                  <h2 className="parent-heading text-2xl" style={{ color: 'var(--parent-text)' }}>
-                    {person.name}'s Manual
-                  </h2>
-                  <p className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                    {selectedOption?.label} relationship
-                  </p>
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <h3 className="font-semibold mb-3" style={{ color: 'var(--parent-text)' }}>
-                  This manual will include {preview.totalSections} sections:
-                </h3>
-
-                <div className="space-y-4">
-                  {preview.universalSections.length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium mb-2" style={{ color: 'var(--parent-text-light)' }}>
-                        Universal Sections ({preview.universalSections.length})
-                      </p>
-                      <div className="grid gap-2">
-                        {preview.universalSections.map((section) => (
-                          <div key={section.title} className="flex items-start gap-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--parent-bg)' }}>
-                            <span className="text-xl">{section.emoji}</span>
-                            <div>
-                              <p className="font-medium text-sm" style={{ color: 'var(--parent-text)' }}>{section.title}</p>
-                              <p className="text-xs" style={{ color: 'var(--parent-text-light)' }}>{section.description}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {preview.specificSections.length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium mb-2" style={{ color: 'var(--parent-text-light)' }}>
-                        {selectedOption?.label}-Specific Sections ({preview.specificSections.length})
-                      </p>
-                      <div className="grid gap-2">
-                        {preview.specificSections.map((section) => (
-                          <div key={section.title} className="flex items-start gap-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--parent-bg)' }}>
-                            <span className="text-xl">{section.emoji}</span>
-                            <div>
-                              <p className="font-medium text-sm" style={{ color: 'var(--parent-text)' }}>{section.title}</p>
-                              <p className="text-xs" style={{ color: 'var(--parent-text-light)' }}>{section.description}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div
-                className="p-4 rounded-lg"
-                style={{ backgroundColor: 'rgba(124, 144, 130, 0.08)' }}
-              >
-                <p className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  💡 <strong>Good to know:</strong> All sections start empty. You'll fill them in over time as you discover what works for {person.name}.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-between">
-              <button
-                onClick={() => setStep('select_type')}
-                className="px-6 py-3 rounded-lg font-medium transition-all hover:shadow-md"
-                style={{ border: '1px solid var(--parent-border)', color: 'var(--parent-text-light)' }}
-              >
-                ← Back
-              </button>
-              <button
-                onClick={handleCreateManual}
-                disabled={isCreating}
-                className="px-8 py-3 rounded-lg font-semibold text-white transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: 'var(--parent-accent)' }}
-              >
-                {isCreating ? 'Creating Manual...' : `Create ${person.name}'s Manual`}
-              </button>
-            </div>
-          </div>
-        )}
       </main>
     </div>
   );

@@ -125,7 +125,7 @@ export default function JournalDetailPage({ params }: { params: Promise<{ id: st
 
   if (!entry) return null;
 
-  const childName = children.find((c) => c.userId === entry.childId)?.name;
+  const childName = children.find((c) => c.childId === entry.childId)?.name;
 
   const categoryInfo: Record<JournalCategory, { emoji: string; label: string; color: string }> = {
     win: { emoji: '🎉', label: 'Win', color: '#A8E6CF' },

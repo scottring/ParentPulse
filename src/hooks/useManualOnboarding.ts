@@ -17,6 +17,7 @@ import {
   GeneratedManualContent,
   GenerateManualContentRequest,
   GenerateManualContentResponse,
+  QuestionAnswer,
   saveOnboardingProgress,
   clearOnboardingProgress
 } from '@/types/onboarding';
@@ -34,9 +35,10 @@ interface UseManualOnboardingReturn {
   // Section navigation
   goToNextSection: () => void;
   goToPreviousSection: () => void;
+  setTotalSections: (total: number) => void;
 
   // Answer management
-  updateSectionAnswers: (sectionId: string, answers: Record<string, string>) => void;
+  updateSectionAnswers: (sectionId: string, answers: Record<string, QuestionAnswer>) => void;
 
   // Generation
   generateContent: (personId: string, personName: string, relationshipType: RelationshipType) => Promise<void>;
@@ -105,8 +107,15 @@ export function useManualOnboarding(): UseManualOnboardingReturn {
     }));
   };
 
+  const setTotalSections = (total: number) => {
+    setWizardState(prev => ({
+      ...prev,
+      totalSections: total
+    }));
+  };
+
   // Answer management
-  const updateSectionAnswers = (sectionId: string, answers: Record<string, string>) => {
+  const updateSectionAnswers = (sectionId: string, answers: Record<string, QuestionAnswer>) => {
     setWizardState(prev => ({
       ...prev,
       answers: {
@@ -211,6 +220,7 @@ export function useManualOnboarding(): UseManualOnboardingReturn {
     goToStep,
     goToNextSection,
     goToPreviousSection,
+    setTotalSections,
     updateSectionAnswers,
     generateContent,
     updateGeneratedContent,

@@ -71,6 +71,7 @@ export async function createManualSections(params: CreateManualSectionsParams): 
 
     const newSection: Omit<RoleSection, 'roleSectionId'> = {
       manualId,
+      personId,
       familyId,
 
       // Role definition
@@ -143,7 +144,7 @@ export function getManualSectionsPreview(relationshipType: RelationshipType = 'o
   return {
     totalSections: 1, // One comprehensive role section
     universalSections: contentAreas,
-    specificSections: [],
+    specificSections: [] as typeof contentAreas,
     sections: contentAreas
   };
 }

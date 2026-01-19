@@ -6,7 +6,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useChildProfile } from '@/hooks/useChildProfile';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
-import { COLLECTIONS, User, ChildBaselineProfile, LearningStyle, ChildChallenge } from '@/types';
+import { COLLECTIONS, ChildBaselineProfile, LearningStyle, ChildChallenge } from '@/types';
+import { Child } from '@/types/child-manual';
 import ChallengesStep from '@/components/onboarding/ChallengesStep';
 import StrengthsStep from '@/components/onboarding/StrengthsStep';
 import EnvironmentStep from '@/components/onboarding/EnvironmentStep';
@@ -40,7 +41,7 @@ export default function OnboardingPage() {
   const { user, loading: authLoading } = useAuth();
   const { createProfile, loading: profileLoading } = useChildProfile();
 
-  const [child, setChild] = useState<User | null>(null);
+  const [child, setChild] = useState<Child | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({
     challenges: [],
@@ -58,9 +59,9 @@ export default function OnboardingPage() {
     if (!childId || !user?.familyId) return;
 
     const fetchChild = async () => {
-      const childDoc = await getDoc(doc(firestore, COLLECTIONS.USERS, childId));
+      const childDoc = await getDoc(doc(firestore, COLLECTIONS.CHILDREN, childId));
       if (childDoc.exists()) {
-        setChild({ userId: childDoc.id, ...childDoc.data() } as User);
+        setChild(childDoc.data() as Child);
       }
     };
 
@@ -103,8 +104,8 @@ export default function OnboardingPage() {
       const profileData: Omit<ChildBaselineProfile, 'profileId' | 'createdAt' | 'updatedAt' | 'version'> = {
         familyId: user!.familyId,
         relationshipType: 'children',
-        relationshipMemberId: child.userId,
-        childId: child.userId, // Backward compatibility
+        relationshipMemberId: child.childId,
+        childId: child.childId, // Backward compatibility
         challenges: onboardingData.challenges,
         strengths: onboardingData.strengths,
         interests: onboardingData.interests,

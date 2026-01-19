@@ -156,7 +156,7 @@ export default function JournalListPage() {
               >
                 <option value="">All children</option>
                 {children.map((child) => (
-                  <option key={child.userId} value={child.userId}>
+                  <option key={child.childId} value={child.childId}>
                     {child.name}
                   </option>
                 ))}
@@ -218,7 +218,7 @@ interface JournalEntryCardProps {
 
 function JournalEntryCard({ entry, children, categoryColor, formatDate, animationDelay }: JournalEntryCardProps) {
   const router = useRouter();
-  const childName = children.find((c) => c.userId === entry.childId)?.name;
+  const childName = children.find((c) => c.childId === entry.childId)?.name;
 
   const categoryEmoji: Record<JournalCategory, string> = {
     win: '🎉',

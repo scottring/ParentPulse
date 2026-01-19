@@ -1,0 +1,11 @@
+{
+  "name": "LifeManual - Personal Operating Manuals",
+  "short_name": "LifeManual",
+  "description": "Create personalized operating manuals for the important people in your life",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary"
+}

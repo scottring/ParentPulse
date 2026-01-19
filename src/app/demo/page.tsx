@@ -68,6 +68,7 @@ export default function DemoPage() {
     try {
       await createRoleSection({
         manualId: manual.manualId,
+        personId: manual.personId,
         familyId: manual.familyId,
         roleType: newRoleType,
         roleTitle: newRoleTitle,
@@ -171,7 +172,6 @@ export default function DemoPage() {
               </div>
               <div style={{ fontSize: '14px', color: '#166534' }}>
                 Manual ID: {manual.manualId}<br />
-                Role Sections: {manual.roleSectionCount}<br />
                 Last Updated: {manual.updatedAt.toDate().toLocaleString()}
               </div>
             </div>

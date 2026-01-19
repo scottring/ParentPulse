@@ -1,19 +1,15 @@
 /**
- * Person-Centric Operating Manual System
+ * Person-Centric Operating Manual System - Phase 1 (Simplified)
  *
  * Architecture:
  * - Person: Core entity (Scott, Iris, Ella, Caleb)
- * - PersonManual: One per person, contains all role sections
- * - RoleSection: Multiple per person, represents one relationship role
- *   - "Scott as Father to Ella" (contributors: Scott, Ella)
- *   - "Scott as Spouse to Iris" (contributors: Scott, Iris)
+ * - PersonManual: One per person, contains all their content directly
  *
  * Key Benefits:
- * 1. One person = one cohesive manual
- * 2. Roles are context-specific sections
- * 3. Collaborative editing - both people in relationship contribute
- * 4. Living document - roles evolve over time
- * 5. Strategic plans target person + specific role
+ * 1. One person = one cohesive manual with all their content
+ * 2. Simple structure - all content lives directly in the manual
+ * 3. Living document - evolves over time
+ * 4. Foundation for future Phase 2: filtered relationship views
  */
 
 import { Timestamp } from 'firebase/firestore';
@@ -63,31 +59,105 @@ export interface Person {
   };
 }
 
-// ==================== Person Manual ====================
+// ==================== Person Manual (Phase 1: Simplified) ====================
 
 export interface PersonManual {
   manualId: string;
   familyId: string;
   personId: string;
   personName: string; // Denormalized for easy display
+  relationshipType?: RelationshipType; // Denormalized from Person
 
   // Manual metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;
   version: number;
-
-  // Role sections (stored as subcollection, count tracked here)
-  roleSectionCount: number;
-  activeRoles: string[]; // Array of role IDs for quick lookup
-
-  // Living document tracking
   lastEditedAt: Timestamp;
   lastEditedBy: string; // User ID
+
+  // Core Information
+  coreInfo: {
+    sensoryNeeds?: string[];
+    interests?: string[];
+    strengths?: string[];
+    notes?: string;
+  };
+
+  // Content sections (stored directly in the manual)
+  triggers: ManualTrigger[];
+  whatWorks: ManualStrategy[];
+  whatDoesntWork: ManualStrategy[];
+  boundaries: ManualBoundary[];
+
+  // Dynamic content
+  emergingPatterns: ManualPattern[];
+  progressNotes: ManualProgressNote[];
 
   // Summary statistics
   totalTriggers: number;
   totalStrategies: number;
-  activePlansCount: number;
+  totalBoundaries: number;
+
+  // References
+  relatedJournalEntries: string[];
+  relatedKnowledgeIds: string[];
+}
+
+// ==================== Manual Content Types ====================
+
+export interface ManualTrigger {
+  id: string;
+  description: string;
+  context: string; // When/where this happens
+  typicalResponse: string; // How the person typically reacts
+  deescalationStrategy?: string; // What helps
+  severity: 'mild' | 'moderate' | 'significant';
+  identifiedDate: Timestamp;
+  identifiedBy: string; // User ID who added this
+  confirmedBy: string[]; // Other users who confirmed this
+  // Phase 2: Add involvedPeople array for relationship filtering
+}
+
+export interface ManualStrategy {
+  id: string;
+  description: string;
+  context: string; // When to use this
+  effectiveness: 1 | 2 | 3 | 4 | 5;
+  addedDate: Timestamp;
+  addedBy: string; // User ID
+  sourceType: 'discovered' | 'recommended' | 'professional' | 'knowledge_base';
+  sourceId?: string;
+  notes?: string;
+  // Phase 2: Add involvedPeople array for relationship filtering
+}
+
+export interface ManualBoundary {
+  id: string;
+  description: string;
+  category: 'immovable' | 'negotiable' | 'preference';
+  context?: string;
+  consequences?: string; // What happens if crossed
+  addedDate: Timestamp;
+  addedBy: string; // User ID
+}
+
+export interface ManualPattern {
+  id: string;
+  description: string;
+  frequency: string; // "Daily after school", "When stressed", etc.
+  firstObserved: Timestamp;
+  lastObserved: Timestamp;
+  confidence: 'emerging' | 'consistent' | 'validated';
+  relatedEntries: string[]; // Journal entry IDs
+  identifiedBy: 'ai' | 'user';
+}
+
+export interface ManualProgressNote {
+  id: string;
+  date: Timestamp;
+  note: string;
+  category: 'improvement' | 'challenge' | 'insight' | 'milestone' | 'concern';
+  addedBy: string; // User ID or 'ai'
 }
 
 // ==================== Role Section ====================
@@ -97,6 +167,7 @@ export type RoleType = 'parent' | 'child' | 'spouse' | 'sibling' | 'friend' | 'p
 export interface RoleSection {
   roleSectionId: string;
   manualId: string;
+  personId: string; // The person this manual is about (denormalized for navigation)
   familyId: string;
 
   // Role definition
@@ -105,8 +176,8 @@ export interface RoleSection {
   roleDescription?: string;
 
   // Role-specific overview (collaborative description of the person in this role)
-  roleOverview?: string; // Rich text description of how this person shows up in this role
-  // Contributors can each add their perspective on the person in this relationship
+  roleOverview?: string; // Legacy: single overview text (kept for backward compatibility)
+  roleOverviewContributions?: RoleOverviewContribution[]; // New: multi-contributor perspectives
 
   // Relationship context
   relatedPersonId?: string; // The other person in this relationship (if applicable)
@@ -197,6 +268,18 @@ export interface RoleProgressNote {
   category: 'improvement' | 'challenge' | 'insight' | 'milestone' | 'concern';
   addedBy: string; // Person ID or 'ai'
   isPrivate: boolean; // If true, only visible to the person themselves
+}
+
+export interface RoleOverviewContribution {
+  id: string;
+  contributorId: string; // User ID of the contributor
+  contributorName: string; // Denormalized for display
+  perspective: string; // The contributor's perspective/description
+  relationshipToSubject?: string; // e.g., "Parent", "Spouse", "Friend", "Therapist"
+  closenessWeight?: 1 | 2 | 3 | 4 | 5; // 1 = Distant/Professional, 5 = Closest/Most Important
+  addedAt: Timestamp;
+  updatedAt: Timestamp;
+  isActive: boolean; // Can be deactivated without deleting
 }
 
 // ==================== Role-Specific Profile Extensions ====================
@@ -451,11 +534,119 @@ export interface FamilyTradition {
   addedBy: string; // User ID
 }
 
+// ==================== Relationship Manuals ====================
+
+export interface RelationshipManual {
+  relationshipId: string;
+  familyId: string;
+
+  // Participants
+  participantIds: string[];        // Person IDs involved (typically 2, can be more)
+  participantNames: string[];      // Denormalized for display
+
+  // Relationship metadata
+  relationshipType: 'marriage' | 'partnership' | 'parent_child' | 'friendship' | 'professional' | 'other';
+  relationshipTitle: string;       // "Scott & Iris Marriage", "Scott-Ella Parent-Child"
+  relationshipDescription?: string;
+
+  // Joint content sections
+  sharedGoals: SharedGoal[];
+  rituals: RelationshipRitual[];
+  traditions: RelationshipTradition[];
+
+  // Relationship dynamics
+  conflictPatterns: ConflictPattern[];
+  connectionStrategies: ConnectionStrategy[];
+  relationshipOverview?: string;   // Overall narrative of the relationship
+
+  // Important context
+  importantMilestones: RelationshipMilestone[];
+  jointNotes: string[];            // General notes about the relationship
+
+  // Metadata
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  version: number;
+  lastEditedBy: string;
+
+  // Cross-references
+  relatedPersonManualIds: string[];  // Links back to participant person manuals
+  relatedRoleSectionIds?: string[];  // Optional: link to relevant role sections
+}
+
+export interface SharedGoal {
+  id: string;
+  title: string;
+  description: string;
+  category: 'financial' | 'family' | 'personal_growth' | 'health' | 'career' | 'other';
+  timeline?: string;              // "Next 6 months", "5 years", etc.
+  status: 'active' | 'achieved' | 'paused' | 'abandoned';
+  milestones?: string[];
+  addedDate: Timestamp;
+  addedBy: string;
+}
+
+export interface RelationshipRitual {
+  id: string;
+  title: string;
+  description: string;
+  frequency: 'daily' | 'weekly' | 'monthly' | 'occasional';
+  timing?: string;                // "Sunday mornings", "Every evening", etc.
+  significance: string;           // Why this matters to the relationship
+  addedDate: Timestamp;
+  addedBy: string;
+}
+
+export interface RelationshipTradition {
+  id: string;
+  title: string;
+  description: string;
+  occasion: string;               // "Anniversary", "First snow", etc.
+  howWeCelebrate: string;
+  yearStarted?: number;
+  addedDate: Timestamp;
+  addedBy: string;
+}
+
+export interface ConflictPattern {
+  id: string;
+  pattern: string;                // Description of typical pattern
+  triggerSituations: string[];   // What typically starts this pattern
+  typicalOutcome: string;         // How it usually plays out
+  whatHelps: string[];            // Strategies that help break the pattern
+  whatMakesWorse: string[];       // Things that escalate
+  severity: 'minor' | 'moderate' | 'significant';
+  identifiedDate: Timestamp;
+  identifiedBy: string;
+}
+
+export interface ConnectionStrategy {
+  id: string;
+  strategy: string;
+  context: string;                // When/why to use this
+  effectiveness: 1 | 2 | 3 | 4 | 5;
+  lastUsed?: Timestamp;
+  notes?: string;
+  addedDate: Timestamp;
+  addedBy: string;
+}
+
+export interface RelationshipMilestone {
+  id: string;
+  title: string;
+  description: string;
+  date: Timestamp;
+  significance: string;
+  addedDate: Timestamp;
+  addedBy: string;
+}
+
 // ==================== Firestore Collections ====================
 
 export const PERSON_MANUAL_COLLECTIONS = {
   PEOPLE: 'people',
   PERSON_MANUALS: 'person_manuals',
   ROLE_SECTIONS: 'role_sections', // Subcollection under person_manuals
-  ROLE_BASED_PLANS: 'role_based_strategic_plans'
+  ROLE_BASED_PLANS: 'role_based_strategic_plans',
+  RELATIONSHIP_MANUALS: 'relationship_manuals'
 } as const;

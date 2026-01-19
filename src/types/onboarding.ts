@@ -28,11 +28,26 @@ export interface WizardState {
 
 // ==================== Answer Types ====================
 
+/**
+ * Structured answer supporting multiple data types
+ */
+export interface StructuredAnswer {
+  primary: string | number | string[] | boolean; // The main answer (rating, selection, etc.)
+  qualitative?: string;  // Optional text embellishment
+  timestamp?: number;    // When answered
+}
+
+/**
+ * Answer can be either a simple string (legacy) or structured data (new)
+ */
+export type QuestionAnswer = string | StructuredAnswer;
+
 export interface SectionAnswers {
-  [questionId: string]: string;
+  [questionId: string]: QuestionAnswer;
 }
 
 export interface WizardAnswers {
+  [sectionId: string]: SectionAnswers | undefined;
   overview?: SectionAnswers;
   triggers?: SectionAnswers;
   whatWorks?: SectionAnswers;
@@ -99,6 +114,18 @@ export interface GeneratedManualContent {
     // Sibling
     relationshipDynamics?: string;
     currentContext?: string[];
+  };
+
+  // Raw assessment scores for future analysis
+  assessmentScores?: {
+    via?: {
+      [strengthName: string]: {
+        score: number;
+        qualitative?: string;
+        domain: string;  // e.g., "Wisdom & Knowledge"
+      };
+    };
+    // Future: adhd, bigFive, etc.
   };
 }
 
@@ -251,13 +278,88 @@ export function clearOnboardingProgress(personId: string): void {
   localStorage.removeItem(key);
 }
 
+// ==================== Relationship Onboarding Progress ====================
+
+export interface RelationshipOnboardingProgress {
+  relationshipId: string;
+  currentStep: WizardStep;
+  currentSectionIndex: number;
+  currentQuestionIndex: number;
+  answers: WizardAnswers;
+  timestamp: number; // Unix timestamp
+}
+
+/**
+ * Get localStorage key for relationship onboarding progress
+ */
+export function getRelationshipOnboardingProgressKey(relationshipId: string): string {
+  return `relationship_onboarding_${relationshipId}`;
+}
+
+/**
+ * Save relationship onboarding progress to localStorage
+ */
+export function saveRelationshipOnboardingProgress(progress: RelationshipOnboardingProgress): void {
+  const key = getRelationshipOnboardingProgressKey(progress.relationshipId);
+  localStorage.setItem(key, JSON.stringify(progress));
+}
+
+/**
+ * Load relationship onboarding progress from localStorage
+ */
+export function loadRelationshipOnboardingProgress(relationshipId: string): RelationshipOnboardingProgress | null {
+  const key = getRelationshipOnboardingProgressKey(relationshipId);
+  const saved = localStorage.getItem(key);
+
+  if (!saved) return null;
+
+  try {
+    const progress = JSON.parse(saved) as RelationshipOnboardingProgress;
+
+    // Check if progress is stale (older than 7 days)
+    const now = Date.now();
+    const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
+
+    if (progress.timestamp < sevenDaysAgo) {
+      clearRelationshipOnboardingProgress(relationshipId);
+      return null;
+    }
+
+    return progress;
+  } catch (error) {
+    console.error('Error loading relationship onboarding progress:', error);
+    return null;
+  }
+}
+
+/**
+ * Clear relationship onboarding progress from localStorage
+ */
+export function clearRelationshipOnboardingProgress(relationshipId: string): void {
+  const key = getRelationshipOnboardingProgressKey(relationshipId);
+  localStorage.removeItem(key);
+}
+
 // ==================== Validation ====================
 
 /**
  * Check if an answer is valid (not empty or whitespace)
  */
-export function isValidAnswer(answer: string | undefined): boolean {
-  return !!answer && answer.trim().length > 0;
+export function isValidAnswer(answer: QuestionAnswer | undefined): boolean {
+  if (!answer) return false;
+
+  // String answer (legacy)
+  if (typeof answer === 'string') {
+    return answer.trim().length > 0;
+  }
+
+  // StructuredAnswer (clinical assessments)
+  if (typeof answer === 'object' && 'primary' in answer) {
+    // Has a primary value (rating, selection, etc.)
+    return answer.primary !== undefined && answer.primary !== null && answer.primary !== '';
+  }
+
+  return false;
 }
 
 /**
@@ -278,6 +380,7 @@ export function getCompletionPercentage(
   totalQuestions: number
 ): number {
   const answeredCount = Object.values(answers).reduce((count, sectionAnswers) => {
+    if (!sectionAnswers) return count;
     return count + Object.values(sectionAnswers).filter(isValidAnswer).length;
   }, 0);
 

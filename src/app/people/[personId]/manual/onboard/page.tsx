@@ -8,18 +8,12 @@ import { usePersonById } from '@/hooks/usePerson';
 import { usePersonManual } from '@/hooks/usePersonManual';
 import { useManualOnboarding } from '@/hooks/useManualOnboarding';
 import { useSaveManualContent } from '@/hooks/useSaveManualContent';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { firestore } from '@/lib/firebase';
-import { PERSON_MANUAL_COLLECTIONS } from '@/types/person-manual';
-import {
-  getOnboardingSections,
-  personalizeQuestions,
-  getEstimatedTime
-} from '@/config/onboarding-questions';
-import { loadOnboardingProgress, clearOnboardingProgress } from '@/types/onboarding';
-import { ContentReviewStep } from '@/components/manual/ContentReviewStep';
+import { getOnboardingSections, getNeurodivergenceSections, OnboardingSection } from '@/config/onboarding-questions';
+import { RelationshipType } from '@/types/person-manual';
+import { GeneratedTrigger, GeneratedStrategy, GeneratedBoundary, loadOnboardingProgress, QuestionAnswer } from '@/types/onboarding';
+import { QuestionRenderer } from '@/components/onboarding/QuestionRenderer';
 
-export default function ManualOnboardingPage({ params }: { params: Promise<{ personId: string }> }) {
+export default function AIOnboardingPage({ params }: { params: Promise<{ personId: string }> }) {
   const { personId } = use(params);
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -27,347 +21,801 @@ export default function ManualOnboardingPage({ params }: { params: Promise<{ per
   const { manual, loading: manualLoading } = usePersonManual(personId);
   const {
     wizardState,
+    goToStep,
     goToNextStep,
     goToPreviousStep,
     goToNextSection,
     goToPreviousSection,
     updateSectionAnswers,
     generateContent,
+    updateGeneratedContent,
     resetWizard,
+    setTotalSections,
     saveProgress
   } = useManualOnboarding();
-  const { saveContent, saving: savingContent } = useSaveManualContent();
+  const { saveContent, saving, error: saveError } = useSaveManualContent();
 
-  const [sections, setSections] = useState<ReturnType<typeof getOnboardingSections>>([]);
-  const [currentSectionAnswers, setCurrentSectionAnswers] = useState<Record<string, string>>({});
-  const [hasResumedProgress, setHasResumedProgress] = useState(false);
-  const [roleSectionId, setRoleSectionId] = useState<string | null>(null);
+  const [sections, setSections] = useState<OnboardingSection[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [progressRestored, setProgressRestored] = useState(false);
 
-  // Check for auth
+  // Restore saved progress on mount
+  useEffect(() => {
+    if (!progressRestored && manual?.manualId && person?.relationshipType) {
+      const savedProgress = loadOnboardingProgress(personId);
+      if (savedProgress && savedProgress.manualId === manual.manualId) {
+        // Restore wizard state from saved progress
+        if (savedProgress.answers && Object.keys(savedProgress.answers).length > 0) {
+          // Restore answers
+          Object.entries(savedProgress.answers).forEach(([sectionId, sectionAnswers]) => {
+            if (sectionAnswers) {
+              updateSectionAnswers(sectionId, sectionAnswers);
+            }
+          });
+
+          // Restore position if they were in the middle of questions
+          if (savedProgress.currentStep === 'questions') {
+            goToStep('questions');
+            // Note: currentSectionIndex will be managed by the wizard state
+          }
+        }
+      }
+      setProgressRestored(true);
+    }
+  }, [progressRestored, manual?.manualId, person?.relationshipType, personId, updateSectionAnswers, goToStep]);
+
+  // Check auth
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
     }
   }, [user, authLoading, router]);
 
-  // Check if manual exists, if not redirect
+  // Check if manual exists
   useEffect(() => {
     if (!manualLoading && !manual) {
       router.push(`/people/${personId}/create-manual`);
     }
   }, [manual, manualLoading, personId, router]);
 
-  // Initialize sections and fetch role section ID
+  // Load sections based on relationship type and branching logic
   useEffect(() => {
-    if (person && manual) {
-      const relationshipType = person.relationshipType || 'other';
-      const sectionsForType = getOnboardingSections(relationshipType);
-      const personalizedSections = personalizeQuestions(sectionsForType, person.name);
-      setSections(personalizedSections);
+    if (person?.relationshipType) {
+      const baseSections = getOnboardingSections(person.relationshipType as RelationshipType);
 
-      // Fetch the role section ID for this manual
-      const fetchRoleSection = async () => {
-        const q = query(
-          collection(firestore, PERSON_MANUAL_COLLECTIONS.ROLE_SECTIONS),
-          where('manualId', '==', manual.manualId)
-        );
-        const snapshot = await getDocs(q);
-        if (!snapshot.empty) {
-          setRoleSectionId(snapshot.docs[0].id);
-        }
-      };
-      fetchRoleSection();
+      // For child relationships, check if we need to add neurodivergence sections
+      if (person.relationshipType === 'child') {
+        const screeningAnswer = wizardState.answers['screening']?.['screening_level'];
+        const screeningValue = typeof screeningAnswer === 'object' && screeningAnswer !== null && 'primary' in screeningAnswer
+          ? screeningAnswer.primary
+          : screeningAnswer;
 
-      // Try to load saved progress
-      if (!hasResumedProgress) {
-        const saved = loadOnboardingProgress(personId);
-        if (saved && saved.manualId === manual.manualId) {
-          // TODO: Restore progress from localStorage
-          // For now, just mark that we checked
+        if (screeningValue && typeof screeningValue === 'string') {
+          // Insert neurodivergence sections after screening but before universal sections
+          const neurodivergenceSections = getNeurodivergenceSections(screeningValue);
+          if (neurodivergenceSections.length > 0) {
+            // Insert neurodivergence sections after screening (index 1) and before the rest
+            const updatedSections = [
+              baseSections[0], // Screening section
+              ...neurodivergenceSections, // Neurodivergence sections
+              ...baseSections.slice(1) // Rest of sections
+            ];
+            setSections(updatedSections);
+            setTotalSections(updatedSections.length);
+            return;
+          }
         }
-        setHasResumedProgress(true);
       }
-    }
-  }, [person, manual, personId, hasResumedProgress]);
 
-  // Auto-save progress
+      setSections(baseSections);
+      setTotalSections(baseSections.length);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [person?.relationshipType, wizardState.answers]);
+
+  // Auto-save progress to localStorage whenever answers change
   useEffect(() => {
-    if (person && manual && wizardState.currentStep === 'questions') {
-      saveProgress(personId, manual.manualId, person.relationshipType || 'other');
+    if (manual?.manualId && person?.relationshipType && Object.keys(wizardState.answers).length > 0) {
+      saveProgress(personId, manual.manualId, person.relationshipType as RelationshipType);
     }
-  }, [wizardState, person, manual, personId, saveProgress]);
+  }, [wizardState.answers, manual?.manualId, person?.relationshipType, personId, saveProgress]);
 
-  if (authLoading || personLoading || manualLoading || !user || !person || !manual) {
+  if (authLoading || personLoading || manualLoading || !user || !person || !manual || sections.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center parent-page">
-        <div className="w-16 h-16 spinner"></div>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FFF8F0' }}>
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-slate-800 border-t-amber-600 rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 font-mono text-sm text-slate-600">LOADING...</p>
+        </div>
       </div>
     );
   }
 
   const currentSection = sections[wizardState.currentSectionIndex];
-  const progress = sections.length > 0 ? ((wizardState.currentSectionIndex + 1) / sections.length) * 100 : 0;
-  const estimatedTime = getEstimatedTime(person.relationshipType || 'other');
+  const currentQuestion = currentSection?.questions[currentQuestionIndex];
 
-  const handleSectionComplete = () => {
-    // Save current section answers
-    if (currentSection) {
-      updateSectionAnswers(currentSection.sectionId, currentSectionAnswers);
-    }
+  // Personalize text
+  const personalizeText = (text: string) => {
+    return text.replace(/\{\{personName\}\}/g, person.name);
+  };
 
-    // Move to next section or processing
-    if (wizardState.currentSectionIndex < sections.length - 1) {
+  // Handle answer - auto-save to state and localStorage (supports all question types)
+  const handleAnswer = (questionId: string, value: QuestionAnswer) => {
+    const sectionAnswers = wizardState.answers[currentSection.sectionId] || {};
+    updateSectionAnswers(currentSection.sectionId, {
+      ...sectionAnswers,
+      [questionId]: value
+    });
+  };
+
+  // Navigation
+  const handleNext = () => {
+    if (currentQuestionIndex < currentSection.questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else if (wizardState.currentSectionIndex < sections.length - 1) {
       goToNextSection();
-      setCurrentSectionAnswers({});
+      setCurrentQuestionIndex(0);
     } else {
-      // All sections complete, start generating
+      // All questions answered - generate content
       handleGenerate();
     }
   };
 
-  const handleSkipSection = () => {
-    if (wizardState.currentSectionIndex < sections.length - 1) {
-      goToNextSection();
-      setCurrentSectionAnswers({});
-    } else {
-      handleGenerate();
+  const handlePrevious = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+    } else if (wizardState.currentSectionIndex > 0) {
+      goToPreviousSection();
+      const prevSection = sections[wizardState.currentSectionIndex - 1];
+      setCurrentQuestionIndex(prevSection.questions.length - 1);
     }
   };
 
   const handleGenerate = async () => {
-    await generateContent(
-      personId,
-      person.name,
-      person.relationshipType || 'other'
-    );
-  };
-
-  const handleComplete = async () => {
-    if (!roleSectionId || !wizardState.generatedContent) {
-      alert('Missing role section or generated content');
-      return;
-    }
+    if (!manual?.manualId || !person.relationshipType) return;
 
     try {
-      // Save generated content to Firestore
-      await saveContent(roleSectionId, wizardState.generatedContent);
-
-      // Clear saved progress
-      clearOnboardingProgress(personId);
-
-      // Redirect to manual view
-      router.push(`/people/${personId}/manual`);
+      await generateContent(
+        personId,
+        person.name,
+        person.relationshipType as RelationshipType
+      );
     } catch (error) {
-      console.error('Error saving content:', error);
-      alert('Failed to save content. Please try again.');
+      console.error('Error generating content:', error);
     }
   };
 
-  return (
-    <div className="min-h-screen parent-page">
-      {/* Header */}
-      <header className="border-b paper-texture" style={{ borderColor: 'var(--parent-border)', backgroundColor: 'var(--parent-card)' }}>
-        <div className="max-w-4xl mx-auto px-6 lg:px-8 py-6">
-          <div className="flex items-center gap-4">
-            <Link href={`/people/${personId}`} className="text-2xl transition-transform hover:scale-110">
-              ←
-            </Link>
-            <div className="flex-1">
-              <h1 className="parent-heading text-2xl sm:text-3xl" style={{ color: 'var(--parent-accent)' }}>
-                {person.name}'s Manual
-              </h1>
-              <p className="text-sm mt-1" style={{ color: 'var(--parent-text-light)' }}>
-                {wizardState.currentStep === 'welcome' && 'Let\'s get started'}
-                {wizardState.currentStep === 'questions' && `Section ${wizardState.currentSectionIndex + 1} of ${sections.length}`}
-                {wizardState.currentStep === 'processing' && 'Generating content...'}
-                {wizardState.currentStep === 'review' && 'Review & edit'}
-                {wizardState.currentStep === 'complete' && 'All done!'}
-              </p>
+  const handleSaveGeneratedContent = async () => {
+    if (!manual?.manualId || !wizardState.generatedContent) return;
+
+    try {
+      await saveContent(manual.manualId, wizardState.generatedContent);
+      goToStep('complete');
+    } catch (error) {
+      console.error('Error saving content:', error);
+    }
+  };
+
+  const handleComplete = () => {
+    router.push(`/people/${personId}/manual`);
+  };
+
+  // Calculate progress
+  const totalQuestions = sections.reduce((sum, section) => sum + section.questions.length, 0);
+  const answeredQuestions = Object.values(wizardState.answers).reduce((count, sectionAnswers) => {
+    if (!sectionAnswers) return count;
+    return count + Object.keys(sectionAnswers).length;
+  }, 0);
+  const progressPercent = (answeredQuestions / totalQuestions) * 100;
+
+  // ==================== WELCOME SCREEN ====================
+  if (wizardState.currentStep === 'welcome') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8" style={{ backgroundColor: '#FFF8F0' }}>
+        <div className="blueprint-grid"></div>
+
+        <div className="relative max-w-3xl w-full">
+          <div className="relative bg-white border-4 border-slate-800 p-12 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+            {/* Corner brackets */}
+            <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-amber-600"></div>
+            <div className="absolute top-0 right-0 w-16 h-16 border-t-4 border-r-4 border-amber-600"></div>
+            <div className="absolute bottom-0 left-0 w-16 h-16 border-b-4 border-l-4 border-amber-600"></div>
+            <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 border-amber-600"></div>
+
+            <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-6">
+              AI-POWERED MANUAL GENERATION
+            </div>
+
+            <h1 className="font-mono text-5xl font-bold mb-6 text-slate-900">
+              {person.name}'s Operating Manual
+            </h1>
+
+            <p className="font-mono text-lg text-slate-700 mb-4 leading-relaxed">
+              I'll ask you a few conversational questions about {person.name}, then use AI to generate a structured operating manual with triggers, strategies, and boundaries.
+            </p>
+
+            <p className="font-mono text-base text-slate-600 mb-8 leading-relaxed">
+              This takes about 10-15 minutes and you'll have a chance to review and edit everything before saving.
+            </p>
+
+            <div className="space-y-4 mb-10 p-6 bg-amber-50 border-2 border-amber-600">
+              <div className="flex items-center gap-3 font-mono text-sm">
+                <span className="text-3xl">🤖</span>
+                <div>
+                  <div className="font-bold text-slate-900">AI-GENERATED CONTENT:</div>
+                  <div className="text-slate-700">Claude will analyze your answers and create structured content</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 font-mono text-sm">
+                <span className="text-3xl">✏️</span>
+                <div>
+                  <div className="font-bold text-slate-900">REVIEW & EDIT:</div>
+                  <div className="text-slate-700">You'll review everything before it's saved</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 font-mono text-sm">
+                <span className="text-3xl">📋</span>
+                <div>
+                  <div className="font-bold text-slate-900">SECTIONS TO COMPLETE:</div>
+                  <div className="text-slate-700">{sections.length} sections ({totalQuestions} questions total)</div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => goToStep('questions')}
+              className="w-full py-4 bg-slate-800 text-white font-mono font-bold text-lg hover:bg-amber-600 transition-all shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-1 active:translate-y-1"
+            >
+              START QUESTIONNAIRE →
+            </button>
+
+            <div className="mt-6 text-center">
+              <Link
+                href={`/people/${personId}/manual`}
+                className="font-mono text-sm text-slate-500 hover:text-slate-800 underline"
+              >
+                ← Skip and add content manually
+              </Link>
             </div>
           </div>
+        </div>
 
-          {/* Progress Bar */}
-          {wizardState.currentStep === 'questions' && (
-            <div className="mt-4">
-              <div className="w-full h-2 rounded-full" style={{ backgroundColor: 'var(--parent-border)' }}>
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{ backgroundColor: 'var(--parent-accent)', width: `${progress}%` }}
-                />
+        <style jsx>{`
+          .blueprint-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+              linear-gradient(rgba(30, 58, 95, 0.03) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(30, 58, 95, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            z-index: 0;
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // ==================== QUESTIONS SCREEN ====================
+  if (wizardState.currentStep === 'questions' && currentQuestion) {
+    const currentAnswer = wizardState.answers[currentSection.sectionId]?.[currentQuestion.id];
+
+    // Check if answer is valid for required questions
+    const hasValidAnswer = () => {
+      if (!currentQuestion.required) return true;
+      if (!currentAnswer) return false;
+
+      // Handle structured answers
+      if (typeof currentAnswer === 'object' && 'primary' in currentAnswer) {
+        return currentAnswer.primary !== undefined && currentAnswer.primary !== null && currentAnswer.primary !== '';
+      }
+
+      // Handle string answers
+      return typeof currentAnswer === 'string' && currentAnswer.trim().length > 0;
+    };
+
+    return (
+      <div className="min-h-screen" style={{ backgroundColor: '#FFF8F0' }}>
+        <div className="blueprint-grid"></div>
+
+        {/* Progress Bar */}
+        <div className="fixed top-0 left-0 right-0 h-2 bg-slate-200 z-50">
+          <div
+            className="h-full bg-amber-600 transition-all duration-300"
+            style={{ width: `${progressPercent}%` }}
+          ></div>
+        </div>
+
+        {/* Header */}
+        <header className="border-b-4 border-slate-800 bg-white shadow-[0px_4px_0px_0px_rgba(0,0,0,1)] pt-8 pb-6">
+          <div className="max-w-4xl mx-auto px-6">
+            <div className="inline-block px-3 py-1 bg-amber-600 text-white font-mono text-xs mb-3">
+              SECTION {wizardState.currentSectionIndex + 1} OF {sections.length}: {currentSection.sectionName.toUpperCase()}
+            </div>
+            <p className="font-mono text-sm text-slate-600">
+              {personalizeText(currentSection.sectionDescription)}
+            </p>
+          </div>
+        </header>
+
+        {/* Question Display */}
+        <main className="relative max-w-4xl mx-auto px-6 py-16">
+          <div className="relative bg-white border-4 border-slate-800 p-10 shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]">
+            {/* Question Number */}
+            <div className="absolute -top-4 -left-4 w-16 h-16 bg-slate-800 text-white font-mono font-bold flex items-center justify-center text-2xl border-4 border-amber-600">
+              {currentQuestionIndex + 1}
+            </div>
+
+            {/* Question */}
+            <div className="mb-8">
+              <h3 className="font-mono text-3xl font-bold text-slate-900 leading-snug mb-4">
+                {personalizeText(currentQuestion.question)}
+              </h3>
+              {currentQuestion.helperText && (
+                <p className="font-mono text-sm text-slate-600 p-4 bg-amber-50 border-l-4 border-amber-600">
+                  💡 {personalizeText(currentQuestion.helperText)}
+                </p>
+              )}
+            </div>
+
+            {/* Answer Input - Using QuestionRenderer for all question types */}
+            <div className="mb-8">
+              <QuestionRenderer
+                question={currentQuestion}
+                value={currentAnswer}
+                onChange={(value) => handleAnswer(currentQuestion.id, value)}
+                personName={person.name}
+                onKeyboardContinue={handleNext}
+              />
+            </div>
+
+            {/* Navigation Buttons */}
+            <div className="flex gap-4">
+              {(wizardState.currentSectionIndex > 0 || currentQuestionIndex > 0) && (
+                <button
+                  onClick={handlePrevious}
+                  className="px-6 py-3 border-2 border-slate-300 bg-white font-mono font-bold text-slate-700 hover:border-slate-800 transition-all"
+                  data-testid="previous-button"
+                >
+                  ← PREVIOUS
+                </button>
+              )}
+              <button
+                onClick={handleNext}
+                disabled={!hasValidAnswer()}
+                className="flex-1 px-6 py-3 bg-slate-800 text-white font-mono font-bold hover:bg-amber-600 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-800"
+                data-testid="continue-button"
+              >
+                {wizardState.currentSectionIndex === sections.length - 1 && currentQuestionIndex === currentSection.questions.length - 1
+                  ? 'GENERATE MANUAL →'
+                  : 'NEXT →'}
+              </button>
+            </div>
+
+            {/* Skip Option (for non-required questions) */}
+            {!currentQuestion.required && !hasValidAnswer() && (
+              <div className="mt-4 text-center">
+                <button
+                  onClick={handleNext}
+                  className="font-mono text-sm text-slate-500 hover:text-slate-800 underline"
+                >
+                  Skip this question
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Section Progress */}
+          <div className="mt-6 text-center font-mono text-sm text-slate-600">
+            Question {currentQuestionIndex + 1} of {currentSection.questions.length} in this section
+          </div>
+        </main>
+
+        <style jsx>{`
+          .blueprint-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+              linear-gradient(rgba(30, 58, 95, 0.03) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(30, 58, 95, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            z-index: 0;
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // ==================== PROCESSING SCREEN ====================
+  if (wizardState.currentStep === 'processing') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8" style={{ backgroundColor: '#FFF8F0' }}>
+        <div className="blueprint-grid"></div>
+
+        <div className="relative max-w-3xl w-full">
+          <div className="relative bg-white border-4 border-slate-800 p-12 text-center shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+            <div className="inline-block px-3 py-1 bg-amber-600 text-white font-mono text-xs mb-6">
+              ⚙️ PROCESSING
+            </div>
+
+            <div className="mb-8">
+              <div className="w-20 h-20 border-4 border-slate-800 border-t-amber-600 rounded-full animate-spin mx-auto"></div>
+            </div>
+
+            <h2 className="font-mono text-4xl font-bold mb-6 text-slate-900">
+              Generating Manual...
+            </h2>
+
+            <p className="font-mono text-lg text-slate-700 mb-8">
+              Claude AI is analyzing your answers and generating structured content. This takes about 30-60 seconds.
+            </p>
+
+            <div className="space-y-3 font-mono text-sm text-slate-600 max-w-md mx-auto">
+              <div className="flex items-center gap-3 justify-start">
+                <span className="text-green-600">✓</span>
+                <span>Analyzing responses</span>
+              </div>
+              <div className="flex items-center gap-3 justify-start">
+                <span className="text-amber-600">⋯</span>
+                <span>Identifying triggers and patterns</span>
+              </div>
+              <div className="flex items-center gap-3 justify-start">
+                <span className="text-slate-400">○</span>
+                <span>Extracting strategies</span>
+              </div>
+              <div className="flex items-center gap-3 justify-start">
+                <span className="text-slate-400">○</span>
+                <span>Structuring boundaries</span>
+              </div>
+            </div>
+
+            {wizardState.error && (
+              <div className="mt-8 p-4 bg-red-50 border-2 border-red-600">
+                <div className="font-mono text-sm text-red-900">
+                  <div className="font-bold mb-2">❌ Generation Failed</div>
+                  <div className="text-xs">{wizardState.error}</div>
+                </div>
+                <button
+                  onClick={() => goToStep('questions')}
+                  className="mt-4 px-6 py-2 bg-red-600 text-white font-mono text-sm font-bold hover:bg-red-700"
+                >
+                  ← Back to Questions
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <style jsx>{`
+          .blueprint-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+              linear-gradient(rgba(30, 58, 95, 0.03) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(30, 58, 95, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            z-index: 0;
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // ==================== REVIEW SCREEN ====================
+  if (wizardState.currentStep === 'review' && wizardState.generatedContent) {
+    const content = wizardState.generatedContent;
+
+    return (
+      <div className="min-h-screen pb-20" style={{ backgroundColor: '#FFF8F0' }}>
+        <div className="blueprint-grid"></div>
+
+        {/* Header */}
+        <header className="border-b-4 border-slate-800 bg-white shadow-[0px_4px_0px_0px_rgba(0,0,0,1)] py-8 sticky top-0 z-10">
+          <div className="max-w-5xl mx-auto px-6">
+            <div className="inline-block px-3 py-1 bg-green-600 text-white font-mono text-xs mb-3">
+              ✓ GENERATION COMPLETE - REVIEW CONTENT
+            </div>
+            <h1 className="font-mono text-3xl font-bold text-slate-900 mb-2">
+              Review Generated Manual
+            </h1>
+            <p className="font-mono text-sm text-slate-600">
+              Review the AI-generated content below. You can edit or delete any items before saving.
+            </p>
+          </div>
+        </header>
+
+        <main className="max-w-5xl mx-auto px-6 py-12">
+          {/* Triggers Section */}
+          {content.triggers && content.triggers.length > 0 && (
+            <div className="mb-12">
+              <div className="inline-block px-3 py-1 bg-red-600 text-white font-mono text-xs mb-4">
+                ⚡ TRIGGERS ({content.triggers.length})
+              </div>
+              <div className="space-y-4">
+                {content.triggers.map((trigger, index) => (
+                  <TriggerCard key={index} trigger={trigger} index={index} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* What Works Section */}
+          {content.whatWorks && content.whatWorks.length > 0 && (
+            <div className="mb-12">
+              <div className="inline-block px-3 py-1 bg-green-600 text-white font-mono text-xs mb-4">
+                ✨ WHAT WORKS ({content.whatWorks.length})
+              </div>
+              <div className="space-y-4">
+                {content.whatWorks.map((strategy, index) => (
+                  <StrategyCard key={index} strategy={strategy} index={index} type="works" />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* What Doesn't Work Section */}
+          {content.whatDoesntWork && content.whatDoesntWork.length > 0 && (
+            <div className="mb-12">
+              <div className="inline-block px-3 py-1 bg-orange-600 text-white font-mono text-xs mb-4">
+                🚫 WHAT DOESN'T WORK ({content.whatDoesntWork.length})
+              </div>
+              <div className="space-y-4">
+                {content.whatDoesntWork.map((strategy, index) => (
+                  <StrategyCard key={index} strategy={strategy} index={index} type="doesnt-work" />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Boundaries Section */}
+          {content.boundaries && content.boundaries.length > 0 && (
+            <div className="mb-12">
+              <div className="inline-block px-3 py-1 bg-amber-600 text-white font-mono text-xs mb-4">
+                🛡️ BOUNDARIES ({content.boundaries.length})
+              </div>
+              <div className="space-y-4">
+                {content.boundaries.map((boundary, index) => (
+                  <BoundaryCard key={index} boundary={boundary} index={index} />
+                ))}
+              </div>
+            </div>
+          )}
+        </main>
+
+        {/* Fixed Bottom Action Bar */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t-4 border-slate-800 py-6 shadow-[0px_-4px_0px_0px_rgba(0,0,0,1)]">
+          <div className="max-w-5xl mx-auto px-6 flex gap-4">
+            <button
+              onClick={() => goToStep('questions')}
+              className="px-6 py-3 border-2 border-slate-300 bg-white font-mono font-bold text-slate-700 hover:border-slate-800 transition-all"
+            >
+              ← BACK TO QUESTIONS
+            </button>
+            <button
+              onClick={handleSaveGeneratedContent}
+              disabled={saving}
+              className="flex-1 px-6 py-3 bg-green-600 text-white font-mono font-bold hover:bg-green-700 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+              data-testid="save-manual-button"
+            >
+              {saving ? 'SAVING...' : `SAVE MANUAL →`}
+            </button>
+          </div>
+          {saveError && (
+            <div className="max-w-5xl mx-auto px-6 mt-4">
+              <div className="p-3 bg-red-50 border-2 border-red-600 font-mono text-sm text-red-900">
+                ❌ Save failed: {saveError}
               </div>
             </div>
           )}
         </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-6 lg:px-8 py-12">
-        {/* Welcome Step */}
-        {wizardState.currentStep === 'welcome' && (
-          <div className="animate-fade-in-up">
-            <div className="parent-card p-8 text-center">
-              <div className="text-6xl mb-6">👤</div>
-              <h2 className="parent-heading text-3xl mb-4" style={{ color: 'var(--parent-text)' }}>
-                Let's build {person.name}'s manual together
-              </h2>
-              <p className="text-lg mb-6" style={{ color: 'var(--parent-text-light)' }}>
-                I'll ask you some questions to create initial content based on your experience with {person.name}.
-              </p>
-              <div className="flex items-center justify-center gap-2 mb-8" style={{ color: 'var(--parent-text-light)' }}>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Estimated time: {estimatedTime}</span>
-              </div>
-              <button
-                onClick={goToNextStep}
-                className="px-8 py-3 rounded-lg font-semibold text-white transition-all hover:shadow-lg"
-                style={{ backgroundColor: 'var(--parent-accent)' }}
-              >
-                Get Started
-              </button>
+        <style jsx>{`
+          .blueprint-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+              linear-gradient(rgba(30, 58, 95, 0.03) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(30, 58, 95, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            z-index: 0;
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // ==================== COMPLETE SCREEN ====================
+  if (wizardState.currentStep === 'complete') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8" style={{ backgroundColor: '#FFF8F0' }}>
+        <div className="blueprint-grid"></div>
+
+        <div className="relative max-w-3xl w-full">
+          <div className="relative bg-white border-4 border-green-600 p-12 shadow-[12px_12px_0px_0px_rgba(22,163,74,1)] text-center">
+            <div className="inline-block px-3 py-1 bg-green-600 text-white font-mono text-xs mb-6">
+              ✓ MANUAL CREATION COMPLETE
             </div>
+
+            <div className="text-7xl mb-6">📖</div>
+
+            <h1 className="font-mono text-5xl font-bold mb-6 text-slate-900">
+              Manual Ready!
+            </h1>
+
+            <p className="font-mono text-lg text-slate-700 mb-10">
+              {person.name}'s operating manual has been created with AI-generated triggers, strategies, and boundaries. You can now view and continue adding to it.
+            </p>
+
+            <button
+              onClick={handleComplete}
+              className="w-full py-4 bg-green-600 text-white font-mono font-bold text-lg hover:bg-green-700 transition-all shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
+              data-testid="view-manual-button"
+            >
+              VIEW MANUAL →
+            </button>
+          </div>
+        </div>
+
+        <style jsx>{`
+          .blueprint-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+              linear-gradient(rgba(30, 58, 95, 0.03) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(30, 58, 95, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            z-index: 0;
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // Default fallback
+  return null;
+}
+
+// ==================== REVIEW CARD COMPONENTS ====================
+
+function TriggerCard({ trigger, index }: { trigger: GeneratedTrigger; index: number }) {
+  return (
+    <div className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+      <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-red-600">
+        {String(index + 1).padStart(2, '0')}
+      </div>
+
+      <div className="flex items-start gap-4 mb-4">
+        <div
+          className={`px-3 py-1 font-mono text-xs font-bold ${
+            trigger.severity === 'significant' ? 'bg-red-600 text-white' :
+            trigger.severity === 'moderate' ? 'bg-yellow-500 text-slate-900' :
+            'bg-green-600 text-white'
+          }`}
+        >
+          {trigger.severity.toUpperCase()}
+        </div>
+      </div>
+
+      <h4 className="font-mono font-bold text-lg mb-4 text-slate-900">
+        {trigger.description}
+      </h4>
+
+      <div className="space-y-3">
+        <div>
+          <span className="font-mono text-xs text-slate-500 uppercase tracking-wider">Context:</span>
+          <p className="font-mono text-sm text-slate-700 mt-1">{trigger.context}</p>
+        </div>
+
+        <div>
+          <span className="font-mono text-xs text-slate-500 uppercase tracking-wider">Typical Response:</span>
+          <p className="font-mono text-sm text-slate-700 mt-1">{trigger.typicalResponse}</p>
+        </div>
+
+        {trigger.deescalationStrategy && (
+          <div>
+            <span className="font-mono text-xs text-amber-600 uppercase tracking-wider font-bold">Recommended Action:</span>
+            <p className="font-mono text-sm text-slate-700 mt-1">{trigger.deescalationStrategy}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StrategyCard({ strategy, index, type }: { strategy: GeneratedStrategy; index: number; type: 'works' | 'doesnt-work' }) {
+  return (
+    <div className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+      <div className={`absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 ${
+        type === 'works' ? 'border-green-600' : 'border-orange-600'
+      }`}>
+        {String(index + 1).padStart(2, '0')}
+      </div>
+
+      {strategy.effectiveness && type === 'works' && (
+        <div className="flex items-center gap-2 px-3 py-1 bg-green-50 border-2 border-green-600 font-mono text-xs font-bold mb-4 inline-block">
+          <span className="text-slate-600">EFFECTIVENESS:</span>
+          <span className="text-green-700">{strategy.effectiveness}/5</span>
+        </div>
+      )}
+
+      <h4 className="font-mono font-bold text-lg mb-4 text-slate-900">
+        {strategy.description}
+      </h4>
+
+      <div className="space-y-3">
+        <div>
+          <span className="font-mono text-xs text-slate-500 uppercase tracking-wider">Context:</span>
+          <p className="font-mono text-sm text-slate-700 mt-1">{strategy.context}</p>
+        </div>
+
+        {strategy.notes && (
+          <div>
+            <span className="font-mono text-xs text-slate-500 uppercase tracking-wider">Notes:</span>
+            <p className="font-mono text-sm text-slate-700 mt-1">{strategy.notes}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BoundaryCard({ boundary, index }: { boundary: GeneratedBoundary; index: number }) {
+  return (
+    <div className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+      <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-amber-600">
+        {String(index + 1).padStart(2, '0')}
+      </div>
+
+      <div className="flex items-start gap-4 mb-4">
+        <div
+          className={`px-3 py-1 font-mono text-xs font-bold ${
+            boundary.category === 'immovable' ? 'bg-red-600 text-white' :
+            boundary.category === 'negotiable' ? 'bg-yellow-500 text-slate-900' :
+            'bg-blue-600 text-white'
+          }`}
+        >
+          {boundary.category.toUpperCase()}
+        </div>
+      </div>
+
+      <h4 className="font-mono font-bold text-lg mb-4 text-slate-900">
+        {boundary.description}
+      </h4>
+
+      <div className="space-y-3">
+        {boundary.context && (
+          <div>
+            <span className="font-mono text-xs text-slate-500 uppercase tracking-wider">Context:</span>
+            <p className="font-mono text-sm text-slate-700 mt-1">{boundary.context}</p>
           </div>
         )}
 
-        {/* Questions Step */}
-        {wizardState.currentStep === 'questions' && currentSection && (
-          <div className="animate-fade-in-up">
-            <div className="parent-card p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="text-4xl">{currentSection.emoji}</div>
-                <div>
-                  <h2 className="parent-heading text-2xl" style={{ color: 'var(--parent-text)' }}>
-                    {currentSection.sectionName}
-                  </h2>
-                  <p className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                    {currentSection.sectionDescription}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                {currentSection.questions.map((question) => (
-                  <div key={question.id}>
-                    <label className="block font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
-                      {question.question}
-                      {question.required && <span className="text-red-500 ml-1">*</span>}
-                    </label>
-                    <textarea
-                      value={currentSectionAnswers[question.id] || ''}
-                      onChange={(e) => setCurrentSectionAnswers(prev => ({
-                        ...prev,
-                        [question.id]: e.target.value
-                      }))}
-                      placeholder={question.placeholder}
-                      rows={4}
-                      className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
-                      style={{
-                        borderColor: 'var(--parent-border)',
-                        backgroundColor: 'var(--parent-bg)',
-                        color: 'var(--parent-text)'
-                      }}
-                    />
-                    {question.helperText && (
-                      <p className="text-sm mt-1" style={{ color: 'var(--parent-text-light)' }}>
-                        {question.helperText}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex justify-between mt-8">
-              <div className="flex gap-3">
-                {wizardState.currentSectionIndex > 0 && (
-                  <button
-                    onClick={goToPreviousSection}
-                    className="px-6 py-3 rounded-lg font-medium transition-all hover:shadow-md"
-                    style={{ border: '1px solid var(--parent-border)', color: 'var(--parent-text-light)' }}
-                  >
-                    ← Previous
-                  </button>
-                )}
-                {currentSection.skippable && (
-                  <button
-                    onClick={handleSkipSection}
-                    className="px-6 py-3 rounded-lg font-medium transition-all hover:shadow-md"
-                    style={{ border: '1px solid var(--parent-border)', color: 'var(--parent-text-light)' }}
-                  >
-                    Skip Section
-                  </button>
-                )}
-              </div>
-              <button
-                onClick={handleSectionComplete}
-                className="px-8 py-3 rounded-lg font-semibold text-white transition-all hover:shadow-lg"
-                style={{ backgroundColor: 'var(--parent-accent)' }}
-              >
-                {wizardState.currentSectionIndex < sections.length - 1 ? 'Continue' : 'Generate Content'}
-              </button>
-            </div>
+        {boundary.consequences && (
+          <div>
+            <span className="font-mono text-xs text-red-600 uppercase tracking-wider font-bold">If Violated:</span>
+            <p className="font-mono text-sm text-slate-700 mt-1">{boundary.consequences}</p>
           </div>
         )}
-
-        {/* Processing Step */}
-        {wizardState.currentStep === 'processing' && (
-          <div className="animate-fade-in-up">
-            <div className="parent-card p-12 text-center">
-              <div className="w-16 h-16 spinner mx-auto mb-6"></div>
-              <h2 className="parent-heading text-2xl mb-4" style={{ color: 'var(--parent-text)' }}>
-                Analyzing your responses...
-              </h2>
-              <p style={{ color: 'var(--parent-text-light)' }}>
-                Creating personalized content for {person.name}'s manual
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Review Step */}
-        {wizardState.currentStep === 'review' && wizardState.generatedContent && (
-          <div className="animate-fade-in-up">
-            <div className="mb-6">
-              <h2 className="parent-heading text-2xl mb-2" style={{ color: 'var(--parent-text)' }}>
-                Review Generated Content
-              </h2>
-              <p className="mb-6" style={{ color: 'var(--parent-text-light)' }}>
-                Review the content below before saving to {person.name}'s manual. You can edit these later.
-              </p>
-            </div>
-
-            <ContentReviewStep content={wizardState.generatedContent} personName={person.name} />
-
-            <div className="flex justify-between mt-8">
-              <button
-                onClick={() => goToStep('questions')}
-                disabled={savingContent}
-                className="px-6 py-3 rounded-lg font-medium transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ border: '1px solid var(--parent-border)', color: 'var(--parent-text-light)' }}
-              >
-                ← Back to Questions
-              </button>
-              <button
-                onClick={handleComplete}
-                disabled={savingContent}
-                className="px-8 py-3 rounded-lg font-semibold text-white transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: 'var(--parent-accent)' }}
-              >
-                {savingContent ? 'Saving...' : 'Save to Manual'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Error Display */}
-        {wizardState.error && (
-          <div className="parent-card p-6 border-l-4 border-red-500 mb-6">
-            <p className="font-semibold text-red-700">Error</p>
-            <p className="text-sm text-red-600">{wizardState.error}</p>
-          </div>
-        )}
-      </main>
+      </div>
     </div>
   );
 }

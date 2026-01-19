@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { useChildren, CreateChildData } from '@/hooks/useChildren';
+import { useChildren } from '@/hooks/useChildren';
 import { useChildProfile } from '@/hooks/useChildProfile';
+import { AddChildForm } from '@/types/child-manual';
 
 export default function ChildrenManagementPage() {
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
-  const { children, loading, error, createChild, deleteChild } = useChildren();
+  const { children, loading, error, addChild, deleteChild } = useChildren();
   const { profileExists } = useChildProfile();
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -60,13 +61,13 @@ export default function ChildrenManagementPage() {
 
     try {
       setFormLoading(true);
-      const childData: CreateChildData = {
+      const childData: AddChildForm = {
         name: name.trim(),
         dateOfBirth: new Date(dateOfBirth),
-        avatar: avatar || undefined,
       };
 
-      const newChildId = await createChild(childData);
+      const newChild = await addChild(childData);
+      const newChildId = newChild.childId;
 
       // Check if profile exists for this child
       const hasProfile = await profileExists(newChildId);
@@ -362,20 +363,16 @@ export default function ChildrenManagementPage() {
           <div className="grid gap-6">
             {children.map((child, index) => (
               <div
-                key={child.userId}
+                key={child.childId}
                 className="parent-card p-6 hover:shadow-lg transition-all duration-300 animate-fade-in-up"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <div className="flex items-center gap-6">
                   {/* Avatar */}
                   <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0" style={{ backgroundColor: 'var(--parent-primary)' }}>
-                    {child.avatarUrl ? (
-                      <img src={child.avatarUrl} alt={child.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-4xl">
-                        👤
-                      </div>
-                    )}
+                    <div className="w-full h-full flex items-center justify-center text-4xl">
+                      👤
+                    </div>
                   </div>
 
                   {/* Info */}
@@ -386,19 +383,11 @@ export default function ChildrenManagementPage() {
                     <p className="text-sm mb-2" style={{ color: 'var(--parent-text-light)' }}>
                       {calculateAge(child.dateOfBirth)}
                     </p>
-                    {child.chipBalance !== undefined && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">🎮</span>
-                        <span className="font-semibold" style={{ color: 'var(--parent-secondary)' }}>
-                          {child.chipBalance} chips
-                        </span>
-                      </div>
-                    )}
                   </div>
 
                   {/* Actions */}
                   <button
-                    onClick={() => handleDelete(child.userId, child.name)}
+                    onClick={() => handleDelete(child.childId, child.name)}
                     className="w-10 h-10 rounded-lg flex items-center justify-center transition-all hover:scale-110"
                     style={{
                       border: '1.5px solid var(--parent-border)',
