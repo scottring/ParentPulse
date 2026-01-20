@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 
 export default function RegisterPage() {
@@ -103,7 +104,16 @@ export default function RegisterPage() {
 
         <div className="relative z-10 max-w-lg animate-fade-in-up">
           <div className="mb-8">
-            <div className="text-7xl mb-6 animate-float">📋</div>
+            <div className="animate-float">
+              <Image
+                src="/relish banner 04b.png"
+                alt="Relish - The Operating Manual for Relationships"
+                width={400}
+                height={150}
+                className="object-contain"
+                priority
+              />
+            </div>
           </div>
 
           <h1 className="parent-heading text-5xl mb-6" style={{ color: 'var(--parent-accent)' }}>
@@ -151,12 +161,18 @@ export default function RegisterPage() {
         <div className="w-full max-w-lg animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
-            <div className="text-5xl mb-3 animate-bounce-gentle">📖</div>
-            <h1 className="parent-heading text-3xl" style={{ color: 'var(--parent-accent)' }}>
-              Relish
-            </h1>
+            <div className="mb-3 flex justify-center">
+              <Image
+                src="/Relish-logo.png"
+                alt="Relish - The Operating Manual for Relationships"
+                width={80}
+                height={80}
+                className="object-contain"
+                priority
+              />
+            </div>
             <p className="text-sm mt-2" style={{ color: 'var(--parent-text-light)' }}>
-              Operating manuals for the people you love
+              The Operating Manual for Relationships
             </p>
           </div>
 

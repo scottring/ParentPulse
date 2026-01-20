@@ -1,6 +1,6 @@
 # Vercel Deployment Guide
 
-This guide walks you through deploying LifeManual to Vercel with Firebase backend.
+This guide walks you through deploying Relish to Vercel with Firebase backend.
 
 ## Architecture
 
@@ -81,7 +81,7 @@ vercel
 # - Set up and deploy? Yes
 # - Which scope? Your account/team
 # - Link to existing project? No
-# - Project name? lifemanual (or your preferred name)
+# - Project name? relish (or your preferred name)
 # - Directory? ./
 # - Override settings? No
 
@@ -100,7 +100,7 @@ vercel --prod
 
 1. In Vercel Dashboard, go to your project
 2. Settings > Domains
-3. Add your domain (e.g., `lifemanual.com`)
+3. Add your domain (e.g., `relish.app` or `relish.com`)
 4. Update DNS records as instructed by Vercel
 5. Vercel automatically provisions SSL certificate
 

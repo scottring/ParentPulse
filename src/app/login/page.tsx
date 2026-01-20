@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
+import { Zap, Target, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
@@ -48,106 +50,140 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen parent-page flex">
-      {/* Left side - Welcome message with manual aesthetic */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden p-16 items-center justify-center">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#7C9082] via-[#98B4A0] to-[#D4A574] opacity-10"></div>
-        <div className="paper-texture absolute inset-0"></div>
+    <div className="min-h-screen flex" style={{ backgroundColor: '#FFF8F0' }}>
+      {/* Left side - Technical manual hero */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden p-16 items-center justify-center border-r-4 border-slate-800">
+        {/* Corner brackets */}
+        <div className="absolute top-8 left-8 w-16 h-16 border-t-4 border-l-4 border-amber-600"></div>
+        <div className="absolute top-8 right-8 w-16 h-16 border-t-4 border-r-4 border-amber-600"></div>
+        <div className="absolute bottom-8 left-8 w-16 h-16 border-b-4 border-l-4 border-amber-600"></div>
+        <div className="absolute bottom-8 right-8 w-16 h-16 border-b-4 border-r-4 border-amber-600"></div>
 
-        <div className="relative z-10 max-w-lg animate-fade-in-up">
-          <div className="mb-8">
-            <div className="inline-block animate-float">
-              <div className="text-8xl mb-4">📖</div>
+        {/* Decorative grid lines */}
+        <div className="absolute inset-0 opacity-5" style={{
+          backgroundImage: 'linear-gradient(#1e293b 1px, transparent 1px), linear-gradient(90deg, #1e293b 1px, transparent 1px)',
+          backgroundSize: '40px 40px'
+        }}></div>
+
+        <div className="relative z-10 max-w-lg">
+          {/* Technical header */}
+          <div className="mb-8 pb-4 border-b-2 border-slate-800">
+            <div className="font-mono text-xs text-slate-500 uppercase tracking-wider mb-2">
+              SYSTEM ACCESS • VERSION 2.0
+            </div>
+            <div className="inline-block">
+              <Image
+                src="/relish banner 04b.png"
+                alt="Relish - The Operating Manual for Relationships"
+                width={380}
+                height={140}
+                className="object-contain"
+                priority
+              />
             </div>
           </div>
 
-          <h1 className="parent-heading text-6xl mb-6" style={{ color: 'var(--parent-accent)' }}>
-            Relish
-          </h1>
-
-          <p className="text-2xl leading-relaxed mb-4" style={{ color: 'var(--parent-text)' }}>
-            Operating manuals for the people you love
-          </p>
-
-          <p className="text-lg leading-relaxed mb-12" style={{ color: 'var(--parent-text-light)' }}>
-            Create personalized guides to understand and support your children, spouse,
-            friends, and family members. Think of it as an owner's manual for relationships.
-          </p>
-
-          <div className="space-y-4">
-            <div className="flex items-start gap-4">
-              <div className="text-3xl">⚡</div>
+          {/* Technical specs list */}
+          <div className="space-y-4 mb-8">
+            <div className="flex items-start gap-4 p-4 bg-white border-2 border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <div className="w-12 h-12 bg-slate-800 flex items-center justify-center shrink-0 border-2 border-amber-600">
+                <Zap className="w-6 h-6 text-amber-600" strokeWidth={2.5} />
+              </div>
               <div>
+                <div className="font-mono text-xs text-amber-600 uppercase tracking-wider mb-1">MODULE 01</div>
                 <div className="font-semibold mb-1">Triggers & Strategies</div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Document what causes stress and what actually works
+                <div className="text-sm text-slate-600">
+                  Document behavioral patterns and effective responses
                 </div>
               </div>
             </div>
-            <div className="flex items-start gap-4">
-              <div className="text-3xl">🎯</div>
+            <div className="flex items-start gap-4 p-4 bg-white border-2 border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <div className="w-12 h-12 bg-slate-800 flex items-center justify-center shrink-0 border-2 border-amber-600">
+                <Target className="w-6 h-6 text-amber-600" strokeWidth={2.5} />
+              </div>
               <div>
-                <div className="font-semibold mb-1">Weekly Goals</div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  AI-generated action plans based on your manual
+                <div className="font-mono text-xs text-amber-600 uppercase tracking-wider mb-1">MODULE 02</div>
+                <div className="font-semibold mb-1">Weekly Action Plans</div>
+                <div className="text-sm text-slate-600">
+                  AI-generated behavioral goals and tracking
                 </div>
               </div>
             </div>
-            <div className="flex items-start gap-4">
-              <div className="text-3xl">📊</div>
+            <div className="flex items-start gap-4 p-4 bg-white border-2 border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <div className="w-12 h-12 bg-slate-800 flex items-center justify-center shrink-0 border-2 border-amber-600">
+                <BarChart3 className="w-6 h-6 text-amber-600" strokeWidth={2.5} />
+              </div>
               <div>
-                <div className="font-semibold mb-1">Patterns & Insights</div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Track progress and discover what makes each person unique
+                <div className="font-mono text-xs text-amber-600 uppercase tracking-wider mb-1">MODULE 03</div>
+                <div className="font-semibold mb-1">Pattern Analysis</div>
+                <div className="text-sm text-slate-600">
+                  Historical data and relationship insights
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Technical footer */}
+          <div className="font-mono text-xs text-slate-500 uppercase tracking-wider pt-4 border-t border-slate-300">
+            Operating Manual System • Confidential
           </div>
         </div>
       </div>
 
       {/* Right side - Login form */}
-      <div className="flex-1 flex items-center justify-center p-8 sm:p-16">
-        <div className="w-full max-w-md animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+      <div className="flex-1 flex items-center justify-center p-8 sm:p-16 relative">
+        {/* Corner accents */}
+        <div className="absolute top-8 right-8 w-12 h-12 border-t-2 border-r-2 border-amber-600"></div>
+        <div className="absolute bottom-8 right-8 w-12 h-12 border-b-2 border-r-2 border-amber-600"></div>
+
+        <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
-            <div className="text-5xl mb-3 animate-bounce-gentle">📖</div>
-            <h1 className="parent-heading text-3xl" style={{ color: 'var(--parent-accent)' }}>
-              Relish
-            </h1>
-            <p className="text-sm mt-2" style={{ color: 'var(--parent-text-light)' }}>
-              Operating manuals for the people you love
-            </p>
+            <div className="mb-4 flex justify-center">
+              <Image
+                src="/Relish-logo.png"
+                alt="Relish - The Operating Manual for Relationships"
+                width={80}
+                height={80}
+                className="object-contain"
+                priority
+              />
+            </div>
+            <div className="font-mono text-xs text-slate-500 uppercase tracking-wider">
+              Operating Manual System
+            </div>
           </div>
 
-          {/* Login card */}
-          <div className="parent-card p-8 sm:p-10 paper-texture">
-            <h2 className="parent-heading text-3xl sm:text-4xl mb-2" style={{ color: 'var(--parent-text)' }}>
-              Welcome back
-            </h2>
-            <p className="mb-8" style={{ color: 'var(--parent-text-light)' }}>
-              Sign in to access your manuals
-            </p>
+          {/* Login card - Technical style */}
+          <div className="bg-white border-4 border-slate-800 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-8 sm:p-10 relative">
+            {/* Top corner detail */}
+            <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-amber-600"></div>
+            <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-amber-600"></div>
+
+            {/* Header */}
+            <div className="mb-6 pb-4 border-b-2 border-slate-800">
+              <div className="font-mono text-xs text-amber-600 uppercase tracking-wider mb-2">
+                USER AUTHENTICATION
+              </div>
+              <h2 className="font-mono text-2xl sm:text-3xl font-bold text-slate-900">
+                System Access
+              </h2>
+            </div>
 
             {(error || authError) && (
-              <div
-                className="mb-6 p-4 rounded-lg animate-fade-in-up"
-                style={{
-                  backgroundColor: '#FEE2E2',
-                  border: '1px solid #FCA5A5',
-                  color: '#991B1B'
-                }}
-              >
-                <p className="text-sm font-medium">{error || authError}</p>
+              <div className="mb-6 p-4 bg-red-50 border-2 border-red-600">
+                <div className="flex items-start gap-2">
+                  <div className="text-red-600 font-bold">⚠</div>
+                  <p className="text-sm font-mono text-red-900">{error || authError}</p>
+                </div>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label
                   htmlFor="email"
-                  className="block text-sm font-medium mb-2"
-                  style={{ color: 'var(--parent-text)' }}
+                  className="block font-mono text-xs uppercase tracking-wider text-slate-700 mb-2"
                 >
                   Email Address
                 </label>
@@ -156,18 +192,10 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded-lg transition-all duration-200"
-                  style={{
-                    border: '1.5px solid var(--parent-border)',
-                    backgroundColor: 'var(--parent-bg)',
-                    color: 'var(--parent-text)',
-                    fontSize: '16px'
-                  }}
-                  placeholder="you@example.com"
+                  className="w-full px-4 py-3 border-2 border-slate-800 bg-white font-mono text-sm focus:outline-none focus:border-amber-600 focus:shadow-[2px_2px_0px_0px_rgba(217,119,6,1)] transition-all"
+                  placeholder="user@example.com"
                   autoComplete="email"
                   disabled={loading}
-                  onFocus={(e) => e.target.style.borderColor = 'var(--parent-primary)'}
-                  onBlur={(e) => e.target.style.borderColor = 'var(--parent-border)'}
                   data-testid="email-input"
                 />
               </div>
@@ -176,17 +204,15 @@ export default function LoginPage() {
                 <div className="flex items-center justify-between mb-2">
                   <label
                     htmlFor="password"
-                    className="block text-sm font-medium"
-                    style={{ color: 'var(--parent-text)' }}
+                    className="block font-mono text-xs uppercase tracking-wider text-slate-700"
                   >
                     Password
                   </label>
                   <Link
                     href="#"
-                    className="text-sm font-medium hover:underline"
-                    style={{ color: 'var(--parent-accent)' }}
+                    className="font-mono text-xs text-amber-600 hover:text-amber-700 uppercase tracking-wider"
                   >
-                    Forgot?
+                    Reset
                   </Link>
                 </div>
                 <input
@@ -194,18 +220,10 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded-lg transition-all duration-200"
-                  style={{
-                    border: '1.5px solid var(--parent-border)',
-                    backgroundColor: 'var(--parent-bg)',
-                    color: 'var(--parent-text)',
-                    fontSize: '16px'
-                  }}
+                  className="w-full px-4 py-3 border-2 border-slate-800 bg-white font-mono text-sm focus:outline-none focus:border-amber-600 focus:shadow-[2px_2px_0px_0px_rgba(217,119,6,1)] transition-all"
                   placeholder="••••••••"
                   autoComplete="current-password"
                   disabled={loading}
-                  onFocus={(e) => e.target.style.borderColor = 'var(--parent-primary)'}
-                  onBlur={(e) => e.target.style.borderColor = 'var(--parent-border)'}
                   data-testid="password-input"
                 />
               </div>
@@ -213,43 +231,45 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 rounded-lg font-semibold text-white transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed mt-6"
-                style={{
-                  backgroundColor: 'var(--parent-accent)',
-                  transform: loading ? 'scale(0.98)' : 'scale(1)'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#234946'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--parent-accent)'}
+                className="w-full py-4 bg-slate-800 text-white font-mono text-sm font-bold uppercase tracking-wider border-2 border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-amber-600 hover:border-amber-600 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] disabled:opacity-50 disabled:cursor-not-allowed transition-all mt-8"
                 data-testid="login-button"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Signing in...
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Authenticating...
                   </span>
                 ) : (
-                  'Sign In'
+                  '→ Initiate Login'
                 )}
               </button>
             </form>
 
-            <div className="mt-8 pt-6 border-t" style={{ borderColor: 'var(--parent-border)' }}>
-              <p className="text-center text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                Don't have an account?{' '}
+            <div className="mt-8 pt-6 border-t-2 border-slate-800">
+              <p className="text-center font-mono text-xs text-slate-600 uppercase tracking-wider">
+                New User?{' '}
                 <Link
                   href="/register"
-                  className="font-semibold hover:underline"
-                  style={{ color: 'var(--parent-accent)' }}
+                  className="text-amber-600 hover:text-amber-700 font-bold"
                 >
-                  Create one now
+                  Register Account →
                 </Link>
               </p>
             </div>
+
+            {/* Bottom corner detail */}
+            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-amber-600"></div>
+            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-amber-600"></div>
           </div>
 
-          {/* Trust indicators */}
-          <div className="mt-6 text-center text-sm" style={{ color: 'var(--parent-text-light)' }}>
-            <p>Your data is private and secure 🔒</p>
+          {/* Security notice */}
+          <div className="mt-6 p-4 bg-white border-2 border-slate-300 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
+              <p className="font-mono text-xs text-slate-600 uppercase tracking-wider">
+                Secure Connection • Data Encrypted
+              </p>
+            </div>
           </div>
         </div>
       </div>

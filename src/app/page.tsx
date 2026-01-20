@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 
 export default function Home() {
@@ -18,7 +19,7 @@ export default function Home() {
           router.push('/child');
         }
       } else {
-        router.push('/login');
+        router.push('/landing');
       }
     }
   }, [user, loading, router]);
@@ -27,8 +28,17 @@ export default function Home() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-600 to-blue-500">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
-        <h1 className="text-3xl font-bold text-white mb-2">Relish</h1>
+        <div className="mb-6 flex justify-center">
+          <Image
+            src="/Relish-logo.png"
+            alt="Relish"
+            width={100}
+            height={100}
+            className="object-contain animate-pulse"
+            priority
+          />
+        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
         <p className="text-white/80">Loading...</p>
       </div>
     </div>

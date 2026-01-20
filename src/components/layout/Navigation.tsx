@@ -3,6 +3,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Navigation() {
   const { user, logout } = useAuth();
@@ -27,24 +28,25 @@ export default function Navigation() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
-          {/* Logo - Technical manual style */}
+          {/* Logo - Relish brand */}
           <Link
             href="/dashboard"
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity group"
+            className="flex items-center gap-3 hover:opacity-90 transition-opacity"
           >
-            <div className="relative">
-              <div className="w-10 h-10 bg-slate-800 flex items-center justify-center border-2 border-amber-600 group-hover:bg-amber-600 transition-colors">
-                <span className="text-xl">📖</span>
-              </div>
-              {/* Small corner detail */}
-              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-amber-600"></div>
-            </div>
-            <div>
-              <div className="font-mono text-xs text-slate-500 uppercase tracking-wider">
-                DOCUMENTATION SYSTEM
-              </div>
+            <Image
+              src="/Relish-logo.png"
+              alt="Relish - The Operating Manual for Relationships"
+              width={50}
+              height={50}
+              className="object-contain"
+              priority
+            />
+            <div className="hidden sm:block">
               <div className="font-mono text-xl font-bold text-slate-900 tracking-tight">
                 Relish
+              </div>
+              <div className="font-mono text-xs text-slate-500 tracking-wider">
+                The Operating Manual for Relationships
               </div>
             </div>
           </Link>

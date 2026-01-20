@@ -1,6 +1,6 @@
 # Admin Scripts
 
-This directory contains administrative scripts for managing the LifeManual Firebase backend.
+This directory contains administrative scripts for managing the Relish Firebase backend.
 
 ## Prerequisites
 

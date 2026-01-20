@@ -83,7 +83,7 @@ export default function ActivityPage({
 
     setSaving(true);
     try {
-      await completeActivity(workbook.workbookId, activityId, response, parentNotes || undefined);
+      await completeActivity(workbook.workbookId, activityId, response, parentNotes.trim() || undefined);
       router.push(`/people/${personId}/workbook`);
     } catch (error) {
       console.error('Error completing activity:', error);

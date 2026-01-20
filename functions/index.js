@@ -1878,7 +1878,7 @@ ${boundariesText}${selfWorthText}${reflectionText}
 YOUR TASK:
 Generate a weekly workbook with:
 1. 3-5 specific, measurable PARENT behavior goals (not child goals!)
-2. 2-3 suggested daily activities appropriate for ${personName}'s age and challenges
+2. 5 suggested activities appropriate for ${personName}'s age and challenges
 3. A brief weekly focus summary
 
 CRITICAL GUIDELINES FOR PARENT GOALS:
@@ -1932,13 +1932,190 @@ Generate a JSON response with this structure:
 
 IMPORTANT:
 - Generate 3-5 parent goals (not more)
-- Generate 2-3 activity suggestions (not more)
+- Generate exactly 5 activity suggestions
 - Be specific to ${personName}'s documented triggers and strategies
 - If triggers mention specific times/situations, create goals for those situations
 - If strategies are highly effective (4-5/5), prioritize goals that practice those strategies
 - Goals should be achievable and realistic for one week
 - Activities should be age-appropriate
 ${previousWeekReflection ? "- Consider previous week's reflection when generating goals (keep what worked, adjust what didn't)" : ""}
+
+Return ONLY the JSON object, no additional text or explanation.`;
+}
+
+
+/**
+ * Regenerate Workbook Activities Only
+ * Uses Claude 3.5 Sonnet to generate new activity suggestions while keeping existing parent goals
+ */
+exports.regenerateWorkbookActivities = onCall(
+    {
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      // Verify authentication
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const {
+        personName,
+        relationshipType,
+        personAge,
+        triggers,
+        whatWorks,
+        boundaries,
+        assessmentScores,
+        coreInfo,
+      } = request.data;
+
+      // Validate input
+      if (!personName || !relationshipType) {
+        throw new Error("Missing required parameters");
+      }
+
+      logger.info(`Regenerating activities for ${personName} (${relationshipType})`);
+
+      try {
+        // Build prompt for activities only
+        const prompt = buildActivitiesRegenerationPrompt(
+            personName,
+            relationshipType,
+            personAge,
+            triggers || [],
+            whatWorks || [],
+            boundaries || [],
+            assessmentScores,
+            coreInfo
+        );
+
+        // Call Claude 3.5 Sonnet
+        const client = getAnthropic();
+        const response = await client.messages.create({
+          model: "claude-sonnet-4-5-20250929",
+          max_tokens: 2000,
+          temperature: 0.8, // Higher temperature for more variety
+          messages: [{
+            role: "user",
+            content: prompt,
+          }],
+        });
+
+        const responseText = response.content[0].text;
+        logger.info("Claude response received, parsing JSON");
+
+        // Parse the JSON response
+        let content;
+        try {
+          const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) ||
+                           responseText.match(/```\s*([\s\S]*?)\s*```/);
+          const jsonText = jsonMatch ? jsonMatch[1] : responseText;
+
+          content = JSON.parse(jsonText);
+          logger.info("Successfully parsed regenerated activities");
+        } catch (parseError) {
+          logger.error("Error parsing Claude response:", parseError);
+          logger.error("Response text:", responseText);
+          throw new Error("Failed to parse AI response as JSON");
+        }
+
+        // Return just the activities array
+        return {
+          success: true,
+          activities: content.dailyActivities || [],
+        };
+      } catch (error) {
+        logger.error("Error regenerating activities:", error);
+        return {
+          success: false,
+          error: error.message,
+          errorDetails: error.stack,
+        };
+      }
+    }
+);
+
+/**
+ * Build prompt for regenerating just activities (not parent goals)
+ */
+function buildActivitiesRegenerationPrompt(
+    personName,
+    relationshipType,
+    personAge,
+    triggers,
+    whatWorks,
+    boundaries,
+    assessmentScores,
+    coreInfo
+) {
+  // Format triggers
+  const triggersText = triggers.length > 0 ?
+    triggers.map((t, idx) => `${idx + 1}. ${t.description} (Severity: ${t.severity})`).join("\n") :
+    "No triggers documented yet.";
+
+  // Format strategies
+  const strategiesText = whatWorks.length > 0 ?
+    whatWorks.map((s, idx) => `${idx + 1}. ${s.description} (Effectiveness: ${s.effectiveness}/5)`).join("\n") :
+    "No strategies documented yet.";
+
+  // Format self-worth assessment if available
+  const selfWorthText = assessmentScores?.selfWorth ?
+    `\nSELF-WORTH ASSESSMENT: ${assessmentScores.selfWorth.category} (${assessmentScores.selfWorth.totalScore}/24)
+Insights: ${coreInfo?.selfWorthInsights?.join(', ') || 'None'}` : "";
+
+  return `You are helping generate new activity suggestions for ${personName}'s weekly workbook.
+
+CONTEXT:
+Person: ${personName}
+Relationship: ${relationshipType}${personAge ? `\nAge: ${personAge} years old` : ""}
+
+KEY TRIGGERS:
+${triggersText}
+
+EFFECTIVE STRATEGIES:
+${strategiesText}${selfWorthText}
+
+YOUR TASK:
+Generate exactly 5 NEW activity suggestions that are:
+1. Age-appropriate for ${personName}
+2. Address their specific triggers/challenges
+3. Different from what they might have tried before
+4. Easy for a parent to facilitate (2-7 minutes each)
+
+AVAILABLE ACTIVITY TYPES:
+- emotion-checkin: Ages 3-12, helps with emotional awareness (5 min)
+- choice-board: Ages 3+, helps when upset/overwhelmed (5 min)
+- daily-win: Ages 4+, bedtime positivity ritual (5 min)
+- visual-schedule: Ages 3-10, helps with routines (2 min)
+- gratitude: Ages 5+, thankfulness practice (5 min)
+- feeling-thermometer: Ages 5+, emotion intensity rating (3 min)
+- strength-reflection: Ages 5+, identifies personal strengths (5 min) [SELF-WORTH]
+- courage-moment: Ages 4+, recalls brave actions (5 min) [SELF-WORTH]
+- affirmation-practice: Ages 5+, positive self-statements (5 min) [SELF-WORTH]
+- growth-mindset-reflection: Ages 6+, reframes challenges as learning (7 min) [SELF-WORTH]
+- accomplishment-tracker: Ages 5+, tracks weekly wins (3 min) [SELF-WORTH]
+
+${assessmentScores?.selfWorth?.totalScore < 18 ? `\nIMPORTANT: Self-worth score is ${assessmentScores.selfWorth.category} - prioritize including at least 2 [SELF-WORTH] activities` : ''}
+
+Generate a JSON response with this structure:
+
+{
+  "dailyActivities": [
+    {
+      "type": "activity-type-from-list-above",
+      "suggestedTime": "morning" | "afternoon" | "evening" | "bedtime" | "when-upset",
+      "customization": "Specific suggestions tailored for ${personName}"
+    }
+  ]
+}
+
+REQUIREMENTS:
+- Generate EXACTLY 5 activities
+- Make them diverse (don't repeat the same activity type)
+- Tailor to ${personName}'s age and challenges
+- Include specific customization hints for each activity
 
 Return ONLY the JSON object, no additional text or explanation.`;
 }

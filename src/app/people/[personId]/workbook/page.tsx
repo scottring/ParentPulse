@@ -23,9 +23,11 @@ export default function WeeklyWorkbookPage({ params }: { params: Promise<{ perso
     workbook,
     loading: workbookLoading,
     error: workbookError,
+    regenerating,
     createWorkbook,
     logGoalCompletion,
     completeActivity,
+    regenerateActivities,
     saveReflection,
     completeWorkbook
   } = useWeeklyWorkbook(personId);
@@ -333,6 +335,40 @@ export default function WeeklyWorkbookPage({ params }: { params: Promise<{ perso
     }
   };
 
+  const handleRegenerateActivities = async () => {
+    if (!workbook || !manual || !person) return;
+
+    const confirmed = confirm(
+      'This will replace all uncompleted activities with new suggestions. Completed activities will be kept. Continue?'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const relationshipType = manual.relationshipType || person.relationshipType;
+      const personAge = person.dateOfBirth
+        ? Math.floor((Date.now() - person.dateOfBirth.toDate().getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+        : undefined;
+
+      await regenerateActivities(
+        workbook.workbookId,
+        person.name,
+        relationshipType!,
+        personAge,
+        manual.triggers || [],
+        manual.whatWorks || [],
+        manual.boundaries || [],
+        (manual as any).assessmentScores || undefined,
+        manual.coreInfo || undefined
+      );
+
+      alert('Activities regenerated successfully!');
+    } catch (error) {
+      console.error('Error regenerating activities:', error);
+      alert(error instanceof Error ? error.message : 'Failed to regenerate activities');
+    }
+  };
+
   return (
     <MainLayout>
       <div className="relative">
@@ -505,8 +541,18 @@ export default function WeeklyWorkbookPage({ params }: { params: Promise<{ perso
               </div>
               <p className="font-mono text-sm text-slate-600">Complete with {person.name}</p>
             </div>
-            <div className="font-mono text-sm text-slate-600">
-              {completedActivities} / {totalActivities} COMPLETE
+            <div className="flex items-center gap-4">
+              <div className="font-mono text-sm text-slate-600">
+                {completedActivities} / {totalActivities} COMPLETE
+              </div>
+              <button
+                onClick={handleRegenerateActivities}
+                disabled={regenerating}
+                className="px-4 py-2 border-2 border-purple-600 bg-purple-50 font-mono text-xs font-bold text-purple-900 hover:bg-purple-600 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(147,51,234,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                data-testid="regenerate-activities-button"
+              >
+                {regenerating ? '⏳ REGENERATING...' : '🔄 NEW ACTIVITIES'}
+              </button>
             </div>
           </div>
 

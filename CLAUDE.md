@@ -49,7 +49,7 @@ Cloud Functions, Firestore, and Authentication remain on Firebase. See [DEPLOYME
 
 ## High-Level Architecture
 
-**LifeManual** (formerly ParentPulse) is a Next.js 16 application that helps users create "operating manuals" for the important people in their lives. Think of it as creating personalized user guides for understanding and supporting the people you care about - children, spouses, friends, elderly parents, etc.
+**Relish** (formerly LifeManual, ParentPulse) is a Next.js 16 application that helps users create "operating manuals" for the important people in their lives. Think of it as creating personalized user guides for understanding and supporting the people you care about - children, spouses, friends, elderly parents, etc.
 
 ### Tech Stack
 

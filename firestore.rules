@@ -344,23 +344,7 @@ service cloud.firestore {
     }
 
     // ==================== Weekly Workbooks System ====================
-
-    // Weekly workbooks collection (active weekly documents per person)
-    match /weekly_workbooks/{workbookId} {
-      // Family members can read workbooks in their family
-      allow read: if belongsToFamily(resource.data.familyId);
-
-      // Parents can create workbooks in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Parents can update workbooks in their family
-      allow update: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete workbooks in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Cloud Functions can auto-create workbooks (using admin SDK)
-    }
+    // (Actual rules defined below in main workbooks section)
 
     // Workbook observations collection (casual notes captured in workbooks)
     match /workbook_observations/{observationId} {
