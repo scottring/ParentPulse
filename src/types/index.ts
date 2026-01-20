@@ -14,6 +14,7 @@ export interface User {
   avatarUrl?: string;
   chipBalance?: number;     // For children - chip economy balance
   isAdmin?: boolean;        // Admin privileges for accessing admin dashboard
+  isDemo?: boolean;         // Demo account flag for demo mode
   createdAt: Timestamp;
   settings: {
     notifications: boolean;

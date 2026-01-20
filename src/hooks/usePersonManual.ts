@@ -245,8 +245,22 @@ export function usePersonManual(personId?: string): UsePersonManualReturn {
   // Delete manual
   const deleteManual = async (manualId: string): Promise<void> => {
     try {
+      // Get the manual first to find the personId
       const manualRef = doc(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS, manualId);
+      const manualToDelete = manual;
+
+      // Delete the manual document
       await deleteDoc(manualRef);
+
+      // Update the person document to remove manual reference
+      if (manualToDelete?.personId) {
+        const personRef = doc(firestore, PERSON_MANUAL_COLLECTIONS.PEOPLE, manualToDelete.personId);
+        await updateDoc(personRef, {
+          hasManual: false,
+          manualId: null
+        });
+      }
+
       setManual(null);
     } catch (err) {
       console.error('Error deleting person manual:', err);

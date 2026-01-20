@@ -13,6 +13,8 @@ interface QuestionRendererProps {
   onChange: (value: QuestionAnswer) => void;
   personName: string;
   onKeyboardContinue?: () => void; // Ctrl/Cmd + Enter handler
+  demoMode?: boolean; // Whether in demo mode
+  demoAnswer?: QuestionAnswer; // Pre-filled demo answer
 }
 
 export function QuestionRenderer({
@@ -20,9 +22,18 @@ export function QuestionRenderer({
   value,
   onChange,
   personName,
-  onKeyboardContinue
+  onKeyboardContinue,
+  demoMode = false,
+  demoAnswer
 }: QuestionRendererProps) {
   const questionType = question.questionType || 'text';
+
+  // Handle auto-fill from demo answer
+  const handleAutoFill = () => {
+    if (demoAnswer) {
+      onChange(demoAnswer);
+    }
+  };
 
   // Extract primary value and qualitative comment from structured answer
   const primaryValue = typeof value === 'object' && value !== null && 'primary' in value
@@ -91,31 +102,58 @@ export function QuestionRenderer({
       default:
         // Legacy text input (textarea)
         return (
-          <textarea
-            value={typeof value === 'string' ? value : ''}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={(e) => {
-              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && onKeyboardContinue) {
-                onKeyboardContinue();
-              }
-            }}
-            placeholder={question.placeholder || 'Type your answer here...'}
-            rows={6}
-            className="w-full px-6 py-4 rounded-lg border-2 focus:outline-none focus:ring-4 transition-all text-lg sm:text-xl"
-            style={{
-              borderColor: 'var(--parent-border)',
-              backgroundColor: 'var(--parent-bg)',
-              color: 'var(--parent-text)',
-              resize: 'vertical'
-            }}
-            autoFocus
-          />
+          <div className="relative">
+            <textarea
+              value={typeof value === 'string' ? value : ''}
+              onChange={(e) => onChange(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && onKeyboardContinue) {
+                  onKeyboardContinue();
+                }
+              }}
+              placeholder={question.placeholder || 'Type your answer here...'}
+              rows={6}
+              className="w-full px-6 py-4 rounded-lg border-2 focus:outline-none focus:ring-4 transition-all text-lg sm:text-xl"
+              style={{
+                borderColor: 'var(--parent-border)',
+                backgroundColor: 'var(--parent-bg)',
+                color: 'var(--parent-text)',
+                resize: 'vertical'
+              }}
+              autoFocus
+            />
+            {/* Demo auto-fill button */}
+            {demoMode && demoAnswer && (
+              <button
+                type="button"
+                onClick={handleAutoFill}
+                className="absolute bottom-3 right-3 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-mono font-bold rounded shadow-sm transition-all opacity-70 hover:opacity-100"
+                title="Auto-fill demo answer"
+              >
+                ✨ DEMO FILL
+              </button>
+            )}
+          </div>
         );
     }
   };
 
   return (
     <div className="space-y-6">
+      {/* Demo auto-fill button for structured questions */}
+      {demoMode && demoAnswer && questionType !== 'text' && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleAutoFill}
+            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-mono font-bold rounded shadow-sm transition-all"
+            title="Auto-fill demo answer"
+          >
+            ✨ DEMO FILL
+          </button>
+        </div>
+      )}
+
       {/* Primary question input */}
       {renderQuestionInput()}
 

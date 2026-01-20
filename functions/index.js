@@ -2610,3 +2610,113 @@ exports.admin_resetUserData = onCall(
       }
     },
 );
+
+/**
+ * Demo function: Reset demo account data
+ * Deletes all people, manuals, and workbooks for the demo account
+ * Preserves the demo user account itself
+ */
+exports.resetDemoAccount = onCall(
+    {
+      enforceAppCheck: false,
+      memory: "256MiB",
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      try {
+        // Check authentication
+        if (!request.auth) {
+          throw new Error("Authentication required");
+        }
+
+        // Get user document
+        const userDoc = await admin.firestore()
+            .collection("users")
+            .doc(request.auth.uid)
+            .get();
+
+        if (!userDoc.exists) {
+          throw new Error("User not found");
+        }
+
+        const userData = userDoc.data();
+        const familyId = userData.familyId;
+
+        // Verify this is a demo account (check email or isDemo flag)
+        const isDemoAccount = userData.email === "demo@relish.app" || userData.isDemo === true;
+
+        if (!isDemoAccount) {
+          throw new Error("This function can only be called from a demo account");
+        }
+
+        logger.info(`Resetting demo account for family ${familyId}`);
+
+        let deletedPeople = 0;
+        let deletedManuals = 0;
+        let deletedWorkbooks = 0;
+
+        // Delete all people in the demo family
+        const peopleSnapshot = await admin.firestore()
+            .collection("people")
+            .where("familyId", "==", familyId)
+            .get();
+
+        const peopleBatch = admin.firestore().batch();
+        peopleSnapshot.forEach((doc) => {
+          peopleBatch.delete(doc.ref);
+          deletedPeople++;
+        });
+        await peopleBatch.commit();
+
+        // Delete all person_manuals in the demo family
+        const manualsSnapshot = await admin.firestore()
+            .collection("person_manuals")
+            .where("familyId", "==", familyId)
+            .get();
+
+        const manualsBatch = admin.firestore().batch();
+        manualsSnapshot.forEach((doc) => {
+          manualsBatch.delete(doc.ref);
+          deletedManuals++;
+        });
+        await manualsBatch.commit();
+
+        // Delete all weekly_workbooks in the demo family
+        const workbooksSnapshot = await admin.firestore()
+            .collection("weekly_workbooks")
+            .where("familyId", "==", familyId)
+            .get();
+
+        const workbooksBatch = admin.firestore().batch();
+        workbooksSnapshot.forEach((doc) => {
+          workbooksBatch.delete(doc.ref);
+          deletedWorkbooks++;
+        });
+        await workbooksBatch.commit();
+
+        logger.info(`Demo account reset complete: deleted ${deletedPeople} people, ${deletedManuals} manuals, ${deletedWorkbooks} workbooks`);
+
+        return {
+          success: true,
+          message: "Demo account data has been reset successfully",
+          deleted: {
+            people: deletedPeople,
+            manuals: deletedManuals,
+            workbooks: deletedWorkbooks,
+          },
+        };
+      } catch (error) {
+        logger.error("Error resetting demo account:", error);
+        return {
+          success: false,
+          error: error.message,
+          deleted: {
+            people: 0,
+            manuals: 0,
+            workbooks: 0,
+          },
+        };
+      }
+    },
+);

@@ -13,7 +13,6 @@ import {
   query,
   where,
   getDocs,
-  getDoc,
   doc,
   addDoc,
   updateDoc,
@@ -167,38 +166,62 @@ export function usePerson(): UsePersonReturn {
 
   // Delete person (with cascade delete of manual and workbooks)
   const deletePerson = async (personId: string): Promise<void> => {
+    if (!user?.familyId) {
+      throw new Error('User must be authenticated with a family');
+    }
+
     try {
       // First, delete associated manual if it exists
       const manualsQuery = query(
         collection(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS),
-        where('personId', '==', personId)
+        where('personId', '==', personId),
+        where('familyId', '==', user.familyId)
       );
       const manualsSnapshot = await getDocs(manualsQuery);
 
       for (const manualDoc of manualsSnapshot.docs) {
-        await deleteDoc(doc(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS, manualDoc.id));
+        try {
+          await deleteDoc(doc(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS, manualDoc.id));
+          console.log(`Deleted manual: ${manualDoc.id}`);
+        } catch (err) {
+          console.error(`Failed to delete manual ${manualDoc.id}:`, err);
+          throw new Error(`Failed to delete manual: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        }
       }
 
       // Delete weekly workbooks
       const workbooksQuery = query(
         collection(firestore, 'weekly_workbooks'),
-        where('personId', '==', personId)
+        where('personId', '==', personId),
+        where('familyId', '==', user.familyId)
       );
       const workbooksSnapshot = await getDocs(workbooksQuery);
 
       for (const workbookDoc of workbooksSnapshot.docs) {
-        await deleteDoc(doc(firestore, 'weekly_workbooks', workbookDoc.id));
+        try {
+          await deleteDoc(doc(firestore, 'weekly_workbooks', workbookDoc.id));
+          console.log(`Deleted workbook: ${workbookDoc.id}`);
+        } catch (err) {
+          console.error(`Failed to delete workbook ${workbookDoc.id}:`, err);
+          throw new Error(`Failed to delete workbook: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        }
       }
 
       // Finally, delete the person
-      const personRef = doc(firestore, PERSON_MANUAL_COLLECTIONS.PEOPLE, personId);
-      await deleteDoc(personRef);
+      try {
+        const personRef = doc(firestore, PERSON_MANUAL_COLLECTIONS.PEOPLE, personId);
+        await deleteDoc(personRef);
+        console.log(`Deleted person: ${personId}`);
+      } catch (err) {
+        console.error(`Failed to delete person ${personId}:`, err);
+        throw new Error(`Failed to delete person: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      }
 
       // Update local state
       setPeople(prev => prev.filter(person => person.personId !== personId));
     } catch (err) {
       console.error('Error deleting person:', err);
-      throw new Error('Failed to delete person');
+      throw err; // Re-throw the specific error instead of generic message
     }
   };
 

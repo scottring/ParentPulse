@@ -89,68 +89,73 @@ export default function RegisterPage() {
 
   if (authLoading || user) {
     return (
-      <div className="min-h-screen flex items-center justify-center parent-page">
-        <div className="w-16 h-16 spinner"></div>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FFF8F0' }}>
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-slate-800 border-t-amber-600 rounded-full animate-spin"></div>
+          <p className="mt-4 font-mono text-sm text-slate-600">LOADING SYSTEM...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen parent-page flex">
+    <div className="min-h-screen flex" style={{ backgroundColor: '#FFF8F0' }}>
       {/* Left side - Getting started guide */}
-      <div className="hidden lg:flex lg:w-2/5 relative overflow-hidden p-16 items-center justify-center">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#D4A574] via-[#B8956F] to-[#7C9082] opacity-10"></div>
-        <div className="paper-texture absolute inset-0"></div>
-
-        <div className="relative z-10 max-w-lg animate-fade-in-up">
-          <div className="mb-8">
-            <div className="animate-float">
-              <Image
-                src="/relish banner 04b.png"
-                alt="Relish - The Operating Manual for Relationships"
-                width={400}
-                height={150}
-                className="object-contain"
-                priority
-              />
-            </div>
+      <div className="hidden lg:flex lg:w-2/5 p-16 items-center justify-center" style={{ backgroundColor: '#E8DCC8' }}>
+        <div className="relative z-10 max-w-lg">
+          <div className="mb-12">
+            <Image
+              src="/relish banner 04b.png"
+              alt="Relish - The Operating Manual for Relationships"
+              width={400}
+              height={150}
+              className="object-contain"
+              priority
+            />
           </div>
 
-          <h1 className="parent-heading text-5xl mb-6" style={{ color: 'var(--parent-accent)' }}>
-            Create Your Manual Library
-          </h1>
+          <div className="relative bg-white border-4 border-slate-800 p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] mb-8">
+            <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-amber-600"></div>
+            <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-amber-600"></div>
+            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-amber-600"></div>
+            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-amber-600"></div>
 
-          <p className="text-xl leading-relaxed mb-8" style={{ color: 'var(--parent-text-light)' }}>
-            Build personalized guides to better understand the important people in your life.
-          </p>
+            <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-4">
+              SYSTEM OVERVIEW
+            </div>
 
-          <div className="space-y-6">
-            <div className="flex gap-4 items-center">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--parent-primary)' }}>
-                <span className="text-xl">1</span>
+            <h1 className="font-mono text-3xl font-bold mb-4 text-slate-900">
+              Create Your Manual Library
+            </h1>
+
+            <p className="font-mono text-sm text-slate-600 mb-6">
+              Build personalized operating guides to better understand the important people in your life.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="relative bg-white border-2 border-slate-800 p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <div className="absolute -top-3 -left-3 w-8 h-8 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-amber-600">
+                1
               </div>
-              <div className="flex-1">
-                <div className="font-semibold mb-1">Create your account</div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>Set up your manual library in minutes</div>
-              </div>
+              <div className="font-mono text-sm font-bold mb-1 text-slate-900">Create your account</div>
+              <div className="font-mono text-xs text-slate-600">Initialize system in minutes</div>
             </div>
-            <div className="flex gap-4 items-center">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--parent-secondary)' }}>
-                <span className="text-xl">2</span>
+
+            <div className="relative bg-white border-2 border-slate-800 p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <div className="absolute -top-3 -left-3 w-8 h-8 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-green-600">
+                2
               </div>
-              <div className="flex-1">
-                <div className="font-semibold mb-1">Add people & build manuals</div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>Document triggers, strategies, and what works</div>
-              </div>
+              <div className="font-mono text-sm font-bold mb-1 text-slate-900">Add people & build manuals</div>
+              <div className="font-mono text-xs text-slate-600">Document triggers, strategies, patterns</div>
             </div>
-            <div className="flex gap-4 items-center">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--parent-accent)' }}>
-                <span className="text-xl text-white">3</span>
+
+            <div className="relative bg-white border-2 border-slate-800 p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <div className="absolute -top-3 -left-3 w-8 h-8 bg-amber-600 text-white font-mono font-bold flex items-center justify-center border-2 border-slate-800">
+                3
               </div>
-              <div className="flex-1">
-                <div className="font-semibold mb-1">Get AI-powered guidance</div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>Weekly goals and insights based on your manuals</div>
-              </div>
+              <div className="font-mono text-sm font-bold mb-1 text-slate-900">Get AI-powered guidance</div>
+              <div className="font-mono text-xs text-slate-600">Weekly goals based on manual data</div>
             </div>
           </div>
         </div>
@@ -158,7 +163,7 @@ export default function RegisterPage() {
 
       {/* Right side - Registration form */}
       <div className="flex-1 flex items-center justify-center p-8 sm:p-12">
-        <div className="w-full max-w-lg animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+        <div className="w-full max-w-lg">
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
             <div className="mb-3 flex justify-center">
@@ -171,194 +176,160 @@ export default function RegisterPage() {
                 priority
               />
             </div>
-            <p className="text-sm mt-2" style={{ color: 'var(--parent-text-light)' }}>
+            <p className="font-mono text-xs text-slate-600 uppercase tracking-wider">
               The Operating Manual for Relationships
             </p>
           </div>
 
           {/* Registration card */}
-          <div className="parent-card p-8 sm:p-10 paper-texture">
-            <h2 className="parent-heading text-3xl sm:text-4xl mb-2" style={{ color: 'var(--parent-text)' }}>
-              Create your account
+          <div className="relative bg-white border-4 border-slate-800 p-8 sm:p-10 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            {/* Corner brackets */}
+            <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-amber-600"></div>
+            <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-amber-600"></div>
+            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-amber-600"></div>
+            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-amber-600"></div>
+
+            <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-4">
+              NEW USER REGISTRATION
+            </div>
+
+            <h2 className="font-mono text-3xl sm:text-4xl font-bold mb-2 text-slate-900">
+              Initialize Account
             </h2>
-            <p className="mb-6" style={{ color: 'var(--parent-text-light)' }}>
-              Start building your manual library
+            <p className="font-mono text-sm text-slate-600 mb-6">
+              Complete form to access system
             </p>
 
             {(error || authError) && (
-              <div
-                className="mb-6 p-4 rounded-lg animate-fade-in-up"
-                style={{
-                  backgroundColor: '#FEE2E2',
-                  border: '1px solid #FCA5A5',
-                  color: '#991B1B'
-                }}
-              >
-                <p className="text-sm font-medium">{error || authError}</p>
+              <div className="mb-6 p-4 border-2 border-red-600 bg-red-50">
+                <div className="inline-block px-2 py-1 bg-red-600 text-white font-mono text-xs mb-2">
+                  ⚠ ERROR
+                </div>
+                <p className="font-mono text-sm text-red-900">{error || authError}</p>
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
-                  Your Name
+                <label htmlFor="name" className="block font-mono text-xs font-bold mb-2 text-slate-600 uppercase tracking-wider">
+                  Full Name:
                 </label>
                 <input
                   id="name"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg transition-all duration-200"
-                  style={{
-                    border: '1.5px solid var(--parent-border)',
-                    backgroundColor: 'var(--parent-bg)',
-                    color: 'var(--parent-text)',
-                    fontSize: '16px'
-                  }}
-                  placeholder="John Doe"
+                  className="w-full px-4 py-3 font-mono text-sm border-2 border-slate-800 focus:outline-none focus:border-amber-600"
+                  style={{ backgroundColor: '#FFF8F0' }}
+                  placeholder="JOHN DOE"
                   autoComplete="name"
                   disabled={loading}
-                  onFocus={(e) => e.target.style.borderColor = 'var(--parent-primary)'}
-                  onBlur={(e) => e.target.style.borderColor = 'var(--parent-border)'}
                 />
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
-                  Email Address
+                <label htmlFor="email" className="block font-mono text-xs font-bold mb-2 text-slate-600 uppercase tracking-wider">
+                  Email Address:
                 </label>
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg transition-all duration-200"
-                  style={{
-                    border: '1.5px solid var(--parent-border)',
-                    backgroundColor: 'var(--parent-bg)',
-                    color: 'var(--parent-text)',
-                    fontSize: '16px'
-                  }}
-                  placeholder="you@example.com"
+                  className="w-full px-4 py-3 font-mono text-sm border-2 border-slate-800 focus:outline-none focus:border-amber-600"
+                  style={{ backgroundColor: '#FFF8F0' }}
+                  placeholder="USER@EXAMPLE.COM"
                   autoComplete="email"
                   disabled={loading}
-                  onFocus={(e) => e.target.style.borderColor = 'var(--parent-primary)'}
-                  onBlur={(e) => e.target.style.borderColor = 'var(--parent-border)'}
                 />
               </div>
 
               <div>
-                <label htmlFor="familyName" className="block text-sm font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
-                  Family Name
+                <label htmlFor="familyName" className="block font-mono text-xs font-bold mb-2 text-slate-600 uppercase tracking-wider">
+                  Family Name:
                 </label>
                 <input
                   id="familyName"
                   type="text"
                   value={familyName}
                   onChange={(e) => setFamilyName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg transition-all duration-200"
-                  style={{
-                    border: '1.5px solid var(--parent-border)',
-                    backgroundColor: 'var(--parent-bg)',
-                    color: 'var(--parent-text)',
-                    fontSize: '16px'
-                  }}
-                  placeholder="The Smith Family"
+                  className="w-full px-4 py-3 font-mono text-sm border-2 border-slate-800 focus:outline-none focus:border-amber-600"
+                  style={{ backgroundColor: '#FFF8F0' }}
+                  placeholder="THE SMITH FAMILY"
                   autoComplete="organization"
                   disabled={loading}
-                  onFocus={(e) => e.target.style.borderColor = 'var(--parent-primary)'}
-                  onBlur={(e) => e.target.style.borderColor = 'var(--parent-border)'}
                 />
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
-                  Password
+                <label htmlFor="password" className="block font-mono text-xs font-bold mb-2 text-slate-600 uppercase tracking-wider">
+                  Password:
                 </label>
                 <input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg transition-all duration-200"
-                  style={{
-                    border: '1.5px solid var(--parent-border)',
-                    backgroundColor: 'var(--parent-bg)',
-                    color: 'var(--parent-text)',
-                    fontSize: '16px'
-                  }}
+                  className="w-full px-4 py-3 font-mono text-sm border-2 border-slate-800 focus:outline-none focus:border-amber-600"
+                  style={{ backgroundColor: '#FFF8F0' }}
                   placeholder="••••••••"
                   autoComplete="new-password"
                   disabled={loading}
-                  onFocus={(e) => e.target.style.borderColor = 'var(--parent-primary)'}
-                  onBlur={(e) => e.target.style.borderColor = 'var(--parent-border)'}
                 />
-                <p className="mt-1 text-xs" style={{ color: 'var(--parent-text-light)' }}>At least 6 characters</p>
+                <p className="mt-1 font-mono text-xs text-slate-500">MINIMUM 6 CHARACTERS</p>
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
-                  Confirm Password
+                <label htmlFor="confirmPassword" className="block font-mono text-xs font-bold mb-2 text-slate-600 uppercase tracking-wider">
+                  Confirm Password:
                 </label>
                 <input
                   id="confirmPassword"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg transition-all duration-200"
-                  style={{
-                    border: '1.5px solid var(--parent-border)',
-                    backgroundColor: 'var(--parent-bg)',
-                    color: 'var(--parent-text)',
-                    fontSize: '16px'
-                  }}
+                  className="w-full px-4 py-3 font-mono text-sm border-2 border-slate-800 focus:outline-none focus:border-amber-600"
+                  style={{ backgroundColor: '#FFF8F0' }}
                   placeholder="••••••••"
                   autoComplete="new-password"
                   disabled={loading}
-                  onFocus={(e) => e.target.style.borderColor = 'var(--parent-primary)'}
-                  onBlur={(e) => e.target.style.borderColor = 'var(--parent-border)'}
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 rounded-lg font-semibold text-white transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed mt-6"
-                style={{
-                  backgroundColor: 'var(--parent-accent)',
-                  transform: loading ? 'scale(0.98)' : 'scale(1)'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#234946'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--parent-accent)'}
+                className="w-full py-4 bg-slate-800 text-white font-mono text-sm font-bold uppercase tracking-wider hover:bg-amber-600 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 disabled:cursor-not-allowed mt-6"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Creating account...
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    PROCESSING...
                   </span>
                 ) : (
-                  'Create Account'
+                  'CREATE ACCOUNT →'
                 )}
               </button>
             </form>
 
-            <div className="mt-8 pt-6 border-t" style={{ borderColor: 'var(--parent-border)' }}>
-              <p className="text-center text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                Already have an account?{' '}
+            <div className="mt-8 pt-6 border-t-2 border-slate-200">
+              <p className="text-center font-mono text-xs text-slate-600">
+                EXISTING USER?{' '}
                 <Link
                   href="/login"
-                  className="font-semibold hover:underline"
-                  style={{ color: 'var(--parent-accent)' }}
+                  className="font-bold text-amber-600 hover:text-slate-800 uppercase tracking-wider"
                 >
-                  Sign in instead
+                  SIGN IN
                 </Link>
               </p>
             </div>
           </div>
 
           {/* Privacy note */}
-          <div className="mt-6 text-center text-xs" style={{ color: 'var(--parent-text-light)' }}>
-            <p>Your data is private and secure</p>
+          <div className="mt-6 text-center">
+            <div className="inline-block px-3 py-1 border border-slate-300 bg-white">
+              <p className="font-mono text-xs text-slate-500 uppercase tracking-wider">🔒 SECURE & PRIVATE</p>
+            </div>
           </div>
         </div>
       </div>

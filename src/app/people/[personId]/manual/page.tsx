@@ -47,6 +47,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
   const [deletingPattern, setDeletingPattern] = useState<string | null>(null);
   const [showDeleteManual, setShowDeleteManual] = useState(false);
   const [isDeletingManual, setIsDeletingManual] = useState(false);
+  const [hasBeenDeleted, setHasBeenDeleted] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -54,12 +55,12 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
     }
   }, [user, authLoading, router]);
 
-  // If no manual exists, redirect to create page
+  // If no manual exists, redirect to create page (but not if we just deleted it)
   useEffect(() => {
-    if (!manualLoading && !manual && person) {
+    if (!manualLoading && !manual && person && !isDeletingManual && !hasBeenDeleted) {
       router.push(`/people/${personId}/create-manual`);
     }
-  }, [manual, manualLoading, person, personId, router]);
+  }, [manual, manualLoading, person, personId, router, isDeletingManual, hasBeenDeleted]);
 
   if (authLoading || personLoading || manualLoading || !user || !person || !manual) {
     return (
@@ -89,6 +90,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
     if (!manual) return;
 
     setIsDeletingManual(true);
+    setHasBeenDeleted(true);
     try {
       await deleteManual(manual.manualId);
       // Redirect to people page after successful deletion
@@ -97,6 +99,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
       console.error('Failed to delete manual:', err);
       alert('Failed to delete manual. Please try again.');
       setIsDeletingManual(false);
+      setHasBeenDeleted(false);
     }
   };
 
