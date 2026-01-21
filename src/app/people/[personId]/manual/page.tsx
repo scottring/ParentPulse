@@ -126,7 +126,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
               ←
             </Link>
 
-            <div className="flex-1">
+            <div>
               <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-3">
                 TECHNICAL DOCUMENTATION
               </div>
@@ -139,41 +139,6 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                   <span className="text-slate-600">VERSION</span>
                   <span className="text-amber-600">{manual.version}</span>
                 </div>
-                <Link
-                  href={`/people/${personId}/workbook`}
-                  className="px-4 py-2 border-2 border-emerald-600 bg-emerald-50 font-mono text-xs font-bold text-emerald-900 hover:bg-emerald-600 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(5,150,105,1)]"
-                  data-testid="weekly-workbook-button"
-                >
-                  📅 WEEKLY WORKBOOK
-                </Link>
-                <Link
-                  href={`/people/${personId}/coach`}
-                  className="px-4 py-2 border-2 border-amber-600 bg-amber-50 font-mono text-xs font-bold text-amber-900 hover:bg-amber-600 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(217,119,6,1)]"
-                  data-testid="ask-coach-button"
-                >
-                  🤖 ASK COACH
-                </Link>
-                <button
-                  onClick={() => setShowSelfWorthAssessment(true)}
-                  className="px-4 py-2 border-2 border-purple-600 bg-purple-50 font-mono text-xs font-bold text-purple-900 hover:bg-purple-600 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(147,51,234,1)]"
-                  data-testid="self-worth-assessment-button"
-                >
-                  {(manual as any).assessmentScores?.selfWorth ? '🔄 UPDATE' : '➕ ADD'} SELF-WORTH
-                </button>
-                <Link
-                  href={`/people/${personId}/manual/onboard`}
-                  className="px-4 py-2 border-2 border-slate-800 bg-white font-mono text-xs font-bold text-slate-800 hover:bg-slate-800 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                  data-testid="edit-manual-button"
-                >
-                  EDIT MANUAL
-                </Link>
-                <button
-                  onClick={() => setShowDeleteManual(true)}
-                  className="px-4 py-2 border-2 border-red-600 bg-red-50 font-mono text-xs font-bold text-red-900 hover:bg-red-600 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(220,38,38,1)]"
-                  data-testid="delete-manual-button"
-                >
-                  🗑️ DELETE MANUAL
-                </button>
               </div>
 
               <div className="flex items-center gap-4 font-mono text-xs text-slate-600">
@@ -190,8 +155,73 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
         </div>
       </header>
 
+      {/* Floating Ask Coach Button */}
+      <Link
+        href={`/people/${personId}/coach`}
+        className="fixed bottom-8 right-8 z-50 px-6 py-4 border-4 border-amber-600 bg-amber-50 font-mono text-sm font-bold text-amber-900 hover:bg-amber-600 hover:text-white transition-all shadow-[4px_4px_0px_0px_rgba(217,119,6,1)] hover:shadow-[6px_6px_0px_0px_rgba(217,119,6,1)] hover:translate-x-[-2px] hover:translate-y-[-2px]"
+        data-testid="ask-coach-button"
+      >
+        🤖 ASK COACH
+      </Link>
+
       {/* Main Content */}
       <main className="relative max-w-7xl mx-auto px-6 lg:px-8 py-12">
+        {/* Quick Actions Section */}
+        <div className="mb-12">
+          <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-4">
+            QUICK ACTIONS
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Link
+              href={`/people/${personId}/workbook`}
+              className="px-6 py-4 border-2 border-emerald-600 bg-emerald-50 font-mono text-sm font-bold text-emerald-900 hover:bg-emerald-600 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(5,150,105,1)] flex items-center gap-3"
+              data-testid="weekly-workbook-button"
+            >
+              <span className="text-2xl">📅</span>
+              <div>
+                <div>WEEKLY WORKBOOK</div>
+                <div className="text-xs font-normal opacity-75">View parent goals & activities</div>
+              </div>
+            </Link>
+
+            <button
+              onClick={() => setShowSelfWorthAssessment(true)}
+              className="px-6 py-4 border-2 border-purple-600 bg-purple-50 font-mono text-sm font-bold text-purple-900 hover:bg-purple-600 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(147,51,234,1)] flex items-center gap-3 text-left"
+              data-testid="self-worth-assessment-button"
+            >
+              <span className="text-2xl">{(manual as any).assessmentScores?.selfWorth ? '🔄' : '➕'}</span>
+              <div>
+                <div>{(manual as any).assessmentScores?.selfWorth ? 'UPDATE' : 'ADD'} SELF-WORTH</div>
+                <div className="text-xs font-normal opacity-75">Assess self-worth indicators</div>
+              </div>
+            </button>
+
+            <Link
+              href={`/people/${personId}/manual/onboard`}
+              className="px-6 py-4 border-2 border-blue-600 bg-blue-50 font-mono text-sm font-bold text-blue-900 hover:bg-blue-600 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(37,99,235,1)] flex items-center gap-3"
+              data-testid="redo-onboarding-button"
+            >
+              <span className="text-2xl">📝</span>
+              <div>
+                <div>RE-DO ONBOARDING</div>
+                <div className="text-xs font-normal opacity-75">Retake baseline questionnaire</div>
+              </div>
+            </Link>
+
+            <button
+              onClick={() => setShowDeleteManual(true)}
+              className="px-6 py-4 border-2 border-red-600 bg-red-50 font-mono text-sm font-bold text-red-900 hover:bg-red-600 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(220,38,38,1)] flex items-center gap-3 text-left"
+              data-testid="delete-manual-button"
+            >
+              <span className="text-2xl">🗑️</span>
+              <div>
+                <div>DELETE MANUAL</div>
+                <div className="text-xs font-normal opacity-75">Permanently remove this manual</div>
+              </div>
+            </button>
+          </div>
+        </div>
+
         {/* Technical Specification Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
           {/* Stat 1: Triggers */}

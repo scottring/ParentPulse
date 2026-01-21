@@ -548,5 +548,41 @@ service cloud.firestore {
       // Parents can delete workbooks in their family
       allow delete: if isParent() && belongsToFamily(resource.data.familyId);
     }
+
+    // ==================== Dual Workbook System ====================
+
+    // Parent Workbooks
+    // Parent-facing workbook with behavior goals and daily strategies
+    match /parent_workbooks/{workbookId} {
+      // Family members can read parent workbooks in their family
+      allow read: if belongsToFamily(resource.data.familyId);
+
+      // Parents can create parent workbooks in their family
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+
+      // Family members can update parent workbooks (log goals, complete strategies, add reflections)
+      // This enables collaborative tracking where both parents can log completions
+      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId);
+
+      // Parents can delete parent workbooks in their family
+      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
+    // Child Workbooks
+    // Child-facing storybook with weekly story and activities
+    match /child_workbooks/{workbookId} {
+      // Family members can read child workbooks in their family
+      allow read: if belongsToFamily(resource.data.familyId);
+
+      // Parents can create child workbooks in their family
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+
+      // Family members can update child workbooks (mark days as read, complete activities)
+      // This allows both parents and children to interact with the storybook
+      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId);
+
+      // Parents can delete child workbooks in their family
+      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
   }
 }

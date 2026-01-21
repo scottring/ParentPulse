@@ -9,12 +9,20 @@
  * - Simple tablet activities for parent + child moments
  * - AI generates goals from manual content
  * - Weekly rhythm with reflection and adjustment
+ *
+ * @deprecated This unified workbook model is being replaced by separate
+ * ParentWorkbook and ChildWorkbook types for better separation of concerns.
+ * See /src/types/parent-workbook.ts and /src/types/child-workbook.ts
  */
 
 import { Timestamp } from 'firebase/firestore';
 
 // ==================== Weekly Workbook ====================
 
+/**
+ * @deprecated Use ParentWorkbook and ChildWorkbook instead
+ * This type is kept for backward compatibility with existing workbooks
+ */
 export interface WeeklyWorkbook {
   workbookId: string;
   familyId: string;
@@ -154,7 +162,8 @@ export type ActivityType =
   | 'courage-moment'             // Child recalls a brave action
   | 'affirmation-practice'       // Daily positive self-statements
   | 'growth-mindset-reflection'  // Reframe challenges as learning
-  | 'accomplishment-tracker';    // Track weekly wins
+  | 'accomplishment-tracker'     // Track weekly wins
+  | 'story-reflection';          // NEW: Reflect on weekly story character
 
 export interface DailyActivity {
   id: string;

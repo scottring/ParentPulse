@@ -123,6 +123,13 @@ export interface PersonManual {
     };
   };
 
+  // Workbook generation configuration
+  workbookConfig?: {
+    storyModel: 'claude-sonnet-4.5' | 'claude-haiku-4.5' | 'gpt-4o-mini' | 'gpt-3.5-turbo';
+    illustrationModel: 'nano-banana-pro' | 'dalle-3-standard' | 'stable-diffusion-3.5' | 'gpt-image-1-mini';
+    illustrationsEnabled: boolean;
+  };
+
   // References
   relatedJournalEntries: string[];
   relatedKnowledgeIds: string[];

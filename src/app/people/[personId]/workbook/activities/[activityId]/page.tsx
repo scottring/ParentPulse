@@ -19,6 +19,8 @@ import {
   GrowthMindsetReflectionResponse,
   AccomplishmentTrackerResponse
 } from '@/types/workbook';
+import type { StoryReflectionResponse } from '@/types/child-workbook';
+import { useChildWorkbook } from '@/hooks/useChildWorkbook';
 
 export default function ActivityPage({
   params
@@ -30,6 +32,7 @@ export default function ActivityPage({
   const { user, loading: authLoading } = useAuth();
   const { person, loading: personLoading } = usePersonById(personId);
   const { workbook, loading: workbookLoading, completeActivity } = useWeeklyWorkbook(personId);
+  const { workbook: childWorkbook, loading: childWorkbookLoading } = useChildWorkbook(personId);
 
   const [response, setResponse] = useState<any>(null);
   const [parentNotes, setParentNotes] = useState('');
@@ -41,7 +44,7 @@ export default function ActivityPage({
     }
   }, [user, authLoading, router]);
 
-  if (authLoading || personLoading || workbookLoading) {
+  if (authLoading || personLoading || workbookLoading || childWorkbookLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center parent-page">
         <div className="w-16 h-16 spinner"></div>
@@ -116,6 +119,13 @@ export default function ActivityPage({
         return <GrowthMindsetReflectionActivity response={response} setResponse={setResponse} personName={person.name} />;
       case 'accomplishment-tracker':
         return <AccomplishmentTrackerActivity response={response} setResponse={setResponse} personName={person.name} />;
+      case 'story-reflection':
+        return <StoryReflectionActivity
+          response={response}
+          setResponse={setResponse}
+          personName={person.name}
+          childWorkbook={childWorkbook}
+        />;
       default:
         return <div>Unknown activity type</div>;
     }
@@ -1431,6 +1441,154 @@ function AccomplishmentTrackerActivity({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Story Reflection Activity Component
+ *
+ * Questions about the weekly story character that prompt self-reflection
+ */
+function StoryReflectionActivity({
+  response,
+  setResponse,
+  personName,
+  childWorkbook
+}: {
+  response: StoryReflectionResponse | null;
+  setResponse: (response: StoryReflectionResponse) => void;
+  personName: string;
+  childWorkbook: any;
+}) {
+  const story = childWorkbook?.weeklyStory;
+
+  if (!story) {
+    return (
+      <div className="text-center py-12">
+        <p className="font-mono text-lg text-slate-600">Story not found. Please complete this week's story first.</p>
+      </div>
+    );
+  }
+
+  const questions = story.reflectionQuestions || [];
+
+  const handleResponseChange = (questionId: string, value: string) => {
+    const currentResponse = response || {
+      challengeIdentified: '',
+      courageObserved: '',
+      strategyNamed: '',
+      personalConnection: '',
+      adviceToCharacter: '',
+      parentNotes: '',
+    };
+
+    // Map question IDs to response fields
+    const fieldMap: Record<string, keyof StoryReflectionResponse> = {
+      challenge: 'challengeIdentified',
+      courage: 'courageObserved',
+      strategy: 'strategyNamed',
+      connection: 'personalConnection',
+      compassion: 'adviceToCharacter',
+    };
+
+    // Find the field to update based on question category
+    const question = questions.find((q: any) => q.id === questionId);
+    if (!question) return;
+
+    const field = fieldMap[question.category as string];
+    if (!field) return;
+
+    setResponse({
+      ...currentResponse,
+      [field]: value,
+    });
+  };
+
+  return (
+    <div>
+      {/* Story Recap */}
+      <div className="relative bg-white border-4 border-purple-600 p-8 mb-8 shadow-[6px_6px_0px_0px_rgba(147,51,234,1)]">
+        <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-amber-600"></div>
+        <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-amber-600"></div>
+
+        <div className="inline-block px-3 py-1 bg-purple-600 text-white font-mono text-xs mb-4">
+          THIS WEEK'S STORY
+        </div>
+        <h2 className="font-serif text-3xl font-bold mb-2 text-purple-900">
+          {story.title}
+        </h2>
+        <p className="font-serif text-lg text-purple-700 mb-4">
+          This week, {personName} read about {story.characterName}, {story.characterDescription}.
+        </p>
+        <p className="text-slate-700">
+          Let's think about {story.characterName}'s journey and what we can learn from it!
+        </p>
+      </div>
+
+      {/* Reflection Questions */}
+      <div className="space-y-6">
+        {questions.map((question: any, idx: number) => {
+          const fieldMap: Record<string, keyof StoryReflectionResponse> = {
+            challenge: 'challengeIdentified',
+            courage: 'courageObserved',
+            strategy: 'strategyNamed',
+            connection: 'personalConnection',
+            compassion: 'adviceToCharacter',
+          };
+
+          const field = fieldMap[question.category];
+          const value = response?.[field] || '';
+
+          return (
+            <div
+              key={question.id}
+              className="relative bg-white border-4 border-slate-800 p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+            >
+              <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-purple-600">
+                {idx + 1}
+              </div>
+
+              <label className="block font-serif text-xl mb-4 text-slate-900">
+                {question.questionText}
+              </label>
+              <textarea
+                value={value}
+                onChange={(e) => handleResponseChange(question.id, e.target.value)}
+                className="w-full border-2 border-slate-300 p-4 font-serif text-lg focus:outline-none focus:border-purple-600 bg-white rounded"
+                rows={4}
+                placeholder="Write your thoughts here..."
+              />
+              {question.purposeNote && (
+                <p className="text-xs text-purple-600 mt-2 font-mono">
+                  💡 FOR PARENT: {question.purposeNote}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Parent Notes */}
+      <div className="relative bg-amber-50 border-4 border-amber-600 p-6 mt-8 shadow-[4px_4px_0px_0px_rgba(217,119,6,1)]">
+        <div className="inline-block px-3 py-1 bg-amber-600 text-white font-mono text-xs mb-4">
+          PARENT OBSERVATIONS (OPTIONAL)
+        </div>
+        <textarea
+          value={response?.parentNotes || ''}
+          onChange={(e) => setResponse({ ...(response || {} as StoryReflectionResponse), parentNotes: e.target.value })}
+          className="w-full border-2 border-amber-600 p-4 font-mono text-sm focus:outline-none focus:border-slate-800 bg-white"
+          rows={3}
+          placeholder="What did you notice about your child during this reflection?"
+        />
+      </div>
+
+      {/* Encouragement */}
+      <div className="mt-6 text-center">
+        <p className="font-serif text-lg text-purple-600">
+          Great job thinking about {story.characterName}'s story! 🌟
+        </p>
+      </div>
     </div>
   );
 }

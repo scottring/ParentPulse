@@ -26,7 +26,7 @@ export default function Navigation() {
       <div className="absolute top-0 left-4 w-8 h-8 border-t-2 border-l-2 border-amber-600"></div>
       <div className="absolute top-0 right-4 w-8 h-8 border-t-2 border-r-2 border-amber-600"></div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="px-4 sm:px-6 lg:pl-8 lg:pr-8">
         <div className="flex justify-between items-center h-20">
           {/* Logo - Relish brand */}
           <Link

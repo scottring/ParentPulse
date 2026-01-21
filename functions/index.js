@@ -2,6 +2,7 @@ const {onSchedule} = require("firebase-functions/v2/scheduler");
 const {onCall} = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 const Anthropic = require("@anthropic-ai/sdk");
+const {GoogleGenerativeAI} = require("@google/generative-ai");
 
 admin.initializeApp();
 
@@ -14,6 +15,15 @@ function getAnthropic() {
     });
   }
   return anthropic;
+}
+
+// Initialize Google Generative AI client lazily
+let genAI;
+function getGoogleAI() {
+  if (!genAI && process.env.GOOGLE_AI_API_KEY) {
+    genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
+  }
+  return genAI; // Returns null if API key not set
 }
 
 /**
@@ -2036,6 +2046,833 @@ exports.regenerateWorkbookActivities = onCall(
       }
     }
 );
+
+/**
+ * Generate Dual Weekly Workbooks (Parent + Child)
+ *
+ * Creates linked parent and child workbooks:
+ * - ParentWorkbook: Behavior goals + daily parenting strategies (aligned with child's story)
+ * - ChildWorkbook: Weekly serialized story with illustrations
+ *
+ * Uses Claude 3.5 Sonnet for story narrative
+ * Uses Nano Banana Pro (Gemini 3 Pro Image) for illustrations
+ */
+exports.generateWeeklyWorkbooks = onCall(
+    {
+      secrets: [
+        "ANTHROPIC_API_KEY",  // Required for Claude story generation
+        // Optional secrets (check availability in code):
+        // "OPENAI_API_KEY" - for GPT models and DALL-E illustrations
+        // "GOOGLE_AI_API_KEY" - for Nano Banana Pro illustrations
+      ],
+      timeoutSeconds: 540, // 9 minutes for story + illustration generation
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      // Verify authentication
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const {
+        familyId,
+        personId,
+        personName,
+        personAge,
+        manualId,
+        relationshipType,
+        triggers,
+        whatWorks,
+        whatDoesntWork,
+        boundaries,
+        coreInfo,
+        previousWeekReflection,
+        assessmentScores,
+        weekNumber,
+        startDate,
+        endDate,
+        // AI model configuration (optional - defaults to standard tier)
+        storyModel = 'claude-haiku-4.5',
+        illustrationModel = 'dalle-3-standard',
+        illustrationsEnabled = true,
+        // Test/Demo mode (avoids API costs)
+        testMode = false,
+      } = request.data;
+
+      // Validate required parameters
+      if (!familyId || !personId || !personName || !manualId) {
+        throw new Error("Missing required parameters: familyId, personId, personName, manualId");
+      }
+
+      if (testMode) {
+        logger.info(`[TEST MODE] Generating dual workbooks for ${personName} using sample data (no API costs)`);
+      } else {
+        logger.info(`Generating dual workbooks for ${personName}, age ${personAge}`);
+      }
+
+      try {
+        const db = admin.firestore();
+
+        // Generate unique weekId to link both workbooks
+        const weekId = `week-${personId}-${weekNumber || Date.now()}`;
+
+        let parentGoalsData;
+        let storyData;
+        let dailyStrategiesData;
+
+        if (testMode) {
+          // ===== TEST MODE: Use sample data (no API calls, no costs) =====
+          logger.info("[TEST MODE] Loading sample data instead of calling AI APIs");
+
+          const sampleData = require("./sample-story-data");
+
+          // Customize sample data with person's name
+          storyData = {
+            ...sampleData.sampleStoryAge6,
+            characterName: personName,
+            dailyFragments: sampleData.sampleStoryAge6.dailyFragments.map(fragment => ({
+              ...fragment,
+              fragmentText: fragment.fragmentText.replace(/Luna/g, personName),
+            })),
+          };
+
+          parentGoalsData = {
+            parentGoals: sampleData.sampleParentGoals.map(goal => ({
+              ...goal,
+              description: goal.description.replace(/Luna/g, personName),
+            })),
+          };
+
+          dailyStrategiesData = {
+            dailyStrategies: sampleData.sampleDailyStrategies.map(strategy => ({
+              ...strategy,
+              strategyDescription: strategy.strategyDescription.replace(/Luna/g, personName),
+              connectionToStory: strategy.connectionToStory.replace(/Luna/g, personName),
+            })),
+          };
+
+          logger.info(`[TEST MODE] Using sample story: "${storyData.title}"`);
+
+        } else {
+          // ===== PRODUCTION MODE: Call AI APIs (costs apply) =====
+
+          // STEP 1: Generate parent goals
+          logger.info("Step 1: Generating parent behavior goals");
+          const parentGoalsPrompt = buildWorkbookGenerationPrompt(
+              personName,
+              relationshipType,
+              personAge,
+              triggers || [],
+              whatWorks || [],
+              boundaries || [],
+              previousWeekReflection,
+              assessmentScores,
+              coreInfo
+          );
+
+          const anthropicClient = getAnthropic();
+          const goalsResponse = await anthropicClient.messages.create({
+            model: "claude-sonnet-4-5-20250929",
+            max_tokens: 4000,
+            temperature: 0.7,
+            messages: [{
+              role: "user",
+              content: parentGoalsPrompt,
+            }],
+          });
+
+          const goalsText = goalsResponse.content[0].text;
+          const goalsJsonMatch = goalsText.match(/```json\s*([\s\S]*?)\s*```/) ||
+                                 goalsText.match(/```\s*([\s\S]*?)\s*```/);
+          const goalsJson = goalsJsonMatch ? goalsJsonMatch[1] : goalsText;
+          parentGoalsData = JSON.parse(goalsJson);
+
+          logger.info(`Generated ${parentGoalsData.parentGoals.length} parent goals`);
+
+          // STEP 2: Generate child's weekly story
+          logger.info(`Step 2: Generating child's weekly story with ${storyModel}`);
+          storyData = await generateWeeklyStory(
+              personName,
+              personAge,
+              coreInfo?.strengths || [],
+              triggers || [],
+              whatWorks || [],
+              relationshipType,
+              storyModel
+          );
+
+          logger.info(`Generated story: "${storyData.title}" with ${storyData.dailyFragments.length} fragments`);
+
+          // STEP 3: Generate daily parent strategies (aligned with story)
+          logger.info("Step 3: Generating daily parent strategies aligned with story");
+          const dailyStrategiesPrompt = buildDailyStrategiesPrompt(
+              personName,
+              personAge,
+              storyData,
+              triggers || [],
+              whatWorks || []
+          );
+
+          const strategiesResponse = await anthropicClient.messages.create({
+            model: "claude-sonnet-4-5-20250929",
+            max_tokens: 3000,
+            temperature: 0.7,
+            messages: [{
+              role: "user",
+              content: dailyStrategiesPrompt,
+            }],
+          });
+
+          const strategiesText = strategiesResponse.content[0].text;
+          const strategiesJsonMatch = strategiesText.match(/```json\s*([\s\S]*?)\s*```/) ||
+                                      strategiesText.match(/```\s*([\s\S]*?)\s*```/);
+          const strategiesJson = strategiesJsonMatch ? strategiesJsonMatch[1] : strategiesText;
+          dailyStrategiesData = JSON.parse(strategiesJson);
+
+          logger.info(`Generated ${dailyStrategiesData.dailyStrategies.length} daily strategies`);
+        }
+
+        // STEP 4: Create ParentWorkbook document
+        const parentWorkbookRef = db.collection("parent_workbooks").doc();
+        const parentWorkbookId = parentWorkbookRef.id;
+
+        // STEP 5: Create ChildWorkbook document
+        const childWorkbookRef = db.collection("child_workbooks").doc();
+        const childWorkbookId = childWorkbookRef.id;
+
+        // Build parent workbook data
+        const parentWorkbook = {
+          workbookId: parentWorkbookId,
+          weekId: weekId,
+          familyId: familyId,
+          personId: personId,
+          personName: personName,
+          weekNumber: weekNumber || 1,
+          startDate: startDate ? admin.firestore.Timestamp.fromDate(new Date(startDate)) : admin.firestore.Timestamp.now(),
+          endDate: endDate ? admin.firestore.Timestamp.fromDate(new Date(endDate)) : admin.firestore.Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
+
+          // Parent goals from step 1
+          parentGoals: parentGoalsData.parentGoals.map((goal) => ({
+            id: db.collection("parent_workbooks").doc().id,
+            description: goal.description,
+            targetFrequency: goal.targetFrequency,
+            linkedToTrigger: goal.relatedTriggerId || null,
+            linkedToStrategy: goal.relatedStrategyId || null,
+            completionLog: [],
+            addedDate: admin.firestore.Timestamp.now(),
+          })),
+
+          // Daily strategies from step 3 (aligned with child's story)
+          dailyStrategies: dailyStrategiesData.dailyStrategies.map((strategy, idx) => ({
+            day: strategy.day,
+            dayNumber: idx + 1,
+            strategyTitle: strategy.strategyTitle,
+            strategyDescription: strategy.strategyDescription,
+            connectionToStory: strategy.connectionToStory,
+            practicalTips: strategy.practicalTips || [],
+            linkedToTrigger: strategy.linkedToTrigger || null,
+            linkedToWhatWorks: strategy.linkedToWhatWorks || null,
+            completed: false,
+            completedAt: null,
+            notes: null,
+          })),
+
+          // Child progress summary (initially empty)
+          childProgressSummary: {
+            storiesRead: 0,
+            activitiesCompleted: 0,
+            lastActiveDate: null,
+            storyCompletionPercent: 0,
+          },
+
+          // Link to child workbook
+          childWorkbookId: childWorkbookId,
+
+          status: "active",
+          createdAt: admin.firestore.Timestamp.now(),
+          updatedAt: admin.firestore.Timestamp.now(),
+          lastEditedBy: request.auth.uid,
+        };
+
+        // Build child workbook data
+        const childWorkbook = {
+          workbookId: childWorkbookId,
+          weekId: weekId,
+          familyId: familyId,
+          personId: personId,
+          personName: personName,
+          personAge: personAge || 8,
+          weekNumber: weekNumber || 1,
+          startDate: startDate ? admin.firestore.Timestamp.fromDate(new Date(startDate)) : admin.firestore.Timestamp.now(),
+          endDate: endDate ? admin.firestore.Timestamp.fromDate(new Date(endDate)) : admin.firestore.Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
+
+          // Weekly story from step 2
+          weeklyStory: {
+            ...storyData,
+            // Mark illustrations as 'generating' initially
+            dailyFragments: storyData.dailyFragments.map((fragment) => ({
+              ...fragment,
+              illustrationUrl: null,
+              illustrationThumbnail: null,
+              illustrationStatus: "generating",
+            })),
+          },
+
+          // Daily activities from parent goals data
+          dailyActivities: parentGoalsData.dailyActivities || [],
+
+          // Story progress tracking (initially empty)
+          storyProgress: {
+            currentDay: 1,
+            daysRead: [false, false, false, false, false, false, false],
+            activitiesCompleted: [],
+            totalActivities: (parentGoalsData.dailyActivities || []).length,
+            lastReadAt: null,
+          },
+
+          // Link to parent workbook
+          parentWorkbookId: parentWorkbookId,
+
+          status: "active",
+          createdAt: admin.firestore.Timestamp.now(),
+          updatedAt: admin.firestore.Timestamp.now(),
+        };
+
+        // STEP 6: Save both workbooks to Firestore
+        logger.info("Step 4: Saving workbooks to Firestore");
+        await Promise.all([
+          parentWorkbookRef.set(parentWorkbook),
+          childWorkbookRef.set(childWorkbook),
+        ]);
+
+        logger.info(`Workbooks saved: parent=${parentWorkbookId}, child=${childWorkbookId}`);
+
+        // STEP 7: Generate illustrations asynchronously (don't block response)
+        if (testMode) {
+          logger.info("[TEST MODE] Skipping illustration generation - using sample illustrations");
+        } else if (illustrationsEnabled) {
+          logger.info(`Step 5: Triggering async illustration generation with ${illustrationModel}`);
+          generateAndSaveIllustrations(
+              childWorkbookId,
+              storyData,
+              personAge,
+              illustrationModel
+          ).catch((error) => {
+            logger.error("Async illustration generation failed:", error);
+          });
+        } else {
+          logger.info("Step 5: Illustrations disabled, skipping generation");
+        }
+
+        // Return success with workbook IDs
+        return {
+          success: true,
+          parentWorkbookId: parentWorkbookId,
+          childWorkbookId: childWorkbookId,
+          weekId: weekId,
+          storyTitle: storyData.title,
+          parentGoalsCount: parentGoalsData.parentGoals.length,
+          dailyStrategiesCount: dailyStrategiesData.dailyStrategies.length,
+        };
+
+      } catch (error) {
+        logger.error("Error generating dual workbooks:", error);
+        return {
+          success: false,
+          error: error.message,
+          errorDetails: error.stack,
+        };
+      }
+    }
+);
+
+/**
+ * Generate story with specified AI model
+ */
+async function generateStoryWithModel(
+    modelName,
+    storyPrompt,
+    logger
+) {
+  logger.info(`Generating story with model: ${modelName}`);
+
+  let responseText;
+
+  switch (modelName) {
+    case 'claude-sonnet-4.5': {
+      const client = getAnthropic();
+      const response = await client.messages.create({
+        model: "claude-sonnet-4-5-20250929",
+        max_tokens: 4000,
+        temperature: 0.8,
+        messages: [{ role: "user", content: storyPrompt }],
+      });
+      responseText = response.content[0].text;
+      break;
+    }
+
+    case 'claude-haiku-4.5': {
+      const client = getAnthropic();
+      const response = await client.messages.create({
+        model: "claude-haiku-4-5-20250222",
+        max_tokens: 4000,
+        temperature: 0.8,
+        messages: [{ role: "user", content: storyPrompt }],
+      });
+      responseText = response.content[0].text;
+      break;
+    }
+
+    case 'gpt-4o-mini':
+    case 'gpt-3.5-turbo': {
+      // OpenAI models require the OpenAI SDK
+      const { OpenAI } = require('openai');
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      const modelId = modelName === 'gpt-4o-mini' ? 'gpt-4o-mini' : 'gpt-3.5-turbo';
+      const response = await openai.chat.completions.create({
+        model: modelId,
+        max_tokens: 4000,
+        temperature: 0.8,
+        messages: [{ role: 'user', content: storyPrompt }],
+      });
+      responseText = response.choices[0].message.content;
+      break;
+    }
+
+    default:
+      throw new Error(`Unsupported story model: ${modelName}`);
+  }
+
+  logger.info("Story generation response received");
+
+  // Parse JSON response
+  const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) ||
+                   responseText.match(/```\s*([\s\S]*?)\s*```/);
+  const jsonText = jsonMatch ? jsonMatch[1] : responseText;
+  const storyData = JSON.parse(jsonText);
+
+  return storyData;
+}
+
+/**
+ * Generate weekly story using Claude 3.5 Sonnet (legacy wrapper for backwards compatibility)
+ */
+async function generateWeeklyStory(
+    personName,
+    personAge,
+    strengths,
+    triggers,
+    whatWorks,
+    relationshipType,
+    modelName = 'claude-haiku-4.5' // Default to Standard tier
+) {
+  const logger = require("firebase-functions/logger");
+
+  // Determine primary trigger for story theme
+  const primaryTrigger = triggers.length > 0 ? triggers[0] : null;
+
+  // Build story generation prompt
+  const storyPrompt = buildStoryPrompt(
+      personName,
+      personAge,
+      strengths,
+      primaryTrigger,
+      whatWorks
+  );
+
+  // Use new model-agnostic function
+  return await generateStoryWithModel(modelName, storyPrompt, logger);
+}
+
+/**
+ * Build prompt for generating weekly story
+ */
+function buildStoryPrompt(personName, personAge, strengths, primaryTrigger, whatWorks) {
+  const ageLevel =
+    personAge <= 5 ? "picture-book" :
+    personAge <= 8 ? "early-reader" :
+    "chapter-book";
+
+  const wordCount =
+    personAge <= 5 ? "50-100" :
+    personAge <= 8 ? "100-150" :
+    "150-250";
+
+  const strengthsText = strengths.length > 0 ? strengths.join(", ") : "creativity, curiosity, kindness";
+  const triggerText = primaryTrigger ? primaryTrigger.description : "facing new challenges";
+  const strategiesText = whatWorks.length > 0 ?
+    whatWorks.map((s) => s.description).join("; ") :
+    "taking deep breaths, asking for help, breaking tasks into small steps";
+
+  return `You are writing a therapeutic children's story for ${personName}, age ${personAge}.
+
+STORY REQUIREMENTS:
+- Age level: ${ageLevel} (${wordCount} words per day)
+- 7-day serialized story (one fragment per day, Monday-Sunday)
+- Main character mirrors ${personName}'s age and strengths: ${strengthsText}
+- Character faces challenge similar to: ${triggerText}
+- Character discovers strategies: ${strategiesText}
+- Each fragment ends with mini-cliffhanger (except Sunday)
+
+THERAPEUTIC DESIGN PRINCIPLE:
+The story creates a "therapeutic mirror" - the character faces ${personName}'s challenges, but it feels psychologically safe because "it's about someone else." Questions about the character become a bridge to self-reflection.
+
+STORY STRUCTURE (7-Day Arc):
+Day 1 (Monday): Introduce character, world, establish normalcy
+Day 2 (Tuesday): Challenge emerges (mirrors the trigger)
+Day 3 (Wednesday): First attempt, partial success or setback
+Day 4 (Thursday): Discovery of helpful strategy
+Day 5 (Friday): Success with help, feeling proud
+Day 6 (Saturday): Continued growth and practice
+Day 7 (Sunday): Resolution and lesson learned
+
+THERAPEUTIC GOALS:
+- Character demonstrates it's okay to struggle
+- Character shows asking for help is brave
+- Character's feelings are validated
+- Character grows through experience, not despite it
+- Emotions are named and normalized
+
+STORY REFLECTION QUESTIONS (5-7 questions):
+Create questions about the character that prompt self-reflection:
+1. Challenge identification: "What was hard for [Character]?"
+2. Courage recognition: "What brave thing did [Character] do?"
+3. Strategy naming: "What helped [Character] feel better?"
+4. Connection bridge: "Have you ever felt like [Character]?"
+5. Self-compassion: "What would you tell [Character] if they were your friend?"
+
+CHARACTER DESIGN:
+- Choose an animal or child character that feels relatable
+- Character should be same age as ${personName}
+- Character demonstrates documented strengths
+- Character's personality mirrors positive traits
+
+OUTPUT FORMAT (JSON):
+{
+  "title": "Luna and the Big Transition",
+  "characterName": "Luna",
+  "characterDescription": "a curious young fox",
+  "characterAge": ${personAge},
+  "storyTheme": "transitions" | "courage" | "friendship" | "problem-solving" | "emotions" | "boundaries" | "growth" | "self-compassion",
+  "ageAppropriateLevel": "${ageLevel}",
+  "readingLevel": "Ages ${Math.max(3, personAge - 2)}-${personAge + 2}",
+  "estimatedReadTime": 15,
+  "dailyFragments": [
+    {
+      "day": "monday",
+      "dayNumber": 1,
+      "fragmentText": "Story text here...",
+      "illustrationPrompt": "A curious young fox waking up in a cozy den",
+      "wordCount": ${wordCount.split('-')[0]},
+      "estimatedReadTime": 2,
+      "pairedActivityId": null
+    },
+    // ... 6 more days
+  ],
+  "reflectionQuestions": [
+    {
+      "id": "q1",
+      "questionText": "What was hard for Luna this week?",
+      "category": "challenge",
+      "purposeNote": "Helps identify and name challenges"
+    },
+    // ... 4-6 more questions
+  ],
+  "mirrorsContent": {
+    "primaryTrigger": "${primaryTrigger?.id || null}",
+    "strategiesUsed": ${JSON.stringify((whatWorks || []).map((s) => s.id))},
+    "strengthsHighlighted": ${JSON.stringify(strengths)}
+  }
+}
+
+IMPORTANT:
+- Keep language age-appropriate for ${personAge} year old
+- Character should feel like a friend, not a lesson
+- Story should be engaging and fun first, therapeutic second
+- Each day's fragment should be complete enough to satisfy but leave curiosity
+- Illustration prompts should describe the scene visually for AI image generation
+- Return ONLY valid JSON, no additional text`;
+}
+
+/**
+ * Build prompt for generating daily parent strategies (aligned with child's story)
+ */
+function buildDailyStrategiesPrompt(personName, personAge, storyData, triggers, whatWorks) {
+  const triggersText = triggers.length > 0 ?
+    triggers.map((t) => `- ${t.description} (${t.severity})`).join("\n") :
+    "None documented";
+
+  const strategiesText = whatWorks.length > 0 ?
+    whatWorks.map((s) => `- ${s.description} (${s.effectiveness}/5)`).join("\n") :
+    "None documented";
+
+  // Extract story progression
+  const storyProgression = storyData.dailyFragments.map((f, idx) =>
+    `Day ${idx + 1} (${f.day}): ${f.fragmentText.substring(0, 100)}...`
+  ).join("\n");
+
+  return `You are creating daily parenting strategies for a parent of ${personName} (age ${personAge}).
+
+CONTEXT:
+This week, ${personName} will be reading a story called "${storyData.title}" about ${storyData.characterName}, ${storyData.characterDescription}.
+
+STORY PROGRESSION:
+${storyProgression}
+
+DOCUMENTED TRIGGERS:
+${triggersText}
+
+WHAT WORKS (Effective Strategies):
+${strategiesText}
+
+YOUR TASK:
+Generate 7 daily parenting strategies (Monday-Sunday) that:
+1. Align with what's happening in ${storyData.characterName}'s story each day
+2. Give parents concrete ways to support ${personName} through similar situations
+3. Practice the documented "what works" strategies
+4. Address the documented triggers proactively
+5. Connect the story to real parenting moments
+
+Each daily strategy should:
+- Have a clear, actionable title
+- Describe what parent should focus on/practice that day
+- Explain how it connects to the story
+- Provide 2-3 practical tips
+- Be achievable in the context of daily life
+
+OUTPUT FORMAT (JSON):
+{
+  "dailyStrategies": [
+    {
+      "day": "monday",
+      "dayNumber": 1,
+      "strategyTitle": "Notice Without Judgment",
+      "strategyDescription": "Today, practice observing ${personName}'s emotions without immediately trying to fix them, just like ${storyData.characterName}'s parent notices their feelings in today's story.",
+      "connectionToStory": "In today's story, ${storyData.characterName} wakes up feeling grumpy. Practice noticing and naming ${personName}'s emotions without judgment.",
+      "practicalTips": [
+        "When you notice an emotion, name it: 'I see you're feeling frustrated'",
+        "Wait 5 seconds before offering solutions",
+        "Validate the feeling: 'It makes sense you'd feel that way'"
+      ],
+      "linkedToTrigger": "trigger-id-if-applicable",
+      "linkedToWhatWorks": "strategy-id-if-applicable"
+    },
+    // ... 6 more days
+  ]
+}
+
+IMPORTANT:
+- Each strategy should feel doable and specific
+- Connect to the story but also stand alone as parenting guidance
+- Use ${personName}'s name and ${storyData.characterName}'s name explicitly
+- Strategies should build on each other across the week
+- Return ONLY valid JSON, no additional text`;
+}
+
+/**
+ * Generate story illustrations using specified model (async)
+ * Supports: dalle-3-standard (default), nano-banana-pro, stable-diffusion-3.5, gpt-image-1-mini
+ */
+async function generateAndSaveIllustrations(
+    childWorkbookId,
+    storyData,
+    personAge,
+    illustrationModel = 'dalle-3-standard'
+) {
+  const logger = require("firebase-functions/logger");
+
+  try {
+    logger.info(`Starting illustration generation for workbook ${childWorkbookId} with model: ${illustrationModel}`);
+
+    const db = admin.firestore();
+    const bucket = admin.storage().bucket();
+    const illustrations = [];
+
+    // Generate all 7 illustrations
+    for (let i = 0; i < storyData.dailyFragments.length; i++) {
+      const fragment = storyData.dailyFragments[i];
+
+      logger.info(`Generating illustration ${i + 1}/7: ${fragment.day}`);
+
+      // Build illustration prompt
+      const characterRef = i === 0 ?
+        `Introduce ${storyData.characterName}, ${storyData.characterDescription}. This is the first illustration, establish character design.` :
+        `Continue with ${storyData.characterName} (${storyData.characterDescription}) from previous illustrations. Maintain exact same character appearance, colors, and style.`;
+
+      const fullPrompt = `
+Children's book illustration in watercolor style:
+
+${characterRef}
+
+Scene: ${fragment.illustrationPrompt}
+
+Style requirements:
+- Watercolor or soft digital painting aesthetic
+- Warm, friendly, inviting colors
+- Age-appropriate for ${personAge} years old
+- No scary or threatening elements
+- Whimsical and playful tone
+- High detail in character, moderate detail in background
+- Picture book quality (professional children's book standard)
+
+Composition:
+- Main character clearly visible and expressive
+- Clear emotion/action readable by young children
+- Background supports but doesn't overwhelm story
+
+Technical:
+- High resolution (1024x1024 minimum)
+- Consistent character proportions and colors across series
+- Safe for children, warm and comforting overall tone
+`;
+
+      try {
+        let imageBuffer;
+
+        // Route to appropriate model
+        switch (illustrationModel) {
+          case 'dalle-3-standard': {
+            const { OpenAI } = require('openai');
+            const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+            const response = await openai.images.generate({
+              model: 'dall-e-3',
+              prompt: fullPrompt,
+              n: 1,
+              size: '1024x1024',
+              quality: 'standard',
+              response_format: 'url',
+            });
+
+            // Download the image
+            const imageUrl = response.data[0].url;
+            const imageResponse = await fetch(imageUrl);
+            imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+            break;
+          }
+
+          case 'nano-banana-pro': {
+            const genAI = getGoogleAI();
+            if (!genAI) {
+              throw new Error('GOOGLE_AI_API_KEY not configured');
+            }
+
+            const model = genAI.getGenerativeModel({
+              model: "gemini-3-pro-image-preview",
+            });
+
+            const result = await model.generateContent(fullPrompt);
+            const image = await result.response.image();
+            imageBuffer = Buffer.from(await image.arrayBuffer());
+            break;
+          }
+
+          case 'stable-diffusion-3.5':
+          case 'gpt-image-1-mini': {
+            // TODO: Implement when Stability AI SDK is added
+            logger.warn(`Model ${illustrationModel} not yet implemented, marking as pending`);
+            illustrations.push({
+              url: null,
+              day: fragment.day,
+              dayNumber: i + 1,
+              status: "pending",
+            });
+            continue;
+          }
+
+          default:
+            throw new Error(`Unsupported illustration model: ${illustrationModel}`);
+        }
+
+        // Upload to Firebase Storage
+        const filename = `story-illustrations/${childWorkbookId}/day-${i + 1}-${fragment.day}.png`;
+        const file = bucket.file(filename);
+
+        await file.save(imageBuffer, {
+          metadata: {
+            contentType: "image/png",
+            metadata: {
+              characterName: storyData.characterName,
+              day: fragment.day,
+              workbookId: childWorkbookId,
+              model: illustrationModel,
+            },
+          },
+        });
+
+        // Make file publicly readable
+        await file.makePublic();
+
+        const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+
+        illustrations.push({
+          url: publicUrl,
+          day: fragment.day,
+          dayNumber: i + 1,
+        });
+
+        logger.info(`Illustration ${i + 1}/7 generated: ${publicUrl}`);
+
+      } catch (error) {
+        logger.error(`Failed to generate illustration for day ${i + 1}:`, error);
+        illustrations.push({
+          url: null,
+          day: fragment.day,
+          dayNumber: i + 1,
+          status: "failed",
+        });
+      }
+    }
+
+    // Update child workbook with illustration URLs
+    const childWorkbookRef = db.collection("child_workbooks").doc(childWorkbookId);
+    const workbook = await childWorkbookRef.get();
+
+    if (!workbook.exists) {
+      throw new Error(`Child workbook ${childWorkbookId} not found`);
+    }
+
+    const weeklyStory = workbook.data().weeklyStory;
+
+    // Update each fragment with its illustration
+    weeklyStory.dailyFragments = weeklyStory.dailyFragments.map((fragment, idx) => ({
+      ...fragment,
+      illustrationUrl: illustrations[idx]?.url || null,
+      illustrationStatus: illustrations[idx]?.url ? "complete" : (illustrations[idx]?.status || "failed"),
+    }));
+
+    await childWorkbookRef.update({
+      weeklyStory: weeklyStory,
+      updatedAt: admin.firestore.Timestamp.now(),
+    });
+
+    const successCount = illustrations.filter(i => i.url).length;
+    logger.info(`Successfully generated ${successCount}/7 illustrations using ${illustrationModel}`);
+
+  } catch (error) {
+    logger.error("Illustration generation failed:", error);
+
+    // Mark all illustrations as failed
+    const db = admin.firestore();
+    const childWorkbookRef = db.collection("child_workbooks").doc(childWorkbookId);
+    const workbook = await childWorkbookRef.get();
+
+    if (workbook.exists) {
+      const weeklyStory = workbook.data().weeklyStory;
+      weeklyStory.dailyFragments = weeklyStory.dailyFragments.map((fragment) => ({
+        ...fragment,
+        illustrationStatus: "failed",
+      }));
+
+      await childWorkbookRef.update({
+        weeklyStory: weeklyStory,
+        updatedAt: admin.firestore.Timestamp.now(),
+      });
+    }
+  }
+}
 
 /**
  * Build prompt for regenerating just activities (not parent goals)

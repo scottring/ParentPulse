@@ -55,9 +55,10 @@ Cloud Functions, Firestore, and Authentication remain on Firebase. See [DEPLOYME
 
 - **Frontend**: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4
 - **Backend**: Firebase (Firestore, Authentication, Cloud Functions)
-- **AI**: Anthropic Claude API (via Cloud Functions)
-  - Claude 3.5 Sonnet for complex generation (strategic plans, manual content)
-  - Claude 3 Haiku for quick operations (daily actions, chat)
+- **AI**: Multiple AI providers (via Cloud Functions)
+  - **Anthropic Claude**: Claude 3.5 Sonnet (complex generation), Claude 4.5 Haiku (cost-optimized)
+  - **OpenAI**: GPT-4o Mini, GPT-3.5 Turbo (stories), DALL-E 3 (illustrations)
+  - **Google**: Gemini 3 Pro Image / Nano Banana Pro (premium illustrations)
 
 ### Core Architecture: Person-Centric Manual System (Phase 1 - Simplified)
 
@@ -131,6 +132,72 @@ WeeklyWorkbook {
 - `useWeeklyWorkbook(personId)` - CRUD operations for workbooks
 - `useActiveWorkbooks()` - Query all active workbooks for family
 - `useWorkbookHistory(personId, weekCount)` - Fetch historical workbooks
+
+### Cost Optimization & Test Mode
+
+**AI Model Pricing Tiers** (see [/src/types/workbook-config.ts](src/types/workbook-config.ts)):
+
+The system supports multiple pricing tiers for workbook generation:
+
+| Tier | Story Model | Illustration Model | Total Cost |
+|------|------------|-------------------|------------|
+| **Standard** (default) | Claude Haiku 4.5 | DALL-E 3 Standard | $0.38 |
+| **Premium** | Claude Sonnet 4.5 | Nano Banana Pro | $1.14 |
+| **Budget** | GPT-4o Mini | DALL-E 3 Standard | $0.225 |
+| **Economy** | GPT-3.5 Turbo | None | $0.115 |
+
+**Default**: Standard tier (67% savings vs Premium)
+
+**Test Mode** (see [/src/utils/workbook-test-mode.ts](src/utils/workbook-test-mode.ts) and [TEST_MODE_GUIDE.md](TEST_MODE_GUIDE.md)):
+
+Generate workbooks with **$0.00 API costs** for:
+- Development testing (auto-enabled in `NODE_ENV === 'development'`)
+- Customer demonstrations (auto-enabled for `demo@relish.app`)
+- QA testing
+- Load testing
+
+**How it works**:
+- Pass `testMode: true` to Cloud Function
+- Uses pre-generated sample story: "Luna and the Big Transition"
+- Personalizes with child's name
+- Creates real Firestore documents
+- Skips all AI API calls
+
+**Auto-Detection**:
+```typescript
+import { determineTestMode, shouldUserUseTestMode } from '@/utils/workbook-test-mode';
+import { isDemoUser } from '@/utils/demo';
+
+// Automatically enables for demo account or dev environment
+const testMode = determineTestMode({
+  user,
+  ignoreEnvironment: false
+});
+```
+
+### Demo Account System
+
+**Demo Account** (see [DEMO_ACCOUNT_GUIDE.md](DEMO_ACCOUNT_GUIDE.md)):
+- Email: `demo@relish.app`
+- Features shortened onboarding (8 questions vs 30+)
+- Auto-fill buttons for quick demos
+- Integrates with test mode (zero API costs)
+- One-click reset via Cloud Function `resetDemoAccount`
+
+**Demo Mode Detection** ([/src/utils/demo.ts](src/utils/demo.ts)):
+```typescript
+import { isDemoUser, isDemoMode, DEMO_ACCOUNT } from '@/utils/demo';
+
+// Check if user is demo account
+if (isDemoUser(user)) {
+  // Enable demo features
+}
+
+// Check URL parameter: ?demo=true
+if (isDemoMode()) {
+  // Enable demo mode
+}
+```
 
 ## Manual Creation Flow
 
@@ -228,12 +295,13 @@ All functions in [/functions/index.js](functions/index.js):
    - **Input**: User's conversational answers to questions
    - **Output**: Structured JSON (triggers, strategies, boundaries, etc.)
 
-2. **`generateWeeklyWorkbook`** (lines 1389-1604) **NEW**
-   - **Model**: Claude 3.5 Sonnet
-   - **Purpose**: Generate weekly workbook with parent behavior goals from manual content
-   - **Input**: Manual content (triggers, whatWorks, boundaries), previous week reflection
-   - **Output**: 3-5 parent goals + 2-3 suggested activities + weekly focus
-   - **Integration**: Automatically called after manual onboarding completion
+2. **`generateWeeklyWorkbooks`** (lines 2000+) **UPDATED** - Now generates dual workbooks
+   - **Models**: Configurable (Standard tier default: Claude Haiku 4.5 + DALL-E 3)
+   - **Purpose**: Generate weekly workbook with parent behavior goals and child story
+   - **Input**: Manual content, optional pricing tier, testMode flag
+   - **Output**: Parent workbook (3-5 goals) + Child workbook (7-day story with illustrations)
+   - **Test Mode**: Pass `testMode: true` for $0.00 cost using sample data
+   - **Cost Options**: Standard ($0.38), Premium ($1.14), Budget ($0.225), Economy ($0.115)
 
 3. **`generateStrategicPlan`** (lines 749-951)
    - **Model**: Claude 3.5 Sonnet
@@ -438,3 +506,11 @@ Uses Tailwind CSS 4 with CSS variables for theming:
   - Questions like "What makes you feel loved?" answered by each person about themselves
   - Age detection from Person's birthdate field
   - UI adjustments for children (bigger text, more visual, less reading)
+- **Dual Workbook System** (Planned - see [DUAL_WORKBOOK_IMPLEMENTATION_SUMMARY.md](DUAL_WORKBOOK_IMPLEMENTATION_SUMMARY.md)):
+  - Split weekly workbooks into separate parent and child experiences
+  - **Parent Workbook**: Technical manual style with behavior goals and tracking
+  - **Child Workbook**: Serialized children's story with AI-generated illustrations
+  - Story character mirrors child's age and faces parallel challenges
+  - Illustrations generated with Nano Banana Pro (Gemini 3 Pro Image)
+  - "Story Reflection" activity bridges character's story to child's self-awareness
+  - Both workbooks linked by shared `weekId` and generated together
