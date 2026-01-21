@@ -59,7 +59,7 @@ export default function ChildWorkbookPage({ params }: { params: Promise<{ person
         <div className="text-center">
           <p className="font-serif text-xl text-slate-600 mb-6">{workbookError || 'Storybook not found'}</p>
           <Link
-            href={`/people/${personId}/workbook-hub`}
+            href={`/people/${personId}/workbook`}
             className="inline-block px-6 py-3 bg-purple-600 text-white font-serif font-bold rounded-full shadow-lg hover:bg-purple-700 transition"
           >
             ← Back to Hub
@@ -118,7 +118,7 @@ export default function ChildWorkbookPage({ params }: { params: Promise<{ person
         <div className="max-w-4xl mx-auto px-6">
           <div className="flex items-center justify-between mb-4">
             <Link
-              href={`/people/${personId}/workbook-hub`}
+              href={`/people/${personId}/workbook`}
               className={`font-serif text-2xl font-bold transition-colors ${
                 bedtimeMode ? 'text-purple-300 hover:text-purple-100' : 'text-purple-600 hover:text-purple-800'
               }`}
@@ -311,7 +311,7 @@ export default function ChildWorkbookPage({ params }: { params: Promise<{ person
               Great job reading every day this week! {story.characterName} is proud of you.
             </p>
             <Link
-              href={`/people/${personId}/workbook-hub`}
+              href={`/people/${personId}/workbook`}
               className="inline-block px-8 py-4 bg-emerald-600 text-white font-serif text-lg font-bold rounded-full shadow-lg hover:bg-emerald-700 transition-all hover:scale-105"
             >
               Back to Workbooks

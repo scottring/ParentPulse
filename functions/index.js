@@ -2061,8 +2061,8 @@ exports.generateWeeklyWorkbooks = onCall(
     {
       secrets: [
         "ANTHROPIC_API_KEY",  // Required for Claude story generation
+        "OPENAI_API_KEY",     // Fallback for story generation and DALL-E illustrations
         // Optional secrets (check availability in code):
-        // "OPENAI_API_KEY" - for GPT models and DALL-E illustrations
         // "GOOGLE_AI_API_KEY" - for Nano Banana Pro illustrations
       ],
       timeoutSeconds: 540, // 9 minutes for story + illustration generation
@@ -2092,8 +2092,8 @@ exports.generateWeeklyWorkbooks = onCall(
         weekNumber,
         startDate,
         endDate,
-        // AI model configuration (optional - defaults to standard tier)
-        storyModel = 'claude-haiku-4.5',
+        // AI model configuration (optional - defaults to budget tier with GPT-4o-mini)
+        storyModel = 'gpt-4o-mini', // Changed from claude-haiku-4.5 due to reliability issues
         illustrationModel = 'dalle-3-standard',
         illustrationsEnabled = true,
         // Test/Demo mode (avoids API costs)
@@ -2352,15 +2352,19 @@ exports.generateWeeklyWorkbooks = onCall(
         if (testMode) {
           logger.info("[TEST MODE] Skipping illustration generation - using sample illustrations");
         } else if (illustrationsEnabled) {
-          logger.info(`Step 5: Triggering async illustration generation with ${illustrationModel}`);
-          generateAndSaveIllustrations(
-              childWorkbookId,
-              storyData,
-              personAge,
-              illustrationModel
-          ).catch((error) => {
-            logger.error("Async illustration generation failed:", error);
-          });
+          logger.info(`Step 5: Generating illustrations synchronously with ${illustrationModel}`);
+          try {
+            await generateAndSaveIllustrations(
+                childWorkbookId,
+                storyData,
+                personAge,
+                illustrationModel
+            );
+            logger.info("All illustrations generated successfully");
+          } catch (error) {
+            logger.error("Illustration generation failed:", error);
+            // Continue anyway - workbooks are still usable without illustrations
+          }
         } else {
           logger.info("Step 5: Illustrations disabled, skipping generation");
         }
@@ -2413,9 +2417,10 @@ async function generateStoryWithModel(
     }
 
     case 'claude-haiku-4.5': {
+      // Note: There is no Claude Haiku 4.5, using Claude 3 Haiku instead
       const client = getAnthropic();
       const response = await client.messages.create({
-        model: "claude-haiku-4-5-20250222",
+        model: "claude-3-haiku-20240307",
         max_tokens: 4000,
         temperature: 0.8,
         messages: [{ role: "user", content: storyPrompt }],
@@ -2450,10 +2455,34 @@ async function generateStoryWithModel(
   // Parse JSON response
   const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) ||
                    responseText.match(/```\s*([\s\S]*?)\s*```/);
-  const jsonText = jsonMatch ? jsonMatch[1] : responseText;
-  const storyData = JSON.parse(jsonText);
+  let jsonText = jsonMatch ? jsonMatch[1] : responseText;
 
-  return storyData;
+  try {
+    const storyData = JSON.parse(jsonText);
+    return storyData;
+  } catch (parseError) {
+    // Try to repair common JSON issues
+    logger.warn("Initial JSON parse failed, attempting repair...");
+
+    try {
+      // Remove trailing commas before } or ]
+      jsonText = jsonText.replace(/,(\s*[}\]])/g, '$1');
+      // Fix unescaped quotes in strings (basic attempt)
+      // Try parsing again
+      const storyData = JSON.parse(jsonText);
+      logger.info("Successfully repaired and parsed JSON");
+      return storyData;
+    } catch (repairError) {
+      logger.error("Failed to parse story JSON even after repair:", {
+        originalError: parseError.message,
+        position: parseError.message.match(/position (\d+)/)?.[1],
+        jsonLength: jsonText.length,
+        jsonPreview: jsonText.substring(0, 1000),
+        fullResponse: responseText.substring(0, 2000)
+      });
+      throw new Error(`Failed to parse story JSON: ${parseError.message}. The AI generated invalid JSON. Please try again.`);
+    }
+  }
 }
 
 /**
@@ -2482,8 +2511,64 @@ async function generateWeeklyStory(
       whatWorks
   );
 
-  // Use new model-agnostic function
-  return await generateStoryWithModel(modelName, storyPrompt, logger);
+  // Determine minimum word count based on age
+  const minWordCount =
+    personAge <= 5 ? 75 :
+    personAge <= 8 ? 150 :
+    200;
+
+  // Try up to 2 times to get properly sized story
+  let lastError = null;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      logger.info(`Story generation attempt ${attempt}/2`);
+
+      // Use new model-agnostic function
+      const storyData = await generateStoryWithModel(modelName, storyPrompt, logger);
+
+      // Validate word counts
+      const fragmentValidation = storyData.dailyFragments.map((fragment, idx) => {
+        const wordCount = fragment.fragmentText.split(/\s+/).length;
+        const isValid = wordCount >= minWordCount;
+        return { day: idx + 1, wordCount, isValid, minRequired: minWordCount };
+      });
+
+      const invalidFragments = fragmentValidation.filter(f => !f.isValid);
+
+      if (invalidFragments.length > 0) {
+        const details = invalidFragments.map(f =>
+          `Day ${f.day}: ${f.wordCount} words (need ${f.minRequired}+)`
+        ).join(', ');
+
+        logger.warn(`Story fragments too short on attempt ${attempt}: ${details}`);
+
+        if (attempt < 2) {
+          // Retry with stronger emphasis
+          logger.info("Retrying with stronger word count emphasis...");
+          continue;
+        } else {
+          // On final attempt, log warning but accept it
+          logger.error(`Story still too short after ${attempt} attempts. Accepting anyway.`);
+        }
+      } else {
+        logger.info("All story fragments meet minimum word count requirements");
+      }
+
+      return storyData;
+
+    } catch (error) {
+      lastError = error;
+      logger.error(`Story generation attempt ${attempt} failed:`, error);
+
+      if (attempt < 2) {
+        logger.info("Retrying story generation...");
+        continue;
+      }
+    }
+  }
+
+  // If we got here, all attempts failed
+  throw lastError || new Error("Story generation failed after all attempts");
 }
 
 /**
@@ -2496,9 +2581,9 @@ function buildStoryPrompt(personName, personAge, strengths, primaryTrigger, what
     "chapter-book";
 
   const wordCount =
-    personAge <= 5 ? "50-100" :
-    personAge <= 8 ? "100-150" :
-    "150-250";
+    personAge <= 5 ? "75-125" :
+    personAge <= 8 ? "150-200" :
+    "200-300";
 
   const strengthsText = strengths.length > 0 ? strengths.join(", ") : "creativity, curiosity, kindness";
   const triggerText = primaryTrigger ? primaryTrigger.description : "facing new challenges";
@@ -2509,12 +2594,14 @@ function buildStoryPrompt(personName, personAge, strengths, primaryTrigger, what
   return `You are writing a therapeutic children's story for ${personName}, age ${personAge}.
 
 STORY REQUIREMENTS:
-- Age level: ${ageLevel} (${wordCount} words per day)
+- Age level: ${ageLevel}
+- **CRITICAL: Each day's story MUST be ${wordCount} words (minimum ${wordCount.split('-')[0]} words)**
 - 7-day serialized story (one fragment per day, Monday-Sunday)
 - Main character mirrors ${personName}'s age and strengths: ${strengthsText}
 - Character faces challenge similar to: ${triggerText}
 - Character discovers strategies: ${strategiesText}
 - Each fragment ends with mini-cliffhanger (except Sunday)
+- DO NOT write short paragraphs - write full, engaging stories of ${wordCount} words per day
 
 THERAPEUTIC DESIGN PRINCIPLE:
 The story creates a "therapeutic mirror" - the character faces ${personName}'s challenges, but it feels psychologically safe because "it's about someone else." Questions about the character become a bridge to self-reflection.
@@ -2549,13 +2636,20 @@ CHARACTER DESIGN:
 - Character demonstrates documented strengths
 - Character's personality mirrors positive traits
 
-OUTPUT FORMAT (JSON):
+OUTPUT FORMAT - CRITICAL REQUIREMENTS:
+1. Return ONLY valid JSON - no comments, no additional text, no markdown code blocks
+2. All 7 days must be complete - do not use placeholders like "..." or comments
+3. Include 5-7 complete reflection questions
+4. Escape all quotes inside strings properly
+5. Do not include any explanatory text before or after the JSON
+
+JSON STRUCTURE (all fields required):
 {
-  "title": "Luna and the Big Transition",
-  "characterName": "Luna",
-  "characterDescription": "a curious young fox",
+  "title": "Story title here",
+  "characterName": "Character name",
+  "characterDescription": "Brief description",
   "characterAge": ${personAge},
-  "storyTheme": "transitions" | "courage" | "friendship" | "problem-solving" | "emotions" | "boundaries" | "growth" | "self-compassion",
+  "storyTheme": "one of: transitions, courage, friendship, problem-solving, emotions, boundaries, growth, self-compassion",
   "ageAppropriateLevel": "${ageLevel}",
   "readingLevel": "Ages ${Math.max(3, personAge - 2)}-${personAge + 2}",
   "estimatedReadTime": 15,
@@ -2563,22 +2657,22 @@ OUTPUT FORMAT (JSON):
     {
       "day": "monday",
       "dayNumber": 1,
-      "fragmentText": "Story text here...",
-      "illustrationPrompt": "A curious young fox waking up in a cozy den",
-      "wordCount": ${wordCount.split('-')[0]},
+      "fragmentText": "Complete story text for day 1 here",
+      "illustrationPrompt": "Visual description for AI image generation",
+      "wordCount": 100,
       "estimatedReadTime": 2,
       "pairedActivityId": null
-    },
-    // ... 6 more days
+    }
+    (INCLUDE ALL 7 DAYS: monday, tuesday, wednesday, thursday, friday, saturday, sunday)
   ],
   "reflectionQuestions": [
     {
       "id": "q1",
-      "questionText": "What was hard for Luna this week?",
+      "questionText": "What was hard for [Character]?",
       "category": "challenge",
       "purposeNote": "Helps identify and name challenges"
-    },
-    // ... 4-6 more questions
+    }
+    (INCLUDE 5-7 COMPLETE QUESTIONS)
   ],
   "mirrorsContent": {
     "primaryTrigger": "${primaryTrigger?.id || null}",
@@ -2591,9 +2685,10 @@ IMPORTANT:
 - Keep language age-appropriate for ${personAge} year old
 - Character should feel like a friend, not a lesson
 - Story should be engaging and fun first, therapeutic second
-- Each day's fragment should be complete enough to satisfy but leave curiosity
-- Illustration prompts should describe the scene visually for AI image generation
-- Return ONLY valid JSON, no additional text`;
+- **EACH DAY MUST BE ${wordCount} WORDS - DO NOT write shorter fragments**
+- Write complete, engaging narratives - not brief summaries
+- Illustration prompts should describe scenes visually for AI image generation
+- RETURN ONLY VALID JSON WITH NO COMMENTS OR EXTRA TEXT`;
 }
 
 /**

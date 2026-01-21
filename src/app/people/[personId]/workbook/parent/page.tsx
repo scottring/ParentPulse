@@ -90,7 +90,7 @@ export default function ParentWorkbookPage({ params }: { params: Promise<{ perso
             {workbookError || 'Workbook not found'}
           </p>
           <Link
-            href={`/people/${personId}/workbook-hub`}
+            href={`/people/${personId}/workbook`}
             className="inline-block mt-4 px-6 py-3 bg-slate-800 text-white font-mono font-bold hover:bg-amber-600 transition-all"
           >
             ← BACK TO HUB
@@ -186,7 +186,7 @@ export default function ParentWorkbookPage({ params }: { params: Promise<{ perso
 
             <div className="flex items-center gap-6 mb-6">
               <Link
-                href={`/people/${personId}/workbook-hub`}
+                href={`/people/${personId}/workbook`}
                 className="font-mono text-3xl font-bold text-slate-800 hover:text-amber-600 transition-colors"
               >
                 ←

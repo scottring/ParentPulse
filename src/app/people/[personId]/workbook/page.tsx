@@ -48,7 +48,9 @@ export default function WorkbookHubPage({ params }: { params: Promise<{ personId
     setGenerateError(null);
 
     try {
-      const generateWeeklyWorkbooks = httpsCallable(functions, 'generateWeeklyWorkbooks');
+      const generateWeeklyWorkbooks = httpsCallable(functions, 'generateWeeklyWorkbooks', {
+        timeout: 540000 // 9 minutes to match Cloud Function timeout
+      });
 
       const result = await generateWeeklyWorkbooks({
         familyId: user.familyId,
@@ -65,7 +67,7 @@ export default function WorkbookHubPage({ params }: { params: Promise<{ personId
         boundaries: manual.boundaries || [],
         coreInfo: manual.coreInfo || {},
         assessmentScores: (manual as any).assessmentScores || null,
-        testMode: false,
+        testMode: false, // Using real AI generation with GPT-4o-mini
         tier: 'standard' // Using standard tier (Claude Haiku + DALL-E 3)
       });
 
