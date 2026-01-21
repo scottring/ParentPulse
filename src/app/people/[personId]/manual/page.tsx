@@ -336,173 +336,309 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
         <div>
           {activeTab === 'overview' && (
             <div className="space-y-8">
-              {/* Core Information Section */}
-              <div className="relative bg-white border-4 border-slate-800 p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+              {/* Narrative Manual - The Story of This Person */}
+              <div className="relative bg-white border-4 border-slate-800 p-12 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
                 {/* Corner brackets */}
                 <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-amber-600"></div>
                 <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-amber-600"></div>
                 <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-amber-600"></div>
                 <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-amber-600"></div>
 
-                <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-6">
-                  SECTION 1: CORE INFORMATION
+                <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-8">
+                  OPERATING MANUAL: NARRATIVE GUIDE
                 </div>
 
-                {manual.coreInfo?.sensoryNeeds && manual.coreInfo.sensoryNeeds.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="font-mono font-bold text-sm text-amber-600 mb-3 uppercase tracking-wider">
-                      Sensory Requirements
-                    </h4>
-                    <ul className="space-y-2">
-                      {manual.coreInfo.sensoryNeeds.map((need, idx) => (
-                        <li key={idx} className="flex items-start gap-3">
-                          <span className="font-mono text-slate-400 flex-shrink-0">[{String(idx + 1).padStart(2, '0')}]</span>
-                          <span className="font-mono text-sm text-slate-700">{need}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                <div className="prose prose-slate max-w-none">
+                  {/* Introduction */}
+                  <div className="mb-10">
+                    <h2 className="font-mono text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                      <span className="text-amber-600">§1.</span> Understanding {person.name}
+                    </h2>
 
-                {manual.coreInfo?.interests && manual.coreInfo.interests.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="font-mono font-bold text-sm text-amber-600 mb-3 uppercase tracking-wider">
-                      Primary Interests
-                    </h4>
-                    <ul className="space-y-2">
-                      {manual.coreInfo.interests.map((interest, idx) => (
-                        <li key={idx} className="flex items-start gap-3">
-                          <span className="font-mono text-slate-400 flex-shrink-0">[{String(idx + 1).padStart(2, '0')}]</span>
-                          <span className="font-mono text-sm text-slate-700">{interest}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                    {manual.coreInfo?.strengths && manual.coreInfo.strengths.length > 0 && (
+                      <p className="font-mono text-base leading-relaxed text-slate-700 mb-4">
+                        {person.name} is {manual.coreInfo.strengths.slice(0, 3).join(', ').toLowerCase()}
+                        {manual.coreInfo.interests && manual.coreInfo.interests.length > 0 && (
+                          <>, with a deep passion for {manual.coreInfo.interests[0].toLowerCase()}</>
+                        )}.
+                        {manual.coreInfo.strengths.length > 0 && (
+                          <> Their core strengths include {manual.coreInfo.strengths.join(', ').toLowerCase()}.</>
+                        )}
+                      </p>
+                    )}
 
-                {manual.coreInfo?.strengths && manual.coreInfo.strengths.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="font-mono font-bold text-sm text-amber-600 mb-3 uppercase tracking-wider">
-                      Core Strengths
-                    </h4>
-                    <ul className="space-y-2">
-                      {manual.coreInfo.strengths.map((strength, idx) => (
-                        <li key={idx} className="flex items-start gap-3">
-                          <span className="font-mono text-slate-400 flex-shrink-0">[{String(idx + 1).padStart(2, '0')}]</span>
-                          <span className="font-mono text-sm text-slate-700">{strength}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                    {manual.coreInfo?.sensoryNeeds && manual.coreInfo.sensoryNeeds.length > 0 && (
+                      <p className="font-mono text-base leading-relaxed text-slate-700 mb-4">
+                        <span className="font-bold text-amber-600">Sensory Profile:</span> {person.name} experiences the world in a unique way. {manual.coreInfo.sensoryNeeds.join('. ')}. Understanding these sensory needs is essential for creating an environment where they can thrive.
+                      </p>
+                    )}
 
-                {manual.coreInfo?.selfWorthInsights && manual.coreInfo.selfWorthInsights.length > 0 && (
-                  <div className="mb-6">
-                    <div className="flex items-center gap-2 mb-3">
-                      <h4 className="font-mono font-bold text-sm text-purple-600 uppercase tracking-wider">
-                        Self-Worth Insights
-                      </h4>
-                      {(manual as any).assessmentScores?.selfWorth && (
-                        <span className={`px-2 py-1 font-mono text-xs font-bold ${
-                          (manual as any).assessmentScores.selfWorth.category === 'high' ? 'bg-green-100 text-green-700 border border-green-600' :
-                          (manual as any).assessmentScores.selfWorth.category === 'moderate' ? 'bg-yellow-100 text-yellow-700 border border-yellow-600' :
-                          'bg-red-100 text-red-700 border border-red-600'
-                        }`}>
-                          {(manual as any).assessmentScores.selfWorth.category.toUpperCase()} ({(manual as any).assessmentScores.selfWorth.totalScore}/24)
-                        </span>
+                    {manual.coreInfo?.notes && (
+                      <p className="font-mono text-base leading-relaxed text-slate-700 italic border-l-4 border-amber-600 pl-4">
+                        {manual.coreInfo.notes}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Triggers Section */}
+                  {manual.triggers && manual.triggers.length > 0 && (
+                    <div className="mb-10">
+                      <h2 className="font-mono text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                        <span className="text-red-600">§2.</span> Understanding Their Challenges
+                      </h2>
+
+                      <p className="font-mono text-base leading-relaxed text-slate-700 mb-6">
+                        Like everyone, {person.name} has situations that are particularly challenging. We've documented {manual.triggers.length} key trigger{manual.triggers.length > 1 ? 's' : ''} that can lead to dysregulation or distress. Understanding these patterns helps you anticipate challenges and respond with compassion rather than frustration.
+                      </p>
+
+                      {/* Significant Triggers */}
+                      {manual.triggers.filter(t => t.severity === 'significant').length > 0 && (
+                        <div className="mb-6">
+                          <h3 className="font-mono text-lg font-bold text-red-600 mb-3 uppercase tracking-wide">
+                            ⚠ Critical Challenges
+                          </h3>
+                          {manual.triggers.filter(t => t.severity === 'significant').map((trigger, idx) => (
+                            <div key={trigger.id} className="mb-6 p-4 bg-red-50 border-l-4 border-red-600">
+                              <h4 className="font-mono font-bold text-base text-slate-900 mb-2">
+                                {idx + 1}. {trigger.description}
+                              </h4>
+                              <p className="font-mono text-sm leading-relaxed text-slate-700 mb-3">
+                                <span className="font-bold">Context:</span> {trigger.context}
+                              </p>
+                              <p className="font-mono text-sm leading-relaxed text-slate-700 mb-3">
+                                <span className="font-bold">What You'll See:</span> {trigger.typicalResponse}
+                              </p>
+                              {trigger.deescalationStrategy && (
+                                <p className="font-mono text-sm leading-relaxed text-amber-800 bg-amber-50 p-3 border border-amber-600">
+                                  <span className="font-bold">→ What Works:</span> {trigger.deescalationStrategy}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Moderate Triggers */}
+                      {manual.triggers.filter(t => t.severity === 'moderate').length > 0 && (
+                        <div className="mb-6">
+                          <h3 className="font-mono text-lg font-bold text-yellow-700 mb-3 uppercase tracking-wide">
+                            Moderate Challenges
+                          </h3>
+                          {manual.triggers.filter(t => t.severity === 'moderate').slice(0, 3).map((trigger, idx) => (
+                            <div key={trigger.id} className="mb-4">
+                              <p className="font-mono text-sm leading-relaxed text-slate-700">
+                                <span className="font-bold text-yellow-700">•</span> <span className="font-bold">{trigger.description}:</span> {trigger.context} {trigger.deescalationStrategy && `→ ${trigger.deescalationStrategy}`}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
-                    <ul className="space-y-2">
-                      {manual.coreInfo.selfWorthInsights.map((insight, idx) => (
-                        <li key={idx} className="flex items-start gap-3">
-                          <span className="font-mono text-purple-400 flex-shrink-0">[{String(idx + 1).padStart(2, '0')}]</span>
-                          <span className="font-mono text-sm text-slate-700">{insight}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                  )}
 
-                {manual.coreInfo?.notes && (
-                  <div>
-                    <h4 className="font-mono font-bold text-sm text-amber-600 mb-3 uppercase tracking-wider">
-                      Additional Notes
-                    </h4>
-                    <p className="font-mono text-sm text-slate-700 leading-relaxed">{manual.coreInfo.notes}</p>
-                  </div>
-                )}
+                  {/* Strategies Section */}
+                  {manual.whatWorks && manual.whatWorks.length > 0 && (
+                    <div className="mb-10">
+                      <h2 className="font-mono text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                        <span className="text-green-600">§3.</span> What Actually Works
+                      </h2>
 
-                {(!manual.coreInfo || Object.values(manual.coreInfo).every(v => !v || (Array.isArray(v) && v.length === 0))) && (
-                  <div className="text-center py-12">
-                    <div className="inline-block px-4 py-2 bg-amber-50 border-2 border-amber-600 font-mono text-xs text-amber-700 mb-4">
-                      NO DATA AVAILABLE
+                      <p className="font-mono text-base leading-relaxed text-slate-700 mb-6">
+                        Through careful observation and documentation, we've identified {manual.whatWorks.length} proven strateg{manual.whatWorks.length > 1 ? 'ies' : 'y'} that consistently help {person.name} regulate, connect, and thrive. These are your tools—use them.
+                      </p>
+
+                      {/* High-effectiveness strategies (4-5 rating) */}
+                      {manual.whatWorks.filter(s => s.effectiveness >= 4).length > 0 && (
+                        <div className="mb-6">
+                          <h3 className="font-mono text-lg font-bold text-green-700 mb-3 uppercase tracking-wide">
+                            ★ Most Effective Strategies
+                          </h3>
+                          {manual.whatWorks.filter(s => s.effectiveness >= 4).map((strategy, idx) => (
+                            <div key={strategy.id} className="mb-5 p-4 bg-green-50 border-l-4 border-green-600">
+                              <div className="flex items-start justify-between mb-2">
+                                <h4 className="font-mono font-bold text-base text-slate-900">
+                                  {idx + 1}. {strategy.description}
+                                </h4>
+                                <div className="flex items-center gap-1 px-2 py-1 bg-green-600 text-white font-mono text-xs font-bold">
+                                  {'★'.repeat(strategy.effectiveness)}
+                                </div>
+                              </div>
+                              <p className="font-mono text-sm leading-relaxed text-slate-700 mb-2">
+                                {strategy.context}
+                              </p>
+                              {strategy.notes && (
+                                <p className="font-mono text-xs leading-relaxed text-slate-600 italic">
+                                  Note: {strategy.notes}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Moderate-effectiveness strategies (2-3 rating) */}
+                      {manual.whatWorks.filter(s => s.effectiveness >= 2 && s.effectiveness < 4).length > 0 && (
+                        <div className="mb-6">
+                          <h3 className="font-mono text-lg font-bold text-slate-700 mb-3 uppercase tracking-wide">
+                            Other Helpful Strategies
+                          </h3>
+                          <ul className="space-y-2">
+                            {manual.whatWorks.filter(s => s.effectiveness >= 2 && s.effectiveness < 4).slice(0, 5).map((strategy) => (
+                              <li key={strategy.id} className="font-mono text-sm leading-relaxed text-slate-700">
+                                <span className="text-green-600 font-bold">→</span> <span className="font-bold">{strategy.description}:</span> {strategy.context}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
-                    <p className="font-mono text-sm text-slate-600">
-                      No core information has been documented yet.
+                  )}
+
+                  {/* Boundaries Section */}
+                  {manual.boundaries && manual.boundaries.length > 0 && (
+                    <div className="mb-10">
+                      <h2 className="font-mono text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                        <span className="text-amber-600">§4.</span> Essential Boundaries
+                      </h2>
+
+                      <p className="font-mono text-base leading-relaxed text-slate-700 mb-6">
+                        Boundaries aren't restrictions—they're the framework that creates safety and predictability. We've established {manual.boundaries.length} key boundar{manual.boundaries.length > 1 ? 'ies' : 'y'} that help {person.name} feel secure and understood.
+                      </p>
+
+                      {/* Immovable boundaries */}
+                      {manual.boundaries.filter(b => b.category === 'immovable').length > 0 && (
+                        <div className="mb-6">
+                          <h3 className="font-mono text-lg font-bold text-red-700 mb-3 uppercase tracking-wide">
+                            Non-Negotiable Boundaries
+                          </h3>
+                          {manual.boundaries.filter(b => b.category === 'immovable').map((boundary, idx) => (
+                            <div key={boundary.id} className="mb-4 p-4 bg-red-50 border-l-4 border-red-600">
+                              <h4 className="font-mono font-bold text-base text-slate-900 mb-2">
+                                {idx + 1}. {boundary.description}
+                              </h4>
+                              {boundary.context && (
+                                <p className="font-mono text-sm leading-relaxed text-slate-700 mb-2">
+                                  {boundary.context}
+                                </p>
+                              )}
+                              {boundary.consequences && (
+                                <p className="font-mono text-sm leading-relaxed text-red-800">
+                                  <span className="font-bold">If violated:</span> {boundary.consequences}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Negotiable boundaries */}
+                      {manual.boundaries.filter(b => b.category === 'negotiable').length > 0 && (
+                        <div className="mb-6">
+                          <h3 className="font-mono text-lg font-bold text-slate-700 mb-3 uppercase tracking-wide">
+                            Flexible Boundaries
+                          </h3>
+                          <ul className="space-y-2">
+                            {manual.boundaries.filter(b => b.category === 'negotiable').slice(0, 5).map((boundary) => (
+                              <li key={boundary.id} className="font-mono text-sm leading-relaxed text-slate-700">
+                                <span className="text-yellow-600 font-bold">•</span> {boundary.description}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Patterns Section */}
+                  {manual.emergingPatterns && manual.emergingPatterns.length > 0 && (
+                    <div className="mb-10">
+                      <h2 className="font-mono text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                        <span className="text-blue-600">§5.</span> Observed Patterns
+                      </h2>
+
+                      <p className="font-mono text-base leading-relaxed text-slate-700 mb-6">
+                        Over time, we've identified {manual.emergingPatterns.length} recurring pattern{manual.emergingPatterns.length > 1 ? 's' : ''} in {person.name}'s behavior and responses. These patterns help predict needs and prevent escalation.
+                      </p>
+
+                      <div className="space-y-4">
+                        {manual.emergingPatterns.slice(0, 5).map((pattern, idx) => (
+                          <div key={pattern.id} className="p-4 bg-blue-50 border-l-4 border-blue-600">
+                            <div className="flex items-start justify-between mb-2">
+                              <h4 className="font-mono font-bold text-base text-slate-900">
+                                {idx + 1}. {pattern.description}
+                              </h4>
+                              <span className={`px-2 py-1 font-mono text-xs font-bold ${
+                                pattern.confidence === 'validated' ? 'bg-green-600 text-white' :
+                                pattern.confidence === 'consistent' ? 'bg-blue-600 text-white' :
+                                'bg-slate-600 text-white'
+                              }`}>
+                                {pattern.confidence.toUpperCase()}
+                              </span>
+                            </div>
+                            <p className="font-mono text-sm leading-relaxed text-slate-700">
+                              <span className="font-bold">Frequency:</span> {pattern.frequency}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Self-Worth Section */}
+                  {manual.coreInfo?.selfWorthInsights && manual.coreInfo.selfWorthInsights.length > 0 && (
+                    <div className="mb-10">
+                      <h2 className="font-mono text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                        <span className="text-purple-600">§6.</span> Self-Worth & Inner World
+                      </h2>
+
+                      {(manual as any).assessmentScores?.selfWorth && (
+                        <div className="mb-4 p-4 border-2 border-purple-600 bg-purple-50">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="font-mono text-sm font-bold text-slate-700">Current Assessment:</span>
+                            <span className={`px-3 py-1 font-mono text-sm font-bold ${
+                              (manual as any).assessmentScores.selfWorth.category === 'high' ? 'bg-green-600 text-white' :
+                              (manual as any).assessmentScores.selfWorth.category === 'moderate' ? 'bg-yellow-500 text-slate-900' :
+                              'bg-red-600 text-white'
+                            }`}>
+                              {(manual as any).assessmentScores.selfWorth.category.toUpperCase()} ({(manual as any).assessmentScores.selfWorth.totalScore}/24)
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-3">
+                        {manual.coreInfo.selfWorthInsights.map((insight, idx) => (
+                          <p key={idx} className="font-mono text-sm leading-relaxed text-slate-700 pl-4 border-l-2 border-purple-400">
+                            {insight}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Closing */}
+                  <div className="mt-12 pt-8 border-t-2 border-slate-300">
+                    <p className="font-mono text-sm leading-relaxed text-slate-600 italic">
+                      This manual is a living document (v{manual.version}), last updated {manual.lastEditedAt.toDate().toLocaleDateString()}.
+                      As you learn more about {person.name}, continue adding triggers, strategies, and insights using the tabs above.
+                      The more complete this manual becomes, the more effective you'll be at supporting {person.name}'s growth and wellbeing.
                     </p>
                   </div>
-                )}
-              </div>
 
-              {/* Manual Summary Section */}
-              <div className="relative bg-white border-4 border-slate-800 p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-                <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-amber-600"></div>
-                <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-amber-600"></div>
-                <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-amber-600"></div>
-                <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-amber-600"></div>
-
-                <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-6">
-                  SECTION 2: DOCUMENT SUMMARY
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-8">
-                  <div>
-                    <h4 className="font-mono font-bold text-sm text-amber-600 mb-4 uppercase tracking-wider">
-                      Content Overview
-                    </h4>
-                    <div className="space-y-3">
-                      <div className="flex justify-between font-mono text-sm">
-                        <span className="text-slate-500">TRIGGERS:</span>
-                        <span className="text-slate-900 font-bold">{manual.totalTriggers || 0}</span>
+                  {/* Empty state */}
+                  {!manual.triggers?.length && !manual.whatWorks?.length && !manual.boundaries?.length && (
+                    <div className="text-center py-16">
+                      <div className="inline-block px-6 py-3 bg-amber-50 border-4 border-amber-600 font-mono text-sm text-amber-800 mb-6">
+                        ⚠ MANUAL INCOMPLETE
                       </div>
-                      <div className="flex justify-between font-mono text-sm">
-                        <span className="text-slate-500">STRATEGIES:</span>
-                        <span className="text-slate-900 font-bold">{manual.totalStrategies || 0}</span>
-                      </div>
-                      <div className="flex justify-between font-mono text-sm">
-                        <span className="text-slate-500">BOUNDARIES:</span>
-                        <span className="text-slate-900 font-bold">{manual.totalBoundaries || 0}</span>
-                      </div>
-                      <div className="flex justify-between font-mono text-sm">
-                        <span className="text-slate-500">PATTERNS:</span>
-                        <span className="text-slate-900 font-bold">{manual.emergingPatterns?.length || 0}</span>
-                      </div>
+                      <p className="font-mono text-base text-slate-700 mb-4">
+                        This manual doesn't yet contain enough information to provide a narrative guide.
+                      </p>
+                      <p className="font-mono text-sm text-slate-600">
+                        Use the tabs above to add triggers, strategies, and boundaries, then return here to see {person.name}'s complete story.
+                      </p>
                     </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-mono font-bold text-sm text-amber-600 mb-4 uppercase tracking-wider">
-                      Document Metadata
-                    </h4>
-                    <div className="space-y-3">
-                      <div className="flex justify-between font-mono text-sm">
-                        <span className="text-slate-500">VERSION:</span>
-                        <span className="text-slate-900 font-bold">{manual.version}</span>
-                      </div>
-                      <div className="flex justify-between font-mono text-sm">
-                        <span className="text-slate-500">CREATED:</span>
-                        <span className="text-slate-900">{manual.createdAt.toDate().toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex justify-between font-mono text-sm">
-                        <span className="text-slate-500">LAST EDIT:</span>
-                        <span className="text-slate-900">{manual.lastEditedAt.toDate().toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex justify-between font-mono text-sm">
-                        <span className="text-slate-500">STATUS:</span>
-                        <span className="text-green-700 font-bold">OPERATIONAL</span>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>

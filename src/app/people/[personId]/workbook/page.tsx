@@ -6,13 +6,16 @@
  * Selector page for choosing between parent workbook and child storybook
  */
 
-import { use } from 'react';
+import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { httpsCallable } from 'firebase/functions';
 import { useAuth } from '@/context/AuthContext';
 import { usePersonById } from '@/hooks/usePerson';
+import { usePersonManual } from '@/hooks/usePersonManual';
 import { useParentWorkbook } from '@/hooks/useParentWorkbook';
 import { useChildWorkbook } from '@/hooks/useChildWorkbook';
+import { functions } from '@/lib/firebase';
 import MainLayout from '@/components/layout/MainLayout';
 
 export default function WorkbookHubPage({ params }: { params: Promise<{ personId: string }> }) {
@@ -20,8 +23,11 @@ export default function WorkbookHubPage({ params }: { params: Promise<{ personId
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { person, loading: personLoading } = usePersonById(personId);
-  const { workbook: parentWorkbook, loading: parentLoading } = useParentWorkbook(personId);
-  const { workbook: childWorkbook, loading: childLoading } = useChildWorkbook(personId);
+  const { manual, loading: manualLoading } = usePersonManual(personId);
+  const { workbook: parentWorkbook, loading: parentLoading, refreshWorkbook: refreshParent } = useParentWorkbook(personId);
+  const { workbook: childWorkbook, loading: childLoading, refreshWorkbook: refreshChild } = useChildWorkbook(personId);
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
   // Redirect if not authenticated
   if (!authLoading && !user) {
@@ -29,7 +35,57 @@ export default function WorkbookHubPage({ params }: { params: Promise<{ personId
     return null;
   }
 
-  const loading = authLoading || personLoading || parentLoading || childLoading;
+  const loading = authLoading || personLoading || manualLoading || parentLoading || childLoading;
+
+  // Function to generate workbook
+  const handleGenerateWorkbook = async () => {
+    if (!manual || !person || !user) {
+      setGenerateError('Missing required data to generate workbook');
+      return;
+    }
+
+    setGenerating(true);
+    setGenerateError(null);
+
+    try {
+      const generateWeeklyWorkbooks = httpsCallable(functions, 'generateWeeklyWorkbooks');
+
+      const result = await generateWeeklyWorkbooks({
+        familyId: user.familyId,
+        personId: personId,
+        personName: person.name,
+        personAge: person.dateOfBirth ?
+          Math.floor((new Date().getTime() - person.dateOfBirth.toDate().getTime()) / (1000 * 60 * 60 * 24 * 365.25)) :
+          undefined,
+        manualId: manual.manualId,
+        relationshipType: manual.relationshipType,
+        triggers: manual.triggers || [],
+        whatWorks: manual.whatWorks || [],
+        whatDoesntWork: manual.whatDoesntWork || [],
+        boundaries: manual.boundaries || [],
+        coreInfo: manual.coreInfo || {},
+        assessmentScores: (manual as any).assessmentScores || null,
+        testMode: false,
+        tier: 'standard' // Using standard tier (Claude Haiku + DALL-E 3)
+      });
+
+      const data = result.data as any;
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to generate workbook');
+      }
+
+      // Refresh both workbooks
+      await Promise.all([refreshParent(), refreshChild()]);
+
+      // Workbooks will auto-load via the hooks
+    } catch (err) {
+      console.error('Error generating workbook:', err);
+      setGenerateError(err instanceof Error ? err.message : 'Failed to generate workbook');
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -67,8 +123,44 @@ export default function WorkbookHubPage({ params }: { params: Promise<{ personId
     );
   }
 
-  // If no workbooks exist, redirect to manual page to generate
+  // If no workbooks exist, show generate option
   if (!parentWorkbook && !childWorkbook) {
+    // Check if manual exists
+    if (!manual) {
+      return (
+        <MainLayout>
+          <div className="max-w-4xl mx-auto py-16 px-6">
+            <div className="relative bg-white border-4 border-slate-800 p-12 shadow-[8px_8px_0px_0px_rgba(217,119,6,1)]">
+              <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-amber-600"></div>
+              <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-amber-600"></div>
+              <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-amber-600"></div>
+              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-amber-600"></div>
+
+              <div className="text-center">
+                <div className="text-8xl mb-6">📋</div>
+                <div className="inline-block px-4 py-2 bg-slate-800 text-white font-mono text-sm mb-4">
+                  STATUS: NO MANUAL FOUND
+                </div>
+                <h2 className="font-mono text-3xl font-bold mb-6">
+                  Create a Manual First
+                </h2>
+                <p className="text-lg text-slate-700 mb-8 max-w-md mx-auto leading-relaxed">
+                  You need to create {person.name}'s manual before generating a workbook.
+                </p>
+
+                <Link
+                  href={`/people/${personId}/create-manual`}
+                  className="inline-block px-8 py-4 bg-emerald-600 text-white font-mono font-bold hover:bg-emerald-700 transition-all hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                >
+                  CREATE MANUAL →
+                </Link>
+              </div>
+            </div>
+          </div>
+        </MainLayout>
+      );
+    }
+
     return (
       <MainLayout>
         <div className="max-w-4xl mx-auto py-16 px-6">
@@ -87,18 +179,56 @@ export default function WorkbookHubPage({ params }: { params: Promise<{ personId
                 No Active Weekly Workbooks
               </h2>
               <p className="text-lg text-slate-700 mb-8 max-w-md mx-auto leading-relaxed">
-                Generate a weekly workbook from {person.name}'s manual to begin tracking goals and stories.
+                Generate weekly workbooks from {person.name}'s manual: a parent workbook for tracking behavior goals, and a child storybook with AI-generated illustrations.
               </p>
 
-              <Link
-                href={`/people/${personId}/manual`}
-                className="inline-block px-8 py-4 bg-emerald-600 text-white font-mono font-bold hover:bg-emerald-700 transition-all hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-              >
-                GO TO MANUAL →
-              </Link>
+              {generateError && (
+                <div className="mb-6 p-4 bg-red-50 border-2 border-red-600 text-red-900 font-mono text-sm">
+                  <strong>Error:</strong> {generateError}
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <button
+                  onClick={handleGenerateWorkbook}
+                  disabled={generating}
+                  className="px-8 py-4 bg-purple-600 text-white font-mono font-bold hover:bg-purple-700 transition-all hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {generating ? 'GENERATING WORKBOOKS...' : 'GENERATE WORKBOOKS'}
+                </button>
+
+                <Link
+                  href={`/people/${personId}/manual`}
+                  className="inline-block px-8 py-4 bg-slate-600 text-white font-mono font-bold hover:bg-slate-700 transition-all hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                >
+                  GO TO MANUAL →
+                </Link>
+              </div>
+
+              {generating && (
+                <div className="mt-8">
+                  <div className="manual-spinner mx-auto"></div>
+                  <p className="mt-4 font-mono text-sm text-slate-600">
+                    Generating both parent and child workbooks with AI (this may take 1-2 minutes)...
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
+        <style jsx>{`
+          .manual-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #1e293b;
+            border-top-color: #d97706;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </MainLayout>
     );
   }
