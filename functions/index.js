@@ -1903,19 +1903,59 @@ CRITICAL GUIDELINES FOR PARENT GOALS:
 
 ACTIVITY SELECTION GUIDELINES:
 Choose from these activity types based on ${personName}'s age and documented challenges:
+
+FOUNDATIONAL ACTIVITIES (Ages 3-12):
 - emotion-checkin: Ages 3-12, helps with emotional awareness (5 min)
 - choice-board: Ages 3+, helps when upset/overwhelmed (5 min)
 - daily-win: Ages 4+, bedtime positivity ritual (5 min)
 - visual-schedule: Ages 3-10, helps with routines (2 min)
 - gratitude: Ages 5+, thankfulness practice (5 min)
 - feeling-thermometer: Ages 5+, emotion intensity rating (3 min)
+
+SELF-WORTH ACTIVITIES (Ages 4-12):
 - strength-reflection: Ages 5+, identifies personal strengths (5 min) [SELF-WORTH]
 - courage-moment: Ages 4+, recalls brave actions (5 min) [SELF-WORTH]
 - affirmation-practice: Ages 5+, positive self-statements (5 min) [SELF-WORTH]
 - growth-mindset-reflection: Ages 6+, reframes challenges as learning (7 min) [SELF-WORTH]
 - accomplishment-tracker: Ages 5+, tracks weekly wins (3 min) [SELF-WORTH]
+- story-reflection: Ages 5+, reflect on weekly story character (10 min) [SELF-WORTH]
 
-If self-worth score < 18: Prioritize one of the [SELF-WORTH] activities based on ${personName}'s specific self-worth challenges
+EMOTIONAL REGULATION & COPING (Ages 5-12):
+- worry-box: Ages 6+, categorize worries as controllable/uncontrollable (10 min)
+- emotion-wheel: Ages 7+, identify secondary emotions beneath primary ones (8 min)
+- calm-down-toolbox: Ages 5+, build personalized calming strategies (10 min)
+- body-signals: Ages 6+, map physical sensations to emotions (8 min)
+- safe-person-map: Ages 5+, identify support network by situation type (10 min)
+
+EXECUTIVE FUNCTION & ROUTINES (Ages 6-12):
+- time-captain: Ages 7+, time estimation vs. reality tracking (10 min)
+- priority-picker: Ages 8+, important/urgent matrix for task prioritization (10 min)
+- energy-tracker: Ages 7+, daily energy patterns for optimal scheduling (8 min)
+- transition-timer: Ages 5+, visual countdown for difficult transitions (5 min)
+
+RELATIONSHIP & SOCIAL SKILLS (Ages 5-12):
+- friendship-builder: Ages 6+, friendship qualities self-assessment (10 min)
+- conflict-detective: Ages 6+, "I felt ___ when ___ because ___" framework (10 min)
+- kindness-catcher: Ages 5+, notice and record kindness (given/received/observed) (7 min)
+- share-or-boundaries: Ages 6+, practice saying yes/no with confidence (10 min)
+
+SELF-AWARENESS & IDENTITY (Ages 7-12):
+- value-compass: Ages 8+, identify and rank personal values (12 min)
+- inner-voice-check: Ages 7+, self-talk pattern recognition and reframing (10 min)
+- compare-and-care: Ages 8+, address social comparison with growth focus (10 min)
+- mood-journal: Ages 6+, color-coded emotional journey throughout day (8 min)
+
+GROWTH MINDSET & RESILIENCE (Ages 5-12):
+- mistake-magic: Ages 6+, reframe mistakes as learning opportunities (8 min)
+- hard-thing-hero: Ages 5+, celebrate attempting difficult tasks (7 min)
+- yet-power: Ages 6+, transform "I can't" to "I can't... yet" (7 min)
+
+SELECTION PRIORITIES:
+1. If self-worth score < 18: Include at least 1-2 [SELF-WORTH] activities
+2. Match activities to documented triggers (e.g., transition issues → transition-timer, worry → worry-box)
+3. Match activities to age appropriateness
+4. Provide variety across categories
+5. Include mix of quick (5 min) and deeper (10 min) activities
 
 Generate a JSON response with this structure:
 
@@ -1932,9 +1972,9 @@ Generate a JSON response with this structure:
   ],
   "dailyActivities": [
     {
-      "type": "emotion-checkin" | "choice-board" | "daily-win" | "visual-schedule" | "gratitude" | "feeling-thermometer",
-      "suggestedTime": "morning" | "afternoon" | "evening" | "bedtime" | "when-upset",
-      "customization": "Specific suggestions for ${personName} (optional)"
+      "type": "emotion-checkin" | "choice-board" | "daily-win" | "visual-schedule" | "gratitude" | "feeling-thermometer" | "strength-reflection" | "courage-moment" | "affirmation-practice" | "growth-mindset-reflection" | "accomplishment-tracker" | "story-reflection" | "worry-box" | "emotion-wheel" | "calm-down-toolbox" | "body-signals" | "safe-person-map" | "time-captain" | "priority-picker" | "energy-tracker" | "transition-timer" | "friendship-builder" | "conflict-detective" | "kindness-catcher" | "share-or-boundaries" | "value-compass" | "inner-voice-check" | "compare-and-care" | "mood-journal" | "mistake-magic" | "hard-thing-hero" | "yet-power",
+      "suggestedTime": "morning" | "afternoon" | "evening" | "bedtime" | "when-upset" | "after-school" | "during-transition",
+      "customization": "Specific suggestions for ${personName} based on their triggers, strengths, or challenges"
     }
   ],
   "parentNotes": "Brief encouragement or tips for the parent (1-2 sentences)"

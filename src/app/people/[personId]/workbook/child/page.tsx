@@ -362,6 +362,124 @@ export default function ChildWorkbookPage({ params }: { params: Promise<{ person
             {workbook.storyProgress.daysRead.filter(Boolean).length} of 7 days completed
           </div>
         </div>
+
+        {/* Daily Activities */}
+        {workbook.dailyActivities && workbook.dailyActivities.length > 0 && (
+          <div
+            className={`rounded-3xl p-8 transition-colors mt-12 ${bedtimeMode ? 'bg-indigo-800' : 'bg-white border-2 border-purple-200'}`}
+          >
+            <h3
+              className={`font-serif text-2xl font-bold mb-6 transition-colors ${
+                bedtimeMode ? 'text-purple-100' : 'text-purple-900'
+              }`}
+            >
+              🎮 Fun Activities This Week
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {workbook.dailyActivities.map((activity: any, index: number) => {
+                const isCompleted = workbook.storyProgress.activitiesCompleted?.includes(activity.id);
+                const activityNames: { [key: string]: string } = {
+                  'emotion-checkin': '😊 Emotion Check-In',
+                  'choice-board': '🎯 Choice Board',
+                  'daily-win': '🌟 Daily Win',
+                  'visual-schedule': '📅 Visual Schedule',
+                  'gratitude': '🙏 Gratitude',
+                  'feeling-thermometer': '🌡️ Feeling Thermometer',
+                  'strength-reflection': '💪 Strength Reflection',
+                  'courage-moment': '🦁 Courage Moment',
+                  'affirmation-practice': '✨ Affirmations',
+                  'growth-mindset-reflection': '🌱 Growth Mindset',
+                  'accomplishment-tracker': '🏆 Accomplishment Tracker',
+                  'story-reflection': '📖 Story Reflection',
+                  'worry-box': '📦 Worry Box',
+                  'emotion-wheel': '🎨 Emotion Wheel',
+                  'calm-down-toolbox': '🧰 Calm Down Toolbox',
+                  'body-signals': '🚦 Body Signals',
+                  'safe-person-map': '🗺️ Safe Person Map',
+                  'time-captain': '⏰ Time Captain',
+                  'priority-picker': '📝 Priority Picker',
+                  'energy-tracker': '⚡ Energy Tracker',
+                  'transition-timer': '⏳ Transition Timer',
+                  'friendship-builder': '🤝 Friendship Builder',
+                  'conflict-detective': '🔍 Conflict Detective',
+                  'kindness-catcher': '💝 Kindness Catcher',
+                  'share-or-boundaries': '🛡️ Share or Boundaries',
+                  'value-compass': '🧭 Value Compass',
+                  'inner-voice-check': '💭 Inner Voice Check',
+                  'compare-and-care': '🌈 Compare and Care',
+                  'mood-journal': '📔 Mood Journal',
+                  'mistake-magic': '✨ Mistake Magic',
+                  'hard-thing-hero': '🦸 Hard Thing Hero',
+                  'yet-power': '💫 Yet Power'
+                };
+
+                return (
+                  <Link
+                    key={activity.id}
+                    href={`/people/${personId}/workbook/activities/${activity.id}`}
+                    className={`relative p-6 rounded-2xl border-2 transition-all hover:scale-105 ${
+                      isCompleted
+                        ? bedtimeMode
+                          ? 'bg-amber-500 border-amber-400 text-indigo-900'
+                          : 'bg-emerald-100 border-emerald-400'
+                        : bedtimeMode
+                        ? 'bg-purple-700 border-purple-500 text-purple-100 hover:bg-purple-600'
+                        : 'bg-purple-50 border-purple-300 hover:bg-purple-100'
+                    }`}
+                  >
+                    {isCompleted && (
+                      <div className="absolute top-2 right-2 text-2xl">✓</div>
+                    )}
+                    <div className={`font-serif text-lg font-bold mb-2 ${
+                      isCompleted
+                        ? bedtimeMode
+                          ? 'text-indigo-900'
+                          : 'text-emerald-900'
+                        : bedtimeMode
+                        ? 'text-purple-100'
+                        : 'text-purple-900'
+                    }`}>
+                      {activityNames[activity.type] || activity.type}
+                    </div>
+                    {activity.customization && (
+                      <div className={`font-serif text-sm ${
+                        isCompleted
+                          ? bedtimeMode
+                            ? 'text-indigo-800'
+                            : 'text-emerald-700'
+                          : bedtimeMode
+                          ? 'text-purple-200'
+                          : 'text-purple-600'
+                      }`}>
+                        {activity.customization}
+                      </div>
+                    )}
+                    {activity.suggestedTime && (
+                      <div className={`font-mono text-xs mt-2 ${
+                        isCompleted
+                          ? bedtimeMode
+                            ? 'text-indigo-700'
+                            : 'text-emerald-600'
+                          : bedtimeMode
+                          ? 'text-purple-300'
+                          : 'text-purple-500'
+                      }`}>
+                        Best time: {activity.suggestedTime}
+                      </div>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+            <div
+              className={`mt-6 text-center font-serif text-sm transition-colors ${
+                bedtimeMode ? 'text-purple-300' : 'text-purple-600'
+              }`}
+            >
+              {workbook.storyProgress.activitiesCompleted?.length || 0} of {workbook.dailyActivities.length} activities completed
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
