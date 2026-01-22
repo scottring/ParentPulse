@@ -3,18 +3,23 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import {
+  ChartBarIcon,
+  UsersIcon,
+  Cog6ToothIcon,
+} from '@heroicons/react/24/outline';
 
 interface NavItem {
   label: string;
   href: string;
-  icon: string;
+  icon: React.ComponentType<{ className?: string }>;
   badge?: string;
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: '📊' },
-  { label: 'People', href: '/people', icon: '👥' },
-  { label: 'Settings', href: '/settings', icon: '⚙️' },
+  { label: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
+  { label: 'People', href: '/people', icon: UsersIcon },
+  { label: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ];
 
 export default function SideNav() {
@@ -103,7 +108,7 @@ export default function SideNav() {
                 </div>
 
                 <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
-                  <span className="text-xl">{item.icon}</span>
+                  <item.icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-slate-700'}`} />
                   {!isCollapsed && (
                     <div className="flex-1">
                       <div className={`font-mono text-sm font-bold ${isActive ? 'text-white' : 'text-slate-900'}`}>
@@ -198,7 +203,7 @@ export default function SideNav() {
                       >
                         {index + 1}
                       </div>
-                      <span className="text-xl">{item.icon}</span>
+                      <item.icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-slate-700'}`} />
                       <div className="flex-1">
                         <div className={`font-mono text-sm font-bold ${isActive ? 'text-white' : 'text-slate-900'}`}>
                           {item.label}

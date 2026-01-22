@@ -11,6 +11,21 @@ import { AddStrategyModal } from '@/components/manual/AddStrategyModal';
 import { AddBoundaryModal } from '@/components/manual/AddBoundaryModal';
 import { SelfWorthAssessmentModal } from '@/components/manual/SelfWorthAssessmentModal';
 import MainLayout from '@/components/layout/MainLayout';
+import {
+  ClipboardDocumentListIcon,
+  BoltIcon,
+  SparklesIcon,
+  ShieldCheckIcon,
+  MagnifyingGlassIcon,
+  PencilSquareIcon,
+  ExclamationTriangleIcon,
+  ArrowPathIcon,
+  PlusIcon,
+  ChatBubbleBottomCenterTextIcon,
+  CalendarDaysIcon,
+  TrashIcon,
+  InformationCircleIcon,
+} from '@heroicons/react/24/outline';
 
 type ContentTab = 'overview' | 'triggers' | 'strategies' | 'boundaries' | 'patterns';
 
@@ -103,12 +118,12 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
     }
   };
 
-  const tabs: Array<{ id: ContentTab; label: string; icon: string; count?: number }> = [
-    { id: 'overview', label: 'Overview', icon: '📋' },
-    { id: 'triggers', label: 'Triggers', icon: '⚡', count: manual.triggers?.length || 0 },
-    { id: 'strategies', label: 'What Works', icon: '✨', count: manual.whatWorks?.length || 0 },
-    { id: 'boundaries', label: 'Boundaries', icon: '🛡️', count: manual.boundaries?.length || 0 },
-    { id: 'patterns', label: 'Patterns', icon: '🔍', count: manual.emergingPatterns?.length || 0 },
+  const tabs: Array<{ id: ContentTab; label: string; icon: React.ComponentType<{ className?: string }>; count?: number }> = [
+    { id: 'overview', label: 'Overview', icon: ClipboardDocumentListIcon },
+    { id: 'triggers', label: 'Triggers', icon: BoltIcon, count: manual.triggers?.length || 0 },
+    { id: 'strategies', label: 'What Works', icon: SparklesIcon, count: manual.whatWorks?.length || 0 },
+    { id: 'boundaries', label: 'Boundaries', icon: ShieldCheckIcon, count: manual.boundaries?.length || 0 },
+    { id: 'patterns', label: 'Patterns', icon: MagnifyingGlassIcon, count: manual.emergingPatterns?.length || 0 },
   ];
 
   return (
@@ -158,10 +173,11 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
       {/* Floating Ask Coach Button */}
       <Link
         href={`/people/${personId}/coach`}
-        className="fixed bottom-8 right-8 z-50 px-6 py-4 border-4 border-amber-600 bg-amber-50 font-mono text-sm font-bold text-amber-900 hover:bg-amber-600 hover:text-white transition-all shadow-[4px_4px_0px_0px_rgba(217,119,6,1)] hover:shadow-[6px_6px_0px_0px_rgba(217,119,6,1)] hover:translate-x-[-2px] hover:translate-y-[-2px]"
+        className="fixed bottom-8 right-8 z-50 px-6 py-4 border-4 border-amber-600 bg-amber-50 font-mono text-sm font-bold text-amber-900 hover:bg-amber-600 hover:text-white transition-all shadow-[4px_4px_0px_0px_rgba(217,119,6,1)] hover:shadow-[6px_6px_0px_0px_rgba(217,119,6,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] flex items-center gap-2"
         data-testid="ask-coach-button"
       >
-        🤖 ASK COACH
+        <ChatBubbleBottomCenterTextIcon className="w-5 h-5" />
+        ASK COACH
       </Link>
 
       {/* Main Content */}
@@ -177,7 +193,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
               className="px-6 py-4 border-2 border-emerald-600 bg-emerald-50 font-mono text-sm font-bold text-emerald-900 hover:bg-emerald-600 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(5,150,105,1)] flex items-center gap-3"
               data-testid="weekly-workbook-button"
             >
-              <span className="text-2xl">📅</span>
+              <CalendarDaysIcon className="w-6 h-6" />
               <div>
                 <div>WEEKLY WORKBOOK</div>
                 <div className="text-xs font-normal opacity-75">View parent goals & activities</div>
@@ -189,7 +205,11 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
               className="px-6 py-4 border-2 border-purple-600 bg-purple-50 font-mono text-sm font-bold text-purple-900 hover:bg-purple-600 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(147,51,234,1)] flex items-center gap-3 text-left"
               data-testid="self-worth-assessment-button"
             >
-              <span className="text-2xl">{(manual as any).assessmentScores?.selfWorth ? '🔄' : '➕'}</span>
+              {(manual as any).assessmentScores?.selfWorth ? (
+                <ArrowPathIcon className="w-6 h-6" />
+              ) : (
+                <PlusIcon className="w-6 h-6" />
+              )}
               <div>
                 <div>{(manual as any).assessmentScores?.selfWorth ? 'UPDATE' : 'ADD'} SELF-WORTH</div>
                 <div className="text-xs font-normal opacity-75">Assess self-worth indicators</div>
@@ -201,7 +221,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
               className="px-6 py-4 border-2 border-blue-600 bg-blue-50 font-mono text-sm font-bold text-blue-900 hover:bg-blue-600 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(37,99,235,1)] flex items-center gap-3"
               data-testid="redo-onboarding-button"
             >
-              <span className="text-2xl">📝</span>
+              <PencilSquareIcon className="w-6 h-6" />
               <div>
                 <div>RE-DO ONBOARDING</div>
                 <div className="text-xs font-normal opacity-75">Retake baseline questionnaire</div>
@@ -213,7 +233,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
               className="px-6 py-4 border-2 border-red-600 bg-red-50 font-mono text-sm font-bold text-red-900 hover:bg-red-600 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(220,38,38,1)] flex items-center gap-3 text-left"
               data-testid="delete-manual-button"
             >
-              <span className="text-2xl">🗑️</span>
+              <TrashIcon className="w-6 h-6" />
               <div>
                 <div>DELETE MANUAL</div>
                 <div className="text-xs font-normal opacity-75">Permanently remove this manual</div>
@@ -314,7 +334,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                 }`}
                 data-testid={`tab-${tab.id}`}
               >
-                <span className="mr-2">{tab.icon}</span>
+                <tab.icon className={`w-5 h-5 inline mr-2 ${activeTab === tab.id ? 'text-white' : 'text-slate-700'}`} />
                 {tab.label}
                 {tab.count !== undefined && (
                   <span
@@ -394,8 +414,9 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                       {/* Significant Triggers */}
                       {manual.triggers.filter(t => t.severity === 'significant').length > 0 && (
                         <div className="mb-6">
-                          <h3 className="font-mono text-lg font-bold text-red-600 mb-3 uppercase tracking-wide">
-                            ⚠ Critical Challenges
+                          <h3 className="font-mono text-lg font-bold text-red-600 mb-3 uppercase tracking-wide flex items-center gap-2">
+                            <ExclamationTriangleIcon className="w-5 h-5" />
+                            Critical Challenges
                           </h3>
                           {manual.triggers.filter(t => t.severity === 'significant').map((trigger, idx) => (
                             <div key={trigger.id} className="mb-6 p-4 bg-red-50 border-l-4 border-red-600">
@@ -628,8 +649,9 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                   {/* Empty state */}
                   {!manual.triggers?.length && !manual.whatWorks?.length && !manual.boundaries?.length && (
                     <div className="text-center py-16">
-                      <div className="inline-block px-6 py-3 bg-amber-50 border-4 border-amber-600 font-mono text-sm text-amber-800 mb-6">
-                        ⚠ MANUAL INCOMPLETE
+                      <div className="inline-flex items-center gap-2 px-6 py-3 bg-amber-50 border-4 border-amber-600 font-mono text-sm text-amber-800 mb-6">
+                        <ExclamationTriangleIcon className="w-4 h-4" />
+                        MANUAL INCOMPLETE
                       </div>
                       <p className="font-mono text-base text-slate-700 mb-4">
                         This manual doesn't yet contain enough information to provide a narrative guide.
@@ -889,8 +911,9 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
             <div className="space-y-6">
               {/* Add Pattern Button - Patterns are AI-generated, so just show info */}
               <div className="flex justify-end mb-6">
-                <div className="px-6 py-3 bg-blue-50 border-2 border-blue-600 font-mono text-xs text-blue-700">
-                  ℹ️ PATTERNS ARE AUTO-IDENTIFIED BY AI
+                <div className="px-6 py-3 bg-blue-50 border-2 border-blue-600 font-mono text-xs text-blue-700 flex items-center gap-2">
+                  <InformationCircleIcon className="w-4 h-4" />
+                  PATTERNS ARE AUTO-IDENTIFIED BY AI
                 </div>
               </div>
 
@@ -1019,8 +1042,9 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
             className="relative bg-white border-4 border-red-600 p-8 max-w-md w-full shadow-[12px_12px_0px_0px_rgba(220,38,38,1)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="inline-block px-3 py-1 bg-red-600 text-white font-mono text-xs mb-6">
-              ⚠ CONFIRM DELETE
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-600 text-white font-mono text-xs mb-6">
+              <ExclamationTriangleIcon className="w-3 h-3" />
+              CONFIRM DELETE
             </div>
             <h3 className="font-mono text-2xl font-bold mb-4 text-red-600">
               Delete Trigger?
@@ -1059,8 +1083,9 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
             className="relative bg-white border-4 border-red-600 p-8 max-w-md w-full shadow-[12px_12px_0px_0px_rgba(220,38,38,1)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="inline-block px-3 py-1 bg-red-600 text-white font-mono text-xs mb-6">
-              ⚠ CONFIRM DELETE
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-600 text-white font-mono text-xs mb-6">
+              <ExclamationTriangleIcon className="w-3 h-3" />
+              CONFIRM DELETE
             </div>
             <h3 className="font-mono text-2xl font-bold mb-4 text-red-600">
               Delete Strategy?
@@ -1099,8 +1124,9 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
             className="relative bg-white border-4 border-red-600 p-8 max-w-md w-full shadow-[12px_12px_0px_0px_rgba(220,38,38,1)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="inline-block px-3 py-1 bg-red-600 text-white font-mono text-xs mb-6">
-              ⚠ CONFIRM DELETE
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-600 text-white font-mono text-xs mb-6">
+              <ExclamationTriangleIcon className="w-3 h-3" />
+              CONFIRM DELETE
             </div>
             <h3 className="font-mono text-2xl font-bold mb-4 text-red-600">
               Delete Boundary?
@@ -1145,8 +1171,9 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
             <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-slate-800"></div>
             <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-slate-800"></div>
 
-            <div className="inline-block px-3 py-1 bg-red-600 text-white font-mono text-xs mb-6">
-              ⚠ CRITICAL WARNING
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-600 text-white font-mono text-xs mb-6">
+              <ExclamationTriangleIcon className="w-3 h-3" />
+              CRITICAL WARNING
             </div>
             <h3 className="font-mono text-2xl font-bold mb-2 text-red-600">
               Delete Entire Manual?
@@ -1155,8 +1182,9 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
               You are about to permanently delete <strong>{person.name}&apos;s Operating Manual</strong>.
             </p>
             <div className="mb-4 p-3 bg-red-50 border-2 border-red-600">
-              <p className="font-mono text-xs text-red-700 mb-2">
-                ⚠ THIS WILL DELETE:
+              <p className="font-mono text-xs text-red-700 mb-2 flex items-center gap-2">
+                <ExclamationTriangleIcon className="w-4 h-4 flex-shrink-0" />
+                THIS WILL DELETE:
               </p>
               <ul className="font-mono text-xs text-red-700 space-y-1 list-disc list-inside">
                 <li>{manual.triggers?.length || 0} Triggers</li>

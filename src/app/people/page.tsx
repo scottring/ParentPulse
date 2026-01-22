@@ -6,6 +6,12 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { usePerson } from '@/hooks/usePerson';
 import MainLayout from '@/components/layout/MainLayout';
+import {
+  ExclamationTriangleIcon,
+  EllipsisVerticalIcon,
+  PencilIcon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline';
 
 export default function PeoplePage() {
   const router = useRouter();
@@ -463,8 +469,9 @@ export default function PeoplePage() {
             <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-slate-800"></div>
             <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-slate-800"></div>
 
-            <div className="inline-block px-3 py-1 bg-red-600 text-white font-mono text-xs mb-6">
-              ⚠ WARNING
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-600 text-white font-mono text-xs mb-6">
+              <ExclamationTriangleIcon className="w-3 h-3" />
+              WARNING
             </div>
             <h3 className="font-mono text-2xl font-bold mb-2 text-red-600">
               Delete Person?
@@ -474,8 +481,9 @@ export default function PeoplePage() {
             </p>
             {deletingPerson.hasManual && (
               <div className="mb-4 p-3 bg-red-50 border-2 border-red-600">
-                <p className="font-mono text-xs text-red-700">
-                  ⚠ THIS PERSON HAS AN OPERATING MANUAL THAT WILL BE AFFECTED
+                <p className="font-mono text-xs text-red-700 flex items-center gap-2">
+                  <ExclamationTriangleIcon className="w-4 h-4 flex-shrink-0" />
+                  THIS PERSON HAS AN OPERATING MANUAL THAT WILL BE AFFECTED
                 </p>
               </div>
             )}
@@ -576,7 +584,7 @@ function PersonCard({ person, index, hasManual, onEdit, onDelete }: PersonCardPr
             className="p-2 hover:bg-slate-100 rounded font-mono text-slate-600 hover:text-slate-900"
             data-testid="person-menu-button"
           >
-            ⋮
+            <EllipsisVerticalIcon className="w-5 h-5" />
           </button>
         </div>
 
@@ -632,17 +640,19 @@ function PersonCard({ person, index, hasManual, onEdit, onDelete }: PersonCardPr
           >
             <button
               onClick={handleEdit}
-              className="w-full px-4 py-3 text-left font-mono text-xs hover:bg-slate-100 transition-colors border-b border-slate-200 text-slate-900"
+              className="w-full px-4 py-3 text-left font-mono text-xs hover:bg-slate-100 transition-colors border-b border-slate-200 text-slate-900 flex items-center gap-2"
               data-testid="edit-person-button"
             >
-              ✎ EDIT
+              <PencilIcon className="w-4 h-4" />
+              EDIT
             </button>
             <button
               onClick={handleDelete}
-              className="w-full px-4 py-3 text-left font-mono text-xs hover:bg-red-50 transition-colors text-red-600"
+              className="w-full px-4 py-3 text-left font-mono text-xs hover:bg-red-50 transition-colors text-red-600 flex items-center gap-2"
               data-testid="delete-person-button"
             >
-              ✕ DELETE
+              <XMarkIcon className="w-4 h-4" />
+              DELETE
             </button>
           </div>
         </>

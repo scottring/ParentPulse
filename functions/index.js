@@ -2168,27 +2168,40 @@ exports.generateWeeklyWorkbooks = onCall(
           const sampleData = require("./sample-story-data");
 
           // Customize sample data with person's name
+          const sampleCharacterName = sampleData.sampleStoryAge6.characterName; // "Alex" in current sample
+
           storyData = {
             ...sampleData.sampleStoryAge6,
             characterName: personName,
             dailyFragments: sampleData.sampleStoryAge6.dailyFragments.map(fragment => ({
               ...fragment,
-              fragmentText: fragment.fragmentText.replace(/Luna/g, personName),
+              fragmentText: fragment.fragmentText.replace(new RegExp(sampleCharacterName, 'g'), personName),
+            })),
+            reflectionQuestions: sampleData.sampleStoryAge6.reflectionQuestions.map(q => ({
+              ...q,
+              questionText: q.questionText.replace(new RegExp(sampleCharacterName, 'g'), personName),
             })),
           };
 
           parentGoalsData = {
             parentGoals: sampleData.sampleParentGoals.map(goal => ({
               ...goal,
-              description: goal.description.replace(/Luna/g, personName),
+              description: goal.description.replace(new RegExp(sampleCharacterName, 'g'), personName),
+            })),
+            dailyActivities: (sampleData.sampleChildActivities || []).map(activity => ({
+              ...activity,
+              customization: activity.customization.replace(new RegExp(sampleCharacterName, 'g'), personName),
             })),
           };
 
           dailyStrategiesData = {
             dailyStrategies: sampleData.sampleDailyStrategies.map(strategy => ({
               ...strategy,
-              strategyDescription: strategy.strategyDescription.replace(/Luna/g, personName),
-              connectionToStory: strategy.connectionToStory.replace(/Luna/g, personName),
+              strategyDescription: strategy.strategyDescription.replace(new RegExp(sampleCharacterName, 'g'), personName),
+              connectionToStory: strategy.connectionToStory.replace(new RegExp(sampleCharacterName, 'g'), personName),
+              practicalTips: strategy.practicalTips.map(tip =>
+                tip.replace(new RegExp(sampleCharacterName, 'g'), personName)
+              ),
             })),
           };
 
@@ -2350,13 +2363,17 @@ exports.generateWeeklyWorkbooks = onCall(
           // Weekly story from step 2
           weeklyStory: {
             ...storyData,
-            // Mark illustrations as 'generating' initially
-            dailyFragments: storyData.dailyFragments.map((fragment) => ({
-              ...fragment,
-              illustrationUrl: null,
-              illustrationThumbnail: null,
-              illustrationStatus: "generating",
-            })),
+            // In test mode, preserve sample illustration URLs; in production, mark as generating
+            dailyFragments: storyData.dailyFragments.map((fragment) => {
+              // Ensure no undefined values - Firestore rejects them
+              const result = {
+                ...fragment,
+                illustrationUrl: testMode ? (fragment.illustrationUrl ?? null) : null,
+                illustrationThumbnail: null, // Always null for placeholders
+                illustrationStatus: testMode ? (fragment.illustrationStatus ?? "complete") : "generating",
+              };
+              return result;
+            }),
           },
 
           // Daily activities from parent goals data
