@@ -53,6 +53,12 @@ export interface WeeklyWorkbook {
   generatedBy: 'ai';
   approvedBy?: string; // User ID who approved
   approvedAt?: Timestamp;
+
+  // Archival fields
+  isArchived?: boolean;              // True if workbook has been archived
+  archivedAt?: Timestamp;            // When workbook was archived
+  archivedReason?: string;           // Why archived (e.g., "replaced", "manual", "outdated")
+  replacedByWorkbookId?: string;     // ID of workbook that replaced this one
 }
 
 // ==================== Parent Behavior Goals ====================
@@ -127,6 +133,11 @@ export interface WorkbookObservation {
   aiAnalyzed: boolean;
   authorId: string;
   authorName: string;
+
+  // Archival fields (archived when parent workbook is archived)
+  isArchived?: boolean;
+  archivedAt?: Timestamp;
+  archivedWithWorkbookId?: string;  // ID of workbook that was archived with this observation
 }
 
 // ==================== Behavior Tracking ====================
@@ -147,6 +158,11 @@ export interface BehaviorInstance {
   timestamp: Timestamp;
   recordedBy: string;
   recordedByName: string;
+
+  // Archival fields (archived when parent workbook is archived)
+  isArchived?: boolean;
+  archivedAt?: Timestamp;
+  archivedWithWorkbookId?: string;  // ID of workbook that was archived with this instance
 }
 
 // ==================== Daily Interactive Activities ====================

@@ -63,6 +63,9 @@ interface UseWeeklyWorkbookResult {
   saveReflection: (workbookId: string, reflection: WeeklyReflection) => Promise<void>;
   completeWorkbook: (workbookId: string) => Promise<void>;
 
+  // Archival
+  archiveWorkbook: (workbookId: string, reason: string, replacedByWorkbookId?: string) => Promise<void>;
+
   refresh: () => Promise<void>;
 }
 
@@ -105,8 +108,16 @@ export function useWeeklyWorkbook(personId: string | null): UseWeeklyWorkbookRes
       const snapshot = await getDocs(q);
 
       if (!snapshot.empty) {
-        const data = snapshot.docs[0].data() as WeeklyWorkbook;
-        setWorkbook({ ...data, workbookId: snapshot.docs[0].id });
+        // Filter out archived workbooks
+        const activeWorkbooks = snapshot.docs
+          .map((doc) => ({ ...(doc.data() as WeeklyWorkbook), workbookId: doc.id }))
+          .filter((wb) => !wb.isArchived);
+
+        if (activeWorkbooks.length > 0) {
+          setWorkbook(activeWorkbooks[0]);
+        } else {
+          setWorkbook(null);
+        }
       } else {
         setWorkbook(null);
       }
@@ -355,6 +366,66 @@ export function useWeeklyWorkbook(personId: string | null): UseWeeklyWorkbookRes
     [user, updateWorkbook]
   );
 
+  // Archive workbook and related data
+  const archiveWorkbook = useCallback(
+    async (workbookId: string, reason: string, replacedByWorkbookId?: string) => {
+      if (!user) throw new Error('User not authenticated');
+
+      try {
+        const workbookRef = doc(db, WORKBOOK_COLLECTIONS.WEEKLY_WORKBOOKS, workbookId);
+
+        // Archive the workbook
+        await updateDoc(workbookRef, {
+          isArchived: true,
+          archivedAt: Timestamp.now(),
+          archivedReason: reason,
+          replacedByWorkbookId: replacedByWorkbookId || undefined,
+        });
+
+        // Archive related observations
+        const observationsRef = collection(db, WORKBOOK_COLLECTIONS.WORKBOOK_OBSERVATIONS);
+        const obsQuery = query(
+          observationsRef,
+          where('workbookId', '==', workbookId)
+        );
+        const obsSnapshot = await getDocs(obsQuery);
+
+        const obsUpdatePromises = obsSnapshot.docs.map((obsDoc) =>
+          updateDoc(obsDoc.ref, {
+            isArchived: true,
+            archivedAt: Timestamp.now(),
+            archivedWithWorkbookId: workbookId,
+          })
+        );
+
+        // Archive related behavior tracking
+        const behaviorRef = collection(db, WORKBOOK_COLLECTIONS.BEHAVIOR_TRACKING);
+        const behaviorQuery = query(
+          behaviorRef,
+          where('workbookId', '==', workbookId)
+        );
+        const behaviorSnapshot = await getDocs(behaviorQuery);
+
+        const behaviorUpdatePromises = behaviorSnapshot.docs.map((behaviorDoc) =>
+          updateDoc(behaviorDoc.ref, {
+            isArchived: true,
+            archivedAt: Timestamp.now(),
+            archivedWithWorkbookId: workbookId,
+          })
+        );
+
+        // Execute all updates
+        await Promise.all([...obsUpdatePromises, ...behaviorUpdatePromises]);
+
+        setWorkbook(null);
+      } catch (err) {
+        console.error('Error archiving workbook:', err);
+        throw new Error('Failed to archive workbook');
+      }
+    },
+    [user]
+  );
+
   // Regenerate activities
   const regenerateActivities = useCallback(
     async (
@@ -431,6 +502,7 @@ export function useWeeklyWorkbook(personId: string | null): UseWeeklyWorkbookRes
     regenerateActivities,
     saveReflection,
     completeWorkbook,
+    archiveWorkbook,
     refresh: fetchActiveWorkbook
   };
 }
@@ -467,10 +539,12 @@ export function useActiveWorkbooks() {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const workbooksData = snapshot.docs.map(doc => ({
-          ...doc.data(),
-          workbookId: doc.id
-        })) as WeeklyWorkbook[];
+        const workbooksData = snapshot.docs
+          .map(doc => ({
+            ...doc.data(),
+            workbookId: doc.id
+          }) as WeeklyWorkbook)
+          .filter(wb => !wb.isArchived); // Filter out archived workbooks
 
         setWorkbooks(workbooksData);
         setLoading(false);
@@ -518,10 +592,12 @@ export function useWorkbookHistory(personId: string | null, weekCount: number = 
         );
 
         const snapshot = await getDocs(q);
-        const workbooksData = snapshot.docs.map(doc => ({
-          ...doc.data(),
-          workbookId: doc.id
-        })) as WeeklyWorkbook[];
+        const workbooksData = snapshot.docs
+          .map(doc => ({
+            ...doc.data(),
+            workbookId: doc.id
+          }) as WeeklyWorkbook)
+          .filter(wb => !wb.isArchived); // Filter out archived workbooks by default
 
         setWorkbooks(workbooksData);
         setError(null);

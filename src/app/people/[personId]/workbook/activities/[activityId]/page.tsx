@@ -2,6 +2,7 @@
 
 import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { usePersonById } from '@/hooks/usePerson';
 import { useWeeklyWorkbook } from '@/hooks/useWeeklyWorkbook';
@@ -125,6 +126,7 @@ export default function ActivityPage({
           setResponse={setResponse}
           personName={person.name}
           childWorkbook={childWorkbook}
+          user={user}
         />;
       default:
         return <div>Unknown activity type</div>;
@@ -1454,12 +1456,14 @@ function StoryReflectionActivity({
   response,
   setResponse,
   personName,
-  childWorkbook
+  childWorkbook,
+  user
 }: {
   response: StoryReflectionResponse | null;
   setResponse: (response: StoryReflectionResponse) => void;
   personName: string;
   childWorkbook: any;
+  user: any;
 }) {
   const story = childWorkbook?.weeklyStory;
 
@@ -1481,6 +1485,8 @@ function StoryReflectionActivity({
       personalConnection: '',
       adviceToCharacter: '',
       parentNotes: '',
+      completedAt: Timestamp.now(),
+      completedBy: user?.uid || '',
     };
 
     // Map question IDs to response fields
@@ -1538,7 +1544,8 @@ function StoryReflectionActivity({
           };
 
           const field = fieldMap[question.category];
-          const value = response?.[field] || '';
+          const fieldValue = response?.[field];
+          const value = typeof fieldValue === 'string' ? fieldValue : '';
 
           return (
             <div

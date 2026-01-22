@@ -38,6 +38,12 @@ export interface ParentWorkbook {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   lastEditedBy?: string;             // User ID
+
+  // Archival fields
+  isArchived?: boolean;              // True if workbook has been archived
+  archivedAt?: Timestamp;            // When workbook was archived
+  archivedReason?: string;           // Why archived (e.g., "replaced", "manual", "outdated")
+  replacedByWorkbookId?: string;     // ID of workbook that replaced this one
 }
 
 export interface ParentBehaviorGoal {

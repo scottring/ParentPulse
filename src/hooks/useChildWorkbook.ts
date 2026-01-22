@@ -29,6 +29,7 @@ interface UseChildWorkbookResult {
   markDayAsRead: (dayNumber: number) => Promise<void>;
   completeActivity: (activityId: string) => Promise<void>;
   updateCurrentDay: (dayNumber: number) => Promise<void>;
+  archiveWorkbook: (reason: string, replacedByWorkbookId?: string) => Promise<void>;
   refreshWorkbook: () => Promise<void>;
 }
 
@@ -65,8 +66,16 @@ export function useChildWorkbook(personId: string): UseChildWorkbookResult {
       const snapshot = await getDocs(q);
 
       if (!snapshot.empty) {
-        const workbookData = snapshot.docs[0].data() as ChildWorkbook;
-        setWorkbook(workbookData);
+        // Filter out archived workbooks
+        const activeWorkbooks = snapshot.docs
+          .map((doc) => doc.data() as ChildWorkbook)
+          .filter((wb) => !wb.isArchived);
+
+        if (activeWorkbooks.length > 0) {
+          setWorkbook(activeWorkbooks[0]);
+        } else {
+          setWorkbook(null);
+        }
       } else {
         setWorkbook(null);
       }
@@ -180,6 +189,29 @@ export function useChildWorkbook(personId: string): UseChildWorkbookResult {
     await fetchWorkbook();
   };
 
+  /**
+   * Archive workbook (typically called along with parent workbook archival)
+   */
+  const archiveWorkbook = async (reason: string, replacedByWorkbookId?: string): Promise<void> => {
+    if (!workbook || !user) {
+      throw new Error('Workbook or user not found');
+    }
+
+    const workbookRef = doc(firestore, 'child_workbooks', workbook.workbookId);
+
+    // Archive the workbook
+    await updateDoc(workbookRef, {
+      isArchived: true,
+      archivedAt: Timestamp.now(),
+      archivedReason: reason,
+      replacedByWorkbookId: replacedByWorkbookId || undefined,
+      updatedAt: Timestamp.now(),
+    });
+
+    // Refresh workbook
+    await fetchWorkbook();
+  };
+
   return {
     workbook,
     loading,
@@ -187,6 +219,7 @@ export function useChildWorkbook(personId: string): UseChildWorkbookResult {
     markDayAsRead,
     completeActivity,
     updateCurrentDay,
+    archiveWorkbook,
     refreshWorkbook: fetchWorkbook,
   };
 }
@@ -220,7 +253,9 @@ export function useActiveChildWorkbooks() {
         );
 
         const snapshot = await getDocs(q);
-        const workbooksData = snapshot.docs.map((doc) => doc.data() as ChildWorkbook);
+        const workbooksData = snapshot.docs
+          .map((doc) => doc.data() as ChildWorkbook)
+          .filter((wb) => !wb.isArchived); // Filter out archived workbooks
 
         setWorkbooks(workbooksData);
       } catch (err) {
@@ -267,7 +302,9 @@ export function useChildWorkbookHistory(personId: string, weekCount: number = 4)
         );
 
         const snapshot = await getDocs(q);
-        const workbooksData = snapshot.docs.map((doc) => doc.data() as ChildWorkbook);
+        const workbooksData = snapshot.docs
+          .map((doc) => doc.data() as ChildWorkbook)
+          .filter((wb) => !wb.isArchived); // Filter out archived workbooks by default
 
         setWorkbooks(workbooksData);
       } catch (err) {
@@ -332,4 +369,51 @@ export function useChildWorkbookByWeekId(weekId: string) {
   }, [user?.familyId, weekId]);
 
   return { workbook, loading, error };
+}
+
+/**
+ * Get archived child workbooks for a specific person
+ */
+export function useArchivedChildWorkbooks(personId: string) {
+  const { user } = useAuth();
+  const [workbooks, setWorkbooks] = useState<ChildWorkbook[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user?.familyId || !personId) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchArchivedWorkbooks = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const workbooksRef = collection(firestore, 'child_workbooks');
+        const q = query(
+          workbooksRef,
+          where('familyId', '==', user.familyId),
+          where('personId', '==', personId),
+          where('isArchived', '==', true),
+          orderBy('archivedAt', 'desc')
+        );
+
+        const snapshot = await getDocs(q);
+        const workbooksData = snapshot.docs.map((doc) => doc.data() as ChildWorkbook);
+
+        setWorkbooks(workbooksData);
+      } catch (err) {
+        console.error('Error fetching archived child workbooks:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch archived workbooks');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchArchivedWorkbooks();
+  }, [user?.familyId, personId]);
+
+  return { workbooks, loading, error };
 }
