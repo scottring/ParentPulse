@@ -17,6 +17,7 @@ import { useParentWorkbook } from '@/hooks/useParentWorkbook';
 import { useChildWorkbook } from '@/hooks/useChildWorkbook';
 import { functions } from '@/lib/firebase';
 import MainLayout from '@/components/layout/MainLayout';
+import { shouldUserUseTestMode } from '@/utils/workbook-test-mode';
 
 export default function WorkbookHubPage({ params }: { params: Promise<{ personId: string }> }) {
   const { personId } = use(params);
@@ -52,6 +53,9 @@ export default function WorkbookHubPage({ params }: { params: Promise<{ personId
         timeout: 540000 // 9 minutes to match Cloud Function timeout
       });
 
+      // Check if user should use test mode (demo account = free)
+      const useTestMode = shouldUserUseTestMode(user);
+
       const result = await generateWeeklyWorkbooks({
         familyId: user.familyId,
         personId: personId,
@@ -67,7 +71,7 @@ export default function WorkbookHubPage({ params }: { params: Promise<{ personId
         boundaries: manual.boundaries || [],
         coreInfo: manual.coreInfo || {},
         assessmentScores: (manual as any).assessmentScores || null,
-        testMode: false, // Using real AI generation with GPT-4o-mini
+        testMode: useTestMode, // Auto-detects demo users for free generation
         tier: 'standard' // Using standard tier (Claude Haiku + DALL-E 3)
       });
 
