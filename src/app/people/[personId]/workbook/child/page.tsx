@@ -199,7 +199,7 @@ export default function ChildWorkbookPage({ params }: { params: Promise<{ person
               <img
                 src={currentFragment.illustrationUrl}
                 alt={currentFragment.illustrationPrompt}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
               />
             </div>
           )}
@@ -213,7 +213,7 @@ export default function ChildWorkbookPage({ params }: { params: Promise<{ person
             </div>
           )}
 
-          {currentFragment.illustrationStatus === 'failed' && (
+          {(currentFragment.illustrationStatus === 'pending' || currentFragment.illustrationStatus === 'failed') && (
             <div className="aspect-video bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
               <div className="text-center">
                 <div className="text-6xl mb-4">🖼️</div>
@@ -415,7 +415,7 @@ export default function ChildWorkbookPage({ params }: { params: Promise<{ person
 
                 return (
                   <Link
-                    key={activity.id}
+                    key={activity.id || `activity-${index}`}
                     href={`/people/${personId}/workbook/activities/${activity.id}`}
                     className={`relative p-6 rounded-2xl border-2 transition-all hover:scale-105 ${
                       isCompleted

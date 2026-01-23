@@ -127,6 +127,15 @@ service firebase.storage {
       // Parents cannot directly delete illustrations
     }
 
+    // Demo story images (pre-generated for test/demo mode)
+    // Used for demo accounts to avoid API costs
+    match /demo-story-images/{filename} {
+      // Public read access - these are reusable demo illustrations
+      allow read: if true;
+
+      // Only admins can upload/delete demo images (via Cloud Functions admin SDK)
+    }
+
     // Activity response attachments (drawings, photos from child workbook activities)
     match /families/{familyId}/activity_responses/{activityId}/{filename} {
       // Family members can upload activity responses
