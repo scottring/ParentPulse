@@ -7,13 +7,16 @@ interface CoachChatProps {
   personId?: string;
   personName?: string;
   onClose?: () => void;
+  initialMessage?: string;
+  onInitialMessageSent?: () => void;
 }
 
-export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
+export function CoachChat({ personId, personName, onClose, initialMessage, onInitialMessageSent }: CoachChatProps) {
   const { messages, loading, error, context, sendMessage, clearConversation } = useCoach();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [initialMessageSent, setInitialMessageSent] = useState(false);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -24,6 +27,23 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  // Handle initial message - send it automatically when provided
+  useEffect(() => {
+    if (initialMessage && !initialMessageSent && !loading) {
+      setInitialMessageSent(true);
+      sendMessage(initialMessage, personId).then(() => {
+        onInitialMessageSent?.();
+      });
+    }
+  }, [initialMessage, initialMessageSent, loading, sendMessage, personId, onInitialMessageSent]);
+
+  // Reset initial message sent flag when initial message changes
+  useEffect(() => {
+    if (!initialMessage) {
+      setInitialMessageSent(false);
+    }
+  }, [initialMessage]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
