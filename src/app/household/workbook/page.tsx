@@ -23,6 +23,8 @@ import {
   DEFAULT_JOURNEY_CONTEXT,
 } from '@/components/household';
 import { openCoachWithMessage } from '@/components/coach';
+import { ConcernsList } from '@/components/concerns';
+import type { Concern } from '@/types/household-workbook';
 import {
   createMockHouseholdWorkbook,
   HouseholdWeeklyFocus,
@@ -221,6 +223,25 @@ export default function HouseholdWorkbookPage() {
     setAiEditContext(context);
   };
 
+  // Handle making a concern into a focus
+  const handleMakeConcernFocus = (concern: Concern) => {
+    // Open coach with a prompt to help convert this concern into a weekly focus
+    const prompt = `I have a concern that I'd like to make into a weekly focus:
+
+**Concern:** ${concern.description}
+**Involves:** ${concern.involvedPersonNames.join(', ')}
+**Urgency:** ${concern.urgency}
+
+Current milestone: "${displayWorkbook.currentMilestone.description}" (Day ${displayWorkbook.journeyDayNumber} of 90)
+
+Can you help me:
+1. Turn this concern into a structured weekly focus with clear steps
+2. Make sure it fits with my current milestone goals
+3. Suggest how to adjust my plan if needed`;
+
+    openCoachWithMessage(prompt, 'concern-to-focus');
+  };
+
   // Generate prompt for AI coach based on edit context
   const getAIEditPrompt = (context: EditContext): string => {
     const milestoneContext = `Current milestone: "${displayWorkbook.currentMilestone.description}" (Day ${displayWorkbook.journeyDayNumber} of 90)`;
@@ -358,6 +379,16 @@ Please help me refine this step while keeping it aligned with the overall weekly
             onAddToManual={handleAddToManual}
             onEditWithAI={handleEditWithAI}
           />
+        </section>
+
+        {/* What's on your mind - Captured concerns */}
+        <section>
+          <SectionHeader
+            title="WHAT'S ON YOUR MIND"
+            subtitle="Concerns you've captured that may need attention"
+            className="mb-4"
+          />
+          <ConcernsList onMakeFocus={handleMakeConcernFocus} />
         </section>
 
         {/* Reflection section */}

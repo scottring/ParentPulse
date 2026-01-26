@@ -1095,6 +1095,7 @@ export const COLLECTIONS = {
   HOUSEHOLD_WORKBOOKS: 'household_workbooks',
   HOUSEHOLD_JOURNEYS: 'household_journeys',
   INTERVENTIONS: 'interventions',
+  CONCERNS: 'concerns',
 } as const;
 
 // ==================== Firebase Storage Paths ====================

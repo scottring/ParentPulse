@@ -357,6 +357,57 @@ export interface HouseholdJourney {
   updatedAt: Timestamp;
 }
 
+// ============ CONCERNS (Quick Capture) ============
+
+export type ConcernUrgency = 'can-wait' | 'simmering' | 'need-soon';
+
+export interface Concern {
+  concernId: string;
+  familyId: string;
+
+  // What's the concern
+  description: string;
+
+  // Who's involved
+  involvedPersonIds: string[];
+  involvedPersonNames: string[];
+
+  // Urgency
+  urgency: ConcernUrgency;
+
+  // Optional context
+  relatedLayers?: LayerId[];
+  notes?: string;
+
+  // Status
+  status: 'active' | 'addressed' | 'dismissed';
+  addressedAt?: Timestamp;
+  addressedInWorkbookId?: string; // If it became a focus
+
+  // Metadata
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  createdBy: string; // userId
+}
+
+export const CONCERN_URGENCY_LABELS: Record<ConcernUrgency, { label: string; description: string; color: string }> = {
+  'can-wait': {
+    label: 'Can Wait',
+    description: 'Log it, review later',
+    color: 'slate',
+  },
+  'simmering': {
+    label: 'Simmering',
+    description: 'Should be addressed in 2-3 weeks',
+    color: 'amber',
+  },
+  'need-soon': {
+    label: 'Need It Soon',
+    description: 'Consider for this/next week',
+    color: 'red',
+  },
+};
+
 // ============ HOUSEHOLD MANUAL CONTENT ============
 
 export interface HouseholdTrigger {

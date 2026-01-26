@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { DemoBanner } from "@/components/demo/DemoBanner";
 import { FloatingCoachButton } from "@/components/coach";
+import { QuickCaptureButton } from "@/components/concerns";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -40,6 +41,7 @@ export default function RootLayout({
         <AuthProvider>
           <DemoBanner />
           {children}
+          <QuickCaptureButton />
           <FloatingCoachButton />
         </AuthProvider>
       </body>
