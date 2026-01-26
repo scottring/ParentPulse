@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { DemoBanner } from "@/components/demo/DemoBanner";
+import { FloatingCoachButton } from "@/components/coach";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -39,6 +40,7 @@ export default function RootLayout({
         <AuthProvider>
           <DemoBanner />
           {children}
+          <FloatingCoachButton />
         </AuthProvider>
       </body>
     </html>

@@ -77,6 +77,29 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
     }
   }, [manual, manualLoading, person, personId, router, isDeletingManual, hasBeenDeleted]);
 
+  // If person doesn't exist after loading, show error
+  if (!authLoading && !personLoading && user && !person) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FFF8F0' }}>
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 mx-auto mb-4 bg-red-100 border-4 border-red-600 flex items-center justify-center">
+            <span className="text-2xl text-red-600">!</span>
+          </div>
+          <h1 className="font-mono text-xl font-bold text-slate-800 mb-2">PERSON NOT FOUND</h1>
+          <p className="font-mono text-sm text-slate-600 mb-6">
+            The person with ID &quot;{personId.slice(0, 20)}...&quot; doesn&apos;t exist in your family.
+          </p>
+          <Link
+            href="/people"
+            className="inline-block px-6 py-3 bg-slate-800 text-white font-mono text-sm font-bold hover:bg-amber-600 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+          >
+            &larr; BACK TO PEOPLE
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (authLoading || personLoading || manualLoading || !user || !person || !manual) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FFF8F0' }}>

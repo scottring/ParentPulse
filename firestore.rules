@@ -584,5 +584,85 @@ service cloud.firestore {
       // Parents can delete child workbooks in their family
       allow delete: if isParent() && belongsToFamily(resource.data.familyId);
     }
+
+    // ==================== Household Manual System ====================
+
+    // Household Manuals
+    // Operating manual for the entire household with 6-layer framework
+    match /household_manuals/{manualId} {
+      // Parents can read individual household manual documents in their family
+      allow get: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can list/query household manuals in their family
+      allow list: if isParent();
+
+      // Parents can create household manuals in their family
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+
+      // Family members can update household manuals (collaborative editing)
+      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId);
+
+      // Parents can delete household manuals in their family
+      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
+    // Household Journeys
+    // 90-day journey tracking with milestones
+    match /household_journeys/{journeyId} {
+      // Parents can read individual journey documents in their family
+      allow get: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can list/query journeys in their family
+      allow list: if isParent();
+
+      // Parents can create journeys in their family
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+
+      // Family members can update journeys (update progress, complete milestones)
+      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId);
+
+      // Parents can delete journeys in their family
+      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
+    // Household Workbooks
+    // Hub-and-spokes workbook with delegated tasks
+    match /household_workbooks/{workbookId} {
+      // Parents can read individual workbook documents in their family
+      allow get: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can list/query household workbooks in their family
+      allow list: if isParent();
+
+      // Parents can create household workbooks in their family
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+
+      // Family members can update household workbooks (complete tasks, add reflections)
+      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId);
+
+      // Parents can delete household workbooks in their family
+      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
+    // ==================== Intervention System ====================
+
+    // Interventions
+    // Emergency crisis management for unexpected behavioral incidents
+    match /interventions/{interventionId} {
+      // Parents can read individual intervention documents in their family
+      allow get: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can list/query interventions in their family
+      allow list: if isParent();
+
+      // Parents can create interventions in their family
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+
+      // Family members can update interventions (add tasks, update status, approve suggestions)
+      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId);
+
+      // Parents can delete interventions in their family
+      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
   }
 }

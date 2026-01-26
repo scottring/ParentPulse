@@ -7,6 +7,8 @@ import {
   ChartBarIcon,
   UsersIcon,
   Cog6ToothIcon,
+  HomeModernIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 
 interface NavItem {
@@ -18,7 +20,9 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
+  { label: 'Household', href: '/household', icon: HomeModernIcon },
   { label: 'People', href: '/people', icon: UsersIcon },
+  { label: 'Intervention', href: '/intervention', icon: ExclamationTriangleIcon },
   { label: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ];
 

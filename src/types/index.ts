@@ -1,5 +1,14 @@
 import { Timestamp } from 'firebase/firestore';
 
+// ==================== Re-export type modules ====================
+
+export * from './assessment';
+export * from './manual';
+export * from './journey';
+export * from './story';
+export * from './household-workbook';
+export * from './intervention';
+
 // ==================== User & Family Types ====================
 
 export type UserRole = 'parent' | 'child';
@@ -1034,8 +1043,12 @@ export interface AsyncState<T> {
 // ==================== Firestore Document References ====================
 
 export const COLLECTIONS = {
+  // Core
   FAMILIES: 'families',
   USERS: 'users',
+  PEOPLE: 'people',
+
+  // Legacy journal/checkin
   JOURNAL_ENTRIES: 'journal_entries',
   CHILD_CHECKINS: 'child_checkins',
   CHIP_ECONOMY: 'chip_economy',
@@ -1046,19 +1059,42 @@ export const COLLECTIONS = {
   DAILY_ANALYSES: 'daily_analyses',
 
   // Universal Relationship System
-  RELATIONSHIP_MEMBERS: 'relationship_members', // New: Universal entity for all relationships
-  RELATIONSHIP_PROFILES: 'relationship_profiles', // New: Universal profiles (spouse, parent, friend, professional, child)
+  RELATIONSHIP_MEMBERS: 'relationship_members',
+  RELATIONSHIP_PROFILES: 'relationship_profiles',
 
   // Legacy (backward compatibility)
-  CHILD_PROFILES: 'child_profiles', // Deprecated: Use RELATIONSHIP_PROFILES with relationshipType: 'children'
+  CHILD_PROFILES: 'child_profiles',
   STRATEGIC_PLANS: 'strategic_plans',
   PLAN_PROGRESS: 'plan_progress',
 
-  // NEW: Child Manual System (MVP v1)
+  // Manuals (V1)
   CHILDREN: 'children',
   CHILD_MANUALS: 'child_manuals',
+  MARRIAGE_MANUALS: 'marriage_manuals',
+  FAMILY_MANUALS: 'family_manuals',
   DAILY_OBSERVATIONS: 'daily_observations',
   COACHING_SESSIONS: 'coaching_sessions',
+
+  // Goals & Assessment
+  GOAL_VOLUMES: 'goal_volumes',
+  ASSESSMENTS: 'assessments',
+  REPAIR_LOGS: 'repair_logs',
+  PROGRESS_TIMELINES: 'progress_timelines',
+
+  // Workbooks
+  PARENT_WORKBOOKS: 'parent_workbooks',
+  WORKBOOK_TOOLS: 'workbook_tools',
+  MANUAL_GAPS: 'manual_gaps',
+
+  // Reflections
+  ACTIVITY_REFLECTIONS: 'activity_reflections',
+  MILESTONE_REFLECTIONS: 'milestone_reflections',
+
+  // Household System (V2)
+  HOUSEHOLD_MANUALS: 'household_manuals',
+  HOUSEHOLD_WORKBOOKS: 'household_workbooks',
+  HOUSEHOLD_JOURNEYS: 'household_journeys',
+  INTERVENTIONS: 'interventions',
 } as const;
 
 // ==================== Firebase Storage Paths ====================

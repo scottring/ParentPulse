@@ -1246,3 +1246,286 @@ export function getWeekNumber(date: Date = new Date()): number {
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 }
+
+// ==================== V2 Parent Workbook Types ====================
+
+import type { LayerId, SpiderAssessment, RepairLog } from './assessment';
+import type { EffectivenessRating } from './manual';
+
+/**
+ * Workbook status
+ */
+export type WorkbookStatus = 'upcoming' | 'active' | 'completed';
+
+/**
+ * Activity completion status
+ */
+export type ActivityStatus = 'pending' | 'completed' | 'skipped';
+
+/**
+ * A parent behavior goal for the week (V2)
+ * These track parent's own behavior changes (NOT child compliance)
+ */
+export interface ParentBehaviorGoalV2 {
+  goalId: string;
+  description: string; // e.g., "Give 5-minute warning before transitions"
+  layerFocus: LayerId; // Which layer this targets
+  frequency: 'daily' | 'situational'; // How often to practice
+  linkedStrategyId?: string; // Links to strategy in manual
+  linkedTriggerId?: string; // Links to trigger this addresses
+
+  // Daily tracking
+  dailyCompletions: {
+    day: number; // 0-6 (Sunday-Saturday)
+    completed: boolean;
+    notes?: string;
+  }[];
+
+  // Weekly totals
+  completedCount: number;
+  totalOpportunities: number;
+}
+
+/**
+ * A daily activity/practice (V2)
+ */
+export interface DailyActivityV2 {
+  activityId: string;
+  title: string;
+  description: string;
+  layerFocus: LayerId;
+  estimatedMinutes: number;
+  day: number; // 0-6 (Sunday-Saturday)
+
+  status: ActivityStatus;
+  completedAt?: Timestamp;
+  skippedReason?: string;
+  notes?: string;
+}
+
+/**
+ * Weekly reflection questions and answers (V2)
+ */
+export interface WeeklyReflectionV2 {
+  // Standard reflection questions
+  whatWorkedWell?: string;
+  whatWasChallenging?: string;
+  whatWillTryDifferently?: string;
+  celebrationMoments?: string;
+
+  // 6-layer assessment
+  layerAssessment: SpiderAssessment;
+
+  // Repair tracking
+  repairLog: RepairLog;
+
+  completedAt: Timestamp;
+}
+
+/**
+ * Parent Weekly Workbook (V2)
+ */
+export interface ParentWorkbook {
+  workbookId: string;
+  familyId: string;
+  personId: string; // Person this workbook is about (child, spouse, etc.)
+  manualId: string;
+  manualType: 'child' | 'marriage' | 'family';
+
+  // Week identification
+  weekId: string; // Format: "2026-W04" (year-week)
+  weekNumber: number; // 1-52
+  year: number;
+  startDate: Timestamp;
+  endDate: Timestamp;
+
+  // Goal context (friendly hierarchy display)
+  goalContext: {
+    yearGoal: string;
+    quarterFocus: string;
+    thisMonth: string;
+    thisWeek: string; // Specific focus for this week
+    volumeId: string; // Link to GoalVolume
+  };
+
+  // Content
+  parentGoals: ParentBehaviorGoalV2[]; // 3-5 goals
+  dailyActivities: DailyActivityV2[]; // Activities for each day
+  suggestedPractices: string[]; // Quick tips
+
+  // Reflection (filled at end of week)
+  weeklyReflection?: WeeklyReflectionV2;
+
+  // Status
+  status: WorkbookStatus;
+
+  // Metadata
+  generatedAt: Timestamp;
+  generatedBy: 'ai' | 'manual';
+  lastUpdatedAt: Timestamp;
+}
+
+// ==================== Workbook Tools (V2) ====================
+
+/**
+ * Tool types that can be generated/tracked in workbooks
+ */
+export type ToolType =
+  | 'checklist'
+  | 'token_economy'
+  | 'emotion_chart'
+  | 'reward_chart'
+  | 'coregulation_plan';
+
+/**
+ * Checklist step
+ */
+export interface ChecklistStep {
+  stepId: string;
+  description: string;
+  order: number;
+  completed: boolean;
+}
+
+/**
+ * A visual checklist tool (bedtime routine, morning routine, etc.)
+ */
+export interface ChecklistTool {
+  toolId: string;
+  toolType: 'checklist';
+  name: string; // e.g., "Caleb's Bedtime Checklist"
+  personId: string;
+  layerFocus: LayerId;
+
+  steps: ChecklistStep[];
+  targetTime?: string; // e.g., "7:30pm"
+
+  // Tracking
+  weeklyCompletions: {
+    weekId: string;
+    completionRate: number; // 0-1
+    effectivenessRating: EffectivenessRating;
+    notes?: string;
+  }[];
+
+  status: 'active' | 'working_well' | 'needs_adjustment' | 'archived';
+  effectivenessTrend: 'improving' | 'stable' | 'declining';
+
+  createdAt: Timestamp;
+  createdWeekId: string;
+}
+
+/**
+ * Token/Chip economy earn behavior
+ */
+export interface EarnBehavior {
+  behaviorId: string;
+  behavior: string;
+  chips: number;
+  rationale?: string;
+}
+
+/**
+ * Token/Chip economy spend option
+ */
+export interface SpendOption {
+  optionId: string;
+  reward: string;
+  cost: number;
+  rationale?: string;
+}
+
+/**
+ * Token/Chip economy system
+ */
+export interface TokenEconomyTool {
+  toolId: string;
+  toolType: 'token_economy';
+  name: string; // e.g., "Caleb's Chip System"
+  personId: string;
+
+  // System configuration
+  earnBehaviors: EarnBehavior[];
+  spendOptions: SpendOption[];
+  rules: string[];
+  visualTracker: 'physical_jar' | 'app' | 'chart';
+
+  // Current state
+  currentBalance: number;
+  weeklyEarned: number;
+  weeklySpent: number;
+
+  // Tracking
+  weeklyStats: {
+    weekId: string;
+    earned: number;
+    spent: number;
+    effectivenessRating: EffectivenessRating;
+    notes?: string;
+  }[];
+
+  status: 'active' | 'working_well' | 'needs_adjustment' | 'archived';
+  effectivenessTrend: 'improving' | 'stable' | 'declining';
+
+  createdAt: Timestamp;
+  createdWeekId: string;
+}
+
+/**
+ * Emotion chart/meter tool
+ */
+export interface EmotionChartTool {
+  toolId: string;
+  toolType: 'emotion_chart';
+  name: string;
+  personId: string;
+
+  chartType: 'feelings_wheel' | 'thermometer' | 'zones' | 'custom';
+  emotions: string[]; // Available emotions to pick from
+  calmingStrategies: string[]; // Linked calming options
+
+  // Tracking
+  weeklyUsage: {
+    weekId: string;
+    timesUsed: number;
+    mostCommonEmotions: string[];
+    effectivenessRating: EffectivenessRating;
+  }[];
+
+  status: 'active' | 'working_well' | 'needs_adjustment' | 'archived';
+
+  createdAt: Timestamp;
+}
+
+/**
+ * Union type for all tools
+ */
+export type WorkbookTool = ChecklistTool | TokenEconomyTool | EmotionChartTool;
+
+// ==================== Gap Detection ====================
+
+/**
+ * Types of gaps detected in a manual
+ */
+export type GapType =
+  | 'insufficient_triggers'
+  | 'missing_routines'
+  | 'weak_strategies'
+  | 'unclear_values'
+  | 'no_repair_patterns'
+  | 'untested_layer';
+
+/**
+ * A detected gap in a manual
+ */
+export interface ManualGap {
+  gapId: string;
+  gapType: GapType;
+  layerId?: LayerId;
+  description: string;
+  priority: 'low' | 'medium' | 'high';
+  suggestedAction: string;
+  detectedAt: Timestamp;
+  resolved: boolean;
+  resolvedAt?: Timestamp;
+}
