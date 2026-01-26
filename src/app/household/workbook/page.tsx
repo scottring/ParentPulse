@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useHouseholdWorkbook } from '@/hooks/useHouseholdWorkbook';
 import { useHouseholdManual, useHouseholdJourney } from '@/hooks/useHouseholdManual';
 import type { StepDeliverable } from '@/types/household-workbook';
+import type { EditContext } from '@/components/household/WeeklyFocusCard';
 import {
   TechnicalCard,
   TechnicalButton,
@@ -21,6 +22,7 @@ import {
   DEFAULT_DAY30_PLAN,
   DEFAULT_JOURNEY_CONTEXT,
 } from '@/components/household';
+import { openCoachWithMessage } from '@/components/coach';
 import {
   createMockHouseholdWorkbook,
   HouseholdWeeklyFocus,
@@ -51,6 +53,7 @@ export default function HouseholdWorkbookPage() {
   ];
   const [showReflectionForm, setShowReflectionForm] = useState(false);
   const [showMilestonePlan, setShowMilestonePlan] = useState(false);
+  const [aiEditContext, setAiEditContext] = useState<EditContext | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -213,6 +216,38 @@ export default function HouseholdWorkbookPage() {
     }
   };
 
+  // Handle AI-assisted editing
+  const handleEditWithAI = (context: EditContext) => {
+    setAiEditContext(context);
+  };
+
+  // Generate prompt for AI coach based on edit context
+  const getAIEditPrompt = (context: EditContext): string => {
+    const milestoneContext = `Current milestone: "${displayWorkbook.currentMilestone.description}" (Day ${displayWorkbook.journeyDayNumber} of 90)`;
+
+    if (context.editType === 'focus') {
+      return `I'd like help editing my Week ${context.weekNumber} focus activity. Here's what I currently have:
+
+**Title:** ${context.currentContent.title}
+**Description:** ${context.currentContent.description}
+**Why It Matters:** ${context.currentContent.whyItMatters}
+
+${milestoneContext}
+
+Please help me refine this content while keeping it aligned with my overall 90-day journey goals. I want to maintain the integrity of the plan while making it work better for my family.`;
+    } else if (context.editType === 'instruction') {
+      return `I'd like help editing Step ${context.currentContent.step} of my Week ${context.weekNumber} focus activity ("${context.weeklyFocus.title}").
+
+**Current Step Title:** ${context.currentContent.title}
+**Current Description:** ${context.currentContent.description}
+
+${milestoneContext}
+
+Please help me refine this step while keeping it aligned with the overall weekly focus and my 90-day journey goals.`;
+    }
+    return '';
+  };
+
   return (
     <div className="min-h-screen bg-[#FAF8F5]">
       {/* Navigation */}
@@ -321,6 +356,7 @@ export default function HouseholdWorkbookPage() {
             householdMembers={householdMembers}
             onDeliverableUpdate={handleDeliverableUpdate}
             onAddToManual={handleAddToManual}
+            onEditWithAI={handleEditWithAI}
           />
         </section>
 
@@ -394,6 +430,118 @@ export default function HouseholdWorkbookPage() {
           </TechnicalButton>
         </div>
       </main>
+
+      {/* AI Edit Panel */}
+      {aiEditContext && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-hidden border-2 border-slate-800 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b-2 border-slate-800 bg-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-amber-500 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-mono font-bold text-white uppercase text-sm">
+                    AI-Assisted Edit
+                  </h3>
+                  <p className="font-mono text-[10px] text-slate-300">
+                    {aiEditContext.editType === 'focus' ? 'EDITING WEEKLY FOCUS' : `EDITING STEP ${aiEditContext.currentContent.step}`}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setAiEditContext(null)}
+                className="text-white hover:text-amber-300"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+              {/* Current Content Display */}
+              <div className="mb-6">
+                <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">
+                  CURRENT CONTENT
+                </h4>
+                <div className="p-4 bg-slate-50 border border-slate-200 space-y-3">
+                  <div>
+                    <span className="font-mono text-[10px] text-slate-500">TITLE</span>
+                    <p className="font-medium text-slate-800">{aiEditContext.currentContent.title}</p>
+                  </div>
+                  <div>
+                    <span className="font-mono text-[10px] text-slate-500">DESCRIPTION</span>
+                    <p className="text-slate-600">{aiEditContext.currentContent.description}</p>
+                  </div>
+                  {aiEditContext.currentContent.whyItMatters && (
+                    <div>
+                      <span className="font-mono text-[10px] text-slate-500">WHY IT MATTERS</span>
+                      <p className="text-slate-600">{aiEditContext.currentContent.whyItMatters}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Context Info */}
+              <div className="mb-6 p-3 bg-amber-50 border-l-4 border-amber-500">
+                <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-amber-700 mb-1">
+                  JOURNEY CONTEXT
+                </h4>
+                <p className="text-sm text-amber-800">
+                  <strong>Milestone:</strong> {displayWorkbook.currentMilestone.description}
+                </p>
+                <p className="text-sm text-amber-800">
+                  <strong>Progress:</strong> Day {displayWorkbook.journeyDayNumber} of 90 • Week {displayWorkbook.weekNumber}
+                </p>
+              </div>
+
+              {/* AI Prompt Preview */}
+              <div className="mb-6">
+                <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">
+                  AI WILL HELP YOU WITH
+                </h4>
+                <div className="p-4 bg-blue-50 border border-blue-200 text-sm text-blue-800">
+                  <p className="mb-2">
+                    The AI coach will help you refine this content while maintaining alignment with:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-blue-700">
+                    <li>Your 30/60/90 day milestone goals</li>
+                    <li>The weekly focus theme and structure</li>
+                    <li>Your household&apos;s specific needs and context</li>
+                    <li>Evidence-based parenting strategies</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <TechnicalButton
+                  variant="primary"
+                  onClick={() => {
+                    const prompt = getAIEditPrompt(aiEditContext);
+                    setAiEditContext(null);
+                    // Open the coach with the pre-filled message
+                    openCoachWithMessage(prompt, 'household-workbook');
+                  }}
+                >
+                  OPEN AI COACH
+                </TechnicalButton>
+                <TechnicalButton
+                  variant="outline"
+                  onClick={() => setAiEditContext(null)}
+                >
+                  CANCEL
+                </TechnicalButton>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

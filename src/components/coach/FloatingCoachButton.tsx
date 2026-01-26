@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { CoachChat } from './CoachChat';
 
@@ -14,16 +14,52 @@ interface FloatingCoachButtonProps {
   };
 }
 
+// Global event system for triggering coach from anywhere
+const COACH_OPEN_EVENT = 'openCoachWithMessage';
+
+export interface CoachOpenEvent {
+  message: string;
+  context?: string;
+}
+
+// Function to trigger coach from outside the component
+export function openCoachWithMessage(message: string, context?: string) {
+  window.dispatchEvent(new CustomEvent(COACH_OPEN_EVENT, {
+    detail: { message, context }
+  }));
+}
+
 export function FloatingCoachButton({ context }: FloatingCoachButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [initialMessage, setInitialMessage] = useState<string | undefined>(undefined);
   const pathname = usePathname();
+
+  // Listen for external open requests
+  const handleOpenRequest = useCallback((event: Event) => {
+    const customEvent = event as CustomEvent<CoachOpenEvent>;
+    setInitialMessage(customEvent.detail.message);
+    setIsOpen(true);
+    setIsMinimized(false);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener(COACH_OPEN_EVENT, handleOpenRequest);
+    return () => window.removeEventListener(COACH_OPEN_EVENT, handleOpenRequest);
+  }, [handleOpenRequest]);
 
   // Close coach when navigating to a different page
   useEffect(() => {
     setIsOpen(false);
     setIsMinimized(false);
+    setInitialMessage(undefined);
   }, [pathname]);
+
+  // Clear initial message when coach is closed
+  const handleClose = () => {
+    setIsOpen(false);
+    setInitialMessage(undefined);
+  };
 
   // Don't show on login/register pages
   if (pathname === '/login' || pathname === '/register' || pathname === '/landing') {
@@ -101,7 +137,7 @@ export function FloatingCoachButton({ context }: FloatingCoachButtonProps) {
                     </svg>
                   </button>
                   <button
-                    onClick={() => setIsOpen(false)}
+                    onClick={handleClose}
                     className="w-8 h-8 flex items-center justify-center text-white hover:bg-amber-700 rounded transition-colors"
                     aria-label="Close"
                   >
@@ -117,6 +153,8 @@ export function FloatingCoachButton({ context }: FloatingCoachButtonProps) {
                 <CoachChat
                   personId={context?.personId}
                   personName={context?.personName}
+                  initialMessage={initialMessage}
+                  onInitialMessageSent={() => setInitialMessage(undefined)}
                 />
               </div>
             </div>
@@ -128,7 +166,7 @@ export function FloatingCoachButton({ context }: FloatingCoachButtonProps) {
       {isOpen && !isMinimized && (
         <div
           className="fixed inset-0 bg-black/20 z-40 md:hidden"
-          onClick={() => setIsOpen(false)}
+          onClick={handleClose}
         />
       )}
     </>
