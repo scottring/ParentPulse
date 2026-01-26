@@ -19,7 +19,10 @@ import { useAuth } from '@/context/AuthContext';
 import { usePersonById } from '@/hooks/usePerson';
 import { useParentWorkbook } from '@/hooks/useParentWorkbook';
 import { useChildWorkbookByWeekId } from '@/hooks/useChildWorkbook';
+import { useConcerns } from '@/hooks/useConcerns';
 import type { ParentWeeklyReflection } from '@/types/parent-workbook';
+import type { Concern, ConcernUrgency } from '@/types/household-workbook';
+import { CONCERN_URGENCY_LABELS } from '@/types/household-workbook';
 import MainLayout from '@/components/layout/MainLayout';
 
 export default function ParentWorkbookPage({ params }: { params: Promise<{ personId: string }> }) {
@@ -37,6 +40,16 @@ export default function ParentWorkbookPage({ params }: { params: Promise<{ perso
     completeWorkbook,
   } = useParentWorkbook(personId);
 
+  // Concerns for this person
+  const {
+    concerns,
+    activeConcerns,
+    loading: concernsLoading,
+    dismissConcern,
+    markAddressed,
+    getConcernsByPerson,
+  } = useConcerns(user?.familyId);
+
   const [showReflection, setShowReflection] = useState(false);
   const [reflection, setReflection] = useState<Partial<Omit<ParentWeeklyReflection, 'completedAt' | 'completedBy'>>>({
     whatWorkedWell: '',
@@ -47,6 +60,22 @@ export default function ParentWorkbookPage({ params }: { params: Promise<{ perso
   const [saving, setSaving] = useState(false);
   const [animatingGoals, setAnimatingGoals] = useState<Set<string>>(new Set());
   const [expandedStrategy, setExpandedStrategy] = useState<number | null>(null);
+  const [expandedConcern, setExpandedConcern] = useState<string | null>(null);
+
+  // Filter concerns for this person
+  const personConcerns = activeConcerns.filter(
+    (concern) => concern.involvedPersonIds.includes(personId)
+  );
+
+  // Sort by urgency
+  const sortedPersonConcerns = [...personConcerns].sort((a, b) => {
+    const urgencyOrder: Record<ConcernUrgency, number> = {
+      'need-soon': 0,
+      'simmering': 1,
+      'can-wait': 2,
+    };
+    return urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
+  });
 
   // Redirect if not authenticated
   if (!authLoading && !user) {
@@ -419,7 +448,99 @@ export default function ParentWorkbookPage({ params }: { params: Promise<{ perso
             </Link>
           </div>
 
-          {/* Section 4: Weekly Reflection */}
+          {/* Section 4: Active Concerns for this Person */}
+          {sortedPersonConcerns.length > 0 && (
+            <div className="relative bg-white border-4 border-slate-800 p-8 mb-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+              <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-amber-600"></div>
+              <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-amber-600"></div>
+
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <div className="inline-block px-3 py-1 bg-amber-600 text-white font-mono text-xs mb-2">
+                    SECTION 4: ACTIVE CONCERNS ({sortedPersonConcerns.length})
+                  </div>
+                  <p className="font-mono text-sm text-slate-600">
+                    Things on your mind about {person.name} that need attention
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {sortedPersonConcerns.map((concern) => {
+                  const urgencyConfig = CONCERN_URGENCY_LABELS[concern.urgency];
+                  const isExpanded = expandedConcern === concern.concernId;
+
+                  return (
+                    <div
+                      key={concern.concernId}
+                      className={`border-2 transition-all ${
+                        concern.urgency === 'need-soon'
+                          ? 'border-red-300 bg-red-50'
+                          : concern.urgency === 'simmering'
+                          ? 'border-amber-300 bg-amber-50'
+                          : 'border-slate-300 bg-white'
+                      }`}
+                    >
+                      <button
+                        onClick={() => setExpandedConcern(isExpanded ? null : concern.concernId)}
+                        className="w-full p-4 text-left"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <span
+                                className={`px-2 py-0.5 font-mono text-[10px] font-bold ${
+                                  concern.urgency === 'need-soon'
+                                    ? 'bg-red-600 text-white'
+                                    : concern.urgency === 'simmering'
+                                    ? 'bg-amber-600 text-white'
+                                    : 'bg-slate-600 text-white'
+                                }`}
+                              >
+                                {urgencyConfig.label.toUpperCase()}
+                              </span>
+                              <span className="font-mono text-[10px] text-slate-400">
+                                {concern.createdAt.toDate().toLocaleDateString()}
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-800">{concern.description}</p>
+                          </div>
+                          <span className="font-mono text-xs text-slate-400">
+                            {isExpanded ? '▼' : '▶'}
+                          </span>
+                        </div>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="px-4 pb-4 pt-2 border-t border-slate-200">
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              onClick={() => markAddressed(concern.concernId, workbook?.workbookId)}
+                              className="px-4 py-2 bg-green-600 text-white font-mono text-xs font-bold hover:bg-green-700"
+                            >
+                              MARK ADDRESSED
+                            </button>
+                            <button
+                              onClick={() => dismissConcern(concern.concernId)}
+                              className="px-4 py-2 border-2 border-slate-300 font-mono text-xs font-bold hover:border-slate-800"
+                            >
+                              DISMISS
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="mt-4 font-mono text-[10px] text-slate-500">
+                Use the &quot;What&apos;s on your mind?&quot; button to capture new concerns anytime
+              </p>
+            </div>
+          )}
+
+          {/* Section 5: Weekly Reflection */}
           {isWeekEnd && !workbook.weeklyReflection && (
             <div className="relative bg-amber-50 border-4 border-amber-600 p-8 shadow-[6px_6px_0px_0px_rgba(217,119,6,1)]">
               <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-slate-800"></div>
@@ -428,7 +549,7 @@ export default function ParentWorkbookPage({ params }: { params: Promise<{ perso
               <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-slate-800"></div>
 
               <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-4">
-                SECTION 4: WEEKLY REFLECTION
+                SECTION 5: WEEKLY REFLECTION
               </div>
 
               {!showReflection ? (

@@ -399,3 +399,42 @@ export function getCompletionPercentage(
 
   return totalQuestions > 0 ? Math.round((answeredCount / totalQuestions) * 100) : 0;
 }
+
+// ==================== Tagged Questions ====================
+
+/**
+ * A question tagged for another family member to answer
+ */
+export interface TaggedQuestion {
+  tagId: string;
+  familyId: string;
+
+  // Who tagged it
+  taggerUserId: string;
+  taggerName: string;
+
+  // Who should answer it
+  taggedUserId: string;
+  taggedUserName: string;
+
+  // The question context
+  personId: string;           // The person the manual is about
+  personName: string;
+  manualId?: string;
+  sectionId: string;
+  questionId: string;
+  questionText: string;       // Store the question text for easy display
+
+  // Answer handling
+  taggerAnswer?: QuestionAnswer;  // If they answered but also want input
+  taggedAnswer?: QuestionAnswer;  // The tagged person's answer
+  skippedByTagger: boolean;       // Whether tagger skipped (vs answered and tagged)
+
+  // Status
+  status: 'pending' | 'answered' | 'dismissed';
+  createdAt: number;          // Unix timestamp
+  answeredAt?: number;
+
+  // Optional note from tagger
+  note?: string;              // "You know him better in this area"
+}

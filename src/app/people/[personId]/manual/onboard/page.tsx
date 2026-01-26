@@ -14,6 +14,7 @@ import { isDemoMode, isDemoUser } from '@/utils/demo';
 import { RelationshipType } from '@/types/person-manual';
 import { GeneratedTrigger, GeneratedStrategy, GeneratedBoundary, loadOnboardingProgress, QuestionAnswer } from '@/types/onboarding';
 import { QuestionRenderer } from '@/components/onboarding/QuestionRenderer';
+import { TagQuestionButton } from '@/components/onboarding/TagQuestionButton';
 
 export default function AIOnboardingPage({ params }: { params: Promise<{ personId: string }> }) {
   const { personId } = use(params);
@@ -420,6 +421,20 @@ export default function AIOnboardingPage({ params }: { params: Promise<{ personI
                 </button>
               </div>
             )}
+
+            {/* Tag Someone Option */}
+            <div className="mt-4 flex justify-center">
+              <TagQuestionButton
+                personId={personId}
+                personName={person.name}
+                manualId={manual?.manualId}
+                sectionId={currentSection.sectionId}
+                questionId={currentQuestion.id}
+                questionText={personalizeText(currentQuestion.question)}
+                currentAnswer={currentAnswer}
+                onTagAndSkip={handleNext}
+              />
+            </div>
           </div>
 
           {/* Section Progress */}
@@ -530,6 +545,51 @@ export default function AIOnboardingPage({ params }: { params: Promise<{ personI
   if (wizardState.currentStep === 'review' && wizardState.generatedContent) {
     const content = wizardState.generatedContent;
 
+    // Handler functions for editing content
+    const handleEditTrigger = (index: number, updatedTrigger: GeneratedTrigger) => {
+      const newTriggers = [...content.triggers];
+      newTriggers[index] = updatedTrigger;
+      updateGeneratedContent({ ...content, triggers: newTriggers });
+    };
+
+    const handleDeleteTrigger = (index: number) => {
+      const newTriggers = content.triggers.filter((_, i) => i !== index);
+      updateGeneratedContent({ ...content, triggers: newTriggers });
+    };
+
+    const handleEditWhatWorks = (index: number, updatedStrategy: GeneratedStrategy) => {
+      const newStrategies = [...content.whatWorks];
+      newStrategies[index] = updatedStrategy;
+      updateGeneratedContent({ ...content, whatWorks: newStrategies });
+    };
+
+    const handleDeleteWhatWorks = (index: number) => {
+      const newStrategies = content.whatWorks.filter((_, i) => i !== index);
+      updateGeneratedContent({ ...content, whatWorks: newStrategies });
+    };
+
+    const handleEditWhatDoesntWork = (index: number, updatedStrategy: GeneratedStrategy) => {
+      const newStrategies = [...content.whatDoesntWork];
+      newStrategies[index] = updatedStrategy;
+      updateGeneratedContent({ ...content, whatDoesntWork: newStrategies });
+    };
+
+    const handleDeleteWhatDoesntWork = (index: number) => {
+      const newStrategies = content.whatDoesntWork.filter((_, i) => i !== index);
+      updateGeneratedContent({ ...content, whatDoesntWork: newStrategies });
+    };
+
+    const handleEditBoundary = (index: number, updatedBoundary: GeneratedBoundary) => {
+      const newBoundaries = [...content.boundaries];
+      newBoundaries[index] = updatedBoundary;
+      updateGeneratedContent({ ...content, boundaries: newBoundaries });
+    };
+
+    const handleDeleteBoundary = (index: number) => {
+      const newBoundaries = content.boundaries.filter((_, i) => i !== index);
+      updateGeneratedContent({ ...content, boundaries: newBoundaries });
+    };
+
     return (
       <div className="min-h-screen pb-20" style={{ backgroundColor: '#FFF8F0' }}>
         <div className="blueprint-grid"></div>
@@ -538,13 +598,13 @@ export default function AIOnboardingPage({ params }: { params: Promise<{ personI
         <header className="border-b-4 border-slate-800 bg-white shadow-[0px_4px_0px_0px_rgba(0,0,0,1)] py-8 sticky top-0 z-10">
           <div className="max-w-5xl mx-auto px-6">
             <div className="inline-block px-3 py-1 bg-green-600 text-white font-mono text-xs mb-3">
-              ✓ GENERATION COMPLETE - REVIEW CONTENT
+              ✓ GENERATION COMPLETE - REVIEW & EDIT
             </div>
             <h1 className="font-mono text-3xl font-bold text-slate-900 mb-2">
               Review Generated Manual
             </h1>
             <p className="font-mono text-sm text-slate-600">
-              Review the AI-generated content below. You can edit or delete any items before saving.
+              Hover over any card to edit or delete it. Make sure everything looks right before saving.
             </p>
           </div>
         </header>
@@ -558,7 +618,13 @@ export default function AIOnboardingPage({ params }: { params: Promise<{ personI
               </div>
               <div className="space-y-4">
                 {content.triggers.map((trigger, index) => (
-                  <TriggerCard key={index} trigger={trigger} index={index} />
+                  <TriggerCard
+                    key={index}
+                    trigger={trigger}
+                    index={index}
+                    onEdit={(updated) => handleEditTrigger(index, updated)}
+                    onDelete={() => handleDeleteTrigger(index)}
+                  />
                 ))}
               </div>
             </div>
@@ -572,7 +638,14 @@ export default function AIOnboardingPage({ params }: { params: Promise<{ personI
               </div>
               <div className="space-y-4">
                 {content.whatWorks.map((strategy, index) => (
-                  <StrategyCard key={index} strategy={strategy} index={index} type="works" />
+                  <StrategyCard
+                    key={index}
+                    strategy={strategy}
+                    index={index}
+                    type="works"
+                    onEdit={(updated) => handleEditWhatWorks(index, updated)}
+                    onDelete={() => handleDeleteWhatWorks(index)}
+                  />
                 ))}
               </div>
             </div>
@@ -586,7 +659,14 @@ export default function AIOnboardingPage({ params }: { params: Promise<{ personI
               </div>
               <div className="space-y-4">
                 {content.whatDoesntWork.map((strategy, index) => (
-                  <StrategyCard key={index} strategy={strategy} index={index} type="doesnt-work" />
+                  <StrategyCard
+                    key={index}
+                    strategy={strategy}
+                    index={index}
+                    type="doesnt-work"
+                    onEdit={(updated) => handleEditWhatDoesntWork(index, updated)}
+                    onDelete={() => handleDeleteWhatDoesntWork(index)}
+                  />
                 ))}
               </div>
             </div>
@@ -600,7 +680,13 @@ export default function AIOnboardingPage({ params }: { params: Promise<{ personI
               </div>
               <div className="space-y-4">
                 {content.boundaries.map((boundary, index) => (
-                  <BoundaryCard key={index} boundary={boundary} index={index} />
+                  <BoundaryCard
+                    key={index}
+                    boundary={boundary}
+                    index={index}
+                    onEdit={(updated) => handleEditBoundary(index, updated)}
+                    onDelete={() => handleDeleteBoundary(index)}
+                  />
                 ))}
               </div>
             </div>
@@ -710,12 +796,158 @@ export default function AIOnboardingPage({ params }: { params: Promise<{ personI
 
 // ==================== REVIEW CARD COMPONENTS ====================
 
-function TriggerCard({ trigger, index }: { trigger: GeneratedTrigger; index: number }) {
+interface TriggerCardProps {
+  trigger: GeneratedTrigger;
+  index: number;
+  onEdit: (updatedTrigger: GeneratedTrigger) => void;
+  onDelete: () => void;
+}
+
+function TriggerCard({ trigger, index, onEdit, onDelete }: TriggerCardProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTrigger, setEditedTrigger] = useState(trigger);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleSave = () => {
+    onEdit(editedTrigger);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditedTrigger(trigger);
+    setIsEditing(false);
+  };
+
+  const handleDelete = () => {
+    onDelete();
+    setShowDeleteConfirm(false);
+  };
+
+  if (isEditing) {
+    return (
+      <div className="relative bg-amber-50 border-2 border-amber-600 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+        <div className="absolute -top-3 -left-3 w-10 h-10 bg-amber-600 text-white font-mono font-bold flex items-center justify-center border-2 border-slate-800">
+          ✎
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block font-mono text-xs text-slate-600 uppercase tracking-wider mb-1">Description</label>
+            <textarea
+              value={editedTrigger.description}
+              onChange={(e) => setEditedTrigger({ ...editedTrigger, description: e.target.value })}
+              className="w-full p-2 border-2 border-slate-300 font-mono text-sm focus:border-slate-800 focus:outline-none"
+              rows={2}
+            />
+          </div>
+
+          <div>
+            <label className="block font-mono text-xs text-slate-600 uppercase tracking-wider mb-1">Context</label>
+            <textarea
+              value={editedTrigger.context}
+              onChange={(e) => setEditedTrigger({ ...editedTrigger, context: e.target.value })}
+              className="w-full p-2 border-2 border-slate-300 font-mono text-sm focus:border-slate-800 focus:outline-none"
+              rows={2}
+            />
+          </div>
+
+          <div>
+            <label className="block font-mono text-xs text-slate-600 uppercase tracking-wider mb-1">Typical Response</label>
+            <textarea
+              value={editedTrigger.typicalResponse}
+              onChange={(e) => setEditedTrigger({ ...editedTrigger, typicalResponse: e.target.value })}
+              className="w-full p-2 border-2 border-slate-300 font-mono text-sm focus:border-slate-800 focus:outline-none"
+              rows={2}
+            />
+          </div>
+
+          <div>
+            <label className="block font-mono text-xs text-slate-600 uppercase tracking-wider mb-1">De-escalation Strategy</label>
+            <textarea
+              value={editedTrigger.deescalationStrategy || ''}
+              onChange={(e) => setEditedTrigger({ ...editedTrigger, deescalationStrategy: e.target.value })}
+              className="w-full p-2 border-2 border-slate-300 font-mono text-sm focus:border-slate-800 focus:outline-none"
+              rows={2}
+            />
+          </div>
+
+          <div>
+            <label className="block font-mono text-xs text-slate-600 uppercase tracking-wider mb-1">Severity</label>
+            <select
+              value={editedTrigger.severity}
+              onChange={(e) => setEditedTrigger({ ...editedTrigger, severity: e.target.value as GeneratedTrigger['severity'] })}
+              className="w-full p-2 border-2 border-slate-300 font-mono text-sm focus:border-slate-800 focus:outline-none"
+            >
+              <option value="mild">Mild</option>
+              <option value="moderate">Moderate</option>
+              <option value="significant">Significant</option>
+            </select>
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <button
+              onClick={handleSave}
+              className="px-4 py-2 bg-green-600 text-white font-mono text-xs font-bold hover:bg-green-700"
+            >
+              SAVE
+            </button>
+            <button
+              onClick={handleCancel}
+              className="px-4 py-2 border-2 border-slate-300 font-mono text-xs font-bold hover:border-slate-800"
+            >
+              CANCEL
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+    <div className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] group">
       <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-red-600">
         {String(index + 1).padStart(2, '0')}
       </div>
+
+      {/* Edit/Delete buttons */}
+      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={() => setIsEditing(true)}
+          className="p-2 bg-slate-100 hover:bg-amber-100 border border-slate-300 font-mono text-xs"
+          title="Edit"
+        >
+          ✎
+        </button>
+        <button
+          onClick={() => setShowDeleteConfirm(true)}
+          className="p-2 bg-slate-100 hover:bg-red-100 border border-slate-300 font-mono text-xs"
+          title="Delete"
+        >
+          ✕
+        </button>
+      </div>
+
+      {showDeleteConfirm && (
+        <div className="absolute inset-0 bg-white/95 flex items-center justify-center z-10 border-2 border-red-600">
+          <div className="text-center p-4">
+            <p className="font-mono text-sm text-slate-800 mb-4">Delete this trigger?</p>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-600 text-white font-mono text-xs font-bold hover:bg-red-700"
+              >
+                DELETE
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 border-2 border-slate-300 font-mono text-xs font-bold hover:border-slate-800"
+              >
+                CANCEL
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex items-start gap-4 mb-4">
         <div
@@ -729,7 +961,7 @@ function TriggerCard({ trigger, index }: { trigger: GeneratedTrigger; index: num
         </div>
       </div>
 
-      <h4 className="font-mono font-bold text-lg mb-4 text-slate-900">
+      <h4 className="font-mono font-bold text-lg mb-4 text-slate-900 pr-16">
         {trigger.description}
       </h4>
 
@@ -755,14 +987,155 @@ function TriggerCard({ trigger, index }: { trigger: GeneratedTrigger; index: num
   );
 }
 
-function StrategyCard({ strategy, index, type }: { strategy: GeneratedStrategy; index: number; type: 'works' | 'doesnt-work' }) {
+interface StrategyCardProps {
+  strategy: GeneratedStrategy;
+  index: number;
+  type: 'works' | 'doesnt-work';
+  onEdit: (updatedStrategy: GeneratedStrategy) => void;
+  onDelete: () => void;
+}
+
+function StrategyCard({ strategy, index, type, onEdit, onDelete }: StrategyCardProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedStrategy, setEditedStrategy] = useState(strategy);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleSave = () => {
+    onEdit(editedStrategy);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditedStrategy(strategy);
+    setIsEditing(false);
+  };
+
+  const handleDelete = () => {
+    onDelete();
+    setShowDeleteConfirm(false);
+  };
+
+  if (isEditing) {
+    return (
+      <div className="relative bg-amber-50 border-2 border-amber-600 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+        <div className="absolute -top-3 -left-3 w-10 h-10 bg-amber-600 text-white font-mono font-bold flex items-center justify-center border-2 border-slate-800">
+          ✎
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block font-mono text-xs text-slate-600 uppercase tracking-wider mb-1">Description</label>
+            <textarea
+              value={editedStrategy.description}
+              onChange={(e) => setEditedStrategy({ ...editedStrategy, description: e.target.value })}
+              className="w-full p-2 border-2 border-slate-300 font-mono text-sm focus:border-slate-800 focus:outline-none"
+              rows={2}
+            />
+          </div>
+
+          <div>
+            <label className="block font-mono text-xs text-slate-600 uppercase tracking-wider mb-1">Context</label>
+            <textarea
+              value={editedStrategy.context}
+              onChange={(e) => setEditedStrategy({ ...editedStrategy, context: e.target.value })}
+              className="w-full p-2 border-2 border-slate-300 font-mono text-sm focus:border-slate-800 focus:outline-none"
+              rows={2}
+            />
+          </div>
+
+          {type === 'works' && (
+            <div>
+              <label className="block font-mono text-xs text-slate-600 uppercase tracking-wider mb-1">Effectiveness (1-5)</label>
+              <select
+                value={editedStrategy.effectiveness || 3}
+                onChange={(e) => setEditedStrategy({ ...editedStrategy, effectiveness: parseInt(e.target.value) as 1|2|3|4|5 })}
+                className="w-full p-2 border-2 border-slate-300 font-mono text-sm focus:border-slate-800 focus:outline-none"
+              >
+                <option value={1}>1 - Rarely works</option>
+                <option value={2}>2 - Sometimes works</option>
+                <option value={3}>3 - Works moderately</option>
+                <option value={4}>4 - Works well</option>
+                <option value={5}>5 - Highly effective</option>
+              </select>
+            </div>
+          )}
+
+          <div>
+            <label className="block font-mono text-xs text-slate-600 uppercase tracking-wider mb-1">Notes</label>
+            <textarea
+              value={editedStrategy.notes || ''}
+              onChange={(e) => setEditedStrategy({ ...editedStrategy, notes: e.target.value })}
+              className="w-full p-2 border-2 border-slate-300 font-mono text-sm focus:border-slate-800 focus:outline-none"
+              rows={2}
+            />
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <button
+              onClick={handleSave}
+              className="px-4 py-2 bg-green-600 text-white font-mono text-xs font-bold hover:bg-green-700"
+            >
+              SAVE
+            </button>
+            <button
+              onClick={handleCancel}
+              className="px-4 py-2 border-2 border-slate-300 font-mono text-xs font-bold hover:border-slate-800"
+            >
+              CANCEL
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+    <div className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] group">
       <div className={`absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 ${
         type === 'works' ? 'border-green-600' : 'border-orange-600'
       }`}>
         {String(index + 1).padStart(2, '0')}
       </div>
+
+      {/* Edit/Delete buttons */}
+      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={() => setIsEditing(true)}
+          className="p-2 bg-slate-100 hover:bg-amber-100 border border-slate-300 font-mono text-xs"
+          title="Edit"
+        >
+          ✎
+        </button>
+        <button
+          onClick={() => setShowDeleteConfirm(true)}
+          className="p-2 bg-slate-100 hover:bg-red-100 border border-slate-300 font-mono text-xs"
+          title="Delete"
+        >
+          ✕
+        </button>
+      </div>
+
+      {showDeleteConfirm && (
+        <div className="absolute inset-0 bg-white/95 flex items-center justify-center z-10 border-2 border-red-600">
+          <div className="text-center p-4">
+            <p className="font-mono text-sm text-slate-800 mb-4">Delete this strategy?</p>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-600 text-white font-mono text-xs font-bold hover:bg-red-700"
+              >
+                DELETE
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 border-2 border-slate-300 font-mono text-xs font-bold hover:border-slate-800"
+              >
+                CANCEL
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {strategy.effectiveness && type === 'works' && (
         <div className="flex items-center gap-2 px-3 py-1 bg-green-50 border-2 border-green-600 font-mono text-xs font-bold mb-4 inline-block">
@@ -771,7 +1144,7 @@ function StrategyCard({ strategy, index, type }: { strategy: GeneratedStrategy; 
         </div>
       )}
 
-      <h4 className="font-mono font-bold text-lg mb-4 text-slate-900">
+      <h4 className="font-mono font-bold text-lg mb-4 text-slate-900 pr-16">
         {strategy.description}
       </h4>
 
@@ -792,12 +1165,148 @@ function StrategyCard({ strategy, index, type }: { strategy: GeneratedStrategy; 
   );
 }
 
-function BoundaryCard({ boundary, index }: { boundary: GeneratedBoundary; index: number }) {
+interface BoundaryCardProps {
+  boundary: GeneratedBoundary;
+  index: number;
+  onEdit: (updatedBoundary: GeneratedBoundary) => void;
+  onDelete: () => void;
+}
+
+function BoundaryCard({ boundary, index, onEdit, onDelete }: BoundaryCardProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedBoundary, setEditedBoundary] = useState(boundary);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleSave = () => {
+    onEdit(editedBoundary);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditedBoundary(boundary);
+    setIsEditing(false);
+  };
+
+  const handleDelete = () => {
+    onDelete();
+    setShowDeleteConfirm(false);
+  };
+
+  if (isEditing) {
+    return (
+      <div className="relative bg-amber-50 border-2 border-amber-600 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+        <div className="absolute -top-3 -left-3 w-10 h-10 bg-amber-600 text-white font-mono font-bold flex items-center justify-center border-2 border-slate-800">
+          ✎
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block font-mono text-xs text-slate-600 uppercase tracking-wider mb-1">Description</label>
+            <textarea
+              value={editedBoundary.description}
+              onChange={(e) => setEditedBoundary({ ...editedBoundary, description: e.target.value })}
+              className="w-full p-2 border-2 border-slate-300 font-mono text-sm focus:border-slate-800 focus:outline-none"
+              rows={2}
+            />
+          </div>
+
+          <div>
+            <label className="block font-mono text-xs text-slate-600 uppercase tracking-wider mb-1">Category</label>
+            <select
+              value={editedBoundary.category}
+              onChange={(e) => setEditedBoundary({ ...editedBoundary, category: e.target.value as GeneratedBoundary['category'] })}
+              className="w-full p-2 border-2 border-slate-300 font-mono text-sm focus:border-slate-800 focus:outline-none"
+            >
+              <option value="immovable">Immovable (Non-negotiable)</option>
+              <option value="negotiable">Negotiable</option>
+              <option value="preference">Preference</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block font-mono text-xs text-slate-600 uppercase tracking-wider mb-1">Context</label>
+            <textarea
+              value={editedBoundary.context || ''}
+              onChange={(e) => setEditedBoundary({ ...editedBoundary, context: e.target.value })}
+              className="w-full p-2 border-2 border-slate-300 font-mono text-sm focus:border-slate-800 focus:outline-none"
+              rows={2}
+            />
+          </div>
+
+          <div>
+            <label className="block font-mono text-xs text-slate-600 uppercase tracking-wider mb-1">Consequences if Violated</label>
+            <textarea
+              value={editedBoundary.consequences || ''}
+              onChange={(e) => setEditedBoundary({ ...editedBoundary, consequences: e.target.value })}
+              className="w-full p-2 border-2 border-slate-300 font-mono text-sm focus:border-slate-800 focus:outline-none"
+              rows={2}
+            />
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <button
+              onClick={handleSave}
+              className="px-4 py-2 bg-green-600 text-white font-mono text-xs font-bold hover:bg-green-700"
+            >
+              SAVE
+            </button>
+            <button
+              onClick={handleCancel}
+              className="px-4 py-2 border-2 border-slate-300 font-mono text-xs font-bold hover:border-slate-800"
+            >
+              CANCEL
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+    <div className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] group">
       <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-amber-600">
         {String(index + 1).padStart(2, '0')}
       </div>
+
+      {/* Edit/Delete buttons */}
+      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={() => setIsEditing(true)}
+          className="p-2 bg-slate-100 hover:bg-amber-100 border border-slate-300 font-mono text-xs"
+          title="Edit"
+        >
+          ✎
+        </button>
+        <button
+          onClick={() => setShowDeleteConfirm(true)}
+          className="p-2 bg-slate-100 hover:bg-red-100 border border-slate-300 font-mono text-xs"
+          title="Delete"
+        >
+          ✕
+        </button>
+      </div>
+
+      {showDeleteConfirm && (
+        <div className="absolute inset-0 bg-white/95 flex items-center justify-center z-10 border-2 border-red-600">
+          <div className="text-center p-4">
+            <p className="font-mono text-sm text-slate-800 mb-4">Delete this boundary?</p>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-600 text-white font-mono text-xs font-bold hover:bg-red-700"
+              >
+                DELETE
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 border-2 border-slate-300 font-mono text-xs font-bold hover:border-slate-800"
+              >
+                CANCEL
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex items-start gap-4 mb-4">
         <div
@@ -811,7 +1320,7 @@ function BoundaryCard({ boundary, index }: { boundary: GeneratedBoundary; index:
         </div>
       </div>
 
-      <h4 className="font-mono font-bold text-lg mb-4 text-slate-900">
+      <h4 className="font-mono font-bold text-lg mb-4 text-slate-900 pr-16">
         {boundary.description}
       </h4>
 

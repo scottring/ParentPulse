@@ -3,11 +3,28 @@ import { Timestamp } from 'firebase/firestore';
 // ==================== Re-export type modules ====================
 
 export * from './assessment';
-export * from './manual';
+export * from './manual'; // V1 manual types (deprecated - use person-manual for new code)
+// NOTE: person-manual.ts types are NOT exported here due to naming conflicts with V1 manual.ts
+// For V2 PersonManual system, import directly: import { PersonManual, ... } from '@/types/person-manual';
 export * from './journey';
 export * from './story';
 export * from './household-workbook';
 export * from './intervention';
+
+// Export specific non-conflicting types from person-manual
+export {
+  PERSON_MANUAL_LAYERS,
+  getPersonLayerFriendlyName,
+  getPersonLayerTechnicalName,
+  PERSON_MANUAL_COLLECTIONS,
+} from './person-manual';
+
+// Export PersonManual explicitly (unique name, no conflict)
+export type {
+  PersonManual,
+  Person,
+  RelationshipType,
+} from './person-manual';
 
 // ==================== User & Family Types ====================
 
@@ -1096,6 +1113,9 @@ export const COLLECTIONS = {
   HOUSEHOLD_JOURNEYS: 'household_journeys',
   INTERVENTIONS: 'interventions',
   CONCERNS: 'concerns',
+
+  // Tagged Questions (collaborative input)
+  TAGGED_QUESTIONS: 'tagged_questions',
 } as const;
 
 // ==================== Firebase Storage Paths ====================

@@ -97,7 +97,7 @@ export function FloatingCoachButton({ context }: FloatingCoachButtonProps) {
           className={`fixed z-50 transition-all duration-300 ${
             isMinimized
               ? 'bottom-6 right-6 w-72 h-14'
-              : 'bottom-6 right-6 w-[420px] h-[600px] max-h-[80vh]'
+              : 'bottom-4 right-4 w-[560px] h-[85vh] max-h-[800px]'
           }`}
         >
           {isMinimized ? (

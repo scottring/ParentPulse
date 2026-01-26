@@ -1,5 +1,18 @@
 import { Timestamp } from 'firebase/firestore';
 
+// ==================== DEPRECATION NOTICE ====================
+/**
+ * @deprecated This file contains the original V1 child manual types.
+ * For new code, use the V2 PersonManual system from './person-manual.ts'.
+ *
+ * These types are retained for backward compatibility with:
+ * - Existing routes under /children/[childId]/
+ * - Cloud Functions (generateChildManual, chatChildCoach)
+ * - Existing Firestore data in 'child_manuals' collection
+ *
+ * New manual features should use PersonManual with relationshipType: 'child'.
+ */
+
 // ==================== Core Entities ====================
 
 /**

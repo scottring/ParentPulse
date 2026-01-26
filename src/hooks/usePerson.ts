@@ -254,20 +254,97 @@ export function usePerson(): UsePersonReturn {
 
 /**
  * Hook for a single person
+ * Falls back to checking household members if not found in people collection
  */
 export function usePersonById(personId?: string) {
-  const { people, loading, error, updatePerson } = usePerson();
+  const { user } = useAuth();
+  const { people, loading: peopleLoading, error, updatePerson } = usePerson();
   const [person, setPerson] = useState<Person | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!personId) {
       setPerson(null);
+      setLoading(false);
       return;
     }
 
+    // First check the people collection
     const foundPerson = people.find(p => p.personId === personId);
-    setPerson(foundPerson || null);
-  }, [personId, people]);
+    if (foundPerson) {
+      setPerson(foundPerson);
+      setLoading(false);
+      return;
+    }
+
+    // If not found and still loading people, wait
+    if (peopleLoading) {
+      return;
+    }
+
+    // If not found in people collection, check household members as fallback
+    const checkHouseholdMembers = async () => {
+      if (!user?.familyId) {
+        setPerson(null);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const householdQuery = query(
+          collection(firestore, 'household_manuals'),
+          where('familyId', '==', user.familyId)
+        );
+        const snapshot = await getDocs(householdQuery);
+
+        if (!snapshot.empty) {
+          const householdManual = snapshot.docs[0].data();
+          const member = householdManual.members?.find(
+            (m: any) => m.personId === personId
+          );
+
+          if (member) {
+            // Map household role to relationship type
+            const roleToRelationshipType: Record<string, string> = {
+              'child': 'child',
+              'spouse': 'spouse',
+              'partner': 'spouse',
+              'parent': 'parent',
+              'self': 'self',
+            };
+            const relationshipType = roleToRelationshipType[member.role] || member.role;
+
+            // Create a synthetic person object from household member
+            const syntheticPerson: Person = {
+              personId: member.personId,
+              familyId: user.familyId,
+              name: member.name,
+              dateOfBirth: member.dateOfBirth || undefined,
+              avatarUrl: member.avatarUrl || undefined,
+              hasManual: false,
+              addedAt: Timestamp.now(),
+              addedByUserId: user.userId,
+              householdRole: member.role,
+              relationshipType: relationshipType,
+            };
+            setPerson(syntheticPerson);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Not found anywhere
+        setPerson(null);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error checking household members:', err);
+        setPerson(null);
+        setLoading(false);
+      }
+    };
+
+    checkHouseholdMembers();
+  }, [personId, people, peopleLoading, user?.familyId, user?.userId]);
 
   return {
     person,

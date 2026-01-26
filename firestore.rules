@@ -644,6 +644,27 @@ service cloud.firestore {
       allow delete: if isParent() && belongsToFamily(resource.data.familyId);
     }
 
+    // ==================== Concerns System ====================
+
+    // Concerns
+    // Tracked concerns/pain points about people or household
+    match /concerns/{concernId} {
+      // Parents can read individual concern documents in their family
+      allow get: if isParent() && belongsToFamily(resource.data.familyId);
+
+      // Parents can list/query concerns in their family
+      allow list: if isParent();
+
+      // Parents can create concerns in their family
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+
+      // Family members can update concerns (update urgency, status)
+      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId);
+
+      // Parents can delete concerns in their family
+      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
     // ==================== Intervention System ====================
 
     // Interventions
@@ -663,6 +684,34 @@ service cloud.firestore {
 
       // Parents can delete interventions in their family
       allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
+    // ==================== Tagged Questions System ====================
+
+    // Tagged Questions
+    // Questions tagged for another family member to answer
+    match /tagged_questions/{tagId} {
+      // Family members can read tagged questions in their family
+      // (either tagged for them or tagged by them)
+      allow read: if isSignedIn() && belongsToFamily(resource.data.familyId);
+
+      // Family members can list/query tagged questions in their family
+      allow list: if isSignedIn();
+
+      // Family members can create tagged questions in their family
+      allow create: if isSignedIn() && belongsToFamily(request.resource.data.familyId);
+
+      // Family members can update tagged questions (answer, dismiss)
+      // Only the tagged person or the tagger can update
+      allow update: if isSignedIn() &&
+                       belongsToFamily(resource.data.familyId) &&
+                       (resource.data.taggedUserId == request.auth.uid ||
+                        resource.data.taggerUserId == request.auth.uid);
+
+      // Only the tagger can delete a tagged question
+      allow delete: if isSignedIn() &&
+                       belongsToFamily(resource.data.familyId) &&
+                       resource.data.taggerUserId == request.auth.uid;
     }
   }
 }

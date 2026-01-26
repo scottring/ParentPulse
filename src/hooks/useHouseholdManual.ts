@@ -4,9 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   collection,
   doc,
-  getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   getDocs,
@@ -15,6 +15,7 @@ import {
 import { firestore } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { COLLECTIONS } from '@/types';
+import { PERSON_MANUAL_COLLECTIONS } from '@/types/person-manual';
 import type {
   HouseholdManual,
   HouseholdMember,
@@ -101,6 +102,9 @@ export function useHouseholdManual(familyId: string | undefined): UseHouseholdMa
   useEffect(() => {
     fetchManual();
   }, [fetchManual]);
+
+  // Note: Household members are displayed directly from manual.members
+  // The People page merges them with the people collection as a fallback
 
   // Save entire manual
   const saveManual = useCallback(
@@ -292,20 +296,51 @@ export function useHouseholdManual(familyId: string | undefined): UseHouseholdMa
   // Member operations
   const addMember = useCallback(
     async (member: HouseholdMember) => {
-      if (!manual) return;
+      if (!manual || !user) return;
+
+      // Add to household manual members array
       const members = [...manual.members, member];
       await updateManual({ members });
+
+      // Also create a Person document in the people collection for sync
+      const personDoc = doc(firestore, PERSON_MANUAL_COLLECTIONS.PEOPLE, member.personId);
+      await setDoc(personDoc, {
+        personId: member.personId,
+        familyId: manual.familyId,
+        name: member.name,
+        pronouns: undefined,
+        dateOfBirth: member.dateOfBirth || null,
+        avatarUrl: member.avatarUrl || null,
+        householdRole: member.role,
+        hasManual: false,
+        addedAt: Timestamp.now(),
+        addedByUserId: user.userId,
+      }, { merge: true });
     },
-    [manual, updateManual]
+    [manual, updateManual, user]
   );
 
   const updateMember = useCallback(
     async (personId: string, updates: Partial<HouseholdMember>) => {
       if (!manual) return;
+
+      // Update in household manual
       const members = manual.members.map((m) =>
         m.personId === personId ? { ...m, ...updates } : m
       );
       await updateManual({ members });
+
+      // Also update the Person document
+      const personDoc = doc(firestore, PERSON_MANUAL_COLLECTIONS.PEOPLE, personId);
+      const personUpdates: Record<string, any> = {};
+      if (updates.name) personUpdates.name = updates.name;
+      if (updates.dateOfBirth !== undefined) personUpdates.dateOfBirth = updates.dateOfBirth;
+      if (updates.avatarUrl !== undefined) personUpdates.avatarUrl = updates.avatarUrl;
+      if (updates.role) personUpdates.householdRole = updates.role;
+
+      if (Object.keys(personUpdates).length > 0) {
+        await updateDoc(personDoc, personUpdates);
+      }
     },
     [manual, updateManual]
   );
@@ -313,8 +348,18 @@ export function useHouseholdManual(familyId: string | undefined): UseHouseholdMa
   const deleteMember = useCallback(
     async (personId: string) => {
       if (!manual) return;
+
+      // Remove from household manual
       const members = manual.members.filter((m) => m.personId !== personId);
       await updateManual({ members });
+
+      // Also delete from people collection
+      const personDoc = doc(firestore, PERSON_MANUAL_COLLECTIONS.PEOPLE, personId);
+      try {
+        await deleteDoc(personDoc);
+      } catch (err) {
+        console.warn('Could not delete person document:', err);
+      }
     },
     [manual, updateManual]
   );

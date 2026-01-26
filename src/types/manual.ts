@@ -1,10 +1,25 @@
 import { Timestamp } from 'firebase/firestore';
 import { LayerId, SpiderAssessment } from './assessment';
 
+// ==================== DEPRECATION NOTICE ====================
+/**
+ * @deprecated This file contains V1 manual types (ChildManual, MarriageManual, FamilyManual).
+ * For new code, use the V2 PersonManual system from './person-manual.ts'.
+ *
+ * Migration path:
+ * - V1 ManualTrigger (with triggerId) → V2 ManualTrigger (with id, layerId) from person-manual.ts
+ * - V1 ManualStrategy (with strategyId) → V2 ManualStrategy (with id, layerId) from person-manual.ts
+ * - V1 ManualBoundary (with boundaryId) → V2 ManualBoundary (with id, layerId) from person-manual.ts
+ * - V1 ChildManual/MarriageManual/FamilyManual → V2 PersonManual from person-manual.ts
+ *
+ * V1 types are retained for backward compatibility with existing Firestore data.
+ */
+
 // ==================== Manual Base Types ====================
 
 /**
  * Manual types supported in V1
+ * @deprecated Use PersonManual with relationshipType from person-manual.ts
  * - child: One per child (Caleb's Manual, Ella's Manual)
  * - marriage: Shared couple manual (Scott + Iris)
  * - family: Household systems and values
