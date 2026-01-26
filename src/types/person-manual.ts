@@ -27,6 +27,7 @@ export type RelationshipType =
   | 'friend'
   | 'professional'
   | 'sibling'
+  | 'self'
   | 'other';
 
 // ==================== Core Person Entity ====================
@@ -43,6 +44,7 @@ export interface Person {
 
   // Relationship context - determines which section templates they get
   relationshipType?: RelationshipType;
+  householdRole?: 'parent' | 'child' | 'other';
 
   // Manual reference
   hasManual: boolean;
@@ -682,3 +684,64 @@ export const PERSON_MANUAL_COLLECTIONS = {
   ROLE_BASED_PLANS: 'role_based_strategic_plans',
   RELATIONSHIP_MANUALS: 'relationship_manuals'
 } as const;
+
+// ==================== 6-Layer Framework ====================
+
+/**
+ * The 6-layer scaffolding framework for person manuals.
+ * Maps to the brain-based parenting model.
+ */
+export const PERSON_MANUAL_LAYERS = {
+  1: {
+    id: 1,
+    technical: 'Inputs',
+    friendly: 'Triggers',
+    description: 'What causes stress or dysregulation',
+  },
+  2: {
+    id: 2,
+    technical: 'Processing',
+    friendly: 'Understanding',
+    description: 'Co-regulation and emotional processing',
+  },
+  3: {
+    id: 3,
+    technical: 'Memory & Structure',
+    friendly: 'Routines',
+    description: 'Routines, boundaries, and predictability',
+  },
+  4: {
+    id: 4,
+    technical: 'Execution',
+    friendly: 'Strategies',
+    description: 'Daily strategies and interventions',
+  },
+  5: {
+    id: 5,
+    technical: 'Outputs',
+    friendly: 'Growth',
+    description: 'Growth, connection, and progress',
+  },
+  6: {
+    id: 6,
+    technical: 'Supervisory',
+    friendly: 'Values',
+    description: 'Core values and guiding principles',
+  },
+} as const;
+
+export type PersonLayerId = keyof typeof PERSON_MANUAL_LAYERS;
+
+/**
+ * Get the user-friendly layer name
+ */
+export function getPersonLayerFriendlyName(layerId: PersonLayerId): string {
+  return PERSON_MANUAL_LAYERS[layerId].friendly;
+}
+
+/**
+ * Get the technical layer name
+ */
+export function getPersonLayerTechnicalName(layerId: PersonLayerId): string {
+  return PERSON_MANUAL_LAYERS[layerId].technical;
+}
