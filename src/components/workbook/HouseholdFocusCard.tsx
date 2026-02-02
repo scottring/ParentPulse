@@ -142,7 +142,7 @@ export default function HouseholdFocusCard({
               >
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs font-bold uppercase tracking-wider text-slate-600">
-                    {domainMeta.name}
+                    {domainMeta.label}
                   </span>
                   <TechnicalLabel
                     variant="subtle"

@@ -81,7 +81,7 @@ export function useBaselineEnforcement(
       if (!manual) {
         return {
           domain,
-          domainName: meta.name,
+          domainName: meta.label,
           domainDescription: meta.description,
           requiredLayers,
           isComplete: false,
@@ -103,7 +103,7 @@ export function useBaselineEnforcement(
 
       return {
         domain,
-        domainName: meta.name,
+        domainName: meta.label,
         domainDescription: meta.description,
         requiredLayers,
         isComplete: missing.length === 0,

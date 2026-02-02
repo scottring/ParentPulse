@@ -10,6 +10,8 @@ import { AddTriggerModal } from '@/components/manual/AddTriggerModal';
 import { AddStrategyModal } from '@/components/manual/AddStrategyModal';
 import { AddBoundaryModal } from '@/components/manual/AddBoundaryModal';
 import { SelfWorthAssessmentModal } from '@/components/manual/SelfWorthAssessmentModal';
+import { ManualProgressCard } from '@/components/manual';
+import { usePersonManualProgress } from '@/hooks/useIndividualManualProgress';
 import MainLayout from '@/components/layout/MainLayout';
 import {
   ClipboardDocumentListIcon,
@@ -46,6 +48,10 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
     deletePattern,
     deleteManual
   } = usePersonManual(personId);
+
+  // Progress tracking for baseline enforcement
+  const progress = usePersonManualProgress(manual);
+
   const [activeTab, setActiveTab] = useState<ContentTab>('overview');
 
   // Modal states
@@ -205,6 +211,16 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
 
       {/* Main Content */}
       <main className="relative max-w-7xl mx-auto px-6 lg:px-8 py-12">
+        {/* Manual Progress Card */}
+        <div className="mb-8">
+          <ManualProgressCard
+            personId={personId}
+            personName={person.name}
+            manualType="person"
+            progress={progress}
+          />
+        </div>
+
         {/* Quick Actions Section */}
         <div className="mb-12">
           <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-4">

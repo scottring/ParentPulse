@@ -20,6 +20,12 @@ import type {
   ActivityStatus,
 } from '@/types/workbook';
 import {
+  checkChildManualBaseline,
+  checkPersonManualBaseline,
+} from '@/config/baseline-requirements';
+import type { ChildManual } from '@/types/manual';
+import type { PersonManual } from '@/types/person-manual';
+import {
   generateWorkbookContent,
   generateFallbackContent,
   getWeekId,
@@ -306,4 +312,55 @@ export function useWorkbookHistory(manualId: string | undefined, limitCount = 10
   }, [user, manualId, limitCount]);
 
   return { workbooks, loading };
+}
+
+// ==================== Baseline Check Utilities ====================
+
+export interface WorkbookBaselineCheckResult {
+  canGenerate: boolean;
+  missingRequirements: Array<{
+    requirementId: string;
+    description: string;
+    layerId: number;
+  }>;
+  completionPercentage: number;
+}
+
+/**
+ * Check if a child manual meets baseline requirements for workbook generation
+ */
+export function checkWorkbookBaseline(manual: ChildManual): WorkbookBaselineCheckResult {
+  const { requirements } = checkChildManualBaseline(manual);
+  const met = requirements.filter((r) => r.isMet).length;
+  const missing = requirements.filter((r) => !r.isMet);
+
+  return {
+    // Allow 1 missing requirement for flexibility
+    canGenerate: met >= requirements.length - 1,
+    missingRequirements: missing.map((m) => ({
+      requirementId: m.requirementId,
+      description: m.description,
+      layerId: m.layerId,
+    })),
+    completionPercentage: Math.round((met / requirements.length) * 100),
+  };
+}
+
+/**
+ * Check if a person manual (legacy) meets baseline requirements for workbook generation
+ */
+export function checkPersonWorkbookBaseline(manual: PersonManual): WorkbookBaselineCheckResult {
+  const { requirements } = checkPersonManualBaseline(manual);
+  const met = requirements.filter((r) => r.isMet).length;
+  const missing = requirements.filter((r) => !r.isMet);
+
+  return {
+    canGenerate: met >= requirements.length - 1,
+    missingRequirements: missing.map((m) => ({
+      requirementId: m.requirementId,
+      description: m.description,
+      layerId: m.layerId,
+    })),
+    completionPercentage: Math.round((met / requirements.length) * 100),
+  };
 }
