@@ -3709,3 +3709,437 @@ exports.resetDemoAccount = onCall(
       }
     },
 );
+
+// ==================== HOUSEHOLD SECTION CONTENT GENERATION ====================
+
+const {buildHouseholdSectionPrompt} = require("./householdPrompts");
+
+/**
+ * Generate AI content for a specific household manual section
+ * Takes user answers and generates structured content for that section
+ */
+exports.generateHouseholdSectionContent = onCall(
+    {
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      // Verify authentication
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const {familyId, sectionId, answers, householdName, members} = request.data;
+
+      // Validate input
+      if (!familyId || !sectionId || !answers) {
+        throw new Error("Missing required parameters: familyId, sectionId, and answers are required");
+      }
+
+      logger.info(`Generating household section content for family ${familyId}, section ${sectionId}`);
+
+      try {
+        // Optionally fetch individual manuals for context
+        let linkedManuals = [];
+        if (members && members.length > 0) {
+          const manualsSnapshot = await admin.firestore()
+              .collection("child_manuals")
+              .where("familyId", "==", familyId)
+              .get();
+
+          linkedManuals = manualsSnapshot.docs.map((doc) => ({
+            personId: doc.data().personId,
+            personName: doc.data().childName,
+            triggers: doc.data().triggers || [],
+            strategies: doc.data().strategies || [],
+          }));
+        }
+
+        // Build section-specific prompt
+        const prompt = buildHouseholdSectionPrompt(
+            sectionId,
+            answers,
+            householdName || "Our Household",
+            members || [],
+            linkedManuals,
+        );
+
+        // Call Claude for content generation
+        const client = getAnthropic();
+        const response = await client.messages.create({
+          model: "claude-sonnet-4-5-20250929",
+          max_tokens: 4000,
+          temperature: 0.7,
+          messages: [{
+            role: "user",
+            content: prompt,
+          }],
+        });
+
+        const responseText = response.content[0].text;
+        logger.info("Claude response received, parsing JSON");
+
+        // Parse the JSON response
+        let content;
+        try {
+          const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) ||
+                           responseText.match(/```\s*([\s\S]*?)\s*```/);
+          const jsonText = jsonMatch ? jsonMatch[1] : responseText;
+
+          content = JSON.parse(jsonText);
+          logger.info("Successfully parsed generated content");
+        } catch (parseError) {
+          logger.error("Error parsing Claude response:", parseError);
+          logger.error("Response text:", responseText);
+          throw new Error("Failed to parse AI response as JSON");
+        }
+
+        // Transform parsed content into ContentItem[] format for the UI
+        const items = transformSectionContentToItems(sectionId, content);
+
+        return {
+          success: true,
+          items: items,
+          rawContent: content,
+        };
+      } catch (error) {
+        logger.error("Error generating household section content:", error);
+        return {
+          success: false,
+          error: error.message,
+          items: [],
+        };
+      }
+    },
+);
+
+/**
+ * Transform parsed JSON content into ContentItem[] format
+ * for display in the AIContentReview component
+ */
+function transformSectionContentToItems(sectionId, content) {
+  const items = [];
+
+  switch (sectionId) {
+    case "home_charter":
+      if (content.familyMission) {
+        items.push({
+          id: `mission-${Date.now()}`,
+          type: "string",
+          label: "Mission",
+          value: content.familyMission,
+        });
+      }
+      if (content.nonNegotiables) {
+        content.nonNegotiables.forEach((nn, i) => {
+          items.push({
+            id: `nn-${Date.now()}-${i}`,
+            type: "non-negotiable",
+            label: "Non-Negotiable",
+            value: nn,
+          });
+        });
+      }
+      if (content.desiredFeelings) {
+        items.push({
+          id: `feelings-${Date.now()}`,
+          type: "string",
+          label: "Desired Feelings",
+          value: content.desiredFeelings,
+        });
+      }
+      if (content.coreValues) {
+        items.push({
+          id: `values-${Date.now()}`,
+          type: "string",
+          label: "Core Values",
+          value: content.coreValues,
+        });
+      }
+      break;
+
+    case "sanctuary_map":
+      if (content.lightRecommendations) {
+        content.lightRecommendations.forEach((rec, i) => {
+          items.push({
+            id: `light-${Date.now()}-${i}`,
+            type: "string",
+            label: "Light Recommendation",
+            value: rec,
+          });
+        });
+      }
+      if (content.soundRecommendations) {
+        content.soundRecommendations.forEach((rec, i) => {
+          items.push({
+            id: `sound-${Date.now()}-${i}`,
+            type: "string",
+            label: "Sound Recommendation",
+            value: rec,
+          });
+        });
+      }
+      if (content.zones) {
+        content.zones.forEach((zone, i) => {
+          items.push({
+            id: `zone-${Date.now()}-${i}`,
+            type: "zone",
+            label: "Home Zone",
+            value: zone,
+          });
+        });
+      }
+      break;
+
+    case "village_wiki":
+      if (content.contacts) {
+        content.contacts.forEach((contact, i) => {
+          items.push({
+            id: `contact-${Date.now()}-${i}`,
+            type: "contact",
+            label: "Contact",
+            value: contact,
+          });
+        });
+      }
+      if (content.householdTips) {
+        content.householdTips.forEach((tip, i) => {
+          items.push({
+            id: `tip-${Date.now()}-${i}`,
+            type: "string",
+            label: "Household Tip",
+            value: tip,
+          });
+        });
+      }
+      break;
+
+    case "roles_rituals":
+      if (content.fairPlayCards) {
+        content.fairPlayCards.forEach((card, i) => {
+          items.push({
+            id: `card-${Date.now()}-${i}`,
+            type: "card",
+            label: "Fair Play Card",
+            value: card,
+          });
+        });
+      }
+      if (content.standardsOfCare) {
+        content.standardsOfCare.forEach((soc, i) => {
+          items.push({
+            id: `soc-${Date.now()}-${i}`,
+            type: "string",
+            label: "Standard of Care",
+            value: typeof soc === "string" ? soc : `${soc.area}: ${soc.minimumStandard}`,
+          });
+        });
+      }
+      if (content.weeklyRituals) {
+        content.weeklyRituals.forEach((ritual, i) => {
+          items.push({
+            id: `ritual-${Date.now()}-${i}`,
+            type: "ritual",
+            label: "Weekly Ritual",
+            value: ritual,
+          });
+        });
+      }
+      break;
+
+    case "communication_rhythm":
+      if (content.weeklySyncConfig) {
+        items.push({
+          id: `sync-${Date.now()}`,
+          type: "string",
+          label: "Weekly Sync Configuration",
+          value: JSON.stringify(content.weeklySyncConfig, null, 2),
+        });
+      }
+      if (content.repairProtocol) {
+        items.push({
+          id: `repair-${Date.now()}`,
+          type: "string",
+          label: "Repair Protocol",
+          value: JSON.stringify(content.repairProtocol, null, 2),
+        });
+      }
+      if (content.conflictStyleInsight) {
+        items.push({
+          id: `conflict-${Date.now()}`,
+          type: "string",
+          label: "Conflict Style Insight",
+          value: content.conflictStyleInsight,
+        });
+      }
+      break;
+
+    default:
+      // Generic handling for unknown sections
+      Object.entries(content).forEach(([key, value]) => {
+        items.push({
+          id: `${key}-${Date.now()}`,
+          type: "string",
+          label: key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+          value: typeof value === "string" ? value : JSON.stringify(value),
+        });
+      });
+  }
+
+  return items;
+}
+
+// ==================== HOUSEHOLD WEEKLY FOCUS GENERATION ====================
+
+const {buildWeeklyFocusPrompt} = require("./householdFocusPrompts");
+
+/**
+ * Generate weekly household focus areas based on manual content and user preferences.
+ * This is the core of the Action Generation Engine (Phase 7).
+ */
+exports.generateWeeklyHouseholdFocus = onCall(
+    {
+      secrets: ["ANTHROPIC_API_KEY"],
+      memory: "1GiB",
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      // Verify authentication
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const {familyId, preferences} = request.data;
+
+      // Validate input
+      if (!familyId || !preferences) {
+        throw new Error("Missing required parameters: familyId and preferences");
+      }
+
+      logger.info(`Generating weekly household focus for family ${familyId}`);
+
+      try {
+        // Fetch household manual
+        const householdManualSnapshot = await admin.firestore()
+            .collection("household_manuals")
+            .where("familyId", "==", familyId)
+            .limit(1)
+            .get();
+
+        if (householdManualSnapshot.empty) {
+          throw new Error("Household manual not found");
+        }
+
+        const householdManual = householdManualSnapshot.docs[0].data();
+
+        // Fetch individual child manuals for context
+        const childManualsSnapshot = await admin.firestore()
+            .collection("child_manuals")
+            .where("familyId", "==", familyId)
+            .get();
+
+        const childManuals = childManualsSnapshot.docs.map((doc) => ({
+          personId: doc.data().personId,
+          personName: doc.data().childName,
+          triggers: doc.data().triggers || [],
+          strategies: doc.data().strategies || [],
+          boundaries: doc.data().boundaries || [],
+        }));
+
+        // Fetch recent focus history (last 4 weeks)
+        const fourWeeksAgo = new Date();
+        fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+
+        const recentFocusSnapshot = await admin.firestore()
+            .collection("household_weekly_focus")
+            .where("familyId", "==", familyId)
+            .where("weekOf", ">=", admin.firestore.Timestamp.fromDate(fourWeeksAgo))
+            .orderBy("weekOf", "desc")
+            .limit(4)
+            .get();
+
+        const recentFocus = recentFocusSnapshot.docs.map((doc) => doc.data());
+
+        // Build the prompt
+        const prompt = buildWeeklyFocusPrompt({
+          householdManual,
+          childManuals,
+          preferences,
+          recentFocus,
+        });
+
+        // Call Claude for generation
+        const client = getAnthropic();
+        const response = await client.messages.create({
+          model: "claude-sonnet-4-5-20250929",
+          max_tokens: 4000,
+          temperature: 0.7,
+          messages: [{
+            role: "user",
+            content: prompt,
+          }],
+        });
+
+        const responseText = response.content[0].text;
+        logger.info("Claude response received, parsing JSON");
+
+        // Parse the JSON response
+        let focusContent;
+        try {
+          const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) ||
+                           responseText.match(/```\s*([\s\S]*?)\s*```/);
+          const jsonText = jsonMatch ? jsonMatch[1] : responseText;
+
+          focusContent = JSON.parse(jsonText);
+          logger.info("Successfully parsed generated focus content");
+        } catch (parseError) {
+          logger.error("Error parsing Claude response:", parseError);
+          logger.error("Response text:", responseText);
+          throw new Error("Failed to parse AI response as JSON");
+        }
+
+        // Transform and validate focus areas
+        const focusAreas = (focusContent.focusAreas || []).map((area, index) => ({
+          focusAreaId: `area-${Date.now()}-${index}`,
+          title: area.title || "Untitled Focus",
+          sourceType: area.sourceType || "strategy",
+          sourceId: area.sourceId || `generated-${index}`,
+          layerId: area.layerId || 4,
+          rationale: area.rationale || "",
+          actions: (area.actions || []).map((action, actionIndex) => ({
+            actionId: `action-${Date.now()}-${index}-${actionIndex}`,
+            description: action.description || action,
+            trackable: action.trackable !== false,
+            dueDay: action.dueDay,
+            recurring: action.recurring || false,
+          })),
+          successMetric: area.successMetric || "Complete all actions",
+        }));
+
+        const ritualReminders = (focusContent.ritualReminders || []).map((reminder, index) => ({
+          ritualId: `reminder-${Date.now()}-${index}`,
+          ritualName: reminder.ritualName || reminder.name || "Ritual",
+          scheduledDay: reminder.scheduledDay || 0,
+          notes: reminder.notes,
+        }));
+
+        return {
+          success: true,
+          focus: {
+            focusAreas,
+            ritualReminders,
+            capacityNote: focusContent.capacityNote || null,
+            preferences,
+          },
+        };
+      } catch (error) {
+        logger.error("Error generating weekly household focus:", error);
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+    },
+);

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useHouseholdManual, useHouseholdJourney } from '@/hooks/useHouseholdManual';
+import { useHouseholdSync } from '@/hooks/useHouseholdSync';
 import { usePerson } from '@/hooks/usePerson';
 import {
   TechnicalCard,
@@ -16,8 +17,21 @@ import {
 import {
   HouseholdManualHeader,
   LayerSection,
+  SectionProgressCard,
 } from '@/components/household';
-import { HOUSEHOLD_LAYERS, LayerId, HouseholdTrigger, HouseholdStrategy, HouseholdBoundary, HouseholdMember, calculateAge } from '@/types/household-workbook';
+import {
+  HOUSEHOLD_LAYERS,
+  LayerId,
+  HouseholdTrigger,
+  HouseholdStrategy,
+  HouseholdBoundary,
+  HouseholdMember,
+  calculateAge,
+  HouseholdSectionId,
+  HOUSEHOLD_SECTION_META,
+  calculateAllSectionCompleteness,
+  getNextRecommendedSection,
+} from '@/types/household-workbook';
 import { Timestamp } from 'firebase/firestore';
 
 // Modal types
@@ -318,6 +332,19 @@ export default function HouseholdManualPage() {
     (p) => !manual.members.some((m) => m.personId === p.personId)
   );
 
+  // Helper to get the field name for a section
+  const getSectionFieldName = (sectionId: HouseholdSectionId): string => {
+    const fieldMap: Record<HouseholdSectionId, string> = {
+      home_charter: 'homeCharter',
+      sanctuary_map: 'sanctuaryMap',
+      village_wiki: 'villageWiki',
+      roles_rituals: 'rolesAndRituals',
+      communication_rhythm: 'communicationRhythm',
+      household_pulse: 'householdPulse',
+    };
+    return fieldMap[sectionId];
+  };
+
   return (
     <div className="min-h-screen bg-[#FAF8F5]">
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
@@ -350,11 +377,41 @@ export default function HouseholdManualPage() {
           onOpenWorkbook={() => router.push('/household/workbook')}
         />
 
+        {/* Section-Based Manual Builder */}
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <SectionHeader
+              number={1}
+              title="BUILD YOUR MANUAL"
+              subtitle="Complete each section to create your household operating manual"
+              cornerBrackets={false}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {(['home_charter', 'sanctuary_map', 'village_wiki', 'roles_rituals', 'communication_rhythm', 'household_pulse'] as HouseholdSectionId[]).map((sectionId) => {
+              const sectionCompleteness = manual.sectionCompleteness?.[sectionId] ??
+                (manual[getSectionFieldName(sectionId) as keyof typeof manual] ? 50 : 0);
+              const recommendedSection = getNextRecommendedSection(manual);
+
+              return (
+                <SectionProgressCard
+                  key={sectionId}
+                  sectionId={sectionId}
+                  completeness={sectionCompleteness}
+                  isRecommended={recommendedSection === sectionId}
+                  onClick={() => router.push(`/household/onboard/${sectionId}`)}
+                />
+              );
+            })}
+          </div>
+        </section>
+
         {/* Completeness overview */}
         <TechnicalCard shadowSize="sm" className="p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-slate-600">
-              MANUAL COMPLETENESS
+              LAYER COMPLETENESS
             </h3>
             <span className="font-mono text-sm font-bold text-slate-800">
               {manual.completeness.overall}%
@@ -381,7 +438,7 @@ export default function HouseholdManualPage() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <SectionHeader
-              number={1}
+              number={2}
               title="HOUSEHOLD MEMBERS"
               subtitle={`${manual.members.length} member${manual.members.length !== 1 ? 's' : ''}`}
               cornerBrackets={false}
@@ -460,7 +517,7 @@ export default function HouseholdManualPage() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <SectionHeader
-              number={2}
+              number={3}
               title="WHAT WE'VE LEARNED"
               subtitle="Organized by the 6-layer framework"
               cornerBrackets={false}
@@ -660,7 +717,7 @@ export default function HouseholdManualPage() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <SectionHeader
-              number={3}
+              number={4}
               title="OUR FAMILY VALUES"
               subtitle="What we stand for"
               cornerBrackets={false}
@@ -727,6 +784,12 @@ export default function HouseholdManualPage() {
 
         {/* Quick actions */}
         <div className="flex flex-wrap gap-4">
+          <TechnicalButton
+            variant="primary"
+            onClick={() => router.push('/household/weekly-plan')}
+          >
+            WEEKLY FOCUS
+          </TechnicalButton>
           <TechnicalButton
             variant="secondary"
             onClick={() => router.push('/household/workbook')}

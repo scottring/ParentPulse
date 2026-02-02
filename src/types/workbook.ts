@@ -1251,6 +1251,7 @@ export function getWeekNumber(date: Date = new Date()): number {
 
 import type { LayerId, SpiderAssessment, RepairLog } from './assessment';
 import type { EffectivenessRating } from './manual';
+import type { HouseholdWeeklyFocusV2 } from './household-workbook';
 
 /**
  * Workbook status
@@ -1358,6 +1359,11 @@ export interface ParentWorkbook {
 
   // Status
   status: WorkbookStatus;
+
+  // Household focus integration (Phase 7)
+  // Links to the current week's household-level focus for cross-reference
+  householdFocusId?: string;
+  householdFocus?: HouseholdWeeklyFocusV2;
 
   // Metadata
   generatedAt: Timestamp;

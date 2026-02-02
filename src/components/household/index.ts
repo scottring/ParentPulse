@@ -21,6 +21,10 @@ export { MilestoneTracker } from './MilestoneTracker';
 export { HouseholdReflectionForm } from './HouseholdReflectionForm';
 export { MilestonePlanView, DEFAULT_DAY30_PLAN, DEFAULT_JOURNEY_CONTEXT } from './MilestonePlanView';
 
+// Section onboarding components
+export { default as SectionProgressCard } from './SectionProgressCard';
+export { default as AIContentReview } from './AIContentReview';
+
 // Coach components (to be added in Phase 6)
 // export { HouseholdCoachButton } from './HouseholdCoachButton';
 // export { CoachSuggestionCard } from './CoachSuggestionCard';

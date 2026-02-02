@@ -408,6 +408,305 @@ export const CONCERN_URGENCY_LABELS: Record<ConcernUrgency, { label: string; des
   },
 };
 
+// ============ HOME CHARTER (L6 - Values) ============
+
+export interface CharterNonNegotiable {
+  id: string;
+  value: string;
+  description?: string;
+  source: 'onboarding' | 'ai' | 'user';
+  createdAt: Timestamp;
+}
+
+export interface HomeCharter {
+  familyMission?: string;
+  nonNegotiables: CharterNonNegotiable[];
+  desiredFeelings: string[];
+  coreValues?: string[];
+  updatedAt?: Timestamp;
+}
+
+// ============ SANCTUARY MAP (L1 - Inputs/Triggers) ============
+
+export type SensoryType = 'light' | 'sound' | 'smell' | 'temperature' | 'nature';
+export type ZoneType = 'quiet' | 'activity' | 'work' | 'rest' | 'connection' | 'transition';
+
+export interface SensoryAuditItem {
+  id: string;
+  type: SensoryType;
+  location: string;
+  description: string;
+  quality: 'optimal' | 'needs-improvement' | 'problematic';
+  notes?: string;
+  source: 'onboarding' | 'ai' | 'user';
+  createdAt: Timestamp;
+}
+
+export interface HomeZone {
+  id: string;
+  name: string;
+  type: ZoneType;
+  location: string;
+  purpose: string;
+  rules?: string[];
+  linkedToPersonIds?: string[];
+  source: 'onboarding' | 'ai' | 'user';
+  createdAt: Timestamp;
+}
+
+export interface SanctuaryMap {
+  lightAudit: SensoryAuditItem[];
+  soundAudit: SensoryAuditItem[];
+  smellAudit?: SensoryAuditItem[];
+  temperatureNotes?: string;
+  natureElements?: string[];
+  zones: HomeZone[];
+  updatedAt?: Timestamp;
+}
+
+// ============ VILLAGE WIKI (L3 - Memory/Structure) ============
+
+export type ContactCategory = 'emergency' | 'medical' | 'school' | 'childcare' | 'family' | 'neighbor' | 'service' | 'other';
+
+export interface VillageContact {
+  id: string;
+  name: string;
+  relationship: string;
+  category: ContactCategory;
+  phone?: string;
+  email?: string;
+  address?: string;
+  notes?: string;
+  linkedToPersonIds?: string[];
+  source: 'onboarding' | 'ai' | 'user';
+  createdAt: Timestamp;
+}
+
+export interface HouseholdCode {
+  id: string;
+  name: string;
+  code: string;
+  location?: string;
+  notes?: string;
+  source: 'onboarding' | 'user';
+  createdAt: Timestamp;
+}
+
+export interface HowItWorks {
+  id: string;
+  item: string;
+  category: 'appliance' | 'system' | 'routine' | 'quirk' | 'other';
+  instructions: string;
+  tips?: string[];
+  source: 'onboarding' | 'ai' | 'user';
+  createdAt: Timestamp;
+}
+
+export interface VillageWiki {
+  contacts: VillageContact[];
+  householdCodes: HouseholdCode[];
+  howThingsWork: HowItWorks[];
+  updatedAt?: Timestamp;
+}
+
+// ============ ROLES & RITUALS (L4 - Execution) ============
+
+export type FairPlayCategory =
+  | 'meals' | 'tidying' | 'laundry' | 'finances' | 'scheduling'
+  | 'medical' | 'school' | 'emotional-labor' | 'household-maintenance'
+  | 'childcare' | 'pet-care' | 'social' | 'other';
+
+export interface FairPlayCard {
+  id: string;
+  name: string;
+  category: FairPlayCategory;
+  ownerId: string;
+  ownerName: string;
+  description?: string;
+  conception: boolean;
+  planning: boolean;
+  execution: boolean;
+  standardOfCare?: string;
+  frequency?: 'daily' | 'weekly' | 'monthly' | 'as-needed';
+  source: 'onboarding' | 'ai' | 'user';
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface StandardOfCare {
+  id: string;
+  area: string;
+  minimumStandard: string;
+  idealStandard?: string;
+  owner?: string;
+  agreedBy: string[];
+  source: 'onboarding' | 'ai' | 'user';
+  createdAt: Timestamp;
+}
+
+export interface WeeklyRitual {
+  id: string;
+  name: string;
+  description: string;
+  dayOfWeek?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  timeOfDay?: 'morning' | 'afternoon' | 'evening' | 'flexible';
+  duration?: string;
+  participants: string[];
+  purpose: string;
+  isActive: boolean;
+  source: 'onboarding' | 'ai' | 'user';
+  createdAt: Timestamp;
+}
+
+export interface RolesAndRituals {
+  fairPlayCards: FairPlayCard[];
+  standardsOfCare: StandardOfCare[];
+  weeklyRituals: WeeklyRitual[];
+  updatedAt?: Timestamp;
+}
+
+// ============ COMMUNICATION RHYTHM (L2 - Processing) ============
+
+export interface WeeklySyncConfig {
+  isEnabled: boolean;
+  dayOfWeek?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  timeOfDay?: string;
+  duration?: string;
+  agenda?: string[];
+  location?: string;
+  facilitator?: string;
+}
+
+export interface RepairStep {
+  order: number;
+  action: string;
+  description?: string;
+}
+
+export interface RepairProtocol {
+  coolDownTime?: string;
+  initiationPhrase?: string;
+  steps: RepairStep[];
+  signalWords?: string[];
+  aftercare?: string[];
+}
+
+export interface NVCGuideEntry {
+  id: string;
+  situation: string;
+  observation: string;
+  feeling: string;
+  need: string;
+  request: string;
+  source: 'onboarding' | 'ai' | 'user';
+  createdAt: Timestamp;
+}
+
+export interface CommunicationRhythm {
+  weeklySyncConfig: WeeklySyncConfig;
+  repairProtocol: RepairProtocol;
+  nvcGuide?: NVCGuideEntry[];
+  conflictStyle?: string;
+  updatedAt?: Timestamp;
+}
+
+// ============ HOUSEHOLD PULSE (L5 - Outputs) ============
+
+export interface HouseholdAssessmentDimension {
+  dimensionId: string;
+  label: string;
+  description: string;
+  score: number;
+  notes?: string;
+}
+
+export interface HouseholdAssessment {
+  assessmentId: string;
+  assessedAt: Timestamp;
+  assessedBy: string;
+  dimensions: {
+    clarity: HouseholdAssessmentDimension;
+    restoration: HouseholdAssessmentDimension;
+    efficiency: HouseholdAssessmentDimension;
+    connection: HouseholdAssessmentDimension;
+  };
+  overallScore: number;
+  reflectionNotes?: string;
+}
+
+export interface HouseholdPulse {
+  currentAssessment?: HouseholdAssessment;
+  assessmentHistory: HouseholdAssessment[];
+  targetScores?: {
+    clarity: number;
+    restoration: number;
+    efficiency: number;
+    connection: number;
+  };
+  updatedAt?: Timestamp;
+}
+
+// ============ HOUSEHOLD SECTION IDS ============
+
+export type HouseholdSectionId =
+  | 'home_charter'
+  | 'sanctuary_map'
+  | 'village_wiki'
+  | 'roles_rituals'
+  | 'communication_rhythm'
+  | 'household_pulse';
+
+export const HOUSEHOLD_SECTION_META: Record<HouseholdSectionId, {
+  name: string;
+  friendlyName: string;
+  layer: LayerId;
+  icon: string;
+  description: string;
+}> = {
+  home_charter: {
+    name: 'Our Home Charter',
+    friendlyName: 'What We Stand For',
+    layer: 6,
+    icon: 'DocumentTextIcon',
+    description: 'Family mission, non-negotiables, and the feelings you want your home to create'
+  },
+  sanctuary_map: {
+    name: 'The Sanctuary Map',
+    friendlyName: 'What Sets Us Off',
+    layer: 1,
+    icon: 'HomeModernIcon',
+    description: 'Light, sound, nature audit with quiet zones and activity zones'
+  },
+  village_wiki: {
+    name: 'Our Village & Wiki',
+    friendlyName: 'Our Rhythms',
+    layer: 3,
+    icon: 'BookOpenIcon',
+    description: 'Contacts, codes, and how things work in your household'
+  },
+  roles_rituals: {
+    name: 'Roles & Rituals',
+    friendlyName: 'How We Get Things Done',
+    layer: 4,
+    icon: 'UserGroupIcon',
+    description: 'Fair Play ownership, standards of care, and weekly rituals'
+  },
+  communication_rhythm: {
+    name: 'Communication Rhythm',
+    friendlyName: 'How We Talk',
+    layer: 2,
+    icon: 'ChatBubbleLeftRightIcon',
+    description: 'Weekly sync, repair protocols, and NVC guide'
+  },
+  household_pulse: {
+    name: 'Household Pulse',
+    friendlyName: "What We're Building",
+    layer: 5,
+    icon: 'ChartBarIcon',
+    description: 'Spider diagram tracking clarity, restoration, efficiency, and connection'
+  }
+};
+
 // ============ HOUSEHOLD MANUAL CONTENT ============
 
 export interface HouseholdTrigger {
@@ -504,15 +803,42 @@ export interface HouseholdManual {
   // Members
   members: HouseholdMember[];
 
-  // 6-layer content
+  // 6-layer content (legacy - still supported)
   triggers: HouseholdTrigger[];
   strategies: HouseholdStrategy[];
   boundaries: HouseholdBoundary[];
   routines: HouseholdRoutine[];
 
-  // Family values (Layer 6)
+  // Family values (Layer 6) - legacy, migrated to homeCharter
   familyValues: string[];
   familyMotto?: string;
+
+  // ============ NEW SECTION-BASED CONTENT ============
+
+  // L6 - Values: Family mission, non-negotiables, desired feelings
+  homeCharter?: HomeCharter;
+
+  // L1 - Inputs: Light/sound/nature audit, quiet zones, activity zones
+  sanctuaryMap?: SanctuaryMap;
+
+  // L3 - Memory: Contacts, codes, how things work
+  villageWiki?: VillageWiki;
+
+  // L4 - Execution: Fair Play ownership, standards of care
+  rolesAndRituals?: RolesAndRituals;
+
+  // L2 - Processing: Weekly sync, repair protocols, NVC guide
+  communicationRhythm?: CommunicationRhythm;
+
+  // L5 - Outputs: Spider diagram tracking
+  householdPulse?: HouseholdPulse;
+
+  // Onboarding progress tracking
+  onboardingProgress?: {
+    completedSections: HouseholdSectionId[];
+    lastSectionCompleted?: HouseholdSectionId;
+    lastCompletedAt?: Timestamp;
+  };
 
   // Journey reference
   activeJourneyId?: string;
@@ -528,10 +854,453 @@ export interface HouseholdManual {
     overall: number;
   };
 
+  // Section-specific completeness
+  sectionCompleteness?: Record<HouseholdSectionId, number>;
+
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;
   lastGeneratedAt?: Timestamp;
+}
+
+// ============ SECTION COMPLETENESS HELPERS ============
+
+/**
+ * Calculate completeness percentage for a specific section
+ */
+export function calculateSectionCompleteness(
+  manual: HouseholdManual,
+  sectionId: HouseholdSectionId
+): number {
+  switch (sectionId) {
+    case 'home_charter': {
+      if (!manual.homeCharter) return 0;
+      const { familyMission, nonNegotiables, desiredFeelings, coreValues } = manual.homeCharter;
+      let score = 0;
+      if (familyMission && familyMission.length > 10) score += 30;
+      if (nonNegotiables && nonNegotiables.length > 0) score += 30;
+      if (desiredFeelings && desiredFeelings.length > 0) score += 20;
+      if (coreValues && coreValues.length > 0) score += 20;
+      return Math.min(100, score);
+    }
+
+    case 'sanctuary_map': {
+      if (!manual.sanctuaryMap) return 0;
+      const { lightAudit, soundAudit, zones } = manual.sanctuaryMap;
+      let score = 0;
+      if (lightAudit && lightAudit.length > 0) score += 25;
+      if (soundAudit && soundAudit.length > 0) score += 25;
+      if (zones && zones.length > 0) score += 50;
+      return Math.min(100, score);
+    }
+
+    case 'village_wiki': {
+      if (!manual.villageWiki) return 0;
+      const { contacts, householdCodes, howThingsWork } = manual.villageWiki;
+      let score = 0;
+      if (contacts && contacts.length > 0) score += 40;
+      if (householdCodes && householdCodes.length > 0) score += 30;
+      if (howThingsWork && howThingsWork.length > 0) score += 30;
+      return Math.min(100, score);
+    }
+
+    case 'roles_rituals': {
+      if (!manual.rolesAndRituals) return 0;
+      const { fairPlayCards, standardsOfCare, weeklyRituals } = manual.rolesAndRituals;
+      let score = 0;
+      if (fairPlayCards && fairPlayCards.length > 0) score += 40;
+      if (standardsOfCare && standardsOfCare.length > 0) score += 30;
+      if (weeklyRituals && weeklyRituals.length > 0) score += 30;
+      return Math.min(100, score);
+    }
+
+    case 'communication_rhythm': {
+      if (!manual.communicationRhythm) return 0;
+      const { weeklySyncConfig, repairProtocol } = manual.communicationRhythm;
+      let score = 0;
+      if (weeklySyncConfig?.isEnabled) score += 50;
+      if (repairProtocol?.steps && repairProtocol.steps.length > 0) score += 50;
+      return Math.min(100, score);
+    }
+
+    case 'household_pulse': {
+      if (!manual.householdPulse) return 0;
+      const { currentAssessment, targetScores } = manual.householdPulse;
+      let score = 0;
+      if (currentAssessment) score += 70;
+      if (targetScores) score += 30;
+      return Math.min(100, score);
+    }
+
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Calculate all section completeness values
+ */
+export function calculateAllSectionCompleteness(
+  manual: HouseholdManual
+): Record<HouseholdSectionId, number> {
+  const sections: HouseholdSectionId[] = [
+    'home_charter',
+    'sanctuary_map',
+    'village_wiki',
+    'roles_rituals',
+    'communication_rhythm',
+    'household_pulse'
+  ];
+
+  return sections.reduce((acc, sectionId) => {
+    acc[sectionId] = calculateSectionCompleteness(manual, sectionId);
+    return acc;
+  }, {} as Record<HouseholdSectionId, number>);
+}
+
+/**
+ * Get the next recommended section to complete
+ */
+export function getNextRecommendedSection(
+  manual: HouseholdManual
+): HouseholdSectionId | null {
+  // Recommended order: Charter → Sanctuary → Village → Roles → Communication → Pulse
+  const recommendedOrder: HouseholdSectionId[] = [
+    'home_charter',
+    'sanctuary_map',
+    'village_wiki',
+    'roles_rituals',
+    'communication_rhythm',
+    'household_pulse'
+  ];
+
+  const completeness = calculateAllSectionCompleteness(manual);
+
+  for (const sectionId of recommendedOrder) {
+    if (completeness[sectionId] < 100) {
+      return sectionId;
+    }
+  }
+
+  return null;
+}
+
+// ============ MOCK DATA HELPERS ============
+
+// ============ PHASE 7: ACTION GENERATION ENGINE TYPES ============
+
+/**
+ * Focus domains that span the 6-layer framework
+ * Used for user preference selection in weekly planning
+ */
+export type FocusDomain =
+  | 'physical_environment'  // Sanctuary zones, organization (L1)
+  | 'behavior_boundaries'   // Child behavior, sibling dynamics (L3)
+  | 'partner_dynamics'      // Communication, fair play (L2, L4)
+  | 'routines_rituals'      // Daily/weekly rhythms (L4)
+  | 'self_regulation'       // Parent triggers, strategies (L1, L4)
+  | 'values_alignment';     // Non-negotiables, family mission (L6)
+
+/**
+ * Capacity level for weekly planning
+ */
+export type CapacityLevel = 'light' | 'moderate' | 'full';
+
+/**
+ * User preferences for weekly focus generation
+ */
+export interface WeeklyPlanningPreferences {
+  focusDomains: FocusDomain[];        // 1-3 selected domains
+  capacity: CapacityLevel;
+  manualPriorities?: string[];        // Free-text priorities
+  excludeAreas?: string[];            // Things to skip this week
+}
+
+/**
+ * A trackable action within a focus area
+ */
+export interface FocusAction {
+  actionId: string;
+  description: string;
+  trackable: boolean;
+  dueDay?: number;  // 0-6, Sunday-Saturday
+  recurring?: boolean;
+  completed?: boolean;
+  completedAt?: Timestamp;
+}
+
+/**
+ * A focus area generated by AI or added by user
+ */
+export interface FocusArea {
+  focusAreaId: string;
+  title: string;
+  sourceType: 'trigger' | 'strategy' | 'boundary' | 'ritual' | 'fairplay' | 'value' | 'custom';
+  sourceId?: string;  // Links back to manual item (optional for custom)
+  layerId: LayerId;
+  rationale: string;  // AI explanation of why this needs focus
+  domain: FocusDomain;
+
+  actions: FocusAction[];
+  successMetric: string;
+}
+
+/**
+ * A reminder for a scheduled ritual
+ */
+export interface RitualReminder {
+  ritualId: string;
+  ritualName: string;
+  scheduledDay: number;  // 0-6, Sunday-Saturday
+  notes?: string;
+}
+
+/**
+ * A journal entry for capturing observations during the week
+ */
+export interface WeeklyJournalEntry {
+  entryId: string;
+  timestamp: Timestamp;
+  content: string;
+  relatedFocusAreaId?: string;  // Optional link to specific focus area
+  mood?: 'positive' | 'neutral' | 'challenging';
+  tags?: string[];  // e.g., ['boundary-test', 'bedtime', 'progress']
+}
+
+/**
+ * The complete household weekly focus generated by AI
+ */
+export interface HouseholdWeeklyFocusV2 {
+  focusId: string;
+  familyId: string;
+  weekOf: Timestamp;
+  generatedAt: Timestamp;
+
+  // Planning context
+  preferences: WeeklyPlanningPreferences;
+
+  // AI-generated content
+  focusAreas: FocusArea[];
+  ritualReminders: RitualReminder[];
+  capacityNote?: string;
+
+  // User modifications after AI generation
+  userAddedAreas?: FocusArea[];      // User's own focus areas
+  removedAreaIds?: string[];          // AI areas user removed
+
+  // Journal entries during the week
+  journalEntries: WeeklyJournalEntry[];
+
+  // Tracking
+  completedActions: string[];  // action IDs
+  reflectionNotes?: string;
+  effectivenessRating?: 1 | 2 | 3 | 4 | 5;
+
+  // Status
+  status: 'draft' | 'active' | 'completed';
+  confirmedAt?: Timestamp;
+  completedAt?: Timestamp;
+}
+
+// ============ BASELINE ENFORCEMENT TYPES ============
+
+/**
+ * A single requirement for a layer baseline
+ */
+export interface BaselineRequirement {
+  requirementId: string;
+  description: string;
+  minimumCount?: number;  // e.g., "At least 2 boundaries"
+  fieldPath: string;      // Path in manual to check, e.g., "homeCharter.nonNegotiables"
+  isMet?: boolean;
+}
+
+/**
+ * Complete baseline status for a layer
+ */
+export interface LayerBaseline {
+  layerId: LayerId;
+  layerName: string;
+  requirements: BaselineRequirement[];
+  isComplete: boolean;
+  completionPercentage: number;
+}
+
+/**
+ * Mapping of focus domains to required layer baselines
+ */
+export const DOMAIN_BASELINE_REQUIREMENTS: Record<FocusDomain, LayerId[]> = {
+  'physical_environment': [6, 1],        // Values + Triggers
+  'behavior_boundaries': [6, 1, 3],      // Values + Triggers + Boundaries
+  'partner_dynamics': [6, 2, 4],         // Values + Processing + Execution
+  'routines_rituals': [6, 4],            // Values + Execution
+  'self_regulation': [6, 1, 4],          // Values + Triggers + Execution
+  'values_alignment': [6],                // Values only
+};
+
+/**
+ * Focus domain metadata for UI display
+ */
+export const FOCUS_DOMAIN_META: Record<FocusDomain, {
+  label: string;
+  description: string;
+  icon: string;
+  relatedLayers: LayerId[];
+}> = {
+  'physical_environment': {
+    label: 'Physical Environment',
+    description: 'Sanctuary zones, organization',
+    icon: 'HomeModernIcon',
+    relatedLayers: [1],
+  },
+  'behavior_boundaries': {
+    label: 'Behavior & Boundaries',
+    description: 'Child behavior, sibling dynamics',
+    icon: 'ShieldCheckIcon',
+    relatedLayers: [1, 3],
+  },
+  'partner_dynamics': {
+    label: 'Partner Dynamics',
+    description: 'Communication, fair play',
+    icon: 'HeartIcon',
+    relatedLayers: [2, 4],
+  },
+  'routines_rituals': {
+    label: 'Routines & Rituals',
+    description: 'Daily/weekly rhythms',
+    icon: 'ClockIcon',
+    relatedLayers: [4],
+  },
+  'self_regulation': {
+    label: 'Self-Care & Regulation',
+    description: 'Parent triggers, strategies',
+    icon: 'SparklesIcon',
+    relatedLayers: [1, 4],
+  },
+  'values_alignment': {
+    label: 'Values Alignment',
+    description: 'Non-negotiables, family mission',
+    icon: 'StarIcon',
+    relatedLayers: [6],
+  },
+};
+
+/**
+ * Baseline requirements configuration by layer
+ */
+export const LAYER_BASELINE_CONFIG: Record<LayerId, BaselineRequirement[]> = {
+  1: [
+    { requirementId: 'l1_triggers', description: 'At least 2 triggers documented', minimumCount: 2, fieldPath: 'triggers' },
+    { requirementId: 'l1_sensory', description: 'Sensory audit started', fieldPath: 'sanctuaryMap.lightAudit' },
+  ],
+  2: [
+    { requirementId: 'l2_repair', description: 'Repair protocol defined', fieldPath: 'communicationRhythm.repairProtocol.steps' },
+    { requirementId: 'l2_communication', description: 'Communication preferences documented', fieldPath: 'communicationRhythm.weeklySyncConfig' },
+  ],
+  3: [
+    { requirementId: 'l3_boundaries', description: 'At least 2 boundaries defined', minimumCount: 2, fieldPath: 'boundaries' },
+    { requirementId: 'l3_zones', description: 'Home zones mapped', fieldPath: 'sanctuaryMap.zones' },
+  ],
+  4: [
+    { requirementId: 'l4_rituals', description: 'At least 1 weekly ritual', minimumCount: 1, fieldPath: 'rolesAndRituals.weeklyRituals' },
+    { requirementId: 'l4_fairplay', description: 'Fair Play cards assigned', fieldPath: 'rolesAndRituals.fairPlayCards' },
+  ],
+  5: [
+    { requirementId: 'l5_pulse', description: 'Initial household assessment completed', fieldPath: 'householdPulse.currentAssessment' },
+  ],
+  6: [
+    { requirementId: 'l6_mission', description: 'Family mission defined', fieldPath: 'homeCharter.familyMission' },
+    { requirementId: 'l6_values', description: 'At least 3 non-negotiables documented', minimumCount: 3, fieldPath: 'homeCharter.nonNegotiables' },
+    { requirementId: 'l6_feelings', description: 'Core values selected', fieldPath: 'homeCharter.coreValues' },
+  ],
+};
+
+// ============ HELPER FUNCTIONS FOR PHASE 7 ============
+
+/**
+ * Get required baseline layers for a set of focus domains
+ */
+export function getRequiredBaselinesForDomains(domains: FocusDomain[]): LayerId[] {
+  const layers = new Set<LayerId>();
+  domains.forEach(domain => {
+    DOMAIN_BASELINE_REQUIREMENTS[domain].forEach(layer => layers.add(layer));
+  });
+  return Array.from(layers).sort();
+}
+
+/**
+ * Check if a baseline requirement is met based on manual content
+ */
+export function checkBaselineRequirement(
+  manual: HouseholdManual,
+  requirement: BaselineRequirement
+): boolean {
+  // Navigate to the field path
+  const pathParts = requirement.fieldPath.split('.');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let value: any = manual;
+
+  for (const part of pathParts) {
+    if (value === undefined || value === null) return false;
+    value = value[part];
+  }
+
+  // Check based on requirement type
+  if (requirement.minimumCount !== undefined) {
+    return Array.isArray(value) && value.length >= requirement.minimumCount;
+  }
+
+  // For non-array fields, check if it exists and has content
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+
+  if (typeof value === 'string') {
+    return value.trim().length > 10; // Non-trivial content
+  }
+
+  return value !== undefined && value !== null;
+}
+
+/**
+ * Calculate baseline completion for a layer
+ */
+export function calculateLayerBaseline(
+  manual: HouseholdManual,
+  layerId: LayerId
+): LayerBaseline {
+  const requirements = LAYER_BASELINE_CONFIG[layerId].map(req => ({
+    ...req,
+    isMet: checkBaselineRequirement(manual, req),
+  }));
+
+  const metCount = requirements.filter(r => r.isMet).length;
+  const totalCount = requirements.length;
+
+  return {
+    layerId,
+    layerName: HOUSEHOLD_LAYERS[layerId].friendly,
+    requirements,
+    isComplete: metCount === totalCount,
+    completionPercentage: totalCount > 0 ? Math.round((metCount / totalCount) * 100) : 0,
+  };
+}
+
+/**
+ * Check if all baselines for given domains are complete
+ */
+export function checkBaselinesForDomains(
+  manual: HouseholdManual,
+  domains: FocusDomain[]
+): { complete: boolean; missingLayers: LayerBaseline[] } {
+  const requiredLayers = getRequiredBaselinesForDomains(domains);
+  const baselines = requiredLayers.map(layerId => calculateLayerBaseline(manual, layerId));
+  const missingLayers = baselines.filter(b => !b.isComplete);
+
+  return {
+    complete: missingLayers.length === 0,
+    missingLayers,
+  };
 }
 
 // ============ MOCK DATA HELPERS ============
