@@ -209,7 +209,7 @@ export default function LoginPage() {
                     Password
                   </label>
                   <Link
-                    href="#"
+                    href="/reset-password-custom"
                     className="font-mono text-xs text-amber-600 hover:text-amber-700 uppercase tracking-wider"
                   >
                     Reset

@@ -7,6 +7,450 @@
 
 import { RelationshipType } from '@/types/person-manual';
 
+// ==================== Relationship-Specific Placeholder Text ====================
+
+/**
+ * Age and relationship-appropriate placeholder examples for each question
+ */
+export const RELATIONSHIP_PLACEHOLDERS: Record<RelationshipType, Record<string, { placeholder?: string; helperText?: string }>> = {
+  child: {
+    // Overview
+    overview_q1: {
+      placeholder: 'Example: Loves Legos, playing outside, reading comic books, time with grandparents...',
+      helperText: 'Think about their favorite toys, activities, and what makes them light up'
+    },
+    overview_q2: {
+      placeholder: 'Example: Dislikes loud noises, hates being rushed, gets overwhelmed by too many choices...',
+      helperText: 'What drains their energy or causes meltdowns?'
+    },
+    overview_q3: {
+      placeholder: 'Example: Loves earning screen time, motivated by praise, wants to be helpful...',
+      helperText: 'What reward systems or motivations work for them?'
+    },
+    overview_q4: {
+      placeholder: 'Example: Comfortable with routine, needs warnings before transitions, uncomfortable with new foods...',
+      helperText: 'What helps them feel safe vs. anxious?'
+    },
+    // Triggers
+    triggers_q1: {
+      placeholder: 'Example: Last week during homework, they threw their pencil when they couldn\'t solve a math problem...',
+      helperText: 'Describe what happened, what led up to it, and how they reacted'
+    },
+    triggers_q2: {
+      placeholder: 'Example: Transitions from play to homework, getting ready for school, bedtime routines...',
+      helperText: 'Think about daily routines, school situations, or social challenges'
+    },
+    triggers_q3: {
+      placeholder: 'Example: Counting to 10, going to their calm-down corner, squeezing a stress ball...',
+      helperText: 'What de-escalation strategies work when they\'re upset?'
+    },
+    // What Works
+    works_q1: {
+      placeholder: 'Example: Visual timers, giving 5-minute warnings, offering two choices instead of demands...',
+      helperText: 'What parenting approaches consistently work?'
+    },
+    works_q2: {
+      placeholder: 'Example: When we laid out clothes the night before, morning went smoothly...',
+      helperText: 'What made that success happen?'
+    },
+    works_q3: {
+      placeholder: 'Example: Earning stickers, special one-on-one time, getting to pick the movie...',
+      helperText: 'What gets them engaged and cooperative?'
+    },
+    // Boundaries
+    boundaries_q1: {
+      placeholder: 'Example: Needs personal space when upset, has a special blanket no one else touches...',
+      helperText: 'What should babysitters, teachers, and others respect?'
+    },
+    boundaries_q2: {
+      placeholder: 'Example: Warms up slowly, needs time to process questions, does better with visual instructions...',
+      helperText: 'Important info for teachers, coaches, or caregivers'
+    },
+    boundaries_q3: {
+      placeholder: 'Example: Don\'t compare to siblings, never force hugs, avoid asking "why did you do that?"...',
+      helperText: 'What approaches backfire or make things worse?'
+    }
+  },
+  spouse: {
+    overview_q1: {
+      placeholder: 'Example: Loves weekend hikes, energized by social gatherings, enjoys cooking together...',
+      helperText: 'What brings them joy and energy in your relationship?'
+    },
+    overview_q2: {
+      placeholder: 'Example: Drained by work stress, dislikes last-minute plan changes, needs alone time to recharge...',
+      helperText: 'What depletes their energy or causes tension?'
+    },
+    overview_q3: {
+      placeholder: 'Example: Driven by career goals, motivated by family security, values quality time...',
+      helperText: 'What are their core values and life priorities?'
+    },
+    overview_q4: {
+      placeholder: 'Example: Comfortable with planned activities, uncomfortable discussing finances under stress...',
+      helperText: 'What environments help vs. hinder your connection?'
+    },
+    triggers_q1: {
+      placeholder: 'Example: Got frustrated when I made weekend plans without checking first...',
+      helperText: 'Describe a recent conflict or moment of tension'
+    },
+    triggers_q2: {
+      placeholder: 'Example: Financial discussions, feeling unheard, when work bleeds into family time...',
+      helperText: 'What topics or situations tend to cause friction?'
+    },
+    triggers_q3: {
+      placeholder: 'Example: Giving space to cool down, physical affection, acknowledging their feelings first...',
+      helperText: 'What helps when they\'re stressed or you\'re in conflict?'
+    },
+    works_q1: {
+      placeholder: 'Example: Weekly check-ins, sharing calendars, expressing appreciation daily...',
+      helperText: 'What communication strategies strengthen your relationship?'
+    },
+    works_q2: {
+      placeholder: 'Example: When we planned our vacation together step-by-step, we both felt heard...',
+      helperText: 'What made that success happen?'
+    },
+    works_q3: {
+      placeholder: 'Example: Words of affirmation, acts of service, quality time without phones...',
+      helperText: 'What makes them feel loved and appreciated?'
+    },
+    boundaries_q1: {
+      placeholder: 'Example: Needs 30 minutes alone after work, doesn\'t discuss work on weekends...',
+      helperText: 'What boundaries keep your relationship healthy?'
+    },
+    boundaries_q2: {
+      placeholder: 'Example: Prefers direct communication, needs time to process big decisions...',
+      helperText: 'What should you remember when navigating challenges?'
+    },
+    boundaries_q3: {
+      placeholder: 'Example: Don\'t bring up sensitive topics when tired, avoid "you always" statements...',
+      helperText: 'What approaches make conflicts worse?'
+    }
+  },
+  elderly_parent: {
+    overview_q1: {
+      placeholder: 'Example: Loves gardening, enjoys visits from grandchildren, likes watching old movies...',
+      helperText: 'What activities and interactions bring them joy?'
+    },
+    overview_q2: {
+      placeholder: 'Example: Frustrated by technology, dislikes feeling dependent, tires easily in crowds...',
+      helperText: 'What situations are challenging or draining for them?'
+    },
+    overview_q3: {
+      placeholder: 'Example: Wants to maintain independence, values family traditions, needs to feel useful...',
+      helperText: 'What matters most to them at this stage of life?'
+    },
+    overview_q4: {
+      placeholder: 'Example: Comfortable in their home, uncomfortable with change or new caregivers...',
+      helperText: 'What helps them feel secure vs. anxious?'
+    },
+    triggers_q1: {
+      placeholder: 'Example: Got upset when I suggested they stop driving after the fender bender...',
+      helperText: 'Describe a recent difficult conversation or incident'
+    },
+    triggers_q2: {
+      placeholder: 'Example: Discussions about moving, medical appointments, feeling rushed...',
+      helperText: 'What situations tend to cause distress or resistance?'
+    },
+    triggers_q3: {
+      placeholder: 'Example: Giving them time, involving them in decisions, reminiscing about the past...',
+      helperText: 'What helps when they\'re upset or anxious?'
+    },
+    works_q1: {
+      placeholder: 'Example: Visiting at consistent times, writing things down, involving them in meal planning...',
+      helperText: 'What approaches help your caregiving go smoothly?'
+    },
+    works_q2: {
+      placeholder: 'Example: When I asked for their advice on my garden, they felt valued and capable...',
+      helperText: 'What made that interaction positive?'
+    },
+    works_q3: {
+      placeholder: 'Example: Feeling needed, visits from family, sharing memories and stories...',
+      helperText: 'What gives them purpose and joy?'
+    },
+    boundaries_q1: {
+      placeholder: 'Example: Respects their right to make some decisions, even if risky...',
+      helperText: 'What autonomy is important to preserve?'
+    },
+    boundaries_q2: {
+      placeholder: 'Example: Hearing loss - speak clearly facing them, needs extra time to process...',
+      helperText: 'What should family and caregivers know?'
+    },
+    boundaries_q3: {
+      placeholder: 'Example: Don\'t talk about them like they\'re not there, avoid rushing them...',
+      helperText: 'What approaches feel disrespectful or upsetting?'
+    }
+  },
+  friend: {
+    overview_q1: {
+      placeholder: 'Example: Loves trying new restaurants, energized by deep conversations, enjoys hiking...',
+      helperText: 'What activities do you enjoy together?'
+    },
+    overview_q2: {
+      placeholder: 'Example: Going through work stress, drained by family obligations, needs alone time...',
+      helperText: 'What\'s challenging in their life right now?'
+    },
+    overview_q3: {
+      placeholder: 'Example: Career-focused, values loyalty, going through a major life transition...',
+      helperText: 'What drives them and what are they working toward?'
+    },
+    overview_q4: {
+      placeholder: 'Example: Comfortable with last-minute plans, uncomfortable with large group gatherings...',
+      helperText: 'What helps your friendship thrive?'
+    },
+    triggers_q1: {
+      placeholder: 'Example: Seemed hurt when I forgot to check in during their tough week...',
+      helperText: 'Describe a recent misunderstanding or tension'
+    },
+    triggers_q2: {
+      placeholder: 'Example: Sensitive about their job search, stressed by family topics...',
+      helperText: 'What topics or situations require care?'
+    },
+    triggers_q3: {
+      placeholder: 'Example: Letting them vent without fixing, checking in consistently...',
+      helperText: 'How do you best support them?'
+    },
+    works_q1: {
+      placeholder: 'Example: Regular check-in texts, remembering important dates, being a good listener...',
+      helperText: 'What keeps your friendship strong?'
+    },
+    works_q2: {
+      placeholder: 'Example: When I just listened without giving advice, they felt truly heard...',
+      helperText: 'What made that moment meaningful?'
+    },
+    works_q3: {
+      placeholder: 'Example: Quality time, acts of service, words of encouragement...',
+      helperText: 'How does this friend feel most supported?'
+    },
+    boundaries_q1: {
+      placeholder: 'Example: Respects their need for space, doesn\'t push for details about their dating life...',
+      helperText: 'What boundaries help your friendship stay healthy?'
+    },
+    boundaries_q2: {
+      placeholder: 'Example: Going through a divorce, has a history with anxiety, prefers texts over calls...',
+      helperText: 'What context helps you be a better friend?'
+    },
+    boundaries_q3: {
+      placeholder: 'Example: Avoid unsolicited advice, don\'t bring up their ex...',
+      helperText: 'What topics or approaches should you avoid?'
+    }
+  },
+  professional: {
+    overview_q1: {
+      placeholder: 'Example: Passionate about their projects, energized by collaboration, values innovation...',
+      helperText: 'What drives them professionally?'
+    },
+    overview_q2: {
+      placeholder: 'Example: Frustrated by bureaucracy, stressed by tight deadlines, dislikes unnecessary meetings...',
+      helperText: 'What work situations are challenging for them?'
+    },
+    overview_q3: {
+      placeholder: 'Example: Career advancement, work-life balance, making an impact in their field...',
+      helperText: 'What are their professional goals and values?'
+    },
+    overview_q4: {
+      placeholder: 'Example: Comfortable with structured agendas, uncomfortable with ambiguity...',
+      helperText: 'What work environments help them thrive?'
+    },
+    triggers_q1: {
+      placeholder: 'Example: Got frustrated when the project scope changed without notice...',
+      helperText: 'Describe a recent work challenge or conflict'
+    },
+    triggers_q2: {
+      placeholder: 'Example: Last-minute changes, feeling micromanaged, unclear expectations...',
+      helperText: 'What work situations tend to cause stress?'
+    },
+    triggers_q3: {
+      placeholder: 'Example: Clear communication, written follow-ups, giving them autonomy...',
+      helperText: 'What helps when work gets stressful?'
+    },
+    works_q1: {
+      placeholder: 'Example: Regular 1:1s, clear written expectations, async communication...',
+      helperText: 'What makes your working relationship effective?'
+    },
+    works_q2: {
+      placeholder: 'Example: When we aligned on goals upfront, the project went smoothly...',
+      helperText: 'What made that collaboration successful?'
+    },
+    works_q3: {
+      placeholder: 'Example: Recognition for their work, opportunities to learn, autonomy...',
+      helperText: 'What motivates them professionally?'
+    },
+    boundaries_q1: {
+      placeholder: 'Example: Doesn\'t check email after 6pm, prefers scheduled meetings over drop-ins...',
+      helperText: 'What professional boundaries do they maintain?'
+    },
+    boundaries_q2: {
+      placeholder: 'Example: Prefers direct feedback, needs time to process before responding...',
+      helperText: 'What communication style works best?'
+    },
+    boundaries_q3: {
+      placeholder: 'Example: Don\'t assign tasks verbally without follow-up, avoid last-minute requests...',
+      helperText: 'What approaches create friction?'
+    }
+  },
+  sibling: {
+    overview_q1: {
+      placeholder: 'Example: Loves family gatherings, passionate about their career, enjoys outdoor activities...',
+      helperText: 'What brings them joy in life?'
+    },
+    overview_q2: {
+      placeholder: 'Example: Stressed by family drama, drained by their job, sensitive about comparisons...',
+      helperText: 'What\'s challenging in their life?'
+    },
+    overview_q3: {
+      placeholder: 'Example: Focused on their kids, driven by career goals, values independence...',
+      helperText: 'What matters most to them right now?'
+    },
+    overview_q4: {
+      placeholder: 'Example: Comfortable when visits are planned, uncomfortable with surprise drop-ins...',
+      helperText: 'What helps your sibling relationship stay positive?'
+    },
+    triggers_q1: {
+      placeholder: 'Example: Tension arose when I brought up how they handled mom\'s care...',
+      helperText: 'Describe a recent conflict or sensitive moment'
+    },
+    triggers_q2: {
+      placeholder: 'Example: Discussions about inheritance, comparisons to our childhood, parenting criticism...',
+      helperText: 'What topics tend to cause tension?'
+    },
+    triggers_q3: {
+      placeholder: 'Example: Giving space, focusing on shared memories, avoiding old family dynamics...',
+      helperText: 'What helps when things get tense?'
+    },
+    works_q1: {
+      placeholder: 'Example: Regular phone calls, planning family events together, respecting differences...',
+      helperText: 'What keeps your sibling relationship healthy?'
+    },
+    works_q2: {
+      placeholder: 'Example: When we planned mom\'s birthday together, we reconnected...',
+      helperText: 'What made that interaction positive?'
+    },
+    works_q3: {
+      placeholder: 'Example: Feeling included in family decisions, appreciation for their help...',
+      helperText: 'What makes them feel valued in the family?'
+    },
+    boundaries_q1: {
+      placeholder: 'Example: Respects their parenting choices, doesn\'t interfere in their marriage...',
+      helperText: 'What boundaries keep your relationship healthy?'
+    },
+    boundaries_q2: {
+      placeholder: 'Example: Going through a rough patch at work, sensitive about their weight...',
+      helperText: 'What context helps you be a better sibling?'
+    },
+    boundaries_q3: {
+      placeholder: 'Example: Don\'t bring up old resentments, avoid comparing our kids...',
+      helperText: 'What topics or approaches should you avoid?'
+    }
+  },
+  self: {
+    overview_q1: {
+      placeholder: 'Example: I love morning coffee rituals, feel energized by creative projects, enjoy deep conversations...',
+      helperText: 'What activities and experiences bring you joy?'
+    },
+    overview_q2: {
+      placeholder: 'Example: Drained by social obligations, dislike being rushed, find small talk exhausting...',
+      helperText: 'What depletes your energy?'
+    },
+    overview_q3: {
+      placeholder: 'Example: Driven to help others, motivated by learning, value authenticity and growth...',
+      helperText: 'What are your core values and what drives you?'
+    },
+    overview_q4: {
+      placeholder: 'Example: Comfortable with routine, uncomfortable with conflict, need alone time to recharge...',
+      helperText: 'What environments help you thrive?'
+    },
+    triggers_q1: {
+      placeholder: 'Example: Last week I snapped at my partner when I was already stressed about work...',
+      helperText: 'Describe a recent time you felt overwhelmed or reactive'
+    },
+    triggers_q2: {
+      placeholder: 'Example: Feeling unappreciated, tight deadlines, too many social commitments...',
+      helperText: 'What situations tend to trigger stress or negative reactions?'
+    },
+    triggers_q3: {
+      placeholder: 'Example: Going for a walk, journaling, talking to a friend, taking a break...',
+      helperText: 'What helps you calm down or regain perspective?'
+    },
+    works_q1: {
+      placeholder: 'Example: Morning routines, setting boundaries, regular exercise, scheduling downtime...',
+      helperText: 'What strategies help you function at your best?'
+    },
+    works_q2: {
+      placeholder: 'Example: When I prepared the night before, my morning was calm and productive...',
+      helperText: 'What conditions led to that success?'
+    },
+    works_q3: {
+      placeholder: 'Example: Making progress on goals, positive feedback, quality time with loved ones...',
+      helperText: 'What motivates and energizes you?'
+    },
+    boundaries_q1: {
+      placeholder: 'Example: Need alone time daily, don\'t respond to work after 7pm, protect weekend mornings...',
+      helperText: 'What boundaries do you need to maintain wellbeing?'
+    },
+    boundaries_q2: {
+      placeholder: 'Example: I need advance notice for plans, prefer text over calls, need time to process before responding...',
+      helperText: 'What should others know to interact well with you?'
+    },
+    boundaries_q3: {
+      placeholder: 'Example: Don\'t try to cheer me up when I\'m processing, avoid unsolicited advice...',
+      helperText: 'What approaches from others make things worse?'
+    }
+  },
+  other: {
+    overview_q1: {
+      placeholder: 'Example: Enjoys specific hobbies, energized by certain activities, values particular things...',
+      helperText: 'What brings them joy or energy?'
+    },
+    overview_q2: {
+      placeholder: 'Example: Finds certain situations draining, dislikes specific things...',
+      helperText: 'What depletes their energy?'
+    },
+    overview_q3: {
+      placeholder: 'Example: Motivated by specific goals, driven by certain values...',
+      helperText: 'What drives them?'
+    },
+    overview_q4: {
+      placeholder: 'Example: Comfortable with certain conditions, uncomfortable in specific situations...',
+      helperText: 'What environments help them thrive?'
+    },
+    triggers_q1: {
+      placeholder: 'Example: Describe a specific situation where they became stressed...',
+      helperText: 'What happened and how did they react?'
+    },
+    triggers_q2: {
+      placeholder: 'Example: Specific situations, transitions, or environments that are challenging...',
+      helperText: 'What tends to cause difficulty?'
+    },
+    triggers_q3: {
+      placeholder: 'Example: Specific strategies or approaches that help...',
+      helperText: 'What helps when they\'re struggling?'
+    },
+    works_q1: {
+      placeholder: 'Example: Specific approaches or strategies that work well...',
+      helperText: 'What has been effective?'
+    },
+    works_q2: {
+      placeholder: 'Example: Describe what made a positive situation work...',
+      helperText: 'What led to success?'
+    },
+    works_q3: {
+      placeholder: 'Example: Specific motivators or rewards that work...',
+      helperText: 'What motivates them?'
+    },
+    boundaries_q1: {
+      placeholder: 'Example: Specific limits or needs to respect...',
+      helperText: 'What boundaries are important?'
+    },
+    boundaries_q2: {
+      placeholder: 'Example: Important context others should know...',
+      helperText: 'What helps interactions go well?'
+    },
+    boundaries_q3: {
+      placeholder: 'Example: Topics or approaches to avoid...',
+      helperText: 'What makes things worse?'
+    }
+  }
+};
+
 // ==================== Question Type System ====================
 
 export type QuestionType =
@@ -1031,6 +1475,9 @@ export function getOnboardingSections(relationshipType: RelationshipType): Onboa
     case 'sibling':
       sections.push(...SIBLING_SPECIFIC_SECTIONS);
       break;
+    case 'self':
+      // Self manuals use universal sections - questions will be phrased differently via personalization
+      break;
     case 'other':
       // Only universal sections
       break;
@@ -1052,20 +1499,68 @@ export function getNeurodivergenceSections(screeningResponse: string): Onboardin
 }
 
 /**
- * Replace {{personName}} placeholder with actual name in questions
+ * Replace {{personName}} placeholder, adjust pronouns, and apply relationship-specific placeholders
  */
 export function personalizeQuestions(
   sections: OnboardingSection[],
-  personName: string
+  personName: string,
+  relationshipType?: RelationshipType
 ): OnboardingSection[] {
+  const isSelf = relationshipType === 'self';
+  const placeholders = relationshipType ? RELATIONSHIP_PLACEHOLDERS[relationshipType] : undefined;
+
+  const personalizeText = (text: string | undefined): string | undefined => {
+    if (!text) return text;
+
+    let result = text;
+
+    if (isSelf) {
+      // For self manuals, use "you/your" pronouns
+      result = result
+        .replace(/\{\{personName\}\}/g, 'you')
+        .replace(/\bthey\b/gi, (match) => match[0] === 'T' ? 'You' : 'you')
+        .replace(/\bthem\b/gi, 'you')
+        .replace(/\btheir\b/gi, 'your')
+        .replace(/\bthemselves\b/gi, 'yourself')
+        .replace(/\bthemself\b/gi, 'yourself')
+        // Fix common patterns
+        .replace(/you is\b/gi, 'you are')
+        .replace(/you was\b/gi, 'you were')
+        .replace(/you has\b/gi, 'you have')
+        .replace(/you does\b/gi, 'you do')
+        .replace(/does you\b/gi, 'do you')
+        .replace(/you feels\b/gi, 'you feel')
+        .replace(/you thinks\b/gi, 'you think')
+        .replace(/you works\b/gi, 'you work')
+        .replace(/you expects\b/gi, 'you expect')
+        .replace(/you treats\b/gi, 'you treat')
+        .replace(/you controls\b/gi, 'you control')
+        .replace(/you finishes\b/gi, 'you finish')
+        .replace(/you takes\b/gi, 'you take');
+    } else {
+      // For other relationship types, just replace the name placeholder
+      result = result.replace(/\{\{personName\}\}/g, personName);
+    }
+
+    return result;
+  };
+
   return sections.map(section => ({
     ...section,
-    questions: section.questions.map(q => ({
-      ...q,
-      question: q.question.replace(/\{\{personName\}\}/g, personName),
-      placeholder: q.placeholder?.replace(/\{\{personName\}\}/g, personName),
-      helperText: q.helperText?.replace(/\{\{personName\}\}/g, personName)
-    }))
+    sectionDescription: personalizeText(section.sectionDescription) || section.sectionDescription,
+    questions: section.questions.map(q => {
+      // Get relationship-specific placeholder overrides if available
+      const overrides = placeholders?.[q.id];
+
+      return {
+        ...q,
+        question: personalizeText(q.question) || q.question,
+        // Use relationship-specific placeholder if available, otherwise personalize the default
+        placeholder: overrides?.placeholder || personalizeText(q.placeholder),
+        helperText: overrides?.helperText || personalizeText(q.helperText),
+        qualitativePlaceholder: personalizeText(q.qualitativePlaceholder)
+      };
+    })
   }));
 }
 

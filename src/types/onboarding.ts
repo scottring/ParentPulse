@@ -425,6 +425,12 @@ export interface TaggedQuestion {
   questionId: string;
   questionText: string;       // Store the question text for easy display
 
+  // Additional context for the tagged person
+  sectionName?: string;       // e.g., "What Works"
+  sectionDescription?: string; // e.g., "Share strategies that have been effective"
+  helperText?: string;        // e.g., "Think about approaches that consistently work well"
+  questionContext?: string;   // What this question is building (e.g., "This will help build the 'Strategies' section of the manual")
+
   // Answer handling
   taggerAnswer?: QuestionAnswer;  // If they answered but also want input
   taggedAnswer?: QuestionAnswer;  // The tagged person's answer

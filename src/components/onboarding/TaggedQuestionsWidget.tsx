@@ -147,8 +147,18 @@ function QuestionCard({
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <p className="font-mono text-sm text-amber-600 mb-1">
-              {question.taggerName} tagged you • About {question.personName}
+            <div className="flex items-center gap-2 mb-2">
+              <p className="font-mono text-sm text-amber-600">
+                {question.taggerName} tagged you
+              </p>
+              {question.sectionName && (
+                <span className="px-2 py-0.5 bg-slate-800 text-white font-mono text-xs">
+                  {question.sectionName.toUpperCase()}
+                </span>
+              )}
+            </div>
+            <p className="font-mono text-xs text-slate-500 mb-2">
+              For {question.personName}'s operating manual
             </p>
             <p className="font-mono font-bold text-slate-800">
               {question.questionText}
@@ -168,9 +178,25 @@ function QuestionCard({
       {/* Expanded content */}
       {isExpanded && (
         <div className="p-4 border-t-2 border-slate-200 bg-slate-50">
+          {/* Context for the tagged person */}
+          {(question.sectionDescription || question.helperText) && (
+            <div className="mb-4 p-3 bg-amber-50 border-l-4 border-amber-600 rounded">
+              {question.sectionDescription && (
+                <p className="font-mono text-xs text-slate-600 mb-1">
+                  <span className="font-bold">Section goal:</span> {question.sectionDescription}
+                </p>
+              )}
+              {question.helperText && (
+                <p className="font-mono text-xs text-slate-600">
+                  <span className="font-bold">Hint:</span> {question.helperText}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Show tagger's answer if they provided one */}
           {taggerAnswerText && !question.skippedByTagger && (
-            <div className="mb-4 p-3 bg-white border-l-4 border-amber-600 rounded">
+            <div className="mb-4 p-3 bg-white border-l-4 border-slate-400 rounded">
               <p className="font-mono text-xs text-slate-500 uppercase tracking-wider mb-1">
                 {question.taggerName}'s answer:
               </p>

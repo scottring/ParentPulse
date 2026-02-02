@@ -8,6 +8,7 @@ import {
   signOut,
   onAuthStateChanged,
   updateProfile,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import {
   doc,
@@ -39,6 +40,7 @@ interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (data: RegistrationData) => Promise<void>;
   logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 
   // Child auth methods
   loginChild: (username: string, pin: string) => Promise<void>;
@@ -344,6 +346,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const resetPassword = async (email: string): Promise<void> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      console.log('🔐 Attempting to send password reset email to:', email);
+      console.log('🌐 Current origin:', typeof window !== 'undefined' ? window.location.origin : 'SSR');
+
+      // Configure action code settings for password reset
+      const actionCodeSettings = {
+        url: `${window.location.origin}/login`,
+        handleCodeInApp: false,
+      };
+
+      console.log('📧 Sending password reset email with settings:', actionCodeSettings);
+
+      await sendPasswordResetEmail(auth, email, actionCodeSettings);
+
+      console.log('✅ Password reset email sent successfully!');
+      console.log('📬 Check your inbox (and spam folder) for the reset link');
+    } catch (err: any) {
+      console.error('❌ Password reset error details:', {
+        code: err.code,
+        message: err.message,
+        fullError: err
+      });
+
+      // Translate Firebase error codes to user-friendly messages
+      let errorMessage = 'Failed to send password reset email. Please try again.';
+
+      if (err.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address. Please check and try again.';
+      } else if (err.code === 'auth/user-not-found') {
+        // Don't reveal if user exists for security reasons
+        errorMessage = 'If this email is registered, you will receive a password reset link.';
+      } else if (err.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (err.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many password reset requests. Please try again later.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
+      const friendlyError = new Error(errorMessage);
+      throw friendlyError;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ==================== Child Authentication ====================
 
   const registerChild = async (data: ChildRegistrationData): Promise<void> => {
@@ -495,6 +548,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     register,
     logout,
+    resetPassword,
     loginChild,
     registerChild,
     refreshUser,

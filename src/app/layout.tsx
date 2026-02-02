@@ -5,6 +5,8 @@ import { AuthProvider } from "@/context/AuthContext";
 import { DemoBanner } from "@/components/demo/DemoBanner";
 import { FloatingCoachButton } from "@/components/coach";
 import { QuickCaptureButton } from "@/components/concerns";
+import Navigation from "@/components/layout/Navigation";
+import SideNav from "@/components/layout/SideNav";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -40,7 +42,11 @@ export default function RootLayout({
       <body className={`${inter.variable} antialiased`}>
         <AuthProvider>
           <DemoBanner />
-          {children}
+          <Navigation />
+          <SideNav />
+          <main className="pt-20 lg:pl-64">
+            {children}
+          </main>
           <QuickCaptureButton />
           <FloatingCoachButton />
         </AuthProvider>

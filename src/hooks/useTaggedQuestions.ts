@@ -53,6 +53,10 @@ interface TagQuestionParams {
   taggerAnswer?: QuestionAnswer;
   skippedByTagger: boolean;
   note?: string;
+  // Additional context for the tagged person
+  sectionName?: string;
+  sectionDescription?: string;
+  helperText?: string;
 }
 
 export function useTaggedQuestions(): UseTaggedQuestionsReturn {
@@ -150,6 +154,9 @@ export function useTaggedQuestions(): UseTaggedQuestionsReturn {
         status: 'pending',
         createdAt: Date.now(),
         note: params.note,
+        sectionName: params.sectionName,
+        sectionDescription: params.sectionDescription,
+        helperText: params.helperText,
       };
 
       const docRef = await addDoc(

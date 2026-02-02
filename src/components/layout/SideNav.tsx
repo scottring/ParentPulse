@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import {
   ChartBarIcon,
-  UsersIcon,
   Cog6ToothIcon,
   HomeModernIcon,
 } from '@heroicons/react/24/outline';
@@ -20,7 +19,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
   { label: 'Household', href: '/household', icon: HomeModernIcon },
-  { label: 'People', href: '/people', icon: UsersIcon },
   { label: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ];
 
@@ -76,7 +74,10 @@ export default function SideNav() {
         {/* Navigation items */}
         <nav className="p-4 space-y-2">
           {navItems.map((item, index) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+            // Household also includes /people routes since people are accessed via household members
+            const isActive = pathname === item.href ||
+              pathname.startsWith(item.href + '/') ||
+              (item.href === '/household' && pathname.startsWith('/people'));
 
             return (
               <Link
@@ -173,7 +174,10 @@ export default function SideNav() {
             {/* Mobile nav items */}
             <nav className="space-y-3">
               {navItems.map((item, index) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                // Household also includes /people routes since people are accessed via household members
+                const isActive = pathname === item.href ||
+                  pathname.startsWith(item.href + '/') ||
+                  (item.href === '/household' && pathname.startsWith('/people'));
 
                 return (
                   <Link

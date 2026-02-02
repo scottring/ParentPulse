@@ -14,6 +14,10 @@ interface TagQuestionButtonProps {
   questionText: string;
   currentAnswer?: QuestionAnswer;
   onTagAndSkip?: () => void;  // Called after tagging if they want to skip
+  // Additional context for the tagged person
+  sectionName?: string;
+  sectionDescription?: string;
+  helperText?: string;
 }
 
 export function TagQuestionButton({
@@ -25,6 +29,9 @@ export function TagQuestionButton({
   questionText,
   currentAnswer,
   onTagAndSkip,
+  sectionName,
+  sectionDescription,
+  helperText,
 }: TagQuestionButtonProps) {
   const { otherMembers, loading: membersLoading } = useFamilyMembers();
   const { tagQuestion } = useTaggedQuestions();
@@ -55,6 +62,9 @@ export function TagQuestionButton({
         taggerAnswer: hasAnswer ? currentAnswer : undefined,
         skippedByTagger: skipAfterTag || !hasAnswer,
         note: note || undefined,
+        sectionName,
+        sectionDescription,
+        helperText,
       });
 
       setShowSuccess(true);
@@ -75,9 +85,47 @@ export function TagQuestionButton({
     }
   };
 
-  // Don't show if no other family members
-  if (membersLoading || otherMembers.length === 0) {
+  // Show invite prompt if no other family members
+  if (membersLoading) {
     return null;
+  }
+
+  if (otherMembers.length === 0) {
+    return (
+      <div className="relative inline-block">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-mono text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+          title="Tag someone else to answer this"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          Tag Someone
+        </button>
+
+        {isOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+            <div className="absolute right-0 top-full mt-2 w-72 bg-white border-2 border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-50 p-4">
+              <h4 className="font-mono font-bold text-sm text-slate-800 mb-2">
+                No family members yet
+              </h4>
+              <p className="font-mono text-xs text-slate-600 mb-3">
+                Invite a co-parent or family member to collaborate on this manual together.
+              </p>
+              <a
+                href="/settings"
+                className="block w-full py-2 bg-amber-600 text-white font-mono font-bold text-sm text-center hover:bg-amber-700 transition-colors"
+              >
+                Invite Family Member →
+              </a>
+            </div>
+          </>
+        )}
+      </div>
+    );
   }
 
   if (showSuccess) {

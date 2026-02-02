@@ -8,7 +8,7 @@ import { usePersonById } from '@/hooks/usePerson';
 import { usePersonManual } from '@/hooks/usePersonManual';
 import { useManualOnboarding } from '@/hooks/useManualOnboarding';
 import { useSaveManualContent } from '@/hooks/useSaveManualContent';
-import { getOnboardingSections, getNeurodivergenceSections, OnboardingSection } from '@/config/onboarding-questions';
+import { getOnboardingSections, getNeurodivergenceSections, personalizeQuestions, OnboardingSection } from '@/config/onboarding-questions';
 import { DEMO_ONBOARDING_SECTIONS, DEMO_PREFILLED_ANSWERS } from '@/config/demo-onboarding-questions';
 import { isDemoMode, isDemoUser } from '@/utils/demo';
 import { RelationshipType } from '@/types/person-manual';
@@ -90,14 +90,16 @@ export default function AIOnboardingPage({ params }: { params: Promise<{ personI
 
   // Load sections based on relationship type and branching logic
   useEffect(() => {
-    if (person?.relationshipType) {
+    if (person?.relationshipType && person?.name) {
+      const relationshipType = person.relationshipType as RelationshipType;
+
       // Use demo sections if in demo mode
-      const baseSections = isDemo
+      let baseSections = isDemo
         ? DEMO_ONBOARDING_SECTIONS
-        : getOnboardingSections(person.relationshipType as RelationshipType);
+        : getOnboardingSections(relationshipType);
 
       // For child relationships, check if we need to add neurodivergence sections
-      if (person.relationshipType === 'child') {
+      if (relationshipType === 'child') {
         const screeningAnswer = wizardState.answers['screening']?.['screening_level'];
         const screeningValue = typeof screeningAnswer === 'object' && screeningAnswer !== null && 'primary' in screeningAnswer
           ? screeningAnswer.primary
@@ -108,23 +110,23 @@ export default function AIOnboardingPage({ params }: { params: Promise<{ personI
           const neurodivergenceSections = getNeurodivergenceSections(screeningValue);
           if (neurodivergenceSections.length > 0) {
             // Insert neurodivergence sections after screening (index 1) and before the rest
-            const updatedSections = [
+            baseSections = [
               baseSections[0], // Screening section
               ...neurodivergenceSections, // Neurodivergence sections
               ...baseSections.slice(1) // Rest of sections
             ];
-            setSections(updatedSections);
-            setTotalSections(updatedSections.length);
-            return;
           }
         }
       }
 
-      setSections(baseSections);
-      setTotalSections(baseSections.length);
+      // Apply relationship-specific placeholders and personalization
+      const personalizedSections = personalizeQuestions(baseSections, person.name, relationshipType);
+
+      setSections(personalizedSections);
+      setTotalSections(personalizedSections.length);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [person?.relationshipType, wizardState.answers]);
+  }, [person?.relationshipType, person?.name, wizardState.answers]);
 
   // Auto-save progress to localStorage whenever answers change
   useEffect(() => {
@@ -147,8 +149,35 @@ export default function AIOnboardingPage({ params }: { params: Promise<{ personI
   const currentSection = sections[wizardState.currentSectionIndex];
   const currentQuestion = currentSection?.questions[currentQuestionIndex];
 
-  // Personalize text
+  // Personalize text based on relationship type
   const personalizeText = (text: string) => {
+    const isSelf = person.relationshipType === 'self';
+
+    if (isSelf) {
+      // For self manuals, use "you/your" pronouns
+      return text
+        .replace(/\{\{personName\}\}/g, 'you')
+        .replace(/\bthey\b/gi, (match) => match[0] === 'T' ? 'You' : 'you')
+        .replace(/\bthem\b/gi, 'you')
+        .replace(/\btheir\b/gi, 'your')
+        .replace(/\bthemselves\b/gi, 'yourself')
+        .replace(/\bthemself\b/gi, 'yourself')
+        // Fix verb conjugations
+        .replace(/you is\b/gi, 'you are')
+        .replace(/you was\b/gi, 'you were')
+        .replace(/you has\b/gi, 'you have')
+        .replace(/you does\b/gi, 'you do')
+        .replace(/does you\b/gi, 'do you')
+        .replace(/you feels\b/gi, 'you feel')
+        .replace(/you thinks\b/gi, 'you think')
+        .replace(/you works\b/gi, 'you work')
+        .replace(/you expects\b/gi, 'you expect')
+        .replace(/you treats\b/gi, 'you treat')
+        .replace(/you controls\b/gi, 'you control')
+        .replace(/you finishes\b/gi, 'you finish')
+        .replace(/you takes\b/gi, 'you take');
+    }
+
     return text.replace(/\{\{personName\}\}/g, person.name);
   };
 
@@ -433,6 +462,9 @@ export default function AIOnboardingPage({ params }: { params: Promise<{ personI
                 questionText={personalizeText(currentQuestion.question)}
                 currentAnswer={currentAnswer}
                 onTagAndSkip={handleNext}
+                sectionName={currentSection.sectionName}
+                sectionDescription={personalizeText(currentSection.sectionDescription)}
+                helperText={currentQuestion.helperText ? personalizeText(currentQuestion.helperText) : undefined}
               />
             </div>
           </div>

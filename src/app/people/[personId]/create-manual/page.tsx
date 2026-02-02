@@ -14,6 +14,7 @@ const RELATIONSHIP_OPTIONS: Array<{
   description: string;
   emoji: string;
 }> = [
+  { type: 'self', label: 'Myself', description: 'Create an operating manual for yourself', emoji: '🪞' },
   { type: 'child', label: 'Child', description: 'Your son, daughter, or child you parent', emoji: '👶' },
   { type: 'spouse', label: 'Spouse/Partner', description: 'Your romantic partner or spouse', emoji: '💑' },
   { type: 'elderly_parent', label: 'Elderly Parent', description: 'Your aging parent needing care', emoji: '👴' },

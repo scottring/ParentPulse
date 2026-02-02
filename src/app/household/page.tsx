@@ -94,16 +94,7 @@ export default function HouseholdManualPage() {
   if (!manual) {
     return (
       <div className="min-h-screen bg-[#FAF8F5] p-6 lg:p-8">
-        <header className="max-w-4xl mx-auto mb-8">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-2 font-mono text-sm text-slate-600 hover:text-slate-800 mb-4"
-          >
-            &larr; Back to Dashboard
-          </Link>
-        </header>
-
-        <main className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto">
           <TechnicalCard cornerBrackets shadowSize="lg" className="p-8 text-center">
             <div className="w-20 h-20 mx-auto mb-6 bg-slate-800 border-2 border-amber-600 flex items-center justify-center">
               <span className="font-mono font-bold text-3xl text-white">HQ</span>
@@ -126,7 +117,7 @@ export default function HouseholdManualPage() {
               START ONBOARDING
             </TechnicalButton>
           </TechnicalCard>
-        </main>
+        </div>
       </div>
     );
   }
@@ -329,26 +320,7 @@ export default function HouseholdManualPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF8F5]">
-      {/* Navigation */}
-      <nav className="border-b-2 border-slate-800 bg-white">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link
-            href="/dashboard"
-            className="font-mono text-sm text-slate-600 hover:text-slate-800"
-          >
-            &larr; DASHBOARD
-          </Link>
-          <div className="flex items-center gap-4">
-            {journey && (
-              <TechnicalLabel variant="outline" color="amber" size="sm">
-                DAY {journey.currentDay} OF 90
-              </TechnicalLabel>
-            )}
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+      <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
         {/* Header with journey status */}
         <HouseholdManualHeader
           householdName={manual.householdName}
@@ -427,12 +399,15 @@ export default function HouseholdManualPage() {
             {manual.members.map((member) => (
               <TechnicalCard key={member.personId} shadowSize="sm" className="p-4">
                 <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center font-mono text-sm font-bold text-slate-600">
+                  <Link
+                    href={`/people/${member.personId}/manual`}
+                    className="flex items-center gap-3 hover:opacity-80 transition-opacity flex-1 min-w-0"
+                  >
+                    <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center font-mono text-sm font-bold text-slate-600 flex-shrink-0">
                       {member.name.charAt(0).toUpperCase()}
                     </div>
-                    <div>
-                      <div className="font-mono font-bold text-slate-800">
+                    <div className="min-w-0">
+                      <div className="font-mono font-bold text-slate-800 truncate">
                         {member.name}
                         {member.dateOfBirth && (
                           <span className="font-normal text-slate-500 ml-1">
@@ -448,16 +423,22 @@ export default function HouseholdManualPage() {
                         {member.role.toUpperCase()}
                       </TechnicalLabel>
                     </div>
-                  </div>
-                  <div className="flex gap-1">
+                  </Link>
+                  <div className="flex gap-1 flex-shrink-0 ml-2">
                     <button
-                      onClick={() => openModal('edit-member', member)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openModal('edit-member', member);
+                      }}
                       className="font-mono text-[10px] text-slate-400 hover:text-slate-600"
                     >
                       [EDIT]
                     </button>
                     <button
-                      onClick={() => openModal('confirm-delete', { type: 'member', ...member })}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openModal('confirm-delete', { type: 'member', ...member });
+                      }}
                       className="font-mono text-[10px] text-red-400 hover:text-red-600"
                     >
                       [X]
@@ -759,7 +740,7 @@ export default function HouseholdManualPage() {
             RE-RUN ONBOARDING
           </TechnicalButton>
         </div>
-      </main>
+      </div>
 
       {/* Modals */}
       {modal.type && (
