@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useHouseholdManual } from '@/hooks/useHouseholdManual';
+import { isDemoUser, isDemoMode } from '@/utils/demo';
 import {
   HouseholdSectionId,
   HOUSEHOLD_SECTION_META,
@@ -43,6 +44,13 @@ export default function SectionOnboardingPage() {
   const [generatedContent, setGeneratedContent] = useState<ContentItem[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDemo, setIsDemo] = useState(false);
+
+  // Check for demo mode
+  useEffect(() => {
+    const demo = isDemoMode() || isDemoUser(user);
+    setIsDemo(demo);
+  }, [user]);
 
   // Get section config
   const section = getHouseholdSection(sectionId);
@@ -120,6 +128,15 @@ export default function SectionOnboardingPage() {
   const generateContent = async () => {
     setIsGenerating(true);
     setError(null);
+
+    // In demo mode, use fallback content directly (skip expensive API call)
+    if (isDemo) {
+      const demoContent = generateDemoFallbackContent(sectionId, answers);
+      setGeneratedContent(demoContent);
+      setCurrentStep('review');
+      setIsGenerating(false);
+      return;
+    }
 
     try {
       const generateFunction = httpsCallable(functions, 'generateHouseholdSectionContent');
@@ -368,6 +385,7 @@ export default function SectionOnboardingPage() {
                 question={currentQuestion}
                 value={answers[currentQuestion.id]}
                 onChange={(value) => handleAnswer(currentQuestion.id, value)}
+                demoMode={isDemo}
               />
             </div>
 
@@ -428,21 +446,36 @@ function QuestionInput({
   question,
   value,
   onChange,
+  demoMode = false,
 }: {
   question: HouseholdOnboardingQuestion;
   value: any;
   onChange: (value: any) => void;
+  demoMode?: boolean;
 }) {
   switch (question.questionType) {
     case 'text':
       return (
-        <textarea
-          value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={question.placeholder}
-          className="w-full p-3 border-2 border-slate-300 font-mono text-sm focus:outline-none focus:border-slate-800 resize-none"
-          rows={4}
-        />
+        <div className="relative">
+          <textarea
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={question.placeholder}
+            className="w-full p-3 border-2 border-slate-300 font-mono text-sm focus:outline-none focus:border-slate-800 resize-none"
+            rows={4}
+          />
+          {/* Use placeholder button for demo mode */}
+          {demoMode && question.placeholder && (
+            <button
+              type="button"
+              onClick={() => onChange(question.placeholder)}
+              className="absolute bottom-3 right-3 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-mono font-bold rounded shadow-sm transition-all opacity-70 hover:opacity-100"
+              title="Use placeholder text"
+            >
+              USE PLACEHOLDER
+            </button>
+          )}
+        </div>
       );
 
     case 'rating':
@@ -678,16 +711,22 @@ function transformItemsToSectionData(sectionId: HouseholdSectionId, items: Conte
   switch (sectionId) {
     case 'home_charter':
       return {
-        familyMission: items.find(i => i.label === 'Mission')?.value,
+        familyMission: items.find(i => i.label === 'Mission')?.value || '',
         nonNegotiables: items
           .filter(i => i.type === 'non-negotiable')
-          .map(i => ({
-            id: i.id,
-            value: typeof i.value === 'string' ? i.value : (i.value as any).value,
-            description: typeof i.value === 'object' ? (i.value as any).description : undefined,
-            source: 'ai',
-            createdAt: now,
-          })),
+          .map(i => {
+            const base: Record<string, any> = {
+              id: i.id,
+              value: typeof i.value === 'string' ? i.value : (i.value as any).value || '',
+              source: 'ai',
+              createdAt: now,
+            };
+            // Only add description if it exists (Firestore doesn't accept undefined)
+            if (typeof i.value === 'object' && (i.value as any).description) {
+              base.description = (i.value as any).description;
+            }
+            return base;
+          }),
         desiredFeelings: items
           .find(i => i.label === 'Desired Feelings')?.value as string[] || [],
         coreValues: items
@@ -701,7 +740,7 @@ function transformItemsToSectionData(sectionId: HouseholdSectionId, items: Conte
           id: i.id,
           type: 'light',
           location: 'General',
-          description: i.value as string,
+          description: String(i.value || ''),
           quality: 'needs-improvement',
           source: 'ai',
           createdAt: now,
@@ -710,13 +749,15 @@ function transformItemsToSectionData(sectionId: HouseholdSectionId, items: Conte
           id: i.id,
           type: 'sound',
           location: 'General',
-          description: i.value as string,
+          description: String(i.value || ''),
           quality: 'needs-improvement',
           source: 'ai',
           createdAt: now,
         })),
         zones: items.filter(i => i.type === 'zone').map(i => ({
-          ...(i.value as any),
+          name: (i.value as any)?.name || '',
+          purpose: (i.value as any)?.purpose || '',
+          location: (i.value as any)?.location || '',
           id: i.id,
           source: 'ai',
           createdAt: now,
@@ -724,9 +765,196 @@ function transformItemsToSectionData(sectionId: HouseholdSectionId, items: Conte
         updatedAt: now,
       };
 
-    // Add more cases for other sections...
+    case 'village_wiki':
+      return {
+        contacts: items.filter(i => i.type === 'contact').map(i => ({
+          id: i.id,
+          name: (i.value as any)?.name || '',
+          role: (i.value as any)?.role || '',
+          phone: (i.value as any)?.phone || '',
+          source: 'ai',
+          createdAt: now,
+        })),
+        updatedAt: now,
+      };
+
+    case 'roles_rituals':
+      return {
+        rituals: items.filter(i => i.type === 'ritual').map(i => ({
+          id: i.id,
+          name: (i.value as any)?.name || '',
+          frequency: (i.value as any)?.frequency || 'daily',
+          description: (i.value as any)?.description || '',
+          source: 'ai',
+          createdAt: now,
+        })),
+        updatedAt: now,
+      };
+
+    case 'communication_rhythm':
+      return {
+        rhythms: items.filter(i => i.type === 'card').map(i => ({
+          id: i.id,
+          name: (i.value as any)?.name || '',
+          frequency: (i.value as any)?.frequency || 'weekly',
+          description: (i.value as any)?.description || '',
+          source: 'ai',
+          createdAt: now,
+        })),
+        updatedAt: now,
+      };
 
     default:
-      return { items, updatedAt: now };
+      // Filter out any undefined values from items before saving
+      const cleanItems = items.map(item => ({
+        id: item.id,
+        type: item.type,
+        label: item.label || '',
+        value: item.value || '',
+      }));
+      return { items: cleanItems, updatedAt: now };
+  }
+}
+
+// Generate demo fallback content for demo mode (skips API call)
+function generateDemoFallbackContent(sectionId: HouseholdSectionId, answers: Record<string, any>): ContentItem[] {
+  const now = Date.now();
+
+  switch (sectionId) {
+    case 'home_charter':
+      return [
+        {
+          id: `demo-mission-${now}`,
+          type: 'string',
+          label: 'Mission',
+          value: answers.family_values || 'To create a home filled with kindness, curiosity, and perseverance where every family member feels valued and supported.',
+        },
+        {
+          id: `demo-nn-1-${now}`,
+          type: 'non-negotiable',
+          label: 'Non-Negotiable',
+          value: 'We speak to each other with respect, even when frustrated.',
+        },
+        {
+          id: `demo-nn-2-${now}`,
+          type: 'non-negotiable',
+          label: 'Non-Negotiable',
+          value: 'Everyone contributes to household responsibilities.',
+        },
+        {
+          id: `demo-nn-3-${now}`,
+          type: 'non-negotiable',
+          label: 'Non-Negotiable',
+          value: 'We make time for family connection every day.',
+        },
+        {
+          id: `demo-values-${now}`,
+          type: 'string',
+          label: 'Core Values',
+          value: ['Kindness', 'Curiosity', 'Perseverance'],
+        },
+        {
+          id: `demo-feelings-${now}`,
+          type: 'string',
+          label: 'Desired Feelings',
+          value: ['Safe', 'Connected', 'Supported', 'Joyful'],
+        },
+      ];
+
+    case 'sanctuary_map':
+      return [
+        {
+          id: `demo-zone-1-${now}`,
+          type: 'zone',
+          label: 'Calm Zone',
+          value: {
+            name: 'Reading Nook',
+            purpose: 'Quiet reflection and decompression',
+            location: 'Living room corner',
+          },
+        },
+        {
+          id: `demo-zone-2-${now}`,
+          type: 'zone',
+          label: 'Activity Zone',
+          value: {
+            name: 'Play Area',
+            purpose: 'Active play and creativity',
+            location: 'Family room',
+          },
+        },
+      ];
+
+    case 'village_wiki':
+      return [
+        {
+          id: `demo-contact-1-${now}`,
+          type: 'contact',
+          label: 'Emergency Contact',
+          value: {
+            name: 'Grandma Smith',
+            role: 'Emergency backup',
+            phone: '(555) 123-4567',
+          },
+        },
+        {
+          id: `demo-contact-2-${now}`,
+          type: 'contact',
+          label: 'Support Contact',
+          value: {
+            name: 'Neighbor Jane',
+            role: 'Backup pickup',
+            phone: '(555) 987-6543',
+          },
+        },
+      ];
+
+    case 'roles_rituals':
+      return [
+        {
+          id: `demo-ritual-1-${now}`,
+          type: 'ritual',
+          label: 'Morning Ritual',
+          value: {
+            name: 'Morning Huddle',
+            frequency: 'daily',
+            description: 'Quick family check-in before starting the day',
+          },
+        },
+        {
+          id: `demo-ritual-2-${now}`,
+          type: 'ritual',
+          label: 'Evening Ritual',
+          value: {
+            name: 'Gratitude Circle',
+            frequency: 'daily',
+            description: 'Share one thing we\'re grateful for at dinner',
+          },
+        },
+      ];
+
+    case 'communication_rhythm':
+      return [
+        {
+          id: `demo-rhythm-1-${now}`,
+          type: 'card',
+          label: 'Weekly Check-in',
+          value: {
+            name: 'Sunday Planning',
+            frequency: 'weekly',
+            description: 'Review the week ahead and assign tasks',
+          },
+        },
+      ];
+
+    default:
+      return [
+        {
+          id: `demo-default-${now}`,
+          type: 'string',
+          label: 'Demo Content',
+          value: 'This is demo content for the ' + sectionId + ' section.',
+        },
+      ];
   }
 }

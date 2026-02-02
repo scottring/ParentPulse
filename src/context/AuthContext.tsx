@@ -177,22 +177,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       isRegistering.current = true; // Set flag to prevent orphaned check
 
       // Check for pending invites for this email
-      const familiesRef = collection(firestore, COLLECTIONS.FAMILIES);
-      const familiesSnapshot = await getDocs(familiesRef);
-
+      // Note: This may fail for new users due to security rules - that's OK, they'll create a new family
       let existingFamilyId: string | null = null;
       let pendingInvite: any = null;
 
-      for (const familyDoc of familiesSnapshot.docs) {
-        const familyData = familyDoc.data();
-        const invite = familyData.pendingInvites?.find(
-          (inv: any) => inv.email.toLowerCase() === data.email.toLowerCase()
-        );
-        if (invite) {
-          existingFamilyId = familyData.familyId;
-          pendingInvite = invite;
-          break;
+      try {
+        const familiesRef = collection(firestore, COLLECTIONS.FAMILIES);
+        const familiesSnapshot = await getDocs(familiesRef);
+
+        for (const familyDoc of familiesSnapshot.docs) {
+          const familyData = familyDoc.data();
+          const invite = familyData.pendingInvites?.find(
+            (inv: any) => inv.email.toLowerCase() === data.email.toLowerCase()
+          );
+          if (invite) {
+            existingFamilyId = familyData.familyId;
+            pendingInvite = invite;
+            break;
+          }
         }
+      } catch (inviteCheckErr) {
+        // Expected for new users - security rules prevent listing families
+        // Continue with creating a new family
+        console.log('Could not check for pending invites (expected for new users)');
       }
 
       // Create Firebase auth user

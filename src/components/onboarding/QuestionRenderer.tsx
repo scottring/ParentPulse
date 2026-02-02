@@ -28,10 +28,17 @@ export function QuestionRenderer({
 }: QuestionRendererProps) {
   const questionType = question.questionType || 'text';
 
-  // Handle auto-fill from demo answer
+  // Handle auto-fill from demo answer or placeholder
   const handleAutoFill = () => {
     if (demoAnswer) {
       onChange(demoAnswer);
+    }
+  };
+
+  // Handle auto-fill from placeholder text
+  const handleUsePlaceholder = () => {
+    if (question.placeholder) {
+      onChange(question.placeholder);
     }
   };
 
@@ -130,7 +137,18 @@ export function QuestionRenderer({
                 className="absolute bottom-3 right-3 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-mono font-bold rounded shadow-sm transition-all opacity-70 hover:opacity-100"
                 title="Auto-fill demo answer"
               >
-                ✨ DEMO FILL
+                DEMO FILL
+              </button>
+            )}
+            {/* Use placeholder button for demo mode */}
+            {demoMode && !demoAnswer && question.placeholder && (
+              <button
+                type="button"
+                onClick={handleUsePlaceholder}
+                className="absolute bottom-3 right-3 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-mono font-bold rounded shadow-sm transition-all opacity-70 hover:opacity-100"
+                title="Use placeholder text"
+              >
+                USE PLACEHOLDER
               </button>
             )}
           </div>
