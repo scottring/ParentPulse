@@ -1144,3 +1144,11 @@ export const STORAGE_PATHS = {
 // ==================== Weekly Workbooks System ====================
 
 export * from './workbook';
+
+// ==================== Multi-Perspective Input System ====================
+
+export * from './multi-perspective';
+
+// ==================== Onboarding Journey System ====================
+
+export * from './onboarding-progress';

@@ -9,4 +9,5 @@ export { RelationshipContentReview } from './RelationshipContentReview';
 export { SelfWorthAssessmentModal } from './SelfWorthAssessmentModal';
 export { GapAnalysisWizard } from './GapAnalysisWizard';
 export { default as ManualProgressCard } from './ManualProgressCard';
+export { default as PerspectiveView, PerspectiveStatus } from './PerspectiveView';
 export * from './ManualIcons';
