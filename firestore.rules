@@ -287,7 +287,8 @@ service cloud.firestore {
     // People collection (core entities - everyone in the family network)
     match /people/{personId} {
       // Family members can read all people in their family
-      allow read: if belongsToFamily(resource.data.familyId);
+      // Also allow reads if document doesn't exist
+      allow read: if isSignedIn() && (resource == null || belongsToFamily(resource.data.familyId));
 
       // Parents can create people in their family
       allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
@@ -302,7 +303,8 @@ service cloud.firestore {
     // Person manuals collection (one manual per person)
     match /person_manuals/{manualId} {
       // Family members can read manuals in their family
-      allow read: if belongsToFamily(resource.data.familyId);
+      // Also allow reads if document doesn't exist
+      allow read: if isSignedIn() && (resource == null || belongsToFamily(resource.data.familyId));
 
       // Parents can create manuals for people in their family
       allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
@@ -684,6 +686,59 @@ service cloud.firestore {
 
       // Parents can delete interventions in their family
       allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
+    // ==================== Onboarding Journey System ====================
+
+    // Onboarding Progress
+    // Tracks structured progress through the 6-layer manual onboarding
+    match /onboarding_progress/{progressId} {
+      // Family members can read progress in their family
+      // Also allow reads if document doesn't exist (returns null, client handles)
+      allow read: if isSignedIn() && (resource == null || belongsToFamily(resource.data.familyId));
+
+      // Parents can create progress records in their family
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+
+      // Family members can update progress (mark layers complete, track milestones)
+      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId);
+
+      // Parents can delete progress records in their family
+      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
+    // ==================== Multi-Perspective Input System ====================
+
+    // Manual Inputs
+    // Individual inputs from different family members for multi-perspective data
+    match /manual_inputs/{inputId} {
+      // Family members can read inputs in their family (via manual lookup)
+      allow read: if isSignedIn();
+
+      // Family members can create inputs
+      allow create: if isSignedIn();
+
+      // Input author can update their own input
+      allow update: if isSignedIn() && resource.data.respondentId == request.auth.uid;
+
+      // Parents can delete inputs in their family
+      allow delete: if isParent();
+    }
+
+    // Multi-Perspective Items
+    // Synthesized items from multiple perspectives
+    match /multi_perspective_items/{itemId} {
+      // Family members can read items
+      allow read: if isSignedIn();
+
+      // Parents can create items
+      allow create: if isParent();
+
+      // Parents can update items (synthesis, status)
+      allow update: if isParent();
+
+      // Parents can delete items
+      allow delete: if isParent();
     }
 
     // ==================== Tagged Questions System ====================

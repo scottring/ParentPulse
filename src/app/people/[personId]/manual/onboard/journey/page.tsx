@@ -24,6 +24,7 @@ export default function ManualJourneyPage() {
 
   const [manual, setManual] = useState<PersonManual | null>(null);
   const [loadingManual, setLoadingManual] = useState(true);
+  const [manualError, setManualError] = useState<string | null>(null);
   const [showGraduation, setShowGraduation] = useState(false);
 
   // Fetch manual
@@ -31,25 +32,45 @@ export default function ManualJourneyPage() {
     async function fetchManual() {
       if (!user || !personId) return;
 
+      // Check user permissions
+      if (user.role !== 'parent' || !user.familyId) {
+        setManualError('Permission denied: You need to be a parent with a family to access this page.');
+        setLoadingManual(false);
+        return;
+      }
+
       setLoadingManual(true);
+      setManualError(null);
       try {
+        console.log('[Journey] Fetching manual for personId:', personId);
         // Try person_manuals collection first
         const manualRef = doc(firestore, 'person_manuals', personId);
         const manualSnap = await getDoc(manualRef);
 
         if (manualSnap.exists()) {
+          console.log('[Journey] Found manual in person_manuals');
           setManual(manualSnap.data() as PersonManual);
         } else {
           // Try child_manuals as fallback
+          console.log('[Journey] Manual not found in person_manuals, trying child_manuals');
           const childManualRef = doc(firestore, 'child_manuals', personId);
           const childManualSnap = await getDoc(childManualRef);
 
           if (childManualSnap.exists()) {
+            console.log('[Journey] Found manual in child_manuals');
             setManual(childManualSnap.data() as PersonManual);
+          } else {
+            console.log('[Journey] Manual not found in either collection');
           }
         }
-      } catch (err) {
-        console.error('Error fetching manual:', err);
+      } catch (err: unknown) {
+        console.error('[Journey] Error fetching manual:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        if (errorMessage.includes('permission')) {
+          setManualError('Permission denied: Unable to access manual. Please check your user permissions.');
+        } else {
+          setManualError(`Error loading manual: ${errorMessage}`);
+        }
       } finally {
         setLoadingManual(false);
       }
@@ -119,23 +140,47 @@ export default function ManualJourneyPage() {
     );
   }
 
-  // Error state
-  if (error) {
+  // Error state (manual error or journey error)
+  if (error || manualError) {
+    const errorMsg = manualError || error;
+    const isPermissionError = errorMsg?.toLowerCase().includes('permission');
+
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white border-2 border-red-200 p-6 text-center">
           <ExclamationTriangleIcon className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h2 className="font-mono font-bold text-lg text-slate-800 mb-2">
-            Error Loading Journey
+            {isPermissionError ? 'Permission Error' : 'Error Loading Journey'}
           </h2>
-          <p className="font-mono text-sm text-slate-600 mb-4">{error}</p>
-          <TechnicalButton
-            variant="outline"
-            onClick={() => router.push(`/people/${personId}/manual`)}
-          >
-            <ArrowLeftIcon className="w-4 h-4 mr-2" />
-            Back to Manual
-          </TechnicalButton>
+          <p className="font-mono text-sm text-slate-600 mb-4">{errorMsg}</p>
+          {isPermissionError && (
+            <div className="bg-amber-50 border border-amber-200 p-3 mb-4 text-left">
+              <p className="font-mono text-xs text-amber-800 mb-2">
+                <strong>To fix this:</strong>
+              </p>
+              <ol className="font-mono text-xs text-amber-700 list-decimal ml-4 space-y-1">
+                <li>Go to Firebase Console → Firestore</li>
+                <li>Find your user document in &quot;users&quot; collection</li>
+                <li>Ensure you have: <code className="bg-amber-100 px-1">role: &quot;parent&quot;</code></li>
+                <li>Ensure you have a valid <code className="bg-amber-100 px-1">familyId</code></li>
+              </ol>
+            </div>
+          )}
+          <div className="flex gap-2 justify-center">
+            <TechnicalButton
+              variant="outline"
+              onClick={() => router.push(`/people/${personId}/manual`)}
+            >
+              <ArrowLeftIcon className="w-4 h-4 mr-2" />
+              Back to Manual
+            </TechnicalButton>
+            <TechnicalButton
+              variant="outline"
+              onClick={() => router.push('/walkthrough')}
+            >
+              Walkthrough Controls
+            </TechnicalButton>
+          </div>
         </div>
       </div>
     );
