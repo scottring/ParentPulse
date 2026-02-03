@@ -390,8 +390,11 @@ export default function HouseholdManualPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {(['home_charter', 'sanctuary_map', 'village_wiki', 'roles_rituals', 'communication_rhythm', 'household_pulse'] as HouseholdSectionId[]).map((sectionId) => {
+              // Check completeness: explicit sectionCompleteness > check completedSections array > check if data exists
+              const isInCompletedSections = manual.onboardingProgress?.completedSections?.includes(sectionId);
+              const hasData = !!manual[getSectionFieldName(sectionId) as keyof typeof manual];
               const sectionCompleteness = manual.sectionCompleteness?.[sectionId] ??
-                (manual[getSectionFieldName(sectionId) as keyof typeof manual] ? 50 : 0);
+                (isInCompletedSections ? 100 : hasData ? 100 : 0);
               const recommendedSection = getNextRecommendedSection(manual);
 
               return (
@@ -409,29 +412,62 @@ export default function HouseholdManualPage() {
 
         {/* Completeness overview */}
         <TechnicalCard shadowSize="sm" className="p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-slate-600">
-              LAYER COMPLETENESS
-            </h3>
-            <span className="font-mono text-sm font-bold text-slate-800">
-              {manual.completeness.overall}%
-            </span>
-          </div>
-          <div className="grid grid-cols-6 gap-2">
-            {([1, 2, 3, 4, 5, 6] as LayerId[]).map((layerId) => (
-              <div key={layerId} className="text-center">
-                <div
-                  className={`
-                    h-2 mb-1
-                    ${manual.completeness[`layer${layerId}` as keyof typeof manual.completeness] > 0 ? 'bg-green-500' : 'bg-slate-200'}
-                  `}
-                />
-                <span className="font-mono text-[10px] text-slate-500">
-                  L{layerId}
-                </span>
-              </div>
-            ))}
-          </div>
+          {(() => {
+            // Calculate layer completeness from completed sections
+            const sectionToLayer: Record<HouseholdSectionId, number> = {
+              home_charter: 6,
+              sanctuary_map: 1,
+              village_wiki: 2,
+              roles_rituals: 3,
+              communication_rhythm: 4,
+              household_pulse: 5,
+            };
+            const completedSections = manual.onboardingProgress?.completedSections || [];
+            const allSections = ['home_charter', 'sanctuary_map', 'village_wiki', 'roles_rituals', 'communication_rhythm', 'household_pulse'] as HouseholdSectionId[];
+
+            // Count sections that are complete (in array or have data)
+            const layerComplete: Record<number, boolean> = {};
+            for (let i = 1; i <= 6; i++) layerComplete[i] = false;
+
+            allSections.forEach((sid) => {
+              const hasData = !!manual[getSectionFieldName(sid) as keyof typeof manual];
+              const isComplete = completedSections.includes(sid) || hasData || (manual.sectionCompleteness?.[sid] ?? 0) >= 100;
+              if (isComplete) {
+                layerComplete[sectionToLayer[sid]] = true;
+              }
+            });
+
+            const completedCount = Object.values(layerComplete).filter(Boolean).length;
+            const overallPercent = Math.round((completedCount / 6) * 100);
+
+            return (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-slate-600">
+                    LAYER COMPLETENESS
+                  </h3>
+                  <span className="font-mono text-sm font-bold text-slate-800">
+                    {overallPercent}%
+                  </span>
+                </div>
+                <div className="grid grid-cols-6 gap-2">
+                  {([1, 2, 3, 4, 5, 6] as LayerId[]).map((layerId) => (
+                    <div key={layerId} className="text-center">
+                      <div
+                        className={`
+                          h-2 mb-1
+                          ${layerComplete[layerId] ? 'bg-green-500' : 'bg-slate-200'}
+                        `}
+                      />
+                      <span className="font-mono text-[10px] text-slate-500">
+                        L{layerId}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            );
+          })()}
         </TechnicalCard>
 
         {/* Members Section */}

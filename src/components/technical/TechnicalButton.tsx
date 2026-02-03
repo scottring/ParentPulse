@@ -63,6 +63,7 @@ export function TechnicalButton({
       onClick={onClick}
       disabled={disabled}
       className={`
+        inline-flex items-center justify-center
         font-mono font-bold uppercase tracking-wider
         transition-all duration-150
         ${variantMap[variant]}
@@ -72,7 +73,7 @@ export function TechnicalButton({
         ${className}
       `}
     >
-      [ {children} ]
+      [ <span className="inline-flex items-center">{children}</span> ]
     </button>
   );
 }

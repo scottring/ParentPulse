@@ -180,15 +180,34 @@ export default function SectionOnboardingPage() {
       // Transform answers into section-specific data structure
       const sectionData = transformAnswersToSectionData(sectionId, answers);
 
+      // Calculate new completeness values
+      const newCompletedSections = [
+        ...(manual.onboardingProgress?.completedSections || []).filter(s => s !== sectionId),
+        sectionId
+      ];
+
+      // Build complete sectionCompleteness with all sections
+      const newSectionCompleteness: Record<HouseholdSectionId, number> = {
+        home_charter: manual.sectionCompleteness?.home_charter ?? 0,
+        sanctuary_map: manual.sectionCompleteness?.sanctuary_map ?? 0,
+        village_wiki: manual.sectionCompleteness?.village_wiki ?? 0,
+        roles_rituals: manual.sectionCompleteness?.roles_rituals ?? 0,
+        communication_rhythm: manual.sectionCompleteness?.communication_rhythm ?? 0,
+        household_pulse: manual.sectionCompleteness?.household_pulse ?? 0,
+        [sectionId]: 100,
+      };
+
+      // Calculate layer completeness based on completed sections
+      const layerCompleteness = calculateLayerCompleteness(newCompletedSections);
+
       await updateManual({
         [getSectionFieldName(sectionId)]: sectionData,
         onboardingProgress: {
-          completedSections: [
-            ...(manual.onboardingProgress?.completedSections || []).filter(s => s !== sectionId),
-            sectionId
-          ],
+          completedSections: newCompletedSections,
           lastSectionCompleted: sectionId,
-        }
+        },
+        sectionCompleteness: newSectionCompleteness,
+        completeness: layerCompleteness,
       });
 
       // Clear localStorage
@@ -208,15 +227,34 @@ export default function SectionOnboardingPage() {
     try {
       const sectionData = transformItemsToSectionData(sectionId, items);
 
+      // Calculate new completeness values
+      const newCompletedSections = [
+        ...(manual.onboardingProgress?.completedSections || []).filter(s => s !== sectionId),
+        sectionId
+      ];
+
+      // Build complete sectionCompleteness with all sections
+      const newSectionCompleteness: Record<HouseholdSectionId, number> = {
+        home_charter: manual.sectionCompleteness?.home_charter ?? 0,
+        sanctuary_map: manual.sectionCompleteness?.sanctuary_map ?? 0,
+        village_wiki: manual.sectionCompleteness?.village_wiki ?? 0,
+        roles_rituals: manual.sectionCompleteness?.roles_rituals ?? 0,
+        communication_rhythm: manual.sectionCompleteness?.communication_rhythm ?? 0,
+        household_pulse: manual.sectionCompleteness?.household_pulse ?? 0,
+        [sectionId]: 100,
+      };
+
+      // Calculate layer completeness based on completed sections
+      const layerCompleteness = calculateLayerCompleteness(newCompletedSections);
+
       await updateManual({
         [getSectionFieldName(sectionId)]: sectionData,
         onboardingProgress: {
-          completedSections: [
-            ...(manual.onboardingProgress?.completedSections || []).filter(s => s !== sectionId),
-            sectionId
-          ],
+          completedSections: newCompletedSections,
           lastSectionCompleted: sectionId,
-        }
+        },
+        sectionCompleteness: newSectionCompleteness,
+        completeness: layerCompleteness,
       });
 
       // Clear localStorage
@@ -699,6 +737,47 @@ function QuestionInput({
 }
 
 // Helper functions for transforming data
+
+// Calculate layer completeness based on completed sections
+function calculateLayerCompleteness(completedSections: HouseholdSectionId[]) {
+  // Map sections to their layers
+  const sectionToLayer: Record<HouseholdSectionId, number> = {
+    home_charter: 6,      // Layer 6: Supervisory/Values
+    sanctuary_map: 1,     // Layer 1: Inputs/Environment
+    village_wiki: 2,      // Layer 2: Processing/Support
+    roles_rituals: 3,     // Layer 3: Memory/Structure
+    communication_rhythm: 4, // Layer 4: Execution/Communication
+    household_pulse: 5,   // Layer 5: Outputs/Assessment
+  };
+
+  // Initialize layer completeness
+  const layerComplete: Record<number, boolean> = {};
+  for (let i = 1; i <= 6; i++) {
+    layerComplete[i] = false;
+  }
+
+  // Mark layers as complete based on completed sections
+  for (const section of completedSections) {
+    const layer = sectionToLayer[section];
+    if (layer) {
+      layerComplete[layer] = true;
+    }
+  }
+
+  // Calculate overall as percentage of layers complete
+  const completedCount = Object.values(layerComplete).filter(Boolean).length;
+  const overall = Math.round((completedCount / 6) * 100);
+
+  return {
+    layer1: layerComplete[1] ? 100 : 0,
+    layer2: layerComplete[2] ? 100 : 0,
+    layer3: layerComplete[3] ? 100 : 0,
+    layer4: layerComplete[4] ? 100 : 0,
+    layer5: layerComplete[5] ? 100 : 0,
+    layer6: layerComplete[6] ? 100 : 0,
+    overall,
+  };
+}
 
 function getSectionFieldName(sectionId: HouseholdSectionId): string {
   const fieldMap: Record<HouseholdSectionId, string> = {

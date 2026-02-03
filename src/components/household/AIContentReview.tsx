@@ -277,12 +277,26 @@ export default function AIContentReview({
   };
 
   const renderItemValue = (item: ContentItem, expanded: boolean = false) => {
+    // Try to parse JSON strings into objects
+    let parsedValue = item.value;
     if (typeof item.value === 'string') {
-      return <span className={expanded ? '' : 'line-clamp-2'}>{item.value}</span>;
+      // Check if it looks like JSON (starts with { or [)
+      const trimmed = item.value.trim();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try {
+          parsedValue = JSON.parse(item.value);
+        } catch {
+          // Not valid JSON, keep as string
+        }
+      }
+      // If still a string after parsing attempt, render as text
+      if (typeof parsedValue === 'string') {
+        return <span className={expanded ? '' : 'line-clamp-2'}>{parsedValue}</span>;
+      }
     }
 
     // Render object-based items
-    const val = item.value as Record<string, unknown>;
+    const val = parsedValue as Record<string, unknown>;
     switch (item.type) {
       case 'non-negotiable':
         return (
@@ -342,6 +356,81 @@ export default function AIContentReview({
           </div>
         );
       default:
+        // Try to render common object patterns nicely
+        // Weekly Sync Configuration
+        if ('dayOfWeek' in val && 'agenda' in val) {
+          const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          const agenda = Array.isArray(val.agenda) ? val.agenda : [];
+          const dayIndex = typeof val.dayOfWeek === 'number' ? val.dayOfWeek : 0;
+          return (
+            <div>
+              <p className="font-medium">
+                {days[dayIndex] || 'Weekly'} Sync
+                {val.isEnabled === false && <span className="text-slate-400 ml-2">(Disabled)</span>}
+              </p>
+              {agenda.length > 0 && (
+                <ul className={`text-xs text-slate-600 mt-1 list-disc list-inside ${expanded ? '' : 'line-clamp-2'}`}>
+                  {agenda.slice(0, expanded ? undefined : 2).map((agendaItem, i) => (
+                    <li key={i}>{String(agendaItem)}</li>
+                  ))}
+                  {!expanded && agenda.length > 2 && (
+                    <li className="text-slate-400">+{agenda.length - 2} more...</li>
+                  )}
+                </ul>
+              )}
+            </div>
+          );
+        }
+        // Repair Protocol
+        if ('coolDownTime' in val || 'initiationPhrase' in val || 'steps' in val) {
+          const steps = Array.isArray(val.steps) ? val.steps : [];
+          const initiationPhrase = typeof val.initiationPhrase === 'string' ? val.initiationPhrase : null;
+          const coolDownTime = typeof val.coolDownTime === 'string' ? val.coolDownTime : null;
+          return (
+            <div>
+              {initiationPhrase && (
+                <p className="font-medium italic">&quot;{initiationPhrase}&quot;</p>
+              )}
+              {coolDownTime && (
+                <p className="text-xs text-slate-500 mt-1">
+                  Cool-down time: {coolDownTime}
+                </p>
+              )}
+              {steps.length > 0 && (
+                <ol className={`text-xs text-slate-600 mt-2 list-decimal list-inside ${expanded ? '' : 'line-clamp-2'}`}>
+                  {steps.slice(0, expanded ? undefined : 2).map((step, i) => (
+                    <li key={i}>
+                      {typeof step === 'object' && step !== null
+                        ? String((step as Record<string, unknown>).action || '')
+                        : String(step)}
+                    </li>
+                  ))}
+                  {!expanded && steps.length > 2 && (
+                    <li className="text-slate-400">+{steps.length - 2} more steps...</li>
+                  )}
+                </ol>
+              )}
+            </div>
+          );
+        }
+        // Generic object with name/description pattern
+        if ('name' in val || 'description' in val || 'value' in val) {
+          const name = val.name ? String(val.name) : null;
+          const value = val.value ? String(val.value) : null;
+          const description = val.description ? String(val.description) : null;
+          return (
+            <div>
+              {name && <p className="font-medium">{name}</p>}
+              {value && !name && <p className="font-medium">{value}</p>}
+              {description && (
+                <p className={`text-xs text-slate-600 mt-1 ${expanded ? '' : 'line-clamp-2'}`}>
+                  {description}
+                </p>
+              )}
+            </div>
+          );
+        }
+        // Fallback to JSON
         return <pre className="text-xs overflow-auto">{JSON.stringify(item.value, null, 2)}</pre>;
     }
   };
