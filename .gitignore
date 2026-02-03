@@ -46,3 +46,4 @@ serviceAccountKey.json
 next-env.d.ts
 .env.local
 users.json
+service-account.json
