@@ -1,17 +1,18 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useCoach, ChatMessage } from '@/hooks/useCoach';
+import { useCoach } from '@/hooks/useCoach';
 
 interface CoachChatProps {
   personId?: string;
   personName?: string;
+  includeHousehold?: boolean;
   onClose?: () => void;
   initialMessage?: string;
   onInitialMessageSent?: () => void;
 }
 
-export function CoachChat({ personId, personName, onClose, initialMessage, onInitialMessageSent }: CoachChatProps) {
+export function CoachChat({ personId, personName, includeHousehold, onClose, initialMessage, onInitialMessageSent }: CoachChatProps) {
   const { messages, loading, error, context, sendMessage, clearConversation } = useCoach();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -32,11 +33,11 @@ export function CoachChat({ personId, personName, onClose, initialMessage, onIni
   useEffect(() => {
     if (initialMessage && !initialMessageSent && !loading) {
       setInitialMessageSent(true);
-      sendMessage(initialMessage, personId).then(() => {
+      sendMessage(initialMessage, { personId, includeHousehold }).then(() => {
         onInitialMessageSent?.();
       });
     }
-  }, [initialMessage, initialMessageSent, loading, sendMessage, personId, onInitialMessageSent]);
+  }, [initialMessage, initialMessageSent, loading, sendMessage, personId, includeHousehold, onInitialMessageSent]);
 
   // Reset initial message sent flag when initial message changes
   useEffect(() => {
@@ -51,7 +52,7 @@ export function CoachChat({ personId, personName, onClose, initialMessage, onIni
 
     const message = input.trim();
     setInput('');
-    await sendMessage(message, personId);
+    await sendMessage(message, { personId, includeHousehold });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -69,7 +70,7 @@ export function CoachChat({ personId, personName, onClose, initialMessage, onIni
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
               <span className="font-mono text-sm font-bold text-slate-800 truncate">
-                {personName ? `Coaching: ${personName}` : 'General Coaching'}
+                {personName ? `Coaching: ${personName}` : includeHousehold ? 'Household Coaching' : 'General Coaching'}
               </span>
               {/* Context badges - compact */}
               {context && (
@@ -87,6 +88,11 @@ export function CoachChat({ personId, personName, onClose, initialMessage, onIni
                   {personId && (
                     <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 font-mono text-xs rounded">
                       manual loaded
+                    </span>
+                  )}
+                  {context.householdFound && context.householdFound > 0 && (
+                    <span className="px-1.5 py-0.5 bg-green-100 text-green-800 font-mono text-xs rounded">
+                      household loaded
                     </span>
                   )}
                 </div>
@@ -112,6 +118,8 @@ export function CoachChat({ personId, personName, onClose, initialMessage, onIni
             <p className="font-mono text-sm text-slate-600 max-w-sm mx-auto mb-4">
               {personName
                 ? `Ask me about ${personName}'s triggers, what strategies work best, or how to handle specific situations.`
+                : includeHousehold
+                ? 'Ask me about your household values, rituals, roles, or any family dynamics you\'re working on.'
                 : 'Ask me about parenting strategies, relationship dynamics, or any challenges you\'re facing.'}
             </p>
 
@@ -122,6 +130,16 @@ export function CoachChat({ personId, personName, onClose, initialMessage, onIni
                 <p>• "What strategies work best for {personName}?"</p>
                 <p>• "How should I handle it when {personName} gets overwhelmed?"</p>
                 <p>• "What boundaries are important for {personName}?"</p>
+              </div>
+            )}
+
+            {!personName && includeHousehold && (
+              <div className="space-y-1.5 font-mono text-xs text-slate-500 max-w-sm mx-auto text-left bg-slate-50 p-4 rounded border border-slate-200">
+                <p className="font-bold text-slate-700 mb-2">Try asking:</p>
+                <p>• "Help me think through our family's roles and rituals"</p>
+                <p>• "How can we improve our communication rhythm?"</p>
+                <p>• "What do our household values tell us about this situation?"</p>
+                <p>• "How can I create better sanctuary zones at home?"</p>
               </div>
             )}
           </div>

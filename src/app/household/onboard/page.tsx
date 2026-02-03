@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useHouseholdManual, useHouseholdJourney, createEmptyHouseholdManual } from '@/hooks/useHouseholdManual';
 import { usePerson } from '@/hooks/usePerson';
@@ -15,8 +16,24 @@ import {
 import { PainPointSelector } from '@/components/onboarding/PainPointSelector';
 import { MilestoneEditor } from '@/components/onboarding/MilestoneEditor';
 import { HouseholdMemberList } from '@/components/onboarding/HouseholdMemberList';
-import { HOUSEHOLD_PAIN_POINTS, HOUSEHOLD_LAYERS, LayerId } from '@/types/household-workbook';
+import {
+  HOUSEHOLD_PAIN_POINTS,
+  HOUSEHOLD_LAYERS,
+  HOUSEHOLD_SECTION_META,
+  HouseholdSectionId,
+  LayerId,
+} from '@/types/household-workbook';
 import { Timestamp } from 'firebase/firestore';
+import {
+  CheckCircleIcon,
+  ChevronRightIcon,
+  DocumentTextIcon,
+  HomeModernIcon,
+  BookOpenIcon,
+  UsersIcon,
+  ChatBubbleLeftRightIcon,
+  HeartIcon,
+} from '@heroicons/react/24/outline';
 
 type OnboardingStep = 'welcome' | 'members' | 'pain-points' | 'milestones' | 'review';
 
@@ -34,10 +51,30 @@ const SUGGESTED_MILESTONES = {
   day90: 'Our home feels like a peaceful, organized space',
 };
 
+// Section order for display
+const SECTION_ORDER: HouseholdSectionId[] = [
+  'home_charter',
+  'sanctuary_map',
+  'village_wiki',
+  'roles_rituals',
+  'communication_rhythm',
+  'household_pulse',
+];
+
+// Icon mapping for sections
+const SECTION_ICONS: Record<HouseholdSectionId, React.ComponentType<{ className?: string }>> = {
+  home_charter: DocumentTextIcon,
+  sanctuary_map: HomeModernIcon,
+  village_wiki: BookOpenIcon,
+  roles_rituals: UsersIcon,
+  communication_rhythm: ChatBubbleLeftRightIcon,
+  household_pulse: HeartIcon,
+};
+
 export default function HouseholdOnboardingPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { saveManual } = useHouseholdManual(user?.familyId);
+  const { manual, loading: manualLoading, saveManual } = useHouseholdManual(user?.familyId);
   const { createJourney } = useHouseholdJourney(user?.familyId);
   const { people: existingPeople, loading: peopleLoading } = usePerson();
 
@@ -66,7 +103,8 @@ export default function HouseholdOnboardingPage() {
     }
   }, [user]);
 
-  if (authLoading || !user) {
+  // Loading state
+  if (authLoading || manualLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FAF8F5]">
         <div className="w-16 h-16 border-4 border-slate-300 border-t-slate-800 rounded-full animate-spin" />
@@ -74,6 +112,12 @@ export default function HouseholdOnboardingPage() {
     );
   }
 
+  // If manual exists, show section picker instead of initial onboarding
+  if (manual) {
+    return <SectionPicker manual={manual} />;
+  }
+
+  // Initial onboarding wizard (no manual exists yet)
   const steps: OnboardingStep[] = ['welcome', 'members', 'pain-points', 'milestones', 'review'];
   const currentStepIndex = steps.indexOf(step);
   const progress = ((currentStepIndex + 1) / steps.length) * 100;
@@ -116,8 +160,6 @@ export default function HouseholdOnboardingPage() {
   };
 
   const handleAddMember = (member: Omit<Member, 'id'>, existingPersonId?: string) => {
-    // If existingPersonId is provided, use it as the id (links to real Person document)
-    // Otherwise, generate a temporary id
     const id = existingPersonId || `member-${Date.now()}`;
     setMembers((prev) => [
       ...prev,
@@ -134,16 +176,14 @@ export default function HouseholdOnboardingPage() {
 
     setIsSubmitting(true);
     try {
-      // Create the household manual
-      const manual = createEmptyHouseholdManual(user.familyId, householdName);
-      manual.members = members.map((m) => ({
+      const newManual = createEmptyHouseholdManual(user.familyId, householdName);
+      newManual.members = members.map((m) => ({
         personId: m.id,
         name: m.name,
         role: m.role,
-        dateOfBirth: m.dateOfBirth ? Timestamp.fromDate(new Date(m.dateOfBirth)) : undefined,
+        ...(m.dateOfBirth ? { dateOfBirth: Timestamp.fromDate(new Date(m.dateOfBirth)) } : {}),
       }));
 
-      // Get layers to focus on based on pain points
       const layersFocused = new Set<LayerId>();
       selectedPainPoints.forEach((ppId) => {
         const pp = HOUSEHOLD_PAIN_POINTS.find((p) => p.id === ppId);
@@ -152,13 +192,11 @@ export default function HouseholdOnboardingPage() {
         }
       });
 
-      await saveManual(manual);
-
-      // Create the journey
+      await saveManual(newManual);
       await createJourney(selectedPainPoints, milestones);
 
-      // Navigate to the household manual page
-      router.push('/household');
+      // After creating, redirect to the section picker (this page will now show SectionPicker)
+      router.refresh();
     } catch (err) {
       console.error('Failed to create household manual:', err);
       alert('Failed to create household manual. Please try again.');
@@ -167,10 +205,7 @@ export default function HouseholdOnboardingPage() {
     }
   };
 
-  // Get suggested milestones based on pain points
   const getSuggestedMilestones = () => {
-    // For now, return default suggestions
-    // In the future, this could be AI-generated based on pain points
     return SUGGESTED_MILESTONES;
   };
 
@@ -484,6 +519,201 @@ export default function HouseholdOnboardingPage() {
             </TechnicalButton>
           )}
         </div>
+      </main>
+    </div>
+  );
+}
+
+// ==================== Section Picker Component ====================
+// Shown when a household manual already exists
+
+interface SectionPickerProps {
+  manual: any; // HouseholdManual type
+}
+
+function SectionPicker({ manual }: SectionPickerProps) {
+  const completedSections = manual.onboardingProgress?.completedSections || [];
+
+  // Calculate overall progress
+  const totalSections = SECTION_ORDER.length;
+  const completedCount = completedSections.length;
+  const progressPercent = Math.round((completedCount / totalSections) * 100);
+
+  // Check if a section has content
+  const isSectionComplete = (sectionId: HouseholdSectionId): boolean => {
+    if (completedSections.includes(sectionId)) return true;
+
+    // Also check if section has actual content
+    switch (sectionId) {
+      case 'home_charter':
+        return !!(manual.homeCharter?.familyMission || manual.homeCharter?.nonNegotiables?.length);
+      case 'sanctuary_map':
+        return !!(manual.sanctuaryMap?.zones?.length);
+      case 'village_wiki':
+        return !!(manual.villageWiki?.contacts?.length);
+      case 'roles_rituals':
+        return !!(manual.rolesAndRituals?.rituals?.length);
+      case 'communication_rhythm':
+        return !!(manual.communicationRhythm?.rhythms?.length);
+      case 'household_pulse':
+        return !!(manual.householdPulse?.currentAssessment);
+      default:
+        return false;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#FAF8F5]">
+      {/* Header */}
+      <header className="border-b-2 border-slate-800 bg-white">
+        <div className="max-w-3xl mx-auto px-6 py-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <TechnicalLabel variant="filled" color="amber" size="sm">
+                CONTINUE SETUP
+              </TechnicalLabel>
+              <h1 className="font-mono font-bold text-2xl text-slate-800 mt-2">
+                {manual.householdName}
+              </h1>
+            </div>
+            <Link
+              href="/household"
+              className="font-mono text-sm text-slate-500 hover:text-slate-700"
+            >
+              ← Back to Manual
+            </Link>
+          </div>
+
+          {/* Progress bar */}
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-mono text-xs text-slate-600 uppercase tracking-wider">
+                Setup Progress
+              </span>
+              <span className="font-mono text-sm font-bold text-slate-800">
+                {completedCount} / {totalSections} sections
+              </span>
+            </div>
+            <div className="w-full bg-slate-200 h-3 rounded-sm overflow-hidden">
+              <div
+                className="bg-green-600 h-full transition-all duration-500"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Section list */}
+      <main className="max-w-3xl mx-auto px-6 py-8">
+        <div className="mb-6">
+          <p className="text-slate-600">
+            Complete each section to build out your household manual. You can do them in any order.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {SECTION_ORDER.map((sectionId, index) => {
+            const meta = HOUSEHOLD_SECTION_META[sectionId];
+            const isComplete = isSectionComplete(sectionId);
+            const Icon = SECTION_ICONS[sectionId];
+
+            return (
+              <Link
+                key={sectionId}
+                href={`/household/onboard/${sectionId}`}
+                className={`
+                  block relative bg-white border-2 transition-all
+                  ${isComplete
+                    ? 'border-green-500 hover:border-green-600'
+                    : 'border-slate-300 hover:border-slate-800'
+                  }
+                  shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]
+                  hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.2)]
+                `}
+              >
+                {/* Section number badge */}
+                <div
+                  className={`
+                    absolute -top-3 -left-3 w-8 h-8 flex items-center justify-center
+                    font-mono font-bold text-sm border-2
+                    ${isComplete
+                      ? 'bg-green-600 border-green-700 text-white'
+                      : 'bg-slate-800 border-slate-900 text-white'
+                    }
+                  `}
+                >
+                  {isComplete ? <CheckCircleIcon className="w-5 h-5" /> : index + 1}
+                </div>
+
+                <div className="p-5 pl-8 flex items-center gap-4">
+                  {/* Icon */}
+                  <div
+                    className={`
+                      w-12 h-12 flex items-center justify-center border-2
+                      ${isComplete
+                        ? 'bg-green-50 border-green-300 text-green-600'
+                        : 'bg-slate-50 border-slate-200 text-slate-600'
+                      }
+                    `}
+                  >
+                    <Icon className="w-6 h-6" />
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-mono font-bold text-lg text-slate-800">
+                        {meta.name}
+                      </h3>
+                      {isComplete && (
+                        <TechnicalLabel variant="filled" color="green" size="xs">
+                          COMPLETE
+                        </TechnicalLabel>
+                      )}
+                    </div>
+                    <p className="text-sm text-slate-600 mt-1">
+                      {meta.description}
+                    </p>
+                    <div className="mt-2">
+                      <TechnicalLabel variant="subtle" color="slate" size="xs">
+                        LAYER {meta.layer} • {HOUSEHOLD_LAYERS[meta.layer].friendly}
+                      </TechnicalLabel>
+                    </div>
+                  </div>
+
+                  {/* Arrow */}
+                  <ChevronRightIcon
+                    className={`w-6 h-6 ${isComplete ? 'text-green-500' : 'text-slate-400'}`}
+                  />
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Completion message */}
+        {completedCount === totalSections && (
+          <div className="mt-8 p-6 bg-green-50 border-2 border-green-600">
+            <div className="flex items-start gap-4">
+              <CheckCircleIcon className="w-10 h-10 text-green-600 flex-shrink-0" />
+              <div>
+                <h3 className="font-mono font-bold text-lg text-green-800 mb-2">
+                  All Sections Complete!
+                </h3>
+                <p className="text-sm text-green-700 mb-4">
+                  Your household manual is fully set up. You can always come back to update any section.
+                </p>
+                <Link
+                  href="/household"
+                  className="inline-block px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-mono font-bold text-sm transition-colors"
+                >
+                  VIEW YOUR MANUAL →
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

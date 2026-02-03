@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { usePerson } from '@/hooks/usePerson';
 import MainLayout from '@/components/layout/MainLayout';
 import Link from 'next/link';
+import { OnboardingHero } from '@/components/dashboard/OnboardingHero';
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
@@ -156,29 +157,58 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* Onboarding Hero - Show prominently for new users or users without manuals */}
+        {(people.length === 0 || activeManualsCount === 0) && (
+          <div className="mb-12">
+            <OnboardingHero
+              hasStarted={people.length > 0}
+              currentLayer={people.length > 0 ? 6 : null}
+              completedLayers={[]}
+              onStartOnboarding={() => {
+                if (people.length === 0) {
+                  router.push('/people');
+                } else {
+                  // Find first person without manual and start their onboarding
+                  const personWithoutManual = people.find(p => !p.hasManual);
+                  if (personWithoutManual) {
+                    router.push(`/people/${personWithoutManual.personId}/manual/onboard`);
+                  } else {
+                    router.push('/people');
+                  }
+                }
+              }}
+              personName={people.length > 0 ? people.find(p => !p.hasManual)?.name : undefined}
+            />
+          </div>
+        )}
+
         {/* Manual Directory */}
         {people.length === 0 ? (
-          // Empty state
-          <div className="relative bg-amber-50 border-4 border-amber-600 p-16 text-center shadow-[8px_8px_0px_0px_rgba(217,119,6,1)]">
-            <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-slate-800"></div>
-            <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-slate-800"></div>
-            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-slate-800"></div>
-            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-slate-800"></div>
-
-            <div className="inline-block px-3 py-1 bg-amber-600 text-white font-mono text-xs mb-6">
-              SYSTEM STATUS
-            </div>
-            <h2 className="font-mono text-3xl font-bold mb-4 text-slate-900">
-              NO DOCUMENTATION FOUND
-            </h2>
-            <p className="font-mono text-sm text-slate-700 mb-8 max-w-md mx-auto">
-              Initialize the system by adding your first person and generating their operating manual
-            </p>
+          // Empty state - already handled by OnboardingHero above, just add quick links
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Link
               href="/people"
-              className="inline-block px-8 py-4 bg-slate-800 text-white font-mono font-bold hover:bg-amber-600 transition-all hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              className="relative bg-white border-2 border-slate-300 hover:border-slate-800 p-6 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
             >
-              ADD FIRST PERSON →
+              <div className="font-mono text-xs text-slate-500 mb-2 uppercase tracking-wider">Quick Action</div>
+              <h3 className="font-mono font-bold text-lg text-slate-800 mb-1">Add a Person</h3>
+              <p className="font-mono text-sm text-slate-600">Start by adding someone you want to understand better</p>
+            </Link>
+            <Link
+              href="/household"
+              className="relative bg-white border-2 border-slate-300 hover:border-slate-800 p-6 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
+            >
+              <div className="font-mono text-xs text-slate-500 mb-2 uppercase tracking-wider">Quick Action</div>
+              <h3 className="font-mono font-bold text-lg text-slate-800 mb-1">Household Manual</h3>
+              <p className="font-mono text-sm text-slate-600">Create a shared manual for your whole household</p>
+            </Link>
+            <Link
+              href="/settings"
+              className="relative bg-white border-2 border-slate-300 hover:border-slate-800 p-6 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
+            >
+              <div className="font-mono text-xs text-slate-500 mb-2 uppercase tracking-wider">Quick Action</div>
+              <h3 className="font-mono font-bold text-lg text-slate-800 mb-1">Settings</h3>
+              <p className="font-mono text-sm text-slate-600">Configure your profile and preferences</p>
             </Link>
           </div>
         ) : (

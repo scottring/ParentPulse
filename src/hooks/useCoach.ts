@@ -24,6 +24,7 @@ export interface ChatContext {
   actionsFound: number;
   manualsFound?: number;
   workbooksFound?: number;
+  householdFound?: number;
 }
 
 export interface CoachSuggestion {
@@ -31,6 +32,11 @@ export interface CoachSuggestion {
   content: string;
   reasoning?: string;
   personId?: string;
+}
+
+interface SendMessageOptions {
+  personId?: string;
+  includeHousehold?: boolean;
 }
 
 interface UseCoachReturn {
@@ -42,7 +48,7 @@ interface UseCoachReturn {
   context: ChatContext | null;
 
   // Actions
-  sendMessage: (message: string, personId?: string) => Promise<void>;
+  sendMessage: (message: string, options?: SendMessageOptions) => Promise<void>;
   clearConversation: () => void;
 
   // Suggestions
@@ -57,7 +63,7 @@ export function useCoach(): UseCoachReturn {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [context, setContext] = useState<ChatContext | null>(null);
 
-  const sendMessage = async (message: string, personId?: string): Promise<void> => {
+  const sendMessage = async (message: string, options?: SendMessageOptions): Promise<void> => {
     if (!user) {
       setError('You must be logged in to use the coach');
       return;
@@ -66,6 +72,8 @@ export function useCoach(): UseCoachReturn {
     if (!message.trim()) {
       return;
     }
+
+    const { personId, includeHousehold } = options || {};
 
     setLoading(true);
     setError(null);
@@ -80,14 +88,15 @@ export function useCoach(): UseCoachReturn {
 
     try {
       const chatWithCoach = httpsCallable<
-        { message: string; conversationId?: string; personId?: string },
+        { message: string; conversationId?: string; personId?: string; includeHousehold?: boolean },
         { success: boolean; conversationId: string; response: string; context: ChatContext; error?: string }
       >(functions, 'chatWithCoach');
 
       const result = await chatWithCoach({
         message,
         conversationId: conversationId || undefined,
-        personId
+        personId,
+        includeHousehold
       });
 
       if (result.data.success) {

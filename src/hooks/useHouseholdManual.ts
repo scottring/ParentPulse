@@ -308,7 +308,7 @@ export function useHouseholdManual(familyId: string | undefined): UseHouseholdMa
         personId: member.personId,
         familyId: manual.familyId,
         name: member.name,
-        pronouns: undefined,
+        // Note: Firestore doesn't accept undefined values, so we use null or omit the field
         dateOfBirth: member.dateOfBirth || null,
         avatarUrl: member.avatarUrl || null,
         householdRole: member.role,

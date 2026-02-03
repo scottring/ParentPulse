@@ -77,6 +77,7 @@ exports.generateDailyActions = onSchedule(
 exports.generateDailyActionsManual = onCall(
     {
       secrets: ["ANTHROPIC_API_KEY"],
+      cors: [/localhost/, /parentpulse\.vercel\.app$/, /relish\.app$/],
     },
     async (request) => {
       const logger = require("firebase-functions/logger");
@@ -117,6 +118,7 @@ exports.generateDailyActionsManual = onCall(
 exports.chatWithCoach = onCall(
     {
       secrets: ["ANTHROPIC_API_KEY"],
+      cors: [/localhost/, /parentpulse\.vercel\.app$/, /relish\.app$/],
     },
     async (request) => {
       const logger = require("firebase-functions/logger");
@@ -126,7 +128,7 @@ exports.chatWithCoach = onCall(
         throw new Error("Authentication required");
       }
 
-      const {message, conversationId, personId} = request.data;
+      const {message, conversationId, personId, includeHousehold} = request.data;
       if (!message) {
         throw new Error("Message is required");
       }
@@ -143,11 +145,11 @@ exports.chatWithCoach = onCall(
       }
 
       const familyId = userData.familyId;
-      logger.info(`Chat request from user ${request.auth.uid}, family ${familyId}${personId ? `, person ${personId}` : ""}`);
+      logger.info(`Chat request from user ${request.auth.uid}, family ${familyId}${personId ? `, person ${personId}` : ""}${includeHousehold ? ", with household context" : ""}`);
 
       try {
-        // Retrieve relevant context from the user's data (includes manual if personId provided)
-        const context = await retrieveChatContext(familyId, message, personId);
+        // Retrieve relevant context from the user's data (includes manual if personId provided, household if requested)
+        const context = await retrieveChatContext(familyId, message, personId, includeHousehold);
 
         // Get or create conversation
         let conversation = null;
@@ -212,6 +214,7 @@ exports.chatWithCoach = onCall(
             actionsFound: context.actions.length,
             manualsFound: context.personManual ? 1 : 0,
             workbooksFound: context.workbooks ? context.workbooks.length : 0,
+            householdFound: context.householdManual ? 1 : 0,
           },
         };
       } catch (error) {
@@ -224,7 +227,7 @@ exports.chatWithCoach = onCall(
 /**
  * Retrieve relevant context for chat based on user's message
  */
-async function retrieveChatContext(familyId, userMessage, personId = null) {
+async function retrieveChatContext(familyId, userMessage, personId = null, includeHousehold = false) {
   const logger = require("firebase-functions/logger");
 
   // Get recent journal entries (last 30 days)
@@ -369,7 +372,55 @@ async function retrieveChatContext(familyId, userMessage, personId = null) {
     };
   }).filter((conv) => conv.messageCount > 2); // Only include conversations with substance
 
-  logger.info(`Context: ${journalEntries.length} journals, ${knowledgeItems.length} knowledge items, ${actions.length} actions${personManual ? `, 1 manual for ${personName}` : ""}${workbooks.length > 0 ? `, ${workbooks.length} workbooks` : ""}${pastConversations.length > 0 ? `, ${pastConversations.length} past conversations` : ""}`);
+  // Get household manual if requested
+  let householdManual = null;
+  if (includeHousehold) {
+    const householdSnapshot = await admin.firestore()
+        .collection("household_manuals")
+        .where("familyId", "==", familyId)
+        .limit(1)
+        .get();
+
+    if (!householdSnapshot.empty) {
+      const data = householdSnapshot.docs[0].data();
+      householdManual = {
+        householdName: data.householdName || "Our Household",
+        // Home Charter (Layer 6 - Values)
+        homeCharter: data.homeCharter ? {
+          familyMission: data.homeCharter.familyMission,
+          nonNegotiables: data.homeCharter.nonNegotiables || [],
+          desiredFeelings: data.homeCharter.desiredFeelings || [],
+          coreValues: data.homeCharter.coreValues || [],
+        } : null,
+        // Sanctuary Map (Layer 1 - Environment)
+        sanctuaryMap: data.sanctuaryMap ? {
+          zones: data.sanctuaryMap.zones || [],
+          lightAudit: data.sanctuaryMap.lightAudit || [],
+          soundAudit: data.sanctuaryMap.soundAudit || [],
+        } : null,
+        // Village Wiki (Layer 3 - Support Network)
+        villageWiki: data.villageWiki ? {
+          contacts: data.villageWiki.contacts || [],
+        } : null,
+        // Roles & Rituals (Layer 4 - Execution)
+        rolesAndRituals: data.rolesAndRituals ? {
+          rituals: data.rolesAndRituals.rituals || [],
+        } : null,
+        // Communication Rhythm (Layer 2 - Processing)
+        communicationRhythm: data.communicationRhythm ? {
+          rhythms: data.communicationRhythm.rhythms || [],
+        } : null,
+        // Household Pulse (Layer 5 - Assessment)
+        householdPulse: data.householdPulse ? {
+          currentAssessment: data.householdPulse.currentAssessment || null,
+        } : null,
+        // Onboarding progress
+        onboardingProgress: data.onboardingProgress || null,
+      };
+    }
+  }
+
+  logger.info(`Context: ${journalEntries.length} journals, ${knowledgeItems.length} knowledge items, ${actions.length} actions${personManual ? `, 1 manual for ${personName}` : ""}${workbooks.length > 0 ? `, ${workbooks.length} workbooks` : ""}${pastConversations.length > 0 ? `, ${pastConversations.length} past conversations` : ""}${householdManual ? ", 1 household manual" : ""}`);
 
   return {
     journalEntries,
@@ -378,6 +429,7 @@ async function retrieveChatContext(familyId, userMessage, personId = null) {
     personManual,
     workbooks,
     pastConversations,
+    householdManual,
   };
 }
 
@@ -542,14 +594,113 @@ Available Context:
     systemMessage += "\n";
   }
 
+  // Add household manual if available
+  if (context.householdManual) {
+    systemMessage += `## ${context.householdManual.householdName} - Household Manual:\n`;
+
+    // Home Charter
+    if (context.householdManual.homeCharter) {
+      const charter = context.householdManual.homeCharter;
+      systemMessage += `\n### Home Charter (Family Values & Mission):\n`;
+      if (charter.familyMission) {
+        systemMessage += `Family Mission: ${charter.familyMission}\n`;
+      }
+      if (charter.coreValues && charter.coreValues.length > 0) {
+        systemMessage += `Core Values: ${Array.isArray(charter.coreValues) ? charter.coreValues.join(", ") : charter.coreValues}\n`;
+      }
+      if (charter.nonNegotiables && charter.nonNegotiables.length > 0) {
+        systemMessage += `Non-Negotiables:\n`;
+        charter.nonNegotiables.slice(0, 5).forEach((item, i) => {
+          const value = typeof item === "string" ? item : item.value || item.description;
+          systemMessage += `  ${i + 1}. ${value}\n`;
+        });
+      }
+      if (charter.desiredFeelings && charter.desiredFeelings.length > 0) {
+        systemMessage += `Desired Home Feelings: ${charter.desiredFeelings.join(", ")}\n`;
+      }
+    }
+
+    // Sanctuary Map
+    if (context.householdManual.sanctuaryMap) {
+      const sanctuary = context.householdManual.sanctuaryMap;
+      if (sanctuary.zones && sanctuary.zones.length > 0) {
+        systemMessage += `\n### Sanctuary Zones:\n`;
+        sanctuary.zones.slice(0, 5).forEach((zone, i) => {
+          systemMessage += `  ${i + 1}. ${zone.name}: ${zone.purpose} (${zone.location || "location TBD"})\n`;
+        });
+      }
+    }
+
+    // Roles & Rituals
+    if (context.householdManual.rolesAndRituals) {
+      const rituals = context.householdManual.rolesAndRituals;
+      if (rituals.rituals && rituals.rituals.length > 0) {
+        systemMessage += `\n### Family Rituals:\n`;
+        rituals.rituals.slice(0, 5).forEach((ritual, i) => {
+          systemMessage += `  ${i + 1}. ${ritual.name} (${ritual.frequency}): ${ritual.description || ""}\n`;
+        });
+      }
+    }
+
+    // Communication Rhythm
+    if (context.householdManual.communicationRhythm) {
+      const comm = context.householdManual.communicationRhythm;
+      if (comm.rhythms && comm.rhythms.length > 0) {
+        systemMessage += `\n### Communication Rhythms:\n`;
+        comm.rhythms.slice(0, 3).forEach((rhythm, i) => {
+          systemMessage += `  ${i + 1}. ${rhythm.name} (${rhythm.frequency}): ${rhythm.description || ""}\n`;
+        });
+      }
+    }
+
+    // Village Wiki
+    if (context.householdManual.villageWiki) {
+      const village = context.householdManual.villageWiki;
+      if (village.contacts && village.contacts.length > 0) {
+        systemMessage += `\n### Support Network (Village):\n`;
+        village.contacts.slice(0, 5).forEach((contact, i) => {
+          systemMessage += `  ${i + 1}. ${contact.name} - ${contact.role}\n`;
+        });
+      }
+    }
+
+    // Household Pulse
+    if (context.householdManual.householdPulse && context.householdManual.householdPulse.currentAssessment) {
+      const pulse = context.householdManual.householdPulse.currentAssessment;
+      systemMessage += `\n### Current Household Pulse (Self-Assessment):\n`;
+      if (pulse.dimensions) {
+        Object.entries(pulse.dimensions).forEach(([key, dim]) => {
+          if (dim && dim.label && dim.score) {
+            systemMessage += `  ${dim.label}: ${dim.score}/5\n`;
+          }
+        });
+      }
+      if (pulse.overallScore) {
+        systemMessage += `  Overall: ${pulse.overallScore}/5\n`;
+      }
+    }
+
+    // Onboarding progress
+    if (context.householdManual.onboardingProgress) {
+      const progress = context.householdManual.onboardingProgress;
+      if (progress.completedSections && progress.completedSections.length > 0) {
+        systemMessage += `\n### Completed Household Sections: ${progress.completedSections.join(", ")}\n`;
+      }
+    }
+
+    systemMessage += "\n";
+  }
+
   systemMessage += `When answering questions:
 - Cite specific journal entries, manual items, or knowledge when relevant
 - Reference their person's triggers, strategies, and boundaries directly
+- Reference household values, rituals, and communication rhythms when relevant
 - Remind them of strategies that worked before
 - Help connect their experiences to broader patterns
 - Be concise but thorough
 - When suggesting new strategies or triggers, make them specific and actionable
-- Use a warm, supportive tone`;
+- Use a warm, supportive tone
+- IMPORTANT: Only reference data that actually exists in the context above. Do not make up journal entries, triggers, rituals, or other content that isn't provided. If context is missing, acknowledge that and offer general guidance instead.`;
 
   return systemMessage;
 }
@@ -936,6 +1087,7 @@ function calculateEmotionalTrend(entries) {
 exports.generateStrategicPlan = onCall(
     {
       secrets: ["ANTHROPIC_API_KEY"],
+      cors: [/localhost/, /parentpulse\.vercel\.app$/, /relish\.app$/],
       timeoutSeconds: 540, // 9 minutes - plan generation is complex
       memory: "512MiB",
     },
@@ -1144,6 +1296,7 @@ exports.generateStrategicPlan = onCall(
 exports.generateInitialManualContent = onCall(
     {
       secrets: ["ANTHROPIC_API_KEY"],
+      cors: [/localhost/, /parentpulse\.vercel\.app$/, /relish\.app$/],
     },
     async (request) => {
       const logger = require("firebase-functions/logger");
@@ -1535,6 +1688,7 @@ Return ONLY the JSON object, no additional text or explanation.`;
 exports.generateRelationshipManualContent = onCall(
     {
       secrets: ["ANTHROPIC_API_KEY"],
+      cors: [/localhost/, /parentpulse\.vercel\.app$/, /relish\.app$/],
     },
     async (request) => {
       const logger = require("firebase-functions/logger");
@@ -1718,6 +1872,7 @@ Return ONLY the JSON object, no additional text or explanation.`;
 exports.generateWeeklyWorkbook = onCall(
     {
       secrets: ["ANTHROPIC_API_KEY"],
+      cors: [/localhost/, /parentpulse\.vercel\.app$/, /relish\.app$/],
     },
     async (request) => {
       const logger = require("firebase-functions/logger");
@@ -2001,6 +2156,7 @@ Return ONLY the JSON object, no additional text or explanation.`;
 exports.regenerateWorkbookActivities = onCall(
     {
       secrets: ["ANTHROPIC_API_KEY"],
+      cors: [/localhost/, /parentpulse\.vercel\.app$/, /relish\.app$/],
     },
     async (request) => {
       const logger = require("firebase-functions/logger");
@@ -2105,6 +2261,7 @@ exports.generateWeeklyWorkbooks = onCall(
         // Optional secrets (check availability in code):
         // "GOOGLE_AI_API_KEY" - for Nano Banana Pro illustrations
       ],
+      cors: [/localhost/, /parentpulse\.vercel\.app$/, /relish\.app$/],
       timeoutSeconds: 540, // 9 minutes for story + illustration generation
     },
     async (request) => {
@@ -3721,6 +3878,7 @@ const {buildHouseholdSectionPrompt} = require("./householdPrompts");
 exports.generateHouseholdSectionContent = onCall(
     {
       secrets: ["ANTHROPIC_API_KEY"],
+      cors: [/localhost/, /parentpulse\.vercel\.app$/, /relish\.app$/],
     },
     async (request) => {
       const logger = require("firebase-functions/logger");
@@ -4001,6 +4159,7 @@ const {buildWeeklyFocusPrompt} = require("./householdFocusPrompts");
 exports.generateWeeklyHouseholdFocus = onCall(
     {
       secrets: ["ANTHROPIC_API_KEY"],
+      cors: [/localhost/, /parentpulse\.vercel\.app$/, /relish\.app$/],
       memory: "1GiB",
     },
     async (request) => {

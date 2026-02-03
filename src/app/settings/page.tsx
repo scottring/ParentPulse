@@ -6,6 +6,10 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useFamily } from '@/hooks/useFamily';
 import MainLayout from '@/components/layout/MainLayout';
+import { deleteUser } from 'firebase/auth';
+import { auth, firestore } from '@/lib/firebase';
+import { collection, query, where, getDocs, deleteDoc, doc, writeBatch } from 'firebase/firestore';
+import { COLLECTIONS } from '@/types';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -22,6 +26,12 @@ export default function SettingsPage() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+
+  // Delete account state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -68,6 +78,95 @@ export default function SettingsPage() {
       } catch (err: any) {
         alert(err.message || 'Failed to remove invitation');
       }
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') {
+      setDeleteError('Please type DELETE to confirm');
+      return;
+    }
+
+    if (!user || !auth.currentUser) {
+      setDeleteError('No user logged in');
+      return;
+    }
+
+    setDeleteLoading(true);
+    setDeleteError(null);
+
+    try {
+      const familyId = user.familyId;
+      const userId = user.userId;
+
+      // Delete user's data from various collections
+      const collectionsToClean = [
+        { name: COLLECTIONS.PEOPLE, field: 'familyId', value: familyId },
+        { name: 'person_manuals', field: 'familyId', value: familyId },
+        { name: 'child_manuals', field: 'familyId', value: familyId },
+        { name: 'parent_workbooks', field: 'familyId', value: familyId },
+        { name: 'journal_entries', field: 'familyId', value: familyId },
+        { name: 'daily_observations', field: 'familyId', value: familyId },
+        { name: 'household_manuals', field: 'familyId', value: familyId },
+        { name: 'onboarding_progress', field: 'familyId', value: familyId },
+      ];
+
+      // Delete documents in batches
+      // IMPORTANT: Order matters! User document must be deleted LAST because
+      // Firestore security rules use getUserData() to verify permissions
+      for (const col of collectionsToClean) {
+        try {
+          const q = query(collection(firestore, col.name), where(col.field, '==', col.value));
+          const snapshot = await getDocs(q);
+
+          const batch = writeBatch(firestore);
+          snapshot.docs.forEach((docSnap) => {
+            batch.delete(docSnap.ref);
+          });
+
+          if (snapshot.docs.length > 0) {
+            await batch.commit();
+          }
+        } catch (err) {
+          console.warn(`Could not delete from ${col.name}:`, err);
+          // Continue with other collections
+        }
+      }
+
+      // Delete family document if user is the only member
+      // Must happen BEFORE user document deletion (security rules need user doc)
+      if (family && family.members && family.members.length <= 1) {
+        try {
+          await deleteDoc(doc(firestore, COLLECTIONS.FAMILIES, familyId));
+        } catch (err) {
+          console.warn('Could not delete family document:', err);
+        }
+      }
+
+      // Delete user document LAST (after all family-scoped docs)
+      // This must be the final Firestore operation before Auth deletion
+      try {
+        await deleteDoc(doc(firestore, COLLECTIONS.USERS, userId));
+      } catch (err) {
+        console.warn('Could not delete user document:', err);
+      }
+
+      // Delete Firebase Auth user
+      await deleteUser(auth.currentUser);
+
+      // Redirect to login
+      router.push('/login?deleted=true');
+    } catch (err: any) {
+      console.error('Error deleting account:', err);
+
+      // Handle re-authentication requirement
+      if (err.code === 'auth/requires-recent-login') {
+        setDeleteError('For security, please log out and log back in, then try again.');
+      } else {
+        setDeleteError(err.message || 'Failed to delete account. Please try again.');
+      }
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -480,6 +579,7 @@ export default function SettingsPage() {
                 </div>
               </div>
               <button
+                onClick={() => setShowDeleteConfirm(true)}
                 className="text-sm font-medium px-4 py-2 rounded-lg transition-all hover:shadow-md"
                 style={{
                   backgroundColor: '#FEE2E2',
@@ -490,6 +590,72 @@ export default function SettingsPage() {
                 Delete
               </button>
             </div>
+
+            {/* Delete Account Confirmation Dialog */}
+            {showDeleteConfirm && (
+              <div className="mt-4 p-4 rounded-lg border-2" style={{ backgroundColor: '#FEF2F2', borderColor: '#EF9A9A' }}>
+                <div className="font-semibold text-lg mb-2" style={{ color: '#C62828' }}>
+                  ⚠️ Delete Your Account
+                </div>
+                <p className="text-sm mb-4" style={{ color: '#991B1B' }}>
+                  This action is <strong>permanent and cannot be undone</strong>. All your data including:
+                </p>
+                <ul className="text-sm mb-4 list-disc list-inside" style={{ color: '#991B1B' }}>
+                  <li>All people and their manuals</li>
+                  <li>Journal entries and observations</li>
+                  <li>Workbooks and progress data</li>
+                  <li>Your account and family membership</li>
+                </ul>
+                <p className="text-sm mb-4" style={{ color: '#991B1B' }}>
+                  Type <strong>DELETE</strong> below to confirm:
+                </p>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="Type DELETE to confirm"
+                  className="w-full px-3 py-2 rounded-lg mb-3 font-mono"
+                  style={{
+                    border: '2px solid #EF9A9A',
+                    backgroundColor: 'white',
+                    color: '#C62828'
+                  }}
+                  disabled={deleteLoading}
+                />
+
+                {deleteError && (
+                  <div className="text-sm p-2 rounded mb-3" style={{ backgroundColor: '#FECACA', color: '#991B1B' }}>
+                    {deleteError}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={deleteLoading || deleteConfirmText !== 'DELETE'}
+                    className="px-4 py-2 rounded-lg font-medium text-white transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: '#C62828' }}
+                  >
+                    {deleteLoading ? 'Deleting...' : 'Permanently Delete Account'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDeleteConfirm(false);
+                      setDeleteConfirmText('');
+                      setDeleteError(null);
+                    }}
+                    disabled={deleteLoading}
+                    className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md"
+                    style={{
+                      border: '1px solid var(--parent-border)',
+                      color: 'var(--parent-text)'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

@@ -8,7 +8,18 @@ import { isDemoUser, isDemoMode } from '@/utils/demo';
 import {
   HouseholdSectionId,
   HOUSEHOLD_SECTION_META,
+  HOUSEHOLD_LAYERS,
 } from '@/types/household-workbook';
+
+// Section order for progress tracking
+const SECTION_ORDER: HouseholdSectionId[] = [
+  'home_charter',
+  'sanctuary_map',
+  'village_wiki',
+  'roles_rituals',
+  'communication_rhythm',
+  'household_pulse',
+];
 import {
   getHouseholdSection,
   HouseholdOnboardingQuestion,
@@ -269,35 +280,101 @@ export default function SectionOnboardingPage() {
   const currentQuestion = section.questions[currentQuestionIndex];
   const progressPercent = Math.round(((currentQuestionIndex + 1) / section.questions.length) * 100);
 
+  // Calculate overall section progress (needed for all screens)
+  const completedSections = manual?.onboardingProgress?.completedSections || [];
+
+  // Progress header component for reuse
+  const ProgressHeader = ({ showQuestionProgress = false }: { showQuestionProgress?: boolean }) => (
+    <div className="bg-white shadow-sm border-b-2 border-slate-800">
+      <div className="max-w-3xl mx-auto px-4 py-4">
+        {/* Overall section progress */}
+        <div className={showQuestionProgress ? 'mb-4 pb-4 border-b border-slate-200' : ''}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-mono text-xs text-slate-500 uppercase tracking-wider">
+              Overall Progress
+            </span>
+            <span className="font-mono text-xs text-slate-600">
+              {completedSections.length} / {SECTION_ORDER.length} sections
+            </span>
+          </div>
+          <div className="flex gap-1">
+            {SECTION_ORDER.map((sid) => {
+              const isComplete = completedSections.includes(sid);
+              const isCurrent = sid === sectionId;
+              return (
+                <div
+                  key={sid}
+                  className={`
+                    flex-1 h-2 transition-all
+                    ${isComplete ? 'bg-green-500' : isCurrent ? 'bg-amber-500' : 'bg-slate-200'}
+                  `}
+                  title={HOUSEHOLD_SECTION_META[sid].name}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Current section progress (only for questions screen) */}
+        {showQuestionProgress && (
+          <>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <span className="font-mono text-sm font-bold text-slate-800">
+                  {sectionMeta.name}
+                </span>
+                <span className="font-mono text-xs text-slate-500 ml-2">
+                  Layer {sectionMeta.layer} • {HOUSEHOLD_LAYERS[sectionMeta.layer].friendly}
+                </span>
+              </div>
+              <span className="font-mono text-sm text-slate-600">
+                Question {currentQuestionIndex + 1} / {section.questions.length}
+              </span>
+            </div>
+            <div className="w-full bg-slate-200 h-2">
+              <div
+                className="bg-amber-500 h-2 transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
   // Complete screen
   if (currentStep === 'complete') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
-        <TechnicalCard shadowSize="lg" className="max-w-lg w-full p-8 text-center">
-          <div className="w-20 h-20 mx-auto mb-6 bg-green-100 rounded-full flex items-center justify-center">
-            <span className="text-4xl">✓</span>
-          </div>
-          <h1 className="font-mono font-bold text-2xl text-slate-800 mb-4">
-            {sectionMeta.name} Complete!
-          </h1>
-          <p className="text-slate-600 mb-8">
-            Your {sectionMeta.name.toLowerCase()} has been saved to your household manual.
-          </p>
-          <div className="flex gap-4 justify-center">
-            <TechnicalButton
-              variant="primary"
-              onClick={() => router.push('/household')}
-            >
-              VIEW MANUAL
-            </TechnicalButton>
-            <TechnicalButton
-              variant="outline"
-              onClick={() => router.push('/household/onboard')}
-            >
-              CONTINUE SETUP
-            </TechnicalButton>
-          </div>
-        </TechnicalCard>
+      <div className="min-h-screen bg-[#FAF8F5] flex flex-col">
+        <ProgressHeader />
+        <div className="flex-1 flex items-center justify-center p-4">
+          <TechnicalCard shadowSize="lg" className="max-w-lg w-full p-8 text-center">
+            <div className="w-20 h-20 mx-auto mb-6 bg-green-100 rounded-full flex items-center justify-center">
+              <span className="text-4xl">✓</span>
+            </div>
+            <h1 className="font-mono font-bold text-2xl text-slate-800 mb-4">
+              {sectionMeta.name} Complete!
+            </h1>
+            <p className="text-slate-600 mb-8">
+              Your {sectionMeta.name.toLowerCase()} has been saved to your household manual.
+            </p>
+            <div className="flex gap-4 justify-center">
+              <TechnicalButton
+                variant="primary"
+                onClick={() => router.push('/household')}
+              >
+                VIEW MANUAL
+              </TechnicalButton>
+              <TechnicalButton
+                variant="outline"
+                onClick={() => router.push('/household/onboard')}
+              >
+                CONTINUE SETUP
+              </TechnicalButton>
+            </div>
+          </TechnicalCard>
+        </div>
       </div>
     );
   }
@@ -305,16 +382,21 @@ export default function SectionOnboardingPage() {
   // Review screen
   if (currentStep === 'review') {
     return (
-      <div className="min-h-screen bg-[#FAF8F5] p-4 lg:p-8">
-        <div className="max-w-3xl mx-auto">
-          <AIContentReview
-            sectionName={sectionMeta.name}
-            items={generatedContent}
-            onApprove={handleApproveContent}
-            onReject={handleRejectContent}
-            onEdit={handleEditContent}
-            isLoading={isGenerating}
-          />
+      <div className="min-h-screen bg-[#FAF8F5] flex flex-col">
+        <ProgressHeader />
+        <div className="flex-1 p-4 lg:p-8">
+          <div className="max-w-3xl mx-auto">
+            <AIContentReview
+              sectionName={sectionMeta.name}
+              sectionId={sectionId}
+              items={generatedContent}
+              originalAnswers={answers}
+              onApprove={handleApproveContent}
+              onReject={handleRejectContent}
+              onEdit={handleEditContent}
+              isLoading={isGenerating}
+            />
+          </div>
         </div>
       </div>
     );
@@ -323,16 +405,19 @@ export default function SectionOnboardingPage() {
   // Generating screen
   if (currentStep === 'generating') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center p-4">
-        <TechnicalCard shadowSize="lg" className="max-w-lg w-full p-8 text-center">
-          <div className="w-16 h-16 border-4 border-amber-300 border-t-amber-600 rounded-full animate-spin mx-auto mb-6" />
-          <h1 className="font-mono font-bold text-2xl text-slate-800 mb-4">
-            Generating {sectionMeta.name}...
-          </h1>
-          <p className="text-slate-600">
-            Our AI is creating personalized content based on your answers.
-          </p>
-        </TechnicalCard>
+      <div className="min-h-screen bg-[#FAF8F5] flex flex-col">
+        <ProgressHeader />
+        <div className="flex-1 flex items-center justify-center p-4">
+          <TechnicalCard shadowSize="lg" className="max-w-lg w-full p-8 text-center">
+            <div className="w-16 h-16 border-4 border-amber-300 border-t-amber-600 rounded-full animate-spin mx-auto mb-6" />
+            <h1 className="font-mono font-bold text-2xl text-slate-800 mb-4">
+              Generating {sectionMeta.name}...
+            </h1>
+            <p className="text-slate-600">
+              Our AI is creating personalized content based on your answers.
+            </p>
+          </TechnicalCard>
+        </div>
       </div>
     );
   }
@@ -340,30 +425,7 @@ export default function SectionOnboardingPage() {
   // Questions screen
   return (
     <div className="min-h-screen bg-[#FAF8F5] flex flex-col">
-      {/* Progress bar */}
-      <div className="bg-white shadow-sm border-b border-slate-200">
-        <div className="max-w-3xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <span className="font-mono text-sm font-bold text-slate-800">
-                {sectionMeta.name}
-              </span>
-              <span className="font-mono text-xs text-slate-500 ml-2">
-                Layer {sectionMeta.layer}
-              </span>
-            </div>
-            <span className="font-mono text-sm text-slate-600">
-              {currentQuestionIndex + 1} / {section.questions.length}
-            </span>
-          </div>
-          <div className="w-full bg-slate-200 h-2">
-            <div
-              className="bg-amber-500 h-2 transition-all duration-300"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-        </div>
-      </div>
+      <ProgressHeader showQuestionProgress={true} />
 
       {/* Question content */}
       <div className="flex-1 flex items-center justify-center p-4">
@@ -414,7 +476,7 @@ export default function SectionOnboardingPage() {
                 <TechnicalButton
                   variant="primary"
                   onClick={handleNext}
-                  disabled={currentQuestion.required && !answers[currentQuestion.id]}
+                  disabled={currentQuestion.required && answers[currentQuestion.id] === undefined}
                 >
                   {currentQuestionIndex === section.questions.length - 1
                     ? section.aiGenerationEnabled

@@ -49,6 +49,9 @@ service cloud.firestore {
                        resource.data.role == 'child' &&
                        resource.data.familyId == getUserData().familyId;
 
+      // Users can delete their own document (for account deletion)
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+
       // Parents can read all users in their family
       allow read: if isSignedIn() && isParent() &&
                      resource.data.familyId == getUserData().familyId;
@@ -65,6 +68,9 @@ service cloud.firestore {
 
       // Parents in the family can update it
       allow update: if isParent() && belongsToFamily(familyId);
+
+      // Parents in the family can delete it (for account deletion)
+      allow delete: if isParent() && belongsToFamily(familyId);
 
       // Family Manual subcollection
       match /family_manual/{documentId} {
