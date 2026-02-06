@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useHouseholdManual } from '@/hooks/useHouseholdManual';
 import { isDemoUser, isDemoMode } from '@/utils/demo';
@@ -32,7 +33,7 @@ import AIContentReview from '@/components/household/AIContentReview';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
 
-type WizardStep = 'questions' | 'generating' | 'review' | 'complete';
+type WizardStep = 'questions' | 'generating' | 'review' | 'complete' | 'error';
 
 interface ContentItem {
   id: string;
@@ -164,9 +165,9 @@ export default function SectionOnboardingPage() {
       setCurrentStep('review');
     } catch (err: any) {
       console.error('Error generating content:', err);
-      // Fallback to manual content creation
-      setError('Could not generate AI content. You can still enter content manually.');
-      setCurrentStep('questions');
+      // Show error screen with option to save without AI
+      setError(err.message || 'Could not generate AI content. You can save your answers without AI enhancement, or try again.');
+      setCurrentStep('error');
     } finally {
       setIsGenerating(false);
     }
@@ -454,6 +455,88 @@ export default function SectionOnboardingPage() {
             <p className="text-slate-600">
               Our AI is creating personalized content based on your answers.
             </p>
+          </TechnicalCard>
+        </div>
+      </div>
+    );
+  }
+
+  // Error screen - allows saving without AI when generation fails
+  if (currentStep === 'error') {
+    return (
+      <div className="min-h-screen bg-[#FAF8F5] flex flex-col">
+        <ProgressHeader />
+        <div className="flex-1 flex items-center justify-center p-4">
+          <TechnicalCard shadowSize="lg" className="max-w-lg w-full p-8">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+                <span className="text-3xl">⚠️</span>
+              </div>
+              <h1 className="font-mono font-bold text-2xl text-slate-800 mb-2">
+                AI Generation Failed
+              </h1>
+              <p className="text-slate-600">
+                {error || 'We couldn\'t generate AI content, but your answers are safe.'}
+              </p>
+            </div>
+
+            {/* Show that answers are saved */}
+            <div className="bg-green-50 border border-green-200 p-4 mb-6">
+              <p className="text-sm text-green-800 font-medium">
+                ✓ Your {Object.keys(answers).length} answers are saved locally
+              </p>
+              <p className="text-xs text-green-700 mt-1">
+                You can try again or save without AI enhancement.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <TechnicalButton
+                variant="primary"
+                onClick={() => {
+                  setError(null);
+                  setCurrentStep('generating');
+                  generateContent();
+                }}
+                className="w-full"
+              >
+                TRY AI GENERATION AGAIN
+              </TechnicalButton>
+
+              <TechnicalButton
+                variant="outline"
+                onClick={() => {
+                  // Save using demo fallback content (which uses actual answers)
+                  const fallbackContent = generateDemoFallbackContent(sectionId, answers);
+                  setGeneratedContent(fallbackContent);
+                  setCurrentStep('review');
+                  setError(null);
+                }}
+                className="w-full"
+              >
+                SAVE WITH BASIC FORMATTING
+              </TechnicalButton>
+
+              <TechnicalButton
+                variant="outline"
+                onClick={() => {
+                  setError(null);
+                  setCurrentStep('questions');
+                }}
+                className="w-full text-slate-500"
+              >
+                ← BACK TO EDIT ANSWERS
+              </TechnicalButton>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-slate-200 text-center">
+              <Link
+                href="/recover-data"
+                className="text-sm text-amber-600 hover:underline"
+              >
+                View all saved data →
+              </Link>
+            </div>
           </TechnicalCard>
         </div>
       </div>

@@ -599,7 +599,8 @@ service cloud.firestore {
     // Operating manual for the entire household with 6-layer framework
     match /household_manuals/{manualId} {
       // Parents can read individual household manual documents in their family
-      allow get: if isParent() && belongsToFamily(resource.data.familyId);
+      // Also allow reads if document doesn't exist (resource is null)
+      allow get: if isParent() && (resource == null || belongsToFamily(resource.data.familyId));
 
       // Parents can list/query household manuals in their family
       allow list: if isParent();
