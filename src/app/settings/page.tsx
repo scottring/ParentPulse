@@ -1,701 +1,260 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useFamily } from '@/hooks/useFamily';
-import MainLayout from '@/components/layout/MainLayout';
-import { deleteUser } from 'firebase/auth';
-import { auth, firestore } from '@/lib/firebase';
-import { collection, query, where, getDocs, deleteDoc, doc, writeBatch } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
+import { collection, query, where, getDocs, deleteDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase';
 import { COLLECTIONS } from '@/types';
+import type { Manual, ManualDomains } from '@/types/manual';
+
+const DEMO_DOMAINS: ManualDomains = {
+  values: {
+    values: [
+      { id: 'v1', name: 'Curiosity', description: 'We encourage questions and exploration over perfection' },
+      { id: 'v2', name: 'Kindness', description: 'How we treat people matters more than what we achieve' },
+      { id: 'v3', name: 'Resilience', description: 'We bounce back together and learn from hard things' },
+    ],
+    identityStatements: [
+      "We're the family that talks things through, even when it's uncomfortable",
+      "We show up for each other — no matter what",
+    ],
+    nonNegotiables: [
+      'Everyone gets heard before a decision is made',
+      'No screens during dinner',
+      'We always say goodnight, even after a fight',
+    ],
+    narratives: [
+      'The time we moved across the country and rebuilt everything together',
+    ],
+  },
+  communication: {
+    strengths: ['We can talk about hard things without shutting down'],
+    patterns: ['Partner A processes externally, Partner B needs time to think'],
+    challenges: ['Interrupting each other when stressed', 'Bringing up old issues during new arguments'],
+    repairStrategies: ['Take a 15-minute break when voices rise', 'Say "I feel..." instead of "You always..."'],
+    goals: ['Have a weekly check-in without kids present'],
+  },
+  connection: {
+    rituals: [
+      { id: 'ri1', name: 'Highs & Lows', description: 'Share best and hardest part of the day at dinner', frequency: 'daily', meaningSource: 'Keeps us connected to each other\'s inner world' },
+      { id: 'ri2', name: 'Friday movie night', description: 'Kids alternate picking the movie', frequency: 'weekly', meaningSource: 'Predictable family fun everyone looks forward to' },
+    ],
+    bondingActivities: ['Cooking together on Sundays', 'Bedtime stories with voices', 'Family hikes once a month'],
+    strengths: ['Kids come to us with problems instead of hiding them'],
+    challenges: ['Hard to find couple time after kids are in bed'],
+    goals: ['Monthly date night — no phones'],
+  },
+  roles: {
+    assignments: [
+      { id: 'ra1', area: 'Cooking / meal planning', owner: 'Partner A', satisfaction: 'working' },
+      { id: 'ra2', area: 'School logistics', owner: 'Partner B', satisfaction: 'working' },
+      { id: 'ra3', area: 'Finances', owner: 'Shared', satisfaction: 'needs-discussion' },
+      { id: 'ra4', area: 'Bedtime routine', owner: 'Alternating', satisfaction: 'working' },
+    ],
+    decisionAreas: [
+      { id: 'da1', name: 'Education', style: 'collaborative' },
+      { id: 'da2', name: 'Daily discipline', style: 'delegated' },
+      { id: 'da3', name: 'Social calendar', style: 'unclear' },
+    ],
+    painPoints: ['Mental load is lopsided — one partner tracks everything', 'No clear owner for home maintenance tasks'],
+    goals: ['Redistribute invisible labor', 'Weekly sync on upcoming logistics'],
+  },
+  organization: {
+    spaces: [
+      { id: 'sp1', name: 'Kitchen', currentState: 'Functional but cluttered counters', idealState: 'Clear counters, everything has a home', priority: 'urgent' },
+      { id: 'sp2', name: 'Kids rooms', currentState: 'Toy explosion, no system', idealState: 'Rotation bins, nightly 5-min reset', priority: 'important' },
+      { id: 'sp3', name: 'Garage', currentState: 'Can barely fit one car', idealState: 'Organized zones for tools, sports, storage', priority: 'nice-to-have' },
+    ],
+    systems: [
+      { id: 'sys1', name: 'Shared family calendar', description: 'Google Calendar with color coding', effectiveness: 'working' },
+      { id: 'sys2', name: 'Meal planning', description: 'Plan on Sunday, shop Monday', effectiveness: 'inconsistent' },
+      { id: 'sys3', name: 'Laundry', description: 'No real system — whoever notices', effectiveness: 'nonexistent' },
+    ],
+    routines: [
+      { id: 'rt1', name: 'Morning launch', frequency: 'daily', description: 'Breakfast, pack bags, out the door by 7:45', isActive: true, consistency: 'spotty' },
+      { id: 'rt2', name: 'Sunday reset', frequency: 'weekly', description: 'Meal prep, clean house, plan the week', isActive: true, consistency: 'solid' },
+      { id: 'rt3', name: 'Monthly adventure', frequency: 'monthly', description: 'One new experience as a family', isActive: true, consistency: 'aspirational' },
+    ],
+    painPoints: ['Morning rush — everyone is stressed getting out the door', 'No landing zone for backpacks and papers', 'Clutter accumulates on every flat surface'],
+    goals: ['Create a family command center', 'Implement a 10-minute nightly reset'],
+  },
+  adaptability: {
+    stressors: ['Work travel disrupts routines', 'Sick days with no backup plan', 'Transitions between activities'],
+    copingStrategies: ['Tag-team parenting when one partner is depleted', 'Lower standards temporarily during crunch weeks'],
+    strengths: ['We recover quickly from bad days', 'Kids are flexible with schedule changes'],
+    challenges: ['Sibling conflicts escalate before we catch them', 'Hard to maintain routines during school breaks'],
+    goals: ['Build a "Plan B" protocol for common disruptions'],
+  },
+  problemSolving: {
+    decisionStyle: 'We talk it through but sometimes go in circles — need a clearer process for bigger decisions',
+    conflictPatterns: ['One partner withdraws, the other pursues', 'Revisiting resolved issues when stressed'],
+    strengths: ['We eventually find compromises', 'Both partners willing to apologize'],
+    challenges: ['Avoiding tough financial conversations', 'Decision fatigue leads to defaulting to status quo'],
+    goals: ['Adopt a structured approach for big family decisions'],
+  },
+  resources: {
+    principles: [
+      'We invest in experiences over things',
+      'Each kid gets one extracurricular per season — their choice',
+      'Save before spending on wants',
+    ],
+    tensions: ['Disagreement on how much to spend on kids activities', 'Time poverty — too many commitments, not enough margin'],
+    strengths: ['Good at budgeting basics', 'Aligned on saving for education'],
+    challenges: ['No emergency fund target', 'Impulse spending on convenience when exhausted'],
+    goals: ['Build 3-month emergency fund', 'Audit family time commitments — cut 20%'],
+  },
+};
 
 export default function SettingsPage() {
+  const { user, logout, updateUserProfile, refreshUser } = useAuth();
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
-  const { family, inviteParent, removeInvite } = useFamily();
+  const [resetting, setResetting] = useState(false);
+  const [seeding, setSeeding] = useState(false);
 
-  const [notifications, setNotifications] = useState(true);
-  const [dailyReminder, setDailyReminder] = useState(true);
-  const [weeklyInsights, setWeeklyInsights] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const handleResetOnboarding = async () => {
+    if (!user) return;
+    if (!confirm('This will delete your manuals, conversations, and reset onboarding. Continue?')) return;
 
-  // Invitation state
-  const [showInviteForm, setShowInviteForm] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteLoading, setInviteLoading] = useState(false);
-  const [inviteError, setInviteError] = useState<string | null>(null);
-
-  // Delete account state
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteConfirmText, setDeleteConfirmText] = useState('');
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-    }
-    if (!authLoading && user && user.role !== 'parent') {
-      router.push('/dashboard');
-    }
-  }, [user, authLoading, router]);
-
-  const handleSave = async () => {
-    setSaving(true);
-    // TODO: Implement settings save to Firestore
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSaving(false);
-  };
-
-  const handleInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setInviteError(null);
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(inviteEmail)) {
-      setInviteError('Please enter a valid email address');
-      return;
-    }
-
+    setResetting(true);
     try {
-      setInviteLoading(true);
-      await inviteParent(inviteEmail);
-      setInviteEmail('');
-      setShowInviteForm(false);
-    } catch (err: any) {
-      setInviteError(err.message || 'Failed to send invitation');
-    } finally {
-      setInviteLoading(false);
-    }
-  };
-
-  const handleRemoveInvite = async (email: string) => {
-    if (confirm(`Remove invitation for ${email}?`)) {
-      try {
-        await removeInvite(email);
-      } catch (err: any) {
-        alert(err.message || 'Failed to remove invitation');
+      // Delete manuals for this family
+      const manualsSnap = await getDocs(
+        query(collection(firestore, COLLECTIONS.MANUALS), where('familyId', '==', user.familyId))
+      );
+      for (const d of manualsSnap.docs) {
+        await deleteDoc(doc(firestore, COLLECTIONS.MANUALS, d.id));
       }
+
+      // Delete conversations for this user
+      const convoSnap = await getDocs(
+        query(collection(firestore, COLLECTIONS.CONVERSATIONS), where('userId', '==', user.userId))
+      );
+      for (const d of convoSnap.docs) {
+        await deleteDoc(doc(firestore, COLLECTIONS.CONVERSATIONS, d.id));
+      }
+
+      // Reset onboarding status
+      await updateUserProfile({
+        onboardingStatus: {
+          introCompleted: false,
+          phasesCompleted: [],
+          currentPhase: null,
+          familyManualId: null,
+        },
+      });
+
+      await refreshUser();
+      router.push('/intro');
+    } catch (err) {
+      console.error('Reset failed:', err);
+      alert('Reset failed. Check console.');
+    } finally {
+      setResetting(false);
     }
   };
 
-  const handleDeleteAccount = async () => {
-    if (deleteConfirmText !== 'DELETE') {
-      setDeleteError('Please type DELETE to confirm');
-      return;
-    }
+  const handleSeedDemoData = async () => {
+    if (!user) return;
+    if (!confirm('This will reset onboarding and create a pre-populated demo manual. Continue?')) return;
 
-    if (!user || !auth.currentUser) {
-      setDeleteError('No user logged in');
-      return;
-    }
-
-    setDeleteLoading(true);
-    setDeleteError(null);
-
+    setSeeding(true);
     try {
-      const familyId = user.familyId;
-      const userId = user.userId;
-
-      // Delete user's data from various collections
-      const collectionsToClean = [
-        { name: COLLECTIONS.PEOPLE, field: 'familyId', value: familyId },
-        { name: 'person_manuals', field: 'familyId', value: familyId },
-        { name: 'child_manuals', field: 'familyId', value: familyId },
-        { name: 'parent_workbooks', field: 'familyId', value: familyId },
-        { name: 'journal_entries', field: 'familyId', value: familyId },
-        { name: 'daily_observations', field: 'familyId', value: familyId },
-        { name: 'household_manuals', field: 'familyId', value: familyId },
-        { name: 'onboarding_progress', field: 'familyId', value: familyId },
-      ];
-
-      // Delete documents in batches
-      // IMPORTANT: Order matters! User document must be deleted LAST because
-      // Firestore security rules use getUserData() to verify permissions
-      for (const col of collectionsToClean) {
-        try {
-          const q = query(collection(firestore, col.name), where(col.field, '==', col.value));
-          const snapshot = await getDocs(q);
-
-          const batch = writeBatch(firestore);
-          snapshot.docs.forEach((docSnap) => {
-            batch.delete(docSnap.ref);
-          });
-
-          if (snapshot.docs.length > 0) {
-            await batch.commit();
-          }
-        } catch (err) {
-          console.warn(`Could not delete from ${col.name}:`, err);
-          // Continue with other collections
-        }
+      // First reset — delete old manuals & conversations
+      const manualsSnap = await getDocs(
+        query(collection(firestore, COLLECTIONS.MANUALS), where('familyId', '==', user.familyId))
+      );
+      for (const d of manualsSnap.docs) {
+        await deleteDoc(doc(firestore, COLLECTIONS.MANUALS, d.id));
+      }
+      const convoSnap = await getDocs(
+        query(collection(firestore, COLLECTIONS.CONVERSATIONS), where('userId', '==', user.userId))
+      );
+      for (const d of convoSnap.docs) {
+        await deleteDoc(doc(firestore, COLLECTIONS.CONVERSATIONS, d.id));
       }
 
-      // Delete family document if user is the only member
-      // Must happen BEFORE user document deletion (security rules need user doc)
-      if (family && family.members && family.members.length <= 1) {
-        try {
-          await deleteDoc(doc(firestore, COLLECTIONS.FAMILIES, familyId));
-        } catch (err) {
-          console.warn('Could not delete family document:', err);
-        }
-      }
+      // Create populated manual
+      const manualRef = doc(collection(firestore, COLLECTIONS.MANUALS));
+      const manual: Manual = {
+        manualId: manualRef.id,
+        familyId: user.familyId,
+        type: 'household',
+        title: 'Our Family',
+        subtitle: 'The operating manual for how we do things',
+        domains: DEMO_DOMAINS,
+        createdAt: serverTimestamp() as any,
+        updatedAt: serverTimestamp() as any,
+      };
+      await setDoc(manualRef, manual);
 
-      // Delete user document LAST (after all family-scoped docs)
-      // This must be the final Firestore operation before Auth deletion
-      try {
-        await deleteDoc(doc(firestore, COLLECTIONS.USERS, userId));
-      } catch (err) {
-        console.warn('Could not delete user document:', err);
-      }
+      // Mark onboarding fully complete
+      await updateUserProfile({
+        onboardingStatus: {
+          introCompleted: true,
+          phasesCompleted: ['foundation', 'relationships', 'operations', 'strategy'],
+          currentPhase: null,
+          familyManualId: manualRef.id,
+        },
+      });
 
-      // Delete Firebase Auth user
-      await deleteUser(auth.currentUser);
-
-      // Redirect to login
-      router.push('/login?deleted=true');
-    } catch (err: any) {
-      console.error('Error deleting account:', err);
-
-      // Handle re-authentication requirement
-      if (err.code === 'auth/requires-recent-login') {
-        setDeleteError('For security, please log out and log back in, then try again.');
-      } else {
-        setDeleteError(err.message || 'Failed to delete account. Please try again.');
-      }
+      await refreshUser();
+      router.push('/bookshelf');
+    } catch (err) {
+      console.error('Seed failed:', err);
+      alert('Seed failed. Check console.');
     } finally {
-      setDeleteLoading(false);
+      setSeeding(false);
     }
   };
-
-  if (authLoading || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FFF8F0' }}>
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-slate-800 border-t-amber-600 rounded-full animate-spin"></div>
-          <p className="mt-4 font-mono text-sm text-slate-600">LOADING SETTINGS...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <MainLayout>
-      <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Page Header */}
-        <header className="mb-12">
-          <div className="relative bg-white border-4 border-slate-800 p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-            {/* Corner brackets */}
-            <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-amber-600"></div>
-            <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-amber-600"></div>
-            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-amber-600"></div>
-            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-amber-600"></div>
+    <div className="min-h-screen px-4 py-8">
+      <div className="max-w-lg mx-auto">
+        <h1 className="text-2xl font-bold text-stone-900 heading mb-6">Settings</h1>
 
-            <div className="flex items-start gap-6">
-              <Link href="/dashboard" className="mt-2 font-mono text-3xl font-bold text-slate-800 hover:text-amber-600 transition-colors">
-                ←
-              </Link>
-
-              <div className="flex-1">
-                <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-3">
-                  SYSTEM CONFIGURATION
-                </div>
-
-                <h1 className="font-mono text-4xl font-bold tracking-tight text-slate-900 mb-2">
-                  Settings
-                </h1>
-
-                <p className="font-mono text-sm text-slate-600">
-                  CONFIGURE SYSTEM PARAMETERS AND USER PREFERENCES
-                </p>
-              </div>
-            </div>
+        <div className="bg-white rounded-xl border border-stone-200 p-6 space-y-4">
+          <div>
+            <p className="text-sm text-stone-400">Name</p>
+            <p className="text-stone-900">{user?.displayName}</p>
           </div>
-        </header>
-        {/* Account Section */}
-        <div className="mb-8 animate-fade-in-up">
-          <h2 className="parent-heading text-xl mb-4" style={{ color: 'var(--parent-text)' }}>
-            Account
-          </h2>
-          <div className="parent-card p-6 space-y-4">
-            <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: 'var(--parent-border)' }}>
-              <div>
-                <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
-                  Name
-                </div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  {user.name}
-                </div>
-              </div>
-              <button
-                className="text-sm font-medium px-4 py-2 rounded-lg transition-all hover:shadow-md"
-                style={{
-                  border: '1px solid var(--parent-border)',
-                  color: 'var(--parent-text)'
-                }}
-              >
-                Edit
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: 'var(--parent-border)' }}>
-              <div>
-                <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
-                  Email
-                </div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  {user.email}
-                </div>
-              </div>
-              <button
-                className="text-sm font-medium px-4 py-2 rounded-lg transition-all hover:shadow-md"
-                style={{
-                  border: '1px solid var(--parent-border)',
-                  color: 'var(--parent-text)'
-                }}
-              >
-                Change
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
-                  Password
-                </div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  •••••••••
-                </div>
-              </div>
-              <button
-                className="text-sm font-medium px-4 py-2 rounded-lg transition-all hover:shadow-md"
-                style={{
-                  border: '1px solid var(--parent-border)',
-                  color: 'var(--parent-text)'
-                }}
-              >
-                Change
-              </button>
-            </div>
+          <div>
+            <p className="text-sm text-stone-400">Email</p>
+            <p className="text-stone-900">{user?.email}</p>
           </div>
-        </div>
+          <hr className="border-stone-100" />
 
-        {/* Notifications Section */}
-        <div className="mb-8 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-          <h2 className="parent-heading text-xl mb-4" style={{ color: 'var(--parent-text)' }}>
-            Notifications
-          </h2>
-          <div className="parent-card p-6 space-y-4">
-            <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: 'var(--parent-border)' }}>
-              <div>
-                <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
-                  All Notifications
-                </div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Enable or disable all notifications
-                </div>
-              </div>
-              <ToggleSwitch
-                enabled={notifications}
-                onChange={setNotifications}
-              />
-            </div>
-
-            <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: 'var(--parent-border)' }}>
-              <div>
-                <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
-                  Daily Journal Reminder
-                </div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Reminder to write in your journal each day
-                </div>
-              </div>
-              <ToggleSwitch
-                enabled={dailyReminder && notifications}
-                onChange={setDailyReminder}
-                disabled={!notifications}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
-                  Weekly Insights Email
-                </div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Receive weekly AI-generated insights via email
-                </div>
-              </div>
-              <ToggleSwitch
-                enabled={weeklyInsights && notifications}
-                onChange={setWeeklyInsights}
-                disabled={!notifications}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Preferences Section */}
-        <div className="mb-8 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-          <h2 className="parent-heading text-xl mb-4" style={{ color: 'var(--parent-text)' }}>
-            Preferences
-          </h2>
-          <div className="parent-card p-6 space-y-4">
-            <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: 'var(--parent-border)' }}>
-              <div>
-                <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
-                  Theme
-                </div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Parent theme (soft earth tones)
-                </div>
-              </div>
+          {/* Dev tools */}
+          <div className="pt-2">
+            <p className="text-xs text-stone-400 uppercase tracking-wider mb-2">Developer</p>
+            <div className="flex gap-2 flex-wrap">
               <button
-                className="text-sm font-medium px-4 py-2 rounded-lg transition-all hover:shadow-md"
-                style={{
-                  backgroundColor: 'var(--parent-accent)',
-                  color: 'white'
-                }}
+                onClick={handleResetOnboarding}
+                disabled={resetting || seeding}
+                className="px-4 py-2 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 disabled:opacity-50 text-sm font-medium"
               >
-                Active
+                {resetting ? 'Resetting...' : 'Reset Onboarding'}
+              </button>
+              <button
+                onClick={handleSeedDemoData}
+                disabled={resetting || seeding}
+                className="px-4 py-2 bg-emerald-100 text-emerald-800 rounded-lg hover:bg-emerald-200 disabled:opacity-50 text-sm font-medium"
+              >
+                {seeding ? 'Seeding...' : 'Seed Demo Data'}
               </button>
             </div>
-
-            <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: 'var(--parent-border)' }}>
-              <div>
-                <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
-                  Daily Actions Generation
-                </div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  AI generates actions at 9 PM daily
-                </div>
-              </div>
-              <ToggleSwitch enabled={true} onChange={() => {}} />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
-                  Timezone
-                </div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Pacific Time (US & Canada)
-                </div>
-              </div>
-              <button
-                className="text-sm font-medium px-4 py-2 rounded-lg transition-all hover:shadow-md"
-                style={{
-                  border: '1px solid var(--parent-border)',
-                  color: 'var(--parent-text)'
-                }}
-              >
-                Change
-              </button>
-            </div>
+            <p className="text-xs text-stone-400 mt-1">Reset: restarts from intro | Seed: skip onboarding with populated manual</p>
           </div>
-        </div>
 
-        {/* Family Section */}
-        <div className="mb-8 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-          <h2 className="parent-heading text-xl mb-4" style={{ color: 'var(--parent-text)' }}>
-            Family
-          </h2>
-          <div className="parent-card p-6 space-y-4">
-            <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: 'var(--parent-border)' }}>
-              <div>
-                <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
-                  Manage People
-                </div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Add, edit, or remove people and their manuals
-                </div>
-              </div>
-              <Link
-                href="/people"
-                className="text-sm font-medium px-4 py-2 rounded-lg transition-all hover:shadow-md"
-                style={{
-                  backgroundColor: 'var(--parent-accent)',
-                  color: 'white'
-                }}
-              >
-                Manage
-              </Link>
-            </div>
-
-            {/* Family Members Section */}
-            <div className="pt-2">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
-                    Family Members
-                  </div>
-                  <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                    {family?.members?.length || 1} member{(family?.members?.length || 1) !== 1 ? 's' : ''}
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowInviteForm(!showInviteForm)}
-                  className="text-sm font-medium px-4 py-2 rounded-lg transition-all hover:shadow-md"
-                  style={{
-                    border: '1px solid var(--parent-accent)',
-                    color: 'var(--parent-accent)'
-                  }}
-                >
-                  + Invite Member
-                </button>
-              </div>
-
-              {/* Invite Form */}
-              {showInviteForm && (
-                <div className="mb-4 p-4 rounded-lg" style={{ backgroundColor: 'var(--parent-bg)' }}>
-                  <form onSubmit={handleInvite} className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
-                        Email Address
-                      </label>
-                      <input
-                        type="email"
-                        value={inviteEmail}
-                        onChange={(e) => setInviteEmail(e.target.value)}
-                        placeholder="family@example.com"
-                        className="w-full px-3 py-2 rounded-lg"
-                        style={{
-                          border: '1.5px solid var(--parent-border)',
-                          backgroundColor: 'white',
-                          color: 'var(--parent-text)'
-                        }}
-                        disabled={inviteLoading}
-                      />
-                    </div>
-
-                    {inviteError && (
-                      <div className="text-sm p-2 rounded" style={{ backgroundColor: '#FEE2E2', color: '#991B1B' }}>
-                        {inviteError}
-                      </div>
-                    )}
-
-                    <div className="flex gap-2">
-                      <button
-                        type="submit"
-                        disabled={inviteLoading || !inviteEmail}
-                        className="px-4 py-2 rounded-lg font-medium text-white transition-all hover:shadow-md disabled:opacity-50"
-                        style={{ backgroundColor: 'var(--parent-accent)' }}
-                      >
-                        {inviteLoading ? 'Sending...' : 'Send Invite'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowInviteForm(false);
-                          setInviteEmail('');
-                          setInviteError(null);
-                        }}
-                        className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md"
-                        style={{
-                          border: '1px solid var(--parent-border)',
-                          color: 'var(--parent-text)'
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              )}
-
-              {/* Pending Invites */}
-              {family?.pendingInvites && family.pendingInvites.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <div className="text-sm font-medium" style={{ color: 'var(--parent-text-light)' }}>
-                    Pending Invitations
-                  </div>
-                  {family.pendingInvites.map((invite) => (
-                    <div
-                      key={invite.email}
-                      className="flex items-center justify-between p-3 rounded-lg"
-                      style={{ backgroundColor: 'var(--parent-bg)' }}
-                    >
-                      <div>
-                        <div className="text-sm font-medium" style={{ color: 'var(--parent-text)' }}>
-                          {invite.email}
-                        </div>
-                        <div className="text-xs" style={{ color: 'var(--parent-text-light)' }}>
-                          Invited {invite.sentAt.toDate().toLocaleDateString()}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleRemoveInvite(invite.email)}
-                        className="text-sm px-3 py-1 rounded transition-all hover:shadow-md"
-                        style={{
-                          backgroundColor: '#FEE2E2',
-                          color: '#991B1B'
-                        }}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Data & Privacy Section */}
-        <div className="mb-8 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-          <h2 className="parent-heading text-xl mb-4" style={{ color: 'var(--parent-text)' }}>
-            Data & Privacy
-          </h2>
-          <div className="parent-card p-6 space-y-4">
-            <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: 'var(--parent-border)' }}>
-              <div>
-                <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
-                  Export Data
-                </div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Download all your journal entries and data
-                </div>
-              </div>
-              <button
-                className="text-sm font-medium px-4 py-2 rounded-lg transition-all hover:shadow-md"
-                style={{
-                  border: '1px solid var(--parent-border)',
-                  color: 'var(--parent-text)'
-                }}
-              >
-                Export
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold" style={{ color: '#C62828' }}>
-                  Delete Account
-                </div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Permanently delete your account and all data
-                </div>
-              </div>
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="text-sm font-medium px-4 py-2 rounded-lg transition-all hover:shadow-md"
-                style={{
-                  backgroundColor: '#FEE2E2',
-                  color: '#C62828',
-                  border: '1px solid #EF9A9A'
-                }}
-              >
-                Delete
-              </button>
-            </div>
-
-            {/* Delete Account Confirmation Dialog */}
-            {showDeleteConfirm && (
-              <div className="mt-4 p-4 rounded-lg border-2" style={{ backgroundColor: '#FEF2F2', borderColor: '#EF9A9A' }}>
-                <div className="font-semibold text-lg mb-2" style={{ color: '#C62828' }}>
-                  ⚠️ Delete Your Account
-                </div>
-                <p className="text-sm mb-4" style={{ color: '#991B1B' }}>
-                  This action is <strong>permanent and cannot be undone</strong>. All your data including:
-                </p>
-                <ul className="text-sm mb-4 list-disc list-inside" style={{ color: '#991B1B' }}>
-                  <li>All people and their manuals</li>
-                  <li>Journal entries and observations</li>
-                  <li>Workbooks and progress data</li>
-                  <li>Your account and family membership</li>
-                </ul>
-                <p className="text-sm mb-4" style={{ color: '#991B1B' }}>
-                  Type <strong>DELETE</strong> below to confirm:
-                </p>
-                <input
-                  type="text"
-                  value={deleteConfirmText}
-                  onChange={(e) => setDeleteConfirmText(e.target.value)}
-                  placeholder="Type DELETE to confirm"
-                  className="w-full px-3 py-2 rounded-lg mb-3 font-mono"
-                  style={{
-                    border: '2px solid #EF9A9A',
-                    backgroundColor: 'white',
-                    color: '#C62828'
-                  }}
-                  disabled={deleteLoading}
-                />
-
-                {deleteError && (
-                  <div className="text-sm p-2 rounded mb-3" style={{ backgroundColor: '#FECACA', color: '#991B1B' }}>
-                    {deleteError}
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleDeleteAccount}
-                    disabled={deleteLoading || deleteConfirmText !== 'DELETE'}
-                    className="px-4 py-2 rounded-lg font-medium text-white transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ backgroundColor: '#C62828' }}
-                  >
-                    {deleteLoading ? 'Deleting...' : 'Permanently Delete Account'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowDeleteConfirm(false);
-                      setDeleteConfirmText('');
-                      setDeleteError(null);
-                    }}
-                    disabled={deleteLoading}
-                    className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md"
-                    style={{
-                      border: '1px solid var(--parent-border)',
-                      color: 'var(--parent-text)'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Save Button */}
-        <div className="flex justify-end animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
+          <hr className="border-stone-100" />
           <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-8 py-3 rounded-lg font-semibold text-white transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: 'var(--parent-accent)' }}
+            onClick={() => logout().then(() => router.push('/login'))}
+            className="text-red-600 hover:text-red-700 text-sm font-medium"
           >
-            {saving ? 'Saving...' : 'Save Changes'}
+            Sign out
           </button>
         </div>
       </div>
-    </MainLayout>
-  );
-}
-
-interface ToggleSwitchProps {
-  enabled: boolean;
-  onChange: (enabled: boolean) => void;
-  disabled?: boolean;
-}
-
-function ToggleSwitch({ enabled, onChange, disabled = false }: ToggleSwitchProps) {
-  return (
-    <button
-      onClick={() => !disabled && onChange(!enabled)}
-      disabled={disabled}
-      className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      style={{
-        backgroundColor: enabled ? 'var(--parent-accent)' : '#E0E0E0'
-      }}
-    >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-          enabled ? 'translate-x-6' : 'translate-x-1'
-        }`}
-      />
-    </button>
+    </div>
   );
 }

@@ -1,779 +1,102 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if user is authenticated
+    // ==================== Helper Functions ====================
+
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Helper function to get user data
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Helper function to check if user is a parent
-    function isParent() {
-      return isSignedIn() && getUserData().role == 'parent';
-    }
-
-    // Helper function to check if user belongs to the family
     function belongsToFamily(familyId) {
       return isSignedIn() && getUserData().familyId == familyId;
     }
 
-    // Users collection
+    function isParent() {
+      return isSignedIn() && getUserData().role == 'parent';
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // ==================== Users ====================
+    // Users can read/write their own document only
     match /users/{userId} {
-      // Users can read their own document
-      allow read: if isSignedIn() && request.auth.uid == userId;
-
-      // Only the user themselves can create their document (during registration)
-      allow create: if isSignedIn() && request.auth.uid == userId;
-
-      // Parents can create child documents in their family
-      allow create: if isParent() &&
-                       request.resource.data.role == 'child' &&
-                       request.resource.data.familyId == getUserData().familyId;
-
-      // Users can update their own document
-      allow update: if isSignedIn() && request.auth.uid == userId;
-
-      // Parents can update child documents in their family
-      allow update: if isParent() &&
-                       resource.data.role == 'child' &&
-                       resource.data.familyId == getUserData().familyId;
-
-      // Parents can delete child documents in their family
-      allow delete: if isParent() &&
-                       resource.data.role == 'child' &&
-                       resource.data.familyId == getUserData().familyId;
-
-      // Users can delete their own document (for account deletion)
-      allow delete: if isSignedIn() && request.auth.uid == userId;
-
-      // Parents can read all users in their family
-      allow read: if isSignedIn() && isParent() &&
-                     resource.data.familyId == getUserData().familyId;
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && request.resource.data.keys().hasAll(['userId', 'email', 'familyId', 'role', 'onboardingStatus']);
+      allow update: if isOwner(userId)
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.familyId == resource.data.familyId;
     }
 
-    // Families collection
+    // ==================== Families ====================
+    // Family members can read; parents can update
     match /families/{familyId} {
-      // Family members can read their family document
       allow read: if belongsToFamily(familyId);
-
-      // Allow authenticated users to create family documents during registration
-      // (User document doesn't exist yet, so we can't check isParent())
       allow create: if isSignedIn();
-
-      // Parents in the family can update it
-      allow update: if isParent() && belongsToFamily(familyId);
-
-      // Parents in the family can delete it (for account deletion)
-      allow delete: if isParent() && belongsToFamily(familyId);
-
-      // Family Manual subcollection
-      match /family_manual/{documentId} {
-        // Family members can read the family manual
-        allow read: if belongsToFamily(familyId);
-
-        // Parents can create and update the family manual
-        allow create, update: if isParent() && belongsToFamily(familyId);
-
-        // Parents can delete the family manual
-        allow delete: if isParent() && belongsToFamily(familyId);
-      }
+      allow update: if belongsToFamily(familyId) && isParent();
     }
 
-    // Journal entries collection
-    match /journal_entries/{entryId} {
-      // Parents can read entries in their family
-      allow read: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can create entries in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Parents can update their own entries
-      allow update: if isParent() &&
-                       belongsToFamily(resource.data.familyId) &&
-                       resource.data.authorId == request.auth.uid;
-
-      // Parents can delete their own entries
-      allow delete: if isParent() &&
-                       belongsToFamily(resource.data.familyId) &&
-                       resource.data.authorId == request.auth.uid;
-    }
-
-    // Child check-ins collection
-    match /child_checkins/{checkinId} {
-      // Children can create their own check-ins
-      allow create: if isSignedIn() &&
-                       request.resource.data.childId == request.auth.uid;
-
-      // Children can read their own check-ins
-      allow read: if isSignedIn() && resource.data.childId == request.auth.uid;
-
-      // Parents can read check-ins in their family
-      allow read: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // Chip economy collection
-    match /chip_economy/{familyId} {
-      // Family members can read their chip economy
-      allow read: if belongsToFamily(familyId);
-
-      // Allow authenticated users to create chip economy during registration
-      allow create: if isSignedIn();
-
-      // Parents can manage chip economy after creation
-      allow update, delete: if isParent() && belongsToFamily(familyId);
-    }
-
-    // Chip transactions collection
-    match /chip_transactions/{transactionId} {
-      // Children can read their own transactions
-      allow read: if isSignedIn() && resource.data.childId == request.auth.uid;
-
-      // Parents can read transactions in their family
-      allow read: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can create transactions
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-    }
-
-    // Knowledge base collection
-    match /knowledge_base/{knowledgeId} {
-      // Family members can read knowledge in their family
-      allow read: if belongsToFamily(resource.data.familyId);
-
-      // Parents can manage knowledge
-      allow write: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // AI insights collection
-    match /ai_insights/{insightId} {
-      // Parents can read insights in their family
-      allow read: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Cloud Functions can create insights (using admin SDK)
-      // Parents cannot directly create/edit insights
-    }
-
-    // Tasks collection
-    match /tasks/{taskId} {
-      // Parents can read all tasks in their family
-      allow read: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can create/update/delete tasks
-      allow create, update, delete: if isParent() && belongsToFamily(request.resource.data.familyId);
-    }
-
-    // Rewards collection
-    match /rewards/{rewardId} {
-      // Parents can read all rewards in their family
-      allow read: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can create/update/delete rewards
-      allow create, update, delete: if isParent() && belongsToFamily(request.resource.data.familyId);
-    }
-
-    // Chip transactions collection
-    match /chip_transactions/{transactionId} {
-      // Parents and children can read transactions in their family
-      allow read: if request.auth != null && belongsToFamily(resource.data.familyId);
-
-      // Only parents can create transactions
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-    }
-
-    // Knowledge base collection
-    match /knowledge_base/{knowledgeId} {
-      // Parents can read all knowledge items in their family
-      allow read: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can create knowledge items for their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Parents can update/delete knowledge items they added
-      allow update, delete: if isParent()
-        && belongsToFamily(resource.data.familyId)
-        && resource.data.addedByParentId == request.auth.uid;
-    }
-
-    // Daily actions collection
-    match /daily_actions/{actionId} {
-      // Parents can read actions in their family
-      allow read: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can update actions (mark complete, skip, add notes)
-      allow update: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can manually create actions
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Cloud Functions can create actions (using admin SDK)
-    }
-
-    // Daily analyses collection
-    match /daily_analyses/{analysisId} {
-      // Parents can read analyses in their family
-      allow read: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Cloud Functions can create analyses (using admin SDK)
-    }
-
-    // Child profiles collection
-    match /child_profiles/{profileId} {
-      // Parents can read profiles in their family
-      allow read: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can create profiles for children in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Parents can update profiles in their family
-      allow update: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete profiles in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // Strategic plans collection
-    match /strategic_plans/{planId} {
-      // Parents can read plans in their family
-      allow read: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can update plans (approve, request changes, add notes)
-      allow update: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Cloud Functions create plans (using admin SDK)
-
-      // Plan progress subcollection
-      match /plan_progress/{progressId} {
-        // Parents can read progress in their family
-        allow read: if isParent() && belongsToFamily(resource.data.familyId);
-
-        // Cloud Functions update progress (using admin SDK)
-      }
-    }
-
-    // ==================== Universal Relationship System ====================
-
-    // Relationship members collection (universal entity for all relationships)
-    match /relationship_members/{memberId} {
-      // Parents can read all relationship members in their family
-      allow read: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can create relationship members in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Parents can update relationship members in their family
-      allow update: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete relationship members in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // Relationship profiles collection (universal profiles for all relationship types)
-    match /relationship_profiles/{profileId} {
-      // Parents can read profiles in their family
-      allow read: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can create profiles for relationship members in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Parents can update profiles in their family
-      allow update: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete profiles in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // ==================== Person-Centric Operating Manual System ====================
-
-    // People collection (core entities - everyone in the family network)
-    match /people/{personId} {
-      // Family members can read all people in their family
-      // Also allow reads if document doesn't exist
-      allow read: if isSignedIn() && (resource == null || belongsToFamily(resource.data.familyId));
-
-      // Parents can create people in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Parents can update people in their family
-      allow update: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete people in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // Person manuals collection (one manual per person)
-    match /person_manuals/{manualId} {
-      // Family members can read manuals in their family
-      // Also allow reads if document doesn't exist
-      allow read: if isSignedIn() && (resource == null || belongsToFamily(resource.data.familyId));
-
-      // Parents can create manuals for people in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Family members can update manuals (collaborative editing)
-      allow update: if belongsToFamily(resource.data.familyId);
-
-      // Parents can delete manuals in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // Role sections collection (sections within a person's manual)
-    match /role_sections/{roleSectionId} {
-      // Family members can read role sections in their family
-      allow read: if belongsToFamily(resource.data.familyId);
-
-      // Family members can create role sections in their family
-      allow create: if isSignedIn() && belongsToFamily(request.resource.data.familyId);
-
-      // Family members can update role sections (collaborative editing)
-      allow update: if belongsToFamily(resource.data.familyId);
-
-      // Parents can delete role sections in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // Role-based strategic plans collection
-    match /role_based_strategic_plans/{planId} {
-      // Family members can read plans in their family
-      allow read: if belongsToFamily(resource.data.familyId);
-
-      // Cloud Functions create plans (using admin SDK)
-
-      // Contributors (people in the role) can update to approve
-      allow update: if belongsToFamily(resource.data.familyId);
-
-      // Parents can delete plans in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // ==================== Weekly Workbooks System ====================
-    // (Actual rules defined below in main workbooks section)
-
-    // Workbook observations collection (casual notes captured in workbooks)
-    match /workbook_observations/{observationId} {
-      // Family members can read observations in their family
-      allow read: if belongsToFamily(resource.data.familyId);
-
-      // Family members can create observations (collaborative)
-      allow create: if isSignedIn() && belongsToFamily(request.resource.data.familyId);
-
-      // Author can update/delete their own observations
-      allow update, delete: if isSignedIn()
-        && resource.data.authorId == request.auth.uid
-        && belongsToFamily(resource.data.familyId);
-
-      // Parents can update any observation in their family (for AI suggestions)
-      allow update: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete any observation in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // Behavior tracking collection (structured behavior instances)
-    match /behavior_tracking/{instanceId} {
-      // Parents can read behavior data in their family
-      allow read: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can create behavior instances
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Parents can update behavior instances
-      allow update: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete behavior instances
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // Weekly analyses collection (AI-generated weekly summaries)
-    match /weekly_analyses/{analysisId} {
-      // Family members can read analyses in their family
-      allow read: if belongsToFamily(resource.data.familyId);
-
-      // Cloud Functions create analyses (using admin SDK)
-
-      // Parents can update analyses (mark items as actioned)
-      allow update: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete analyses
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // Daily priorities collection (AI-generated daily priorities)
-    match /daily_priorities/{priorityId} {
-      // Family members can read priorities in their family
-      allow read: if belongsToFamily(resource.data.familyId);
-
-      // Cloud Functions create priorities (using admin SDK)
-
-      // Parents can update priorities (mark completed)
-      allow update: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete priorities
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // Relationship manuals collection (shared manuals between people)
-    match /relationship_manuals/{relationshipId} {
-      // Family members can read relationship manuals in their family
-      allow read: if belongsToFamily(resource.data.familyId);
-
-      // Family members can create relationship manuals (collaborative)
-      allow create: if isSignedIn() && belongsToFamily(request.resource.data.familyId);
-
-      // Family members can update relationship manuals
-      // This enables collaborative editing by all people in the relationship
-      allow update: if belongsToFamily(resource.data.familyId);
-
-      // Parents can delete relationship manuals
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // ==================== NEW: Child Manual System ====================
-
-    // Children collection (basic child information)
-    match /children/{childId} {
-      // Parents can read individual children documents in their family
-      allow get: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can list/query children in their family
-      // This allows queries like: where('familyId', '==', userFamilyId)
-      allow list: if isParent();
-
-      // Parents can create children in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Parents can update children in their family
-      allow update: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete children in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // Child manuals collection (operating manuals for children)
-    match /child_manuals/{manualId} {
-      // Parents can read individual child manual documents in their family
-      allow get: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can list/query child manuals in their family
-      allow list: if isParent();
-
-      // Parents can create child manuals in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Parents in the family can update child manuals (collaborative editing)
-      // Contributors array in the manual defines who can edit
-      allow update: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete child manuals in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // Daily observations collection (parent logs about children)
-    match /daily_observations/{observationId} {
-      // Parents can read individual observation documents in their family
-      allow get: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can list/query observations in their family
-      allow list: if isParent();
-
-      // Parents can create observations in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Parent who created observation can update it (approve/reject AI suggestions)
-      allow update: if isParent()
-        && belongsToFamily(resource.data.familyId)
-        && resource.data.userId == request.auth.uid;
-
-      // Parents can update any observation in their family (for approving suggestions)
-      allow update: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parent who created observation can delete it
-      allow delete: if isParent()
-        && belongsToFamily(resource.data.familyId)
-        && resource.data.userId == request.auth.uid;
-    }
-
-    // Coaching sessions collection (AI coaching chat sessions)
-    match /coaching_sessions/{sessionId} {
-      // Parents can read individual coaching session documents in their family
-      allow get: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can list/query coaching sessions in their family
-      allow list: if isParent();
-
-      // Parents can create coaching sessions in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Parents can update coaching sessions (add messages, outcomes)
-      allow update: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parent who initiated session can delete it
-      allow delete: if isParent()
-        && belongsToFamily(resource.data.familyId)
-        && resource.data.userId == request.auth.uid;
-    }
-
-    // Behavior observations collection (tracks situations and strategy effectiveness)
-    match /behavior_observations/{observationId} {
-      // Parents can read individual behavior observation documents in their family
-      allow get: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can list/query behavior observations in their family
-      allow list: if isParent();
-
-      // Parents can create behavior observations in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Parent who created observation can update it
-      allow update: if isParent()
-        && belongsToFamily(resource.data.familyId)
-        && resource.data.userId == request.auth.uid;
-
-      // Parent who created observation can delete it
-      allow delete: if isParent()
-        && belongsToFamily(resource.data.familyId)
-        && resource.data.userId == request.auth.uid;
-    }
-
-    // Weekly Workbooks
-    // Parent-driven weekly goals and tablet-friendly activities
-    match /weekly_workbooks/{workbookId} {
-      // Family members can read workbooks in their family
-      allow read: if belongsToFamily(resource.data.familyId);
-
-      // Parents can create workbooks in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Family members can update workbooks (log goals, complete activities, add reflections)
-      // This enables collaborative tracking where both parents can log completions
-      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete workbooks in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // ==================== Dual Workbook System ====================
-
-    // Parent Workbooks
-    // Parent-facing workbook with behavior goals and daily strategies
-    match /parent_workbooks/{workbookId} {
-      // Family members can read parent workbooks in their family
-      allow read: if belongsToFamily(resource.data.familyId);
-
-      // Parents can create parent workbooks in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Family members can update parent workbooks (log goals, complete strategies, add reflections)
-      // This enables collaborative tracking where both parents can log completions
-      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete parent workbooks in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // Child Workbooks
-    // Child-facing storybook with weekly story and activities
-    match /child_workbooks/{workbookId} {
-      // Family members can read child workbooks in their family
-      allow read: if belongsToFamily(resource.data.familyId);
-
-      // Parents can create child workbooks in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Family members can update child workbooks (mark days as read, complete activities)
-      // This allows both parents and children to interact with the storybook
-      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete child workbooks in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // ==================== Household Manual System ====================
-
-    // Household Manuals
-    // Operating manual for the entire household with 6-layer framework
-    match /household_manuals/{manualId} {
-      // Parents can read individual household manual documents in their family
-      // Also allow reads if document doesn't exist (resource is null)
-      allow get: if isParent() && (resource == null || belongsToFamily(resource.data.familyId));
-
-      // Parents can list/query household manuals in their family
-      allow list: if isParent();
-
-      // Parents can create household manuals in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Family members can update household manuals (collaborative editing)
-      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete household manuals in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // Household Journeys
-    // 90-day journey tracking with milestones
-    match /household_journeys/{journeyId} {
-      // Parents can read individual journey documents in their family
-      allow get: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can list/query journeys in their family
-      allow list: if isParent();
-
-      // Parents can create journeys in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Family members can update journeys (update progress, complete milestones)
-      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete journeys in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // Household Workbooks
-    // Hub-and-spokes workbook with delegated tasks
-    match /household_workbooks/{workbookId} {
-      // Parents can read individual workbook documents in their family
-      allow get: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can list/query household workbooks in their family
-      allow list: if isParent();
-
-      // Parents can create household workbooks in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Family members can update household workbooks (complete tasks, add reflections)
-      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete household workbooks in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // ==================== Concerns System ====================
-
-    // Concerns
-    // Tracked concerns/pain points about people or household
-    match /concerns/{concernId} {
-      // Parents can read individual concern documents in their family
-      allow get: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can list/query concerns in their family
-      allow list: if isParent();
-
-      // Parents can create concerns in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Family members can update concerns (update urgency, status)
-      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete concerns in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // ==================== Intervention System ====================
-
-    // Interventions
-    // Emergency crisis management for unexpected behavioral incidents
-    match /interventions/{interventionId} {
-      // Parents can read individual intervention documents in their family
-      allow get: if isParent() && belongsToFamily(resource.data.familyId);
-
-      // Parents can list/query interventions in their family
-      allow list: if isParent();
-
-      // Parents can create interventions in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Family members can update interventions (add tasks, update status, approve suggestions)
-      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete interventions in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // ==================== Onboarding Journey System ====================
-
-    // Onboarding Progress
-    // Tracks structured progress through the 6-layer manual onboarding
-    match /onboarding_progress/{progressId} {
-      // Family members can read progress in their family
-      // Also allow reads if document doesn't exist (returns null, client handles)
-      allow read: if isSignedIn() && (resource == null || belongsToFamily(resource.data.familyId));
-
-      // Parents can create progress records in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
-
-      // Family members can update progress (mark layers complete, track milestones)
-      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId);
-
-      // Parents can delete progress records in their family
-      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
-    }
-
-    // ==================== Multi-Perspective Input System ====================
-
-    // Manual Inputs
-    // Individual inputs from different family members for multi-perspective data
-    match /manual_inputs/{inputId} {
-      // Family members can read inputs in their family (via manual lookup)
-      allow read: if isSignedIn();
-
-      // Family members can create inputs
-      allow create: if isSignedIn();
-
-      // Input author can update their own input
-      allow update: if isSignedIn() && resource.data.respondentId == request.auth.uid;
-
-      // Parents can delete inputs in their family
-      allow delete: if isParent();
-    }
-
-    // Multi-Perspective Items
-    // Synthesized items from multiple perspectives
-    match /multi_perspective_items/{itemId} {
-      // Family members can read items
-      allow read: if isSignedIn();
-
-      // Parents can create items
-      allow create: if isParent();
-
-      // Parents can update items (synthesis, status)
-      allow update: if isParent();
-
-      // Parents can delete items
-      allow delete: if isParent();
-    }
-
-    // ==================== Tagged Questions System ====================
-
-    // Tagged Questions
-    // Questions tagged for another family member to answer
-    match /tagged_questions/{tagId} {
-      // Family members can read tagged questions in their family
-      // (either tagged for them or tagged by them)
+    // ==================== Manuals ====================
+    // Family members can read; parents can create/update/delete
+    match /manuals/{manualId} {
       allow read: if isSignedIn() && belongsToFamily(resource.data.familyId);
+      allow create: if isSignedIn() && isParent()
+        && request.resource.data.keys().hasAll(['manualId', 'familyId', 'type', 'title', 'layers']);
+      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId) && isParent()
+        && request.resource.data.familyId == resource.data.familyId;
+      allow delete: if isSignedIn() && belongsToFamily(resource.data.familyId) && isParent();
+    }
 
-      // Family members can list/query tagged questions in their family
-      allow list: if isSignedIn();
+    // ==================== Entries ====================
+    // Family members can read and update; parents can create/delete
+    match /entries/{entryId} {
+      allow read: if isSignedIn() && belongsToFamily(resource.data.familyId);
+      allow create: if isSignedIn()
+        && (isParent() || belongsToFamily(request.resource.data.familyId))
+        && request.resource.data.keys().hasAll(['entryId', 'familyId', 'type', 'source', 'coherenceLayer', 'title', 'content']);
+      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId)
+        && request.resource.data.familyId == resource.data.familyId;
+      allow delete: if isSignedIn() && belongsToFamily(resource.data.familyId) && isParent();
+    }
 
-      // Family members can create tagged questions in their family
-      allow create: if isSignedIn() && belongsToFamily(request.resource.data.familyId);
+    // ==================== Yearbooks ====================
+    // Family members can read; parents can create/update
+    match /yearbooks/{yearbookId} {
+      allow read: if isSignedIn() && belongsToFamily(resource.data.familyId);
+      allow create: if isSignedIn() && isParent()
+        && request.resource.data.keys().hasAll(['yearbookId', 'familyId', 'personId', 'year']);
+      allow update: if isSignedIn() && belongsToFamily(resource.data.familyId) && isParent()
+        && request.resource.data.familyId == resource.data.familyId;
+    }
 
-      // Family members can update tagged questions (answer, dismiss)
-      // Only the tagged person or the tagger can update
-      allow update: if isSignedIn() &&
-                       belongsToFamily(resource.data.familyId) &&
-                       (resource.data.taggedUserId == request.auth.uid ||
-                        resource.data.taggerUserId == request.auth.uid);
+    // ==================== Conversations ====================
+    // Only the conversation owner can read/write/delete
+    match /conversations/{conversationId} {
+      allow read: if isSignedIn()
+        && (resource.data.userId == request.auth.uid || belongsToFamily(resource.data.familyId));
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.keys().hasAll(['conversationId', 'familyId', 'userId', 'purpose']);
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
 
-      // Only the tagger can delete a tagged question
-      allow delete: if isSignedIn() &&
-                       belongsToFamily(resource.data.familyId) &&
-                       resource.data.taggerUserId == request.auth.uid;
+    // ==================== Check-ins ====================
+    // Family members can read; only the author can write
+    match /checkins/{checkinId} {
+      allow read: if isSignedIn() && belongsToFamily(resource.data.familyId);
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.keys().hasAll(['checkinId', 'familyId', 'userId', 'week', 'responses']);
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
   }
 }

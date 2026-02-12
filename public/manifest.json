@@ -1,11 +1,11 @@
 {
-  "name": "Relish - Personal Operating Manuals",
+  "name": "Relish - Family Coherence",
   "short_name": "Relish",
-  "description": "Create personalized operating manuals for the important people in your life",
+  "description": "Build and maintain your family's coherence stack — values, decisions, rhythms, and stories organized in living manuals.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#0f172a",
+  "background_color": "#fafaf9",
+  "theme_color": "#1c1917",
   "orientation": "portrait-primary"
 }

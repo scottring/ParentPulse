@@ -1,7 +1,13 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { vi } from 'vitest';
-import { User, UserRole } from '@/types';
-import { createTimestamp } from './firebase';
+import type { User, UserRole, OnboardingStatus } from '@/types/user';
+
+const DEFAULT_ONBOARDING: OnboardingStatus = {
+  introCompleted: true,
+  layersCompleted: ['mind', 'context'],
+  currentLayer: null,
+  familyManualId: 'test-manual-id',
+};
 
 /**
  * Mock user factory
@@ -11,14 +17,11 @@ export function createMockUser(overrides: Partial<User> = {}): User {
     userId: 'test-user-id',
     familyId: 'test-family-id',
     role: 'parent' as UserRole,
-    name: 'Test User',
+    displayName: 'Test User',
     email: 'test@example.com',
-    createdAt: createTimestamp() as any,
-    settings: {
-      notifications: true,
-      theme: 'light'
-    },
-    ...overrides
+    onboardingStatus: DEFAULT_ONBOARDING,
+    createdAt: new Date(),
+    ...overrides,
   };
 }
 
@@ -32,12 +35,9 @@ export interface MockAuthContextValue {
   login: ReturnType<typeof vi.fn>;
   register: ReturnType<typeof vi.fn>;
   logout: ReturnType<typeof vi.fn>;
-  loginChild: ReturnType<typeof vi.fn>;
-  registerChild: ReturnType<typeof vi.fn>;
   refreshUser: ReturnType<typeof vi.fn>;
   updateUserProfile: ReturnType<typeof vi.fn>;
-  isParent: boolean;
-  isChild: boolean;
+  resetPassword: ReturnType<typeof vi.fn>;
 }
 
 /**
@@ -53,13 +53,10 @@ export function createMockAuthContextValue(overrides: Partial<MockAuthContextVal
     login: vi.fn().mockResolvedValue(undefined),
     register: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn().mockResolvedValue(undefined),
-    loginChild: vi.fn().mockResolvedValue(undefined),
-    registerChild: vi.fn().mockResolvedValue(undefined),
     refreshUser: vi.fn().mockResolvedValue(undefined),
     updateUserProfile: vi.fn().mockResolvedValue(undefined),
-    isParent: user?.role === 'parent',
-    isChild: user?.role === 'child',
-    ...overrides
+    resetPassword: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
   };
 }
 
@@ -105,7 +102,7 @@ export function mockUseAuth(overrides: Partial<MockAuthContextValue> = {}) {
 
   vi.mock('@/context/AuthContext', () => ({
     useAuth: () => mockValue,
-    AuthProvider: ({ children }: { children: ReactNode }) => children
+    AuthProvider: ({ children }: { children: ReactNode }) => children,
   }));
 
   return mockValue;
@@ -116,17 +113,6 @@ export function mockUseAuth(overrides: Partial<MockAuthContextValue> = {}) {
  */
 export const authenticatedParentUser = createMockAuthContextValue({
   user: createMockUser({ role: 'parent' }),
-  isParent: true,
-  isChild: false
-});
-
-/**
- * Preset: Authenticated child user
- */
-export const authenticatedChildUser = createMockAuthContextValue({
-  user: createMockUser({ role: 'child', email: undefined }),
-  isParent: false,
-  isChild: true
 });
 
 /**
@@ -134,8 +120,6 @@ export const authenticatedChildUser = createMockAuthContextValue({
  */
 export const unauthenticatedUser = createMockAuthContextValue({
   user: null,
-  isParent: false,
-  isChild: false
 });
 
 /**
@@ -144,16 +128,18 @@ export const unauthenticatedUser = createMockAuthContextValue({
 export const loadingAuthState = createMockAuthContextValue({
   user: null,
   loading: true,
-  isParent: false,
-  isChild: false
 });
 
 /**
- * Preset: Error state
+ * Preset: New user (intro not completed)
  */
-export const errorAuthState = createMockAuthContextValue({
-  user: null,
-  error: 'Authentication failed',
-  isParent: false,
-  isChild: false
+export const newUser = createMockAuthContextValue({
+  user: createMockUser({
+    onboardingStatus: {
+      introCompleted: false,
+      layersCompleted: [],
+      currentLayer: null,
+      familyManualId: null,
+    },
+  }),
 });

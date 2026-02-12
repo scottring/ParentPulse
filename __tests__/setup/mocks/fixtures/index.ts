@@ -5,5 +5,4 @@
  */
 
 export * from './user';
-export * from './person';
-export * from './role-section';
+export * from './manual';

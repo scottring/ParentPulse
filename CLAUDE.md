@@ -21,7 +21,6 @@ npm run test:all     # Run all tests
 # Firebase
 firebase deploy --only firestore:rules    # Deploy security rules
 firebase deploy --only functions          # Deploy Cloud Functions
-firebase functions:log                    # View function logs
 
 # Vercel
 vercel --prod        # Deploy to production
@@ -29,143 +28,123 @@ vercel --prod        # Deploy to production
 
 ## Architecture Overview
 
-**Relish** is a Next.js 16 app for creating "operating manuals" for important relationships (children, spouses, friends, elderly parents). It uses a 6-layer scaffolding framework to organize triggers, strategies, boundaries, and goals.
+**Relish** is a Next.js 16 app for building and maintaining a family "Coherence Stack" — a 4-layer operating system grounded in family systems research (Bowen, Antonovsky, Walsh, Gottman, Fivush).
 
 ### Tech Stack
 - **Frontend**: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4
 - **Backend**: Firebase (Firestore, Auth, Cloud Functions)
-- **AI**: Claude (Anthropic) for content generation, OpenAI for workbook generation
+- **AI**: Claude (Anthropic) for conversational onboarding and content generation
+
+### The Coherence Framework (4 Layers)
+
+1. **Mind** — What we believe: values, identity, non-negotiables
+2. **Context** — How we decide: decision frameworks, boundaries, resource principles
+3. **Execution** — What we do: rhythms, rituals, commitments
+4. **Output** — Is this us?: coherence checks, drift signals, family story
 
 ### Core Data Model
 
-**Two-Tier System (V2)**:
 ```
-Person → Manual (child_manuals, marriage_manuals, family_manuals)
-       → GoalVolume (hierarchical: Year → Quarter → Month → Week)
-       → ParentWorkbook (weekly tracking with AI-generated goals)
+Family → Manual (household, marriage, parenting, individual)
+       → Yearbook (per person, per year)
+       → Entry (content atom: story, checklist, goal, reflection, etc.)
+       → Conversation (AI-facilitated onboarding, coaching)
+       → Checkin (weekly coherence check-in)
 ```
 
-**6-Layer Framework** (src/types/assessment.ts):
-1. Inputs/Triggers - What causes stress
-2. Processing - Understanding/co-regulation
-3. Memory/Structure - Routines/boundaries
-4. Execution - Daily strategies
-5. Outputs - Growth/connection behaviors
-6. Supervisory - Values/principles
+### Key Concepts
+
+- **Manual**: A living document for a domain of family life, organized by the 4 coherence layers
+- **Yearbook**: A person's interactive activity book for the year (especially for children)
+- **Entry**: The content atom — every piece of content has a type, source, coherence layer, lifecycle, and visibility
+- **Bookshelf**: Main UI metaphor — manuals appear as book spines on a shelf
 
 ### Key Directories
 
 ```
 src/
-├── app/               # Next.js App Router pages
-│   ├── dashboard/     # Main dashboard
-│   ├── people/[personId]/  # Person detail routes
-│   │   ├── manual/    # Manual viewing/editing
-│   │   └── workbook/  # Weekly workbook tracking
+├── app/                    # Next.js App Router pages
+│   ├── bookshelf/          # Main bookshelf view (home)
+│   ├── intro/              # New user intro
+│   ├── onboarding/         # Guided conversational onboarding
+│   ├── manual/[manualId]/  # Manual viewing/editing
+│   ├── yearbook/[personId]/ # Person's yearbook
+│   └── checkin/            # Weekly coherence check-in
 ├── components/
-│   ├── manual/        # CRUD modals for triggers, strategies, boundaries
-│   ├── onboarding/    # Typeform-style wizard components
-│   └── workbook/      # Workbook display components
-├── hooks/             # React hooks for data management
-│   ├── useManualV2.ts     # Manual CRUD (new V2 data layer)
-│   ├── useWorkbookV2.ts   # Workbook generation/tracking
-│   ├── useAssessmentV2.ts # Spider diagram assessments
-│   ├── useGoalV2.ts       # Hierarchical goal management
-│   └── usePersonManual.ts # Legacy manual hook
-├── types/
-│   ├── index.ts       # Re-exports all types + COLLECTIONS constant
-│   ├── assessment.ts  # 6-layer types, SpiderAssessment, GoalVolume
-│   ├── manual.ts      # ChildManual, MarriageManual, FamilyManual
-│   └── workbook.ts    # ParentWorkbook, activities, V2 types
+│   ├── bookshelf/          # Bookshelf + spine components
+│   ├── manual/             # Manual display + editing
+│   ├── onboarding/         # Conversational onboarding UI
+│   ├── yearbook/           # Yearbook + entry components
+│   ├── entry/              # Entry type renderers
+│   ├── checkin/            # Coherence check-in
+│   ├── layout/             # Shell, nav
+│   └── ui/                 # Shared primitives
+├── hooks/                  # React hooks
+├── types/                  # TypeScript types
+│   ├── user.ts             # User, Family, auth types
+│   ├── manual.ts           # Manual, CoherenceLayers
+│   ├── entry.ts            # Entry (content atom)
+│   ├── yearbook.ts         # Yearbook, chapters
+│   ├── onboarding.ts       # Conversation, onboarding state
+│   └── checkin.ts          # Check-in, drift signals
 ├── context/
-│   └── AuthContext.tsx  # Firebase auth with user/family context
-├── config/
-│   └── onboarding-questions.ts  # Wizard questions by relationship type
-└── lib/
-    ├── firebase.ts        # Firebase initialization
-    ├── workbookGenerator.ts  # AI workbook content generation
-    └── spiderDiagramUtils.ts # Hexagon visualization math
+│   └── AuthContext.tsx      # Firebase auth with user/family context
+├── lib/
+│   └── firebase.ts         # Firebase initialization
+└── config/                 # Onboarding prompts, entry templates
 
-functions/           # Firebase Cloud Functions
-├── index.js         # Main functions file
-└── sample-story-data.js  # Test mode sample content
+functions/                  # Firebase Cloud Functions
+├── index.js                # Cloud Functions
+└── package.json            # Dependencies
 ```
 
 ### Firebase Collections
 
-Core collections defined in `COLLECTIONS` constant (src/types/index.ts):
-- `families`, `users`, `people`
-- `child_manuals`, `marriage_manuals`, `family_manuals`
-- `goal_volumes`, `assessments`, `repair_logs`
-- `parent_workbooks`, `workbook_tools`
-- `journal_entries`, `activity_reflections`, `milestone_reflections`
-
-### Cloud Functions
-
-Key AI functions in `/functions/index.js`:
-- `generateInitialManualContent` - Claude generates manual from onboarding answers
-- `generateWeeklyWorkbooks` - Creates parent workbook with goals + child story
-- `chatWithCoach` - RAG-powered conversational AI coach
-- `generateStrategicPlan` - 30-90 day plans for challenges
+Defined in `COLLECTIONS` constant (src/types/index.ts):
+- `families`, `users`
+- `manuals` — with nested `layers` (mind, context, execution, output)
+- `entries` — content atoms with type, source, layer, lifecycle
+- `yearbooks` — per person, per year
+- `conversations` — AI conversation history
+- `checkins` — weekly coherence check-ins
 
 ### Authentication Pattern
 
 All hooks use `useAuth()` from AuthContext:
 ```typescript
-const { user } = useAuth();  // Returns User with userId, familyId, role
+const { user } = useAuth();  // Returns User with userId, familyId, role, onboardingStatus
 ```
 
 Security rules enforce family-based access: `belongsToFamily(familyId)` check.
+Parent-only accounts for MVP (no child login).
+
+### User Flow
+
+1. Register → `/intro` (visual intro explaining the metaphor)
+2. `/onboarding` → Guided AI conversation through Layer 1 (Mind), then Layer 2 (Context)
+3. `/bookshelf` → Main home with manual spines
+4. `/manual/[id]` → Read/edit manuals by layer
+5. `/yearbook/[personId]` → Interactive yearbook for each family member
+6. `/checkin` → Weekly coherence reflection
+
+### Design Aesthetic
+
+Warm and personal — like opening a journal, not logging into software. Book textures, warm stone/sage/amber colors. Crimson Pro for headings, Inter for body. No corporate feel.
 
 ## Key Patterns
 
-### Hook Naming
-- V2 hooks (useManualV2, useWorkbookV2, etc.) use the new 6-layer data model
-- Legacy hooks (usePersonManual, useWeeklyWorkbook) use older flat structure
-- Both can coexist during migration
+### Manual Types
+- `household` — the shared family operating system
+- `marriage` — partnership manual
+- `parenting` — shared approach to raising kids
+- `individual` — one per family member
 
-### Manual Content Types
-Each manual contains arrays of:
-- `ManualTrigger` - With severity, confidence, layerId
-- `ManualStrategy` - With effectiveness rating, source type
-- `ManualBoundary` - Categorized as immovable/negotiable/preference
-- `RepairStrategy` - How to repair after ruptures
+### Entry Types
+insight, activity, goal, task, reflection, story, checklist, discussion, milestone
 
-### Workbook Generation
-Uses `src/lib/workbookGenerator.ts`:
-```typescript
-const content = await generateWorkbookContent(context);
-// Falls back to generateFallbackContent() if AI fails
-```
+### Coherence Layers
+`mind | context | execution | output` — defined as `CoherenceLayerId` type
 
-### Test/Demo Mode
-- Demo account: `demo@relish.app`
-- Test mode uses sample data, $0 API costs
-- Auto-enabled in development or for demo users
+## Previous Version
 
-## CSS Theming
-
-Tailwind CSS 4 with CSS variables:
-```css
---parent-bg, --parent-text, --parent-accent, --parent-border
-```
-
-Design aesthetic: "Technical documentation manual" - warm, approachable, professional.
-
-## Firestore Security Rules
-
-Key helper functions in `/firestore.rules`:
-```javascript
-function isSignedIn() { return request.auth != null; }
-function isParent() { return isSignedIn() && getUserData().role == 'parent'; }
-function belongsToFamily(familyId) { return isSignedIn() && getUserData().familyId == familyId; }
-```
-
-## Extended Documentation
-
-See `/docs/` for detailed guides:
-- `RELISH_6LAYER_ARCHITECTURE.md` - Full architecture spec
-- `WEEKLY_WORKBOOK_IMPLEMENTATION.md` - Workbook system details
-- `DEMO_ACCOUNT_GUIDE.md` - Demo mode setup
-- `FIREBASE_SETUP.md` - Firebase configuration
-- `VERCEL_DEPLOYMENT.md` - Deployment guide
+The v1 codebase (6-layer scaffolding, child manuals, workbooks, chip economy) is archived at `archive/relish-v1` branch.

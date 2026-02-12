@@ -1,400 +1,259 @@
-import { Timestamp } from 'firebase/firestore';
-import { LayerId, SpiderAssessment } from './assessment';
+// Manual types — domain-based family operating manual
+// Research grounding: McMaster, Olson Circumplex, Walsh, Gottman, Bowen, Stinnett/DeFrain
 
-// ==================== DEPRECATION NOTICE ====================
-/**
- * @deprecated This file contains V1 manual types (ChildManual, MarriageManual, FamilyManual).
- * For new code, use the V2 PersonManual system from './person-manual.ts'.
- *
- * Migration path:
- * - V1 ManualTrigger (with triggerId) → V2 ManualTrigger (with id, layerId) from person-manual.ts
- * - V1 ManualStrategy (with strategyId) → V2 ManualStrategy (with id, layerId) from person-manual.ts
- * - V1 ManualBoundary (with boundaryId) → V2 ManualBoundary (with id, layerId) from person-manual.ts
- * - V1 ChildManual/MarriageManual/FamilyManual → V2 PersonManual from person-manual.ts
- *
- * V1 types are retained for backward compatibility with existing Firestore data.
- */
+import { DomainId, OnboardingPhaseId } from './user';
 
-// ==================== Manual Base Types ====================
+export type ManualType = 'household' | 'individual';
 
-/**
- * Manual types supported in V1
- * @deprecated Use PersonManual with relationshipType from person-manual.ts
- * - child: One per child (Caleb's Manual, Ella's Manual)
- * - marriage: Shared couple manual (Scott + Iris)
- * - family: Household systems and values
- */
-export type ManualType = 'child' | 'marriage' | 'family';
+export type DomainUpdateSource = 'onboarding' | 'refresh' | 'manual-edit';
 
-/**
- * Strategy effectiveness rating (1-5 scale)
- */
-export type EffectivenessRating = 1 | 2 | 3 | 4 | 5;
+export interface DomainMeta {
+  updatedAt: Date;
+  updatedBy: DomainUpdateSource;
+}
 
-/**
- * Confidence level in identified patterns/triggers
- */
-export type Confidence = 'low' | 'medium' | 'high';
+export interface Manual {
+  manualId: string;
+  familyId: string;
+  type: ManualType;
+  personId?: string; // for individual manuals
+  title: string;
+  subtitle?: string;
+  domains: ManualDomains;
+  domainMeta?: Partial<Record<DomainId, DomainMeta>>;
+  createdAt: Date;
+  updatedAt?: Date;
+}
 
-/**
- * Source of a strategy
- */
-export type StrategySource =
-  | 'parent_discovery'
-  | 'professional'
-  | 'knowledge_base'
-  | 'ai_suggestion'
-  | 'workbook';
+export interface ManualDomains {
+  values: ValuesDomain;
+  communication: CommunicationDomain;
+  connection: ConnectionDomain;
+  roles: RolesDomain;
+  organization: OrganizationDomain;
+  adaptability: AdaptabilityDomain;
+  problemSolving: ProblemSolvingDomain;
+  resources: ResourcesDomain;
+}
 
-/**
- * Boundary category
- */
-export type BoundaryCategory = 'immovable' | 'negotiable' | 'preference';
+// ==================== Domain 1: Values & Identity ====================
 
-// ==================== Manual Content Types ====================
+export interface ValuesDomain {
+  values: Value[];
+  identityStatements: string[];
+  nonNegotiables: string[];
+  narratives: string[];
+}
 
-/**
- * A documented trigger (Layer 1)
- */
-export interface ManualTrigger {
-  triggerId: string;
+export interface Value {
+  id: string;
+  name: string;
   description: string;
-  context: string; // When/where this happens
-  typicalResponse: string; // What typically follows
-  severity: 'mild' | 'moderate' | 'significant';
-  layerId: LayerId; // Always 1 for triggers
-  confidence: Confidence;
-  identifiedDate: Timestamp;
-  lastObserved?: Timestamp;
-  notes?: string;
+  rank?: number;
 }
 
-/**
- * A documented strategy (Layer 4 - What Works / What Doesn't)
- */
-export interface ManualStrategy {
-  strategyId: string;
-  description: string;
-  context: string; // When to use this
-  effectiveness: EffectivenessRating;
-  layerId: LayerId; // Usually 4 for strategies
-  sourceType: StrategySource;
-  sourceId?: string; // Link to knowledge base, workbook, etc.
-  addedDate: Timestamp;
-  lastUsed?: Timestamp;
-  usageCount: number;
-  notes?: string;
-}
+// ==================== Domain 2: Communication ====================
 
-/**
- * A documented boundary (Layer 3)
- */
-export interface ManualBoundary {
-  boundaryId: string;
-  description: string;
-  category: BoundaryCategory;
-  context?: string; // When this applies
-  consequences?: string; // What happens if crossed
-  layerId: LayerId; // Usually 3 for boundaries
-  addedDate: Timestamp;
-  notes?: string;
-}
-
-/**
- * A repair strategy
- */
-export interface RepairStrategy {
-  repairId: string;
-  description: string;
-  worksWhen: string; // Context when this repair approach works
-  effectiveness: EffectivenessRating;
-  addedDate: Timestamp;
-  notes?: string;
-}
-
-/**
- * An observed pattern
- */
-export interface ManualPattern {
-  patternId: string;
-  description: string;
-  frequency: string; // e.g., "daily", "when tired", "during transitions"
-  firstObserved: Timestamp;
-  lastObserved: Timestamp;
-  confidence: Confidence;
-  relatedTriggerIds: string[];
-  notes?: string;
-}
-
-/**
- * A progress note
- */
-export interface ManualProgressNote {
-  noteId: string;
-  date: Timestamp;
-  note: string;
-  category: 'improvement' | 'challenge' | 'insight' | 'milestone';
-  generatedBy: 'parent' | 'ai';
-  relatedLayerIds?: LayerId[];
-}
-
-// ==================== Child Manual ====================
-
-/**
- * Child-specific core information
- */
-export interface ChildCoreInfo {
-  sensoryNeeds?: string;
-  interests: string[];
+export interface CommunicationDomain {
   strengths: string[];
-  learningStyle?: 'visual' | 'auditory' | 'kinesthetic' | 'reading-writing' | 'mixed';
-  schoolInfo?: {
-    grade?: string;
-    specialServices?: string[];
-    iepOr504?: boolean;
-  };
-  notes?: string;
+  patterns: string[];
+  challenges: string[];
+  repairStrategies: string[];
+  goals: string[];
 }
 
-/**
- * Child Manual - one per child
- */
-export interface ChildManual {
-  manualId: string;
-  familyId: string;
-  personId: string; // Child's user ID
-  personName: string;
-  manualType: 'child';
+// ==================== Domain 3: Connection ====================
 
-  // Core info
-  coreInfo: ChildCoreInfo;
-
-  // Content organized by layer
-  triggers: ManualTrigger[]; // Layer 1
-  whatWorks: ManualStrategy[]; // Layer 4 (effective)
-  whatDoesntWork: ManualStrategy[]; // Layer 4 (ineffective)
-  boundaries: ManualBoundary[]; // Layer 3
-  repairStrategies: RepairStrategy[]; // How we repair
-  patterns: ManualPattern[];
-  progressNotes: ManualProgressNote[];
-
-  // Layer 6 - Values/Principles
-  parentingPrinciples: string[]; // e.g., "Connection before correction"
-
-  // Active goals
-  activeGoalIds: string[]; // Links to GoalVolume documents
-
-  // Baseline assessment
-  baselineAssessment?: SpiderAssessment;
-
-  // Metadata
-  createdAt: Timestamp;
-  createdBy: string;
-  lastEditedAt: Timestamp;
-  lastEditedBy: string;
-  version: number;
-
-  // Completeness tracking
-  completeness: {
-    triggers: number; // Count
-    strategies: number;
-    boundaries: number;
-    repairStrategies: number;
-    overallPercent: number; // 0-100
-  };
+export interface ConnectionDomain {
+  rituals: Ritual[];
+  bondingActivities: string[];
+  strengths: string[];
+  challenges: string[];
+  goals: string[];
 }
 
-// ==================== Marriage Manual ====================
-
-/**
- * Communication style preferences
- */
-export type CommunicationStyleManual = 'direct' | 'indirect' | 'reflective' | 'emotional' | 'logical';
-
-/**
- * Conflict handling style
- */
-export type ConflictStyleManual = 'avoider' | 'accommodator' | 'competitor' | 'compromiser' | 'collaborator';
-
-/**
- * Love language preference
- */
-export type LoveLanguageManual =
-  | 'words_of_affirmation'
-  | 'quality_time'
-  | 'receiving_gifts'
-  | 'acts_of_service'
-  | 'physical_touch';
-
-/**
- * Marriage/Partner-specific core info
- */
-export interface MarriageCoreInfo {
-  partnerNames: [string, string]; // Both partners
-  anniversaryDate?: Timestamp;
-  communicationStyles: {
-    partner1: CommunicationStyleManual;
-    partner2: CommunicationStyleManual;
-  };
-  conflictStyles: {
-    partner1: ConflictStyleManual;
-    partner2: ConflictStyleManual;
-  };
-  loveLanguages: {
-    partner1: LoveLanguageManual[];
-    partner2: LoveLanguageManual[];
-  };
-  sharedValues: string[];
-  notes?: string;
-}
-
-/**
- * Quality time activity
- */
-export interface QualityTimeActivityManual {
-  activityId: string;
-  activity: string;
-  frequency: 'daily' | 'weekly' | 'monthly';
-  idealDuration: string; // e.g., "30 minutes"
-  energyLevel: 'low' | 'medium' | 'high';
-  notes?: string;
-}
-
-/**
- * Marriage Manual - shared by couple
- */
-export interface MarriageManual {
-  manualId: string;
-  familyId: string;
-  partnerIds: [string, string]; // Both partner user IDs
-  manualType: 'marriage';
-
-  // Core info
-  coreInfo: MarriageCoreInfo;
-
-  // Content (both partners' perspectives merged)
-  triggers: ManualTrigger[]; // Relationship triggers
-  whatWorks: ManualStrategy[]; // What strengthens connection
-  whatDoesntWork: ManualStrategy[]; // What damages connection
-  boundaries: ManualBoundary[]; // Relationship agreements
-  repairStrategies: RepairStrategy[]; // How we repair after conflict
-  patterns: ManualPattern[];
-  progressNotes: ManualProgressNote[];
-
-  // Quality time & connection
-  qualityTimeActivities: QualityTimeActivityManual[];
-  dateNightIdeas: string[];
-
-  // Shared lifestyle goals (in scope per spec)
-  sharedGoals: {
-    category: 'date_nights' | 'fitness' | 'sleep' | 'hobbies' | 'other';
-    description: string;
-    frequency?: string;
-  }[];
-
-  // Layer 6 - Relationship values
-  relationshipPrinciples: string[];
-
-  // Active goals
-  activeGoalIds: string[];
-
-  // Baseline
-  baselineAssessment?: SpiderAssessment;
-
-  // Metadata
-  createdAt: Timestamp;
-  createdBy: string;
-  lastEditedAt: Timestamp;
-  lastEditedBy: string;
-  version: number;
-
-  completeness: {
-    triggers: number;
-    strategies: number;
-    boundaries: number;
-    repairStrategies: number;
-    overallPercent: number;
-  };
-}
-
-// ==================== Family/Household Manual ====================
-
-/**
- * Household system (chore charts, routines, storage, etc.)
- */
-export interface HouseholdSystem {
-  systemId: string;
-  name: string; // e.g., "Toy cleanup routine"
+export interface Ritual {
+  id: string;
+  name: string;
   description: string;
-  category: 'chores' | 'routines' | 'storage' | 'meals' | 'schedules' | 'other';
-  assignedTo: string[]; // Person IDs
-  frequency: 'daily' | 'weekly' | 'as_needed';
-  effectiveness: EffectivenessRating;
-  relatedTriggerIds: string[]; // Links to triggers this system addresses
-  notes?: string;
+  frequency: string;
+  meaningSource: string;
 }
 
-/**
- * Family Manual - one per household
- */
-export interface FamilyManual {
-  manualId: string;
-  familyId: string;
-  manualType: 'family';
+// ==================== Domain 4: Roles & Responsibilities ====================
 
-  // Family info
-  familyName: string;
-  memberIds: string[]; // All family member user IDs
-
-  // Content
-  triggers: ManualTrigger[]; // Household stress triggers
-  whatWorks: ManualStrategy[]; // What helps household run
-  whatDoesntWork: ManualStrategy[]; // What creates chaos
-  boundaries: ManualBoundary[]; // House rules
-
-  // Systems
-  householdSystems: HouseholdSystem[];
-
-  // Values (Layer 6)
-  familyValues: string[];
-  familyMotto?: string;
-
-  // Patterns
-  patterns: ManualPattern[];
-  progressNotes: ManualProgressNote[];
-
-  // Active goals
-  activeGoalIds: string[];
-
-  // Baseline
-  baselineAssessment?: SpiderAssessment;
-
-  // Metadata
-  createdAt: Timestamp;
-  createdBy: string;
-  lastEditedAt: Timestamp;
-  lastEditedBy: string;
-  version: number;
-
-  completeness: {
-    triggers: number;
-    systems: number;
-    boundaries: number;
-    overallPercent: number;
-  };
+export interface RolesDomain {
+  assignments: RoleAssignment[];
+  decisionAreas: DecisionArea[];
+  painPoints: string[];
+  goals: string[];
 }
 
-// ==================== Union Type ====================
+export interface RoleAssignment {
+  id: string;
+  area: string;
+  owner: string;
+  satisfaction: 'working' | 'needs-discussion' | 'source-of-conflict';
+}
 
-/**
- * Any manual type
- */
-export type Manual = ChildManual | MarriageManual | FamilyManual;
+export interface DecisionArea {
+  id: string;
+  name: string;
+  style: 'collaborative' | 'delegated' | 'unclear';
+}
 
-// ==================== Firestore Collections ====================
+// ==================== Domain 5: Organization & Spaces ====================
 
-export const MANUAL_COLLECTIONS = {
-  CHILD_MANUALS: 'child_manuals',
-  MARRIAGE_MANUALS: 'marriage_manuals',
-  FAMILY_MANUALS: 'family_manuals',
-} as const;
+export interface OrganizationDomain {
+  spaces: SpaceAssessment[];
+  systems: FamilySystem[];
+  routines: Routine[];
+  painPoints: string[];
+  goals: string[];
+}
+
+export interface SpaceAssessment {
+  id: string;
+  name: string;
+  currentState: string;
+  idealState: string;
+  priority: 'urgent' | 'important' | 'nice-to-have';
+}
+
+export interface FamilySystem {
+  id: string;
+  name: string;
+  description: string;
+  effectiveness: 'working' | 'inconsistent' | 'nonexistent';
+}
+
+export interface Routine {
+  id: string;
+  name: string;
+  frequency: 'daily' | 'weekly' | 'monthly' | 'seasonal';
+  description: string;
+  isActive: boolean;
+  consistency: 'solid' | 'spotty' | 'aspirational';
+}
+
+// ==================== Domain 6: Adaptability ====================
+
+export interface AdaptabilityDomain {
+  stressors: string[];
+  copingStrategies: string[];
+  strengths: string[];
+  challenges: string[];
+  goals: string[];
+}
+
+// ==================== Domain 7: Problem Solving ====================
+
+export interface ProblemSolvingDomain {
+  decisionStyle: string;
+  conflictPatterns: string[];
+  strengths: string[];
+  challenges: string[];
+  goals: string[];
+}
+
+// ==================== Domain 8: Resource Management ====================
+
+export interface ResourcesDomain {
+  principles: string[];
+  tensions: string[];
+  strengths: string[];
+  challenges: string[];
+  goals: string[];
+}
+
+// ==================== Utilities ====================
+
+export const emptyDomains: ManualDomains = {
+  values: { values: [], identityStatements: [], nonNegotiables: [], narratives: [] },
+  communication: { strengths: [], patterns: [], challenges: [], repairStrategies: [], goals: [] },
+  connection: { rituals: [], bondingActivities: [], strengths: [], challenges: [], goals: [] },
+  roles: { assignments: [], decisionAreas: [], painPoints: [], goals: [] },
+  organization: { spaces: [], systems: [], routines: [], painPoints: [], goals: [] },
+  adaptability: { stressors: [], copingStrategies: [], strengths: [], challenges: [], goals: [] },
+  problemSolving: { decisionStyle: '', conflictPatterns: [], strengths: [], challenges: [], goals: [] },
+  resources: { principles: [], tensions: [], strengths: [], challenges: [], goals: [] },
+};
+
+export const DOMAIN_NAMES: Record<DomainId, string> = {
+  values: 'Values & Identity',
+  communication: 'Communication',
+  connection: 'Connection',
+  roles: 'Roles & Responsibilities',
+  organization: 'Organization & Spaces',
+  adaptability: 'Adaptability',
+  problemSolving: 'Problem Solving',
+  resources: 'Resource Management',
+};
+
+export const DOMAIN_DESCRIPTIONS: Record<DomainId, string> = {
+  values: 'What we believe, who we are, what matters most',
+  communication: 'How we talk, listen, and repair',
+  connection: 'Emotional bonds, rituals, and quality time',
+  roles: 'Who does what and how decisions get made',
+  organization: 'Physical spaces, systems, and routines',
+  adaptability: 'How we handle change, stress, and transitions',
+  problemSolving: 'How we face challenges and resolve conflicts',
+  resources: 'How we manage money, time, and energy',
+};
+
+export const ONBOARDING_PHASES: {
+  id: OnboardingPhaseId;
+  name: string;
+  description: string;
+  domains: [DomainId, DomainId];
+}[] = [
+  { id: 'foundation', name: 'Foundation', description: 'Your values, identity, and how you communicate', domains: ['values', 'communication'] },
+  { id: 'relationships', name: 'Relationships', description: 'How you connect and share responsibilities', domains: ['connection', 'roles'] },
+  { id: 'operations', name: 'Operations', description: 'Your spaces, systems, and how you handle change', domains: ['organization', 'adaptability'] },
+  { id: 'strategy', name: 'Strategy', description: 'How you solve problems and manage resources', domains: ['problemSolving', 'resources'] },
+];
+
+export const DOMAIN_ORDER: DomainId[] = [
+  'values', 'communication', 'connection', 'roles',
+  'organization', 'adaptability', 'problemSolving', 'resources',
+];
+
+export const PHASE_DOMAINS: Record<OnboardingPhaseId, [DomainId, DomainId]> = {
+  foundation: ['values', 'communication'],
+  relationships: ['connection', 'roles'],
+  operations: ['organization', 'adaptability'],
+  strategy: ['problemSolving', 'resources'],
+};
+
+export const PHASE_NAMES: Record<OnboardingPhaseId, string> = {
+  foundation: 'Foundation',
+  relationships: 'Relationships',
+  operations: 'Operations',
+  strategy: 'Strategy',
+};
+
+export const PHASE_DESCRIPTIONS: Record<OnboardingPhaseId, string> = {
+  foundation: 'Your values, identity, and how you communicate',
+  relationships: 'How you connect and share responsibilities',
+  operations: 'Your spaces, systems, and how you handle change',
+  strategy: 'How you solve problems and manage resources',
+};
+
+// ==================== Freshness utilities ====================
+
+export type FreshnessLabel = 'fresh' | 'aging' | 'stale';
+
+export function getDomainAge(manual: Manual, domainId: DomainId): number {
+  const meta = manual.domainMeta?.[domainId];
+  const date = meta?.updatedAt ?? manual.createdAt;
+  if (!date) return Infinity;
+  const ms = date instanceof Date ? date.getTime() : (date as any).toDate?.().getTime?.() ?? 0;
+  return Date.now() - ms;
+}
+
+export function getDomainFreshnessLabel(ageMs: number): FreshnessLabel {
+  const days = ageMs / (1000 * 60 * 60 * 24);
+  if (days < 30) return 'fresh';
+  if (days < 90) return 'aging';
+  return 'stale';
+}

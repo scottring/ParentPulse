@@ -1,46 +1,38 @@
-@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600;700&family=Inter:wght@300;400;500;600;700&family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @import "tailwindcss";
 
 :root {
-  /* Parent Theme - Calm Intentionality */
-  --parent-primary: #7C9082;
-  --parent-secondary: #D4A574;
-  --parent-accent: #2D5F5D;
-  --parent-bg: #FAF8F5;
-  --parent-card: #FFFFFF;
-  --parent-text: #2C2C2C;
-  --parent-text-light: #6B6B6B;
-  --parent-border: #E8E3DC;
+  --color-warm-50: #faf8f5;
+  --color-warm-100: #f0ebe3;
+  --color-warm-200: #e8e3dc;
+  --color-warm-300: #d4cec4;
+  --color-warm-500: #8b8175;
+  --color-warm-700: #5c5347;
+  --color-warm-900: #2c2824;
 
-  /* Child Theme - Playful Joy */
-  --child-primary: #FF6B6B;
-  --child-secondary: #FFD93D;
-  --child-accent: #4ECDC4;
-  --child-purple: #A8E6CF;
-  --child-bg: #FFF8DC;
-  --child-card: #FFFFFF;
-  --child-text: #2C2C2C;
+  --color-sage-100: #e8ede9;
+  --color-sage-300: #a3b5a6;
+  --color-sage-500: #7c9082;
+  --color-sage-700: #4a5f4e;
 
-  /* Shadows */
+  --color-amber-200: #f5deb3;
+  --color-amber-400: #d4a574;
+  --color-amber-600: #b08040;
+
   --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
-  --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.1);
-  --shadow-large: 0 8px 24px rgba(0, 0, 0, 0.12), 0 16px 48px rgba(0, 0, 0, 0.14);
+  --shadow-book: 4px 4px 12px rgba(0, 0, 0, 0.15), 1px 1px 4px rgba(0, 0, 0, 0.1);
 
-  /* Fonts */
-  --font-parent-heading: 'Crimson Pro', serif;
-  --font-parent-body: 'Inter', sans-serif;
-  --font-child-heading: 'Fredoka', sans-serif;
-  --font-child-body: 'Nunito', sans-serif;
+  --font-heading: 'Crimson Pro', serif;
+  --font-body: 'Inter', sans-serif;
 }
 
 @theme inline {
-  --color-parent-primary: var(--parent-primary);
-  --color-parent-secondary: var(--parent-secondary);
-  --color-parent-accent: var(--parent-accent);
-  --color-child-primary: var(--child-primary);
-  --color-child-secondary: var(--child-secondary);
-  --color-child-accent: var(--child-accent);
+  --color-sage-500: var(--color-sage-500);
+  --color-sage-700: var(--color-sage-700);
+  --color-warm-50: var(--color-warm-50);
+  --color-warm-200: var(--color-warm-200);
+  --color-amber-400: var(--color-amber-400);
 }
 
 * {
@@ -50,103 +42,42 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: var(--font-parent-body);
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--parent-bg);
-  color: var(--parent-text);
+  background: var(--color-warm-50);
+  color: var(--color-warm-900);
 }
 
-/* Parent Theme Utilities */
-.parent-page {
-  font-family: var(--font-parent-body);
-  background: var(--parent-bg);
-  color: var(--parent-text);
-}
-
-.parent-heading {
-  font-family: var(--font-parent-heading);
+/* Heading utility */
+.heading {
+  font-family: var(--font-heading);
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.2;
 }
 
-.parent-card {
-  background: var(--parent-card);
-  border-radius: 16px;
-  box-shadow: var(--shadow-soft);
-  border: 1px solid var(--parent-border);
-}
-
-/* Child Theme Utilities */
-.child-page {
-  font-family: var(--font-child-body);
-  background: var(--child-bg);
-  color: var(--child-text);
-}
-
-.child-heading {
-  font-family: var(--font-child-heading);
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.child-card {
-  background: var(--child-card);
-  border-radius: 24px;
-  box-shadow: var(--shadow-medium);
-  border: 3px solid var(--child-primary);
-}
-
 /* Animations */
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes bounce-gentle {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -1000px 0;
-  }
-  100% {
-    background-position: 1000px 0;
-  }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .animate-fade-in-up {
   animation: fadeInUp 0.6s ease-out;
 }
 
-.animate-float {
-  animation: float 3s ease-in-out infinite;
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out;
 }
 
-.animate-bounce-gentle {
-  animation: bounce-gentle 2s ease-in-out infinite;
+.animate-fade-in-staggered {
+  animation: fadeInUp 0.5s ease-out both;
 }
 
 /* Smooth scroll */
@@ -154,59 +85,14 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Selection colors */
+/* Selection */
 ::selection {
-  background: var(--parent-secondary);
+  background: var(--color-sage-300);
   color: white;
 }
 
-.child-page ::selection {
-  background: var(--child-primary);
-  color: white;
-}
-
-/* Focus styles */
+/* Focus */
 *:focus-visible {
-  outline: 2px solid var(--parent-accent);
+  outline: 2px solid var(--color-sage-500);
   outline-offset: 2px;
-}
-
-.child-page *:focus-visible {
-  outline: 3px solid var(--child-primary);
-  outline-offset: 3px;
-}
-
-/* Texture overlay for depth */
-.paper-texture {
-  position: relative;
-}
-
-.paper-texture::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
-  pointer-events: none;
-  mix-blend-mode: multiply;
-  opacity: 0.5;
-}
-
-/* Loading spinner */
-.spinner {
-  border: 3px solid rgba(124, 144, 130, 0.2);
-  border-top-color: var(--parent-primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Smooth transitions */
-* {
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
