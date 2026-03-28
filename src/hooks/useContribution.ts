@@ -1,6 +1,20 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+
+// Recursively strip undefined values from an object (Firestore rejects them)
+function stripUndefined(obj: any): any {
+  if (obj === null || obj === undefined) return null;
+  if (typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(stripUndefined);
+  const cleaned: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      cleaned[key] = stripUndefined(value);
+    }
+  }
+  return cleaned;
+}
 import {
   collection,
   doc,
@@ -127,7 +141,7 @@ export function useContribution(manualId?: string): UseContributionReturn {
         perspectiveType: data.perspectiveType,
         relationshipToSubject: data.relationshipToSubject,
         topicCategory: data.topicCategory,
-        answers: data.answers,
+        answers: stripUndefined(data.answers),
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
         status: 'complete',
@@ -213,7 +227,7 @@ export function useContribution(manualId?: string): UseContributionReturn {
       if (existingDraft) {
         // Try to update existing draft — if it fails (deleted doc), fall through to create new
         const updated = await updateContribution(existingDraft.contributionId, {
-          answers: data.answers,
+          answers: stripUndefined(data.answers),
           draftProgress: {
             sectionIndex: data.sectionIndex,
             questionIndex: data.questionIndex,
@@ -236,7 +250,7 @@ export function useContribution(manualId?: string): UseContributionReturn {
         perspectiveType: data.perspectiveType,
         relationshipToSubject: data.relationshipToSubject,
         topicCategory: 'overview', // Will cover all topics
-        answers: data.answers,
+        answers: stripUndefined(data.answers),
         draftProgress: {
           sectionIndex: data.sectionIndex,
           questionIndex: data.questionIndex,
