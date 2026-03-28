@@ -253,13 +253,22 @@ export default function ObserverOnboardPage({ params }: { params: Promise<{ pers
       <div className="border-b-2 border-slate-200 bg-white">
         <div className="max-w-3xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <span className="font-mono text-xs text-blue-600 font-bold tracking-wider">
-                OBSERVER ONBOARDING
-              </span>
-              <h1 className="font-mono font-bold text-lg text-slate-800">
-                About {person.name}
-              </h1>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleSaveAndExit}
+                className="text-slate-400 hover:text-slate-800 transition-colors"
+                title="Back to manual"
+              >
+                <span className="text-xl">&larr;</span>
+              </button>
+              <div>
+                <span className="font-mono text-xs text-blue-600 font-bold tracking-wider">
+                  OBSERVER ONBOARDING
+                </span>
+                <h1 className="font-mono font-bold text-lg text-slate-800">
+                  About {person.name}
+                </h1>
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
