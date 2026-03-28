@@ -20,7 +20,7 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (user && !authLoading) {
-      router.push('/people');
+      router.push('/welcome');
     }
   }, [user, authLoading, router]);
 

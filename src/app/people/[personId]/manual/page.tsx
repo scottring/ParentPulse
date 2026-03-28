@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { usePersonById } from '@/hooks/usePerson';
 import { usePersonManual } from '@/hooks/usePersonManual';
 import { useContribution } from '@/hooks/useContribution';
+import { useFamily } from '@/hooks/useFamily';
 import { Contribution } from '@/types/person-manual';
 import MainLayout from '@/components/layout/MainLayout';
 import { getSelfOnboardingSections } from '@/config/self-questions';
@@ -17,6 +18,11 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
   const { person, loading: personLoading } = usePersonById(personId);
   const { manual, loading: manualLoading } = usePersonManual(personId);
   const { contributions, loading: contribLoading, updateContribution } = useContribution(manual?.manualId);
+  const { inviteParent } = useFamily();
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviting, setInviting] = useState(false);
+  const [inviteSent, setInviteSent] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
 
   const loading = authLoading || personLoading || manualLoading || contribLoading;
 
@@ -89,6 +95,13 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                 >
                   ADD YOUR PERSPECTIVE &rarr;
                 </Link>
+              ) : person.canSelfContribute && !person.linkedUserId ? (
+                <button
+                  onClick={() => setShowInvite(true)}
+                  className="font-mono text-xs text-amber-600 font-bold hover:text-amber-700 transition-colors"
+                >
+                  INVITE {person.name.toUpperCase()} &rarr;
+                </button>
               ) : (
                 <span className="font-mono text-xs text-slate-400">AWAITING</span>
               )}
@@ -112,6 +125,58 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
             </div>
           </div>
         </div>
+
+        {/* Invite Form */}
+        {showInvite && !inviteSent && (
+          <div className="border-2 border-amber-300 bg-amber-50 p-6 mb-6">
+            <h3 className="font-mono font-bold text-sm text-amber-800 mb-2">
+              INVITE {person.name.toUpperCase()} TO RELISH
+            </h3>
+            <p className="font-mono text-xs text-amber-700 mb-4">
+              They&apos;ll create their own account and can add their perspective to this manual.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder={`${person.name}'s email address`}
+                className="flex-1 px-3 py-2 border-2 border-amber-300 bg-white font-mono text-sm focus:outline-none focus:border-amber-500"
+              />
+              <button
+                onClick={async () => {
+                  if (!inviteEmail.trim()) return;
+                  setInviting(true);
+                  try {
+                    await inviteParent(inviteEmail.trim());
+                    setInviteSent(true);
+                  } catch (err) {
+                    console.error('Invite failed:', err);
+                  } finally {
+                    setInviting(false);
+                  }
+                }}
+                disabled={inviting || !inviteEmail.trim()}
+                className="px-4 py-2 bg-amber-600 text-white font-mono text-xs font-bold hover:bg-amber-700 disabled:opacity-50 transition-all"
+              >
+                {inviting ? 'SENDING...' : 'SEND INVITE'}
+              </button>
+              <button
+                onClick={() => setShowInvite(false)}
+                className="px-3 py-2 border border-amber-300 font-mono text-xs text-amber-700 hover:border-amber-500"
+              >
+                CANCEL
+              </button>
+            </div>
+          </div>
+        )}
+        {inviteSent && (
+          <div className="border-2 border-green-300 bg-green-50 p-6 mb-6">
+            <p className="font-mono text-sm text-green-800">
+              Invite sent to <strong>{inviteEmail}</strong>. When they register with this email, they&apos;ll automatically join your family and can add their perspective.
+            </p>
+          </div>
+        )}
 
         {/* Main Content Area */}
         {!hasAnyPerspective ? (
