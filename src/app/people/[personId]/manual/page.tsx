@@ -155,7 +155,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                 </div>
                 <div className="p-6">
                   {selfContributions.map((contribution) => (
-                    <ContributionDisplay key={contribution.contributionId} contribution={contribution} />
+                    <ContributionDisplay key={contribution.contributionId} contribution={contribution} personName={person.name} />
                   ))}
                 </div>
               </div>
@@ -173,7 +173,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                       <span className="font-mono text-xs text-slate-400 mb-4 block">
                         by {contribution.contributorName}
                       </span>
-                      <ContributionDisplay contribution={contribution} />
+                      <ContributionDisplay contribution={contribution} personName={person.name} />
                     </div>
                   ))}
                 </div>
@@ -271,25 +271,33 @@ const SECTION_LABELS: Record<string, string> = {
   needs: 'Needs',
 };
 
-// Build a lookup of questionId -> question text from the question banks
-function buildQuestionLookup(): Record<string, string> {
-  const lookup: Record<string, string> = {};
-  const allSections = [
-    ...getSelfOnboardingSections(),
-    ...getOnboardingSections('spouse'),
-    ...getOnboardingSections('child'),
-  ];
-  for (const section of allSections) {
+// Build separate lookups for self vs observer questions
+function buildQuestionLookups() {
+  const selfLookup: Record<string, string> = {};
+  const observerLookup: Record<string, string> = {};
+
+  for (const section of getSelfOnboardingSections()) {
     for (const q of section.questions) {
-      if (!lookup[q.id]) {
-        lookup[q.id] = q.question;
+      selfLookup[q.id] = q.question;
+    }
+  }
+
+  // Build observer lookups for all relationship types
+  const relTypes: Array<import('@/types/person-manual').RelationshipType> = ['spouse', 'child', 'friend', 'sibling', 'elderly_parent', 'professional', 'other'];
+  for (const relType of relTypes) {
+    for (const section of getOnboardingSections(relType)) {
+      for (const q of section.questions) {
+        if (!observerLookup[q.id]) {
+          observerLookup[q.id] = q.question;
+        }
       }
     }
   }
-  return lookup;
+
+  return { selfLookup, observerLookup };
 }
 
-const questionLookup = buildQuestionLookup();
+const { selfLookup, observerLookup } = buildQuestionLookups();
 
 function extractAnswerText(answer: any): string | null {
   if (typeof answer === 'string') {
@@ -304,8 +312,15 @@ function extractAnswerText(answer: any): string | null {
   return null;
 }
 
-function ContributionDisplay({ contribution }: { contribution: Contribution }) {
+function ContributionDisplay({ contribution, personName }: { contribution: Contribution; personName?: string }) {
   const answers = contribution.answers;
+  const lookup = contribution.perspectiveType === 'self' ? selfLookup : observerLookup;
+
+  const resolveQuestion = (questionId: string): string | null => {
+    const raw = lookup[questionId];
+    if (!raw) return null;
+    return personName ? raw.replace(/\{\{personName\}\}/g, personName) : raw;
+  };
 
   // Answers can be nested { sectionId: { questionId: value } } or flat { questionId: value }
   const isNested = Object.values(answers).some(
@@ -313,7 +328,6 @@ function ContributionDisplay({ contribution }: { contribution: Contribution }) {
   );
 
   if (isNested) {
-    // Nested: group by section
     return (
       <div className="space-y-6">
         {Object.entries(answers).map(([sectionId, sectionAnswers]) => {
@@ -331,7 +345,7 @@ function ContributionDisplay({ contribution }: { contribution: Contribution }) {
                 {nonEmpty.map(([questionId, answer]) => {
                   const text = extractAnswerText(answer);
                   if (!text) return null;
-                  const questionText = questionLookup[questionId];
+                  const questionText = resolveQuestion(questionId);
 
                   return (
                     <div key={questionId} className="border-l-2 border-slate-200 pl-4">
@@ -350,7 +364,6 @@ function ContributionDisplay({ contribution }: { contribution: Contribution }) {
     );
   }
 
-  // Flat: just render answers
   const entries = Object.entries(answers);
   const nonEmpty = entries.filter(([, v]) => extractAnswerText(v));
 
@@ -359,7 +372,7 @@ function ContributionDisplay({ contribution }: { contribution: Contribution }) {
       {nonEmpty.map(([questionId, answer]) => {
         const text = extractAnswerText(answer);
         if (!text) return null;
-        const questionText = questionLookup[questionId];
+        const questionText = resolveQuestion(questionId);
 
         return (
           <div key={questionId} className="border-l-2 border-slate-200 pl-4">
