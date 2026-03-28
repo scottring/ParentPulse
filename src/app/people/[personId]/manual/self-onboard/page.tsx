@@ -356,12 +356,20 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
         {/* Navigation */}
         <div className="flex gap-4 mt-6">
           {(currentSectionIndex > 0 || currentQuestionIndex > 0) && (
-            <button
-              onClick={handlePrevious}
-              className="px-6 py-3 border-2 border-slate-300 bg-white font-mono font-bold text-slate-700 hover:border-slate-800 transition-all"
-            >
-              &larr; PREVIOUS
-            </button>
+            <>
+              <button
+                onClick={() => { setCurrentSectionIndex(0); setCurrentQuestionIndex(0); }}
+                className="px-4 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-500 hover:border-slate-800 hover:text-slate-700 transition-all"
+              >
+                &laquo; START
+              </button>
+              <button
+                onClick={handlePrevious}
+                className="px-6 py-3 border-2 border-slate-300 bg-white font-mono font-bold text-slate-700 hover:border-slate-800 transition-all"
+              >
+                &larr; PREVIOUS
+              </button>
+            </>
           )}
           <button
             onClick={handleNext}
