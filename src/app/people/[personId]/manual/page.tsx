@@ -8,6 +8,8 @@ import { usePersonManual } from '@/hooks/usePersonManual';
 import { useContribution } from '@/hooks/useContribution';
 import { useFamily } from '@/hooks/useFamily';
 import { Contribution } from '@/types/person-manual';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '@/lib/firebase';
 import MainLayout from '@/components/layout/MainLayout';
 import { getSelfOnboardingSections } from '@/config/self-questions';
 import { getOnboardingSections, OnboardingQuestion } from '@/config/onboarding-questions';
@@ -23,6 +25,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
   const [inviting, setInviting] = useState(false);
   const [inviteSent, setInviteSent] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [synthesizing, setSynthesizing] = useState(false);
 
   const loading = authLoading || personLoading || manualLoading || contribLoading;
 
@@ -272,15 +275,34 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
               </div>
             )}
 
-            {/* Synthesis placeholder */}
-            {hasSelfPerspective && hasObserverPerspective && !manual.synthesizedContent && (
+            {/* Synthesis button — show when any completed contributions exist */}
+            {hasAnyPerspective && (
               <div className="border-2 border-amber-300 bg-amber-50 p-6 text-center">
                 <h3 className="font-mono font-bold text-sm text-amber-800 mb-2">
-                  READY FOR SYNTHESIS
+                  {manual.synthesizedContent ? 'RE-SYNTHESIZE' : 'SYNTHESIZE PERSPECTIVES'}
                 </h3>
-                <p className="font-mono text-sm text-amber-700">
-                  Both self and observer perspectives exist. AI synthesis will highlight alignments and gaps.
+                <p className="font-mono text-sm text-amber-700 mb-4">
+                  {hasSelfPerspective && hasObserverPerspective
+                    ? 'Both self and observer perspectives are available. AI will highlight alignments, gaps, and blind spots.'
+                    : 'AI will analyze the available perspectives. More perspectives = richer insights.'}
                 </p>
+                <button
+                  onClick={async () => {
+                    setSynthesizing(true);
+                    try {
+                      const synthesize = httpsCallable(functions, 'synthesizeManualContent');
+                      await synthesize({ manualId: manual.manualId });
+                    } catch (err) {
+                      console.error('Synthesis failed:', err);
+                    } finally {
+                      setSynthesizing(false);
+                    }
+                  }}
+                  disabled={synthesizing}
+                  className="px-6 py-3 bg-amber-600 text-white font-mono font-bold hover:bg-amber-700 disabled:opacity-50 transition-all"
+                >
+                  {synthesizing ? 'SYNTHESIZING...' : 'SYNTHESIZE NOW'}
+                </button>
               </div>
             )}
 

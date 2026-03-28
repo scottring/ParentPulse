@@ -27,6 +27,230 @@ function getGoogleAI() {
 }
 
 /**
+ * Synthesize manual content from multiple perspective contributions.
+ * Reads all completed contributions for a manual, pairs self vs observer
+ * answers by topic, and generates synthesized insights highlighting
+ * alignments, gaps, and blind spots.
+ */
+exports.synthesizeManualContent = onCall(
+    {
+      region: "us-central1",
+      memory: "512MiB",
+      timeoutSeconds: 120,
+    },
+    async (request) => {
+      // Verify authentication
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const {manualId} = request.data;
+      if (!manualId) {
+        throw new Error("manualId is required");
+      }
+
+      const db = admin.firestore();
+
+      // Fetch the manual
+      const manualDoc = await db
+          .collection("person_manuals")
+          .doc(manualId)
+          .get();
+      if (!manualDoc.exists) {
+        throw new Error("Manual not found");
+      }
+      const manual = manualDoc.data();
+
+      // Verify user belongs to this family
+      const userDoc = await db
+          .collection("users")
+          .doc(request.auth.uid)
+          .get();
+      if (!userDoc.exists ||
+          userDoc.data().familyId !== manual.familyId) {
+        throw new Error("Access denied");
+      }
+
+      // Fetch all completed contributions for this manual
+      const contribSnap = await db
+          .collection("contributions")
+          .where("manualId", "==", manualId)
+          .where("status", "==", "complete")
+          .get();
+
+      if (contribSnap.empty) {
+        throw new Error("No completed contributions to synthesize");
+      }
+
+      // Organize contributions by perspective type
+      const selfContribs = [];
+      const observerContribs = [];
+
+      contribSnap.forEach((doc) => {
+        const data = doc.data();
+        if (data.perspectiveType === "self") {
+          selfContribs.push(data);
+        } else {
+          observerContribs.push(data);
+        }
+      });
+
+      // Build the prompt
+      const personName = manual.personName || "this person";
+      let prompt = `You are analyzing a collaborative "operating manual" for ${personName}. `;
+      prompt += `Multiple people have shared their perspectives about ${personName}. `;
+      prompt += `Your job is to synthesize these perspectives, highlighting:\n`;
+      prompt += `1. ALIGNMENTS — where perspectives agree\n`;
+      prompt += `2. GAPS — where perspectives diverge (this is the most valuable part)\n`;
+      prompt += `3. BLIND SPOTS — things only one side sees\n\n`;
+
+      if (selfContribs.length > 0) {
+        prompt += `=== ${personName.toUpperCase()}'S OWN PERSPECTIVE ===\n`;
+        for (const contrib of selfContribs) {
+          for (const [section, answers] of Object.entries(contrib.answers)) {
+            if (typeof answers !== "object" || answers === null) continue;
+            prompt += `\n[${section.toUpperCase()}]\n`;
+            for (const [qId, answer] of Object.entries(answers)) {
+              const text = typeof answer === "string" ?
+                answer :
+                (answer && answer.primary) ?
+                  String(answer.primary) :
+                  JSON.stringify(answer);
+              if (text && text.trim()) {
+                prompt += `- ${text.trim()}\n`;
+              }
+            }
+          }
+        }
+        prompt += "\n";
+      }
+
+      if (observerContribs.length > 0) {
+        for (const contrib of observerContribs) {
+          const observerName = contrib.contributorName || "An observer";
+          const relationship = contrib.relationshipToSubject || "observer";
+          prompt += `=== ${observerName.toUpperCase()}'S PERSPECTIVE `;
+          prompt += `(${relationship}) ===\n`;
+          for (const [section, answers] of Object.entries(contrib.answers)) {
+            if (typeof answers !== "object" || answers === null) continue;
+            prompt += `\n[${section.toUpperCase()}]\n`;
+            for (const [qId, answer] of Object.entries(answers)) {
+              const text = typeof answer === "string" ?
+                answer :
+                (answer && answer.primary) ?
+                  String(answer.primary) :
+                  JSON.stringify(answer);
+              if (text && text.trim()) {
+                prompt += `- ${text.trim()}\n`;
+              }
+            }
+          }
+          prompt += "\n";
+        }
+      }
+
+      prompt += `\nBased on these perspectives, provide a JSON response with this structure:
+{
+  "overview": "A 2-3 sentence narrative overview of ${personName} that weaves together all perspectives",
+  "alignments": [
+    {
+      "id": "unique-id",
+      "topic": "Topic name",
+      "selfPerspective": "What they said (or null if no self-perspective)",
+      "observerPerspective": "What observers said",
+      "synthesis": "How these perspectives align and what it means",
+      "gapSeverity": "aligned"
+    }
+  ],
+  "gaps": [
+    {
+      "id": "unique-id",
+      "topic": "Topic name",
+      "selfPerspective": "What they said",
+      "observerPerspective": "What observers said",
+      "synthesis": "How these perspectives differ and what the gap reveals",
+      "gapSeverity": "minor_gap" or "significant_gap"
+    }
+  ],
+  "blindSpots": [
+    {
+      "id": "unique-id",
+      "topic": "Topic name",
+      "selfPerspective": "What only they see (or null)",
+      "observerPerspective": "What only observers see (or null)",
+      "synthesis": "Why this blind spot matters",
+      "gapSeverity": "minor_gap" or "significant_gap"
+    }
+  ]
+}
+
+Important:
+- Focus on what's genuinely useful for understanding ${personName} better
+- Gaps are not bad — they're where understanding deepens
+- Be warm and constructive, not clinical
+- Keep each synthesis to 1-2 sentences
+- Generate 2-5 items per category (alignments, gaps, blind spots)
+- If there's only one perspective type, still generate insights but note that the other perspective is missing
+- Return ONLY valid JSON, no markdown or extra text`;
+
+      try {
+        const client = getAnthropic();
+        const response = await client.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 2000,
+          messages: [
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+        });
+
+        const content = response.content[0].text;
+
+        // Parse JSON from response (handle potential markdown wrapping)
+        let parsed;
+        try {
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content);
+        } catch (parseErr) {
+          console.error("Failed to parse synthesis response:", content);
+          throw new Error("Failed to parse AI response");
+        }
+
+        // Add IDs if missing
+        const addIds = (items) =>
+          (items || []).map((item, i) => ({
+            ...item,
+            id: item.id || `item-${i}-${Date.now()}`,
+          }));
+
+        const synthesizedContent = {
+          overview: parsed.overview || "",
+          alignments: addIds(parsed.alignments),
+          gaps: addIds(parsed.gaps),
+          blindSpots: addIds(parsed.blindSpots),
+          lastSynthesizedAt: admin.firestore.Timestamp.now(),
+        };
+
+        // Save to manual
+        await db
+            .collection("person_manuals")
+            .doc(manualId)
+            .update({
+              synthesizedContent,
+              updatedAt: admin.firestore.Timestamp.now(),
+            });
+
+        return {success: true, synthesizedContent};
+      } catch (err) {
+        console.error("Synthesis error:", err);
+        throw new Error(`Synthesis failed: ${err.message}`);
+      }
+    },
+);
+
+/**
  * Scheduled function that runs daily at 9 PM to generate next day's actions
  * Schedule format: "0 21 * * *" = 9 PM every day
  */
