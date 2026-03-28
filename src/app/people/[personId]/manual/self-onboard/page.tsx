@@ -35,7 +35,9 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
   useEffect(() => {
     if (!manual || !user || draftLoaded) return;
 
-    findDraft(manual.manualId, 'self').then((draft) => {
+    (async () => {
+      // First check for an in-progress draft
+      const draft = await findDraft(manual.manualId, 'self');
       if (draft) {
         setDraftId(draft.contributionId);
         if (draft.answers) setAnswers(draft.answers);
@@ -43,9 +45,31 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
           setCurrentSectionIndex(draft.draftProgress.sectionIndex);
           setCurrentQuestionIndex(draft.draftProgress.questionIndex);
         }
+        setDraftLoaded(true);
+        return;
+      }
+
+      // No draft — check for a completed contribution to resume from
+      const { query: fsQuery, collection: fsCollection, where, getDocs } = await import('firebase/firestore');
+      const { firestore } = await import('@/lib/firebase');
+      const { PERSON_MANUAL_COLLECTIONS } = await import('@/types/person-manual');
+      const q = fsQuery(
+        fsCollection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS),
+        where('familyId', '==', user.familyId),
+        where('manualId', '==', manual.manualId),
+        where('contributorId', '==', user.userId),
+        where('perspectiveType', '==', 'self'),
+        where('status', '==', 'complete')
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const existing = snap.docs[0];
+        const data = existing.data();
+        if (data.answers) setAnswers(data.answers);
+        setDraftId(existing.id);
       }
       setDraftLoaded(true);
-    });
+    })();
   }, [manual, user, draftLoaded, findDraft]);
 
   const currentSection = sections[currentSectionIndex];
