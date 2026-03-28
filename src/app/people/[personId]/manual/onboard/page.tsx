@@ -9,8 +9,6 @@ import { usePersonManual } from '@/hooks/usePersonManual';
 import { useManualOnboarding } from '@/hooks/useManualOnboarding';
 import { useSaveManualContent } from '@/hooks/useSaveManualContent';
 import { getOnboardingSections, getNeurodivergenceSections, OnboardingSection } from '@/config/onboarding-questions';
-import { DEMO_ONBOARDING_SECTIONS, DEMO_PREFILLED_ANSWERS } from '@/config/demo-onboarding-questions';
-import { isDemoMode, isDemoUser } from '@/utils/demo';
 import { RelationshipType } from '@/types/person-manual';
 import { GeneratedTrigger, GeneratedStrategy, GeneratedBoundary, loadOnboardingProgress, QuestionAnswer } from '@/types/onboarding';
 import { QuestionRenderer } from '@/components/onboarding/QuestionRenderer';
@@ -40,13 +38,6 @@ export default function AIOnboardingPage({ params }: { params: Promise<{ personI
   const [sections, setSections] = useState<OnboardingSection[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [progressRestored, setProgressRestored] = useState(false);
-  const [isDemo, setIsDemo] = useState(false);
-
-  // Detect demo mode on mount
-  useEffect(() => {
-    const demo = isDemoMode() || isDemoUser(user);
-    setIsDemo(demo);
-  }, [user]);
 
   // Restore saved progress on mount
   useEffect(() => {
@@ -91,9 +82,7 @@ export default function AIOnboardingPage({ params }: { params: Promise<{ personI
   useEffect(() => {
     if (person?.relationshipType) {
       // Use demo sections if in demo mode
-      const baseSections = isDemo
-        ? DEMO_ONBOARDING_SECTIONS
-        : getOnboardingSections(person.relationshipType as RelationshipType);
+      const baseSections = getOnboardingSections(person.relationshipType as RelationshipType);
 
       // For child relationships, check if we need to add neurodivergence sections
       if (person.relationshipType === 'child') {
@@ -381,8 +370,6 @@ export default function AIOnboardingPage({ params }: { params: Promise<{ personI
                 onChange={(value) => handleAnswer(currentQuestion.id, value)}
                 personName={person.name}
                 onKeyboardContinue={handleNext}
-                demoMode={isDemo}
-                demoAnswer={isDemo ? (DEMO_PREFILLED_ANSWERS as Record<string, Record<string, string>>)[currentSection.sectionId]?.[currentQuestion.id] : undefined}
               />
             </div>
 

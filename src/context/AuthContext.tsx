@@ -27,7 +27,6 @@ import {
   AuthState,
   LoginCredentials,
   RegistrationData,
-  ChildRegistrationData,
   COLLECTIONS,
 } from '../types';
 import { createUserOwnManual } from '../utils/user-manual-setup';
@@ -39,10 +38,6 @@ interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (data: RegistrationData) => Promise<void>;
   logout: () => Promise<void>;
-
-  // Child auth methods
-  loginChild: (username: string, pin: string) => Promise<void>;
-  registerChild: (data: ChildRegistrationData) => Promise<void>;
 
   // User profile methods
   refreshUser: () => Promise<void>;
@@ -174,31 +169,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setError(null);
       isRegistering.current = true; // Set flag to prevent orphaned check
 
-      // Check for pending invites for this email
-      const familiesRef = collection(firestore, COLLECTIONS.FAMILIES);
-      const familiesSnapshot = await getDocs(familiesRef);
-
-      let existingFamilyId: string | null = null;
-      let pendingInvite: any = null;
-
-      for (const familyDoc of familiesSnapshot.docs) {
-        const familyData = familyDoc.data();
-        const invite = familyData.pendingInvites?.find(
-          (inv: any) => inv.email.toLowerCase() === data.email.toLowerCase()
-        );
-        if (invite) {
-          existingFamilyId = familyData.familyId;
-          pendingInvite = invite;
-          break;
-        }
-      }
-
-      // Create Firebase auth user
+      // Create Firebase auth user first (must be authenticated before querying Firestore)
       userCredential = await createUserWithEmailAndPassword(
         auth,
         data.email,
         data.password
       );
+
+      // Check for pending invites for this email (after auth so we have credentials)
+      let existingFamilyId: string | null = null;
+      let pendingInvite: any = null;
+
+      try {
+        const familiesRef = collection(firestore, COLLECTIONS.FAMILIES);
+        const familiesSnapshot = await getDocs(familiesRef);
+
+        for (const familyDoc of familiesSnapshot.docs) {
+          const familyData = familyDoc.data();
+          const invite = familyData.pendingInvites?.find(
+            (inv: any) => inv.email.toLowerCase() === data.email.toLowerCase()
+          );
+          if (invite) {
+            existingFamilyId = familyData.familyId;
+            pendingInvite = invite;
+            break;
+          }
+        }
+      } catch (inviteErr) {
+        // New users can't query all families — skip invite check
+        console.log('Skipping invite check (new user):', inviteErr);
+      }
 
       // Update display name
       await updateProfile(userCredential.user, {
@@ -344,94 +344,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // ==================== Child Authentication ====================
-
-  const registerChild = async (data: ChildRegistrationData): Promise<void> => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      if (!user || user.role !== 'parent') {
-        throw new Error('Only parents can register children');
-      }
-
-      // Create a pseudo-email for child (not used for login)
-      const childEmail = `${data.username}_${user.familyId}@parentpulse.child`;
-
-      // Create Firebase auth user with PIN as password
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        childEmail,
-        data.pin
-      );
-
-      // Update display name
-      await updateProfile(userCredential.user, {
-        displayName: data.name,
-      });
-
-      // Create child user document
-      await createUserDocument(
-        userCredential.user,
-        'child',
-        data.name,
-        user.familyId,
-        {
-          dateOfBirth: data.dateOfBirth as any,
-        }
-      );
-
-      // Update family document with child ID
-      const familyDocRef = doc(firestore, COLLECTIONS.FAMILIES, user.familyId);
-      const familyDoc = await getDoc(familyDocRef);
-
-      if (familyDoc.exists()) {
-        const familyData = familyDoc.data();
-        await setDoc(familyDocRef, {
-          ...familyData,
-          childIds: [...familyData.childIds, userCredential.user.uid],
-        });
-      }
-
-      // Initialize chip balance for child
-      const chipEconomyRef = doc(firestore, COLLECTIONS.CHIP_ECONOMY, user.familyId);
-      const chipEconomyDoc = await getDoc(chipEconomyRef);
-
-      if (!chipEconomyDoc.exists()) {
-        // Create initial chip economy if it doesn't exist
-        await setDoc(chipEconomyRef, {
-          economyId: user.familyId,
-          familyId: user.familyId,
-          tasks: [],
-          rewards: [],
-        });
-      }
-
-    } catch (err: any) {
-      console.error('Child registration error:', err);
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loginChild = async (username: string, pin: string): Promise<void> => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Note: Child login implementation would require additional setup
-      throw new Error('Child login not yet fully implemented - use parent account to test');
-
-    } catch (err: any) {
-      console.error('Child login error:', err);
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // ==================== User Profile Methods ====================
 
@@ -495,8 +407,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     register,
     logout,
-    loginChild,
-    registerChild,
     refreshUser,
     updateUserProfile,
     isParent,

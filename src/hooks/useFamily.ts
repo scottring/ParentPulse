@@ -13,8 +13,7 @@ import {
 } from 'firebase/firestore';
 import { firestore } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
-import { Family, PendingInvite } from '../types/child-manual';
-import { COLLECTIONS } from '../types';
+import { Family, PendingInvite, COLLECTIONS } from '../types';
 
 interface UseFamilyReturn {
   family: Family | null;
@@ -54,6 +53,7 @@ export const useFamily = (): UseFamilyReturn => {
           // Ensure new fields exist (backwards compatibility)
           const normalizedFamily: Family = {
             familyId: familyData.familyId,
+            name: familyData.name || '',
             createdBy: familyData.createdBy || familyData.parentIds?.[0] || user.userId,
             members: familyData.members || [user.userId],
             pendingInvites: familyData.pendingInvites || [],

@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
-import { DemoBanner } from "@/components/demo/DemoBanner";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -37,7 +36,6 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} antialiased`}>
         <AuthProvider>
-          <DemoBanner />
           {children}
         </AuthProvider>
       </body>
