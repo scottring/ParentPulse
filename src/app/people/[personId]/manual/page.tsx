@@ -20,10 +20,11 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
   const { person, loading: personLoading } = usePersonById(personId);
   const { manual, loading: manualLoading } = usePersonManual(personId);
   const { contributions, loading: contribLoading, updateContribution } = useContribution(manual?.manualId);
-  const { inviteParent } = useFamily();
+  const { family, inviteParent } = useFamily();
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviting, setInviting] = useState(false);
   const [inviteSent, setInviteSent] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
   const [showInvite, setShowInvite] = useState(false);
   const [synthesizing, setSynthesizing] = useState(false);
   type ViewMode = 'synthesized' | 'perspectives' | 'gaps';
@@ -167,11 +168,13 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                 onClick={async () => {
                   if (!inviteEmail.trim()) return;
                   setInviting(true);
+                  setInviteError(null);
                   try {
                     await inviteParent(inviteEmail.trim());
                     setInviteSent(true);
-                  } catch (err) {
+                  } catch (err: any) {
                     console.error('Invite failed:', err);
+                    setInviteError(err.message || 'Failed to send invite');
                   } finally {
                     setInviting(false);
                   }
@@ -188,6 +191,9 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                 CANCEL
               </button>
             </div>
+            {inviteError && (
+              <p className="font-mono text-xs text-red-600 mt-2">{inviteError}</p>
+            )}
           </div>
         )}
         {inviteSent && (
