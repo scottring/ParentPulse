@@ -40,7 +40,7 @@ interface UseContributionReturn {
   updateContribution: (
     contributionId: string,
     updates: Partial<Pick<Contribution, 'answers' | 'status' | 'draftProgress'>>
-  ) => Promise<void>;
+  ) => Promise<boolean>;
 
   /** Save or update a draft contribution. Creates on first call, updates thereafter. */
   saveDraft: (data: {
@@ -150,16 +150,22 @@ export function useContribution(manualId?: string): UseContributionReturn {
     async (
       contributionId: string,
       updates: Partial<Pick<Contribution, 'answers' | 'status' | 'draftProgress'>>
-    ) => {
-      const docRef = doc(
-        firestore,
-        PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS,
-        contributionId
-      );
-      await updateDoc(docRef, {
-        ...updates,
-        updatedAt: Timestamp.now(),
-      });
+    ): Promise<boolean> => {
+      try {
+        const docRef = doc(
+          firestore,
+          PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS,
+          contributionId
+        );
+        await updateDoc(docRef, {
+          ...updates,
+          updatedAt: Timestamp.now(),
+        });
+        return true;
+      } catch (err: any) {
+        console.error('updateContribution failed (doc may not exist):', contributionId, err.message);
+        return false;
+      }
     },
     []
   );
@@ -205,15 +211,19 @@ export function useContribution(manualId?: string): UseContributionReturn {
       const existingDraft = await findDraft(data.manualId, data.perspectiveType);
 
       if (existingDraft) {
-        // Update existing draft
-        await updateContribution(existingDraft.contributionId, {
+        // Try to update existing draft — if it fails (deleted doc), fall through to create new
+        const updated = await updateContribution(existingDraft.contributionId, {
           answers: data.answers,
           draftProgress: {
             sectionIndex: data.sectionIndex,
             questionIndex: data.questionIndex,
           },
         });
-        return existingDraft.contributionId;
+        if (updated) {
+          return existingDraft.contributionId;
+        }
+        // Update failed — document was deleted externally, create a new draft below
+        console.warn('Draft update failed, creating new draft');
       }
 
       // Create new draft
