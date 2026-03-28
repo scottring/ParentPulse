@@ -86,7 +86,7 @@ export function useContribution(manualId?: string): UseContributionReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Listen to completed contributions for a specific manual
+  // Listen to all contributions (draft + complete) for a specific manual
   useEffect(() => {
     if (!user || !manualId) {
       setContributions([]);
@@ -97,8 +97,7 @@ export function useContribution(manualId?: string): UseContributionReturn {
     const q = query(
       collection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS),
       where('manualId', '==', manualId),
-      where('familyId', '==', user.familyId),
-      where('status', '==', 'complete')
+      where('familyId', '==', user.familyId)
     );
 
     const unsubscribe = onSnapshot(

@@ -232,6 +232,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                       key={contribution.contributionId}
                       contribution={contribution}
                       personName={person.name}
+                      personId={personId}
                       editable={isSelf || contribution.contributorId === user.userId}
                       onUpdate={updateContribution}
                     />
@@ -261,6 +262,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                       <ContributionDisplay
                         contribution={contribution}
                         personName={person.name}
+                        personId={personId}
                         editable={contribution.contributorId === user.userId}
                         onUpdate={updateContribution}
                       />
@@ -405,14 +407,17 @@ function extractAnswerText(answer: any): string | null {
 function ContributionDisplay({
   contribution,
   personName,
+  personId,
   editable = false,
   onUpdate,
 }: {
   contribution: Contribution;
   personName?: string;
+  personId?: string;
   editable?: boolean;
   onUpdate?: (id: string, updates: Partial<Pick<Contribution, 'answers' | 'status' | 'draftProgress'>>) => Promise<boolean>;
 }) {
+  const isDraft = contribution.status === 'draft';
   const answers = contribution.answers;
   const lookup = contribution.perspectiveType === 'self' ? selfLookup : observerLookup;
 
@@ -439,9 +444,24 @@ function ContributionDisplay({
     await onUpdate(contribution.contributionId, { answers: updated });
   }, [answers, contribution.contributionId, onUpdate]);
 
+  const draftBanner = isDraft && personId ? (
+    <div className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 mb-4">
+      <span className="font-mono text-xs text-amber-700">
+        IN PROGRESS — not all questions answered yet
+      </span>
+      <Link
+        href={`/people/${personId}/manual/${contribution.perspectiveType === 'self' ? 'self-onboard' : 'onboard'}`}
+        className="font-mono text-xs text-amber-800 font-bold hover:text-amber-900"
+      >
+        CONTINUE &rarr;
+      </Link>
+    </div>
+  ) : null;
+
   if (isNested) {
     return (
       <div className="space-y-6">
+        {draftBanner}
         {Object.entries(answers).map(([sectionId, sectionAnswers]) => {
           if (typeof sectionAnswers !== 'object' || sectionAnswers === null) return null;
           const entries = Object.entries(sectionAnswers as Record<string, any>);
@@ -482,6 +502,7 @@ function ContributionDisplay({
 
   return (
     <div className="space-y-4">
+      {draftBanner}
       {nonEmpty.map(([questionId, answer]) => {
         const text = extractAnswerText(answer);
         if (!text) return null;
