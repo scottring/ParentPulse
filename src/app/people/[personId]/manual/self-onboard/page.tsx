@@ -27,6 +27,23 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
 
+  const storageKey = `self-onboard-${personId}`;
+
+  // Restore saved progress on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.answers) setAnswers(parsed.answers);
+        if (typeof parsed.sectionIndex === 'number') setCurrentSectionIndex(parsed.sectionIndex);
+        if (typeof parsed.questionIndex === 'number') setCurrentQuestionIndex(parsed.questionIndex);
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }, [storageKey]);
+
   const currentSection = sections[currentSectionIndex];
   const currentQuestion = currentSection?.questions[currentQuestionIndex];
 
@@ -36,6 +53,20 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
     (sum, sectionAnswers) => sum + Object.keys(sectionAnswers).length,
     0
   );
+
+  // Auto-save progress to localStorage
+  useEffect(() => {
+    if (answeredQuestions > 0) {
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          answers,
+          sectionIndex: currentSectionIndex,
+          questionIndex: currentQuestionIndex,
+        })
+      );
+    }
+  }, [answers, currentSectionIndex, currentQuestionIndex, answeredQuestions, storageKey]);
 
   const handleAnswer = useCallback((questionId: string, value: QuestionAnswer) => {
     setAnswers((prev) => ({
@@ -93,12 +124,18 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
         });
       }
 
+      localStorage.removeItem(storageKey);
       setIsComplete(true);
     } catch (err) {
       console.error('Failed to save self-onboarding:', err);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSaveAndExit = () => {
+    // Progress is already auto-saved to localStorage
+    router.push(`/people/${personId}/manual`);
   };
 
   // Redirect after completion
@@ -161,16 +198,24 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
                 Tell Us About Yourself
               </h1>
             </div>
-            <div className="text-right">
-              <div className="font-mono text-xs text-slate-500">
-                {answeredQuestions} / {totalQuestions} ANSWERED
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <div className="font-mono text-xs text-slate-500">
+                  {answeredQuestions} / {totalQuestions} ANSWERED
+                </div>
+                <div className="w-32 h-2 bg-slate-200 mt-1">
+                  <div
+                    className="h-full bg-amber-600 transition-all"
+                    style={{ width: `${(answeredQuestions / totalQuestions) * 100}%` }}
+                  />
+                </div>
               </div>
-              <div className="w-32 h-2 bg-slate-200 mt-1">
-                <div
-                  className="h-full bg-amber-600 transition-all"
-                  style={{ width: `${(answeredQuestions / totalQuestions) * 100}%` }}
-                />
-              </div>
+              <button
+                onClick={handleSaveAndExit}
+                className="px-4 py-2 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-600 hover:border-slate-800 hover:text-slate-800 transition-all"
+              >
+                SAVE &amp; EXIT
+              </button>
             </div>
           </div>
         </div>
