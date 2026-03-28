@@ -180,9 +180,15 @@ export interface Contribution {
   perspectiveType: PerspectiveType;
   relationshipToSubject: string;  // "self", "spouse", "parent", "child"
 
-  // What they contributed
+  // What they contributed — answers keyed by sectionId.questionId
   topicCategory: TopicCategory;
-  answers: Record<string, any>;  // Question ID -> answer value
+  answers: Record<string, any>;
+
+  // Draft progress (for save-and-resume)
+  draftProgress?: {
+    sectionIndex: number;
+    questionIndex: number;
+  };
 
   // Metadata
   createdAt: Timestamp;

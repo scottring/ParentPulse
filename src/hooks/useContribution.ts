@@ -6,8 +6,10 @@ import {
   doc,
   addDoc,
   updateDoc,
+  setDoc,
   query,
   where,
+  getDocs,
   onSnapshot,
   Timestamp,
   arrayUnion,
@@ -37,8 +39,28 @@ interface UseContributionReturn {
 
   updateContribution: (
     contributionId: string,
-    updates: Partial<Pick<Contribution, 'answers' | 'status'>>
+    updates: Partial<Pick<Contribution, 'answers' | 'status' | 'draftProgress'>>
   ) => Promise<void>;
+
+  /** Save or update a draft contribution. Creates on first call, updates thereafter. */
+  saveDraft: (data: {
+    manualId: string;
+    personId: string;
+    perspectiveType: PerspectiveType;
+    relationshipToSubject: string;
+    answers: Record<string, any>;
+    sectionIndex: number;
+    questionIndex: number;
+  }) => Promise<string>;
+
+  /** Complete a draft — mark as 'complete' and link to manual. */
+  completeDraft: (contributionId: string, manualId: string) => Promise<void>;
+
+  /** Find an existing draft for the current user on a given manual+perspective. */
+  findDraft: (
+    manualId: string,
+    perspectiveType: PerspectiveType
+  ) => Promise<Contribution | null>;
 
   getByManual: (manualId: string) => Contribution[];
   getByPerspective: (perspectiveType: PerspectiveType) => Contribution[];
@@ -50,7 +72,7 @@ export function useContribution(manualId?: string): UseContributionReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Listen to contributions for a specific manual
+  // Listen to completed contributions for a specific manual
   useEffect(() => {
     if (!user || !manualId) {
       setContributions([]);
@@ -61,7 +83,8 @@ export function useContribution(manualId?: string): UseContributionReturn {
     const q = query(
       collection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS),
       where('manualId', '==', manualId),
-      where('familyId', '==', user.familyId)
+      where('familyId', '==', user.familyId),
+      where('status', '==', 'complete')
     );
 
     const unsubscribe = onSnapshot(
@@ -116,22 +139,7 @@ export function useContribution(manualId?: string): UseContributionReturn {
       );
 
       // Link contribution to manual
-      const manualRef = doc(
-        firestore,
-        PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS,
-        data.manualId
-      );
-
-      const perspectiveUpdate =
-        data.perspectiveType === 'self'
-          ? { 'perspectives.self': user.userId }
-          : { 'perspectives.observers': arrayUnion(user.userId) };
-
-      await updateDoc(manualRef, {
-        contributionIds: arrayUnion(docRef.id),
-        ...perspectiveUpdate,
-        updatedAt: Timestamp.now(),
-      });
+      await linkContributionToManual(data.manualId, docRef.id, data.perspectiveType, user.userId);
 
       return docRef.id;
     },
@@ -141,7 +149,7 @@ export function useContribution(manualId?: string): UseContributionReturn {
   const updateContribution = useCallback(
     async (
       contributionId: string,
-      updates: Partial<Pick<Contribution, 'answers' | 'status'>>
+      updates: Partial<Pick<Contribution, 'answers' | 'status' | 'draftProgress'>>
     ) => {
       const docRef = doc(
         firestore,
@@ -154,6 +162,111 @@ export function useContribution(manualId?: string): UseContributionReturn {
       });
     },
     []
+  );
+
+  const findDraft = useCallback(
+    async (
+      mid: string,
+      perspectiveType: PerspectiveType
+    ): Promise<Contribution | null> => {
+      if (!user) return null;
+
+      const q = query(
+        collection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS),
+        where('manualId', '==', mid),
+        where('contributorId', '==', user.userId),
+        where('perspectiveType', '==', perspectiveType),
+        where('status', '==', 'draft')
+      );
+
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) return null;
+
+      const docSnap = snapshot.docs[0];
+      return { ...docSnap.data(), contributionId: docSnap.id } as Contribution;
+    },
+    [user]
+  );
+
+  const saveDraft = useCallback(
+    async (data: {
+      manualId: string;
+      personId: string;
+      perspectiveType: PerspectiveType;
+      relationshipToSubject: string;
+      answers: Record<string, any>;
+      sectionIndex: number;
+      questionIndex: number;
+    }): Promise<string> => {
+      if (!user) throw new Error('Not authenticated');
+
+      // Check for existing draft
+      const existingDraft = await findDraft(data.manualId, data.perspectiveType);
+
+      if (existingDraft) {
+        // Update existing draft
+        await updateContribution(existingDraft.contributionId, {
+          answers: data.answers,
+          draftProgress: {
+            sectionIndex: data.sectionIndex,
+            questionIndex: data.questionIndex,
+          },
+        });
+        return existingDraft.contributionId;
+      }
+
+      // Create new draft
+      const contribution: Omit<Contribution, 'contributionId'> = {
+        manualId: data.manualId,
+        personId: data.personId,
+        familyId: user.familyId,
+        contributorId: user.userId,
+        contributorName: user.name,
+        perspectiveType: data.perspectiveType,
+        relationshipToSubject: data.relationshipToSubject,
+        topicCategory: 'overview', // Will cover all topics
+        answers: data.answers,
+        draftProgress: {
+          sectionIndex: data.sectionIndex,
+          questionIndex: data.questionIndex,
+        },
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        status: 'draft',
+      };
+
+      const docRef = await addDoc(
+        collection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS),
+        contribution
+      );
+
+      return docRef.id;
+    },
+    [user, findDraft, updateContribution]
+  );
+
+  const completeDraft = useCallback(
+    async (contributionId: string, mid: string) => {
+      if (!user) throw new Error('Not authenticated');
+
+      // Mark as complete
+      const docRef = doc(
+        firestore,
+        PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS,
+        contributionId
+      );
+      await updateDoc(docRef, {
+        status: 'complete',
+        draftProgress: null,
+        updatedAt: Timestamp.now(),
+      });
+
+      // Link to manual
+      const contrib = contributions.find((c) => c.contributionId === contributionId);
+      const perspectiveType = contrib?.perspectiveType || 'self';
+      await linkContributionToManual(mid, contributionId, perspectiveType, user.userId);
+    },
+    [user, contributions]
   );
 
   const getByManual = useCallback(
@@ -173,7 +286,35 @@ export function useContribution(manualId?: string): UseContributionReturn {
     error,
     createContribution,
     updateContribution,
+    saveDraft,
+    completeDraft,
+    findDraft,
     getByManual,
     getByPerspective,
   };
+}
+
+// Helper: link a contribution to a manual document
+async function linkContributionToManual(
+  manualId: string,
+  contributionId: string,
+  perspectiveType: PerspectiveType,
+  userId: string
+) {
+  const manualRef = doc(
+    firestore,
+    PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS,
+    manualId
+  );
+
+  const perspectiveUpdate =
+    perspectiveType === 'self'
+      ? { 'perspectives.self': userId }
+      : { 'perspectives.observers': arrayUnion(userId) };
+
+  await updateDoc(manualRef, {
+    contributionIds: arrayUnion(contributionId),
+    ...perspectiveUpdate,
+    updatedAt: Timestamp.now(),
+  });
 }

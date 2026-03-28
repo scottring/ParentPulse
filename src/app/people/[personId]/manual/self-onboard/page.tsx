@@ -1,13 +1,13 @@
 'use client';
 
-import { use, useEffect, useState, useCallback } from 'react';
+import { use, useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { usePersonById } from '@/hooks/usePerson';
 import { usePersonManual } from '@/hooks/usePersonManual';
 import { useContribution } from '@/hooks/useContribution';
 import { getSelfOnboardingSections } from '@/config/self-questions';
-import { OnboardingSection, OnboardingQuestion } from '@/config/onboarding-questions';
+import { OnboardingSection } from '@/config/onboarding-questions';
 import { QuestionAnswer } from '@/types/onboarding';
 import { QuestionRenderer } from '@/components/onboarding/QuestionRenderer';
 import { TopicCategory } from '@/types/person-manual';
@@ -18,7 +18,7 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
   const { user, loading: authLoading } = useAuth();
   const { person, loading: personLoading } = usePersonById(personId);
   const { manual, loading: manualLoading } = usePersonManual(personId);
-  const { createContribution } = useContribution();
+  const { saveDraft, completeDraft, findDraft } = useContribution();
 
   const [sections] = useState<OnboardingSection[]>(getSelfOnboardingSections());
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
@@ -26,47 +26,69 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
   const [answers, setAnswers] = useState<Record<string, Record<string, QuestionAnswer>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [draftLoaded, setDraftLoaded] = useState(false);
 
-  const storageKey = `self-onboard-${personId}`;
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Restore saved progress on mount
+  // Load existing draft from Firestore on mount
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.answers) setAnswers(parsed.answers);
-        if (typeof parsed.sectionIndex === 'number') setCurrentSectionIndex(parsed.sectionIndex);
-        if (typeof parsed.questionIndex === 'number') setCurrentQuestionIndex(parsed.questionIndex);
+    if (!manual || !user || draftLoaded) return;
+
+    findDraft(manual.manualId, 'self').then((draft) => {
+      if (draft) {
+        setDraftId(draft.contributionId);
+        if (draft.answers) setAnswers(draft.answers);
+        if (draft.draftProgress) {
+          setCurrentSectionIndex(draft.draftProgress.sectionIndex);
+          setCurrentQuestionIndex(draft.draftProgress.questionIndex);
+        }
       }
-    } catch {
-      // ignore parse errors
-    }
-  }, [storageKey]);
+      setDraftLoaded(true);
+    });
+  }, [manual, user, draftLoaded, findDraft]);
 
   const currentSection = sections[currentSectionIndex];
   const currentQuestion = currentSection?.questions[currentQuestionIndex];
 
-  // Count total and answered questions
   const totalQuestions = sections.reduce((sum, s) => sum + s.questions.length, 0);
   const answeredQuestions = Object.values(answers).reduce(
     (sum, sectionAnswers) => sum + Object.keys(sectionAnswers).length,
     0
   );
 
-  // Auto-save progress to localStorage
-  useEffect(() => {
-    if (answeredQuestions > 0) {
-      localStorage.setItem(
-        storageKey,
-        JSON.stringify({
+  // Debounced auto-save to Firestore
+  const triggerSave = useCallback(() => {
+    if (!manual || !person) return;
+
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        const id = await saveDraft({
+          manualId: manual.manualId,
+          personId: person.personId,
+          perspectiveType: 'self',
+          relationshipToSubject: 'self',
           answers,
           sectionIndex: currentSectionIndex,
           questionIndex: currentQuestionIndex,
-        })
-      );
+        });
+        setDraftId(id);
+      } catch (err) {
+        console.error('Auto-save failed:', err);
+      }
+    }, 1500);
+  }, [manual, person, answers, currentSectionIndex, currentQuestionIndex, saveDraft]);
+
+  // Auto-save when answers or position change
+  useEffect(() => {
+    if (answeredQuestions > 0 && draftLoaded) {
+      triggerSave();
     }
-  }, [answers, currentSectionIndex, currentQuestionIndex, answeredQuestions, storageKey]);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, [answers, currentSectionIndex, currentQuestionIndex, answeredQuestions, draftLoaded, triggerSave]);
 
   const handleAnswer = useCallback((questionId: string, value: QuestionAnswer) => {
     setAnswers((prev) => ({
@@ -87,7 +109,6 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
       setCurrentSectionIndex((i) => i + 1);
       setCurrentQuestionIndex(0);
     } else {
-      // All questions done — submit
       handleSubmit();
     }
   }, [currentQuestionIndex, currentSectionIndex, currentSection, sections.length]);
@@ -107,24 +128,39 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
 
     setIsSubmitting(true);
     try {
-      // Create one contribution per section that has answers
-      for (const [sectionId, sectionAnswers] of Object.entries(answers)) {
-        if (Object.keys(sectionAnswers).length === 0) continue;
-
-        // Map section ID to topic category
-        const topicCategory = mapSectionToTopic(sectionId);
-
-        await createContribution({
+      if (draftId) {
+        // Complete existing draft
+        // First update with final answers
+        await saveDraft({
           manualId: manual.manualId,
           personId: person.personId,
           perspectiveType: 'self',
           relationshipToSubject: 'self',
-          topicCategory,
-          answers: sectionAnswers,
+          answers,
+          sectionIndex: currentSectionIndex,
+          questionIndex: currentQuestionIndex,
         });
+        await completeDraft(draftId, manual.manualId);
+      } else {
+        // No draft — save directly as complete
+        const { createContribution } = await import('@/hooks/useContribution').then(() => {
+          // Fall back to creating individual contributions
+          return { createContribution: null };
+        });
+
+        // Just save the draft and complete it
+        const id = await saveDraft({
+          manualId: manual.manualId,
+          personId: person.personId,
+          perspectiveType: 'self',
+          relationshipToSubject: 'self',
+          answers,
+          sectionIndex: 0,
+          questionIndex: 0,
+        });
+        await completeDraft(id, manual.manualId);
       }
 
-      localStorage.removeItem(storageKey);
       setIsComplete(true);
     } catch (err) {
       console.error('Failed to save self-onboarding:', err);
@@ -133,8 +169,23 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
     }
   };
 
-  const handleSaveAndExit = () => {
-    // Progress is already auto-saved to localStorage
+  const handleSaveAndExit = async () => {
+    // Force an immediate save before navigating
+    if (manual && person && answeredQuestions > 0) {
+      try {
+        await saveDraft({
+          manualId: manual.manualId,
+          personId: person.personId,
+          perspectiveType: 'self',
+          relationshipToSubject: 'self',
+          answers,
+          sectionIndex: currentSectionIndex,
+          questionIndex: currentQuestionIndex,
+        });
+      } catch (err) {
+        console.error('Save before exit failed:', err);
+      }
+    }
     router.push(`/people/${personId}/manual`);
   };
 
@@ -148,8 +199,8 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
     }
   }, [isComplete, personId, router]);
 
-  // Loading states
-  if (authLoading || personLoading || manualLoading) {
+  // Loading
+  if (authLoading || personLoading || manualLoading || !draftLoaded) {
     return (
       <div className="min-h-screen bg-[#FFF8F0] flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-2 border-amber-600 border-t-transparent rounded-full" />
@@ -165,7 +216,6 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
     );
   }
 
-  // Completion screen
   if (isComplete) {
     return (
       <div className="min-h-screen bg-[#FFF8F0] flex items-center justify-center">
@@ -295,21 +345,4 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
       </div>
     </div>
   );
-}
-
-function mapSectionToTopic(sectionId: string): TopicCategory {
-  switch (sectionId) {
-    case 'overview':
-      return 'overview';
-    case 'triggers':
-      return 'triggers';
-    case 'what_works':
-      return 'what_works';
-    case 'boundaries':
-      return 'boundaries';
-    case 'communication':
-      return 'communication';
-    default:
-      return 'overview';
-  }
 }
