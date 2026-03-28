@@ -127,13 +127,21 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                   Observer perspectives
                 </span>
               </div>
-              {hasObserverPerspective ? (
-                <span className="font-mono text-xs text-green-600 font-bold">
-                  {observerContributions.length} CONTRIBUTION{observerContributions.length !== 1 ? 'S' : ''}
-                </span>
-              ) : (
-                <span className="font-mono text-xs text-slate-400">NONE YET</span>
-              )}
+              <div className="flex items-center gap-3">
+                {hasObserverPerspective && (
+                  <span className="font-mono text-xs text-green-600 font-bold">
+                    {observerContributions.length} CONTRIBUTION{observerContributions.length !== 1 ? 'S' : ''}
+                  </span>
+                )}
+                {!isSelf && (
+                  <Link
+                    href={`/people/${personId}/manual/onboard`}
+                    className="font-mono text-xs text-blue-600 font-bold hover:text-blue-700 transition-colors"
+                  >
+                    {hasObserverPerspective ? 'ADD MORE' : 'ADD YOUR OBSERVATIONS'} &rarr;
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
         </div>
