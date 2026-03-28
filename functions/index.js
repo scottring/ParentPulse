@@ -27,6 +27,46 @@ function getGoogleAI() {
 }
 
 /**
+ * Check if an email has a pending invite in any family.
+ * Called during registration to match invited users to their family.
+ * Uses Admin SDK so it bypasses security rules.
+ */
+exports.checkPendingInvite = onCall(
+    {
+      region: "us-central1",
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const {email} = request.data;
+      if (!email) {
+        throw new Error("email is required");
+      }
+
+      const db = admin.firestore();
+      const familiesSnap = await db.collection("families").get();
+
+      for (const familyDoc of familiesSnap.docs) {
+        const familyData = familyDoc.data();
+        const invite = familyData.pendingInvites?.find(
+            (inv) => inv.email.toLowerCase() === email.toLowerCase(),
+        );
+        if (invite) {
+          return {
+            found: true,
+            familyId: familyDoc.id,
+            invite,
+          };
+        }
+      }
+
+      return {found: false};
+    },
+);
+
+/**
  * Synthesize manual content from multiple perspective contributions.
  * Reads all completed contributions for a manual, pairs self vs observer
  * answers by topic, and generates synthesized insights highlighting

@@ -15,12 +15,12 @@ import {
   setDoc,
   serverTimestamp,
   collection,
-  getDocs,
   updateDoc,
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
-import { auth, firestore } from '../lib/firebase';
+import { auth, firestore, functions } from '../lib/firebase';
+import { httpsCallable } from 'firebase/functions';
 import {
   User,
   UserRole,
@@ -176,28 +176,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         data.password
       );
 
-      // Check for pending invites for this email (after auth so we have credentials)
+      // Check for pending invites via Cloud Function (bypasses security rules)
       let existingFamilyId: string | null = null;
       let pendingInvite: any = null;
 
       try {
-        const familiesRef = collection(firestore, COLLECTIONS.FAMILIES);
-        const familiesSnapshot = await getDocs(familiesRef);
-
-        for (const familyDoc of familiesSnapshot.docs) {
-          const familyData = familyDoc.data();
-          const invite = familyData.pendingInvites?.find(
-            (inv: any) => inv.email.toLowerCase() === data.email.toLowerCase()
-          );
-          if (invite) {
-            existingFamilyId = familyData.familyId;
-            pendingInvite = invite;
-            break;
-          }
+        const checkInvite = httpsCallable(functions, 'checkPendingInvite');
+        const result = await checkInvite({ email: data.email });
+        const inviteData = result.data as any;
+        if (inviteData.found) {
+          existingFamilyId = inviteData.familyId;
+          pendingInvite = inviteData.invite;
         }
       } catch (inviteErr) {
-        // New users can't query all families — skip invite check
-        console.log('Skipping invite check (new user):', inviteErr);
+        console.log('Invite check failed (proceeding with new family):', inviteErr);
       }
 
       // Update display name
