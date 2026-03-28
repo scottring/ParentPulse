@@ -63,10 +63,12 @@ export default function CreateManualPage({ params }: { params: Promise<{ personI
       const manualId = await createManual(personId, person.name, selectedType);
 
       // Update person document with relationship type and manual link
+      const canSelfContribute = ['spouse', 'child', 'sibling', 'friend'].includes(selectedType);
       await updatePerson({
         relationshipType: selectedType,
         hasManual: true,
-        manualId
+        manualId,
+        canSelfContribute,
       });
 
       // Navigate to onboarding wizard
