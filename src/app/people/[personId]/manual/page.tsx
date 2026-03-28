@@ -100,6 +100,13 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                 >
                   ADD YOUR PERSPECTIVE &rarr;
                 </Link>
+              ) : person.canSelfContribute && person.relationshipType === 'child' ? (
+                <Link
+                  href={`/people/${personId}/manual/kid-session`}
+                  className="font-mono text-xs text-amber-600 font-bold hover:text-amber-700 transition-colors"
+                >
+                  LET {person.name.toUpperCase()} ADD THEIR VOICE &rarr;
+                </Link>
               ) : person.canSelfContribute && !person.linkedUserId ? (
                 <button
                   onClick={() => setShowInvite(true)}
