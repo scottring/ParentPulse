@@ -28,8 +28,16 @@ export default function ObserverOnboardPage({ params }: { params: Promise<{ pers
   const [isComplete, setIsComplete] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved' | 'error'>('saved');
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Refs to always have latest values for saves (avoids stale closures)
+  const answersRef = useRef(answers);
+  const sectionIndexRef = useRef(currentSectionIndex);
+  const questionIndexRef = useRef(currentQuestionIndex);
+  answersRef.current = answers;
+  sectionIndexRef.current = currentSectionIndex;
+  questionIndexRef.current = currentQuestionIndex;
 
   // Load sections based on relationship type
   useEffect(() => {
@@ -90,37 +98,65 @@ export default function ObserverOnboardPage({ params }: { params: Promise<{ pers
     0
   );
 
-  // Debounced auto-save to Firestore
-  const triggerSave = useCallback(() => {
+  // Immediate save — used on navigation and exit. Reads from refs for latest data.
+  const saveNow = useCallback(async () => {
     if (!manual || !person) return;
+    // Cancel any pending debounced save
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    setSaveStatus('saving');
+    try {
+      const id = await saveDraft({
+        manualId: manual.manualId,
+        personId: person.personId,
+        perspectiveType: 'observer',
+        relationshipToSubject: person.relationshipType || 'other',
+        answers: answersRef.current,
+        sectionIndex: sectionIndexRef.current,
+        questionIndex: questionIndexRef.current,
+      });
+      setDraftId(id);
+      setSaveStatus('saved');
+      return id;
+    } catch (err) {
+      console.error('Save failed:', err);
+      setSaveStatus('error');
+      return null;
+    }
+  }, [manual, person, saveDraft]);
 
+  // Debounced save — used for typing within a question
+  const triggerDebouncedSave = useCallback(() => {
+    if (!manual || !person) return;
+    setSaveStatus('unsaved');
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(async () => {
-      try {
-        const id = await saveDraft({
-          manualId: manual.manualId,
-          personId: person.personId,
-          perspectiveType: 'observer',
-          relationshipToSubject: person.relationshipType || 'other',
-          answers,
-          sectionIndex: currentSectionIndex,
-          questionIndex: currentQuestionIndex,
-        });
-        setDraftId(id);
-      } catch (err) {
-        console.error('Auto-save failed:', err);
-      }
+    saveTimeoutRef.current = setTimeout(() => {
+      saveNow();
     }, 1500);
-  }, [manual, person, answers, currentSectionIndex, currentQuestionIndex, saveDraft]);
+  }, [manual, person, saveNow]);
 
+  // Auto-save when answers change (debounced for typing)
   useEffect(() => {
     if (answeredQuestions > 0 && draftLoaded) {
-      triggerSave();
+      triggerDebouncedSave();
     }
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [answers, currentSectionIndex, currentQuestionIndex, answeredQuestions, draftLoaded, triggerSave]);
+  }, [answers, answeredQuestions, draftLoaded, triggerDebouncedSave]);
+
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (saveStatus === 'unsaved' || saveStatus === 'saving') {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [saveStatus]);
 
   const handleAnswer = useCallback((questionId: string, value: QuestionAnswer) => {
     if (!currentSection) return;
@@ -136,6 +172,9 @@ export default function ObserverOnboardPage({ params }: { params: Promise<{ pers
   const handleNext = useCallback(() => {
     if (!currentSection) return;
 
+    // Save immediately on navigation
+    saveNow();
+
     if (currentQuestionIndex < currentSection.questions.length - 1) {
       setCurrentQuestionIndex((i) => i + 1);
     } else if (currentSectionIndex < sections.length - 1) {
@@ -144,9 +183,12 @@ export default function ObserverOnboardPage({ params }: { params: Promise<{ pers
     } else {
       handleSubmit();
     }
-  }, [currentQuestionIndex, currentSectionIndex, currentSection, sections.length]);
+  }, [currentQuestionIndex, currentSectionIndex, currentSection, sections.length, saveNow]);
 
   const handlePrevious = useCallback(() => {
+    // Save immediately on navigation
+    saveNow();
+
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex((i) => i - 1);
     } else if (currentSectionIndex > 0) {
@@ -154,22 +196,16 @@ export default function ObserverOnboardPage({ params }: { params: Promise<{ pers
       setCurrentSectionIndex((i) => i - 1);
       setCurrentQuestionIndex(prevSection.questions.length - 1);
     }
-  }, [currentQuestionIndex, currentSectionIndex, sections]);
+  }, [currentQuestionIndex, currentSectionIndex, sections, saveNow]);
 
   const handleSubmit = async () => {
     if (!user || !manual || !person) return;
 
     setIsSubmitting(true);
     try {
-      const id = draftId || await saveDraft({
-        manualId: manual.manualId,
-        personId: person.personId,
-        perspectiveType: 'observer',
-        relationshipToSubject: person.relationshipType || 'other',
-        answers,
-        sectionIndex: currentSectionIndex,
-        questionIndex: currentQuestionIndex,
-      });
+      // Always save latest answers before completing
+      const id = await saveNow();
+      if (!id) throw new Error('Save failed before completion');
       await completeDraft(id, manual.manualId);
       setIsComplete(true);
     } catch (err) {
@@ -181,19 +217,7 @@ export default function ObserverOnboardPage({ params }: { params: Promise<{ pers
 
   const handleSaveAndExit = async () => {
     if (manual && person && answeredQuestions > 0) {
-      try {
-        await saveDraft({
-          manualId: manual.manualId,
-          personId: person.personId,
-          perspectiveType: 'observer',
-          relationshipToSubject: person.relationshipType || 'other',
-          answers,
-          sectionIndex: currentSectionIndex,
-          questionIndex: currentQuestionIndex,
-        });
-      } catch (err) {
-        console.error('Save before exit failed:', err);
-      }
+      await saveNow();
     }
     router.push(`/people/${personId}/manual`);
   };
@@ -273,8 +297,19 @@ export default function ObserverOnboardPage({ params }: { params: Promise<{ pers
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <div className="font-mono text-xs text-slate-500">
-                  {answeredQuestions} / {totalQuestions} ANSWERED
+                <div className="font-mono text-xs text-slate-500 flex items-center justify-end gap-2">
+                  <span>{answeredQuestions} / {totalQuestions} ANSWERED</span>
+                  <span className={`inline-block w-2 h-2 rounded-full ${
+                    saveStatus === 'saved' ? 'bg-green-500' :
+                    saveStatus === 'saving' ? 'bg-amber-500 animate-pulse' :
+                    saveStatus === 'error' ? 'bg-red-500' :
+                    'bg-amber-400'
+                  }`} title={
+                    saveStatus === 'saved' ? 'All changes saved' :
+                    saveStatus === 'saving' ? 'Saving...' :
+                    saveStatus === 'error' ? 'Save failed — will retry' :
+                    'Unsaved changes'
+                  } />
                 </div>
                 <div className="w-32 h-2 bg-slate-200 mt-1">
                   <div

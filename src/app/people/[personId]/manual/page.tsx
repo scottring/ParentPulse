@@ -567,13 +567,20 @@ const SECTION_LABELS: Record<string, string> = {
 };
 
 // Build separate lookups for self vs observer questions
+interface QuestionMeta {
+  question: string;
+  questionType?: string;
+  scale?: import('@/config/onboarding-questions').ScaleConfig;
+  options?: import('@/config/onboarding-questions').QuestionOption[];
+}
+
 function buildQuestionLookups() {
-  const selfLookup: Record<string, string> = {};
-  const observerLookup: Record<string, string> = {};
+  const selfLookup: Record<string, QuestionMeta> = {};
+  const observerLookup: Record<string, QuestionMeta> = {};
 
   for (const section of getSelfOnboardingSections()) {
     for (const q of section.questions) {
-      selfLookup[q.id] = q.question;
+      selfLookup[q.id] = { question: q.question, questionType: q.questionType, scale: q.scale, options: q.options };
     }
   }
 
@@ -583,7 +590,7 @@ function buildQuestionLookups() {
     for (const section of getOnboardingSections(relType)) {
       for (const q of section.questions) {
         if (!observerLookup[q.id]) {
-          observerLookup[q.id] = q.question;
+          observerLookup[q.id] = { question: q.question, questionType: q.questionType, scale: q.scale, options: q.options };
         }
       }
     }
@@ -594,14 +601,55 @@ function buildQuestionLookups() {
 
 const { selfLookup, observerLookup } = buildQuestionLookups();
 
-function extractAnswerText(answer: any): string | null {
+function formatScaleValue(value: number, scale?: import('@/config/onboarding-questions').ScaleConfig): string {
+  if (!scale) return String(value);
+  // Map numeric value to a descriptive label
+  const range = scale.max - scale.min;
+  const position = (value - scale.min) / range;
+  if (position <= 0) return scale.minLabel;
+  if (position >= 1) return scale.maxLabel;
+  if (scale.midLabel && Math.abs(position - 0.5) < 0.01) return scale.midLabel;
+  // For positions between labels, show "Label (N/max)"
+  if (position < 0.5) return `${scale.minLabel} — leaning (${value}/${scale.max})`;
+  return `${scale.maxLabel} — leaning (${value}/${scale.max})`;
+}
+
+function formatOptionValue(value: string | number, options?: import('@/config/onboarding-questions').QuestionOption[]): string {
+  if (!options) return String(value);
+  const match = options.find((o) => o.value === value);
+  return match ? match.label : String(value);
+}
+
+function extractAnswerText(answer: any, meta?: QuestionMeta): string | null {
   if (typeof answer === 'string') {
     return answer.trim() || null;
   }
   if (typeof answer === 'object' && answer !== null && 'primary' in answer) {
     const primary = answer.primary;
-    if (typeof primary === 'string') return primary.trim() || null;
-    if (typeof primary === 'number') return String(primary);
+    const qualitative = answer.qualitative;
+    const parts: string[] = [];
+
+    if (typeof primary === 'string' && primary.trim()) {
+      if (meta?.options) {
+        parts.push(formatOptionValue(primary, meta.options));
+      } else {
+        parts.push(primary.trim());
+      }
+    } else if (typeof primary === 'number') {
+      parts.push(formatScaleValue(primary, meta?.scale));
+    } else if (Array.isArray(primary)) {
+      if (meta?.options) {
+        parts.push(primary.map((v) => formatOptionValue(v, meta.options)).join(', '));
+      } else {
+        parts.push(primary.join(', '));
+      }
+    }
+
+    if (typeof qualitative === 'string' && qualitative.trim()) {
+      parts.push(qualitative.trim());
+    }
+
+    return parts.length > 0 ? parts.join(' — ') : null;
   }
   if (typeof answer === 'number') return String(answer);
   return null;
@@ -625,10 +673,12 @@ function ContributionDisplay({
   const lookup = contribution.perspectiveType === 'self' ? selfLookup : observerLookup;
 
   const resolveQuestion = (questionId: string): string | null => {
-    const raw = lookup[questionId];
-    if (!raw) return null;
-    return personName ? raw.replace(/\{\{personName\}\}/g, personName) : raw;
+    const meta = lookup[questionId];
+    if (!meta) return null;
+    return personName ? meta.question.replace(/\{\{personName\}\}/g, personName) : meta.question;
   };
+
+  const getQuestionMeta = (questionId: string): QuestionMeta | undefined => lookup[questionId];
 
   // Answers can be nested { sectionId: { questionId: value } } or flat { questionId: value }
   const isNested = Object.values(answers).some(
@@ -690,7 +740,7 @@ function ContributionDisplay({
         {Object.entries(answers).map(([sectionId, sectionAnswers]) => {
           if (typeof sectionAnswers !== 'object' || sectionAnswers === null) return null;
           const entries = Object.entries(sectionAnswers as Record<string, any>);
-          const nonEmpty = entries.filter(([, v]) => extractAnswerText(v));
+          const nonEmpty = entries.filter(([qId, v]) => extractAnswerText(v, getQuestionMeta(qId)));
           if (nonEmpty.length === 0) return null;
 
           return (
@@ -700,7 +750,7 @@ function ContributionDisplay({
               </h4>
               <div className="space-y-4">
                 {nonEmpty.map(([questionId, answer]) => {
-                  const text = extractAnswerText(answer);
+                  const text = extractAnswerText(answer, getQuestionMeta(questionId));
                   if (!text) return null;
                   const questionText = resolveQuestion(questionId);
 
@@ -723,14 +773,14 @@ function ContributionDisplay({
   }
 
   const entries = Object.entries(answers);
-  const nonEmpty = entries.filter(([, v]) => extractAnswerText(v));
+  const nonEmpty = entries.filter(([qId, v]) => extractAnswerText(v, getQuestionMeta(qId)));
 
   return (
     <div className="space-y-4">
       {attribution}
       {draftBanner}
       {nonEmpty.map(([questionId, answer]) => {
-        const text = extractAnswerText(answer);
+        const text = extractAnswerText(answer, getQuestionMeta(questionId));
         if (!text) return null;
         const questionText = resolveQuestion(questionId);
 

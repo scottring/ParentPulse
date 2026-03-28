@@ -29,8 +29,16 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
   const [isComplete, setIsComplete] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved' | 'error'>('saved');
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Refs to always have latest values for saves (avoids stale closures)
+  const answersRef = useRef(answers);
+  const sectionIndexRef = useRef(currentSectionIndex);
+  const questionIndexRef = useRef(currentQuestionIndex);
+  answersRef.current = answers;
+  sectionIndexRef.current = currentSectionIndex;
+  questionIndexRef.current = currentQuestionIndex;
 
   // Load existing draft from Firestore on mount
   useEffect(() => {
@@ -82,38 +90,64 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
     0
   );
 
-  // Debounced auto-save to Firestore
-  const triggerSave = useCallback(() => {
+  // Immediate save — used on navigation and exit. Reads from refs for latest data.
+  const saveNow = useCallback(async () => {
     if (!manual || !person) return;
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    setSaveStatus('saving');
+    try {
+      const id = await saveDraft({
+        manualId: manual.manualId,
+        personId: person.personId,
+        perspectiveType: 'self',
+        relationshipToSubject: 'self',
+        answers: answersRef.current,
+        sectionIndex: sectionIndexRef.current,
+        questionIndex: questionIndexRef.current,
+      });
+      setDraftId(id);
+      setSaveStatus('saved');
+      return id;
+    } catch (err) {
+      console.error('Save failed:', err);
+      setSaveStatus('error');
+      return null;
+    }
+  }, [manual, person, saveDraft]);
 
+  // Debounced save — used for typing within a question
+  const triggerDebouncedSave = useCallback(() => {
+    if (!manual || !person) return;
+    setSaveStatus('unsaved');
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(async () => {
-      try {
-        const id = await saveDraft({
-          manualId: manual.manualId,
-          personId: person.personId,
-          perspectiveType: 'self',
-          relationshipToSubject: 'self',
-          answers,
-          sectionIndex: currentSectionIndex,
-          questionIndex: currentQuestionIndex,
-        });
-        setDraftId(id);
-      } catch (err) {
-        console.error('Auto-save failed:', err);
-      }
+    saveTimeoutRef.current = setTimeout(() => {
+      saveNow();
     }, 1500);
-  }, [manual, person, answers, currentSectionIndex, currentQuestionIndex, saveDraft]);
+  }, [manual, person, saveNow]);
 
-  // Auto-save when answers or position change
+  // Auto-save when answers change (debounced for typing)
   useEffect(() => {
     if (answeredQuestions > 0 && draftLoaded) {
-      triggerSave();
+      triggerDebouncedSave();
     }
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [answers, currentSectionIndex, currentQuestionIndex, answeredQuestions, draftLoaded, triggerSave]);
+  }, [answers, answeredQuestions, draftLoaded, triggerDebouncedSave]);
+
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (saveStatus === 'unsaved' || saveStatus === 'saving') {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [saveStatus]);
 
   const handleAnswer = useCallback((questionId: string, value: QuestionAnswer) => {
     setAnswers((prev) => ({
@@ -128,6 +162,9 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
   const handleNext = useCallback(() => {
     if (!currentSection) return;
 
+    // Save immediately on navigation
+    saveNow();
+
     if (currentQuestionIndex < currentSection.questions.length - 1) {
       setCurrentQuestionIndex((i) => i + 1);
     } else if (currentSectionIndex < sections.length - 1) {
@@ -136,9 +173,12 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
     } else {
       handleSubmit();
     }
-  }, [currentQuestionIndex, currentSectionIndex, currentSection, sections.length]);
+  }, [currentQuestionIndex, currentSectionIndex, currentSection, sections.length, saveNow]);
 
   const handlePrevious = useCallback(() => {
+    // Save immediately on navigation
+    saveNow();
+
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex((i) => i - 1);
     } else if (currentSectionIndex > 0) {
@@ -146,46 +186,17 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
       setCurrentSectionIndex((i) => i - 1);
       setCurrentQuestionIndex(prevSection.questions.length - 1);
     }
-  }, [currentQuestionIndex, currentSectionIndex, sections]);
+  }, [currentQuestionIndex, currentSectionIndex, sections, saveNow]);
 
   const handleSubmit = async () => {
     if (!user || !manual || !person) return;
 
     setIsSubmitting(true);
     try {
-      if (draftId) {
-        // Complete existing draft
-        // First update with final answers
-        await saveDraft({
-          manualId: manual.manualId,
-          personId: person.personId,
-          perspectiveType: 'self',
-          relationshipToSubject: 'self',
-          answers,
-          sectionIndex: currentSectionIndex,
-          questionIndex: currentQuestionIndex,
-        });
-        await completeDraft(draftId, manual.manualId);
-      } else {
-        // No draft — save directly as complete
-        const { createContribution } = await import('@/hooks/useContribution').then(() => {
-          // Fall back to creating individual contributions
-          return { createContribution: null };
-        });
-
-        // Just save the draft and complete it
-        const id = await saveDraft({
-          manualId: manual.manualId,
-          personId: person.personId,
-          perspectiveType: 'self',
-          relationshipToSubject: 'self',
-          answers,
-          sectionIndex: 0,
-          questionIndex: 0,
-        });
-        await completeDraft(id, manual.manualId);
-      }
-
+      // Always save latest answers before completing
+      const id = await saveNow();
+      if (!id) throw new Error('Save failed before completion');
+      await completeDraft(id, manual.manualId);
       setIsComplete(true);
     } catch (err) {
       console.error('Failed to save self-onboarding:', err);
@@ -195,21 +206,8 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
   };
 
   const handleSaveAndExit = async () => {
-    // Force an immediate save before navigating
     if (manual && person && answeredQuestions > 0) {
-      try {
-        await saveDraft({
-          manualId: manual.manualId,
-          personId: person.personId,
-          perspectiveType: 'self',
-          relationshipToSubject: 'self',
-          answers,
-          sectionIndex: currentSectionIndex,
-          questionIndex: currentQuestionIndex,
-        });
-      } catch (err) {
-        console.error('Save before exit failed:', err);
-      }
+      await saveNow();
     }
     router.push(`/people/${personId}/manual`);
   };
@@ -284,8 +282,19 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <div className="font-mono text-xs text-slate-500">
-                  {answeredQuestions} / {totalQuestions} ANSWERED
+                <div className="font-mono text-xs text-slate-500 flex items-center justify-end gap-2">
+                  <span>{answeredQuestions} / {totalQuestions} ANSWERED</span>
+                  <span className={`inline-block w-2 h-2 rounded-full ${
+                    saveStatus === 'saved' ? 'bg-green-500' :
+                    saveStatus === 'saving' ? 'bg-amber-500 animate-pulse' :
+                    saveStatus === 'error' ? 'bg-red-500' :
+                    'bg-amber-400'
+                  }`} title={
+                    saveStatus === 'saved' ? 'All changes saved' :
+                    saveStatus === 'saving' ? 'Saving...' :
+                    saveStatus === 'error' ? 'Save failed — will retry' :
+                    'Unsaved changes'
+                  } />
                 </div>
                 <div className="w-32 h-2 bg-slate-200 mt-1">
                   <div

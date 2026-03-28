@@ -19,7 +19,7 @@ export default function Home() {
           router.push('/child');
         }
       } else {
-        router.push('/landing');
+        router.push('/login');
       }
     }
   }, [user, loading, router]);
