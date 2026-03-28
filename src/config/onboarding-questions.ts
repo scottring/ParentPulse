@@ -70,7 +70,7 @@ export interface OnboardingSection {
   skippable: boolean;
 }
 
-// ==================== Universal Sections ====================
+// ==================== Universal Sections (Child-appropriate default) ====================
 
 export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
   {
@@ -135,7 +135,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
         id: 'triggers_q3',
         question: 'What typically helps when {{personName}} is struggling?',
         placeholder: 'Example: Taking a break, going outside, talking through feelings...',
-        helperText: 'What de-escalation strategies have you found effective?',
+        helperText: 'What approaches have you found effective?',
         required: false
       }
     ]
@@ -143,29 +143,29 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
   {
     sectionId: 'what_works',
     sectionName: 'What Works',
-    sectionDescription: 'Share strategies that have been effective',
+    sectionDescription: 'Share what you\'ve learned about supporting them',
     icon: 'SparklesIcon',
     skippable: false,
     questions: [
       {
         id: 'works_q1',
-        question: 'What strategies have you found most effective with {{personName}}?',
-        placeholder: 'Example: Using visual timers, offering choices, giving advance notice...',
-        helperText: 'Think about approaches that consistently work well',
+        question: 'What have you learned about what {{personName}} needs from the people around them?',
+        placeholder: 'Example: Needs advance notice before plans change, responds well to encouragement...',
+        helperText: 'Think about what consistently helps them feel supported',
         required: true
       },
       {
         id: 'works_q2',
-        question: 'Think of a time something went really well. What made the difference?',
-        placeholder: 'Example: When we prepared them the night before, the morning went smoothly...',
-        helperText: 'What specific actions or conditions led to success?',
+        question: 'Think of a time things went really well between you. What made the difference?',
+        placeholder: 'Example: When we had an unhurried morning together, everything clicked...',
+        helperText: 'What specific conditions or actions led to a good moment?',
         required: false
       },
       {
         id: 'works_q3',
-        question: 'What motivates or excites {{personName}}?',
-        placeholder: 'Example: Earning special time together, working toward a goal, getting praised...',
-        helperText: 'What gets them engaged and cooperative?',
+        question: 'What gets {{personName}} engaged and energized?',
+        placeholder: 'Example: Working toward a meaningful goal, quality time, learning something new...',
+        helperText: 'What motivates or excites them?',
         required: false
       }
     ]
@@ -179,23 +179,23 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
     questions: [
       {
         id: 'boundaries_q1',
-        question: 'What boundaries or limits are important to respect with {{personName}}?',
-        placeholder: 'Example: They need personal space when upset, don\'t touch their special items...',
-        helperText: 'What should others know to respect their needs?',
+        question: 'What boundaries are important to respect with {{personName}}?',
+        placeholder: 'Example: Needs personal space when upset, don\'t interrupt when focused...',
+        helperText: 'What should the people around them know and respect?',
         required: false
       },
       {
         id: 'boundaries_q2',
-        question: 'What should others know to interact well with {{personName}}?',
-        placeholder: 'Example: They warm up slowly to new people, they prefer direct communication...',
-        helperText: 'Important context for teachers, caregivers, or others',
+        question: 'What do you wish you had known earlier about {{personName}}?',
+        placeholder: 'Example: They warm up slowly, they prefer direct communication, they process slowly...',
+        helperText: 'What insight took you a while to figure out?',
         required: false
       },
       {
         id: 'boundaries_q3',
-        question: 'What topics or approaches should be avoided?',
-        placeholder: 'Example: Don\'t compare to siblings, avoid surprises, don\'t rush them...',
-        helperText: 'What makes things worse or causes unnecessary conflict?',
+        question: 'What approaches tend to backfire with {{personName}}?',
+        placeholder: 'Example: Giving unsolicited advice, rushing them, being sarcastic when they\'re upset...',
+        helperText: 'What makes things worse?',
         required: false
       }
     ]
@@ -1006,14 +1006,48 @@ export const SIBLING_SPECIFIC_SECTIONS: OnboardingSection[] = [
  * Get all onboarding sections for a relationship type
  * For children, returns screening section first - detailed sections added dynamically based on screening response
  */
+// Adult-relationship overrides for universal questions
+// These replace child-centric framing with partner-appropriate language
+const ADULT_QUESTION_OVERRIDES: Record<string, Partial<OnboardingQuestion>> = {
+  triggers_q1: {
+    question: 'What tends to cause tension or stress for {{personName}}?',
+    placeholder: 'Example: Work pressure spilling into home, feeling unheard in conversations, being rushed...',
+    helperText: 'Think about patterns you\'ve noticed — not just arguments, but what weighs on them',
+  },
+  triggers_q2: {
+    question: 'What situations tend to create friction between you and {{personName}}?',
+    placeholder: 'Example: Discussions about finances, division of household work, different parenting styles...',
+    helperText: 'Consider recurring patterns, not one-off events',
+  },
+  triggers_q3: {
+    question: 'What have you learned about helping {{personName}} when they\'re stressed?',
+    placeholder: 'Example: Give them space first, then check in. Don\'t try to fix it — just listen...',
+    helperText: 'What works when things get tense?',
+  },
+};
+
+function applyAdultOverrides(sections: OnboardingSection[]): OnboardingSection[] {
+  return sections.map((section) => ({
+    ...section,
+    questions: section.questions.map((q) => {
+      const override = ADULT_QUESTION_OVERRIDES[q.id];
+      return override ? { ...q, ...override } : q;
+    }),
+  }));
+}
+
 export function getOnboardingSections(relationshipType: RelationshipType): OnboardingSection[] {
-  const sections = [...UNIVERSAL_ONBOARDING_SECTIONS];
+  let sections = [...UNIVERSAL_ONBOARDING_SECTIONS];
+
+  // Apply adult-appropriate question framing for non-child relationships
+  const isAdultRelationship = ['spouse', 'elderly_parent', 'friend', 'professional', 'sibling'].includes(relationshipType);
+  if (isAdultRelationship) {
+    sections = applyAdultOverrides(sections);
+  }
 
   switch (relationshipType) {
     case 'child':
-      // Start with screening section - determines if neurodivergence sections are shown
       sections.unshift(CHILD_SCREENING_SECTION);
-      // Basic development section always included
       sections.push(...CHILD_BASIC_SECTIONS);
       break;
     case 'spouse':
@@ -1032,7 +1066,6 @@ export function getOnboardingSections(relationshipType: RelationshipType): Onboa
       sections.push(...SIBLING_SPECIFIC_SECTIONS);
       break;
     case 'other':
-      // Only universal sections
       break;
   }
 
