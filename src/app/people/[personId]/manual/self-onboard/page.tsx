@@ -301,6 +301,16 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
       {/* Question */}
       <div className="max-w-3xl mx-auto px-6 py-8">
         <div className="border-2 border-slate-200 bg-white p-8">
+          {/* Question text */}
+          <h2 className="font-mono font-bold text-lg text-slate-800 mb-2">
+            {currentQuestion.question}
+          </h2>
+          {currentQuestion.helperText && (
+            <p className="font-mono text-sm text-slate-500 mb-6">
+              {currentQuestion.helperText}
+            </p>
+          )}
+
           <QuestionRenderer
             question={currentQuestion}
             value={currentAnswer}

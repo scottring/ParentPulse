@@ -12,9 +12,7 @@ interface QuestionRendererProps {
   value: QuestionAnswer | undefined;
   onChange: (value: QuestionAnswer) => void;
   personName: string;
-  onKeyboardContinue?: () => void; // Ctrl/Cmd + Enter handler
-  demoMode?: boolean; // Whether in demo mode
-  demoAnswer?: QuestionAnswer; // Pre-filled demo answer
+  onKeyboardContinue?: () => void;
 }
 
 export function QuestionRenderer({
@@ -23,17 +21,8 @@ export function QuestionRenderer({
   onChange,
   personName,
   onKeyboardContinue,
-  demoMode = false,
-  demoAnswer
 }: QuestionRendererProps) {
   const questionType = question.questionType || 'text';
-
-  // Handle auto-fill from demo answer
-  const handleAutoFill = () => {
-    if (demoAnswer) {
-      onChange(demoAnswer);
-    }
-  };
 
   // Extract primary value and qualitative comment from structured answer
   const primaryValue = typeof value === 'object' && value !== null && 'primary' in value
@@ -122,17 +111,6 @@ export function QuestionRenderer({
               }}
               autoFocus
             />
-            {/* Demo auto-fill button */}
-            {demoMode && demoAnswer && (
-              <button
-                type="button"
-                onClick={handleAutoFill}
-                className="absolute bottom-3 right-3 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-mono font-bold rounded shadow-sm transition-all opacity-70 hover:opacity-100"
-                title="Auto-fill demo answer"
-              >
-                ✨ DEMO FILL
-              </button>
-            )}
           </div>
         );
     }
@@ -140,20 +118,6 @@ export function QuestionRenderer({
 
   return (
     <div className="space-y-6">
-      {/* Demo auto-fill button for structured questions */}
-      {demoMode && demoAnswer && questionType !== 'text' && (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={handleAutoFill}
-            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-mono font-bold rounded shadow-sm transition-all"
-            title="Auto-fill demo answer"
-          >
-            ✨ DEMO FILL
-          </button>
-        </div>
-      )}
-
       {/* Primary question input */}
       {renderQuestionInput()}
 
