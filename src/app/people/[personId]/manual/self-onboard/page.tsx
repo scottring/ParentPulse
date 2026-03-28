@@ -289,6 +289,13 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
         <p className="font-mono text-sm text-slate-500 mt-1">
           {currentSection.sectionDescription}
         </p>
+        {currentSectionIndex === 0 && currentQuestionIndex === 0 && (
+          <div className="mt-4 p-3 bg-amber-50 border border-amber-200">
+            <p className="font-mono text-xs text-amber-800">
+              Keep it brief — this is a living document, not a test. You can come back anytime to expand, edit, or add new thoughts. Your progress saves automatically.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Question */}
