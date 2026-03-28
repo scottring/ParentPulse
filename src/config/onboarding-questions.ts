@@ -1006,9 +1006,21 @@ export const SIBLING_SPECIFIC_SECTIONS: OnboardingSection[] = [
  * Get all onboarding sections for a relationship type
  * For children, returns screening section first - detailed sections added dynamically based on screening response
  */
-// Adult-relationship overrides for universal questions
+// Adult-relationship overrides for universal questions and section descriptions
 // These replace child-centric framing with partner-appropriate language
 const ADULT_QUESTION_OVERRIDES: Record<string, Partial<OnboardingQuestion>> = {
+  overview_q1: {
+    placeholder: 'Example: Loves cooking elaborate meals, energized by deep conversations, happiest outdoors...',
+  },
+  overview_q2: {
+    placeholder: 'Example: Dislikes being rushed, finds small talk draining, needs alone time to recharge...',
+  },
+  overview_q3: {
+    placeholder: 'Example: Driven by their career, motivated by family connection, values personal growth...',
+  },
+  overview_q4: {
+    placeholder: 'Example: Comfortable with plans and structure, uncomfortable with ambiguity or last-minute changes...',
+  },
   triggers_q1: {
     question: 'What tends to cause tension or stress for {{personName}}?',
     placeholder: 'Example: Work pressure spilling into home, feeling unheard in conversations, being rushed...',
@@ -1024,16 +1036,49 @@ const ADULT_QUESTION_OVERRIDES: Record<string, Partial<OnboardingQuestion>> = {
     placeholder: 'Example: Give them space first, then check in. Don\'t try to fix it — just listen...',
     helperText: 'What works when things get tense?',
   },
+  works_q1: {
+    placeholder: 'Example: Being heard without being "fixed", having dedicated couple time, sharing the mental load...',
+  },
+  works_q2: {
+    placeholder: 'Example: When we had an unplanned evening together with no agenda, we reconnected...',
+  },
+  works_q3: {
+    placeholder: 'Example: Planning a trip together, learning a new skill, meaningful work...',
+  },
+  boundaries_q1: {
+    placeholder: 'Example: Needs decompression time after work, doesn\'t like being interrupted mid-thought...',
+  },
+  boundaries_q2: {
+    placeholder: 'Example: They process slowly — don\'t expect an immediate answer to big questions...',
+  },
+  boundaries_q3: {
+    placeholder: 'Example: Giving unsolicited advice, bringing up issues right before bed, being dismissive...',
+  },
+};
+
+const ADULT_SECTION_OVERRIDES: Record<string, Partial<OnboardingSection>> = {
+  triggers: {
+    sectionDescription: 'What causes stress or tension for them',
+  },
+  what_works: {
+    sectionName: 'What Works',
+    sectionDescription: 'What you\'ve learned about supporting them well',
+  },
+  boundaries: {
+    sectionDescription: 'What you\'ve learned to respect about how they operate',
+  },
 };
 
 function applyAdultOverrides(sections: OnboardingSection[]): OnboardingSection[] {
-  return sections.map((section) => ({
-    ...section,
-    questions: section.questions.map((q) => {
+  return sections.map((section) => {
+    const sectionOverride = ADULT_SECTION_OVERRIDES[section.sectionId];
+    const updatedSection = sectionOverride ? { ...section, ...sectionOverride } : { ...section };
+    updatedSection.questions = section.questions.map((q) => {
       const override = ADULT_QUESTION_OVERRIDES[q.id];
       return override ? { ...q, ...override } : q;
-    }),
-  }));
+    });
+    return updatedSection;
+  });
 }
 
 export function getOnboardingSections(relationshipType: RelationshipType): OnboardingSection[] {
