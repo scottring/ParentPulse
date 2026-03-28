@@ -26,6 +26,8 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
   const [inviteSent, setInviteSent] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [synthesizing, setSynthesizing] = useState(false);
+  type ViewMode = 'synthesized' | 'perspectives' | 'gaps';
+  const [viewMode, setViewMode] = useState<ViewMode>('synthesized');
 
   const loading = authLoading || personLoading || manualLoading || contribLoading;
 
@@ -211,77 +213,153 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
             )}
           </div>
         ) : (
-          /* Has perspectives — show contributions */
+          /* Has perspectives — show view mode tabs + content */
           <div className="space-y-6">
-            {/* Self perspective section */}
-            {hasSelfPerspective && (
-              <div className="border-2 border-slate-200 bg-white">
-                <div className="border-b-2 border-slate-200 px-6 py-3 bg-slate-50 flex items-center justify-between">
-                  <h3 className="font-mono font-bold text-sm text-slate-800">
-                    {isSelf ? 'YOUR PERSPECTIVE' : `${person.name.toUpperCase()}'S PERSPECTIVE`}
-                  </h3>
-                  {isSelf && (
-                    <Link
-                      href={`/people/${personId}/manual/self-onboard`}
-                      className="font-mono text-xs text-amber-600 font-bold hover:text-amber-700"
-                    >
-                      ADD MORE &rarr;
-                    </Link>
-                  )}
-                </div>
-                <div className="p-6">
-                  {selfContributions.map((contribution) => (
-                    <ContributionDisplay
-                      key={contribution.contributionId}
-                      contribution={contribution}
-                      personName={person.name}
-                      personId={personId}
-                      editable={isSelf || contribution.contributorId === user.userId}
-                      onUpdate={updateContribution}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* View mode tabs */}
+            <div className="flex border-2 border-slate-200 bg-white">
+              {([
+                { mode: 'synthesized' as ViewMode, label: 'SYNTHESIZED', available: !!manual.synthesizedContent },
+                { mode: 'perspectives' as ViewMode, label: 'BY PERSPECTIVE', available: true },
+                { mode: 'gaps' as ViewMode, label: 'GAPS & INSIGHTS', available: !!manual.synthesizedContent },
+              ]).map(({ mode, label, available }) => (
+                <button
+                  key={mode}
+                  onClick={() => available && setViewMode(mode)}
+                  className={`flex-1 px-4 py-3 font-mono text-xs font-bold transition-all ${
+                    viewMode === mode
+                      ? 'bg-slate-800 text-white'
+                      : available
+                      ? 'text-slate-600 hover:bg-slate-100'
+                      : 'text-slate-300 cursor-not-allowed'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
 
-            {/* Observer perspective section */}
-            {hasObserverPerspective && (
-              <div className="border-2 border-slate-200 bg-white">
-                <div className="border-b-2 border-slate-200 px-6 py-3 bg-slate-50 flex items-center justify-between">
-                  <h3 className="font-mono font-bold text-sm text-slate-800">OBSERVER PERSPECTIVES</h3>
-                  <Link
-                    href={`/people/${personId}/manual/onboard`}
-                    className="font-mono text-xs text-blue-600 font-bold hover:text-blue-700"
-                  >
-                    ADD MORE &rarr;
-                  </Link>
+            {/* ========== SYNTHESIZED VIEW ========== */}
+            {viewMode === 'synthesized' && manual.synthesizedContent && (
+              <div className="space-y-6">
+                {/* Overview */}
+                <div className="border-2 border-slate-200 bg-white p-6">
+                  <p className="font-mono text-sm text-slate-800 leading-relaxed">
+                    {manual.synthesizedContent.overview}
+                  </p>
                 </div>
-                <div className="p-6">
-                  {observerContributions.map((contribution) => (
-                    <div key={contribution.contributionId}>
-                      <ContributionDisplay
-                        contribution={contribution}
-                        personName={person.name}
-                        personId={personId}
-                        editable={contribution.contributorId === user.userId}
-                        onUpdate={updateContribution}
-                      />
+
+                {/* Alignments */}
+                {manual.synthesizedContent.alignments.length > 0 && (
+                  <div className="border-2 border-green-200 bg-white">
+                    <div className="border-b-2 border-green-200 px-6 py-3 bg-green-50">
+                      <h3 className="font-mono font-bold text-sm text-green-800">ALIGNMENTS</h3>
                     </div>
-                  ))}
-                </div>
+                    <div className="p-6 space-y-4">
+                      {manual.synthesizedContent.alignments.map((item) => (
+                        <div key={item.id} className="border-l-2 border-green-400 pl-4">
+                          <span className="font-mono text-xs text-green-600 font-bold">{item.topic}</span>
+                          {item.selfPerspective && (
+                            <p className="font-mono text-xs text-slate-500 mt-1">
+                              {person.name} says: &ldquo;{item.selfPerspective}&rdquo;
+                            </p>
+                          )}
+                          {item.observerPerspective && (
+                            <p className="font-mono text-xs text-slate-500 mt-1">
+                              Observer sees: &ldquo;{item.observerPerspective}&rdquo;
+                            </p>
+                          )}
+                          <p className="font-mono text-sm text-slate-800 mt-1">{item.synthesis}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Gaps */}
+                {manual.synthesizedContent.gaps.length > 0 && (
+                  <div className="border-2 border-amber-200 bg-white">
+                    <div className="border-b-2 border-amber-200 px-6 py-3 bg-amber-50">
+                      <h3 className="font-mono font-bold text-sm text-amber-800">GAPS</h3>
+                    </div>
+                    <div className="p-6 space-y-4">
+                      {manual.synthesizedContent.gaps.map((item) => (
+                        <div key={item.id} className={`border-l-2 pl-4 ${
+                          item.gapSeverity === 'significant_gap' ? 'border-red-400' : 'border-amber-400'
+                        }`}>
+                          <span className={`font-mono text-xs font-bold ${
+                            item.gapSeverity === 'significant_gap' ? 'text-red-600' : 'text-amber-600'
+                          }`}>{item.topic}</span>
+                          {item.selfPerspective && (
+                            <p className="font-mono text-xs text-slate-500 mt-1">
+                              {person.name} says: &ldquo;{item.selfPerspective}&rdquo;
+                            </p>
+                          )}
+                          {item.observerPerspective && (
+                            <p className="font-mono text-xs text-slate-500 mt-1">
+                              Observer sees: &ldquo;{item.observerPerspective}&rdquo;
+                            </p>
+                          )}
+                          <p className="font-mono text-sm text-slate-800 mt-1">{item.synthesis}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Blind Spots */}
+                {manual.synthesizedContent.blindSpots?.length > 0 && (
+                  <div className="border-2 border-purple-200 bg-white">
+                    <div className="border-b-2 border-purple-200 px-6 py-3 bg-purple-50">
+                      <h3 className="font-mono font-bold text-sm text-purple-800">BLIND SPOTS</h3>
+                    </div>
+                    <div className="p-6 space-y-4">
+                      {manual.synthesizedContent.blindSpots.map((item) => (
+                        <div key={item.id} className="border-l-2 border-purple-400 pl-4">
+                          <span className="font-mono text-xs text-purple-600 font-bold">{item.topic}</span>
+                          {item.selfPerspective && (
+                            <p className="font-mono text-xs text-slate-500 mt-1">
+                              Only {person.name} sees: &ldquo;{item.selfPerspective}&rdquo;
+                            </p>
+                          )}
+                          {item.observerPerspective && (
+                            <p className="font-mono text-xs text-slate-500 mt-1">
+                              Only observer sees: &ldquo;{item.observerPerspective}&rdquo;
+                            </p>
+                          )}
+                          <p className="font-mono text-sm text-slate-800 mt-1">{item.synthesis}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Re-synthesize button */}
+                <button
+                  onClick={async () => {
+                    setSynthesizing(true);
+                    try {
+                      const synthesize = httpsCallable(functions, 'synthesizeManualContent');
+                      await synthesize({ manualId: manual.manualId });
+                    } catch (err) {
+                      console.error('Synthesis failed:', err);
+                    } finally {
+                      setSynthesizing(false);
+                    }
+                  }}
+                  disabled={synthesizing}
+                  className="w-full px-6 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-600 hover:border-slate-800 disabled:opacity-50 transition-all"
+                >
+                  {synthesizing ? 'RE-SYNTHESIZING...' : 'RE-SYNTHESIZE WITH LATEST DATA'}
+                </button>
               </div>
             )}
 
-            {/* Synthesis button — show when any completed contributions exist */}
-            {hasAnyPerspective && (
-              <div className="border-2 border-amber-300 bg-amber-50 p-6 text-center">
-                <h3 className="font-mono font-bold text-sm text-amber-800 mb-2">
-                  {manual.synthesizedContent ? 'RE-SYNTHESIZE' : 'SYNTHESIZE PERSPECTIVES'}
-                </h3>
+            {/* Synthesized view but no synthesis yet */}
+            {viewMode === 'synthesized' && !manual.synthesizedContent && (
+              <div className="border-2 border-amber-300 bg-amber-50 p-8 text-center">
+                <h3 className="font-mono font-bold text-amber-800 mb-2">NO SYNTHESIS YET</h3>
                 <p className="font-mono text-sm text-amber-700 mb-4">
-                  {hasSelfPerspective && hasObserverPerspective
-                    ? 'Both self and observer perspectives are available. AI will highlight alignments, gaps, and blind spots.'
-                    : 'AI will analyze the available perspectives. More perspectives = richer insights.'}
+                  Run AI synthesis to generate insights from the available perspectives.
                 </p>
                 <button
                   onClick={async () => {
@@ -303,35 +381,120 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
               </div>
             )}
 
-            {/* Synthesized content */}
-            {manual.synthesizedContent && (
-              <div className="border-2 border-green-300 bg-green-50">
-                <div className="border-b-2 border-green-300 px-6 py-3">
-                  <h3 className="font-mono font-bold text-sm text-green-800">SYNTHESIZED INSIGHTS</h3>
-                </div>
-                <div className="p-6 space-y-4">
-                  <p className="font-mono text-sm text-slate-700">{manual.synthesizedContent.overview}</p>
-                  {manual.synthesizedContent.gaps.length > 0 && (
-                    <div>
-                      <span className="font-mono text-xs text-red-600 font-bold">GAPS</span>
-                      {manual.synthesizedContent.gaps.map((gap) => (
-                        <div key={gap.id} className="mt-2 p-3 border border-red-200 bg-red-50">
-                          <p className="font-mono text-sm text-slate-700">{gap.synthesis}</p>
+            {/* ========== BY PERSPECTIVE VIEW ========== */}
+            {viewMode === 'perspectives' && (
+              <div className="space-y-6">
+                {hasSelfPerspective && (
+                  <div className="border-2 border-slate-200 bg-white">
+                    <div className="border-b-2 border-slate-200 px-6 py-3 bg-slate-50 flex items-center justify-between">
+                      <h3 className="font-mono font-bold text-sm text-slate-800">
+                        {isSelf ? 'YOUR PERSPECTIVE' : `${person.name.toUpperCase()}'S PERSPECTIVE`}
+                      </h3>
+                      {isSelf && (
+                        <Link href={`/people/${personId}/manual/self-onboard`} className="font-mono text-xs text-amber-600 font-bold hover:text-amber-700">
+                          ADD MORE &rarr;
+                        </Link>
+                      )}
+                    </div>
+                    <div className="p-6">
+                      {selfContributions.map((c) => (
+                        <ContributionDisplay key={c.contributionId} contribution={c} personName={person.name} personId={personId} editable={isSelf || c.contributorId === user.userId} onUpdate={updateContribution} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {hasObserverPerspective && (
+                  <div className="border-2 border-slate-200 bg-white">
+                    <div className="border-b-2 border-slate-200 px-6 py-3 bg-slate-50 flex items-center justify-between">
+                      <h3 className="font-mono font-bold text-sm text-slate-800">OBSERVER PERSPECTIVES</h3>
+                      <Link href={`/people/${personId}/manual/onboard`} className="font-mono text-xs text-blue-600 font-bold hover:text-blue-700">
+                        ADD MORE &rarr;
+                      </Link>
+                    </div>
+                    <div className="p-6">
+                      {observerContributions.map((c) => (
+                        <div key={c.contributionId}>
+                          <ContributionDisplay contribution={c} personName={person.name} personId={personId} editable={c.contributorId === user.userId} onUpdate={updateContribution} />
                         </div>
                       ))}
                     </div>
-                  )}
-                  {manual.synthesizedContent.alignments.length > 0 && (
-                    <div>
-                      <span className="font-mono text-xs text-green-600 font-bold">ALIGNMENTS</span>
-                      {manual.synthesizedContent.alignments.map((alignment) => (
-                        <div key={alignment.id} className="mt-2 p-3 border border-green-200 bg-green-50">
-                          <p className="font-mono text-sm text-slate-700">{alignment.synthesis}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ========== GAPS & INSIGHTS VIEW ========== */}
+            {viewMode === 'gaps' && manual.synthesizedContent && (
+              <div className="space-y-6">
+                {/* Gaps — the main event */}
+                {manual.synthesizedContent.gaps.length > 0 && (
+                  <div className="space-y-4">
+                    {manual.synthesizedContent.gaps.map((item) => (
+                      <div key={item.id} className="border-2 border-slate-200 bg-white p-6">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className={`w-2 h-2 rounded-full ${
+                            item.gapSeverity === 'significant_gap' ? 'bg-red-500' : 'bg-amber-500'
+                          }`} />
+                          <span className="font-mono text-xs font-bold text-slate-800">{item.topic}</span>
+                          <span className={`font-mono text-xs ${
+                            item.gapSeverity === 'significant_gap' ? 'text-red-500' : 'text-amber-500'
+                          }`}>
+                            {item.gapSeverity === 'significant_gap' ? 'SIGNIFICANT' : 'MINOR'}
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                        <div className="grid grid-cols-2 gap-4 mb-3">
+                          <div className="border-l-2 border-amber-300 pl-3">
+                            <span className="font-mono text-xs text-slate-500">{person.name}</span>
+                            <p className="font-mono text-sm text-slate-700 mt-1">
+                              {item.selfPerspective || <span className="text-slate-400 italic">No self-perspective</span>}
+                            </p>
+                          </div>
+                          <div className="border-l-2 border-blue-300 pl-3">
+                            <span className="font-mono text-xs text-slate-500">Observer</span>
+                            <p className="font-mono text-sm text-slate-700 mt-1">
+                              {item.observerPerspective || <span className="text-slate-400 italic">No observer perspective</span>}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="font-mono text-sm text-slate-800 bg-slate-50 p-3">{item.synthesis}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Blind spots */}
+                {manual.synthesizedContent.blindSpots?.length > 0 && (
+                  <div>
+                    <h3 className="font-mono text-xs font-bold text-purple-600 mb-3">BLIND SPOTS</h3>
+                    {manual.synthesizedContent.blindSpots.map((item) => (
+                      <div key={item.id} className="border-2 border-purple-200 bg-white p-6 mb-4">
+                        <span className="font-mono text-xs font-bold text-slate-800">{item.topic}</span>
+                        <div className="grid grid-cols-2 gap-4 mt-3 mb-3">
+                          <div className="border-l-2 border-amber-300 pl-3">
+                            <span className="font-mono text-xs text-slate-500">{person.name}</span>
+                            <p className="font-mono text-sm text-slate-700 mt-1">
+                              {item.selfPerspective || <span className="text-slate-400 italic">--</span>}
+                            </p>
+                          </div>
+                          <div className="border-l-2 border-blue-300 pl-3">
+                            <span className="font-mono text-xs text-slate-500">Observer</span>
+                            <p className="font-mono text-sm text-slate-700 mt-1">
+                              {item.observerPerspective || <span className="text-slate-400 italic">--</span>}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="font-mono text-sm text-slate-800 bg-purple-50 p-3">{item.synthesis}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {manual.synthesizedContent.gaps.length === 0 && (!manual.synthesizedContent.blindSpots || manual.synthesizedContent.blindSpots.length === 0) && (
+                  <div className="border-2 border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+                    <p className="font-mono text-sm text-slate-500">No gaps or blind spots detected. Perspectives are well aligned.</p>
+                  </div>
+                )}
               </div>
             )}
 
