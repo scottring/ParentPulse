@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { usePersonById } from '@/hooks/usePerson';
@@ -16,7 +16,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
   const { user, loading: authLoading } = useAuth();
   const { person, loading: personLoading } = usePersonById(personId);
   const { manual, loading: manualLoading } = usePersonManual(personId);
-  const { contributions, loading: contribLoading } = useContribution(manual?.manualId);
+  const { contributions, loading: contribLoading, updateContribution } = useContribution(manual?.manualId);
 
   const loading = authLoading || personLoading || manualLoading || contribLoading;
 
@@ -148,14 +148,28 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
             {/* Self perspective section */}
             {hasSelfPerspective && (
               <div className="border-2 border-slate-200 bg-white">
-                <div className="border-b-2 border-slate-200 px-6 py-3 bg-slate-50">
+                <div className="border-b-2 border-slate-200 px-6 py-3 bg-slate-50 flex items-center justify-between">
                   <h3 className="font-mono font-bold text-sm text-slate-800">
                     {isSelf ? 'YOUR PERSPECTIVE' : `${person.name.toUpperCase()}'S PERSPECTIVE`}
                   </h3>
+                  {isSelf && (
+                    <Link
+                      href={`/people/${personId}/manual/self-onboard`}
+                      className="font-mono text-xs text-amber-600 font-bold hover:text-amber-700"
+                    >
+                      ADD MORE &rarr;
+                    </Link>
+                  )}
                 </div>
                 <div className="p-6">
                   {selfContributions.map((contribution) => (
-                    <ContributionDisplay key={contribution.contributionId} contribution={contribution} personName={person.name} />
+                    <ContributionDisplay
+                      key={contribution.contributionId}
+                      contribution={contribution}
+                      personName={person.name}
+                      editable={isSelf || contribution.contributorId === user.userId}
+                      onUpdate={updateContribution}
+                    />
                   ))}
                 </div>
               </div>
@@ -164,8 +178,14 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
             {/* Observer perspective section */}
             {hasObserverPerspective && (
               <div className="border-2 border-slate-200 bg-white">
-                <div className="border-b-2 border-slate-200 px-6 py-3 bg-slate-50">
+                <div className="border-b-2 border-slate-200 px-6 py-3 bg-slate-50 flex items-center justify-between">
                   <h3 className="font-mono font-bold text-sm text-slate-800">OBSERVER PERSPECTIVES</h3>
+                  <Link
+                    href={`/people/${personId}/manual/onboard`}
+                    className="font-mono text-xs text-blue-600 font-bold hover:text-blue-700"
+                  >
+                    ADD MORE &rarr;
+                  </Link>
                 </div>
                 <div className="p-6">
                   {observerContributions.map((contribution) => (
@@ -173,7 +193,12 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                       <span className="font-mono text-xs text-slate-400 mb-4 block">
                         by {contribution.contributorName}
                       </span>
-                      <ContributionDisplay contribution={contribution} personName={person.name} />
+                      <ContributionDisplay
+                        contribution={contribution}
+                        personName={person.name}
+                        editable={contribution.contributorId === user.userId}
+                        onUpdate={updateContribution}
+                      />
                     </div>
                   ))}
                 </div>
@@ -312,7 +337,17 @@ function extractAnswerText(answer: any): string | null {
   return null;
 }
 
-function ContributionDisplay({ contribution, personName }: { contribution: Contribution; personName?: string }) {
+function ContributionDisplay({
+  contribution,
+  personName,
+  editable = false,
+  onUpdate,
+}: {
+  contribution: Contribution;
+  personName?: string;
+  editable?: boolean;
+  onUpdate?: (id: string, updates: Partial<Pick<Contribution, 'answers' | 'status' | 'draftProgress'>>) => Promise<boolean>;
+}) {
   const answers = contribution.answers;
   const lookup = contribution.perspectiveType === 'self' ? selfLookup : observerLookup;
 
@@ -326,6 +361,18 @@ function ContributionDisplay({ contribution, personName }: { contribution: Contr
   const isNested = Object.values(answers).some(
     (v) => typeof v === 'object' && v !== null && !('primary' in v) && !Array.isArray(v) && typeof Object.values(v)[0] !== 'undefined'
   );
+
+  const handleSave = useCallback(async (path: string[], newValue: string) => {
+    if (!onUpdate) return;
+    const updated = JSON.parse(JSON.stringify(answers));
+    if (path.length === 2) {
+      if (!updated[path[0]]) updated[path[0]] = {};
+      updated[path[0]][path[1]] = newValue;
+    } else if (path.length === 1) {
+      updated[path[0]] = newValue;
+    }
+    await onUpdate(contribution.contributionId, { answers: updated });
+  }, [answers, contribution.contributionId, onUpdate]);
 
   if (isNested) {
     return (
@@ -348,12 +395,13 @@ function ContributionDisplay({ contribution, personName }: { contribution: Contr
                   const questionText = resolveQuestion(questionId);
 
                   return (
-                    <div key={questionId} className="border-l-2 border-slate-200 pl-4">
-                      {questionText && (
-                        <p className="font-mono text-xs text-slate-500 mb-1">{questionText}</p>
-                      )}
-                      <p className="font-mono text-sm text-slate-800 whitespace-pre-line">{text}</p>
-                    </div>
+                    <EditableAnswer
+                      key={questionId}
+                      questionText={questionText}
+                      answerText={text}
+                      editable={editable}
+                      onSave={(newValue) => handleSave([sectionId, questionId], newValue)}
+                    />
                   );
                 })}
               </div>
@@ -375,14 +423,101 @@ function ContributionDisplay({ contribution, personName }: { contribution: Contr
         const questionText = resolveQuestion(questionId);
 
         return (
-          <div key={questionId} className="border-l-2 border-slate-200 pl-4">
-            {questionText && (
-              <p className="font-mono text-xs text-slate-500 mb-1">{questionText}</p>
-            )}
-            <p className="font-mono text-sm text-slate-800 whitespace-pre-line">{text}</p>
-          </div>
+          <EditableAnswer
+            key={questionId}
+            questionText={questionText}
+            answerText={text}
+            editable={editable}
+            onSave={(newValue) => handleSave([questionId], newValue)}
+          />
         );
       })}
+    </div>
+  );
+}
+
+// ==================== Editable Answer ====================
+
+function EditableAnswer({
+  questionText,
+  answerText,
+  editable,
+  onSave,
+}: {
+  questionText: string | null;
+  answerText: string;
+  editable: boolean;
+  onSave: (newValue: string) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(answerText);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (value.trim() === answerText) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave(value.trim());
+      setEditing(false);
+    } catch (err) {
+      console.error('Failed to save:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <div className="border-l-2 border-amber-400 pl-4">
+        {questionText && (
+          <p className="font-mono text-xs text-slate-500 mb-1">{questionText}</p>
+        )}
+        <textarea
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') handleSave();
+            if (e.key === 'Escape') { setValue(answerText); setEditing(false); }
+          }}
+          rows={3}
+          className="w-full px-3 py-2 border-2 border-amber-300 bg-amber-50 font-mono text-sm text-slate-800 focus:outline-none focus:border-amber-500 resize-y"
+          autoFocus
+        />
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-3 py-1 bg-slate-800 text-white font-mono text-xs font-bold hover:bg-slate-700 disabled:opacity-50"
+          >
+            {saving ? 'SAVING...' : 'SAVE'}
+          </button>
+          <button
+            onClick={() => { setValue(answerText); setEditing(false); }}
+            className="px-3 py-1 border border-slate-300 font-mono text-xs text-slate-600 hover:border-slate-800"
+          >
+            CANCEL
+          </button>
+          <span className="font-mono text-xs text-slate-400 self-center ml-auto">
+            Ctrl+Enter to save, Esc to cancel
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`border-l-2 border-slate-200 pl-4 ${editable ? 'cursor-pointer hover:border-amber-400 hover:bg-amber-50/30 transition-colors' : ''}`}
+      onClick={editable ? () => setEditing(true) : undefined}
+      title={editable ? 'Click to edit' : undefined}
+    >
+      {questionText && (
+        <p className="font-mono text-xs text-slate-500 mb-1">{questionText}</p>
+      )}
+      <p className="font-mono text-sm text-slate-800 whitespace-pre-line">{answerText}</p>
     </div>
   );
 }
