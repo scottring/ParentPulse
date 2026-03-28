@@ -29,11 +29,12 @@ export async function createUserOwnManual(
     const personData: Omit<Person, 'personId'> = {
       familyId,
       name: userName,
-      relationshipType: 'other', // Flexible - family members can define relationship
+      relationshipType: 'self',
+      linkedUserId: userId,
+      canSelfContribute: true,
       addedAt: Timestamp.now(),
       addedByUserId: userId,
-      hasManual: false, // Will be updated to true after manual creation
-      // Don't include optional fields with undefined values - Firestore doesn't allow them
+      hasManual: false,
     };
 
     const personDocRef = await addDoc(
@@ -77,9 +78,11 @@ export async function createUserOwnManual(
       totalStrategies: 0,
       totalBoundaries: 0,
 
-      // References
-      relatedJournalEntries: [],
-      relatedKnowledgeIds: []
+      // Multi-perspective
+      contributionIds: [],
+      perspectives: {
+        observers: [],
+      },
     };
 
     const manualDocRef = doc(
@@ -99,7 +102,7 @@ export async function createUserOwnManual(
       personName: userName,
       familyId,
       userId,
-      relationshipType: 'other'
+      relationshipType: 'self'
     });
 
     // Step 4: Update Person to mark hasManual = true

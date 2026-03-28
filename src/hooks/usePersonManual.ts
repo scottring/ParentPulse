@@ -183,9 +183,11 @@ export function usePersonManual(personId?: string): UsePersonManualReturn {
         totalStrategies: 0,
         totalBoundaries: 0,
 
-        // References
-        relatedJournalEntries: [],
-        relatedKnowledgeIds: []
+        // Multi-perspective
+        contributionIds: [],
+        perspectives: {
+          observers: [],
+        },
       };
 
       const docRef = await addDoc(

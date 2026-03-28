@@ -282,6 +282,25 @@ service cloud.firestore {
       allow delete: if isParent() && belongsToFamily(resource.data.familyId);
     }
 
+    // ==================== Contributions (Multi-Perspective Input) ====================
+
+    // Contributions collection (collaborative manual input)
+    match /contributions/{contributionId} {
+      // Family members can read contributions in their family
+      allow read: if belongsToFamily(resource.data.familyId);
+
+      // Authenticated family members can create contributions
+      allow create: if isSignedIn() && belongsToFamily(request.resource.data.familyId);
+
+      // Contributors can update their own contributions
+      allow update: if isSignedIn()
+        && resource.data.contributorId == request.auth.uid
+        && belongsToFamily(resource.data.familyId);
+
+      // Parents can delete contributions in their family
+      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
     // ==================== Person-Centric Operating Manual System ====================
 
     // People collection (core entities - everyone in the family network)

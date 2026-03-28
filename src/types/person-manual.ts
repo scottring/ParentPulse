@@ -21,6 +21,7 @@ import { Timestamp } from 'firebase/firestore';
  * This is separate from RoleType which describes roles within manual sections
  */
 export type RelationshipType =
+  | 'self'
   | 'child'
   | 'spouse'
   | 'elderly_parent'
@@ -40,6 +41,7 @@ export interface Person {
   dateOfBirth?: Timestamp;
   avatarUrl?: string;
   pronouns?: string;
+  age?: number;
 
   // Relationship context - determines which section templates they get
   relationshipType?: RelationshipType;
@@ -48,15 +50,15 @@ export interface Person {
   hasManual: boolean;
   manualId?: string;
 
+  // Linked user account (if this person has their own Relish login)
+  linkedUserId?: string;
+
+  // Can this person contribute to their own manual?
+  canSelfContribute: boolean;
+
   // Metadata
   addedAt: Timestamp;
   addedByUserId: string;
-
-  // Person-specific data (optional)
-  childData?: {
-    chipBalance: number;
-    schoolGrade?: string;
-  };
 }
 
 // ==================== Person Manual (Phase 1: Simplified) ====================
@@ -123,16 +125,69 @@ export interface PersonManual {
     };
   };
 
-  // Workbook generation configuration
-  workbookConfig?: {
-    storyModel: 'claude-sonnet-4.5' | 'claude-haiku-4.5' | 'gpt-4o-mini' | 'gpt-3.5-turbo';
-    illustrationModel: 'nano-banana-pro' | 'dalle-3-standard' | 'stable-diffusion-3.5' | 'gpt-image-1-mini';
-    illustrationsEnabled: boolean;
+  // Multi-perspective contributions
+  contributionIds: string[];
+  perspectives: {
+    self?: string;           // contributorId of the subject themselves
+    observers: string[];     // contributorIds of other contributors
   };
 
-  // References
-  relatedJournalEntries: string[];
-  relatedKnowledgeIds: string[];
+  // AI-synthesized content from multiple perspectives
+  synthesizedContent?: SynthesizedContent;
+}
+
+// ==================== Multi-Perspective Synthesis ====================
+
+export interface SynthesizedContent {
+  overview: string;
+  alignments: SynthesizedInsight[];
+  gaps: SynthesizedInsight[];
+  blindSpots: SynthesizedInsight[];
+  lastSynthesizedAt: Timestamp;
+}
+
+export interface SynthesizedInsight {
+  id: string;
+  topic: string;
+  selfPerspective?: string;
+  observerPerspective?: string;
+  synthesis: string;
+  gapSeverity?: 'aligned' | 'minor_gap' | 'significant_gap';
+}
+
+// ==================== Contribution (Atomic Unit of Collaborative Input) ====================
+
+export type PerspectiveType = 'self' | 'observer';
+export type TopicCategory =
+  | 'triggers'
+  | 'what_works'
+  | 'what_doesnt_work'
+  | 'boundaries'
+  | 'communication'
+  | 'needs'
+  | 'strengths'
+  | 'overview';
+
+export interface Contribution {
+  contributionId: string;
+  manualId: string;
+  personId: string;       // Subject of the manual
+  familyId: string;
+
+  // Who contributed
+  contributorId: string;  // Firebase Auth UID
+  contributorName: string;
+  perspectiveType: PerspectiveType;
+  relationshipToSubject: string;  // "self", "spouse", "parent", "child"
+
+  // What they contributed
+  topicCategory: TopicCategory;
+  answers: Record<string, any>;  // Question ID -> answer value
+
+  // Metadata
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  status: 'draft' | 'complete';
 }
 
 // ==================== Manual Content Types ====================
@@ -678,7 +733,7 @@ export interface RelationshipMilestone {
 export const PERSON_MANUAL_COLLECTIONS = {
   PEOPLE: 'people',
   PERSON_MANUALS: 'person_manuals',
-  ROLE_SECTIONS: 'role_sections', // Subcollection under person_manuals
-  ROLE_BASED_PLANS: 'role_based_strategic_plans',
-  RELATIONSHIP_MANUALS: 'relationship_manuals'
+  CONTRIBUTIONS: 'contributions',
+  ROLE_SECTIONS: 'role_sections',
+  RELATIONSHIP_MANUALS: 'relationship_manuals',
 } as const;

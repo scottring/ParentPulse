@@ -54,8 +54,7 @@ export default function PeoplePage() {
     try {
       const personId = await addPerson({
         name: newPersonName.trim(),
-        pronouns: undefined,
-        childData: undefined
+        canSelfContribute: false,
       });
 
       setNewPersonName('');
