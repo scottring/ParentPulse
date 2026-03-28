@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useEffect, useState, useCallback, useRef } from 'react';
+import { progressColor } from '@/utils/progress-color';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { usePersonById } from '@/hooks/usePerson';
@@ -277,8 +278,11 @@ export default function ObserverOnboardPage({ params }: { params: Promise<{ pers
                 </div>
                 <div className="w-32 h-2 bg-slate-200 mt-1">
                   <div
-                    className="h-full bg-blue-600 transition-all"
-                    style={{ width: `${(answeredQuestions / totalQuestions) * 100}%` }}
+                    className="h-full transition-all"
+                    style={{
+                      width: `${(answeredQuestions / totalQuestions) * 100}%`,
+                      backgroundColor: progressColor(answeredQuestions / totalQuestions),
+                    }}
                   />
                 </div>
               </div>
