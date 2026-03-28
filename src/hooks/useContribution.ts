@@ -173,6 +173,7 @@ export function useContribution(manualId?: string): UseContributionReturn {
 
       const q = query(
         collection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS),
+        where('familyId', '==', user.familyId),
         where('manualId', '==', mid),
         where('contributorId', '==', user.userId),
         where('perspectiveType', '==', perspectiveType),
