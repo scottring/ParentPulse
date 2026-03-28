@@ -6,7 +6,10 @@ import { useAuth } from '@/context/AuthContext';
 import { usePersonById } from '@/hooks/usePerson';
 import { usePersonManual } from '@/hooks/usePersonManual';
 import { useContribution } from '@/hooks/useContribution';
+import { Contribution } from '@/types/person-manual';
 import MainLayout from '@/components/layout/MainLayout';
+import { getSelfOnboardingSections } from '@/config/self-questions';
+import { getOnboardingSections, OnboardingQuestion } from '@/config/onboarding-questions';
 
 export default function ManualPage({ params }: { params: Promise<{ personId: string }> }) {
   const { personId } = use(params);
@@ -150,26 +153,9 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                     {isSelf ? 'YOUR PERSPECTIVE' : `${person.name.toUpperCase()}'S PERSPECTIVE`}
                   </h3>
                 </div>
-                <div className="p-6 space-y-4">
+                <div className="p-6">
                   {selfContributions.map((contribution) => (
-                    <div key={contribution.contributionId}>
-                      <span className="font-mono text-xs text-amber-600 font-bold tracking-wider">
-                        {contribution.topicCategory.replace(/_/g, ' ').toUpperCase()}
-                      </span>
-                      <div className="mt-2 space-y-2">
-                        {Object.entries(contribution.answers).map(([questionId, answer]) => (
-                          <div key={questionId} className="font-mono text-sm text-slate-700">
-                            {typeof answer === 'string' ? (
-                              <p>{answer}</p>
-                            ) : typeof answer === 'object' && answer !== null && 'primary' in answer ? (
-                              <p>{String(answer.primary)}</p>
-                            ) : (
-                              <p>{JSON.stringify(answer)}</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <ContributionDisplay key={contribution.contributionId} contribution={contribution} />
                   ))}
                 </div>
               </div>
@@ -181,30 +167,13 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                 <div className="border-b-2 border-slate-200 px-6 py-3 bg-slate-50">
                   <h3 className="font-mono font-bold text-sm text-slate-800">OBSERVER PERSPECTIVES</h3>
                 </div>
-                <div className="p-6 space-y-4">
+                <div className="p-6">
                   {observerContributions.map((contribution) => (
                     <div key={contribution.contributionId}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-mono text-xs text-blue-600 font-bold tracking-wider">
-                          {contribution.topicCategory.replace(/_/g, ' ').toUpperCase()}
-                        </span>
-                        <span className="font-mono text-xs text-slate-400">
-                          by {contribution.contributorName}
-                        </span>
-                      </div>
-                      <div className="space-y-2">
-                        {Object.entries(contribution.answers).map(([questionId, answer]) => (
-                          <div key={questionId} className="font-mono text-sm text-slate-700">
-                            {typeof answer === 'string' ? (
-                              <p>{answer}</p>
-                            ) : typeof answer === 'object' && answer !== null && 'primary' in answer ? (
-                              <p>{String(answer.primary)}</p>
-                            ) : (
-                              <p>{JSON.stringify(answer)}</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+                      <span className="font-mono text-xs text-slate-400 mb-4 block">
+                        by {contribution.contributorName}
+                      </span>
+                      <ContributionDisplay contribution={contribution} />
                     </div>
                   ))}
                 </div>
@@ -287,5 +256,120 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
         )}
       </div>
     </MainLayout>
+  );
+}
+
+// ==================== Contribution Display ====================
+
+const SECTION_LABELS: Record<string, string> = {
+  overview: 'About You',
+  triggers: 'Triggers & Patterns',
+  what_works: 'What Works',
+  boundaries: 'Boundaries & Needs',
+  communication: 'Communication',
+  strengths: 'Strengths',
+  needs: 'Needs',
+};
+
+// Build a lookup of questionId -> question text from the question banks
+function buildQuestionLookup(): Record<string, string> {
+  const lookup: Record<string, string> = {};
+  const allSections = [
+    ...getSelfOnboardingSections(),
+    ...getOnboardingSections('spouse'),
+    ...getOnboardingSections('child'),
+  ];
+  for (const section of allSections) {
+    for (const q of section.questions) {
+      if (!lookup[q.id]) {
+        lookup[q.id] = q.question;
+      }
+    }
+  }
+  return lookup;
+}
+
+const questionLookup = buildQuestionLookup();
+
+function extractAnswerText(answer: any): string | null {
+  if (typeof answer === 'string') {
+    return answer.trim() || null;
+  }
+  if (typeof answer === 'object' && answer !== null && 'primary' in answer) {
+    const primary = answer.primary;
+    if (typeof primary === 'string') return primary.trim() || null;
+    if (typeof primary === 'number') return String(primary);
+  }
+  if (typeof answer === 'number') return String(answer);
+  return null;
+}
+
+function ContributionDisplay({ contribution }: { contribution: Contribution }) {
+  const answers = contribution.answers;
+
+  // Answers can be nested { sectionId: { questionId: value } } or flat { questionId: value }
+  const isNested = Object.values(answers).some(
+    (v) => typeof v === 'object' && v !== null && !('primary' in v) && !Array.isArray(v) && typeof Object.values(v)[0] !== 'undefined'
+  );
+
+  if (isNested) {
+    // Nested: group by section
+    return (
+      <div className="space-y-6">
+        {Object.entries(answers).map(([sectionId, sectionAnswers]) => {
+          if (typeof sectionAnswers !== 'object' || sectionAnswers === null) return null;
+          const entries = Object.entries(sectionAnswers as Record<string, any>);
+          const nonEmpty = entries.filter(([, v]) => extractAnswerText(v));
+          if (nonEmpty.length === 0) return null;
+
+          return (
+            <div key={sectionId}>
+              <h4 className="font-mono text-xs text-amber-600 font-bold tracking-wider mb-3">
+                {SECTION_LABELS[sectionId] || sectionId.replace(/_/g, ' ').toUpperCase()}
+              </h4>
+              <div className="space-y-4">
+                {nonEmpty.map(([questionId, answer]) => {
+                  const text = extractAnswerText(answer);
+                  if (!text) return null;
+                  const questionText = questionLookup[questionId];
+
+                  return (
+                    <div key={questionId} className="border-l-2 border-slate-200 pl-4">
+                      {questionText && (
+                        <p className="font-mono text-xs text-slate-500 mb-1">{questionText}</p>
+                      )}
+                      <p className="font-mono text-sm text-slate-800 whitespace-pre-line">{text}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Flat: just render answers
+  const entries = Object.entries(answers);
+  const nonEmpty = entries.filter(([, v]) => extractAnswerText(v));
+
+  return (
+    <div className="space-y-4">
+      {nonEmpty.map(([questionId, answer]) => {
+        const text = extractAnswerText(answer);
+        if (!text) return null;
+        const questionText = questionLookup[questionId];
+
+        return (
+          <div key={questionId} className="border-l-2 border-slate-200 pl-4">
+            {questionText && (
+              <p className="font-mono text-xs text-slate-500 mb-1">{questionText}</p>
+            )}
+            <p className="font-mono text-sm text-slate-800 whitespace-pre-line">{text}</p>
+          </div>
+        );
+      })}
+    </div>
   );
 }
