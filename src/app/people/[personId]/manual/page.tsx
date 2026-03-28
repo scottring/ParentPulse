@@ -259,9 +259,6 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                 <div className="p-6">
                   {observerContributions.map((contribution) => (
                     <div key={contribution.contributionId}>
-                      <span className="font-mono text-xs text-slate-400 mb-4 block">
-                        by {contribution.contributorName}
-                      </span>
                       <ContributionDisplay
                         contribution={contribution}
                         personName={person.name}
@@ -480,9 +477,31 @@ function ContributionDisplay({
     </div>
   ) : null;
 
+  const updatedDate = contribution.updatedAt?.toDate?.()
+    ? contribution.updatedAt.toDate()
+    : contribution.updatedAt?.seconds
+    ? new Date(contribution.updatedAt.seconds * 1000)
+    : null;
+
+  const attribution = (
+    <div className="flex items-center gap-2 mb-4 font-mono text-xs text-slate-400">
+      <span>{contribution.contributorName}</span>
+      <span>&middot;</span>
+      <span>{contribution.perspectiveType === 'self' ? 'self' : contribution.relationshipToSubject || 'observer'}</span>
+      {updatedDate && (
+        <>
+          <span>&middot;</span>
+          <span>{updatedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+        </>
+      )}
+      {isDraft && <span className="text-amber-600 font-bold ml-1">DRAFT</span>}
+    </div>
+  );
+
   if (isNested) {
     return (
       <div className="space-y-6">
+        {attribution}
         {draftBanner}
         {Object.entries(answers).map(([sectionId, sectionAnswers]) => {
           if (typeof sectionAnswers !== 'object' || sectionAnswers === null) return null;
@@ -524,6 +543,7 @@ function ContributionDisplay({
 
   return (
     <div className="space-y-4">
+      {attribution}
       {draftBanner}
       {nonEmpty.map(([questionId, answer]) => {
         const text = extractAnswerText(answer);
