@@ -5,17 +5,30 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { usePerson } from '@/hooks/usePerson';
-import { useManualSummaries, ManualSummary } from '@/hooks/useManualSummaries';
+import { useManualSummaries } from '@/hooks/useManualSummaries';
 import MainLayout from '@/components/layout/MainLayout';
+import PersonCard from '@/components/people/PersonCard';
 import {
   ExclamationTriangleIcon,
-  EllipsisVerticalIcon,
-  PencilIcon,
-  XMarkIcon,
-  UserIcon,
-  EyeIcon,
-  SparklesIcon,
 } from '@heroicons/react/24/outline';
+import { RelationshipType } from '@/types/person-manual';
+import { computeAge } from '@/utils/age';
+import { detectTwins } from '@/utils/family-relationships';
+import { Timestamp } from 'firebase/firestore';
+
+const RELATIONSHIP_OPTIONS: Array<{
+  type: RelationshipType;
+  label: string;
+  emoji: string;
+}> = [
+  { type: 'child', label: 'Child', emoji: '👶' },
+  { type: 'spouse', label: 'Spouse/Partner', emoji: '💑' },
+  { type: 'elderly_parent', label: 'Elderly Parent', emoji: '👴' },
+  { type: 'friend', label: 'Friend', emoji: '🤝' },
+  { type: 'professional', label: 'Professional', emoji: '💼' },
+  { type: 'sibling', label: 'Sibling', emoji: '👫' },
+  { type: 'other', label: 'Other', emoji: '👤' },
+];
 
 export default function PeoplePage() {
   const router = useRouter();
@@ -24,6 +37,8 @@ export default function PeoplePage() {
   const { summaries, loading: summariesLoading } = useManualSummaries();
   const [showAddModal, setShowAddModal] = useState(false);
   const [newPersonName, setNewPersonName] = useState('');
+  const [newPersonDob, setNewPersonDob] = useState('');
+  const [newPersonRelationship, setNewPersonRelationship] = useState<RelationshipType | ''>('');
   const [isAdding, setIsAdding] = useState(false);
 
   // Edit modal state
@@ -57,15 +72,29 @@ export default function PeoplePage() {
 
     setIsAdding(true);
     try {
-      const personId = await addPerson({
+      const personData: any = {
         name: newPersonName.trim(),
         canSelfContribute: false,
-      });
+      };
+
+      if (newPersonDob) {
+        const dob = new Date(newPersonDob);
+        personData.dateOfBirth = Timestamp.fromDate(dob);
+        personData.age = computeAge(dob);
+      }
+
+      if (newPersonRelationship) {
+        personData.relationshipType = newPersonRelationship;
+        personData.canSelfContribute = ['spouse', 'child', 'sibling', 'friend'].includes(newPersonRelationship);
+      }
+
+      const personId = await addPerson(personData);
 
       setNewPersonName('');
+      setNewPersonDob('');
+      setNewPersonRelationship('');
       setShowAddModal(false);
 
-      // Navigate to create manual for this person
       router.push(`/people/${personId}/create-manual`);
     } catch (err) {
       console.error('Failed to add person:', err);
@@ -116,6 +145,7 @@ export default function PeoplePage() {
 
   const peopleWithManuals = people.filter(p => p.hasManual);
   const peopleWithoutManuals = people.filter(p => !p.hasManual);
+  const twinIds = detectTwins(people);
 
   return (
     <MainLayout>
@@ -280,6 +310,7 @@ export default function PeoplePage() {
                       hasManual={true}
                       summary={summaries.get(person.personId)}
                       summaryLoading={summariesLoading}
+                      isTwin={twinIds.has(person.personId)}
                       onEdit={() => openEditModal(person)}
                       onDelete={() => setDeletingPerson(person)}
                     />
@@ -307,6 +338,7 @@ export default function PeoplePage() {
                       person={person}
                       index={index}
                       hasManual={false}
+                      isTwin={twinIds.has(person.personId)}
                       onEdit={() => openEditModal(person)}
                       onDelete={() => setDeletingPerson(person)}
                     />
@@ -342,10 +374,11 @@ export default function PeoplePage() {
               Add Person to Registry
             </h3>
             <p className="font-mono text-xs text-slate-600 mb-6">
-              Enter the name of someone you'd like to create an operating manual for
+              Tell us about someone you'd like to create an operating manual for
             </p>
 
-            <div className="mb-6">
+            {/* Name */}
+            <div className="mb-5">
               <label className="font-mono text-xs text-slate-600 mb-2 block uppercase tracking-wider">
                 Full Name:
               </label>
@@ -354,11 +387,11 @@ export default function PeoplePage() {
                 value={newPersonName}
                 onChange={(e) => setNewPersonName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !isAdding) {
+                  if (e.key === 'Enter' && !isAdding && newPersonName.trim()) {
                     handleAddPerson();
                   }
                 }}
-                placeholder="e.g., SCOTT, IRIS, ELLA, CALEB"
+                placeholder="e.g., Scott, Iris, Ella, Caleb"
                 className="w-full px-4 py-3 font-mono text-sm border-2 border-slate-800 focus:outline-none focus:border-amber-600"
                 style={{ backgroundColor: '#FFF8F0' }}
                 autoFocus
@@ -367,9 +400,76 @@ export default function PeoplePage() {
               />
             </div>
 
+            {/* Date of Birth */}
+            <div className="mb-5">
+              <label className="font-mono text-xs text-slate-600 mb-2 block uppercase tracking-wider">
+                Date of Birth: <span className="text-slate-400">(optional)</span>
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="date"
+                  value={newPersonDob}
+                  onChange={(e) => setNewPersonDob(e.target.value)}
+                  className="flex-1 px-4 py-3 font-mono text-sm border-2 border-slate-800 focus:outline-none focus:border-amber-600"
+                  style={{ backgroundColor: '#FFF8F0' }}
+                  disabled={isAdding}
+                  data-testid="person-dob-input"
+                />
+                {newPersonDob && (
+                  <span className="font-mono text-sm font-bold text-amber-700 bg-amber-50 border border-amber-300 px-3 py-2">
+                    {computeAge(new Date(newPersonDob)) < 18
+                      ? `Age ${computeAge(new Date(newPersonDob))}`
+                      : `${computeAge(new Date(newPersonDob))} yrs`}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Relationship Type */}
+            <div className="mb-6">
+              <label className="font-mono text-xs text-slate-600 mb-2 block uppercase tracking-wider">
+                Relationship: <span className="text-slate-400">(optional)</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {RELATIONSHIP_OPTIONS.map((option) => (
+                  <button
+                    key={option.type}
+                    type="button"
+                    onClick={() => setNewPersonRelationship(
+                      newPersonRelationship === option.type ? '' : option.type
+                    )}
+                    disabled={isAdding}
+                    className={`px-3 py-2 text-left font-mono text-xs border-2 transition-all flex items-center gap-2 ${
+                      newPersonRelationship === option.type
+                        ? 'bg-amber-50 border-amber-600 text-amber-900 shadow-[2px_2px_0px_0px_rgba(217,119,6,0.5)]'
+                        : 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
+                    }`}
+                    data-testid={`relationship-${option.type}`}
+                  >
+                    <span>{option.emoji}</span>
+                    <span className="font-bold">{option.label}</span>
+                  </button>
+                ))}
+              </div>
+              {newPersonDob && newPersonRelationship === 'child' && computeAge(new Date(newPersonDob)) >= 6 && (
+                <div className="mt-2 p-2 bg-green-50 border border-green-300 font-mono text-xs text-green-800">
+                  {computeAge(new Date(newPersonDob)) >= 8
+                    ? `Age ${computeAge(new Date(newPersonDob))} — eligible for self-session and observer sessions`
+                    : `Age ${computeAge(new Date(newPersonDob))} — eligible for kid self-session`}
+                </div>
+              )}
+            </div>
+
             <div className="flex gap-3">
               <button
-                onClick={() => !isAdding && setShowAddModal(false)}
+                onClick={() => {
+                  if (!isAdding) {
+                    setShowAddModal(false);
+                    setNewPersonName('');
+                    setNewPersonDob('');
+                    setNewPersonRelationship('');
+                  }
+                }}
                 className="flex-1 px-4 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-700 hover:border-slate-800 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]"
                 disabled={isAdding}
                 data-testid="cancel-add-button"
@@ -520,259 +620,4 @@ export default function PeoplePage() {
       )}
     </MainLayout>
   );
-}
-
-interface PersonCardProps {
-  person: any;
-  index: number;
-  hasManual: boolean;
-  summary?: ManualSummary;
-  summaryLoading?: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
-}
-
-function PersonCard({ person, index, hasManual, summary, summaryLoading, onEdit, onDelete }: PersonCardProps) {
-  const router = useRouter();
-  const [showMenu, setShowMenu] = useState(false);
-
-  const handleClick = () => {
-    if (hasManual) {
-      router.push(`/people/${person.personId}/manual`);
-    } else {
-      router.push(`/people/${person.personId}/create-manual`);
-    }
-  };
-
-  const handleEdit = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowMenu(false);
-    onEdit();
-  };
-
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowMenu(false);
-    onDelete();
-  };
-
-  // Determine a suggested next action
-  const getNextAction = (): string | null => {
-    if (!summary) return null;
-    if (!summary.hasSelfPerspective && summary.observerCount === 0) return 'Start the questionnaire';
-    if (!summary.hasSelfPerspective) return 'Add self-perspective';
-    if (summary.observerCount === 0) return 'Invite an observer';
-    if (summary.draftsInProgress > 0) return 'Finish draft in progress';
-    if (summary.missingSections.length > 0) return `Fill in ${summary.missingSections[0]}`;
-    if (!summary.hasSynthesis && summary.hasSelfPerspective && summary.observerCount > 0) return 'Run AI synthesis';
-    if (summary.thinSections.length > 0) return `Expand ${summary.thinSections[0]}`;
-    return null;
-  };
-
-  return (
-    <div className="relative">
-      <div
-        onClick={handleClick}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleClick();
-          }
-        }}
-        className={`relative cursor-pointer transition-all ${
-          hasManual
-            ? 'bg-white border-2 border-slate-300 hover:border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]'
-            : 'bg-amber-50 border-2 border-amber-600 hover:border-slate-800 shadow-[4px_4px_0px_0px_rgba(217,119,6,0.5)] hover:shadow-[6px_6px_0px_0px_rgba(217,119,6,1)]'
-        }`}
-        data-testid="person-card"
-      >
-        {/* Card number label */}
-        <div className={`absolute -top-3 -left-3 w-10 h-10 text-white font-mono font-bold flex items-center justify-center border-2 ${
-          hasManual ? 'bg-slate-800 border-green-600' : 'bg-amber-600 border-slate-800'
-        }`}>
-          {String(index + 1).padStart(2, '0')}
-        </div>
-
-        {/* Menu button */}
-        <div className="absolute top-2 right-2 z-10">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowMenu(!showMenu);
-            }}
-            className="p-2 hover:bg-slate-100 rounded font-mono text-slate-600 hover:text-slate-900"
-            data-testid="person-menu-button"
-          >
-            <EllipsisVerticalIcon className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="p-6">
-          {/* Person name + relationship */}
-          <h3 className="font-mono text-xl font-bold mb-1 text-slate-900">
-            {person.name}
-          </h3>
-          <p className="font-mono text-xs text-slate-600 uppercase tracking-wider mb-5">
-            {person.relationshipType || 'UNSPECIFIED'}
-          </p>
-
-          {hasManual && summary && !summaryLoading ? (
-            <>
-              {/* Contributors row */}
-              <div className="flex items-center gap-3 mb-5">
-                <div className="flex items-center gap-1.5">
-                  <UserIcon className="w-4 h-4 text-slate-500" />
-                  <span className={`font-mono text-xs font-bold ${summary.hasSelfPerspective ? 'text-green-700' : 'text-slate-400'}`}>
-                    {summary.hasSelfPerspective ? 'SELF' : 'NO SELF'}
-                  </span>
-                </div>
-                <div className="w-px h-4 bg-slate-200" />
-                <div className="flex items-center gap-1.5">
-                  <EyeIcon className="w-4 h-4 text-slate-500" />
-                  <span className={`font-mono text-xs font-bold ${summary.observerCount > 0 ? 'text-green-700' : 'text-slate-400'}`}>
-                    {summary.observerCount} OBSERVER{summary.observerCount !== 1 ? 'S' : ''}
-                  </span>
-                </div>
-                {summary.draftsInProgress > 0 && (
-                  <>
-                    <div className="w-px h-4 bg-slate-200" />
-                    <span className="font-mono text-xs text-amber-600 font-bold">
-                      {summary.draftsInProgress} DRAFT{summary.draftsInProgress !== 1 ? 'S' : ''}
-                    </span>
-                  </>
-                )}
-              </div>
-
-              {/* Section depth bars */}
-              <div className="space-y-1.5 mb-5">
-                <div className="font-mono text-xs text-slate-500 uppercase tracking-wider mb-2">
-                  CONTENT DEPTH
-                </div>
-                {summary.sections.map((section) => {
-                  // Max out the bar at 6+ answers (2 perspectives x 3 questions)
-                  const fillPercent = Math.min(100, (section.answeredCount / 6) * 100);
-                  return (
-                    <div key={section.sectionId} className="flex items-center gap-2">
-                      <span className="font-mono text-xs text-slate-600 w-24 truncate">
-                        {section.label}
-                      </span>
-                      <div className="flex-1 h-2 bg-slate-100 border border-slate-200">
-                        <div
-                          className={`h-full transition-all ${
-                            section.answeredCount === 0
-                              ? 'bg-slate-200'
-                              : section.answeredCount <= 2
-                              ? 'bg-amber-400'
-                              : 'bg-green-500'
-                          }`}
-                          style={{ width: `${fillPercent}%` }}
-                        />
-                      </div>
-                      <span className="font-mono text-xs text-slate-400 w-4 text-right">
-                        {section.answeredCount}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Synthesis status */}
-              <div className={`flex items-center gap-2 mb-4 px-2 py-1.5 ${
-                summary.hasSynthesis ? 'bg-green-50 border border-green-200' : 'bg-slate-50 border border-slate-200'
-              }`}>
-                <SparklesIcon className={`w-4 h-4 ${summary.hasSynthesis ? 'text-green-600' : 'text-slate-400'}`} />
-                <span className={`font-mono text-xs ${summary.hasSynthesis ? 'text-green-700' : 'text-slate-500'}`}>
-                  {summary.hasSynthesis
-                    ? `SYNTHESIZED${summary.lastSynthesizedAt ? ` ${formatRelativeDate(summary.lastSynthesizedAt)}` : ''}`
-                    : 'NOT YET SYNTHESIZED'}
-                </span>
-              </div>
-
-              {/* Next action hint */}
-              {getNextAction() && (
-                <div className="font-mono text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1.5 mb-4">
-                  NEXT: {getNextAction()}
-                </div>
-              )}
-
-              {/* Action */}
-              <div className="text-center font-mono text-xs font-bold text-slate-800">
-                VIEW MANUAL →
-              </div>
-            </>
-          ) : hasManual && summaryLoading ? (
-            <div className="space-y-2 mb-4">
-              <div className="h-4 bg-slate-100 animate-pulse" />
-              <div className="h-4 bg-slate-100 animate-pulse w-3/4" />
-              <div className="h-4 bg-slate-100 animate-pulse w-1/2" />
-              <div className="mt-4 text-center font-mono text-xs font-bold text-slate-800">
-                VIEW MANUAL →
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Pending setup card (unchanged) */}
-              <div className="inline-block px-2 py-1 font-mono text-xs mb-4 bg-slate-800 text-white">
-                PENDING
-              </div>
-              <div className="space-y-2 mb-6 pb-6 border-b border-amber-200">
-                <div className="flex justify-between font-mono text-xs">
-                  <span className="text-slate-500">STATUS:</span>
-                  <span className="text-amber-700">UNINITIALIZED</span>
-                </div>
-              </div>
-              <div className="text-center font-mono text-xs font-bold text-amber-600">
-                CREATE MANUAL →
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Dropdown Menu */}
-      {showMenu && (
-        <>
-          <div
-            className="fixed inset-0 z-20"
-            onClick={() => setShowMenu(false)}
-          />
-          <div
-            className="absolute right-2 top-12 z-30 bg-white border-2 border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] min-w-[140px]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={handleEdit}
-              className="w-full px-4 py-3 text-left font-mono text-xs hover:bg-slate-100 transition-colors border-b border-slate-200 text-slate-900 flex items-center gap-2"
-              data-testid="edit-person-button"
-            >
-              <PencilIcon className="w-4 h-4" />
-              EDIT
-            </button>
-            <button
-              onClick={handleDelete}
-              className="w-full px-4 py-3 text-left font-mono text-xs hover:bg-red-50 transition-colors text-red-600 flex items-center gap-2"
-              data-testid="delete-person-button"
-            >
-              <XMarkIcon className="w-4 h-4" />
-              DELETE
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function formatRelativeDate(date: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return 'today';
-  if (diffDays === 1) return 'yesterday';
-  if (diffDays < 7) return `${diffDays}d ago`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-  return `${Math.floor(diffDays / 30)}mo ago`;
 }

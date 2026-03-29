@@ -3,11 +3,12 @@
 import { use, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { usePersonById } from '@/hooks/usePerson';
+import { usePersonById, usePerson } from '@/hooks/usePerson';
 import { usePersonManual } from '@/hooks/usePersonManual';
 import { useContribution } from '@/hooks/useContribution';
 import { useFamily } from '@/hooks/useFamily';
 import { Contribution } from '@/types/person-manual';
+import { isKidObserverEligible } from '@/utils/age';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
 import MainLayout from '@/components/layout/MainLayout';
@@ -21,6 +22,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
   const { manual, loading: manualLoading } = usePersonManual(personId);
   const { contributions, loading: contribLoading, updateContribution } = useContribution(manual?.manualId);
   const { family, inviteParent } = useFamily();
+  const { people } = usePerson();
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviting, setInviting] = useState(false);
   const [inviteSent, setInviteSent] = useState(false);
@@ -108,13 +110,23 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                 >
                   LET {person.name.toUpperCase()} ADD THEIR VOICE &rarr;
                 </Link>
-              ) : person.canSelfContribute && !person.linkedUserId ? (
-                <button
-                  onClick={() => setShowInvite(true)}
-                  className="font-mono text-xs text-amber-600 font-bold hover:text-amber-700 transition-colors"
-                >
-                  INVITE {person.name.toUpperCase()} &rarr;
-                </button>
+              ) : person.canSelfContribute && person.relationshipType !== 'child' ? (
+                <div className="flex items-center gap-3">
+                  <Link
+                    href={`/people/${personId}/manual/self-onboard`}
+                    className="font-mono text-xs text-amber-600 font-bold hover:text-amber-700 transition-colors"
+                  >
+                    START SELF-ASSESSMENT &rarr;
+                  </Link>
+                  {!person.linkedUserId && (
+                    <button
+                      onClick={() => setShowInvite(true)}
+                      className="font-mono text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      or INVITE
+                    </button>
+                  )}
+                </div>
               ) : (
                 <span className="font-mono text-xs text-slate-400">AWAITING</span>
               )}
@@ -144,6 +156,62 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                 )}
               </div>
             </div>
+
+            {/* Kid observer perspectives */}
+            {(() => {
+              // Show kids who are eligible observers: either confirmed age 8+ via DOB,
+              // or children without DOB (assume eligible since parent marked them as child)
+              const eligibleKids = people.filter(
+                p => p.relationshipType === 'child' &&
+                  p.personId !== personId &&
+                  (!p.dateOfBirth || isKidObserverEligible(p.dateOfBirth))
+              );
+              if (eligibleKids.length === 0) return null;
+
+              const kidObserverContribs = contributions.filter(
+                c => c.relationshipToSubject === 'child-observer'
+              );
+
+              return (
+                <div className="pt-2 border-t border-slate-100">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`w-3 h-3 rounded-full ${kidObserverContribs.length > 0 ? 'bg-green-500' : 'bg-slate-300'}`} />
+                    <span className="font-mono text-sm text-slate-700">
+                      Kid observer perspectives
+                    </span>
+                  </div>
+                  <div className="ml-6 space-y-1">
+                    {eligibleKids.map(kid => {
+                      const kidContrib = kidObserverContribs.find(c => c.contributorName === kid.name);
+                      return (
+                        <div key={kid.personId} className="flex items-center justify-between">
+                          <span className="font-mono text-xs text-slate-600">
+                            {kid.name}
+                          </span>
+                          {kidContrib?.status === 'complete' ? (
+                            <span className="font-mono text-xs text-green-600 font-bold">DONE</span>
+                          ) : kidContrib?.status === 'draft' ? (
+                            <Link
+                              href={`/people/${personId}/manual/kid-observer-session?observer=${kid.personId}`}
+                              className="font-mono text-xs text-amber-600 font-bold hover:text-amber-700"
+                            >
+                              CONTINUE &rarr;
+                            </Link>
+                          ) : (
+                            <Link
+                              href={`/people/${personId}/manual/kid-observer-session?observer=${kid.personId}`}
+                              className="font-mono text-xs text-purple-600 font-bold hover:text-purple-700"
+                            >
+                              LET {kid.name.toUpperCase()} SHARE &rarr;
+                            </Link>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
 

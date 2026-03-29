@@ -1006,6 +1006,153 @@ export const SIBLING_SPECIFIC_SECTIONS: OnboardingSection[] = [
  * Get all onboarding sections for a relationship type
  * For children, returns screening section first - detailed sections added dynamically based on screening response
  */
+// Age-tiered child overrides for universal questions
+// Young child (6-9), tween (10-12), teen (13-17)
+const CHILD_YOUNG_OVERRIDES: Record<string, Partial<OnboardingQuestion>> = {
+  overview_q1: {
+    placeholder: 'Example: Loves building with Lego, lights up playing with friends, happiest when outdoors...',
+  },
+  overview_q2: {
+    question: 'What does {{personName}} dislike or struggle with?',
+    placeholder: 'Example: Hates being told to stop playing, gets upset when losing a game, doesn\'t like bedtime...',
+    helperText: 'What drains their energy or makes them upset or uncomfortable?',
+  },
+  overview_q3: {
+    question: 'What motivates {{personName}}? What gets them excited?',
+    placeholder: 'Example: Earning screen time, getting stickers or rewards, playing with friends, learning about animals...',
+    helperText: 'What drives them or gets them fired up?',
+  },
+  overview_q4: {
+    placeholder: 'Example: Comfortable with clear routines, uncomfortable when plans change suddenly, needs transition warnings...',
+  },
+  triggers_q1: {
+    placeholder: 'Example: Yesterday at homework time, they got frustrated when they couldn\'t figure out a math problem and threw their pencil...',
+  },
+  triggers_q2: {
+    placeholder: 'Example: Transitioning from screen time to dinner, getting ready for school in the morning, bedtime routine...',
+  },
+  triggers_q3: {
+    placeholder: 'Example: Counting to 10 together, offering a hug, giving them space for a few minutes, a fidget toy...',
+  },
+  works_q1: {
+    placeholder: 'Example: Needs warnings before transitions, responds well to choices instead of commands, thrives with one-on-one time...',
+  },
+  works_q2: {
+    placeholder: 'Example: When we gave them extra time to finish their game before dinner, the whole evening went smoother...',
+  },
+  works_q3: {
+    placeholder: 'Example: Learning to ride their bike, mastering a new video game level, making a new friend at school...',
+  },
+  boundaries_q1: {
+    placeholder: 'Example: Needs alone time after school before doing homework, doesn\'t like being tickled, needs to eat on schedule...',
+  },
+  boundaries_q2: {
+    placeholder: 'Example: They shut down when yelled at — a calm voice works much better, even when it\'s hard...',
+  },
+  boundaries_q3: {
+    placeholder: 'Example: Comparing them to siblings, correcting them in front of friends, interrupting their play without warning...',
+  },
+};
+
+const CHILD_TWEEN_OVERRIDES: Record<string, Partial<OnboardingQuestion>> = {
+  overview_q1: {
+    placeholder: 'Example: Loves gaming with friends online, into drawing and anime, happiest when they have free time to explore interests...',
+  },
+  overview_q2: {
+    question: 'What does {{personName}} dislike or struggle with?',
+    placeholder: 'Example: Frustrated by homework, overwhelmed by social drama at school, hates being treated like a little kid...',
+    helperText: 'What drains their energy or makes them upset or uncomfortable?',
+  },
+  overview_q3: {
+    question: 'What motivates {{personName}}? What gets them excited?',
+    placeholder: 'Example: Earning more independence, competing with friends, mastering a new skill, social approval from peers...',
+    helperText: 'What drives them or gets them fired up?',
+  },
+  overview_q4: {
+    placeholder: 'Example: Comfortable when they feel respected, uncomfortable when singled out or embarrassed, needs some privacy...',
+  },
+  triggers_q1: {
+    placeholder: 'Example: Got into an argument about screen time limits, then slammed their door and refused to talk...',
+  },
+  triggers_q2: {
+    placeholder: 'Example: Being asked to do chores during free time, social conflicts at school carrying over to home, feeling controlled...',
+  },
+  triggers_q3: {
+    placeholder: 'Example: Giving them space first then checking in calmly, validating their feelings before problem-solving, humor...',
+  },
+  works_q1: {
+    placeholder: 'Example: Responds better to negotiation than orders, needs to feel heard before they\'ll cooperate, values fairness...',
+  },
+  works_q2: {
+    placeholder: 'Example: When we let them choose how to organize their homework schedule instead of dictating it, they actually followed through...',
+  },
+  works_q3: {
+    placeholder: 'Example: Making the school team, finishing a creative project, navigating a friendship conflict on their own...',
+  },
+  boundaries_q1: {
+    placeholder: 'Example: Needs privacy with their phone/journal, doesn\'t want to be hugged in front of friends, wants to pick their own clothes...',
+  },
+  boundaries_q2: {
+    placeholder: 'Example: They withdraw if lectured — keeping it short and direct works better...',
+  },
+  boundaries_q3: {
+    placeholder: 'Example: Reading their messages, embarrassing them in front of peers, dismissing their opinions as "just a kid"...',
+  },
+};
+
+const CHILD_TEEN_OVERRIDES: Record<string, Partial<OnboardingQuestion>> = {
+  overview_q1: {
+    placeholder: 'Example: Passionate about music production, loves hanging out with their friend group, energized by creative projects...',
+  },
+  overview_q2: {
+    question: 'What does {{personName}} dislike or find stressful?',
+    placeholder: 'Example: Stressed by school expectations, dislikes being micromanaged, frustrated when privacy isn\'t respected...',
+    helperText: 'What drains their energy or causes friction?',
+  },
+  overview_q3: {
+    question: 'What motivates {{personName}}? What are they passionate about?',
+    placeholder: 'Example: Planning for their future, social connections, creative expression, proving themselves capable...',
+    helperText: 'What drives them or gets them engaged?',
+  },
+  overview_q4: {
+    placeholder: 'Example: Comfortable when given autonomy, uncomfortable with unsolicited advice, needs trust and respect for their judgment...',
+  },
+  triggers_q1: {
+    placeholder: 'Example: Blew up when we questioned who they were going out with — felt like we didn\'t trust them...',
+  },
+  triggers_q2: {
+    placeholder: 'Example: Feeling controlled about social plans, academic pressure before exams, conflicts about curfew or phone rules...',
+  },
+  triggers_q3: {
+    placeholder: 'Example: Having a genuine conversation (not a lecture), giving space and checking in later, acknowledging their perspective first...',
+  },
+  works_q1: {
+    placeholder: 'Example: Treating them more like a young adult, asking for their input on family decisions, respecting their schedule...',
+  },
+  works_q2: {
+    placeholder: 'Example: When we asked their opinion on the family vacation plans, they engaged and actually seemed excited to contribute...',
+  },
+  works_q3: {
+    placeholder: 'Example: Getting their first job, navigating a breakup maturely, advocating for themselves with a teacher...',
+  },
+  boundaries_q1: {
+    placeholder: 'Example: Needs to decompress after school before talking, wants to manage their own social life, private about their relationships...',
+  },
+  boundaries_q2: {
+    placeholder: 'Example: They shut down completely if they feel interrogated — casual conversations yield way more openness...',
+  },
+  boundaries_q3: {
+    placeholder: 'Example: Lecturing in front of their friends, going through their things, making decisions about their life without asking...',
+  },
+};
+
+/** Get the right child override set based on age */
+function getChildOverridesForAge(age?: number): Record<string, Partial<OnboardingQuestion>> {
+  if (!age || age < 10) return CHILD_YOUNG_OVERRIDES;
+  if (age <= 12) return CHILD_TWEEN_OVERRIDES;
+  return CHILD_TEEN_OVERRIDES;
+}
+
 // Adult-relationship overrides for universal questions and section descriptions
 // These replace child-centric framing with partner-appropriate language
 const ADULT_QUESTION_OVERRIDES: Record<string, Partial<OnboardingQuestion>> = {
@@ -1069,25 +1216,43 @@ const ADULT_SECTION_OVERRIDES: Record<string, Partial<OnboardingSection>> = {
   },
 };
 
-function applyAdultOverrides(sections: OnboardingSection[]): OnboardingSection[] {
+function applyOverrides(
+  sections: OnboardingSection[],
+  questionOverrides: Record<string, Partial<OnboardingQuestion>>,
+  sectionOverrides?: Record<string, Partial<OnboardingSection>>
+): OnboardingSection[] {
   return sections.map((section) => {
-    const sectionOverride = ADULT_SECTION_OVERRIDES[section.sectionId];
+    const sectionOverride = sectionOverrides?.[section.sectionId];
     const updatedSection = sectionOverride ? { ...section, ...sectionOverride } : { ...section };
     updatedSection.questions = section.questions.map((q) => {
-      const override = ADULT_QUESTION_OVERRIDES[q.id];
+      const override = questionOverrides[q.id];
       return override ? { ...q, ...override } : q;
     });
     return updatedSection;
   });
 }
 
-export function getOnboardingSections(relationshipType: RelationshipType): OnboardingSection[] {
+function applyAdultOverrides(sections: OnboardingSection[]): OnboardingSection[] {
+  return applyOverrides(sections, ADULT_QUESTION_OVERRIDES, ADULT_SECTION_OVERRIDES);
+}
+
+function applyChildOverrides(sections: OnboardingSection[], age?: number): OnboardingSection[] {
+  return applyOverrides(sections, getChildOverridesForAge(age));
+}
+
+/**
+ * Get onboarding sections for a relationship type.
+ * For children, pass age to get age-appropriate placeholder text.
+ */
+export function getOnboardingSections(relationshipType: RelationshipType, childAge?: number): OnboardingSection[] {
   let sections = [...UNIVERSAL_ONBOARDING_SECTIONS];
 
-  // Apply adult-appropriate question framing for non-child relationships
+  // Apply age-appropriate question framing
   const isAdultRelationship = ['spouse', 'elderly_parent', 'friend', 'professional', 'sibling'].includes(relationshipType);
   if (isAdultRelationship) {
     sections = applyAdultOverrides(sections);
+  } else if (relationshipType === 'child') {
+    sections = applyChildOverrides(sections, childAge);
   }
 
   switch (relationshipType) {

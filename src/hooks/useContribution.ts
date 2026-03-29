@@ -67,6 +67,7 @@ interface UseContributionReturn {
     questionIndex: number;
     answerVisibility?: Record<string, Record<string, 'visible' | 'private'>>;
     aiGeneratedFields?: Record<string, string[]>;
+    contributorName?: string; // Override contributor name (e.g., kid's name for kid-observer)
   }) => Promise<string>;
 
   /** Complete a draft — mark as 'complete' and link to manual. */
@@ -75,7 +76,8 @@ interface UseContributionReturn {
   /** Find an existing draft for the current user on a given manual+perspective. */
   findDraft: (
     manualId: string,
-    perspectiveType: PerspectiveType
+    perspectiveType: PerspectiveType,
+    relationshipToSubject?: string
   ) => Promise<Contribution | null>;
 
   getByManual: (manualId: string) => Contribution[];
@@ -188,17 +190,26 @@ export function useContribution(manualId?: string): UseContributionReturn {
   const findDraft = useCallback(
     async (
       mid: string,
-      perspectiveType: PerspectiveType
+      perspectiveType: PerspectiveType,
+      relationshipToSubject?: string
     ): Promise<Contribution | null> => {
       if (!user) return null;
 
-      const q = query(
-        collection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS),
+      const constraints = [
         where('familyId', '==', user.familyId),
         where('manualId', '==', mid),
         where('contributorId', '==', user.userId),
         where('perspectiveType', '==', perspectiveType),
-        where('status', '==', 'draft')
+        where('status', '==', 'draft'),
+      ];
+
+      if (relationshipToSubject) {
+        constraints.push(where('relationshipToSubject', '==', relationshipToSubject));
+      }
+
+      const q = query(
+        collection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS),
+        ...constraints
       );
 
       const snapshot = await getDocs(q);
@@ -221,11 +232,12 @@ export function useContribution(manualId?: string): UseContributionReturn {
       questionIndex: number;
       answerVisibility?: Record<string, Record<string, 'visible' | 'private'>>;
       aiGeneratedFields?: Record<string, string[]>;
+      contributorName?: string;
     }): Promise<string> => {
       if (!user) throw new Error('Not authenticated');
 
-      // Check for existing draft
-      const existingDraft = await findDraft(data.manualId, data.perspectiveType);
+      // Check for existing draft — use relationshipToSubject to disambiguate kid-observer vs parent observer
+      const existingDraft = await findDraft(data.manualId, data.perspectiveType, data.relationshipToSubject);
 
       const extraFields: Record<string, any> = {};
       if (data.answerVisibility && Object.keys(data.answerVisibility).length > 0) {
@@ -258,7 +270,7 @@ export function useContribution(manualId?: string): UseContributionReturn {
         personId: data.personId,
         familyId: user.familyId,
         contributorId: user.userId,
-        contributorName: user.name,
+        contributorName: data.contributorName || user.name,
         perspectiveType: data.perspectiveType,
         relationshipToSubject: data.relationshipToSubject,
         topicCategory: 'overview', // Will cover all topics

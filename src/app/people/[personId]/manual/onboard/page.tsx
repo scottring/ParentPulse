@@ -11,6 +11,7 @@ import { getOnboardingSections, OnboardingSection } from '@/config/onboarding-qu
 import { QuestionAnswer } from '@/types/onboarding';
 import { QuestionRenderer } from '@/components/onboarding/QuestionRenderer';
 import { RelationshipType } from '@/types/person-manual';
+import { computeAge } from '@/utils/age';
 
 export default function ObserverOnboardPage({ params }: { params: Promise<{ personId: string }> }) {
   const { personId } = use(params);
@@ -39,13 +40,18 @@ export default function ObserverOnboardPage({ params }: { params: Promise<{ pers
   sectionIndexRef.current = currentSectionIndex;
   questionIndexRef.current = currentQuestionIndex;
 
-  // Load sections based on relationship type
+  // Load sections based on relationship type (with age-appropriate placeholders for children)
+  const personRelType = person?.relationshipType;
+  const personDob = person?.dateOfBirth;
   useEffect(() => {
-    if (person?.relationshipType) {
-      const s = getOnboardingSections(person.relationshipType as RelationshipType);
+    if (personRelType) {
+      const childAge = personRelType === 'child' && personDob
+        ? computeAge(personDob)
+        : undefined;
+      const s = getOnboardingSections(personRelType as RelationshipType, childAge);
       setSections(s);
     }
-  }, [person?.relationshipType]);
+  }, [personRelType, personDob]);
 
   // Load existing draft OR completed contribution from Firestore
   useEffect(() => {
