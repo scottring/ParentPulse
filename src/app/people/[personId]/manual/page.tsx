@@ -19,7 +19,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
   const { personId } = use(params);
   const { user, loading: authLoading } = useAuth();
   const { person, loading: personLoading } = usePersonById(personId);
-  const { manual, loading: manualLoading } = usePersonManual(personId);
+  const { manual, loading: manualLoading, fetchByPersonId } = usePersonManual(personId);
   const { contributions, loading: contribLoading, updateContribution } = useContribution(manual?.manualId);
   const { family, inviteParent } = useFamily();
   const { people } = usePerson();
@@ -429,6 +429,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                     try {
                       const synthesize = httpsCallable(functions, 'synthesizeManualContent');
                       await synthesize({ manualId: manual.manualId });
+                      await fetchByPersonId(personId);
                     } catch (err) {
                       console.error('Synthesis failed:', err);
                     } finally {
@@ -456,6 +457,7 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
                     try {
                       const synthesize = httpsCallable(functions, 'synthesizeManualContent');
                       await synthesize({ manualId: manual.manualId });
+                      await fetchByPersonId(personId);
                     } catch (err) {
                       console.error('Synthesis failed:', err);
                     } finally {

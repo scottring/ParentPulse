@@ -77,6 +77,7 @@ exports.synthesizeManualContent = onCall(
       region: "us-central1",
       memory: "512MiB",
       timeoutSeconds: 120,
+      secrets: ["ANTHROPIC_API_KEY"],
     },
     async (request) => {
       // Verify authentication
