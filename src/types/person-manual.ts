@@ -190,6 +190,13 @@ export interface Contribution {
     questionIndex: number;
   };
 
+  // Per-answer visibility: which answers are private to the contributor only
+  // Missing entry or missing field = 'visible' (backwards-compatible default)
+  answerVisibility?: Record<string, Record<string, 'visible' | 'private'>>;
+
+  // Tracks which answers were AI-generated from document upload (stripped on completion)
+  aiGeneratedFields?: Record<string, string[]>;  // sectionId -> questionId[]
+
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;

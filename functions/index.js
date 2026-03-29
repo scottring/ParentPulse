@@ -144,20 +144,38 @@ exports.synthesizeManualContent = onCall(
       prompt += `2. GAPS — where perspectives diverge (this is the most valuable part)\n`;
       prompt += `3. BLIND SPOTS — things only one side sees\n\n`;
 
+      // Helper: check if an answer is marked private
+      const isPrivate = (contrib, section, qId) => {
+        return contrib.answerVisibility &&
+          contrib.answerVisibility[section] &&
+          contrib.answerVisibility[section][qId] === "private";
+      };
+
+      // Helper: extract answer text, filtering out private answers
+      const getAnswerText = (contrib, section, qId, answer) => {
+        if (isPrivate(contrib, section, qId)) return null;
+        const text = typeof answer === "string" ?
+          answer :
+          (answer && answer.primary) ?
+            String(answer.primary) :
+            JSON.stringify(answer);
+        return (text && text.trim()) ? text.trim() : null;
+      };
+
       if (selfContribs.length > 0) {
         prompt += `=== ${personName.toUpperCase()}'S OWN PERSPECTIVE ===\n`;
         for (const contrib of selfContribs) {
           for (const [section, answers] of Object.entries(contrib.answers)) {
             if (typeof answers !== "object" || answers === null) continue;
-            prompt += `\n[${section.toUpperCase()}]\n`;
+            const visibleAnswers = [];
             for (const [qId, answer] of Object.entries(answers)) {
-              const text = typeof answer === "string" ?
-                answer :
-                (answer && answer.primary) ?
-                  String(answer.primary) :
-                  JSON.stringify(answer);
-              if (text && text.trim()) {
-                prompt += `- ${text.trim()}\n`;
+              const text = getAnswerText(contrib, section, qId, answer);
+              if (text) visibleAnswers.push(text);
+            }
+            if (visibleAnswers.length > 0) {
+              prompt += `\n[${section.toUpperCase()}]\n`;
+              for (const text of visibleAnswers) {
+                prompt += `- ${text}\n`;
               }
             }
           }
@@ -173,15 +191,15 @@ exports.synthesizeManualContent = onCall(
           prompt += `(${relationship}) ===\n`;
           for (const [section, answers] of Object.entries(contrib.answers)) {
             if (typeof answers !== "object" || answers === null) continue;
-            prompt += `\n[${section.toUpperCase()}]\n`;
+            const visibleAnswers = [];
             for (const [qId, answer] of Object.entries(answers)) {
-              const text = typeof answer === "string" ?
-                answer :
-                (answer && answer.primary) ?
-                  String(answer.primary) :
-                  JSON.stringify(answer);
-              if (text && text.trim()) {
-                prompt += `- ${text.trim()}\n`;
+              const text = getAnswerText(contrib, section, qId, answer);
+              if (text) visibleAnswers.push(text);
+            }
+            if (visibleAnswers.length > 0) {
+              prompt += `\n[${section.toUpperCase()}]\n`;
+              for (const text of visibleAnswers) {
+                prompt += `- ${text}\n`;
               }
             }
           }
@@ -3970,6 +3988,180 @@ exports.resetDemoAccount = onCall(
             workbooks: 0,
           },
         };
+      }
+    },
+);
+
+/**
+ * Extract draft onboarding answers from uploaded personal documents.
+ *
+ * Privacy: Raw documents are received as base64 in the request payload,
+ * processed transiently with Claude, and never persisted to any storage.
+ * Only structured answers keyed to existing question IDs are returned.
+ */
+exports.extractDraftFromDocuments = onCall(
+    {
+      region: "us-central1",
+      memory: "1GiB",
+      timeoutSeconds: 180,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const {personId, personName, files} = request.data;
+      if (!personId || !files || !Array.isArray(files) || files.length === 0) {
+        throw new Error("personId and files are required");
+      }
+      if (files.length > 5) {
+        throw new Error("Maximum 5 files allowed");
+      }
+
+      // Build content blocks for Claude from uploaded files
+      const contentBlocks = [];
+
+      for (const file of files) {
+        if (!file.base64Data || !file.mimeType) {
+          continue;
+        }
+
+        if (file.mimeType === "text/plain") {
+          // Text files: decode base64 to string
+          const text = Buffer.from(file.base64Data, "base64").toString("utf-8");
+          contentBlocks.push({
+            type: "text",
+            text: `--- Document: ${file.name || "text file"} ---\n${text}`,
+          });
+        } else if (file.mimeType === "application/pdf") {
+          contentBlocks.push({
+            type: "document",
+            source: {
+              type: "base64",
+              media_type: "application/pdf",
+              data: file.base64Data,
+            },
+          });
+        } else if (file.mimeType.startsWith("image/")) {
+          contentBlocks.push({
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: file.mimeType,
+              data: file.base64Data,
+            },
+          });
+        }
+      }
+
+      if (contentBlocks.length === 0) {
+        throw new Error("No valid files to process");
+      }
+
+      // Add the extraction instructions after the document content
+      contentBlocks.push({
+        type: "text",
+        text: `Based on the documents above, extract answers for the following self-onboarding questions.
+Write answers in first person as if ${personName || "the person"} wrote them directly.
+If the documents don't contain relevant information for a question, return null for that question.
+Do NOT reference the source documents, their type, therapy, journaling, or any context about where this information came from.
+Answers should be concise (1-3 sentences) and feel natural, like someone describing themselves.
+
+Also identify any answers that touch on sensitive topics (sexuality, intimacy, trauma, substance use, relationship grievances, embarrassing personal details, mental health diagnoses) and return them in a "sensitiveFields" array — these will be auto-marked as private for the user's protection.
+
+SECTIONS AND QUESTIONS:
+
+Section "overview" (About You):
+  "overview_q1": "What do you enjoy? What brings you joy or energy?"
+  "overview_q2": "What do you dislike or find draining?"
+  "overview_q3": "What drives or motivates you?"
+  "overview_q4": "What makes you feel comfortable vs. uncomfortable?"
+
+Section "triggers" (Your Triggers & Patterns):
+  "triggers_q1": "Describe a recent time you became stressed or upset. What happened?"
+  "triggers_q2": "What situations or transitions tend to be challenging for you?"
+  "triggers_q3": "What typically helps when you're struggling?"
+
+Section "what_works" (What Works for You):
+  "works_q1": "What do you need from the people around you to feel supported?"
+  "works_q2": "Think of a time things went really well at home. What made the difference?"
+  "works_q3": "What motivates or excites you?"
+
+Section "boundaries" (Your Boundaries & Needs):
+  "boundaries_q1": "What boundaries are important to you?"
+  "boundaries_q2": "What do others need to know to interact well with you?"
+  "boundaries_q3": "What approaches or behaviors should be avoided with you?"
+
+Section "communication" (How You Communicate):
+  "communication_q1": "How do you prefer to communicate when something is bothering you?"
+  "communication_q2": "How do you show love or appreciation?"
+  "communication_q3": "How do you prefer to receive love or appreciation?"
+
+Return ONLY valid JSON with this exact structure:
+{
+  "answers": {
+    "overview": { "overview_q1": "answer or null", "overview_q2": "answer or null", "overview_q3": "answer or null", "overview_q4": "answer or null" },
+    "triggers": { "triggers_q1": "answer or null", "triggers_q2": "answer or null", "triggers_q3": "answer or null" },
+    "what_works": { "works_q1": "answer or null", "works_q2": "answer or null", "works_q3": "answer or null" },
+    "boundaries": { "boundaries_q1": "answer or null", "boundaries_q2": "answer or null", "boundaries_q3": "answer or null" },
+    "communication": { "communication_q1": "answer or null", "communication_q2": "answer or null", "communication_q3": "answer or null" }
+  },
+  "sensitiveFields": [{ "sectionId": "...", "questionId": "..." }]
+}`,
+      });
+
+      try {
+        const client = getAnthropic();
+        const response = await client.messages.create({
+          model: "claude-sonnet-4-6",
+          max_tokens: 4000,
+          messages: [
+            {
+              role: "user",
+              content: contentBlocks,
+            },
+          ],
+        });
+
+        const content = response.content[0].text;
+
+        let parsed;
+        try {
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content);
+        } catch (parseErr) {
+          console.error("Failed to parse extraction response:", content);
+          throw new Error("Failed to parse AI response");
+        }
+
+        // Build populatedFields map (sectionId -> questionId[] where answer is not null)
+        const populatedFields = {};
+        const answers = parsed.answers || {};
+        for (const [sectionId, sectionAnswers] of Object.entries(answers)) {
+          const populated = [];
+          for (const [qId, answer] of Object.entries(sectionAnswers || {})) {
+            if (answer !== null && answer !== undefined && answer !== "null") {
+              populated.push(qId);
+            } else {
+              // Normalize null-string to actual null
+              answers[sectionId][qId] = null;
+            }
+          }
+          if (populated.length > 0) {
+            populatedFields[sectionId] = populated;
+          }
+        }
+
+        return {
+          success: true,
+          answers,
+          populatedFields,
+          sensitiveFields: parsed.sensitiveFields || [],
+        };
+      } catch (err) {
+        console.error("Document extraction error:", err);
+        throw new Error(`Document extraction failed: ${err.message}`);
       }
     },
 );

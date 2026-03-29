@@ -53,7 +53,7 @@ interface UseContributionReturn {
 
   updateContribution: (
     contributionId: string,
-    updates: Partial<Pick<Contribution, 'answers' | 'status' | 'draftProgress'>>
+    updates: Partial<Pick<Contribution, 'answers' | 'status' | 'draftProgress' | 'answerVisibility' | 'aiGeneratedFields'>>
   ) => Promise<boolean>;
 
   /** Save or update a draft contribution. Creates on first call, updates thereafter. */
@@ -65,6 +65,8 @@ interface UseContributionReturn {
     answers: Record<string, any>;
     sectionIndex: number;
     questionIndex: number;
+    answerVisibility?: Record<string, Record<string, 'visible' | 'private'>>;
+    aiGeneratedFields?: Record<string, string[]>;
   }) => Promise<string>;
 
   /** Complete a draft — mark as 'complete' and link to manual. */
@@ -162,7 +164,7 @@ export function useContribution(manualId?: string): UseContributionReturn {
   const updateContribution = useCallback(
     async (
       contributionId: string,
-      updates: Partial<Pick<Contribution, 'answers' | 'status' | 'draftProgress'>>
+      updates: Partial<Pick<Contribution, 'answers' | 'status' | 'draftProgress' | 'answerVisibility' | 'aiGeneratedFields'>>
     ): Promise<boolean> => {
       try {
         const docRef = doc(
@@ -217,11 +219,21 @@ export function useContribution(manualId?: string): UseContributionReturn {
       answers: Record<string, any>;
       sectionIndex: number;
       questionIndex: number;
+      answerVisibility?: Record<string, Record<string, 'visible' | 'private'>>;
+      aiGeneratedFields?: Record<string, string[]>;
     }): Promise<string> => {
       if (!user) throw new Error('Not authenticated');
 
       // Check for existing draft
       const existingDraft = await findDraft(data.manualId, data.perspectiveType);
+
+      const extraFields: Record<string, any> = {};
+      if (data.answerVisibility && Object.keys(data.answerVisibility).length > 0) {
+        extraFields.answerVisibility = stripUndefined(data.answerVisibility);
+      }
+      if (data.aiGeneratedFields && Object.keys(data.aiGeneratedFields).length > 0) {
+        extraFields.aiGeneratedFields = stripUndefined(data.aiGeneratedFields);
+      }
 
       if (existingDraft) {
         // Try to update existing draft — if it fails (deleted doc), fall through to create new
@@ -231,6 +243,7 @@ export function useContribution(manualId?: string): UseContributionReturn {
             sectionIndex: data.sectionIndex,
             questionIndex: data.questionIndex,
           },
+          ...extraFields,
         });
         if (updated) {
           return existingDraft.contributionId;
@@ -254,6 +267,7 @@ export function useContribution(manualId?: string): UseContributionReturn {
           sectionIndex: data.sectionIndex,
           questionIndex: data.questionIndex,
         },
+        ...extraFields,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
         status: 'draft',
@@ -273,7 +287,7 @@ export function useContribution(manualId?: string): UseContributionReturn {
     async (contributionId: string, mid: string) => {
       if (!user) throw new Error('Not authenticated');
 
-      // Mark as complete
+      // Mark as complete — strip AI provenance but keep visibility
       const docRef = doc(
         firestore,
         PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS,
@@ -282,6 +296,7 @@ export function useContribution(manualId?: string): UseContributionReturn {
       await updateDoc(docRef, {
         status: 'complete',
         draftProgress: null,
+        aiGeneratedFields: null,
         updatedAt: Timestamp.now(),
       });
 
