@@ -5,18 +5,23 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { usePerson } from '@/hooks/usePerson';
+import { useManualSummaries, ManualSummary } from '@/hooks/useManualSummaries';
 import MainLayout from '@/components/layout/MainLayout';
 import {
   ExclamationTriangleIcon,
   EllipsisVerticalIcon,
   PencilIcon,
   XMarkIcon,
+  UserIcon,
+  EyeIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline';
 
 export default function PeoplePage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { people, loading: peopleLoading, addPerson, updatePerson, deletePerson } = usePerson();
+  const { summaries, loading: summariesLoading } = useManualSummaries();
   const [showAddModal, setShowAddModal] = useState(false);
   const [newPersonName, setNewPersonName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
@@ -273,6 +278,8 @@ export default function PeoplePage() {
                       person={person}
                       index={index}
                       hasManual={true}
+                      summary={summaries.get(person.personId)}
+                      summaryLoading={summariesLoading}
                       onEdit={() => openEditModal(person)}
                       onDelete={() => setDeletingPerson(person)}
                     />
@@ -519,11 +526,13 @@ interface PersonCardProps {
   person: any;
   index: number;
   hasManual: boolean;
+  summary?: ManualSummary;
+  summaryLoading?: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-function PersonCard({ person, index, hasManual, onEdit, onDelete }: PersonCardProps) {
+function PersonCard({ person, index, hasManual, summary, summaryLoading, onEdit, onDelete }: PersonCardProps) {
   const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
 
@@ -545,6 +554,19 @@ function PersonCard({ person, index, hasManual, onEdit, onDelete }: PersonCardPr
     e.stopPropagation();
     setShowMenu(false);
     onDelete();
+  };
+
+  // Determine a suggested next action
+  const getNextAction = (): string | null => {
+    if (!summary) return null;
+    if (!summary.hasSelfPerspective && summary.observerCount === 0) return 'Start the questionnaire';
+    if (!summary.hasSelfPerspective) return 'Add self-perspective';
+    if (summary.observerCount === 0) return 'Invite an observer';
+    if (summary.draftsInProgress > 0) return 'Finish draft in progress';
+    if (summary.missingSections.length > 0) return `Fill in ${summary.missingSections[0]}`;
+    if (!summary.hasSynthesis && summary.hasSelfPerspective && summary.observerCount > 0) return 'Run AI synthesis';
+    if (summary.thinSections.length > 0) return `Expand ${summary.thinSections[0]}`;
+    return null;
   };
 
   return (
@@ -588,41 +610,124 @@ function PersonCard({ person, index, hasManual, onEdit, onDelete }: PersonCardPr
         </div>
 
         <div className="p-6">
-          {/* Status badge */}
-          <div className={`inline-block px-2 py-1 font-mono text-xs mb-4 ${
-            hasManual ? 'bg-green-600 text-white' : 'bg-slate-800 text-white'
-          }`}>
-            {hasManual ? 'ACTIVE' : 'PENDING'}
-          </div>
-
-          {/* Person info */}
+          {/* Person name + relationship */}
           <h3 className="font-mono text-xl font-bold mb-1 text-slate-900">
             {person.name}
           </h3>
-          <p className="font-mono text-xs text-slate-600 uppercase tracking-wider mb-6">
+          <p className="font-mono text-xs text-slate-600 uppercase tracking-wider mb-5">
             {person.relationshipType || 'UNSPECIFIED'}
           </p>
 
-          {/* Technical details */}
-          <div className={`space-y-2 mb-6 pb-6 border-b ${hasManual ? 'border-slate-200' : 'border-amber-200'}`}>
-            <div className="flex justify-between font-mono text-xs">
-              <span className="text-slate-500">PERSON ID:</span>
-              <span className="text-slate-900">{person.personId.slice(0, 8).toUpperCase()}</span>
-            </div>
-            <div className="flex justify-between font-mono text-xs">
-              <span className="text-slate-500">STATUS:</span>
-              <span className={hasManual ? 'text-green-700' : 'text-amber-700'}>
-                {hasManual ? 'OPERATIONAL' : 'UNINITIALIZED'}
-              </span>
-            </div>
-          </div>
+          {hasManual && summary && !summaryLoading ? (
+            <>
+              {/* Contributors row */}
+              <div className="flex items-center gap-3 mb-5">
+                <div className="flex items-center gap-1.5">
+                  <UserIcon className="w-4 h-4 text-slate-500" />
+                  <span className={`font-mono text-xs font-bold ${summary.hasSelfPerspective ? 'text-green-700' : 'text-slate-400'}`}>
+                    {summary.hasSelfPerspective ? 'SELF' : 'NO SELF'}
+                  </span>
+                </div>
+                <div className="w-px h-4 bg-slate-200" />
+                <div className="flex items-center gap-1.5">
+                  <EyeIcon className="w-4 h-4 text-slate-500" />
+                  <span className={`font-mono text-xs font-bold ${summary.observerCount > 0 ? 'text-green-700' : 'text-slate-400'}`}>
+                    {summary.observerCount} OBSERVER{summary.observerCount !== 1 ? 'S' : ''}
+                  </span>
+                </div>
+                {summary.draftsInProgress > 0 && (
+                  <>
+                    <div className="w-px h-4 bg-slate-200" />
+                    <span className="font-mono text-xs text-amber-600 font-bold">
+                      {summary.draftsInProgress} DRAFT{summary.draftsInProgress !== 1 ? 'S' : ''}
+                    </span>
+                  </>
+                )}
+              </div>
 
-          {/* Action */}
-          <div className={`text-center font-mono text-xs font-bold ${
-            hasManual ? 'text-slate-800' : 'text-amber-600'
-          }`}>
-            {hasManual ? 'VIEW MANUAL →' : 'CREATE MANUAL →'}
-          </div>
+              {/* Section depth bars */}
+              <div className="space-y-1.5 mb-5">
+                <div className="font-mono text-xs text-slate-500 uppercase tracking-wider mb-2">
+                  CONTENT DEPTH
+                </div>
+                {summary.sections.map((section) => {
+                  // Max out the bar at 6+ answers (2 perspectives x 3 questions)
+                  const fillPercent = Math.min(100, (section.answeredCount / 6) * 100);
+                  return (
+                    <div key={section.sectionId} className="flex items-center gap-2">
+                      <span className="font-mono text-xs text-slate-600 w-24 truncate">
+                        {section.label}
+                      </span>
+                      <div className="flex-1 h-2 bg-slate-100 border border-slate-200">
+                        <div
+                          className={`h-full transition-all ${
+                            section.answeredCount === 0
+                              ? 'bg-slate-200'
+                              : section.answeredCount <= 2
+                              ? 'bg-amber-400'
+                              : 'bg-green-500'
+                          }`}
+                          style={{ width: `${fillPercent}%` }}
+                        />
+                      </div>
+                      <span className="font-mono text-xs text-slate-400 w-4 text-right">
+                        {section.answeredCount}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Synthesis status */}
+              <div className={`flex items-center gap-2 mb-4 px-2 py-1.5 ${
+                summary.hasSynthesis ? 'bg-green-50 border border-green-200' : 'bg-slate-50 border border-slate-200'
+              }`}>
+                <SparklesIcon className={`w-4 h-4 ${summary.hasSynthesis ? 'text-green-600' : 'text-slate-400'}`} />
+                <span className={`font-mono text-xs ${summary.hasSynthesis ? 'text-green-700' : 'text-slate-500'}`}>
+                  {summary.hasSynthesis
+                    ? `SYNTHESIZED${summary.lastSynthesizedAt ? ` ${formatRelativeDate(summary.lastSynthesizedAt)}` : ''}`
+                    : 'NOT YET SYNTHESIZED'}
+                </span>
+              </div>
+
+              {/* Next action hint */}
+              {getNextAction() && (
+                <div className="font-mono text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1.5 mb-4">
+                  NEXT: {getNextAction()}
+                </div>
+              )}
+
+              {/* Action */}
+              <div className="text-center font-mono text-xs font-bold text-slate-800">
+                VIEW MANUAL →
+              </div>
+            </>
+          ) : hasManual && summaryLoading ? (
+            <div className="space-y-2 mb-4">
+              <div className="h-4 bg-slate-100 animate-pulse" />
+              <div className="h-4 bg-slate-100 animate-pulse w-3/4" />
+              <div className="h-4 bg-slate-100 animate-pulse w-1/2" />
+              <div className="mt-4 text-center font-mono text-xs font-bold text-slate-800">
+                VIEW MANUAL →
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Pending setup card (unchanged) */}
+              <div className="inline-block px-2 py-1 font-mono text-xs mb-4 bg-slate-800 text-white">
+                PENDING
+              </div>
+              <div className="space-y-2 mb-6 pb-6 border-b border-amber-200">
+                <div className="flex justify-between font-mono text-xs">
+                  <span className="text-slate-500">STATUS:</span>
+                  <span className="text-amber-700">UNINITIALIZED</span>
+                </div>
+              </div>
+              <div className="text-center font-mono text-xs font-bold text-amber-600">
+                CREATE MANUAL →
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -658,4 +763,16 @@ function PersonCard({ person, index, hasManual, onEdit, onDelete }: PersonCardPr
       )}
     </div>
   );
+}
+
+function formatRelativeDate(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'today';
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+  return `${Math.floor(diffDays / 30)}mo ago`;
 }
