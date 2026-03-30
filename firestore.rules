@@ -568,6 +568,29 @@ service cloud.firestore {
       allow delete: if isParent() && belongsToFamily(resource.data.familyId);
     }
 
+    // ==================== Growth System ====================
+
+    // Growth items collection (AI-generated micro-activities, reflections, assessments)
+    match /growth_items/{itemId} {
+      allow read: if belongsToFamily(resource.data.familyId);
+      allow update: if belongsToFamily(resource.data.familyId);
+      // Cloud Functions create via admin SDK
+    }
+
+    // Growth arcs (structured multi-week learning courses)
+    match /growth_arcs/{arcId} {
+      allow read: if belongsToFamily(resource.data.familyId);
+      allow update: if belongsToFamily(resource.data.familyId);
+      // Cloud Functions create via admin SDK
+    }
+
+    // Dimension assessments (research-backed relationship health scores)
+    match /dimension_assessments/{assessmentId} {
+      allow read: if belongsToFamily(resource.data.familyId);
+      allow update: if belongsToFamily(resource.data.familyId);
+      // Cloud Functions create via admin SDK
+    }
+
     // ==================== Dual Workbook System ====================
 
     // Parent Workbooks

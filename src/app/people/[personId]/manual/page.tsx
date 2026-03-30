@@ -67,10 +67,10 @@ export default function ManualPage({ params }: { params: Promise<{ personId: str
         {/* Header */}
         <div className="mb-8">
           <Link
-            href="/people"
+            href="/dashboard"
             className="font-mono text-xs text-slate-400 hover:text-slate-600 transition-colors"
           >
-            &larr; BACK TO PEOPLE
+            &larr; BACK TO DASHBOARD
           </Link>
           <h1 className="font-mono font-bold text-2xl text-slate-800 mt-2">
             {person.name}&apos;s Manual

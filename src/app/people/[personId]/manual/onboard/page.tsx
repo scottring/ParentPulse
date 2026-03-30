@@ -225,14 +225,14 @@ export default function ObserverOnboardPage({ params }: { params: Promise<{ pers
     if (manual && person && answeredQuestions > 0) {
       await saveNow();
     }
-    router.push(`/people/${personId}/manual`);
+    router.push('/dashboard');
   };
 
   // Redirect after completion
   useEffect(() => {
     if (isComplete) {
       const timer = setTimeout(() => {
-        router.push(`/people/${personId}/manual`);
+        router.push('/dashboard');
       }, 2000);
       return () => clearTimeout(timer);
     }

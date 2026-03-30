@@ -1,16 +1,37 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { useDashboard } from '@/hooks/useDashboard';
+import { useGrowthFeed } from '@/hooks/useGrowthFeed';
 import { usePerson } from '@/hooks/usePerson';
 import MainLayout from '@/components/layout/MainLayout';
+import RoleCard from '@/components/growth/RoleCard';
 import Link from 'next/link';
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { people, loading: peopleLoading } = usePerson();
+  const {
+    state,
+    selfPerson,
+    roles,
+    spouse,
+    peopleNeedingContributions,
+  } = useDashboard();
+  const {
+    submitFeedback,
+    seedAssessments,
+    generateArc,
+    generating,
+  } = useGrowthFeed();
+  const { addPerson } = usePerson();
+
+  // Inline add-person form state
+  const [addName, setAddName] = useState('');
+  const [addType, setAddType] = useState<'spouse' | 'child'>('spouse');
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -18,12 +39,12 @@ export default function DashboardPage() {
     }
   }, [user, authLoading, router]);
 
-  if (authLoading || peopleLoading) {
+  if (authLoading || state === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FFF8F0' }}>
         <div className="text-center">
           <div className="manual-spinner"></div>
-          <p className="mt-4 font-mono text-sm text-slate-600">LOADING DOCUMENTATION...</p>
+          <p className="mt-4 font-mono text-sm text-slate-600">LOADING...</p>
         </div>
         <style jsx>{`
           .manual-spinner {
@@ -44,273 +65,275 @@ export default function DashboardPage() {
 
   if (!user) return null;
 
-  const activeManualsCount = people.filter(p => p.hasManual).length;
-  const pendingSetupCount = people.filter(p => !p.hasManual).length;
+  const userName = selfPerson?.name || user.name || 'there';
+  const activeArcCount = roles.filter((r) => r.activeArc).length;
+  const todayItemCount = roles.reduce((sum, r) => sum + r.todayItems.length, 0);
+
+  // Compute step numbers for onboarding
+  const totalSteps = 4;
+  const currentStep =
+    state === 'new_user' ? 1 :
+    state === 'self_complete' ? 2 :
+    state === 'has_people' ? 3 :
+    state === 'has_contributions' ? 4 : 0;
+
+  const handleAddPerson = async () => {
+    if (!addName.trim()) return;
+    setAdding(true);
+    try {
+      const personId = await addPerson({
+        name: addName.trim(),
+        relationshipType: addType,
+        canSelfContribute: addType === 'spouse',
+      });
+      setAddName('');
+      // Auto-create manual for the new person
+      router.push(`/people/${personId}/create-manual`);
+    } catch (err) {
+      console.error('Failed to add person:', err);
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleAnalyze = async () => {
+    try {
+      await seedAssessments();
+      await generateArc();
+    } catch (err) {
+      console.error('Failed to analyze:', err);
+    }
+  };
 
   return (
     <MainLayout>
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Technical Header */}
-        <header className="mb-12">
-          <div className="relative bg-white border-4 border-slate-800 p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-            {/* Corner brackets */}
-            <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-amber-600"></div>
-            <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-amber-600"></div>
-            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-amber-600"></div>
-            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-amber-600"></div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-3">
-                  DOCUMENTATION INDEX
-                </div>
-                <h1 className="font-mono text-4xl font-bold tracking-tight mb-2">
-                  Your Family Manuals
-                </h1>
-                <p className="font-mono text-sm text-slate-600">
-                  Operating guides for understanding and supporting the people you care about
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+        {/* Header */}
+        <header className="mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="font-mono font-bold text-2xl text-slate-800">
+                {state === 'active' ? userName : `Welcome, ${userName}`}
+              </h1>
+              {state === 'active' ? (
+                <p className="font-mono text-sm text-slate-500 mt-1">
+                  Your roles &middot; your growth
                 </p>
-              </div>
-              <Link
-                href="/people"
-                className="px-6 py-3 bg-slate-800 text-white font-mono font-bold hover:bg-amber-600 transition-all hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap"
-                data-testid="add-person-button"
-              >
-                + ADD PERSON
-              </Link>
+              ) : (
+                <p className="font-mono text-sm text-slate-500 mt-1">
+                  Let&apos;s set up your relationship health dashboard
+                </p>
+              )}
             </div>
+            {selfPerson && state === 'active' && (
+              <Link
+                href={`/people/${selfPerson.personId}/manual`}
+                className="font-mono text-xs text-slate-400 hover:text-slate-600 transition-colors border border-slate-200 px-3 py-1.5 hover:border-slate-400"
+              >
+                MY MANUAL &rarr;
+              </Link>
+            )}
           </div>
+
+          {/* Status line (active state only) */}
+          {state === 'active' && (
+            <div className="flex items-center gap-4 mt-4 pt-3 border-t border-slate-200">
+              <span className="font-mono text-[10px] text-slate-400 uppercase tracking-wider">
+                {roles.length} ROLE{roles.length !== 1 ? 'S' : ''}
+              </span>
+              {activeArcCount > 0 && (
+                <span className="font-mono text-[10px] text-slate-800 font-bold uppercase tracking-wider">
+                  {activeArcCount} ARC{activeArcCount !== 1 ? 'S' : ''} ACTIVE
+                </span>
+              )}
+              {todayItemCount > 0 && (
+                <span className="font-mono text-[10px] text-amber-600 font-bold uppercase tracking-wider">
+                  {todayItemCount} TO DO TODAY
+                </span>
+              )}
+            </div>
+          )}
         </header>
 
-        {/* Technical Statistics Panel */}
-        {people.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            {/* Stat 1: Total People */}
-            <div className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-              <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-amber-600">
-                1
-              </div>
-              <div className="font-mono text-xs text-slate-600 mb-2 uppercase tracking-wider">
-                SPECIFICATION
-              </div>
-              <div className="flex items-baseline gap-3">
-                <div className="text-5xl font-bold font-mono text-slate-900">
-                  {people.length}
-                </div>
-                <div className="font-mono text-sm text-slate-600">
-                  TOTAL<br/>PEOPLE
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t border-slate-200">
-                <div className="font-mono text-xs text-slate-500">
-                  REGISTERED INDIVIDUALS
-                </div>
-              </div>
-            </div>
+        {/* ===== ONBOARDING CARDS ===== */}
 
-            {/* Stat 2: Active Manuals */}
-            <div className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-              <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-amber-600">
-                2
-              </div>
-              <div className="font-mono text-xs text-slate-600 mb-2 uppercase tracking-wider">
-                SPECIFICATION
-              </div>
-              <div className="flex items-baseline gap-3">
-                <div className="text-5xl font-bold font-mono text-green-700">
-                  {activeManualsCount}
-                </div>
-                <div className="font-mono text-sm text-slate-600">
-                  ACTIVE<br/>MANUALS
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t border-slate-200">
-                <div className="font-mono text-xs text-slate-500">
-                  OPERATIONAL DOCUMENTS
-                </div>
-              </div>
+        {/* Step 1: Complete your manual */}
+        {state === 'new_user' && selfPerson && (
+          <div className="border-2 border-slate-800 bg-white p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] mb-6">
+            <div className="font-mono text-[10px] text-slate-400 mb-3">
+              STEP {currentStep} OF {totalSteps}
             </div>
+            <h2 className="font-mono font-bold text-lg text-slate-900 mb-2">
+              Complete Your Manual
+            </h2>
+            <p className="font-mono text-sm text-slate-600 mb-6 leading-relaxed">
+              Tell us about yourself — how you handle stress, what you need from people,
+              how you communicate. This is the foundation everything else builds on.
+            </p>
+            <Link
+              href={`/people/${selfPerson.personId}/manual/self-onboard`}
+              className="inline-block px-6 py-3 bg-slate-800 text-white font-mono font-bold hover:bg-amber-600 transition-all"
+            >
+              ANSWER QUESTIONS &rarr;
+            </Link>
+          </div>
+        )}
 
-            {/* Stat 3: Awaiting Setup */}
-            <div className="relative bg-white border-2 border-slate-800 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-              <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-amber-600">
-                3
-              </div>
-              <div className="font-mono text-xs text-slate-600 mb-2 uppercase tracking-wider">
-                SPECIFICATION
-              </div>
-              <div className="flex items-baseline gap-3">
-                <div className="text-5xl font-bold font-mono text-amber-600">
-                  {pendingSetupCount}
-                </div>
-                <div className="font-mono text-sm text-slate-600">
-                  AWAITING<br/>SETUP
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t border-slate-200">
-                <div className="font-mono text-xs text-slate-500">
-                  PENDING INITIALIZATION
-                </div>
+        {/* Step 2: Add your spouse (or first person) */}
+        {state === 'self_complete' && (
+          <div className="border-2 border-slate-800 bg-white p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] mb-6">
+            <div className="font-mono text-[10px] text-slate-400 mb-3">
+              STEP {currentStep} OF {totalSteps}
+            </div>
+            <h2 className="font-mono font-bold text-lg text-slate-900 mb-2">
+              Add the people in your life
+            </h2>
+            <p className="font-mono text-sm text-slate-600 mb-4 leading-relaxed">
+              Who do you want to understand better? Start with your spouse or partner.
+            </p>
+
+            {/* Inline add form */}
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <select
+                  value={addType}
+                  onChange={(e) => setAddType(e.target.value as 'spouse' | 'child')}
+                  className="font-mono text-sm border-2 border-slate-300 px-3 py-2 bg-white"
+                >
+                  <option value="spouse">Spouse/Partner</option>
+                  <option value="child">Child</option>
+                </select>
+                <input
+                  type="text"
+                  value={addName}
+                  onChange={(e) => setAddName(e.target.value)}
+                  placeholder="Their name"
+                  className="flex-1 font-mono text-sm border-2 border-slate-300 px-3 py-2"
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddPerson()}
+                />
+                <button
+                  onClick={handleAddPerson}
+                  disabled={adding || !addName.trim()}
+                  className="px-4 py-2 bg-slate-800 text-white font-mono font-bold hover:bg-amber-600 transition-all disabled:opacity-50"
+                >
+                  {adding ? '...' : 'ADD'}
+                </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Manual Directory */}
-        {people.length === 0 ? (
-          // Empty state
-          <div className="relative bg-amber-50 border-4 border-amber-600 p-16 text-center shadow-[8px_8px_0px_0px_rgba(217,119,6,1)]">
-            <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-slate-800"></div>
-            <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-slate-800"></div>
-            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-slate-800"></div>
-            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-slate-800"></div>
-
-            <div className="inline-block px-3 py-1 bg-amber-600 text-white font-mono text-xs mb-6">
-              SYSTEM STATUS
+        {/* Step 3: Share what you know about them */}
+        {state === 'has_people' && peopleNeedingContributions.length > 0 && (
+          <div className="border-2 border-slate-800 bg-white p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] mb-6">
+            <div className="font-mono text-[10px] text-slate-400 mb-3">
+              STEP {currentStep} OF {totalSteps}
             </div>
-            <h2 className="font-mono text-3xl font-bold mb-4 text-slate-900">
-              NO DOCUMENTATION FOUND
+            <h2 className="font-mono font-bold text-lg text-slate-900 mb-2">
+              Share what you know about {peopleNeedingContributions[0].name}
             </h2>
-            <p className="font-mono text-sm text-slate-700 mb-8 max-w-md mx-auto">
-              Initialize the system by adding your first person and generating their operating manual
+            <p className="font-mono text-sm text-slate-600 mb-6 leading-relaxed">
+              You know {peopleNeedingContributions[0].name} from a perspective they can&apos;t see themselves.
+              Your observations are the other half of the picture.
             </p>
             <Link
-              href="/people"
-              className="inline-block px-8 py-4 bg-slate-800 text-white font-mono font-bold hover:bg-amber-600 transition-all hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              href={`/people/${peopleNeedingContributions[0].personId}/manual/onboard`}
+              className="inline-block px-6 py-3 bg-slate-800 text-white font-mono font-bold hover:bg-amber-600 transition-all"
             >
-              ADD FIRST PERSON →
+              ANSWER ABOUT {peopleNeedingContributions[0].name.toUpperCase()} &rarr;
             </Link>
-          </div>
-        ) : (
-          <div className="space-y-12">
-            {/* Active Manuals Section */}
-            {activeManualsCount > 0 && (
-              <section>
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs">
-                    SECTION 1
-                  </div>
-                  <h2 className="font-mono text-2xl font-bold">
-                    Active Manuals ({activeManualsCount})
-                  </h2>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {people.filter(p => p.hasManual).map((person, index) => (
-                    <div
-                      key={person.personId}
-                      className="relative bg-white border-2 border-slate-300 hover:border-slate-800 transition-all group shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
-                      data-testid="person-card"
-                    >
-                      {/* Manual number label */}
-                      <div className="absolute -top-3 -left-3 w-10 h-10 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-green-600">
-                        {String(index + 1).padStart(2, '0')}
-                      </div>
-
-                      <div className="p-6">
-                        {/* Status badge */}
-                        <div className="inline-block px-2 py-1 bg-green-600 text-white font-mono text-xs mb-4">
-                          ACTIVE
-                        </div>
-
-                        {/* Person info */}
-                        <h3 className="font-mono text-xl font-bold mb-1 text-slate-900">
-                          {person.name}
-                        </h3>
-                        <p className="font-mono text-xs text-slate-600 uppercase tracking-wider mb-6">
-                          {person.relationshipType || 'OTHER'}
-                        </p>
-
-                        {/* Technical details */}
-                        <div className="space-y-2 mb-6 pb-6 border-b border-slate-200">
-                          <div className="flex justify-between font-mono text-xs">
-                            <span className="text-slate-500">MANUAL ID:</span>
-                            <span className="text-slate-900">{person.personId.slice(0, 8).toUpperCase()}</span>
-                          </div>
-                          <div className="flex justify-between font-mono text-xs">
-                            <span className="text-slate-500">STATUS:</span>
-                            <span className="text-green-700">OPERATIONAL</span>
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <Link
-                          href={`/people/${person.personId}/manual`}
-                          className="block w-full text-center px-4 py-3 bg-slate-800 text-white font-mono font-bold hover:bg-green-700 transition-all"
-                          data-testid="view-manual-button"
-                        >
-                          VIEW MANUAL →
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
+            {peopleNeedingContributions.length > 1 && (
+              <p className="font-mono text-[10px] text-slate-400 mt-3">
+                +{peopleNeedingContributions.length - 1} more {peopleNeedingContributions.length === 2 ? 'person' : 'people'} after this
+              </p>
             )}
+          </div>
+        )}
 
-            {/* Ready for Setup Section */}
-            {pendingSetupCount > 0 && (
-              <section>
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="inline-block px-3 py-1 bg-amber-600 text-white font-mono text-xs">
-                    SECTION 2
-                  </div>
-                  <h2 className="font-mono text-2xl font-bold">
-                    Ready for Setup ({pendingSetupCount})
-                  </h2>
+        {/* Step 4: Analyze & start growing */}
+        {state === 'has_contributions' && (
+          <div className="border-2 border-slate-800 bg-white p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] mb-6">
+            <div className="font-mono text-[10px] text-slate-400 mb-3">
+              STEP {currentStep} OF {totalSteps}
+            </div>
+            <h2 className="font-mono font-bold text-lg text-slate-900 mb-2">
+              See your relationship health
+            </h2>
+            <p className="font-mono text-sm text-slate-600 mb-4 leading-relaxed">
+              We&apos;ll assess your relationships across 15 research-backed dimensions
+              and build your first Growth Arc — a structured plan targeting your
+              biggest opportunity.
+            </p>
+            <button
+              onClick={handleAnalyze}
+              disabled={generating}
+              className="px-6 py-3 bg-slate-800 text-white font-mono font-bold hover:bg-amber-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {generating ? 'ANALYZING...' : 'ANALYZE & START GROWING'}
+            </button>
+            <p className="font-mono text-[9px] text-slate-400 mt-3">
+              Based on Gottman, Johnson (EFT), Attachment Theory, Baumrind, and Siegel
+            </p>
+          </div>
+        )}
+
+        {/* ===== ACTIVE STATE: ROLE CARDS ===== */}
+
+        {state === 'active' && (
+          <div className="space-y-6">
+            {roles.map((role) => (
+              <RoleCard
+                key={`${role.roleLabel}-${role.otherPerson.personId}`}
+                role={role}
+                onFeedback={submitFeedback}
+              />
+            ))}
+
+            {/* Add another person card */}
+            <div className="border border-dashed border-slate-300 p-5 text-center">
+              <div className="space-y-3">
+                <p className="font-mono text-xs text-slate-400">
+                  + Add another person
+                </p>
+                <div className="flex gap-2 justify-center max-w-sm mx-auto">
+                  <select
+                    value={addType}
+                    onChange={(e) => setAddType(e.target.value as 'spouse' | 'child')}
+                    className="font-mono text-xs border border-slate-300 px-2 py-1.5 bg-white"
+                  >
+                    <option value="child">Child</option>
+                    <option value="spouse">Spouse</option>
+                  </select>
+                  <input
+                    type="text"
+                    value={addName}
+                    onChange={(e) => setAddName(e.target.value)}
+                    placeholder="Name"
+                    className="flex-1 font-mono text-xs border border-slate-300 px-2 py-1.5"
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddPerson()}
+                  />
+                  <button
+                    onClick={handleAddPerson}
+                    disabled={adding || !addName.trim()}
+                    className="px-3 py-1.5 bg-slate-800 text-white font-mono text-xs hover:bg-amber-600 transition-all disabled:opacity-50"
+                  >
+                    ADD
+                  </button>
                 </div>
+              </div>
+            </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {people.filter(p => !p.hasManual).map((person, index) => (
-                    <div
-                      key={person.personId}
-                      className="relative bg-amber-50 border-2 border-amber-600 hover:border-slate-800 transition-all group shadow-[4px_4px_0px_0px_rgba(217,119,6,0.5)] hover:shadow-[6px_6px_0px_0px_rgba(217,119,6,1)]"
-                      data-testid="person-card"
-                    >
-                      {/* Setup number label */}
-                      <div className="absolute -top-3 -left-3 w-10 h-10 bg-amber-600 text-white font-mono font-bold flex items-center justify-center border-2 border-slate-800">
-                        {String(index + 1).padStart(2, '0')}
-                      </div>
-
-                      <div className="p-6">
-                        {/* Status badge */}
-                        <div className="inline-block px-2 py-1 bg-slate-800 text-white font-mono text-xs mb-4">
-                          PENDING
-                        </div>
-
-                        {/* Person info */}
-                        <h3 className="font-mono text-xl font-bold mb-1 text-slate-900">
-                          {person.name}
-                        </h3>
-                        <p className="font-mono text-xs text-slate-600 uppercase tracking-wider mb-6">
-                          {person.relationshipType || 'OTHER'}
-                        </p>
-
-                        {/* Technical details */}
-                        <div className="space-y-2 mb-6 pb-6 border-b border-amber-200">
-                          <div className="flex justify-between font-mono text-xs">
-                            <span className="text-slate-500">PERSON ID:</span>
-                            <span className="text-slate-900">{person.personId.slice(0, 8).toUpperCase()}</span>
-                          </div>
-                          <div className="flex justify-between font-mono text-xs">
-                            <span className="text-slate-500">STATUS:</span>
-                            <span className="text-amber-700">UNINITIALIZED</span>
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <Link
-                          href={`/people/${person.personId}/create-manual`}
-                          className="block w-full text-center px-4 py-3 bg-amber-600 text-white font-mono font-bold hover:bg-slate-800 transition-all"
-                          data-testid="create-manual-button"
-                        >
-                          CREATE MANUAL →
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
+            {/* Start next arc button (when no active arcs) */}
+            {activeArcCount === 0 && roles.length > 0 && (
+              <div className="text-center">
+                <button
+                  onClick={() => generateArc()}
+                  disabled={generating}
+                  className="px-6 py-3 border-2 border-slate-800 bg-white text-slate-800 font-mono font-bold hover:bg-slate-800 hover:text-white transition-all disabled:opacity-50"
+                >
+                  {generating ? 'GENERATING...' : 'START NEXT GROWTH ARC'}
+                </button>
+              </div>
             )}
           </div>
         )}

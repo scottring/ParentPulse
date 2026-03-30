@@ -278,7 +278,7 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
     if (manual && person && answeredQuestions > 0) {
       await saveNow();
     }
-    router.push(`/people/${personId}/manual`);
+    router.push('/dashboard');
   };
 
   // Toggle answer visibility
@@ -474,7 +474,7 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
   useEffect(() => {
     if (isComplete) {
       const timer = setTimeout(() => {
-        router.push(`/people/${personId}/manual`);
+        router.push('/dashboard');
       }, 2000);
       return () => clearTimeout(timer);
     }
@@ -571,7 +571,7 @@ export default function SelfOnboardPage({ params }: { params: Promise<{ personId
 
           <div className="mt-8 text-center">
             <button
-              onClick={() => router.push(`/people/${personId}/manual`)}
+              onClick={() => router.push('/dashboard')}
               className="font-mono text-xs text-slate-400 hover:text-slate-600 transition-colors"
             >
               &larr; BACK TO MANUAL

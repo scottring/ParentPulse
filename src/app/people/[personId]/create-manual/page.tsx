@@ -183,7 +183,7 @@ export default function CreateManualPage({ params }: { params: Promise<{ personI
 
               {/* Skip for now */}
               <Link
-                href="/people"
+                href="/dashboard"
                 className="block w-full p-3 font-mono text-xs text-slate-500 hover:text-slate-800 transition-colors text-center"
               >
                 I&apos;LL DO THIS LATER — BACK TO PEOPLE
@@ -208,7 +208,7 @@ export default function CreateManualPage({ params }: { params: Promise<{ personI
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
           <div className="flex items-center gap-6">
             <Link
-              href="/people"
+              href="/dashboard"
               className="w-12 h-12 flex items-center justify-center bg-slate-100 border-2 border-slate-800 font-mono text-2xl font-bold text-slate-800 hover:bg-amber-600 hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
             >
               ←
@@ -312,7 +312,7 @@ export default function CreateManualPage({ params }: { params: Promise<{ personI
 
           <div className="flex justify-between">
             <Link
-              href="/people"
+              href="/dashboard"
               className="px-6 py-3 border-2 border-slate-300 bg-white font-mono text-sm font-bold text-slate-700 hover:border-slate-800 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]"
             >
               ← CANCEL

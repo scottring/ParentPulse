@@ -1,0 +1,209 @@
+'use client';
+
+import { useState } from 'react';
+import { GrowthItem, FeedbackReaction, ImpactRating } from '@/types/growth';
+
+interface GrowthCardProps {
+  item: GrowthItem;
+  onFeedback: (
+    itemId: string,
+    reaction: FeedbackReaction,
+    impactRating?: ImpactRating,
+    note?: string,
+  ) => Promise<void>;
+}
+
+const REACTIONS: { reaction: FeedbackReaction; emoji: string; label: string }[] = [
+  { reaction: 'loved_it', emoji: '\u2764\uFE0F', label: 'Loved it' },
+  { reaction: 'tried_it', emoji: '\u2705', label: 'Tried it' },
+  { reaction: 'not_now', emoji: '\uD83D\uDD52', label: 'Not now' },
+  { reaction: 'doesnt_fit', emoji: '\u2716\uFE0F', label: "Doesn't fit" },
+];
+
+const IMPACT_LABELS: { value: ImpactRating; label: string }[] = [
+  { value: 1, label: 'Slight' },
+  { value: 2, label: 'Noticeable' },
+  { value: 3, label: 'Breakthrough' },
+];
+
+export default function GrowthCard({ item, onFeedback }: GrowthCardProps) {
+  const [feedbackState, setFeedbackState] = useState<
+    'idle' | 'reacted' | 'submitting' | 'done'
+  >('idle');
+  const [selectedReaction, setSelectedReaction] = useState<FeedbackReaction | null>(null);
+  const [selectedImpact, setSelectedImpact] = useState<ImpactRating | null>(null);
+
+  const isCompleted = item.status === 'completed' || item.status === 'skipped';
+  const isPositive = selectedReaction === 'loved_it' || selectedReaction === 'tried_it';
+
+  const handleReaction = async (reaction: FeedbackReaction) => {
+    setSelectedReaction(reaction);
+
+    // For negative/neutral reactions, submit immediately
+    if (reaction === 'not_now' || reaction === 'doesnt_fit') {
+      setFeedbackState('submitting');
+      await onFeedback(item.growthItemId, reaction);
+      setFeedbackState('done');
+      return;
+    }
+
+    // For positive reactions, show impact selector
+    setFeedbackState('reacted');
+
+    // Auto-submit with default impact after 5 seconds
+    setTimeout(() => {
+      setFeedbackState((prev) => {
+        if (prev === 'reacted') {
+          onFeedback(item.growthItemId, reaction, 2); // default: noticeable
+          return 'done';
+        }
+        return prev;
+      });
+    }, 5000);
+  };
+
+  const handleImpact = async (impact: ImpactRating) => {
+    if (!selectedReaction) return;
+    setSelectedImpact(impact);
+    setFeedbackState('submitting');
+    await onFeedback(item.growthItemId, selectedReaction, impact);
+    setFeedbackState('done');
+  };
+
+  // Completed card (faded)
+  if (isCompleted) {
+    const feedback = item.feedback;
+    const impactLabel = feedback?.impactRating
+      ? IMPACT_LABELS.find((l) => l.value === feedback.impactRating)?.label
+      : null;
+
+    return (
+      <div className="border border-slate-200 bg-slate-50 p-4 opacity-60">
+        <div className="flex items-start gap-3">
+          <span className="text-lg">{item.emoji}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm text-slate-500 line-through">
+                {item.title}
+              </span>
+              {feedback && (
+                <span className="font-mono text-xs text-slate-400">
+                  {feedback.reaction === 'loved_it' ? '\u2764\uFE0F' : '\u2705'}
+                  {impactLabel && ` ${impactLabel.toLowerCase()}`}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Relational level badge
+  const levelBadge = item.relationalLevel && item.relationalLevel !== 'individual' ? (
+    <span
+      className={`font-mono text-[10px] font-bold px-1.5 py-0.5 ${
+        item.relationalLevel === 'couple'
+          ? 'bg-pink-100 text-pink-700'
+          : 'bg-blue-100 text-blue-700'
+      }`}
+    >
+      {item.relationalLevel === 'couple' ? 'COUPLE' : 'FAMILY'}
+    </span>
+  ) : null;
+
+  return (
+    <div className="border-2 border-slate-800 bg-white p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">
+      {/* Header row */}
+      <div className="flex items-start gap-3 mb-3">
+        <span className="text-2xl">{item.emoji}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            {levelBadge}
+            <span className="font-mono text-[10px] text-slate-400 uppercase">
+              {item.speed === 'ambient' ? 'TODAY' : 'THIS WEEK'}
+            </span>
+            {item.estimatedMinutes && (
+              <span className="font-mono text-[10px] text-slate-400">
+                ~{item.estimatedMinutes} min
+              </span>
+            )}
+          </div>
+          <h3 className="font-mono font-bold text-sm text-slate-900 leading-tight">
+            {item.title}
+          </h3>
+        </div>
+      </div>
+
+      {/* Body */}
+      <p className="font-mono text-sm text-slate-600 leading-relaxed mb-4 pl-9">
+        {item.body}
+      </p>
+
+      {/* Target people */}
+      {item.targetPersonNames.length > 0 && (
+        <div className="pl-9 mb-4">
+          <span className="font-mono text-[10px] text-slate-400">
+            ABOUT: {item.targetPersonNames.join(' & ')}
+          </span>
+        </div>
+      )}
+
+      {/* Feedback area */}
+      {feedbackState === 'idle' && (
+        <div className="flex gap-2 pl-9">
+          {REACTIONS.map(({ reaction, emoji, label }) => (
+            <button
+              key={reaction}
+              onClick={() => handleReaction(reaction)}
+              className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 hover:border-slate-800 hover:bg-slate-50 transition-all font-mono text-xs text-slate-600 hover:text-slate-900"
+              title={label}
+            >
+              <span>{emoji}</span>
+              <span className="hidden sm:inline">{label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Impact selector (after positive reaction) */}
+      {feedbackState === 'reacted' && isPositive && (
+        <div className="pl-9">
+          <p className="font-mono text-[10px] text-slate-400 mb-2">
+            HOW MUCH IMPACT?
+          </p>
+          <div className="flex gap-2">
+            {IMPACT_LABELS.map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => handleImpact(value)}
+                className={`px-3 py-2 border font-mono text-xs transition-all ${
+                  selectedImpact === value
+                    ? 'border-slate-800 bg-slate-800 text-white'
+                    : 'border-slate-200 hover:border-slate-800 text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Submitting / Done states */}
+      {feedbackState === 'submitting' && (
+        <div className="pl-9">
+          <span className="font-mono text-xs text-slate-400">Saving...</span>
+        </div>
+      )}
+
+      {feedbackState === 'done' && (
+        <div className="pl-9">
+          <span className="font-mono text-xs text-green-600 font-bold">
+            {selectedReaction === 'not_now' ? 'Saved for later' : 'Got it, thanks!'}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -13,11 +13,7 @@ export default function Home() {
     if (!loading) {
       if (user) {
         // Redirect based on role
-        if (user.role === 'parent') {
-          router.push('/dashboard');
-        } else {
-          router.push('/child');
-        }
+        router.push('/dashboard');
       } else {
         router.push('/login');
       }

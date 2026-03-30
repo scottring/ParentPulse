@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import {
   ChartBarIcon,
-  UsersIcon,
   Cog6ToothIcon,
 } from '@heroicons/react/24/outline';
 
@@ -18,7 +17,6 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
-  { label: 'People', href: '/people', icon: UsersIcon },
   { label: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ];
 

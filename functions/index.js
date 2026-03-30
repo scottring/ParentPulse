@@ -1,5 +1,6 @@
 const {onSchedule} = require("firebase-functions/v2/scheduler");
 const {onCall} = require("firebase-functions/v2/https");
+const {onDocumentUpdated} = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 const Anthropic = require("@anthropic-ai/sdk");
 const {GoogleGenerativeAI} = require("@google/generative-ai");
@@ -206,6 +207,39 @@ exports.synthesizeManualContent = onCall(
           }
           prompt += "\n";
         }
+      }
+
+      // Inject recent growth activity feedback into synthesis context
+      try {
+        const growthItemsSnap = await db.collection("growth_items")
+            .where("sourceManualId", "==", manualId)
+            .where("status", "==", "completed")
+            .get();
+
+        const growthSignals = [];
+        growthItemsSnap.forEach((doc) => {
+          const item = doc.data();
+          if (item.feedback) {
+            const impact = item.feedback.impactRating ?
+              ` (impact: ${["slight", "noticeable", "breakthrough"][item.feedback.impactRating - 1]})` : "";
+            growthSignals.push(
+                `- "${item.title}" → ${item.feedback.reaction}${impact}` +
+                (item.feedback.note ? ` — "${item.feedback.note}"` : ""),
+            );
+          }
+        });
+
+        if (growthSignals.length > 0) {
+          prompt += `\n=== RECENT GROWTH ACTIVITY ===\n`;
+          prompt += `The following activities were tried based on ` +
+            `previous synthesis. Use this evidence of change to ` +
+            `adjust gap severities — if activities addressing a gap ` +
+            `got positive feedback, that gap may have improved.\n`;
+          prompt += growthSignals.slice(0, 10).join("\n");
+          prompt += "\n";
+        }
+      } catch (growthErr) {
+        // Non-critical — continue without growth data
       }
 
       prompt += `\nBased on these perspectives, provide a JSON response with this structure:
@@ -4163,6 +4197,1871 @@ Return ONLY valid JSON with this exact structure:
       } catch (err) {
         console.error("Document extraction error:", err);
         throw new Error(`Document extraction failed: ${err.message}`);
+      }
+    },
+);
+
+// ==================== Growth Items System ====================
+
+/**
+ * Generate a batch of growth items (micro-activities + reflection prompts)
+ * based on synthesis gaps and blind spots.
+ *
+ * Can be called manually or triggered after synthesis completes.
+ * Reads all person_manuals for the family, identifies actionable gaps,
+ * and generates concrete growth items via Claude.
+ */
+exports.generateGrowthBatch = onCall(
+    {
+      region: "us-central1",
+      memory: "512MiB",
+      timeoutSeconds: 120,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const logger = require("firebase-functions/logger");
+      const db = admin.firestore();
+
+      // Get user and family
+      const userDoc = await db
+          .collection("users")
+          .doc(request.auth.uid)
+          .get();
+      if (!userDoc.exists) {
+        throw new Error("User not found");
+      }
+      const userData = userDoc.data();
+      const familyId = userData.familyId;
+      if (!familyId) {
+        throw new Error("User has no family");
+      }
+
+      // Fetch all person manuals with synthesis for this family
+      const manualsSnap = await db
+          .collection("person_manuals")
+          .where("familyId", "==", familyId)
+          .get();
+
+      if (manualsSnap.empty) {
+        return {success: false, message: "No manuals found"};
+      }
+
+      // Collect all insights (gaps + blind spots) across manuals
+      const allInsights = [];
+      const manualMap = {};
+
+      manualsSnap.forEach((doc) => {
+        const manual = doc.data();
+        manualMap[doc.id] = manual;
+        const synth = manual.synthesizedContent;
+        if (!synth) return;
+
+        const addInsights = (items, type) => {
+          for (const item of (items || [])) {
+            allInsights.push({
+              ...item,
+              insightType: type,
+              manualId: doc.id,
+              personName: manual.personName,
+              personId: manual.personId,
+            });
+          }
+        };
+
+        addInsights(synth.gaps, "gap");
+        addInsights(synth.blindSpots, "blind_spot");
+        // Include alignments at lower priority for reflection prompts
+        addInsights(synth.alignments, "alignment");
+      });
+
+      if (allInsights.length === 0) {
+        return {success: false, message: "No synthesis insights found"};
+      }
+
+      // Check recent growth items to avoid repeating topics
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const recentItemsSnap = await db
+          .collection("growth_items")
+          .where("familyId", "==", familyId)
+          .where("createdAt", ">=",
+              admin.firestore.Timestamp.fromDate(thirtyDaysAgo))
+          .get();
+
+      const recentInsightIds = new Set();
+      const recentFeedback = [];
+      recentItemsSnap.forEach((doc) => {
+        const item = doc.data();
+        if (item.sourceInsightId) {
+          recentInsightIds.add(item.sourceInsightId);
+        }
+        if (item.feedback) {
+          recentFeedback.push({
+            title: item.title,
+            reaction: item.feedback.reaction,
+            impactRating: item.feedback.impactRating,
+            sourceInsightId: item.sourceInsightId,
+          });
+        }
+      });
+
+      // Score and select insights
+      const scoredInsights = allInsights
+          .map((insight) => {
+            let score = 0;
+            // Prioritize by type
+            if (insight.insightType === "blind_spot") score += 3;
+            if (insight.insightType === "gap") score += 2;
+            if (insight.insightType === "alignment") score += 0.5;
+            // Prioritize by severity
+            if (insight.gapSeverity === "significant_gap") score += 2;
+            if (insight.gapSeverity === "minor_gap") score += 1;
+            // Penalize recently addressed
+            if (recentInsightIds.has(insight.id)) score -= 5;
+            // Penalize "doesnt_fit" feedback
+            const rejected = recentFeedback.find(
+                (f) => f.sourceInsightId === insight.id &&
+                       f.reaction === "doesnt_fit",
+            );
+            if (rejected) score -= 10;
+            return {...insight, score};
+          })
+          .filter((i) => i.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 5);
+
+      if (scoredInsights.length === 0) {
+        return {
+          success: false,
+          message: "No actionable insights (all recently addressed)",
+        };
+      }
+
+      // Get people for context
+      const peopleSnap = await db
+          .collection("people")
+          .where("familyId", "==", familyId)
+          .get();
+      const people = {};
+      peopleSnap.forEach((doc) => {
+        people[doc.id] = doc.data();
+      });
+
+      // Identify spouse pairs and build relational context
+      const spouses = Object.entries(people)
+          .filter(([, p]) => p.relationshipType === "spouse" ||
+            p.relationshipType === "self");
+      const children = Object.entries(people)
+          .filter(([, p]) => p.relationshipType === "child");
+
+      // Build cross-manual relational narratives
+      let relationalContext = "";
+
+      if (spouses.length >= 2) {
+        // Find the two adult manuals and cross-reference
+        const spouseManuals = spouses
+            .map(([id]) => {
+              const manual = Object.values(manualMap).find(
+                  (m) => m.personId === id,
+              );
+              return manual ? {personId: id, manual} : null;
+            })
+            .filter(Boolean);
+
+        if (spouseManuals.length >= 2) {
+          const [a, b] = spouseManuals;
+
+          relationalContext += "\n=== RELATIONAL DYNAMICS ===\n";
+
+          // Each person alone: their individual synthesis
+          relationalContext += `\n[${a.manual.personName} AS INDIVIDUAL]\n`;
+          const aSynth = a.manual.synthesizedContent;
+          if (aSynth) {
+            relationalContext +=
+              `Overview: ${aSynth.overview}\n`;
+            relationalContext +=
+              `Key gaps: ${(aSynth.gaps || []).map((g) => g.topic + " — " + g.synthesis).join("; ")}\n`;
+            relationalContext +=
+              `Blind spots: ${(aSynth.blindSpots || []).map((bs) => bs.topic + " — " + bs.synthesis).join("; ")}\n`;
+          }
+
+          relationalContext += `\n[${b.manual.personName} AS INDIVIDUAL]\n`;
+          const bSynth = b.manual.synthesizedContent;
+          if (bSynth) {
+            relationalContext +=
+              `Overview: ${bSynth.overview}\n`;
+            relationalContext +=
+              `Key gaps: ${(bSynth.gaps || []).map((g) => g.topic + " — " + g.synthesis).join("; ")}\n`;
+            relationalContext +=
+              `Blind spots: ${(bSynth.blindSpots || []).map((bs) => bs.topic + " — " + bs.synthesis).join("; ")}\n`;
+          }
+
+          // The couple together: cross-reference gaps
+          relationalContext += `\n[${a.manual.personName} & ${b.manual.personName} AS A COUPLE]\n`;
+          relationalContext +=
+            "Look for: where their individual gaps interact, " +
+            "where one person's blind spot is the other's " +
+            "frustration, where communication styles clash " +
+            "or complement.\n";
+
+          // If they have children, add co-parenting context
+          if (children.length > 0) {
+            const childNames = children
+                .map(([, p]) => p.name).join(", ");
+            relationalContext += `\n[${a.manual.personName} & ${b.manual.personName} AS PARENTS TO ${childNames}]\n`;
+            relationalContext +=
+              "Consider: where their parenting approaches " +
+              "diverge, how their individual stress patterns " +
+              "affect the kids, where they need to be more " +
+              "aligned.\n";
+
+            // Add child manual insights if available
+            for (const [childId, childData] of children) {
+              const childManual = Object.values(manualMap).find(
+                  (m) => m.personId === childId,
+              );
+              if (childManual && childManual.synthesizedContent) {
+                const cs = childManual.synthesizedContent;
+                relationalContext +=
+                  `\n${childData.name}'s key insights: `;
+                relationalContext +=
+                  `${cs.overview || "N/A"}\n`;
+                const childGaps = (cs.gaps || [])
+                    .map((g) => g.topic).join(", ");
+                if (childGaps) {
+                  relationalContext +=
+                    `${childData.name}'s gaps: ${childGaps}\n`;
+                }
+              }
+            }
+          }
+        }
+
+        // Check for relationship manual data
+        const relManualSnap = await db
+            .collection("relationship_manuals")
+            .where("familyId", "==", familyId)
+            .get();
+
+        if (!relManualSnap.empty) {
+          relManualSnap.forEach((doc) => {
+            const rm = doc.data();
+            relationalContext +=
+              `\n[RELATIONSHIP MANUAL: ${rm.relationshipTitle || "Couple"}]\n`;
+            if (rm.conflictPatterns && rm.conflictPatterns.length > 0) {
+              relationalContext += "Conflict patterns:\n";
+              for (const cp of rm.conflictPatterns) {
+                relationalContext +=
+                  `- ${cp.pattern} (${cp.severity}): ` +
+                  `helps: ${(cp.whatHelps || []).join(", ")}; ` +
+                  `worsens: ${(cp.whatMakesWorse || []).join(", ")}\n`;
+              }
+            }
+            if (rm.connectionStrategies &&
+                rm.connectionStrategies.length > 0) {
+              relationalContext += "Connection strategies:\n";
+              for (const cs of rm.connectionStrategies) {
+                relationalContext +=
+                  `- ${cs.strategy} (effectiveness: ${cs.effectiveness}/5)\n`;
+              }
+            }
+            if (rm.sharedGoals && rm.sharedGoals.length > 0) {
+              relationalContext += "Shared goals:\n";
+              for (const g of rm.sharedGoals.filter(
+                  (sg) => sg.status === "active")) {
+                relationalContext += `- ${g.title}: ${g.description}\n`;
+              }
+            }
+          });
+        }
+      }
+
+      // Build prompt sections
+      const insightsContext = scoredInsights.map((i) => {
+        return `- [${i.insightType.toUpperCase()}] About ${i.personName}: "${i.topic}" — ${i.synthesis} (severity: ${i.gapSeverity || "N/A"})`;
+      }).join("\n");
+
+      const feedbackContext = recentFeedback.length > 0 ?
+        "\n\nRecent feedback on previous growth items:\n" +
+        recentFeedback.slice(0, 5).map((f) => {
+          const impact = f.impactRating ?
+            ` (impact: ${["slight", "noticeable", "breakthrough"][f.impactRating - 1]})` : "";
+          return `- "${f.title}" → ${f.reaction}${impact}`;
+        }).join("\n") : "";
+
+      const familyContext = Object.values(people).map((p) => {
+        return `- ${p.name} (${p.relationshipType || "other"})`;
+      }).join("\n");
+
+      const prompt = `You are a warm, practical family growth coach. You understand that families are systems — individual patterns affect relationships, and relationship dynamics affect individuals.
+
+FAMILY MEMBERS:
+${familyContext}
+${relationalContext}
+
+INDIVIDUAL SYNTHESIS INSIGHTS:
+${insightsContext}
+${feedbackContext}
+
+Based on all of this context — both individual insights AND relational dynamics — generate 3-5 growth items. Think about THREE levels:
+
+1. INDIVIDUAL: What does each person need to work on for themselves?
+2. COUPLE: Where do their patterns collide? What could they try together?
+3. FAMILY: How do the adults' dynamics affect the kids? What parenting alignment is needed?
+
+Each item should be one of:
+- "micro_activity": A specific 1-3 minute action (e.g., "Tonight, before responding to Iris's request, pause and ask 'What do you need from me right now — action or listening?'")
+- "reflection_prompt": A 1-tap emoji check-in (e.g., "How connected did you feel to Scott today?")
+
+Return JSON:
+{
+  "items": [
+    {
+      "type": "micro_activity" or "reflection_prompt",
+      "title": "Short title (under 60 chars)",
+      "body": "1-3 sentences of warm, specific instruction. Be concrete — name names, suggest specific times of day, describe exactly what to do or say. Connect it to the actual pattern or gap you're addressing.",
+      "emoji": "Single emoji that captures the spirit",
+      "targetPersonNames": ["Name of person(s) this is about"],
+      "sourceInsightId": "The insight ID this addresses (from INDIVIDUAL SYNTHESIS INSIGHTS above)",
+      "relationalLevel": "individual" or "couple" or "family",
+      "speed": "ambient" (for micro daily moments) or "intentional" (for deeper weekly activities),
+      "estimatedMinutes": 1-5
+    }
+  ]
+}
+
+Rules:
+- Use actual names from the family — never generic
+- At least one item should be couple-focused (if two adults exist)
+- Micro-activities should fit natural daily moments (bedtime, dinner, car ride, morning coffee)
+- Reflection prompts should be answerable with a single emoji tap
+- Activities should feel like natural outgrowths of the observations, not homework
+- Connect each activity to a specific pattern or gap — the user should feel "ah, this is about THAT thing"
+- Tone: warm, practical, never clinical or preachy
+- Return ONLY valid JSON, no markdown`;
+
+      try {
+        const client = getAnthropic();
+        const response = await client.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1500,
+          messages: [{role: "user", content: prompt}],
+        });
+
+        const content = response.content[0].text;
+
+        let parsed;
+        try {
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content);
+        } catch (parseErr) {
+          logger.error("Failed to parse growth batch response:", content);
+          throw new Error("Failed to parse AI response");
+        }
+
+        const items = parsed.items || [];
+        if (items.length === 0) {
+          return {success: false, message: "AI generated no items"};
+        }
+
+        // Write items to Firestore
+        const batchId = `batch-${Date.now()}`;
+        const now = admin.firestore.Timestamp.now();
+        const batch = db.batch();
+        const createdItems = [];
+
+        // Schedule items across the next few days
+        const scheduleOffsets = [0, 1, 2, 3, 4]; // days from now
+
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          const ref = db.collection("growth_items").doc();
+
+          // Find the insight this addresses
+          const sourceInsight = scoredInsights.find(
+              (si) => si.id === item.sourceInsightId,
+          );
+
+          // Calculate schedule date
+          const scheduleDate = new Date();
+          scheduleDate.setDate(
+              scheduleDate.getDate() + (scheduleOffsets[i] || i),
+          );
+          scheduleDate.setHours(
+              item.speed === "ambient" ? 9 : 18, 0, 0, 0,
+          );
+
+          // Calculate expiry
+          const expiresAt = new Date(scheduleDate);
+          if (item.speed === "ambient") {
+            expiresAt.setHours(expiresAt.getHours() + 24);
+          } else {
+            expiresAt.setDate(expiresAt.getDate() + 7);
+          }
+
+          // Find targetPersonIds from names
+          const targetPersonIds = (item.targetPersonNames || []).map(
+              (name) => {
+                const match = Object.entries(people).find(
+                    ([, p]) => p.name.toLowerCase() ===
+                      name.toLowerCase(),
+                );
+                return match ? match[0] : null;
+              },
+          ).filter(Boolean);
+
+          const growthItem = {
+            growthItemId: ref.id,
+            familyId,
+            type: item.type || "micro_activity",
+            title: item.title || "",
+            body: item.body || "",
+            emoji: item.emoji || "✨",
+            targetPersonIds,
+            targetPersonNames: item.targetPersonNames || [],
+            assignedToUserId: request.auth.uid,
+            assignedToUserName: userData.displayName ||
+              userData.name || "Parent",
+            sourceInsightId: item.sourceInsightId || null,
+            sourceInsightType: sourceInsight ?
+              sourceInsight.insightType : null,
+            sourceManualId: sourceInsight ?
+              sourceInsight.manualId : null,
+            sourceGapSeverity: sourceInsight ?
+              sourceInsight.gapSeverity : null,
+            relationalLevel: item.relationalLevel || "individual",
+            speed: item.speed || "ambient",
+            scheduledDate:
+              admin.firestore.Timestamp.fromDate(scheduleDate),
+            expiresAt:
+              admin.firestore.Timestamp.fromDate(expiresAt),
+            estimatedMinutes: item.estimatedMinutes || 2,
+            status: "active",
+            createdAt: now,
+            generatedBy: "ai",
+            batchId,
+          };
+
+          batch.set(ref, growthItem);
+          createdItems.push(growthItem);
+        }
+
+        await batch.commit();
+
+        logger.info(
+            `Generated ${createdItems.length} growth items ` +
+            `for family ${familyId}`,
+        );
+
+        return {
+          success: true,
+          itemCount: createdItems.length,
+          items: createdItems,
+        };
+      } catch (err) {
+        logger.error("Growth batch generation error:", err);
+        throw new Error(`Growth batch generation failed: ${err.message}`);
+      }
+    },
+);
+
+// ==================== Dimension Assessment & Growth Arcs ====================
+
+/**
+ * Dimension definitions (mirrored from client config for server use).
+ * Maps existing onboarding question IDs to relationship health dimensions.
+ */
+const DIMENSION_QUESTION_MAPPINGS = {
+  // Couple dimensions
+  love_maps: {
+    questionIds: ["overview_q1", "overview_q2", "overview_q3", "overview_q4"],
+    domain: "couple",
+    name: "Love Maps",
+  },
+  fondness_admiration: {
+    questionIds: ["communication_q2", "communication_q3"],
+    domain: "couple",
+    name: "Fondness & Admiration",
+  },
+  turning_toward: {
+    questionIds: ["what_works_q1", "what_works_q2"],
+    domain: "couple",
+    name: "Turning Toward",
+  },
+  conflict_style: {
+    questionIds: [
+      "triggers_q1", "triggers_q2", "boundaries_q1", "communication_q1",
+    ],
+    domain: "couple",
+    name: "Conflict Style",
+  },
+  emotional_accessibility: {
+    questionIds: ["what_works_q1", "boundaries_q2", "communication_q1"],
+    domain: "couple",
+    name: "Emotional Accessibility",
+  },
+  emotional_responsiveness: {
+    questionIds: ["triggers_q3", "what_works_q3", "communication_q1"],
+    domain: "couple",
+    name: "Emotional Responsiveness",
+  },
+  attachment_security: {
+    questionIds: ["boundaries_q1", "boundaries_q3", "communication_q1"],
+    domain: "couple",
+    name: "Attachment Security",
+  },
+  shared_meaning: {
+    questionIds: ["overview_q3"],
+    domain: "couple",
+    name: "Shared Meaning",
+  },
+  practical_partnership: {
+    questionIds: ["boundaries_q1", "what_works_q1"],
+    domain: "couple",
+    name: "Practical Partnership",
+  },
+  negative_cycles: {
+    questionIds: ["triggers_q1", "triggers_q2", "communication_q1"],
+    domain: "couple",
+    name: "Negative Cycles",
+  },
+  // Parent-child dimensions
+  warmth_responsiveness: {
+    questionIds: [
+      "overview_q1", "what_works_q1", "communication_q2", "communication_q3",
+    ],
+    domain: "parent_child",
+    name: "Warmth & Responsiveness",
+  },
+  structure_consistency: {
+    questionIds: ["triggers_q2", "boundaries_q1", "boundaries_q2"],
+    domain: "parent_child",
+    name: "Structure & Consistency",
+  },
+  autonomy_support: {
+    questionIds: ["what_works_q1", "what_works_q3", "overview_q3"],
+    domain: "parent_child",
+    name: "Autonomy Support",
+  },
+  repair_after_rupture: {
+    questionIds: ["triggers_q3", "what_works_q2"],
+    domain: "parent_child",
+    name: "Repair After Rupture",
+  },
+  mindsight: {
+    questionIds: ["overview_q3", "overview_q4", "triggers_q1"],
+    domain: "parent_child",
+    name: "Mindsight",
+  },
+};
+
+/**
+ * Seed dimension assessments for a family.
+ * Uses Claude to analyze contributions and synthesis data,
+ * producing meaningful per-dimension scores (not heuristic defaults).
+ */
+exports.seedDimensionAssessments = onCall(
+    {
+      region: "us-central1",
+      memory: "1GiB",
+      timeoutSeconds: 180,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const logger = require("firebase-functions/logger");
+      const db = admin.firestore();
+
+      // Get user and family
+      const userDoc = await db.collection("users")
+          .doc(request.auth.uid).get();
+      if (!userDoc.exists) throw new Error("User not found");
+      const familyId = userDoc.data().familyId;
+      if (!familyId) throw new Error("User has no family");
+
+      // Get people
+      const peopleSnap = await db.collection("people")
+          .where("familyId", "==", familyId).get();
+      const people = {};
+      peopleSnap.forEach((doc) => {
+        people[doc.id] = doc.data();
+      });
+
+      // Get all completed contributions
+      const contribSnap = await db.collection("contributions")
+          .where("familyId", "==", familyId)
+          .where("status", "==", "complete")
+          .get();
+
+      const contributions = [];
+      contribSnap.forEach((doc) => contributions.push(doc.data()));
+
+      // Get existing synthesis data from manuals
+      const manualsSnap = await db.collection("person_manuals")
+          .where("familyId", "==", familyId).get();
+      const manuals = {};
+      manualsSnap.forEach((doc) => {
+        manuals[doc.id] = doc.data();
+      });
+
+      // Identify relationship pairs
+      const spouses = Object.entries(people)
+          .filter(([, p]) =>
+            p.relationshipType === "spouse" ||
+            p.relationshipType === "self");
+      const children = Object.entries(people)
+          .filter(([, p]) => p.relationshipType === "child");
+
+      // Build context for Claude to score dimensions
+      // Gather all contribution text and synthesis data
+      let contextForAI = "";
+
+      for (const contrib of contributions) {
+        const person = people[contrib.personId];
+        const personName = person ? person.name : "Unknown";
+        const perspective = contrib.perspectiveType === "self" ?
+          `${personName} about themselves` :
+          `${contrib.contributorName} about ${personName}`;
+        contextForAI += `\n[${perspective}]\n`;
+        for (const [section, answers] of
+          Object.entries(contrib.answers || {})) {
+          if (typeof answers !== "object" || answers === null) continue;
+          for (const [, answer] of Object.entries(answers)) {
+            const text = typeof answer === "string" ?
+              answer : (answer && answer.primary) ?
+                String(answer.primary) : null;
+            if (text && text.trim()) {
+              contextForAI += `- ${text.trim()}\n`;
+            }
+          }
+        }
+      }
+
+      // Add synthesis data
+      for (const manual of Object.values(manuals)) {
+        const synth = manual.synthesizedContent;
+        if (!synth) continue;
+        contextForAI += `\n[Synthesis for ${manual.personName}]\n`;
+        contextForAI += `Overview: ${synth.overview || "N/A"}\n`;
+        for (const gap of (synth.gaps || [])) {
+          contextForAI += `Gap: ${gap.topic} — ${gap.synthesis} ` +
+            `(${gap.gapSeverity})\n`;
+        }
+        for (const bs of (synth.blindSpots || [])) {
+          contextForAI += `Blind spot: ${bs.topic} — ${bs.synthesis}\n`;
+        }
+        for (const al of (synth.alignments || [])) {
+          contextForAI += `Alignment: ${al.topic} — ${al.synthesis}\n`;
+        }
+      }
+
+      // Build relationship pairs to score
+      const pairsToScore = [];
+      if (spouses.length >= 2) {
+        const [a, b] = spouses;
+        pairsToScore.push({
+          ids: [a[0], b[0]],
+          names: [a[1].name, b[1].name],
+          domain: "couple",
+          dimensions: Object.entries(DIMENSION_QUESTION_MAPPINGS)
+              .filter(([, d]) => d.domain === "couple")
+              .map(([id, d]) => ({id, name: d.name})),
+        });
+      }
+      for (const [childId, childData] of children) {
+        for (const [parentId, parentData] of spouses) {
+          pairsToScore.push({
+            ids: [parentId, childId],
+            names: [parentData.name, childData.name],
+            domain: "parent_child",
+            dimensions: Object.entries(DIMENSION_QUESTION_MAPPINGS)
+                .filter(([, d]) => d.domain === "parent_child")
+                .map(([id, d]) => ({id, name: d.name})),
+          });
+        }
+      }
+
+      if (pairsToScore.length === 0) {
+        return {success: false, message: "No relationship pairs found"};
+      }
+
+      // Ask Claude to score all dimensions based on the data
+      const dimensionList = pairsToScore.map((pair) => {
+        return `\n${pair.names.join(" & ")} (${pair.domain}):\n` +
+          pair.dimensions.map((d) => `  - ${d.id}: ${d.name}`).join("\n");
+      }).join("\n");
+
+      const scoringPrompt = `You are a relationship assessment expert. Based on the following data about a family, score each relationship dimension on a 1.0-5.0 scale.
+
+FAMILY DATA:
+${contextForAI.slice(0, 6000)}
+
+DIMENSIONS TO SCORE:
+${dimensionList}
+
+Score each dimension based on the evidence. Use the FULL range:
+- 1.0-2.0: Clear problems, frequent negative patterns
+- 2.0-3.0: Some struggles, inconsistent
+- 3.0-4.0: Generally healthy, room for growth
+- 4.0-5.0: Strong, consistent positive patterns
+
+Also provide a 1-sentence narrative for each relationship pair summarizing their dynamic.
+
+Return JSON:
+{
+  "pairs": [
+    {
+      "names": ["Name1", "Name2"],
+      "domain": "couple",
+      "narrative": "Warm 1-2 sentence summary of this relationship's strengths and growth areas.",
+      "scores": {
+        "dimension_id": 3.5,
+        "another_dimension": 2.1
+      }
+    }
+  ]
+}
+
+Be honest and differentiated — NOT all 3.0. Use the actual data. If you see conflict patterns, score conflict_style LOW. If you see warmth, score warmth HIGH. Every pair should have a different profile.
+Return ONLY valid JSON.`;
+
+      try {
+        const client = getAnthropic();
+        const response = await client.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 2000,
+          messages: [{role: "user", content: scoringPrompt}],
+        });
+
+        const content = response.content[0].text;
+        let parsed;
+        try {
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content);
+        } catch (parseErr) {
+          logger.error("Failed to parse scoring response:", content);
+          throw new Error("Failed to parse AI scoring response");
+        }
+
+        const now = admin.firestore.Timestamp.now();
+        const assessmentsToCreate = [];
+
+        for (const pairResult of (parsed.pairs || [])) {
+          // Match to our pair data
+          const matchedPair = pairsToScore.find((p) =>
+            p.names.every((n) => pairResult.names.includes(n)) &&
+            p.domain === pairResult.domain,
+          );
+          if (!matchedPair) continue;
+
+          for (const dim of matchedPair.dimensions) {
+            const score = pairResult.scores?.[dim.id];
+            if (score === undefined) continue;
+
+            const clampedScore = Math.max(1.0,
+                Math.min(5.0, Math.round(score * 10) / 10));
+
+            assessmentsToCreate.push({
+              familyId,
+              dimensionId: dim.id,
+              domain: matchedPair.domain,
+              participantIds: matchedPair.ids,
+              participantNames: matchedPair.names,
+              currentScore: clampedScore,
+              confidence: "medium",
+              dataPointCount: contributions.length,
+              scoreHistory: [{
+                score: clampedScore,
+                confidence: "medium",
+                timestamp: now,
+                trigger: "initial",
+              }],
+              dataSources: [{
+                sourceType: "onboarding_answer",
+                sourceId: "ai_initial_assessment",
+                signal: clampedScore,
+                weight: 1.0,
+                capturedAt: now,
+              }],
+              assessmentProgress: {
+                promptsDelivered: [],
+                promptsAnswered: [],
+                existingDataUsed: true,
+              },
+              narrative: pairResult.narrative || null,
+              completedArcIds: [],
+              createdAt: now,
+              updatedAt: now,
+              lastAssessedAt: now,
+            });
+          }
+        }
+
+        // Upsert: update existing assessments or create new ones
+        const existingSnap = await db
+            .collection("dimension_assessments")
+            .where("familyId", "==", familyId).get();
+        const existingMap = {};
+        existingSnap.forEach((doc) => {
+          const d = doc.data();
+          const key = `${d.dimensionId}:${(d.participantIds || []).sort().join(",")}`;
+          existingMap[key] = doc.ref;
+        });
+
+        const batch = db.batch();
+        let created = 0;
+        let updated = 0;
+        for (const assessment of assessmentsToCreate) {
+          const key = `${assessment.dimensionId}:${assessment.participantIds.sort().join(",")}`;
+          const existingRef = existingMap[key];
+          if (existingRef) {
+            // SAFE UPDATE: only touch scores, never delete anything.
+            // Preserves: completedArcIds, activeArcId, assessmentProgress,
+            // and all other fields. Appends to scoreHistory (never replaces).
+            batch.update(existingRef, {
+              currentScore: assessment.currentScore,
+              confidence: assessment.confidence,
+              narrative: assessment.narrative || null,
+              lastAssessedAt: now,
+              updatedAt: now,
+              scoreHistory: admin.firestore.FieldValue.arrayUnion(
+                  assessment.scoreHistory[0],
+              ),
+            });
+            updated++;
+          } else {
+            const ref = db.collection("dimension_assessments").doc();
+            assessment.assessmentId = ref.id;
+            batch.set(ref, assessment);
+            created++;
+          }
+        }
+        await batch.commit();
+
+        logger.info(
+            `Dimension assessments for family ${familyId}: ` +
+            `${created} created, ${updated} updated`,
+        );
+
+        return {
+          success: true,
+          assessmentCount: assessmentsToCreate.length,
+          dimensions: assessmentsToCreate.map((a) => ({
+            dimensionId: a.dimensionId,
+            domain: a.domain,
+            score: a.currentScore,
+            confidence: a.confidence,
+            participants: a.participantNames,
+          })),
+        };
+      } catch (err) {
+        logger.error("Dimension assessment seeding error:", err);
+        throw new Error(
+            `Dimension assessment seeding failed: ${err.message}`,
+        );
+      }
+    },
+);
+
+/**
+ * Generate a Growth Arc — a structured multi-week learning course
+ * targeting a specific relationship health dimension.
+ *
+ * Selects the weakest dimension, generates a phased arc via Claude,
+ * and creates all growth items with arc linkage.
+ */
+exports.generateGrowthArc = onCall(
+    {
+      region: "us-central1",
+      memory: "1GiB",
+      timeoutSeconds: 180,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const logger = require("firebase-functions/logger");
+      const db = admin.firestore();
+
+      // Get user and family
+      const userDoc = await db.collection("users")
+          .doc(request.auth.uid).get();
+      if (!userDoc.exists) throw new Error("User not found");
+      const userData = userDoc.data();
+      const familyId = userData.familyId;
+      if (!familyId) throw new Error("User has no family");
+
+      // Optional: allow specifying a dimension
+      const requestedDimension = request.data?.dimensionId || null;
+
+      // Get all dimension assessments for this family
+      const assessSnap = await db.collection("dimension_assessments")
+          .where("familyId", "==", familyId).get();
+
+      if (assessSnap.empty) {
+        return {
+          success: false,
+          message: "No dimension assessments found. Run seedDimensionAssessments first.",
+        };
+      }
+
+      const assessments = [];
+      assessSnap.forEach((doc) => assessments.push(doc.data()));
+
+      // Check for active arcs (max 2 per family)
+      const activeArcsSnap = await db.collection("growth_arcs")
+          .where("familyId", "==", familyId)
+          .where("status", "==", "active")
+          .get();
+
+      if (activeArcsSnap.size >= 2) {
+        return {
+          success: false,
+          message: "Maximum 2 active arcs. Complete or pause one first.",
+        };
+      }
+
+      // Select dimension to target
+      let selectedAssessment;
+
+      if (requestedDimension) {
+        selectedAssessment = assessments.find(
+            (a) => a.dimensionId === requestedDimension && !a.activeArcId,
+        );
+        if (!selectedAssessment) {
+          return {
+            success: false,
+            message: `Dimension ${requestedDimension} not found or already has active arc`,
+          };
+        }
+      } else {
+        // Priority algorithm: lowest score * confidence multiplier
+        const scored = assessments
+            .filter((a) => !a.activeArcId)
+            .map((a) => {
+              const confMult = a.confidence === "high" ? 1.0 :
+                a.confidence === "medium" ? 0.8 : 0.5;
+              const recency = a.completedArcIds.length > 0 ? 0.7 : 1.0;
+              const priority =
+                (5.0 - a.currentScore) * confMult * recency;
+              return {...a, priority};
+            })
+            .sort((a, b) => b.priority - a.priority);
+
+        selectedAssessment = scored[0];
+      }
+
+      if (!selectedAssessment) {
+        return {success: false, message: "No eligible dimensions to address"};
+      }
+
+      const dimId = selectedAssessment.dimensionId;
+      const dimDef = DIMENSION_QUESTION_MAPPINGS[dimId];
+
+      // Determine arc level
+      const previousArcs = selectedAssessment.completedArcIds.length;
+      const level = Math.min(3, previousArcs + 1);
+      const durationWeeks = level === 1 ? 2 : 3;
+
+      // Get people and manuals for context
+      const peopleSnap = await db.collection("people")
+          .where("familyId", "==", familyId).get();
+      const people = {};
+      peopleSnap.forEach((doc) => {
+        people[doc.id] = doc.data();
+      });
+
+      const manualsSnap = await db.collection("person_manuals")
+          .where("familyId", "==", familyId).get();
+
+      let synthesisContext = "";
+      manualsSnap.forEach((doc) => {
+        const m = doc.data();
+        if (selectedAssessment.participantIds.includes(m.personId) &&
+            m.synthesizedContent) {
+          const s = m.synthesizedContent;
+          synthesisContext +=
+            `\n${m.personName}'s synthesis: ${s.overview || "N/A"}`;
+          if (s.gaps?.length) {
+            synthesisContext +=
+              `\nGaps: ${s.gaps.map((g) => g.topic + " — " + g.synthesis).join("; ")}`;
+          }
+          if (s.blindSpots?.length) {
+            synthesisContext +=
+              `\nBlind spots: ${s.blindSpots.map((bs) => bs.topic + " — " + bs.synthesis).join("; ")}`;
+          }
+        }
+      });
+
+      // Get recent feedback context
+      const recentItemsSnap = await db.collection("growth_items")
+          .where("familyId", "==", familyId)
+          .where("dimensionId", "==", dimId)
+          .get();
+
+      let feedbackContext = "";
+      recentItemsSnap.forEach((doc) => {
+        const item = doc.data();
+        if (item.feedback) {
+          feedbackContext +=
+            `\n- "${item.title}" → ${item.feedback.reaction}` +
+            (item.feedback.impactRating ?
+              ` (impact: ${item.feedback.impactRating}/3)` : "");
+        }
+      });
+
+      // Dimension-specific guidance (inline from config)
+      const dimensionGuidance = {
+        love_maps: {
+          research: "Gottman's Sound Relationship House Level 1. " +
+            "Couples who maintain detailed 'love maps' — mental " +
+            "models of each other's world — weather life transitions " +
+            "better. 86% of couples who turn toward bids stay together.",
+          awareness: "Notice how much you know about your partner's " +
+            "current inner world",
+          practice: "Ask open-ended questions and listen without solving",
+          integration: "Build a habit of daily curiosity",
+          exercises: "love map questions, daily check-ins, " +
+            "open-ended conversation starters",
+        },
+        fondness_admiration: {
+          research: "Gottman Level 2. The antidote to contempt " +
+            "(the #1 predictor of divorce). 5:1 positive-to-negative " +
+            "ratio in conflict predicts lasting relationships.",
+          awareness: "Track appreciation vs. criticism flow",
+          practice: "Daily specific appreciation — not generic",
+          integration: "Shift scanning from 'what's wrong' to " +
+            "'what's right'",
+          exercises: "admiration list, daily appreciation, " +
+            "gratitude sharing",
+        },
+        conflict_style: {
+          research: "Gottman's Four Horsemen: criticism, contempt, " +
+            "defensiveness, stonewalling. Each has a researched " +
+            "antidote: gentle startup, appreciation, responsibility, " +
+            "self-soothing.",
+          awareness: "Identify which Horsemen appear in your conflicts",
+          practice: "Replace each with its antidote",
+          integration: "Develop a shared fair-fight protocol",
+          exercises: "horseman spotting, gentle startup practice, " +
+            "repair attempts, 20-min breaks",
+        },
+        negative_cycles: {
+          research: "EFT 'Demon Dialogues' (Sue Johnson). " +
+            "Pursue-Withdraw is most common. The cycle is the enemy, " +
+            "not each other.",
+          awareness: "Name your cycle — see it, don't blame",
+          practice: "Express the emotion underneath the behavior",
+          integration: "Build shared language: 'there it is again'",
+          exercises: "cycle mapping, raw spot identification, " +
+            "underneath-the-anger conversation",
+        },
+        // Simplified entries for other dimensions
+        turning_toward: {research: "Gottman Level 3 — bid responsiveness"},
+        emotional_accessibility: {research: "EFT A.R.E. — Accessibility"},
+        emotional_responsiveness: {research: "EFT A.R.E. — Responsiveness"},
+        attachment_security: {research: "Adult attachment theory"},
+        shared_meaning: {research: "Gottman Levels 6-7"},
+        practical_partnership: {research: "PREPARE/ENRICH scales"},
+        warmth_responsiveness: {research: "Baumrind + SDT warmth axis"},
+        structure_consistency: {research: "Baumrind structure axis + SDT"},
+        autonomy_support: {research: "SDT autonomy support dimension"},
+        repair_after_rupture: {research: "Siegel — repair after rupture"},
+        mindsight: {research: "Siegel reflective functioning"},
+      };
+
+      const guidance = dimensionGuidance[dimId] || {};
+      const participantNames =
+        selectedAssessment.participantNames.join(" & ");
+      const levelTitle = level === 1 ? "Foundations" :
+        level === 2 ? "Deepening" : "Mastery";
+
+      const prompt = `You are designing a structured ${durationWeeks}-week Growth Arc (a mini-course) for the "${dimDef.name}" dimension of ${participantNames}'s ${dimDef.domain === "couple" ? "relationship" : "parent-child relationship"}.
+
+RESEARCH BASIS:
+${guidance.research || dimDef.name + " — see research literature"}
+
+ARC LEVEL: ${level} (${levelTitle})
+${level === 1 ? "This is their first time working on this dimension. Start with basics." : level === 2 ? "They've done a foundations arc. Go deeper." : "They've done two arcs. Focus on mastery and subtle refinement."}
+
+CURRENT ASSESSMENT:
+Score: ${selectedAssessment.currentScore}/5.0 (confidence: ${selectedAssessment.confidence})
+Participants: ${participantNames}
+${synthesisContext}
+${feedbackContext ? "\nPrevious feedback on this dimension:" + feedbackContext : ""}
+
+DATA CONFIDENCE: ${selectedAssessment.confidence}
+${selectedAssessment.confidence === "low" ? "IMPORTANT: We have limited data on this dimension. The arc should include extra reflection_prompt and assessment_prompt items that help us LEARN about this area — not just practice it. Ask open-ended questions that reveal how they experience this dimension. Every response teaches us something." : selectedAssessment.confidence === "medium" ? "We have moderate data. Include 1-2 reflection prompts that deepen our understanding of nuances." : "We have good data. Focus on practice and growth."}
+
+Generate a ${durationWeeks}-week Growth Arc with exactly 3 phases:
+
+1. AWARENESS (Week 1): 3-4 items to help them notice the pattern
+   - Item 1 MUST be an assessment_prompt: a self-rating question about this dimension (this is the pre-assessment)
+   - Then reflection_prompts and 1 micro_activity
+   ${selectedAssessment.confidence === "low" ? "- Include an extra reflection_prompt that asks them to describe their experience in this area in their own words" : ""}
+
+2. PRACTICE (Week ${durationWeeks === 2 ? "1-2" : "2"}): 3-4 items that build new skills
+   - Concrete micro_activities using their actual names
+   - Build on awareness phase insights
+   - After each micro_activity, the NEXT item should be a reflection_prompt asking "how did that go?" — this captures real data about their experience
+
+3. INTEGRATION (Week ${durationWeeks}): 2-3 items that cement the change
+   - Include a micro_activity that tests their progress
+   - LAST item MUST be an assessment_prompt: the SAME self-rating question as item 1 (this is the post-assessment)
+
+Return JSON:
+{
+  "arc": {
+    "title": "Short arc title (under 50 chars)",
+    "subtitle": "One line describing what they'll learn",
+    "emoji": "Single emoji",
+    "outcomeStatement": "After this arc, [specific felt outcome]. (e.g., 'After this, hard conversations should feel safer between you and Iris.')"
+  },
+  "items": [
+    {
+      "type": "assessment_prompt" | "micro_activity" | "reflection_prompt",
+      "title": "Short title (under 60 chars)",
+      "body": "1-3 sentences. Be concrete — use their names, suggest times, describe exactly what to do.",
+      "emoji": "Single emoji",
+      "targetPersonNames": ["Name(s)"],
+      "phase": "awareness" | "practice" | "integration",
+      "week": 1-${durationWeeks},
+      "dayOffset": 0-${durationWeeks * 7},
+      "isAssessment": true/false,
+      "speed": "ambient" | "intentional",
+      "estimatedMinutes": 1-10,
+      "relationalLevel": "individual" | "couple" | "family"
+    }
+  ]
+}
+
+Rules:
+- Use actual names — never generic
+- Activities should feel like natural outgrowths, not homework
+- The pre and post assessment questions MUST be identical for measuring progress
+- For ${dimDef.domain === "couple" ? "couple" : "parent-child"} dimension: activities should involve both participants
+- Tone: warm, practical, never clinical
+- ${durationWeeks === 2 ? "8-10" : "10-12"} items total
+- Return ONLY valid JSON`;
+
+      try {
+        const client = getAnthropic();
+        const response = await client.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 2500,
+          messages: [{role: "user", content: prompt}],
+        });
+
+        const content = response.content[0].text;
+
+        let parsed;
+        try {
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content);
+        } catch (parseErr) {
+          logger.error("Failed to parse arc response:", content);
+          throw new Error("Failed to parse AI response");
+        }
+
+        const arcData = parsed.arc || {};
+        const items = parsed.items || [];
+
+        if (items.length === 0) {
+          return {success: false, message: "AI generated no items"};
+        }
+
+        // Create the arc document
+        const now = admin.firestore.Timestamp.now();
+        const startDate = new Date();
+        const targetEndDate = new Date();
+        targetEndDate.setDate(targetEndDate.getDate() + durationWeeks * 7);
+
+        const arcRef = db.collection("growth_arcs").doc();
+        const arcItemRefs = [];
+        const batch = db.batch();
+
+        // Create growth items
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          const itemRef = db.collection("growth_items").doc();
+
+          // Calculate schedule date from dayOffset
+          const schedDate = new Date(startDate);
+          schedDate.setDate(schedDate.getDate() + (item.dayOffset || i));
+          schedDate.setHours(
+              item.speed === "ambient" ? 9 : 18, 0, 0, 0,
+          );
+
+          const expiresAt = new Date(schedDate);
+          if (item.speed === "ambient") {
+            expiresAt.setHours(expiresAt.getHours() + 48);
+          } else {
+            expiresAt.setDate(expiresAt.getDate() + 7);
+          }
+
+          // Find targetPersonIds
+          const targetPersonIds = (item.targetPersonNames || []).map(
+              (name) => {
+                const match = Object.entries(people).find(
+                    ([, p]) => p.name.toLowerCase() ===
+                      name.toLowerCase(),
+                );
+                return match ? match[0] : null;
+              },
+          ).filter(Boolean);
+
+          const growthItem = {
+            growthItemId: itemRef.id,
+            familyId,
+            type: item.type || "micro_activity",
+            title: item.title || "",
+            body: item.body || "",
+            emoji: item.emoji || "✨",
+            targetPersonIds,
+            targetPersonNames: item.targetPersonNames || [],
+            assignedToUserId: request.auth.uid,
+            assignedToUserName: userData.displayName ||
+              userData.name || "Parent",
+            sourceInsightId: null,
+            sourceInsightType: null,
+            sourceManualId: null,
+            sourceGapSeverity: null,
+            relationalLevel: item.relationalLevel || "couple",
+            speed: item.speed || "ambient",
+            scheduledDate:
+              admin.firestore.Timestamp.fromDate(schedDate),
+            expiresAt:
+              admin.firestore.Timestamp.fromDate(expiresAt),
+            estimatedMinutes: item.estimatedMinutes || 3,
+            status: "active",
+            createdAt: now,
+            generatedBy: "ai",
+            // Arc linkage
+            arcId: arcRef.id,
+            arcPhase: item.phase || "awareness",
+            arcSequence: i + 1,
+            dimensionId: dimId,
+            isAssessmentItem: item.isAssessment || false,
+          };
+
+          batch.set(itemRef, growthItem);
+
+          arcItemRefs.push({
+            growthItemId: itemRef.id,
+            sequenceNumber: i + 1,
+            phase: item.phase || "awareness",
+            week: item.week || 1,
+            isRequired: true,
+            isAssessment: item.isAssessment || false,
+          });
+        }
+
+        // Build phase definitions
+        const phases = [
+          {
+            phase: "awareness",
+            weekStart: 1,
+            weekEnd: 1,
+            title: "Notice the Pattern",
+            description: guidance.awareness ||
+              "Observe and become aware",
+            itemCount: items.filter(
+                (i) => i.phase === "awareness").length,
+          },
+          {
+            phase: "practice",
+            weekStart: durationWeeks === 2 ? 1 : 2,
+            weekEnd: durationWeeks === 2 ? 2 : durationWeeks - 1,
+            title: "Build New Skills",
+            description: guidance.practice || "Practice new approaches",
+            itemCount: items.filter(
+                (i) => i.phase === "practice").length,
+          },
+          {
+            phase: "integration",
+            weekStart: durationWeeks,
+            weekEnd: durationWeeks,
+            title: "Cement the Change",
+            description: guidance.integration ||
+              "Integrate into daily life",
+            itemCount: items.filter(
+                (i) => i.phase === "integration").length,
+          },
+        ];
+
+        const arcDoc = {
+          arcId: arcRef.id,
+          familyId,
+          dimensionId: dimId,
+          dimensionName: dimDef.name,
+          domain: dimDef.domain,
+          participantIds: selectedAssessment.participantIds,
+          participantNames: selectedAssessment.participantNames,
+          title: arcData.title || `Working on ${dimDef.name}`,
+          subtitle: arcData.subtitle || "",
+          emoji: arcData.emoji || "🎯",
+          outcomeStatement: arcData.outcomeStatement || "",
+          researchBasis: guidance.research || "",
+          level,
+          levelTitle,
+          durationWeeks,
+          startDate: admin.firestore.Timestamp.fromDate(startDate),
+          targetEndDate:
+            admin.firestore.Timestamp.fromDate(targetEndDate),
+          phases,
+          arcItems: arcItemRefs,
+          status: "active",
+          currentPhase: "awareness",
+          currentWeek: 1,
+          preScore: selectedAssessment.currentScore,
+          preConfidence: selectedAssessment.confidence,
+          graduationCriteria: {
+            minItemsCompleted: Math.ceil(items.length * 0.6),
+            minPositiveReactions: Math.ceil(items.length * 0.4),
+            minScoreImprovement: 0.5,
+            targetPostScore: Math.min(5.0,
+                selectedAssessment.currentScore + 1.0),
+          },
+          completedItemCount: 0,
+          totalItemCount: items.length,
+          averageImpactRating: 0,
+          positiveReactionCount: 0,
+          createdAt: now,
+          updatedAt: now,
+          generatedBy: "ai",
+        };
+
+        batch.set(arcRef, arcDoc);
+
+        // Update the dimension assessment with activeArcId
+        const assessRef = db.collection("dimension_assessments")
+            .doc(selectedAssessment.assessmentId);
+        batch.update(assessRef, {
+          activeArcId: arcRef.id,
+          updatedAt: now,
+        });
+
+        await batch.commit();
+
+        logger.info(
+            `Generated Growth Arc "${arcDoc.title}" ` +
+            `(${items.length} items, ${durationWeeks} weeks) ` +
+            `for ${dimDef.name} in family ${familyId}`,
+        );
+
+        return {
+          success: true,
+          arcId: arcRef.id,
+          title: arcDoc.title,
+          dimensionId: dimId,
+          dimensionName: dimDef.name,
+          level,
+          itemCount: items.length,
+          durationWeeks,
+        };
+      } catch (err) {
+        logger.error("Growth arc generation error:", err);
+        throw new Error(`Growth arc generation failed: ${err.message}`);
+      }
+    },
+);
+
+// ==================== Feedback Processing Pipeline ====================
+
+/**
+ * Process growth item feedback — the critical data pipeline.
+ *
+ * Every growth item response does double duty:
+ * 1. Updates dimension assessment scores (feedback is signal)
+ * 2. Writes back to person manuals (progress notes, pattern updates)
+ * 3. Updates arc progress when items belong to arcs
+ * 4. Triggers re-synthesis when enough new data accumulates
+ *
+ * Fires on every growth_items document update where feedback was added.
+ */
+exports.processGrowthFeedback = onDocumentUpdated(
+    {
+      document: "growth_items/{itemId}",
+      region: "us-central1",
+      memory: "256MiB",
+    },
+    async (event) => {
+      const logger = require("firebase-functions/logger");
+      const db = admin.firestore();
+      const now = admin.firestore.Timestamp.now();
+
+      const before = event.data.before.data();
+      const after = event.data.after.data();
+
+      // Only process when feedback is newly added
+      if (!after.feedback || before.feedback) return;
+
+      const feedback = after.feedback;
+      const itemId = event.params.itemId;
+
+      logger.info(
+          `Processing feedback on growth item ${itemId}: ` +
+          `${feedback.reaction}`,
+      );
+
+      // ---- 1. UPDATE DIMENSION ASSESSMENT ----
+
+      if (after.dimensionId) {
+        // Find the relevant dimension assessment
+        const assessSnap = await db.collection("dimension_assessments")
+            .where("familyId", "==", after.familyId)
+            .where("dimensionId", "==", after.dimensionId)
+            .get();
+
+        if (!assessSnap.empty) {
+          const assessDoc = assessSnap.docs[0];
+          const assessment = assessDoc.data();
+
+          // Convert feedback reaction to a score signal
+          let signal;
+          if (feedback.reaction === "loved_it") {
+            // Positive signal — things are improving
+            signal = feedback.impactRating === 3 ? 4.5 :
+              feedback.impactRating === 2 ? 4.0 : 3.5;
+          } else if (feedback.reaction === "tried_it") {
+            signal = feedback.impactRating === 3 ? 4.0 :
+              feedback.impactRating === 2 ? 3.5 : 3.0;
+          } else if (feedback.reaction === "doesnt_fit") {
+            // Negative — the suggestion missed, dimension may be worse
+            signal = 2.0;
+          } else {
+            // "not_now" — no score signal, skip
+            signal = null;
+          }
+
+          if (signal !== null) {
+            const newSource = {
+              sourceType: "growth_feedback",
+              sourceId: itemId,
+              signal,
+              weight: 0.8, // Feedback is high-quality recent signal
+              capturedAt: now,
+            };
+
+            const updatedSources = [
+              ...(assessment.dataSources || []),
+              newSource,
+            ];
+            const updatedCount = updatedSources.length;
+
+            // Recalculate weighted average
+            const totalWeight = updatedSources.reduce(
+                (sum, s) => sum + s.weight, 0,
+            );
+            const newScore = updatedSources.reduce(
+                (sum, s) => sum + (s.signal * s.weight), 0,
+            ) / totalWeight;
+            const clampedScore = Math.max(1.0,
+                Math.min(5.0, Math.round(newScore * 10) / 10));
+
+            const confidence = updatedCount >= 5 ? "high" :
+              updatedCount >= 3 ? "medium" : "low";
+
+            await assessDoc.ref.update({
+              dataSources: updatedSources,
+              dataPointCount: updatedCount,
+              currentScore: clampedScore,
+              confidence,
+              lastAssessedAt: now,
+              updatedAt: now,
+              scoreHistory: admin.firestore.FieldValue.arrayUnion({
+                score: clampedScore,
+                confidence,
+                timestamp: now,
+                trigger: "feedback_signal",
+              }),
+            });
+
+            logger.info(
+                `Updated ${after.dimensionId} score: ` +
+                `${assessment.currentScore} → ${clampedScore}`,
+            );
+          }
+        }
+      }
+
+      // ---- 2. WRITE BACK TO PERSON MANUAL ----
+
+      // Positive feedback on gap-sourced items → create ManualProgressNote
+      if (after.sourceManualId &&
+          (feedback.reaction === "loved_it" ||
+           feedback.reaction === "tried_it") &&
+          feedback.impactRating && feedback.impactRating >= 2) {
+        const manualRef = db.collection("person_manuals")
+            .doc(after.sourceManualId);
+        const manualDoc = await manualRef.get();
+
+        if (manualDoc.exists) {
+          const progressNote = {
+            id: `growth-${itemId}-${Date.now()}`,
+            date: now,
+            note: `Growth activity "${after.title}" — ` +
+              `${feedback.reaction === "loved_it" ? "loved it" : "tried it"}` +
+              `${feedback.impactRating === 3 ? " (breakthrough)" :
+                feedback.impactRating === 2 ? " (noticeable impact)" : ""}` +
+              `${feedback.note ? ". Note: " + feedback.note : ""}`,
+            category: feedback.impactRating === 3 ?
+              "milestone" : "improvement",
+            addedBy: "ai",
+          };
+
+          await manualRef.update({
+            progressNotes: admin.firestore.FieldValue.arrayUnion(
+                progressNote,
+            ),
+            updatedAt: now,
+          });
+
+          logger.info(
+              `Added progress note to manual ${after.sourceManualId}`,
+          );
+        }
+      }
+
+      // "Doesn't fit" feedback → mark this source insight as problematic
+      if (after.sourceInsightId && feedback.reaction === "doesnt_fit") {
+        // Track suppressed insights in the growth item for future avoidance
+        // (The generateGrowthBatch already checks for doesnt_fit feedback)
+        logger.info(
+            `Insight ${after.sourceInsightId} marked as "doesn't fit"`,
+        );
+      }
+
+      // ---- 3. UPDATE ARC PROGRESS ----
+
+      if (after.arcId && feedback.reaction !== "not_now") {
+        const arcRef = db.collection("growth_arcs").doc(after.arcId);
+        const arcDoc = await arcRef.get();
+
+        if (arcDoc.exists) {
+          const arc = arcDoc.data();
+          const isPositive = feedback.reaction === "loved_it" ||
+            feedback.reaction === "tried_it";
+
+          const updates = {
+            completedItemCount: (arc.completedItemCount || 0) + 1,
+            updatedAt: now,
+          };
+
+          if (isPositive) {
+            updates.positiveReactionCount =
+              (arc.positiveReactionCount || 0) + 1;
+          }
+
+          // Update average impact rating
+          if (feedback.impactRating) {
+            const prevTotal = (arc.averageImpactRating || 0) *
+              (arc.completedItemCount || 0);
+            updates.averageImpactRating =
+              (prevTotal + feedback.impactRating) /
+              ((arc.completedItemCount || 0) + 1);
+          }
+
+          // Determine current phase from sequence
+          if (after.arcPhase) {
+            updates.currentPhase = after.arcPhase;
+          }
+
+          // Check if arc is complete
+          const newCompletedCount = updates.completedItemCount;
+          if (newCompletedCount >= arc.totalItemCount) {
+            updates.status = "completed";
+            updates.actualEndDate = now;
+
+            // Clear the active arc from dimension assessment
+            const assessSnap2 = await db
+                .collection("dimension_assessments")
+                .where("familyId", "==", arc.familyId)
+                .where("dimensionId", "==", arc.dimensionId)
+                .get();
+
+            if (!assessSnap2.empty) {
+              const assessDoc2 = assessSnap2.docs[0];
+              const assessment2 = assessDoc2.data();
+
+              await assessDoc2.ref.update({
+                activeArcId: null,
+                completedArcIds: admin.firestore.FieldValue.arrayUnion(
+                    arc.arcId,
+                ),
+                updatedAt: now,
+                scoreHistory: admin.firestore.FieldValue.arrayUnion({
+                  score: assessment2.currentScore,
+                  confidence: assessment2.confidence,
+                  timestamp: now,
+                  trigger: "arc_completion",
+                }),
+              });
+
+              // Store post-score on the arc
+              updates.postScore = assessment2.currentScore;
+              updates.postConfidence = assessment2.confidence;
+
+              logger.info(
+                  `Arc ${after.arcId} completed. ` +
+                  `Pre: ${arc.preScore} → Post: ${assessment2.currentScore}`,
+              );
+            }
+          }
+
+          await arcRef.update(updates);
+        }
+      }
+
+      // ---- 4. TRIGGER RE-SYNTHESIS IF ENOUGH DATA ----
+
+      // Count recent positive feedback for this manual
+      if (after.sourceManualId &&
+          (feedback.reaction === "loved_it" ||
+           feedback.reaction === "tried_it")) {
+        const recentFeedbackSnap = await db.collection("growth_items")
+            .where("sourceManualId", "==", after.sourceManualId)
+            .where("status", "==", "completed")
+            .get();
+
+        let positiveCount = 0;
+        let lastSynthDate = null;
+        recentFeedbackSnap.forEach((doc) => {
+          const item = doc.data();
+          if (item.feedback &&
+              (item.feedback.reaction === "loved_it" ||
+               item.feedback.reaction === "tried_it")) {
+            positiveCount++;
+          }
+        });
+
+        // Get the manual's last synthesis date
+        const manualDoc2 = await db.collection("person_manuals")
+            .doc(after.sourceManualId).get();
+        if (manualDoc2.exists) {
+          const synth = manualDoc2.data().synthesizedContent;
+          if (synth && synth.lastSynthesizedAt) {
+            lastSynthDate = synth.lastSynthesizedAt.toDate();
+          }
+        }
+
+        // Trigger re-synthesis if:
+        // - 5+ positive feedback signals since last synthesis, OR
+        // - Last synthesis was 14+ days ago with any new feedback
+        const daysSinceSynth = lastSynthDate ?
+          (Date.now() - lastSynthDate.getTime()) / (1000 * 60 * 60 * 24) :
+          999;
+
+        if (positiveCount >= 5 || (positiveCount >= 1 && daysSinceSynth >= 14)) {
+          // Mark the manual as needing re-synthesis
+          await db.collection("person_manuals")
+              .doc(after.sourceManualId)
+              .update({
+                needsResynthesis: true,
+                resynthesisReason: positiveCount >= 5 ?
+                  "5+ positive growth signals accumulated" :
+                  "New growth data + synthesis is 14+ days old",
+                updatedAt: now,
+              });
+
+          logger.info(
+              `Manual ${after.sourceManualId} flagged for re-synthesis ` +
+              `(${positiveCount} positive signals, ` +
+              `${Math.round(daysSinceSynth)} days since last synthesis)`,
+          );
+        }
+      }
+
+      // ---- 5. ASSESSMENT PROMPT RESPONSES → CONTRIBUTION DATA ----
+
+      // When an assessment_prompt is answered, write the response
+      // back as structured data that enriches the manual
+      if (after.isAssessmentItem && after.dimensionId && feedback.note) {
+        // Store assessment responses in dimension assessment's dataSources
+        // The note field contains freeform text that's valuable context
+        const assessSnap3 = await db.collection("dimension_assessments")
+            .where("familyId", "==", after.familyId)
+            .where("dimensionId", "==", after.dimensionId)
+            .get();
+
+        if (!assessSnap3.empty) {
+          const assessDoc3 = assessSnap3.docs[0];
+          await assessDoc3.ref.update({
+            assessmentProgress: {
+              ...assessDoc3.data().assessmentProgress,
+              promptsAnswered: admin.firestore.FieldValue.arrayUnion(
+                  itemId,
+              ),
+            },
+            updatedAt: now,
+          });
+        }
+      }
+    },
+);
+
+/**
+ * Staleness check — runs weekly to identify dimensions and manuals
+ * that need fresh data. Generates targeted assessment prompts
+ * as growth items to fill gaps.
+ */
+exports.refreshStaleData = onSchedule(
+    {
+      schedule: "0 10 * * 1", // Monday 10 AM weekly
+      timeZone: "America/Los_Angeles",
+      memory: "512MiB",
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async () => {
+      const logger = require("firebase-functions/logger");
+      const db = admin.firestore();
+      const now = admin.firestore.Timestamp.now();
+
+      // Get all families
+      const familiesSnap = await db.collection("families").get();
+
+      for (const familyDoc of familiesSnap.docs) {
+        const familyId = familyDoc.id;
+
+        // Get all dimension assessments for this family
+        const assessSnap = await db.collection("dimension_assessments")
+            .where("familyId", "==", familyId)
+            .get();
+
+        if (assessSnap.empty) continue;
+
+        const staleAssessments = [];
+        const lowConfidence = [];
+
+        assessSnap.forEach((doc) => {
+          const assessment = doc.data();
+          const lastAssessed = assessment.lastAssessedAt?.toDate();
+          const daysSince = lastAssessed ?
+            (Date.now() - lastAssessed.getTime()) /
+            (1000 * 60 * 60 * 24) : 999;
+
+          // Flag stale: not assessed in 21+ days
+          if (daysSince >= 21) {
+            staleAssessments.push({...assessment, daysSince});
+          }
+
+          // Flag low confidence: need more data
+          if (assessment.confidence === "low" &&
+              !assessment.activeArcId) {
+            lowConfidence.push(assessment);
+          }
+        });
+
+        if (staleAssessments.length === 0 &&
+            lowConfidence.length === 0) continue;
+
+        // Get a family user to assign items to
+        const usersSnap = await db.collection("users")
+            .where("familyId", "==", familyId)
+            .where("role", "==", "parent")
+            .get();
+
+        if (usersSnap.empty) continue;
+        const assignee = usersSnap.docs[0].data();
+        const assigneeId = usersSnap.docs[0].id;
+
+        const batch = db.batch();
+        let itemCount = 0;
+
+        // Generate refresh prompts for stale dimensions (max 2 per week)
+        const toRefresh = [
+          ...lowConfidence.slice(0, 1),
+          ...staleAssessments.slice(0, 1),
+        ];
+
+        for (const assessment of toRefresh) {
+          const dimDef = DIMENSION_QUESTION_MAPPINGS[
+              assessment.dimensionId
+          ];
+          if (!dimDef) continue;
+
+          // Find an undelivered assessment prompt
+          const delivered = new Set(
+              assessment.assessmentProgress?.promptsDelivered || [],
+          );
+
+          // Create a simple check-in reflection prompt
+          const schedDate = new Date();
+          schedDate.setHours(10, 0, 0, 0);
+          const expiresAt = new Date(schedDate);
+          expiresAt.setDate(expiresAt.getDate() + 3);
+
+          const ref = db.collection("growth_items").doc();
+          const refreshItem = {
+            growthItemId: ref.id,
+            familyId,
+            type: "reflection_prompt",
+            title: `Quick check: ${dimDef.name}`,
+            body: assessment.confidence === "low" ?
+              `We'd love to know more about this area. ` +
+              `How would you rate "${dimDef.name}" in your ` +
+              `relationship right now?` :
+              `It's been a while since we checked in on ` +
+              `"${dimDef.name}." How are things in this area?`,
+            emoji: "📊",
+            targetPersonIds: assessment.participantIds || [],
+            targetPersonNames: assessment.participantNames || [],
+            assignedToUserId: assigneeId,
+            assignedToUserName: assignee.name || "Parent",
+            sourceInsightId: null,
+            sourceInsightType: null,
+            sourceManualId: null,
+            sourceGapSeverity: null,
+            relationalLevel: assessment.domain === "couple" ?
+              "couple" : "family",
+            speed: "ambient",
+            scheduledDate:
+              admin.firestore.Timestamp.fromDate(schedDate),
+            expiresAt:
+              admin.firestore.Timestamp.fromDate(expiresAt),
+            estimatedMinutes: 1,
+            status: "active",
+            createdAt: now,
+            generatedBy: "system",
+            dimensionId: assessment.dimensionId,
+            isAssessmentItem: true,
+          };
+
+          batch.set(ref, refreshItem);
+          itemCount++;
+        }
+
+        // Also check for manuals flagged for re-synthesis
+        const manualsSnap = await db.collection("person_manuals")
+            .where("familyId", "==", familyId)
+            .where("needsResynthesis", "==", true)
+            .get();
+
+        if (!manualsSnap.empty) {
+          logger.info(
+              `Family ${familyId} has ${manualsSnap.size} manuals ` +
+              `needing re-synthesis`,
+          );
+          // Note: actual re-synthesis is triggered by user or
+          // a separate scheduled function — we just flag it here
+        }
+
+        if (itemCount > 0) {
+          await batch.commit();
+          logger.info(
+              `Generated ${itemCount} refresh items for ` +
+              `family ${familyId}`,
+          );
+        }
       }
     },
 );
