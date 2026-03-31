@@ -267,16 +267,13 @@ export default function DashboardPage() {
         {state === 'active' && health && (
           <div
             className="min-h-screen p-4 sm:p-6"
-            style={{
-              background: 'linear-gradient(145deg, #1a1a1a, #111)',
-            }}
           >
             {/* Dashboard header */}
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h1
                   className="font-mono font-bold text-lg"
-                  style={{ color: 'rgba(255,255,255,0.85)' }}
+                  style={{ color: '#2C2C2C' }}
                 >
                   {userName}
                 </h1>
@@ -285,7 +282,7 @@ export default function DashboardPage() {
                     {health.score.toFixed(1)}
                   </span>
                   {activeArcCount > 0 && (
-                    <span className="font-mono text-[10px] tracking-wider" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    <span className="font-mono text-[10px] tracking-wider" style={{ color: '#6B6B6B' }}>
                       {activeArcCount} ARC{activeArcCount !== 1 ? 'S' : ''}
                     </span>
                   )}
@@ -293,7 +290,7 @@ export default function DashboardPage() {
                     <Link
                       href={`/people/${selfPerson.personId}/manual`}
                       className="font-mono text-[10px] tracking-wider transition-colors"
-                      style={{ color: 'rgba(255,255,255,0.3)' }}
+                      style={{ color: '#A3A3A3' }}
                     >
                       MY MANUAL &rarr;
                     </Link>
@@ -306,8 +303,8 @@ export default function DashboardPage() {
                   disabled={generating}
                   className="font-mono text-[10px] font-bold tracking-wider px-3 py-1.5 rounded transition-all hover:scale-105 disabled:opacity-30"
                   style={{
-                    color: 'rgba(255,255,255,0.5)',
-                    border: '1px solid rgba(255,255,255,0.15)',
+                    color: '#6B6B6B',
+                    border: '1px solid #E8E3DC',
                   }}
                 >
                   {generating ? 'ANALYZING...' : '↻ RE-ANALYZE'}
@@ -317,8 +314,8 @@ export default function DashboardPage() {
                 className="font-mono text-[10px] font-bold tracking-wider px-3 py-1.5 rounded transition-all hover:scale-105"
                 style={{
                   color: '#d97706',
-                  border: '1px solid rgba(217,119,6,0.3)',
-                  background: 'rgba(217,119,6,0.1)',
+                  border: '1px solid rgba(217,119,6,0.4)',
+                  background: 'rgba(217,119,6,0.08)',
                 }}
               >
                 🚨 SOMETHING HAPPENED
@@ -369,19 +366,20 @@ export default function DashboardPage() {
                   key={ds.domain}
                   className="rounded-lg p-3 text-center"
                   style={{
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.06)',
+                    background: '#FFFFFF',
+                    border: '2px solid #E8E3DC',
+                    boxShadow: '2px 2px 0px 0px rgba(0,0,0,0.15)',
                   }}
                 >
                   <div
                     className="font-mono text-[9px] font-bold tracking-widest mb-1"
-                    style={{ color: 'rgba(255,255,255,0.35)' }}
+                    style={{ color: '#6B6B6B' }}
                   >
                     {ds.domain === 'self' ? 'SELF' : ds.domain === 'couple' ? 'SPOUSE' : 'PARENT'}
                   </div>
                   <div
                     className="font-mono text-xl font-bold"
-                    style={{ color: ds.score > 0 ? scoreToColor(ds.score) : 'rgba(255,255,255,0.2)' }}
+                    style={{ color: ds.score > 0 ? scoreToColor(ds.score) : '#D4D4D4' }}
                   >
                     {ds.score > 0 ? ds.score.toFixed(1) : '—'}
                   </div>

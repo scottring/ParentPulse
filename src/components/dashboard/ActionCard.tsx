@@ -31,7 +31,7 @@ export default function ActionCard({ items, onReact, onGenerate, generating }: A
           ) : (
             <span
               className="font-mono text-[11px]"
-              style={{ color: 'rgba(255,255,255,0.3)' }}
+              style={{ color: '#A3A3A3' }}
             >
               ALL CLEAR — NO ACTIONS RIGHT NOW
             </span>
@@ -43,7 +43,7 @@ export default function ActionCard({ items, onReact, onGenerate, generating }: A
 
   return (
     <InstrumentBezel title="NEXT MOVE">
-      <div className="divide-y divide-white/5">
+      <div className="divide-y divide-slate-200">
         {items.slice(0, 2).map((item) => (
           <div key={item.growthItemId} className="px-4 py-3">
             {/* Header */}
@@ -52,20 +52,20 @@ export default function ActionCard({ items, onReact, onGenerate, generating }: A
               <div className="flex-1 min-w-0">
                 <h4
                   className="font-mono text-[12px] font-bold leading-tight"
-                  style={{ color: 'rgba(255,255,255,0.85)' }}
+                  style={{ color: '#2C2C2C' }}
                 >
                   {item.title}
                 </h4>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span
                     className="font-mono text-[9px] tracking-wider"
-                    style={{ color: 'rgba(255,255,255,0.3)' }}
+                    style={{ color: '#6B6B6B' }}
                   >
                     {item.speed === 'ambient' ? '⚡ TODAY' : '📋 THIS WEEK'}
                   </span>
                   <span
                     className="font-mono text-[9px]"
-                    style={{ color: 'rgba(255,255,255,0.25)' }}
+                    style={{ color: '#A3A3A3' }}
                   >
                     {item.estimatedMinutes}m
                   </span>
@@ -76,7 +76,7 @@ export default function ActionCard({ items, onReact, onGenerate, generating }: A
             {/* Body */}
             <p
               className="font-mono text-[11px] leading-relaxed mt-1"
-              style={{ color: 'rgba(255,255,255,0.55)' }}
+              style={{ color: '#6B6B6B' }}
             >
               {item.body}
             </p>
@@ -95,8 +95,8 @@ export default function ActionCard({ items, onReact, onGenerate, generating }: A
                     onClick={() => onReact(item.growthItemId, r.key)}
                     className="px-2 py-1 rounded text-sm transition-all hover:scale-110"
                     style={{
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.1)',
+                      background: 'rgba(44,44,44,0.04)',
+                      border: '1px solid #E8E3DC',
                     }}
                   >
                     {r.emoji}

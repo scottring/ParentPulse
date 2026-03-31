@@ -21,14 +21,14 @@ function StatusLight({ label, active, count }: PerspectiveLightProps) {
       />
       <span
         className="font-mono text-[11px] tracking-wide"
-        style={{ color: active ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.35)' }}
+        style={{ color: active ? '#2C2C2C' : '#A3A3A3' }}
       >
         {label}
       </span>
       {count !== undefined && count > 0 && (
         <span
           className="font-mono text-[9px] ml-auto"
-          style={{ color: 'rgba(255,255,255,0.3)' }}
+          style={{ color: '#A3A3A3' }}
         >
           {count}
         </span>

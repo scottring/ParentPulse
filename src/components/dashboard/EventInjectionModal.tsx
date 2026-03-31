@@ -28,7 +28,7 @@ export default function EventInjectionModal({
       {/* Backdrop */}
       <div
         className="absolute inset-0"
-        style={{ background: 'rgba(0,0,0,0.7)' }}
+        style={{ background: 'rgba(0,0,0,0.4)' }}
         onClick={onClose}
       />
 
@@ -36,23 +36,23 @@ export default function EventInjectionModal({
       <div
         className="relative w-full max-w-md mx-4 rounded-lg p-4"
         style={{
-          background: 'linear-gradient(145deg, #2a2a2a, #1e1e1e)',
-          boxShadow: '0 0 30px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.08)',
-          border: '1px solid rgba(255,255,255,0.08)',
+          background: '#FFFFFF',
+          boxShadow: '8px 8px 0px 0px rgba(0,0,0,1)',
+          border: '2px solid #2C2C2C',
         }}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <h3
             className="font-mono text-[11px] font-bold tracking-widest"
-            style={{ color: 'rgba(255,255,255,0.5)' }}
+            style={{ color: '#2C2C2C' }}
           >
             🚨 SOMETHING HAPPENED
           </h3>
           <button
             onClick={onClose}
             className="font-mono text-[11px] px-2 py-0.5 rounded"
-            style={{ color: 'rgba(255,255,255,0.3)' }}
+            style={{ color: '#6B6B6B' }}
           >
             ✕
           </button>
@@ -60,7 +60,7 @@ export default function EventInjectionModal({
 
         <p
           className="font-mono text-[11px] mb-3"
-          style={{ color: 'rgba(255,255,255,0.4)' }}
+          style={{ color: '#6B6B6B' }}
         >
           Tell us what happened. The AI will map it to your dimensions and decide whether to adjust your growth trajectory.
         </p>
@@ -73,9 +73,9 @@ export default function EventInjectionModal({
           rows={4}
           className="w-full rounded p-3 font-mono text-[12px] resize-none focus:outline-none"
           style={{
-            background: 'rgba(0,0,0,0.3)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            color: 'rgba(255,255,255,0.8)',
+            background: '#FAF8F5',
+            border: '1px solid #E8E3DC',
+            color: '#2C2C2C',
           }}
           autoFocus
         />
@@ -86,8 +86,8 @@ export default function EventInjectionModal({
             onClick={onClose}
             className="font-mono text-[11px] px-4 py-2 rounded"
             style={{
-              color: 'rgba(255,255,255,0.4)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              color: '#6B6B6B',
+              border: '1px solid #E8E3DC',
             }}
           >
             CANCEL
@@ -97,10 +97,10 @@ export default function EventInjectionModal({
             disabled={!text.trim() || loading}
             className="font-mono text-[11px] font-bold px-4 py-2 rounded transition-all disabled:opacity-30"
             style={{
-              background: 'rgba(217,119,6,0.2)',
+              background: 'rgba(217,119,6,0.1)',
               color: '#d97706',
-              border: '1px solid rgba(217,119,6,0.3)',
-              boxShadow: text.trim() ? '0 0 8px rgba(217,119,6,0.15)' : 'none',
+              border: '1px solid rgba(217,119,6,0.5)',
+              boxShadow: text.trim() ? '2px 2px 0px 0px rgba(217,119,6,0.4)' : 'none',
             }}
           >
             {loading ? 'ANALYZING...' : 'RECALCULATE'}

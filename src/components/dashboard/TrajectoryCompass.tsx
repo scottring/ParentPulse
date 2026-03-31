@@ -28,7 +28,7 @@ export default function TrajectoryCompass({ trend, primaryDimension }: Trajector
             <circle
               cx="32" cy="32" r="28"
               fill="none"
-              stroke="rgba(255,255,255,0.1)"
+              stroke="rgba(44,44,44,0.15)"
               strokeWidth="2"
             />
             {/* Tick marks */}
@@ -42,7 +42,7 @@ export default function TrajectoryCompass({ trend, primaryDimension }: Trajector
                 <line
                   key={angle}
                   x1={x1} y1={y1} x2={x2} y2={y2}
-                  stroke="rgba(255,255,255,0.3)"
+                  stroke="rgba(44,44,44,0.35)"
                   strokeWidth="1.5"
                 />
               );
@@ -61,14 +61,14 @@ export default function TrajectoryCompass({ trend, primaryDimension }: Trajector
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 style={{
-                  filter: `drop-shadow(0 0 3px ${config.color})`,
+                  filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))',
                 }}
               />
               <circle
                 cx="32" cy="32" r="3"
                 fill={config.color}
                 style={{
-                  filter: `drop-shadow(0 0 4px ${config.color})`,
+                  filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))',
                 }}
               />
             </g>
@@ -87,7 +87,7 @@ export default function TrajectoryCompass({ trend, primaryDimension }: Trajector
         {primaryDimension && (
           <span
             className="font-mono text-[9px] mt-1 text-center"
-            style={{ color: 'rgba(255,255,255,0.35)' }}
+            style={{ color: '#6B6B6B' }}
           >
             {primaryDimension}
           </span>

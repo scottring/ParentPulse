@@ -11,19 +11,15 @@ export default function InstrumentBezel({ title, children, compact }: Instrument
     <div
       className={`rounded-lg ${compact ? 'p-2' : 'p-3'}`}
       style={{
-        background: 'linear-gradient(145deg, #2a2a2a, #1e1e1e)',
-        boxShadow: `
-          inset 0 1px 2px rgba(255,255,255,0.08),
-          inset 0 -1px 2px rgba(0,0,0,0.3),
-          0 2px 8px rgba(0,0,0,0.3)
-        `,
-        border: '1px solid rgba(255,255,255,0.05)',
+        background: '#FFFFFF',
+        boxShadow: '4px 4px 0px 0px rgba(0,0,0,1)',
+        border: '2px solid #2C2C2C',
       }}
     >
       {title && (
         <div
           className="text-[10px] font-mono font-bold tracking-widest mb-2 px-1"
-          style={{ color: 'rgba(255,255,255,0.4)' }}
+          style={{ color: '#6B6B6B' }}
         >
           {title}
         </div>
@@ -31,8 +27,8 @@ export default function InstrumentBezel({ title, children, compact }: Instrument
       <div
         className="rounded"
         style={{
-          background: 'rgba(0,0,0,0.2)',
-          border: '1px solid rgba(255,255,255,0.03)',
+          background: '#FAF8F5',
+          border: '1px solid #E8E3DC',
         }}
       >
         {children}

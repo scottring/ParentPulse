@@ -130,18 +130,10 @@ export default function ThreeRingDiagram({ health, onZoneClick }: ThreeRingDiagr
           >
             <defs>
               <filter id="glow">
-                <feGaussianBlur stdDeviation="2" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
+                <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="rgba(0,0,0,0.15)" />
               </filter>
               <filter id="softGlow">
-                <feGaussianBlur stdDeviation="4" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
+                <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="rgba(0,0,0,0.1)" />
               </filter>
             </defs>
 
@@ -152,10 +144,10 @@ export default function ThreeRingDiagram({ health, onZoneClick }: ThreeRingDiagr
                 <g key={`${zone.domain}-${zone.perspective}`}>
                   <path
                     d={describePieWedge(cx, cy, middleRadius, outerRadius, zone.startAngle, zone.endAngle)}
-                    fill={zone.score > 0 ? `${color}60` : 'rgba(255,255,255,0.03)'}
-                    stroke={zone.score > 0 ? `${color}90` : 'rgba(255,255,255,0.08)'}
+                    fill={zone.score > 0 ? `${color}60` : 'rgba(44,44,44,0.04)'}
+                    stroke={zone.score > 0 ? `${color}90` : 'rgba(44,44,44,0.12)'}
                     strokeWidth={1}
-                    className={`cursor-pointer transition-all ${zone.score > 0 ? 'hover:brightness-125' : 'hover:fill-[rgba(255,255,255,0.08)]'}`}
+                    className={`cursor-pointer transition-all ${zone.score > 0 ? 'hover:brightness-125' : 'hover:fill-[rgba(44,44,44,0.08)]'}`}
                     onClick={() => onZoneClick?.(zone.domain, zone.perspective)}
                   >
                     <title>
@@ -176,7 +168,7 @@ export default function ThreeRingDiagram({ health, onZoneClick }: ThreeRingDiagr
                           x={pos.x} y={pos.y}
                           textAnchor="middle"
                           dominantBaseline="central"
-                          fill="rgba(255,255,255,0.25)"
+                          fill="rgba(44,44,44,0.3)"
                           fontSize="18"
                           fontFamily="monospace"
                           style={{ pointerEvents: 'none' }}
@@ -190,7 +182,7 @@ export default function ThreeRingDiagram({ health, onZoneClick }: ThreeRingDiagr
                         x={pos.x} y={pos.y}
                         textAnchor="middle"
                         dominantBaseline="central"
-                        fill={zone.score > 0 ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.2)'}
+                        fill={zone.score > 0 ? 'rgba(44,44,44,0.75)' : 'rgba(44,44,44,0.25)'}
                         fontSize="8"
                         fontFamily="monospace"
                         fontWeight="bold"
@@ -212,8 +204,8 @@ export default function ThreeRingDiagram({ health, onZoneClick }: ThreeRingDiagr
                 <g key={`mid-${arc.domain}`}>
                   <path
                     d={describePieWedge(cx, cy, centerRadius, middleRadius, arc.startAngle, arc.endAngle)}
-                    fill={arc.score > 0 ? `${color}40` : 'rgba(255,255,255,0.03)'}
-                    stroke={arc.score > 0 ? `${color}70` : 'rgba(255,255,255,0.06)'}
+                    fill={arc.score > 0 ? `${color}40` : 'rgba(44,44,44,0.04)'}
+                    stroke={arc.score > 0 ? `${color}70` : 'rgba(44,44,44,0.08)'}
                     strokeWidth={1}
                   />
                   {/* Domain label */}
@@ -226,7 +218,7 @@ export default function ThreeRingDiagram({ health, onZoneClick }: ThreeRingDiagr
                         x={pos.x} y={pos.y}
                         textAnchor="middle"
                         dominantBaseline="central"
-                        fill="rgba(255,255,255,0.6)"
+                        fill="rgba(44,44,44,0.7)"
                         fontSize="10"
                         fontFamily="monospace"
                         fontWeight="bold"
@@ -249,7 +241,7 @@ export default function ThreeRingDiagram({ health, onZoneClick }: ThreeRingDiagr
                   key={`sep-${layout.domain}`}
                   x1={p1.x} y1={p1.y}
                   x2={p2.x} y2={p2.y}
-                  stroke="rgba(255,255,255,0.25)"
+                  stroke="rgba(44,44,44,0.3)"
                   strokeWidth={2.5}
                 />
               );
@@ -292,7 +284,7 @@ export default function ThreeRingDiagram({ health, onZoneClick }: ThreeRingDiagr
               x={cx} y={cy + 46}
               textAnchor="middle"
               dominantBaseline="central"
-              fill="rgba(255,255,255,0.4)"
+              fill="#6B6B6B"
               fontSize="8"
               fontFamily="monospace"
             >
