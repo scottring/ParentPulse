@@ -942,6 +942,8 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
             onChange={(value) => handleAnswer(currentQuestion.id, value)}
             personName={user.name}
             onKeyboardContinue={handleNext}
+            isDemo={!!user.isDemo}
+            demoPerspective="self"
           />
 
           {/* Visibility toggle */}

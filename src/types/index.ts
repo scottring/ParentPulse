@@ -12,6 +12,7 @@ export interface User {
   email?: string;
   dateOfBirth?: Timestamp;
   avatarUrl?: string;
+  isDemo?: boolean;
   createdAt: Timestamp;
   settings: {
     notifications: boolean;

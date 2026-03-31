@@ -38,7 +38,7 @@ export default function DashboardPage() {
     generating,
   } = useGrowthFeed();
   const { health } = useRingScores(assessments);
-  const { addPerson } = usePerson();
+  const { addPerson, people } = usePerson();
 
   // Inline add-person form state
   const [addName, setAddName] = useState('');
@@ -330,29 +330,34 @@ export default function DashboardPage() {
             <ThreeRingDiagram
               health={health}
               onZoneClick={(domain, perspective) => {
-                // Find the relevant zone score
                 const domainScore = health.domainScores.find((d) => d.domain === domain);
                 const zone = domainScore?.perspectiveZones.find((z) => z.perspective === perspective);
                 const hasData = zone && zone.score > 0;
 
-                if (hasData) {
-                  // TODO: drill-down view for filled zones
+                // Resolve which person this zone is about based on the domain
+                const targetPerson = domain === 'self'
+                  ? selfPerson
+                  : domain === 'couple'
+                    ? (roles.find((r) => r.otherPerson.relationshipType === 'spouse')?.otherPerson
+                       || people.find((p) => p.relationshipType === 'spouse'))
+                    : (roles.find((r) => r.otherPerson.relationshipType === 'child')?.otherPerson
+                       || people.find((p) => p.relationshipType === 'child'));
+
+                if (hasData && targetPerson) {
+                  // Navigate to the person's manual
+                  router.push(`/people/${targetPerson.personId}/manual`);
                   return;
                 }
 
-                // Route to the right action for empty zones
-                if (perspective === 'self' && selfPerson) {
-                  router.push(`/people/${selfPerson.personId}/manual/self-onboard`);
-                } else if (perspective === 'spouse') {
-                  const spousePerson = roles.find((r) => r.otherPerson.relationshipType === 'spouse')?.otherPerson;
-                  if (spousePerson) {
-                    router.push(`/people/${spousePerson.personId}/manual/onboard`);
-                  }
-                } else if (perspective === 'kids') {
-                  const childPerson = roles.find((r) => r.otherPerson.relationshipType === 'child')?.otherPerson;
-                  if (childPerson) {
-                    router.push(`/people/${childPerson.personId}/manual/kid-session`);
-                  }
+                // Empty zones → route to the right onboarding action
+                if (!targetPerson) return;
+
+                if (domain === 'self') {
+                  router.push(`/people/${targetPerson.personId}/manual/self-onboard`);
+                } else if (domain === 'couple') {
+                  router.push(`/people/${targetPerson.personId}/manual/onboard`);
+                } else {
+                  router.push(`/people/${targetPerson.personId}/manual/kid-session`);
                 }
               }}
             />

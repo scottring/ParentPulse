@@ -6,6 +6,7 @@ import { LikertScaleQuestion } from './LikertScaleQuestion';
 import { FrequencyQuestion } from './FrequencyQuestion';
 import { MultipleChoiceQuestion } from './MultipleChoiceQuestion';
 import { QualitativeComment } from './QualitativeComment';
+import { getDemoAnswer } from '@/config/demo-answers';
 
 interface QuestionRendererProps {
   question: OnboardingQuestion;
@@ -13,6 +14,8 @@ interface QuestionRendererProps {
   onChange: (value: QuestionAnswer) => void;
   personName: string;
   onKeyboardContinue?: () => void;
+  isDemo?: boolean;
+  demoPerspective?: 'self' | 'observer' | 'kid';
 }
 
 export function QuestionRenderer({
@@ -21,6 +24,8 @@ export function QuestionRenderer({
   onChange,
   personName,
   onKeyboardContinue,
+  isDemo,
+  demoPerspective = 'self',
 }: QuestionRendererProps) {
   const questionType = question.questionType || 'text';
 
@@ -111,15 +116,43 @@ export function QuestionRenderer({
               }}
               autoFocus
             />
+            {isDemo && getDemoAnswer(question.id, demoPerspective) && !value && (
+              <button
+                type="button"
+                onClick={() => {
+                  const demo = getDemoAnswer(question.id, demoPerspective);
+                  if (demo !== undefined) onChange(demo);
+                }}
+                className="absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold transition-all hover:scale-105"
+                style={{ background: '#d97706', color: 'white', opacity: 0.85 }}
+              >
+                Fill
+              </button>
+            )}
           </div>
         );
     }
   };
 
+  const demoFillable = isDemo && questionType !== 'text' && !primaryValue && getDemoAnswer(question.id, demoPerspective) !== undefined;
+
   return (
     <div className="space-y-6">
       {/* Primary question input */}
       {renderQuestionInput()}
+      {demoFillable && (
+        <button
+          type="button"
+          onClick={() => {
+            const demo = getDemoAnswer(question.id, demoPerspective);
+            if (demo !== undefined) onChange(demo);
+          }}
+          className="px-3 py-1.5 rounded text-xs font-bold transition-all hover:scale-105"
+          style={{ background: '#d97706', color: 'white', opacity: 0.85 }}
+        >
+          Fill
+        </button>
+      )}
 
       {/* Qualitative comment (optional embellishment) */}
       {question.allowQualitativeComment && questionType !== 'text' && (

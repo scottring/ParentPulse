@@ -383,6 +383,8 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
             onChange={(value) => handleAnswer(currentQuestion.id, value)}
             personName={person.name}
             onKeyboardContinue={handleNext}
+            isDemo={!!user?.isDemo}
+            demoPerspective="observer"
           />
         </div>
 

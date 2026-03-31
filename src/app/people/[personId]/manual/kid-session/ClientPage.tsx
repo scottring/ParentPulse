@@ -282,6 +282,7 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
           }}
           canGoBack={currentSectionIndex > 0 || currentQuestionIndex > 0}
           childName={person.name}
+          isDemo={!!user?.isDemo}
         />
       </div>
     </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import type { ChildQuestion } from '@/config/child-questionnaire';
+import { getDemoAnswer } from '@/config/demo-answers';
 
 interface ChildQuestionDisplayProps {
   question: ChildQuestion;
@@ -14,6 +15,7 @@ interface ChildQuestionDisplayProps {
   onSkip: () => void;
   canGoBack: boolean;
   childName: string;
+  isDemo?: boolean;
 }
 
 export default function ChildQuestionDisplay({
@@ -27,6 +29,7 @@ export default function ChildQuestionDisplay({
   onSkip,
   canGoBack,
   childName,
+  isDemo,
 }: ChildQuestionDisplayProps) {
   const [localValue, setLocalValue] = useState(currentAnswer || '');
 
@@ -200,6 +203,22 @@ export default function ChildQuestionDisplay({
       {/* Input */}
       <div className="mb-8 ml-0 sm:ml-16">
         {renderInput()}
+        {isDemo && !currentAnswer && getDemoAnswer(question.id, 'kid') !== undefined && (
+          <button
+            type="button"
+            onClick={() => {
+              const demo = getDemoAnswer(question.id, 'kid');
+              if (demo !== undefined) {
+                setLocalValue(demo);
+                onAnswer(demo);
+              }
+            }}
+            className="mt-2 px-3 py-1.5 rounded text-xs font-bold transition-all hover:scale-105"
+            style={{ background: '#d97706', color: 'white', opacity: 0.85 }}
+          >
+            Fill
+          </button>
+        )}
       </div>
 
       {/* Action buttons - larger and more kid-friendly */}
