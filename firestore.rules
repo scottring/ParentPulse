@@ -591,6 +591,11 @@ service cloud.firestore {
       // Cloud Functions create via admin SDK
     }
 
+    match /acute_events/{eventId} {
+      allow read: if belongsToFamily(resource.data.familyId);
+      // Cloud Functions create via admin SDK (processAcuteEvent)
+    }
+
     // ==================== Dual Workbook System ====================
 
     // Parent Workbooks

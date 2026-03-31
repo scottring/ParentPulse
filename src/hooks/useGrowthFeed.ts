@@ -54,6 +54,15 @@ interface UseGrowthFeedReturn {
   generateBatch: () => Promise<{ success: boolean; itemCount?: number }>;
   seedAssessments: () => Promise<{ success: boolean; assessmentCount?: number }>;
   generateArc: (dimensionId?: string) => Promise<{ success: boolean; arcId?: string }>;
+  processAcuteEvent: (freeText: string) => Promise<{
+    success: boolean;
+    eventId?: string;
+    analysis?: {
+      recommendation: string;
+      reasoning: string;
+      suggestedActions: string[];
+    };
+  }>;
   generating: boolean;
 }
 
@@ -279,6 +288,25 @@ export function useGrowthFeed(): UseGrowthFeedReturn {
     }
   }, []);
 
+  const processAcuteEvent = useCallback(async (freeText: string) => {
+    try {
+      const fn = httpsCallable(functions, 'processAcuteEvent');
+      const result = await fn({ freeText });
+      return result.data as {
+        success: boolean;
+        eventId?: string;
+        analysis?: {
+          recommendation: string;
+          reasoning: string;
+          suggestedActions: string[];
+        };
+      };
+    } catch (err) {
+      console.error('Failed to process acute event:', err);
+      throw err;
+    }
+  }, []);
+
   return {
     arcGroups,
     standaloneActiveItems,
@@ -292,6 +320,7 @@ export function useGrowthFeed(): UseGrowthFeedReturn {
     generateBatch,
     seedAssessments,
     generateArc,
+    processAcuteEvent,
     generating,
   };
 }

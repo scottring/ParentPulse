@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Zap, Target, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
@@ -15,6 +14,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [focused, setFocused] = useState<string | null>(null);
 
   useEffect(() => {
     if (user && !authLoading) {
@@ -43,234 +43,205 @@ export default function LoginPage() {
 
   if (authLoading || user) {
     return (
-      <div className="min-h-screen flex items-center justify-center parent-page">
-        <div className="w-16 h-16 spinner"></div>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FFF8F0' }}>
+        <div className="w-12 h-12 border-4 border-slate-800 border-t-amber-600 rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: '#FFF8F0' }}>
-      {/* Left side - Technical manual hero */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden p-16 items-center justify-center border-r-4 border-slate-800">
-        {/* Corner brackets */}
-        <div className="absolute top-8 left-8 w-16 h-16 border-t-4 border-l-4 border-amber-600"></div>
-        <div className="absolute top-8 right-8 w-16 h-16 border-t-4 border-r-4 border-amber-600"></div>
-        <div className="absolute bottom-8 left-8 w-16 h-16 border-b-4 border-l-4 border-amber-600"></div>
-        <div className="absolute bottom-8 right-8 w-16 h-16 border-b-4 border-r-4 border-amber-600"></div>
-
-        {/* Decorative grid lines */}
-        <div className="absolute inset-0 opacity-5" style={{
-          backgroundImage: 'linear-gradient(#1e293b 1px, transparent 1px), linear-gradient(90deg, #1e293b 1px, transparent 1px)',
-          backgroundSize: '40px 40px'
-        }}></div>
-
-        <div className="relative z-10 max-w-lg">
-          {/* Technical header */}
-          <div className="mb-8 pb-4 border-b-2 border-slate-800">
-            <div className="font-mono text-xs text-slate-500 uppercase tracking-wider mb-2">
-              SYSTEM ACCESS • VERSION 2.0
-            </div>
-            <div className="inline-block">
-              <Image
-                src="/relish banner 04b.png"
-                alt="Relish - The Operating Manual for Relationships"
-                width={380}
-                height={140}
-                className="object-contain"
-                priority
-              />
-            </div>
-          </div>
-
-          {/* Technical specs list */}
-          <div className="space-y-4 mb-8">
-            <div className="flex items-start gap-4 p-4 bg-white border-2 border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-              <div className="w-12 h-12 bg-slate-800 flex items-center justify-center shrink-0 border-2 border-amber-600">
-                <Zap className="w-6 h-6 text-amber-600" strokeWidth={2.5} />
-              </div>
-              <div>
-                <div className="font-mono text-xs text-amber-600 uppercase tracking-wider mb-1">MODULE 01</div>
-                <div className="font-semibold mb-1">Triggers & Strategies</div>
-                <div className="text-sm text-slate-600">
-                  Document behavioral patterns and effective responses
-                </div>
-              </div>
-            </div>
-            <div className="flex items-start gap-4 p-4 bg-white border-2 border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-              <div className="w-12 h-12 bg-slate-800 flex items-center justify-center shrink-0 border-2 border-amber-600">
-                <Target className="w-6 h-6 text-amber-600" strokeWidth={2.5} />
-              </div>
-              <div>
-                <div className="font-mono text-xs text-amber-600 uppercase tracking-wider mb-1">MODULE 02</div>
-                <div className="font-semibold mb-1">Weekly Action Plans</div>
-                <div className="text-sm text-slate-600">
-                  AI-generated behavioral goals and tracking
-                </div>
-              </div>
-            </div>
-            <div className="flex items-start gap-4 p-4 bg-white border-2 border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-              <div className="w-12 h-12 bg-slate-800 flex items-center justify-center shrink-0 border-2 border-amber-600">
-                <BarChart3 className="w-6 h-6 text-amber-600" strokeWidth={2.5} />
-              </div>
-              <div>
-                <div className="font-mono text-xs text-amber-600 uppercase tracking-wider mb-1">MODULE 03</div>
-                <div className="font-semibold mb-1">Pattern Analysis</div>
-                <div className="text-sm text-slate-600">
-                  Historical data and relationship insights
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Technical footer */}
-          <div className="font-mono text-xs text-slate-500 uppercase tracking-wider pt-4 border-t border-slate-300">
-            Operating Manual System • Confidential
-          </div>
-        </div>
+    <div
+      className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
+      style={{ backgroundColor: '#FFF8F0' }}
+    >
+      {/* Ambient background rings — echoing the dashboard diagram */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: '900px',
+            height: '900px',
+            border: '1px solid rgba(217, 119, 6, 0.06)',
+          }}
+        />
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: '700px',
+            height: '700px',
+            border: '1px solid rgba(217, 119, 6, 0.08)',
+          }}
+        />
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: '500px',
+            height: '500px',
+            border: '1px solid rgba(217, 119, 6, 0.05)',
+          }}
+        />
+        {/* Warm radial glow */}
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: '600px',
+            height: '600px',
+            background: 'radial-gradient(circle, rgba(217, 119, 6, 0.04) 0%, transparent 70%)',
+          }}
+        />
       </div>
 
-      {/* Right side - Login form */}
-      <div className="flex-1 flex items-center justify-center p-8 sm:p-16 relative">
-        {/* Corner accents */}
-        <div className="absolute top-8 right-8 w-12 h-12 border-t-2 border-r-2 border-amber-600"></div>
-        <div className="absolute bottom-8 right-8 w-12 h-12 border-b-2 border-r-2 border-amber-600"></div>
+      {/* Subtle grain texture overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-30"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E")`,
+        }}
+      />
 
-        <div className="w-full max-w-md">
-          {/* Mobile logo */}
-          <div className="lg:hidden text-center mb-8">
-            <div className="mb-4 flex justify-center">
-              <Image
-                src="/Relish-logo.png"
-                alt="Relish - The Operating Manual for Relationships"
-                width={80}
-                height={80}
-                className="object-contain"
-                priority
+      <div className="w-full max-w-md relative z-10" style={{ animation: 'fadeInUp 0.6s ease-out' }}>
+        {/* Logo */}
+        <div className="flex justify-center mb-10">
+          <Image
+            src="/relish banner 04b.png"
+            alt="Relish"
+            width={300}
+            height={110}
+            className="object-contain"
+            priority
+          />
+        </div>
+
+        {/* Tagline */}
+        <p
+          className="text-center mb-8"
+          style={{
+            fontFamily: 'var(--font-parent-heading)',
+            fontSize: '15px',
+            color: '#8B7B6B',
+            letterSpacing: '0.04em',
+          }}
+        >
+          The Operating Manual for Relationships
+        </p>
+
+        {/* Card */}
+        <div
+          className="rounded-2xl p-8 sm:p-10"
+          style={{
+            background: 'rgba(255, 255, 255, 0.85)',
+            backdropFilter: 'blur(20px)',
+            boxShadow: '0 4px 32px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04)',
+            border: '1px solid rgba(217, 119, 6, 0.12)',
+          }}
+        >
+          {/* Error */}
+          {(error || authError) && (
+            <div
+              className="mb-6 p-4 rounded-xl"
+              style={{
+                background: 'rgba(220, 38, 38, 0.06)',
+                border: '1px solid rgba(220, 38, 38, 0.15)',
+              }}
+            >
+              <p className="text-sm font-mono text-red-800">{error || authError}</p>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label
+                htmlFor="email"
+                className="block font-mono text-xs uppercase tracking-wider mb-2 transition-colors duration-200"
+                style={{ color: focused === 'email' ? '#d97706' : '#9B8B7B' }}
+              >
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onFocus={() => setFocused('email')}
+                onBlur={() => setFocused(null)}
+                className="w-full px-4 py-3.5 rounded-xl font-mono text-sm transition-all duration-200 outline-none"
+                style={{
+                  backgroundColor: '#FAF5EE',
+                  border: focused === 'email' ? '2px solid #d97706' : '2px solid #E8E3DC',
+                  boxShadow: focused === 'email' ? '0 0 0 3px rgba(217, 119, 6, 0.1)' : 'none',
+                  color: '#2C2C2C',
+                }}
+                placeholder="you@example.com"
+                autoComplete="email"
+                disabled={loading}
               />
             </div>
-            <div className="font-mono text-xs text-slate-500 uppercase tracking-wider">
-              Operating Manual System
-            </div>
-          </div>
 
-          {/* Login card - Technical style */}
-          <div className="bg-white border-4 border-slate-800 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-8 sm:p-10 relative">
-            {/* Top corner detail */}
-            <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-amber-600"></div>
-            <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-amber-600"></div>
-
-            {/* Header */}
-            <div className="mb-6 pb-4 border-b-2 border-slate-800">
-              <div className="font-mono text-xs text-amber-600 uppercase tracking-wider mb-2">
-                USER AUTHENTICATION
-              </div>
-              <h2 className="font-mono text-2xl sm:text-3xl font-bold text-slate-900">
-                System Access
-              </h2>
-            </div>
-
-            {(error || authError) && (
-              <div className="mb-6 p-4 bg-red-50 border-2 border-red-600">
-                <div className="flex items-start gap-2">
-                  <div className="text-red-600 font-bold">⚠</div>
-                  <p className="text-sm font-mono text-red-900">{error || authError}</p>
-                </div>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block font-mono text-xs uppercase tracking-wider text-slate-700 mb-2"
-                >
-                  Email Address
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-slate-800 bg-white font-mono text-sm focus:outline-none focus:border-amber-600 focus:shadow-[2px_2px_0px_0px_rgba(217,119,6,1)] transition-all"
-                  placeholder="user@example.com"
-                  autoComplete="email"
-                  disabled={loading}
-                  data-testid="email-input"
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label
-                    htmlFor="password"
-                    className="block font-mono text-xs uppercase tracking-wider text-slate-700"
-                  >
-                    Password
-                  </label>
-                  <Link
-                    href="#"
-                    className="font-mono text-xs text-amber-600 hover:text-amber-700 uppercase tracking-wider"
-                  >
-                    Reset
-                  </Link>
-                </div>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-slate-800 bg-white font-mono text-sm focus:outline-none focus:border-amber-600 focus:shadow-[2px_2px_0px_0px_rgba(217,119,6,1)] transition-all"
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                  disabled={loading}
-                  data-testid="password-input"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-4 bg-slate-800 text-white font-mono text-sm font-bold uppercase tracking-wider border-2 border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-amber-600 hover:border-amber-600 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] disabled:opacity-50 disabled:cursor-not-allowed transition-all mt-8"
-                data-testid="login-button"
+            <div>
+              <label
+                htmlFor="password"
+                className="block font-mono text-xs uppercase tracking-wider mb-2 transition-colors duration-200"
+                style={{ color: focused === 'password' ? '#d97706' : '#9B8B7B' }}
               >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Authenticating...
-                  </span>
-                ) : (
-                  '→ Initiate Login'
-                )}
-              </button>
-            </form>
-
-            <div className="mt-8 pt-6 border-t-2 border-slate-800">
-              <p className="text-center font-mono text-xs text-slate-600 uppercase tracking-wider">
-                New User?{' '}
-                <Link
-                  href="/register"
-                  className="text-amber-600 hover:text-amber-700 font-bold"
-                >
-                  Register Account →
-                </Link>
-              </p>
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onFocus={() => setFocused('password')}
+                onBlur={() => setFocused(null)}
+                className="w-full px-4 py-3.5 rounded-xl font-mono text-sm transition-all duration-200 outline-none"
+                style={{
+                  backgroundColor: '#FAF5EE',
+                  border: focused === 'password' ? '2px solid #d97706' : '2px solid #E8E3DC',
+                  boxShadow: focused === 'password' ? '0 0 0 3px rgba(217, 119, 6, 0.1)' : 'none',
+                  color: '#2C2C2C',
+                }}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                disabled={loading}
+              />
             </div>
 
-            {/* Bottom corner detail */}
-            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-amber-600"></div>
-            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-amber-600"></div>
-          </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 font-mono text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-300 disabled:opacity-50 relative overflow-hidden group"
+              style={{
+                background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+                color: 'white',
+                boxShadow: '0 2px 12px rgba(30, 41, 59, 0.2)',
+              }}
+            >
+              <span
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                style={{
+                  background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                }}
+              />
+              <span className="relative">
+                {loading ? 'Signing in...' : 'Sign In'}
+              </span>
+            </button>
+          </form>
+        </div>
 
-          {/* Security notice */}
-          <div className="mt-6 p-4 bg-white border-2 border-slate-300 text-center">
-            <div className="flex items-center justify-center gap-2">
-              <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
-              <p className="font-mono text-xs text-slate-600 uppercase tracking-wider">
-                Secure Connection • Data Encrypted
-              </p>
-            </div>
-          </div>
+        {/* Footer link */}
+        <p className="mt-8 text-center" style={{ fontFamily: 'var(--font-parent-heading)', fontSize: '14px', color: '#8B7B6B' }}>
+          New here?{' '}
+          <Link href="/register" className="font-bold transition-colors duration-200" style={{ color: '#d97706' }}>
+            Create your account
+          </Link>
+        </p>
+
+        {/* Bottom decorative line */}
+        <div className="flex items-center justify-center mt-8 gap-3">
+          <div className="h-px w-12" style={{ background: 'linear-gradient(90deg, transparent, rgba(217, 119, 6, 0.3))' }} />
+          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'rgba(217, 119, 6, 0.3)' }} />
+          <div className="h-px w-12" style={{ background: 'linear-gradient(90deg, rgba(217, 119, 6, 0.3), transparent)' }} />
         </div>
       </div>
     </div>

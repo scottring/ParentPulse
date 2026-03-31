@@ -17,6 +17,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [focused, setFocused] = useState<string | null>(null);
 
   useEffect(() => {
     if (user && !authLoading) {
@@ -25,52 +26,21 @@ export default function RegisterPage() {
   }, [user, authLoading, router]);
 
   const validateForm = (): boolean => {
-    if (!name.trim()) {
-      setError('Please enter your name');
-      return false;
-    }
-
-    if (!email.trim()) {
-      setError('Please enter your email');
-      return false;
-    }
-
+    if (!name.trim()) { setError('Please enter your name'); return false; }
+    if (!email.trim()) { setError('Please enter your email'); return false; }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError('Please enter a valid email address');
-      return false;
-    }
-
-    if (!familyName.trim()) {
-      setError('Please enter your family name (e.g., "The Smith Family")');
-      return false;
-    }
-
-    if (!password) {
-      setError('Please enter a password');
-      return false;
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long');
-      return false;
-    }
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return false;
-    }
-
+    if (!emailRegex.test(email)) { setError('Please enter a valid email address'); return false; }
+    if (!familyName.trim()) { setError('Please enter your family name'); return false; }
+    if (!password) { setError('Please enter a password'); return false; }
+    if (password.length < 6) { setError('Password must be at least 6 characters'); return false; }
+    if (password !== confirmPassword) { setError('Passwords do not match'); return false; }
     return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     try {
       setLoading(true);
@@ -90,247 +60,279 @@ export default function RegisterPage() {
   if (authLoading || user) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FFF8F0' }}>
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-slate-800 border-t-amber-600 rounded-full animate-spin"></div>
-          <p className="mt-4 font-mono text-sm text-slate-600">LOADING SYSTEM...</p>
-        </div>
+        <div className="w-12 h-12 border-4 border-slate-800 border-t-amber-600 rounded-full animate-spin"></div>
       </div>
     );
   }
 
+  const inputStyle = (field: string) => ({
+    backgroundColor: '#FAF5EE',
+    border: focused === field ? '2px solid #d97706' : '2px solid #E8E3DC',
+    boxShadow: focused === field ? '0 0 0 3px rgba(217, 119, 6, 0.1)' : 'none',
+    color: '#2C2C2C',
+  });
+
+  const labelStyle = (field: string) => ({
+    color: focused === field ? '#d97706' : '#9B8B7B',
+  });
+
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: '#FFF8F0' }}>
-      {/* Left side - Getting started guide */}
-      <div className="hidden lg:flex lg:w-2/5 p-16 items-center justify-center" style={{ backgroundColor: '#E8DCC8' }}>
-        <div className="relative z-10 max-w-lg">
-          <div className="mb-12">
-            <Image
-              src="/relish banner 04b.png"
-              alt="Relish - The Operating Manual for Relationships"
-              width={400}
-              height={150}
-              className="object-contain"
-              priority
-            />
-          </div>
-
-          <div className="relative bg-white border-4 border-slate-800 p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] mb-8">
-            <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-amber-600"></div>
-            <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-amber-600"></div>
-            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-amber-600"></div>
-            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-amber-600"></div>
-
-            <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-4">
-              SYSTEM OVERVIEW
-            </div>
-
-            <h1 className="font-mono text-3xl font-bold mb-4 text-slate-900">
-              Create Your Manual Library
-            </h1>
-
-            <p className="font-mono text-sm text-slate-600 mb-6">
-              Build personalized operating guides to better understand the important people in your life.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="relative bg-white border-2 border-slate-800 p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-              <div className="absolute -top-3 -left-3 w-8 h-8 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-amber-600">
-                1
-              </div>
-              <div className="font-mono text-sm font-bold mb-1 text-slate-900">Create your account</div>
-              <div className="font-mono text-xs text-slate-600">Initialize system in minutes</div>
-            </div>
-
-            <div className="relative bg-white border-2 border-slate-800 p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-              <div className="absolute -top-3 -left-3 w-8 h-8 bg-slate-800 text-white font-mono font-bold flex items-center justify-center border-2 border-green-600">
-                2
-              </div>
-              <div className="font-mono text-sm font-bold mb-1 text-slate-900">Add people & build manuals</div>
-              <div className="font-mono text-xs text-slate-600">Document triggers, strategies, patterns</div>
-            </div>
-
-            <div className="relative bg-white border-2 border-slate-800 p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-              <div className="absolute -top-3 -left-3 w-8 h-8 bg-amber-600 text-white font-mono font-bold flex items-center justify-center border-2 border-slate-800">
-                3
-              </div>
-              <div className="font-mono text-sm font-bold mb-1 text-slate-900">Get AI-powered guidance</div>
-              <div className="font-mono text-xs text-slate-600">Weekly goals based on manual data</div>
-            </div>
-          </div>
-        </div>
+    <div
+      className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden"
+      style={{ backgroundColor: '#FFF8F0' }}
+    >
+      {/* Ambient background rings */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: '1000px',
+            height: '1000px',
+            border: '1px solid rgba(217, 119, 6, 0.05)',
+          }}
+        />
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: '780px',
+            height: '780px',
+            border: '1px solid rgba(217, 119, 6, 0.07)',
+          }}
+        />
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: '560px',
+            height: '560px',
+            border: '1px solid rgba(217, 119, 6, 0.04)',
+          }}
+        />
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: '700px',
+            height: '700px',
+            background: 'radial-gradient(circle, rgba(217, 119, 6, 0.03) 0%, transparent 70%)',
+          }}
+        />
       </div>
 
-      {/* Right side - Registration form */}
-      <div className="flex-1 flex items-center justify-center p-8 sm:p-12">
-        <div className="w-full max-w-lg">
-          {/* Mobile logo */}
-          <div className="lg:hidden text-center mb-8">
-            <div className="mb-3 flex justify-center">
-              <Image
-                src="/Relish-logo.png"
-                alt="Relish - The Operating Manual for Relationships"
-                width={80}
-                height={80}
-                className="object-contain"
-                priority
-              />
+      {/* Grain overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-30"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E")`,
+        }}
+      />
+
+      <div className="w-full max-w-md relative z-10" style={{ animation: 'fadeInUp 0.6s ease-out' }}>
+        {/* Logo */}
+        <div className="flex justify-center mb-8">
+          <Image
+            src="/relish banner 04b.png"
+            alt="Relish"
+            width={280}
+            height={100}
+            className="object-contain"
+            priority
+          />
+        </div>
+
+        {/* Tagline */}
+        <p
+          className="text-center mb-6"
+          style={{
+            fontFamily: 'var(--font-parent-heading)',
+            fontSize: '15px',
+            color: '#8B7B6B',
+            letterSpacing: '0.04em',
+          }}
+        >
+          Begin your journey together
+        </p>
+
+        {/* Card */}
+        <div
+          className="rounded-2xl p-8 sm:p-9"
+          style={{
+            background: 'rgba(255, 255, 255, 0.85)',
+            backdropFilter: 'blur(20px)',
+            boxShadow: '0 4px 32px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04)',
+            border: '1px solid rgba(217, 119, 6, 0.12)',
+          }}
+        >
+          {/* Error */}
+          {(error || authError) && (
+            <div
+              className="mb-5 p-4 rounded-xl"
+              style={{
+                background: 'rgba(220, 38, 38, 0.06)',
+                border: '1px solid rgba(220, 38, 38, 0.15)',
+              }}
+            >
+              <p className="text-sm font-mono text-red-800">{error || authError}</p>
             </div>
-            <p className="font-mono text-xs text-slate-600 uppercase tracking-wider">
-              The Operating Manual for Relationships
-            </p>
-          </div>
+          )}
 
-          {/* Registration card */}
-          <div className="relative bg-white border-4 border-slate-800 p-8 sm:p-10 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-            {/* Corner brackets */}
-            <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-amber-600"></div>
-            <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-amber-600"></div>
-            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-amber-600"></div>
-            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-amber-600"></div>
-
-            <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-4">
-              NEW USER REGISTRATION
-            </div>
-
-            <h2 className="font-mono text-3xl sm:text-4xl font-bold mb-2 text-slate-900">
-              Initialize Account
-            </h2>
-            <p className="font-mono text-sm text-slate-600 mb-6">
-              Complete form to access system
-            </p>
-
-            {(error || authError) && (
-              <div className="mb-6 p-4 border-2 border-red-600 bg-red-50">
-                <div className="inline-block px-2 py-1 bg-red-600 text-white font-mono text-xs mb-2">
-                  ⚠ ERROR
-                </div>
-                <p className="font-mono text-sm text-red-900">{error || authError}</p>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Name & Email side by side on larger screens */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="name" className="block font-mono text-xs font-bold mb-2 text-slate-600 uppercase tracking-wider">
-                  Full Name:
+                <label
+                  htmlFor="name"
+                  className="block font-mono text-xs uppercase tracking-wider mb-1.5 transition-colors duration-200"
+                  style={labelStyle('name')}
+                >
+                  Your Name
                 </label>
                 <input
                   id="name"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-3 font-mono text-sm border-2 border-slate-800 focus:outline-none focus:border-amber-600"
-                  style={{ backgroundColor: '#FFF8F0' }}
-                  placeholder="JOHN DOE"
+                  onFocus={() => setFocused('name')}
+                  onBlur={() => setFocused(null)}
+                  className="w-full px-4 py-3 rounded-xl font-mono text-sm transition-all duration-200 outline-none"
+                  style={inputStyle('name')}
+                  placeholder="Jane"
                   autoComplete="name"
                   disabled={loading}
                 />
               </div>
 
               <div>
-                <label htmlFor="email" className="block font-mono text-xs font-bold mb-2 text-slate-600 uppercase tracking-wider">
-                  Email Address:
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 font-mono text-sm border-2 border-slate-800 focus:outline-none focus:border-amber-600"
-                  style={{ backgroundColor: '#FFF8F0' }}
-                  placeholder="USER@EXAMPLE.COM"
-                  autoComplete="email"
-                  disabled={loading}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="familyName" className="block font-mono text-xs font-bold mb-2 text-slate-600 uppercase tracking-wider">
-                  Family Name:
+                <label
+                  htmlFor="familyName"
+                  className="block font-mono text-xs uppercase tracking-wider mb-1.5 transition-colors duration-200"
+                  style={labelStyle('familyName')}
+                >
+                  Family Name
                 </label>
                 <input
                   id="familyName"
                   type="text"
                   value={familyName}
                   onChange={(e) => setFamilyName(e.target.value)}
-                  className="w-full px-4 py-3 font-mono text-sm border-2 border-slate-800 focus:outline-none focus:border-amber-600"
-                  style={{ backgroundColor: '#FFF8F0' }}
-                  placeholder="THE SMITH FAMILY"
+                  onFocus={() => setFocused('familyName')}
+                  onBlur={() => setFocused(null)}
+                  className="w-full px-4 py-3 rounded-xl font-mono text-sm transition-all duration-200 outline-none"
+                  style={inputStyle('familyName')}
+                  placeholder="The Does"
                   autoComplete="organization"
                   disabled={loading}
                 />
               </div>
+            </div>
 
+            <div>
+              <label
+                htmlFor="email"
+                className="block font-mono text-xs uppercase tracking-wider mb-1.5 transition-colors duration-200"
+                style={labelStyle('email')}
+              >
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onFocus={() => setFocused('email')}
+                onBlur={() => setFocused(null)}
+                className="w-full px-4 py-3 rounded-xl font-mono text-sm transition-all duration-200 outline-none"
+                style={inputStyle('email')}
+                placeholder="you@example.com"
+                autoComplete="email"
+                disabled={loading}
+              />
+            </div>
+
+            {/* Password fields side by side */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="password" className="block font-mono text-xs font-bold mb-2 text-slate-600 uppercase tracking-wider">
-                  Password:
+                <label
+                  htmlFor="password"
+                  className="block font-mono text-xs uppercase tracking-wider mb-1.5 transition-colors duration-200"
+                  style={labelStyle('password')}
+                >
+                  Password
                 </label>
                 <input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 font-mono text-sm border-2 border-slate-800 focus:outline-none focus:border-amber-600"
-                  style={{ backgroundColor: '#FFF8F0' }}
+                  onFocus={() => setFocused('password')}
+                  onBlur={() => setFocused(null)}
+                  className="w-full px-4 py-3 rounded-xl font-mono text-sm transition-all duration-200 outline-none"
+                  style={inputStyle('password')}
                   placeholder="••••••••"
                   autoComplete="new-password"
                   disabled={loading}
                 />
-                <p className="mt-1 font-mono text-xs text-slate-500">MINIMUM 6 CHARACTERS</p>
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block font-mono text-xs font-bold mb-2 text-slate-600 uppercase tracking-wider">
-                  Confirm Password:
+                <label
+                  htmlFor="confirmPassword"
+                  className="block font-mono text-xs uppercase tracking-wider mb-1.5 transition-colors duration-200"
+                  style={labelStyle('confirmPassword')}
+                >
+                  Confirm
                 </label>
                 <input
                   id="confirmPassword"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-3 font-mono text-sm border-2 border-slate-800 focus:outline-none focus:border-amber-600"
-                  style={{ backgroundColor: '#FFF8F0' }}
+                  onFocus={() => setFocused('confirmPassword')}
+                  onBlur={() => setFocused(null)}
+                  className="w-full px-4 py-3 rounded-xl font-mono text-sm transition-all duration-200 outline-none"
+                  style={inputStyle('confirmPassword')}
                   placeholder="••••••••"
                   autoComplete="new-password"
                   disabled={loading}
                 />
               </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-4 bg-slate-800 text-white font-mono text-sm font-bold uppercase tracking-wider hover:bg-amber-600 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 disabled:cursor-not-allowed mt-6"
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    PROCESSING...
-                  </span>
-                ) : (
-                  'CREATE ACCOUNT →'
-                )}
-              </button>
-            </form>
-
-            <div className="mt-8 pt-6 border-t-2 border-slate-200">
-              <p className="text-center font-mono text-xs text-slate-600">
-                EXISTING USER?{' '}
-                <Link
-                  href="/login"
-                  className="font-bold text-amber-600 hover:text-slate-800 uppercase tracking-wider"
-                >
-                  SIGN IN
-                </Link>
-              </p>
             </div>
-          </div>
 
-          {/* Privacy note */}
-          <div className="mt-6 text-center">
-            <div className="inline-block px-3 py-1 border border-slate-300 bg-white">
-              <p className="font-mono text-xs text-slate-500 uppercase tracking-wider">🔒 SECURE & PRIVATE</p>
-            </div>
-          </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 font-mono text-sm font-bold uppercase tracking-wider rounded-xl transition-all duration-300 disabled:opacity-50 relative overflow-hidden group mt-2"
+              style={{
+                background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+                color: 'white',
+                boxShadow: '0 2px 12px rgba(30, 41, 59, 0.2)',
+              }}
+            >
+              <span
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                style={{
+                  background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                }}
+              />
+              <span className="relative">
+                {loading ? 'Creating account...' : 'Create Account'}
+              </span>
+            </button>
+          </form>
+        </div>
+
+        {/* Footer */}
+        <p className="mt-8 text-center" style={{ fontFamily: 'var(--font-parent-heading)', fontSize: '14px', color: '#8B7B6B' }}>
+          Already have an account?{' '}
+          <Link href="/login" className="font-bold transition-colors duration-200" style={{ color: '#d97706' }}>
+            Sign in
+          </Link>
+        </p>
+
+        {/* Bottom accent */}
+        <div className="flex items-center justify-center mt-8 gap-3">
+          <div className="h-px w-12" style={{ background: 'linear-gradient(90deg, transparent, rgba(217, 119, 6, 0.3))' }} />
+          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'rgba(217, 119, 6, 0.3)' }} />
+          <div className="h-px w-12" style={{ background: 'linear-gradient(90deg, rgba(217, 119, 6, 0.3), transparent)' }} />
         </div>
       </div>
     </div>

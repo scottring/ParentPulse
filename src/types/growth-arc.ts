@@ -121,6 +121,13 @@ export interface DimensionAssessment {
   confidence: 'low' | 'medium' | 'high';
   dataPointCount: number;
 
+  // Per-perspective sub-scores (for 9-zone visualization)
+  perspectiveScores?: {
+    self?: number;               // 1.0 - 5.0
+    spouse?: number;
+    kids?: number;
+  };
+
   // History
   scoreHistory: ScoreSnapshot[];
 

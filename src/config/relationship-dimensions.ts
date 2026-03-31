@@ -14,11 +14,16 @@
  * - Baumrind/Maccoby-Martin: Parenting styles (most replicated in developmental psych)
  * - Self-Determination Theory: Skinner et al. six parenting dimensions
  * - Siegel: Interpersonal neurobiology / Whole-Brain Parenting
+ * - Gross: Process model of emotion regulation
+ * - Maslach: Burnout inventory (adapted for parenting/caregiving)
+ * - Cohen: Perceived Stress Scale
+ * - Fonagy: Reflective functioning / mentalization
+ * - Deci & Ryan: Self-Determination Theory (autonomy, competence, relatedness)
  */
 
 // ==================== Types ====================
 
-export type DimensionDomain = 'couple' | 'parent_child';
+export type DimensionDomain = 'couple' | 'parent_child' | 'self';
 
 export type CoupleDimensionId =
   | 'love_maps'
@@ -39,7 +44,14 @@ export type ParentChildDimensionId =
   | 'repair_after_rupture'
   | 'mindsight';
 
-export type DimensionId = CoupleDimensionId | ParentChildDimensionId;
+export type SelfDimensionId =
+  | 'emotional_regulation'
+  | 'self_care_burnout'
+  | 'personal_growth'
+  | 'stress_management'
+  | 'self_awareness';
+
+export type DimensionId = CoupleDimensionId | ParentChildDimensionId | SelfDimensionId;
 
 export type ResponseType = 'likert_5' | 'emoji_scale' | 'yes_no' | 'frequency';
 
@@ -671,13 +683,215 @@ const PARENT_CHILD_DIMENSIONS: DimensionDef[] = [
   },
 ];
 
+// ==================== Self Dimensions ====================
+
+const SELF_DIMENSIONS: DimensionDef[] = [
+  {
+    id: 'emotional_regulation',
+    domain: 'self',
+    name: 'Emotional Regulation',
+    shortDescription: 'Your ability to manage and respond to emotional experiences',
+    researchBasis: 'Gross process model of emotion regulation',
+    researchDetail: 'James Gross\'s process model identifies five families of emotion regulation strategies: situation selection, situation modification, attentional deployment, cognitive change (reappraisal), and response modulation (suppression). Research consistently shows that reappraisal leads to better outcomes than suppression. Parents who can regulate their own emotions co-regulate more effectively with children and partners.',
+    existingQuestionMappings: ['triggers_q1', 'triggers_q3'],
+    minDataPointsForScore: 2,
+    assessmentPrompts: [
+      {
+        promptId: 'er_self_1',
+        questionText: 'When you feel overwhelmed, how quickly can you return to a calm state?',
+        responseType: 'likert_5',
+        weight: 0.9,
+        forPerspective: 'self',
+      },
+      {
+        promptId: 'er_self_2',
+        questionText: 'How often do you react to stressful situations in ways you later regret?',
+        responseType: 'frequency',
+        weight: 0.8,
+        forPerspective: 'self',
+      },
+      {
+        promptId: 'er_self_3',
+        questionText: 'Does your partner seem able to manage their emotions before responding to conflict?',
+        responseType: 'likert_5',
+        weight: 0.7,
+        forPerspective: 'observer',
+      },
+    ],
+    arcGuidance: {
+      awarenessGoal: 'Notice your emotional triggers and the gap between stimulus and response',
+      practiceGoal: 'Build a pause habit — name the emotion before acting on it',
+      integrationGoal: 'Develop flexible regulation strategies that match the situation',
+      keyExercises: ['emotion labeling in the moment', 'STOP technique (Stop, Take a breath, Observe, Proceed)', 'body scan for early stress signals', 'reappraisal practice'],
+    },
+  },
+  {
+    id: 'self_care_burnout',
+    domain: 'self',
+    name: 'Self-Care & Burnout',
+    shortDescription: 'How well you maintain your own wellbeing and energy',
+    researchBasis: 'Maslach Burnout Inventory adapted for parenting/caregiving',
+    researchDetail: 'Maslach\'s research identifies three burnout dimensions: emotional exhaustion, depersonalization, and reduced personal accomplishment. Parental burnout — validated by Roskam & Mikolajczak (2018) — affects 5-20% of parents and correlates with neglect, escape ideation, and partner conflict. Self-care isn\'t selfish; depleted parents can\'t sustain attunement.',
+    existingQuestionMappings: ['boundaries_q1'],
+    minDataPointsForScore: 2,
+    assessmentPrompts: [
+      {
+        promptId: 'sc_self_1',
+        questionText: 'How often do you feel emotionally drained by the end of the day?',
+        responseType: 'frequency',
+        weight: 0.9,
+        forPerspective: 'self',
+      },
+      {
+        promptId: 'sc_self_2',
+        questionText: 'Do you regularly make time for activities that recharge you?',
+        responseType: 'likert_5',
+        weight: 0.8,
+        forPerspective: 'self',
+      },
+      {
+        promptId: 'sc_self_3',
+        questionText: 'Does your partner seem burned out or running on empty?',
+        responseType: 'likert_5',
+        weight: 0.7,
+        forPerspective: 'observer',
+      },
+    ],
+    arcGuidance: {
+      awarenessGoal: 'Audit where your energy goes and identify depletion patterns',
+      practiceGoal: 'Protect one non-negotiable self-care activity per week',
+      integrationGoal: 'Build sustainable rhythms where rest is built in, not earned',
+      keyExercises: ['energy audit', 'non-negotiable time block', 'burnout warning signs checklist', 'permission to rest practice'],
+    },
+  },
+  {
+    id: 'personal_growth',
+    domain: 'self',
+    name: 'Personal Growth',
+    shortDescription: 'Sense of developing as an individual, not just a role',
+    researchBasis: 'Self-Determination Theory (Deci & Ryan) — autonomy, competence, relatedness',
+    researchDetail: 'SDT research shows that fulfillment of three basic psychological needs — autonomy (feeling volitional), competence (feeling effective), and relatedness (feeling connected) — predicts wellbeing across cultures. Parents who maintain a sense of personal identity and growth outside their caregiving roles report higher life satisfaction and better relationship quality.',
+    existingQuestionMappings: ['overview_q3'],
+    minDataPointsForScore: 2,
+    assessmentPrompts: [
+      {
+        promptId: 'pg_1',
+        questionText: 'Do you feel like you\'re growing as a person, beyond just your role as a parent or partner?',
+        responseType: 'likert_5',
+        weight: 0.9,
+        forPerspective: 'self',
+      },
+      {
+        promptId: 'pg_2',
+        questionText: 'How often do you pursue interests or goals that are just for you?',
+        responseType: 'frequency',
+        weight: 0.8,
+        forPerspective: 'self',
+      },
+      {
+        promptId: 'pg_3',
+        questionText: 'Does your partner maintain their own interests and sense of identity?',
+        responseType: 'likert_5',
+        weight: 0.6,
+        forPerspective: 'observer',
+      },
+    ],
+    arcGuidance: {
+      awarenessGoal: 'Reflect on which parts of your identity have been put on hold',
+      practiceGoal: 'Re-engage one dormant interest or learning goal',
+      integrationGoal: 'Hold multiple identities — parent AND individual — without guilt',
+      keyExercises: ['identity wheel exercise', 'dormant dream inventory', 'micro-learning commitment', 'values clarification'],
+    },
+  },
+  {
+    id: 'stress_management',
+    domain: 'self',
+    name: 'Stress Management',
+    shortDescription: 'How effectively you cope with daily and chronic stress',
+    researchBasis: 'Cohen Perceived Stress Scale + allostatic load research',
+    researchDetail: 'Cohen\'s Perceived Stress Scale (1983) — the most widely used stress measure in psychology — assesses the degree to which situations are appraised as unpredictable, uncontrollable, and overloading. Chronic stress accumulates as allostatic load (McEwen), degrading physical health, cognitive function, and relational capacity. Effective stress management is a meta-skill that enables everything else.',
+    existingQuestionMappings: ['triggers_q1', 'triggers_q2'],
+    minDataPointsForScore: 2,
+    assessmentPrompts: [
+      {
+        promptId: 'sm_self_1',
+        questionText: 'How often do you feel that things are piling up beyond your ability to cope?',
+        responseType: 'frequency',
+        weight: 0.9,
+        forPerspective: 'self',
+      },
+      {
+        promptId: 'sm_self_2',
+        questionText: 'Do you have reliable strategies for managing stress that actually work for you?',
+        responseType: 'likert_5',
+        weight: 0.8,
+        forPerspective: 'self',
+      },
+      {
+        promptId: 'sm_self_3',
+        questionText: 'When your partner is stressed, does it seem like they have healthy ways to cope?',
+        responseType: 'likert_5',
+        weight: 0.7,
+        forPerspective: 'observer',
+      },
+    ],
+    arcGuidance: {
+      awarenessGoal: 'Map your stress patterns — what triggers overload, what signals appear first',
+      practiceGoal: 'Build a stress toolkit with 2-3 go-to strategies you trust',
+      integrationGoal: 'Shift from reactive coping to proactive stress inoculation',
+      keyExercises: ['stress trigger mapping', 'physiological sigh practice', 'cognitive load reduction', 'weekly stress debrief with partner'],
+    },
+  },
+  {
+    id: 'self_awareness',
+    domain: 'self',
+    name: 'Self-Awareness',
+    shortDescription: 'Understanding your own patterns, needs, and blind spots',
+    researchBasis: 'Fonagy reflective functioning / mentalization (turned inward)',
+    researchDetail: 'Peter Fonagy\'s mentalization research shows that the ability to understand one\'s own mental states — intentions, feelings, desires, reasons for behavior — is the foundation for understanding others. Parents with high reflective functioning raise more securely attached children. Self-awareness is not navel-gazing; it\'s the prerequisite for accurate empathy and intentional behavior change.',
+    existingQuestionMappings: ['overview_q4', 'triggers_q3'],
+    minDataPointsForScore: 2,
+    assessmentPrompts: [
+      {
+        promptId: 'sa_1',
+        questionText: 'How well do you understand why you react the way you do in difficult moments?',
+        responseType: 'likert_5',
+        weight: 0.9,
+        forPerspective: 'self',
+      },
+      {
+        promptId: 'sa_2',
+        questionText: 'Can you name your core emotional needs in relationships?',
+        responseType: 'likert_5',
+        weight: 0.8,
+        forPerspective: 'self',
+      },
+      {
+        promptId: 'sa_3',
+        questionText: 'Does your partner show insight into their own patterns and triggers?',
+        responseType: 'likert_5',
+        weight: 0.7,
+        forPerspective: 'observer',
+      },
+    ],
+    arcGuidance: {
+      awarenessGoal: 'Start noticing the stories you tell yourself in emotionally charged moments',
+      practiceGoal: 'Build a reflective practice — journaling, therapy, or structured self-check-ins',
+      integrationGoal: 'Develop a working model of yourself that you update with new data',
+      keyExercises: ['inner narrative tracking', 'origin story reflection', 'blind spot conversations with partner', 'weekly self-check-in ritual'],
+    },
+  },
+];
+
 // ==================== Exports ====================
 
 export const ALL_DIMENSIONS: DimensionDef[] = [
+  ...SELF_DIMENSIONS,
   ...COUPLE_DIMENSIONS,
   ...PARENT_CHILD_DIMENSIONS,
 ];
 
+export const SELF_DIMENSION_IDS = SELF_DIMENSIONS.map(d => d.id);
 export const COUPLE_DIMENSION_IDS = COUPLE_DIMENSIONS.map(d => d.id);
 export const PARENT_CHILD_DIMENSION_IDS = PARENT_CHILD_DIMENSIONS.map(d => d.id);
 

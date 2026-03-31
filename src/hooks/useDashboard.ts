@@ -46,6 +46,7 @@ export interface DashboardData {
   loading: boolean;
   error: string | null;
   hasAssessments: boolean;
+  assessments: DimensionAssessment[];
   // For onboarding: the first spouse (if any)
   spouse: Person | null;
   // People who need observer contributions from the user
@@ -297,6 +298,7 @@ export function useDashboard(): DashboardData {
     loading: isAllLoading,
     error,
     hasAssessments: assessments.length > 0,
+    assessments,
     spouse,
     peopleNeedingContributions,
   };

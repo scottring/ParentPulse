@@ -1,11 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useFamily } from '@/hooks/useFamily';
 import MainLayout from '@/components/layout/MainLayout';
+import { doc, updateDoc } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase';
+import { DomainWeights, DEFAULT_DOMAIN_WEIGHTS } from '@/types/ring-scores';
+import { scoreToColor } from '@/lib/scoring-engine';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -16,6 +20,49 @@ export default function SettingsPage() {
   const [dailyReminder, setDailyReminder] = useState(true);
   const [weeklyInsights, setWeeklyInsights] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Domain weight state
+  const [weights, setWeights] = useState<DomainWeights>(DEFAULT_DOMAIN_WEIGHTS);
+  const [weightsSaving, setWeightsSaving] = useState(false);
+
+  const handleWeightChange = useCallback((domain: keyof DomainWeights, value: number) => {
+    setWeights((prev) => {
+      const otherDomains = (Object.keys(prev) as (keyof DomainWeights)[])
+        .filter((d) => d !== domain);
+      const remaining = 1 - value;
+      const otherTotal = otherDomains.reduce((sum, d) => sum + prev[d], 0);
+
+      const next = { ...prev, [domain]: value };
+      if (otherTotal > 0) {
+        for (const d of otherDomains) {
+          next[d] = (prev[d] / otherTotal) * remaining;
+        }
+      } else {
+        for (const d of otherDomains) {
+          next[d] = remaining / otherDomains.length;
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSaveWeights = useCallback(async () => {
+    if (!user) return;
+    setWeightsSaving(true);
+    try {
+      await updateDoc(doc(firestore, 'users', user.userId), {
+        'settings.domainWeights': weights,
+      });
+    } catch (err) {
+      console.error('Failed to save weights:', err);
+    } finally {
+      setWeightsSaving(false);
+    }
+  }, [user, weights]);
+
+  const handleResetWeights = useCallback(() => {
+    setWeights(DEFAULT_DOMAIN_WEIGHTS);
+  }, []);
 
   // Invitation state
   const [showInviteForm, setShowInviteForm] = useState(false);
@@ -293,6 +340,74 @@ export default function SettingsPage() {
                 }}
               >
                 Change
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Relationship Health Weights */}
+        <div className="mb-8 animate-fade-in-up" style={{ animationDelay: '0.25s' }}>
+          <h2 className="parent-heading text-xl mb-4" style={{ color: 'var(--parent-text)' }}>
+            Health Score Weights
+          </h2>
+          <div className="parent-card p-6 space-y-6">
+            <p className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
+              Adjust how much each domain contributes to your overall health score.
+              The three weights must total 100%.
+            </p>
+
+            {([
+              { key: 'self' as const, label: 'Self', desc: 'Personal wellbeing & emotional regulation' },
+              { key: 'couple' as const, label: 'Spouse', desc: 'Marriage/partnership health' },
+              { key: 'parent_child' as const, label: 'Parent', desc: 'Parenting relationship health' },
+            ]).map(({ key, label, desc }) => (
+              <div key={key} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-sm" style={{ color: 'var(--parent-text)' }}>
+                      {label}
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--parent-text-light)' }}>
+                      {desc}
+                    </div>
+                  </div>
+                  <span className="font-mono text-sm font-bold" style={{ color: 'var(--parent-text)' }}>
+                    {Math.round(weights[key] * 100)}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={Math.round(weights[key] * 100)}
+                  onChange={(e) => handleWeightChange(key, Number(e.target.value) / 100)}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+                  style={{
+                    background: `linear-gradient(to right, var(--parent-accent) ${Math.round(weights[key] * 100)}%, #e0e0e0 ${Math.round(weights[key] * 100)}%)`,
+                  }}
+                />
+              </div>
+            ))}
+
+            <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: 'var(--parent-border)' }}>
+              <button
+                onClick={handleResetWeights}
+                className="text-sm font-medium px-4 py-2 rounded-lg transition-all hover:shadow-md"
+                style={{
+                  border: '1px solid var(--parent-border)',
+                  color: 'var(--parent-text-light)',
+                }}
+              >
+                Reset to Equal (33/33/33)
+              </button>
+              <button
+                onClick={handleSaveWeights}
+                disabled={weightsSaving}
+                className="text-sm font-medium px-4 py-2 rounded-lg text-white transition-all hover:shadow-md disabled:opacity-50"
+                style={{ backgroundColor: 'var(--parent-accent)' }}
+              >
+                {weightsSaving ? 'Saving...' : 'Save Weights'}
               </button>
             </div>
           </div>

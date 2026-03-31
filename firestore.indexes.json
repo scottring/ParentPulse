@@ -551,6 +551,20 @@
       ]
     },
     {
+      "collectionGroup": "growth_items",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "growth_arcs",
       "queryScope": "COLLECTION",
       "fields": [

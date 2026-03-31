@@ -4028,6 +4028,135 @@ exports.resetDemoAccount = onCall(
 );
 
 /**
+ * Admin function: Clone a source family's data into the demo account.
+ * Creates a fresh copy of all people, contributions, manuals, assessments,
+ * growth arcs, and growth items — remapped to the demo family.
+ */
+exports.admin_cloneFamilyToDemo = onCall(
+    {
+      enforceAppCheck: false,
+      memory: "1GiB",
+      timeoutSeconds: 120,
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+      const db = admin.firestore();
+
+      try {
+        if (!request.auth) throw new Error("Authentication required");
+
+        // Verify caller is admin
+        const callerDoc = await db.collection("users").doc(request.auth.uid).get();
+        if (!callerDoc.exists || !callerDoc.data().isAdmin) {
+          throw new Error("Admin privileges required");
+        }
+
+        const {sourceFamilyId} = request.data;
+        if (!sourceFamilyId) throw new Error("sourceFamilyId is required");
+
+        // Find the demo user
+        const demoSnap = await db.collection("users")
+            .where("isDemo", "==", true).limit(1).get();
+        if (demoSnap.empty) throw new Error("No demo account found (isDemo=true)");
+
+        const demoUser = demoSnap.docs[0];
+        const demoUserId = demoUser.id;
+        const demoFamilyId = demoUser.data().familyId;
+        if (!demoFamilyId) throw new Error("Demo user has no familyId");
+
+        logger.info(`Cloning family ${sourceFamilyId} -> demo family ${demoFamilyId}`);
+
+        // Collections to clone (familyId-scoped)
+        const collections = [
+          "people", "person_manuals", "contributions",
+          "dimension_assessments", "growth_arcs", "growth_items",
+          "acute_events",
+        ];
+
+        // ID mapping: source doc ID -> new doc ID
+        const idMap = {};
+        // Also map source user IDs to demo user ID
+        const sourceUsersSnap = await db.collection("users")
+            .where("familyId", "==", sourceFamilyId).get();
+        const sourceUserIds = sourceUsersSnap.docs.map((d) => d.id);
+
+        // Step 1: Delete existing demo data
+        for (const collName of collections) {
+          const existing = await db.collection(collName)
+              .where("familyId", "==", demoFamilyId).get();
+          if (!existing.empty) {
+            const batch = db.batch();
+            existing.forEach((doc) => batch.delete(doc.ref));
+            await batch.commit();
+          }
+        }
+
+        let totalCloned = 0;
+
+        // Step 2: Clone each collection
+        for (const collName of collections) {
+          const sourceSnap = await db.collection(collName)
+              .where("familyId", "==", sourceFamilyId).get();
+
+          if (sourceSnap.empty) continue;
+
+          const batch = db.batch();
+          for (const sourceDoc of sourceSnap.docs) {
+            const newRef = db.collection(collName).doc();
+            const data = {...sourceDoc.data()};
+
+            // Remap familyId
+            data.familyId = demoFamilyId;
+
+            // Remap user references to demo user
+            for (const uid of sourceUserIds) {
+              if (data.userId === uid) data.userId = demoUserId;
+              if (data.contributorId === uid) data.contributorId = demoUserId;
+              if (data.assignedToUserId === uid) data.assignedToUserId = demoUserId;
+              if (data.addedByUserId === uid) data.addedByUserId = demoUserId;
+              if (data.createdBy === uid) data.createdBy = demoUserId;
+              if (data.linkedUserId === uid) data.linkedUserId = demoUserId;
+              if (Array.isArray(data.participantIds)) {
+                data.participantIds = data.participantIds.map(
+                    (id) => sourceUserIds.includes(id) ? demoUserId : id,
+                );
+              }
+            }
+
+            // Store ID mapping for cross-references
+            idMap[sourceDoc.id] = newRef.id;
+
+            // Update self-referencing ID fields
+            if (data.personId && idMap[data.personId]) {
+              data.personId = idMap[data.personId];
+            }
+            if (data.manualId && idMap[data.manualId]) {
+              data.manualId = idMap[data.manualId];
+            }
+
+            batch.set(newRef, data);
+            totalCloned++;
+          }
+          await batch.commit();
+          logger.info(`Cloned ${sourceSnap.size} docs from ${collName}`);
+        }
+
+        logger.info(`Clone complete: ${totalCloned} total documents`);
+
+        return {
+          success: true,
+          totalCloned,
+          demoFamilyId,
+          demoUserId,
+        };
+      } catch (error) {
+        logger.error("Error cloning family to demo:", error);
+        return {success: false, error: error.message};
+      }
+    },
+);
+
+/**
  * Extract draft onboarding answers from uploaded personal documents.
  *
  * Privacy: Raw documents are received as base64 in the request payload,
@@ -4757,6 +4886,32 @@ const DIMENSION_QUESTION_MAPPINGS = {
     domain: "parent_child",
     name: "Mindsight",
   },
+  // Self dimensions
+  emotional_regulation: {
+    questionIds: ["triggers_q1", "triggers_q3"],
+    domain: "self",
+    name: "Emotional Regulation",
+  },
+  self_care_burnout: {
+    questionIds: ["boundaries_q1"],
+    domain: "self",
+    name: "Self-Care & Burnout",
+  },
+  personal_growth: {
+    questionIds: ["overview_q3"],
+    domain: "self",
+    name: "Personal Growth",
+  },
+  stress_management: {
+    questionIds: ["triggers_q1", "triggers_q2"],
+    domain: "self",
+    name: "Stress Management",
+  },
+  self_awareness: {
+    questionIds: ["overview_q4", "triggers_q3"],
+    domain: "self",
+    name: "Self-Awareness",
+  },
 };
 
 /**
@@ -4888,6 +5043,18 @@ exports.seedDimensionAssessments = onCall(
         }
       }
 
+      // Self domain: each adult gets individual self-assessment
+      for (const [personId, personData] of spouses) {
+        pairsToScore.push({
+          ids: [personId],
+          names: [personData.name],
+          domain: "self",
+          dimensions: Object.entries(DIMENSION_QUESTION_MAPPINGS)
+              .filter(([, d]) => d.domain === "self")
+              .map(([id, d]) => ({id, name: d.name})),
+        });
+      }
+
       if (pairsToScore.length === 0) {
         return {success: false, message: "No relationship pairs found"};
       }
@@ -4898,13 +5065,18 @@ exports.seedDimensionAssessments = onCall(
           pair.dimensions.map((d) => `  - ${d.id}: ${d.name}`).join("\n");
       }).join("\n");
 
-      const scoringPrompt = `You are a relationship assessment expert. Based on the following data about a family, score each relationship dimension on a 1.0-5.0 scale.
+      const scoringPrompt = `You are a relationship and personal wellbeing assessment expert. Based on the following data about a family, score each dimension on a 1.0-5.0 scale.
 
 FAMILY DATA:
-${contextForAI.slice(0, 6000)}
+${contextForAI.slice(0, 8000)}
 
 DIMENSIONS TO SCORE:
 ${dimensionList}
+
+There are three types of dimensions:
+- "couple" dimensions: scored based on the dynamic BETWEEN the two people
+- "parent_child" dimensions: scored based on the parent's relationship WITH the child
+- "self" dimensions: scored based on an INDIVIDUAL's personal wellbeing (emotional regulation, stress, self-care, growth, self-awareness). For self dimensions, each entry has only one person.
 
 Score each dimension based on the evidence. Use the FULL range:
 - 1.0-2.0: Clear problems, frequent negative patterns
@@ -4912,7 +5084,15 @@ Score each dimension based on the evidence. Use the FULL range:
 - 3.0-4.0: Generally healthy, room for growth
 - 4.0-5.0: Strong, consistent positive patterns
 
-Also provide a 1-sentence narrative for each relationship pair summarizing their dynamic.
+Also provide a 1-sentence narrative for each entry summarizing the dynamic (for couples/parent-child) or personal state (for self).
+
+For EACH dimension, provide:
+- A blended score (overall assessment)
+- Per-perspective sub-scores showing how each perspective rates it:
+  - "self": how the person/couple rates themselves on this dimension
+  - "spouse": how their spouse/partner rates them (observer view)
+  - "kids": how children perceive this (if any child data exists)
+  These perspective scores can and SHOULD differ — the gap between them is valuable data.
 
 Return JSON:
 {
@@ -4920,23 +5100,34 @@ Return JSON:
     {
       "names": ["Name1", "Name2"],
       "domain": "couple",
-      "narrative": "Warm 1-2 sentence summary of this relationship's strengths and growth areas.",
+      "narrative": "Warm 1-2 sentence summary.",
       "scores": {
-        "dimension_id": 3.5,
-        "another_dimension": 2.1
+        "dimension_id": { "blended": 3.5, "self": 3.8, "spouse": 3.2, "kids": 3.5 },
+        "another_dimension": { "blended": 2.1, "self": 2.8, "spouse": 1.4 }
+      }
+    },
+    {
+      "names": ["Name1"],
+      "domain": "self",
+      "narrative": "Summary of this person's individual wellbeing.",
+      "scores": {
+        "emotional_regulation": { "blended": 3.2, "self": 3.8, "spouse": 2.6 }
       }
     }
   ]
 }
 
-Be honest and differentiated — NOT all 3.0. Use the actual data. If you see conflict patterns, score conflict_style LOW. If you see warmth, score warmth HIGH. Every pair should have a different profile.
+Rules:
+- Omit a perspective sub-score if there's no data for that perspective (e.g., no kids data → omit "kids")
+- Perspective scores SHOULD differ when data suggests different views — a self score of 4.0 with a spouse score of 2.0 reveals a blind spot
+- Be honest and differentiated — NOT all 3.0. Use the actual data.
 Return ONLY valid JSON.`;
 
       try {
         const client = getAnthropic();
         const response = await client.messages.create({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 2000,
+          max_tokens: 3000,
           messages: [{role: "user", content: scoringPrompt}],
         });
 
@@ -4962,11 +5153,24 @@ Return ONLY valid JSON.`;
           if (!matchedPair) continue;
 
           for (const dim of matchedPair.dimensions) {
-            const score = pairResult.scores?.[dim.id];
-            if (score === undefined) continue;
+            const rawScore = pairResult.scores?.[dim.id];
+            if (rawScore === undefined) continue;
+
+            // Handle both formats: number (legacy) or object with blended + perspectives
+            const isObject = typeof rawScore === "object" && rawScore !== null;
+            const blended = isObject ? rawScore.blended : rawScore;
+            if (blended === undefined) continue;
 
             const clampedScore = Math.max(1.0,
-                Math.min(5.0, Math.round(score * 10) / 10));
+                Math.min(5.0, Math.round(blended * 10) / 10));
+
+            // Extract per-perspective sub-scores
+            const clamp = (v) => v !== undefined ? Math.max(1.0, Math.min(5.0, Math.round(v * 10) / 10)) : undefined;
+            const perspectiveScores = isObject ? {
+              ...(rawScore.self !== undefined && {self: clamp(rawScore.self)}),
+              ...(rawScore.spouse !== undefined && {spouse: clamp(rawScore.spouse)}),
+              ...(rawScore.kids !== undefined && {kids: clamp(rawScore.kids)}),
+            } : {};
 
             assessmentsToCreate.push({
               familyId,
@@ -4975,6 +5179,7 @@ Return ONLY valid JSON.`;
               participantIds: matchedPair.ids,
               participantNames: matchedPair.names,
               currentScore: clampedScore,
+              perspectiveScores: Object.keys(perspectiveScores).length > 0 ? perspectiveScores : null,
               confidence: "medium",
               dataPointCount: contributions.length,
               scoreHistory: [{
@@ -5066,6 +5271,167 @@ Return ONLY valid JSON.`;
         throw new Error(
             `Dimension assessment seeding failed: ${err.message}`,
         );
+      }
+    },
+);
+
+/**
+ * Process an acute event (GPS interruption).
+ * User describes something that just happened; AI maps it to dimensions,
+ * decides whether to pivot/reinforce/absorb, and surfaces immediate actions.
+ */
+exports.processAcuteEvent = onCall(
+    {
+      region: "us-central1",
+      memory: "512MiB",
+      timeoutSeconds: 60,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const logger = require("firebase-functions/logger");
+      const db = admin.firestore();
+
+      const {freeText} = request.data;
+      if (!freeText || typeof freeText !== "string" || !freeText.trim()) {
+        throw new Error("Event description is required");
+      }
+
+      // Get user and family
+      const userDoc = await db.collection("users")
+          .doc(request.auth.uid).get();
+      if (!userDoc.exists) throw new Error("User not found");
+      const userData = userDoc.data();
+      const familyId = userData.familyId;
+      if (!familyId) throw new Error("User has no family");
+
+      // Get current dimension assessments for context
+      const assessSnap = await db.collection("dimension_assessments")
+          .where("familyId", "==", familyId).get();
+      const assessments = [];
+      assessSnap.forEach((doc) => assessments.push(doc.data()));
+
+      // Get active arcs
+      const arcsSnap = await db.collection("growth_arcs")
+          .where("familyId", "==", familyId)
+          .where("status", "==", "active").get();
+      const activeArcs = [];
+      arcsSnap.forEach((doc) => activeArcs.push(doc.data()));
+
+      const dimensionSummary = assessments.map((a) =>
+        `${a.dimensionId} (${a.domain}): ${a.currentScore}/5.0`,
+      ).join("\n");
+
+      const arcSummary = activeArcs.map((a) =>
+        `Active arc: ${a.title} targeting ${a.dimensionId} (week ${a.currentWeek}/${a.durationWeeks})`,
+      ).join("\n") || "No active growth arcs";
+
+      const prompt = `You are a relationship health AI advisor. A user has reported an acute event in their family life. Analyze it in context of their current dimension scores and active growth trajectory.
+
+EVENT: "${freeText}"
+
+CURRENT DIMENSION SCORES:
+${dimensionSummary}
+
+ACTIVE TRAJECTORY:
+${arcSummary}
+
+Analyze this event and respond with JSON:
+{
+  "affectedDimensions": [
+    { "dimensionId": "conflict_style", "impact": -0.5 }
+  ],
+  "recommendation": "urgent_pivot" | "reinforcement" | "background_absorption",
+  "reasoning": "1-2 sentence explanation of why this recommendation",
+  "suggestedActions": [
+    "Specific immediate action the user can take right now"
+  ]
+}
+
+Rules:
+- "urgent_pivot": The event reveals something more urgent than the current arc. Use sparingly.
+- "reinforcement": The event relates to what they're already working on. Most common.
+- "background_absorption": Log it, but don't change course. For minor events.
+- Impact is a score adjustment (-2.0 to +1.0). Negative for conflict/rupture, positive for breakthrough moments.
+- Max 2 suggested actions. Keep them concrete and doable in 5 minutes.
+- Only reference dimensionIds that exist in the scores above.
+
+Return ONLY valid JSON.`;
+
+      try {
+        const client = getAnthropic();
+        const response = await client.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 800,
+          messages: [{role: "user", content: prompt}],
+        });
+
+        const content = response.content[0].text;
+        let analysis;
+        try {
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          analysis = JSON.parse(jsonMatch ? jsonMatch[0] : content);
+        } catch (parseErr) {
+          logger.error("Failed to parse acute event response:", content);
+          throw new Error("Failed to parse AI response");
+        }
+
+        const now = admin.firestore.Timestamp.now();
+
+        // Write the acute event
+        const eventRef = db.collection("acute_events").doc();
+        await eventRef.set({
+          eventId: eventRef.id,
+          familyId,
+          userId: request.auth.uid,
+          freeText: freeText.trim(),
+          timestamp: now,
+          aiAnalysis: analysis,
+          status: "analyzed",
+        });
+
+        // If urgent_pivot or reinforcement, generate an immediate growth item
+        if (analysis.recommendation !== "background_absorption" &&
+            analysis.suggestedActions?.length > 0) {
+          const itemRef = db.collection("growth_items").doc();
+          await itemRef.set({
+            growthItemId: itemRef.id,
+            familyId,
+            type: "micro_activity",
+            title: "Respond to what just happened",
+            body: analysis.suggestedActions[0],
+            emoji: analysis.recommendation === "urgent_pivot" ? "🚨" : "🔄",
+            targetPersonIds: [],
+            targetPersonNames: [],
+            assignedToUserId: request.auth.uid,
+            assignedToUserName: userData.name || "You",
+            speed: "ambient",
+            scheduledDate: now,
+            expiresAt: new admin.firestore.Timestamp(
+                now.seconds + 86400, 0,
+            ),
+            estimatedMinutes: 3,
+            status: "active",
+            createdAt: now,
+            generatedBy: "ai",
+            sourceInsightType: "acute_event",
+            sourceInsightId: eventRef.id,
+          });
+        }
+
+        logger.info(`Acute event processed for family ${familyId}: ${analysis.recommendation}`);
+
+        return {
+          success: true,
+          eventId: eventRef.id,
+          analysis,
+        };
+      } catch (err) {
+        logger.error("Acute event processing error:", err);
+        throw new Error(`Failed to process event: ${err.message}`);
       }
     },
 );

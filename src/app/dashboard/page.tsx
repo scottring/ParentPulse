@@ -5,9 +5,16 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useGrowthFeed } from '@/hooks/useGrowthFeed';
+import { useRingScores } from '@/hooks/useRingScores';
 import { usePerson } from '@/hooks/usePerson';
 import MainLayout from '@/components/layout/MainLayout';
-import RoleCard from '@/components/growth/RoleCard';
+import ThreeRingDiagram from '@/components/dashboard/ThreeRingDiagram';
+import ActionCard from '@/components/dashboard/ActionCard';
+import TrajectoryCompass from '@/components/dashboard/TrajectoryCompass';
+import PerspectiveStatusLights from '@/components/dashboard/PerspectiveStatusLights';
+import EventInjectionModal from '@/components/dashboard/EventInjectionModal';
+import { getDimension } from '@/config/relationship-dimensions';
+import { scoreToColor } from '@/lib/scoring-engine';
 import Link from 'next/link';
 
 export default function DashboardPage() {
@@ -18,20 +25,26 @@ export default function DashboardPage() {
     selfPerson,
     roles,
     spouse,
+    assessments,
     peopleNeedingContributions,
   } = useDashboard();
   const {
+    activeItems,
     submitFeedback,
     seedAssessments,
     generateArc,
+    generateBatch,
+    processAcuteEvent,
     generating,
   } = useGrowthFeed();
+  const { health } = useRingScores(assessments);
   const { addPerson } = usePerson();
 
   // Inline add-person form state
   const [addName, setAddName] = useState('');
   const [addType, setAddType] = useState<'spouse' | 'child'>('spouse');
   const [adding, setAdding] = useState(false);
+  const [eventModalOpen, setEventModalOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -100,6 +113,7 @@ export default function DashboardPage() {
     try {
       await seedAssessments();
       await generateArc();
+      await generateBatch();
     } catch (err) {
       console.error('Failed to analyze:', err);
     }
@@ -107,53 +121,24 @@ export default function DashboardPage() {
 
   return (
     <MainLayout>
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
-        {/* Header */}
+      <div className={state === 'active' ? '' : 'max-w-5xl mx-auto px-4 sm:px-6 py-8'}>
+
+        {/* Header (onboarding states only) */}
+        {state !== 'active' && (
         <header className="mb-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="font-mono font-bold text-2xl text-slate-800">
-                {state === 'active' ? userName : `Welcome, ${userName}`}
+                {`Welcome, ${userName}`}
               </h1>
-              {state === 'active' ? (
-                <p className="font-mono text-sm text-slate-500 mt-1">
-                  Your roles &middot; your growth
-                </p>
-              ) : (
-                <p className="font-mono text-sm text-slate-500 mt-1">
-                  Let&apos;s set up your relationship health dashboard
-                </p>
-              )}
+              <p className="font-mono text-sm text-slate-500 mt-1">
+                Let&apos;s set up your relationship health dashboard
+              </p>
             </div>
-            {selfPerson && state === 'active' && (
-              <Link
-                href={`/people/${selfPerson.personId}/manual`}
-                className="font-mono text-xs text-slate-400 hover:text-slate-600 transition-colors border border-slate-200 px-3 py-1.5 hover:border-slate-400"
-              >
-                MY MANUAL &rarr;
-              </Link>
-            )}
           </div>
-
-          {/* Status line (active state only) */}
-          {state === 'active' && (
-            <div className="flex items-center gap-4 mt-4 pt-3 border-t border-slate-200">
-              <span className="font-mono text-[10px] text-slate-400 uppercase tracking-wider">
-                {roles.length} ROLE{roles.length !== 1 ? 'S' : ''}
-              </span>
-              {activeArcCount > 0 && (
-                <span className="font-mono text-[10px] text-slate-800 font-bold uppercase tracking-wider">
-                  {activeArcCount} ARC{activeArcCount !== 1 ? 'S' : ''} ACTIVE
-                </span>
-              )}
-              {todayItemCount > 0 && (
-                <span className="font-mono text-[10px] text-amber-600 font-bold uppercase tracking-wider">
-                  {todayItemCount} TO DO TODAY
-                </span>
-              )}
-            </div>
-          )}
         </header>
+        )}
+
 
         {/* ===== ONBOARDING CARDS ===== */}
 
@@ -260,7 +245,7 @@ export default function DashboardPage() {
               See your relationship health
             </h2>
             <p className="font-mono text-sm text-slate-600 mb-4 leading-relaxed">
-              We&apos;ll assess your relationships across 15 research-backed dimensions
+              We&apos;ll assess your relationships across 20 research-backed dimensions
               and build your first Growth Arc — a structured plan targeting your
               biggest opportunity.
             </p>
@@ -277,66 +262,238 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ===== ACTIVE STATE: ROLE CARDS ===== */}
+        {/* ===== ACTIVE STATE: THREE-RING DASHBOARD ===== */}
 
-        {state === 'active' && (
-          <div className="space-y-6">
-            {roles.map((role) => (
-              <RoleCard
-                key={`${role.roleLabel}-${role.otherPerson.personId}`}
-                role={role}
-                onFeedback={submitFeedback}
-              />
-            ))}
-
-            {/* Add another person card */}
-            <div className="border border-dashed border-slate-300 p-5 text-center">
-              <div className="space-y-3">
-                <p className="font-mono text-xs text-slate-400">
-                  + Add another person
-                </p>
-                <div className="flex gap-2 justify-center max-w-sm mx-auto">
-                  <select
-                    value={addType}
-                    onChange={(e) => setAddType(e.target.value as 'spouse' | 'child')}
-                    className="font-mono text-xs border border-slate-300 px-2 py-1.5 bg-white"
-                  >
-                    <option value="child">Child</option>
-                    <option value="spouse">Spouse</option>
-                  </select>
-                  <input
-                    type="text"
-                    value={addName}
-                    onChange={(e) => setAddName(e.target.value)}
-                    placeholder="Name"
-                    className="flex-1 font-mono text-xs border border-slate-300 px-2 py-1.5"
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddPerson()}
-                  />
-                  <button
-                    onClick={handleAddPerson}
-                    disabled={adding || !addName.trim()}
-                    className="px-3 py-1.5 bg-slate-800 text-white font-mono text-xs hover:bg-amber-600 transition-all disabled:opacity-50"
-                  >
-                    ADD
-                  </button>
+        {state === 'active' && health && (
+          <div
+            className="min-h-screen p-4 sm:p-6"
+            style={{
+              background: 'linear-gradient(145deg, #1a1a1a, #111)',
+            }}
+          >
+            {/* Dashboard header */}
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1
+                  className="font-mono font-bold text-lg"
+                  style={{ color: 'rgba(255,255,255,0.85)' }}
+                >
+                  {userName}
+                </h1>
+                <div className="flex items-center gap-3 mt-0.5">
+                  <span className="font-mono text-[10px] tracking-[0.15em]" style={{ color: scoreToColor(health.score) }}>
+                    {health.score.toFixed(1)}
+                  </span>
+                  {activeArcCount > 0 && (
+                    <span className="font-mono text-[10px] tracking-wider" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                      {activeArcCount} ARC{activeArcCount !== 1 ? 'S' : ''}
+                    </span>
+                  )}
+                  {selfPerson && (
+                    <Link
+                      href={`/people/${selfPerson.personId}/manual`}
+                      className="font-mono text-[10px] tracking-wider transition-colors"
+                      style={{ color: 'rgba(255,255,255,0.3)' }}
+                    >
+                      MY MANUAL &rarr;
+                    </Link>
+                  )}
                 </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAnalyze}
+                  disabled={generating}
+                  className="font-mono text-[10px] font-bold tracking-wider px-3 py-1.5 rounded transition-all hover:scale-105 disabled:opacity-30"
+                  style={{
+                    color: 'rgba(255,255,255,0.5)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                  }}
+                >
+                  {generating ? 'ANALYZING...' : '↻ RE-ANALYZE'}
+                </button>
+              <button
+                onClick={() => setEventModalOpen(true)}
+                className="font-mono text-[10px] font-bold tracking-wider px-3 py-1.5 rounded transition-all hover:scale-105"
+                style={{
+                  color: '#d97706',
+                  border: '1px solid rgba(217,119,6,0.3)',
+                  background: 'rgba(217,119,6,0.1)',
+                }}
+              >
+                🚨 SOMETHING HAPPENED
+              </button>
               </div>
             </div>
 
-            {/* Start next arc button (when no active arcs) */}
-            {activeArcCount === 0 && roles.length > 0 && (
-              <div className="text-center">
+            {/* Centerpiece: Three Ring Diagram */}
+            <ThreeRingDiagram
+              health={health}
+              onZoneClick={(domain, perspective) => {
+                // Find the relevant zone score
+                const domainScore = health.domainScores.find((d) => d.domain === domain);
+                const zone = domainScore?.perspectiveZones.find((z) => z.perspective === perspective);
+                const hasData = zone && zone.score > 0;
+
+                if (hasData) {
+                  // TODO: drill-down view for filled zones
+                  return;
+                }
+
+                // Route to the right action for empty zones
+                if (perspective === 'self' && selfPerson) {
+                  router.push(`/people/${selfPerson.personId}/manual/self-onboard`);
+                } else if (perspective === 'spouse') {
+                  const spousePerson = roles.find((r) => r.otherPerson.relationshipType === 'spouse')?.otherPerson;
+                  if (spousePerson) {
+                    router.push(`/people/${spousePerson.personId}/manual/onboard`);
+                  }
+                } else if (perspective === 'kids') {
+                  const childPerson = roles.find((r) => r.otherPerson.relationshipType === 'child')?.otherPerson;
+                  if (childPerson) {
+                    router.push(`/people/${childPerson.personId}/manual/kid-session`);
+                  }
+                }
+              }}
+            />
+
+            {/* Domain scores row */}
+            <div className="grid grid-cols-3 gap-3 mt-6">
+              {health.domainScores.map((ds) => (
+                <div
+                  key={ds.domain}
+                  className="rounded-lg p-3 text-center"
+                  style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                  }}
+                >
+                  <div
+                    className="font-mono text-[9px] font-bold tracking-widest mb-1"
+                    style={{ color: 'rgba(255,255,255,0.35)' }}
+                  >
+                    {ds.domain === 'self' ? 'SELF' : ds.domain === 'couple' ? 'SPOUSE' : 'PARENT'}
+                  </div>
+                  <div
+                    className="font-mono text-xl font-bold"
+                    style={{ color: ds.score > 0 ? scoreToColor(ds.score) : 'rgba(255,255,255,0.2)' }}
+                  >
+                    {ds.score > 0 ? ds.score.toFixed(1) : '—'}
+                  </div>
+                  {/* Mini dimension bars */}
+                  <div className="flex gap-0.5 mt-2 justify-center">
+                    {ds.dimensionScores.map((dim, i) => (
+                      <div
+                        key={`${dim.dimensionId}-${i}`}
+                        className="w-1.5 rounded-full"
+                        style={{
+                          height: `${Math.max(4, (dim.score / 5) * 24)}px`,
+                          background: scoreToColor(dim.score),
+                          opacity: 0.7,
+                        }}
+                        title={`${getDimension(dim.dimensionId)?.name}: ${dim.score.toFixed(1)}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Instruments row */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+              <TrajectoryCompass
+                trend={health.trend}
+                primaryDimension={
+                  roles.find((r) => r.activeArc)?.activeArc?.dimensionName
+                }
+              />
+              <ActionCard
+                items={(activeItems || []).slice(0, 2)}
+                onReact={(itemId, reaction) => submitFeedback(itemId, reaction as any)}
+                onGenerate={generateBatch}
+                generating={generating}
+              />
+              <PerspectiveStatusLights
+                selfActive={assessments.some((a) => a.domain === 'self')}
+                spouseActive={assessments.some((a) => a.domain === 'couple')}
+                kidsActive={assessments.some((a) => a.domain === 'parent_child')}
+                selfCount={assessments.filter((a) => a.domain === 'self').length}
+                spouseCount={assessments.filter((a) => a.domain === 'couple').length}
+                kidsCount={assessments.filter((a) => a.domain === 'parent_child').length}
+              />
+            </div>
+
+            {/* Bottom actions */}
+            <div className="flex items-center justify-between mt-6 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              {/* Add person */}
+              <div className="flex gap-2">
+                <select
+                  value={addType}
+                  onChange={(e) => setAddType(e.target.value as 'spouse' | 'child')}
+                  className="font-mono text-[10px] rounded px-2 py-1"
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    color: 'rgba(255,255,255,0.5)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                  }}
+                >
+                  <option value="child">Child</option>
+                  <option value="spouse">Spouse</option>
+                </select>
+                <input
+                  type="text"
+                  value={addName}
+                  onChange={(e) => setAddName(e.target.value)}
+                  placeholder="Name"
+                  className="font-mono text-[10px] rounded px-2 py-1 w-24"
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    color: 'rgba(255,255,255,0.7)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                  }}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddPerson()}
+                />
+                <button
+                  onClick={handleAddPerson}
+                  disabled={adding || !addName.trim()}
+                  className="font-mono text-[10px] font-bold rounded px-3 py-1 transition-all disabled:opacity-30"
+                  style={{
+                    color: '#d97706',
+                    border: '1px solid rgba(217,119,6,0.3)',
+                  }}
+                >
+                  + ADD
+                </button>
+              </div>
+
+              {/* Generate arc */}
+              {activeArcCount === 0 && roles.length > 0 && (
                 <button
                   onClick={() => generateArc()}
                   disabled={generating}
-                  className="px-6 py-3 border-2 border-slate-800 bg-white text-slate-800 font-mono font-bold hover:bg-slate-800 hover:text-white transition-all disabled:opacity-50"
+                  className="font-mono text-[10px] font-bold tracking-wider px-4 py-2 rounded transition-all disabled:opacity-30"
+                  style={{
+                    background: 'rgba(217,119,6,0.15)',
+                    color: '#d97706',
+                    border: '1px solid rgba(217,119,6,0.3)',
+                    boxShadow: '0 0 8px rgba(217,119,6,0.1)',
+                  }}
                 >
-                  {generating ? 'GENERATING...' : 'START NEXT GROWTH ARC'}
+                  {generating ? 'GENERATING...' : 'START GROWTH ARC'}
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
+
+        {/* Event injection modal */}
+        <EventInjectionModal
+          open={eventModalOpen}
+          onClose={() => setEventModalOpen(false)}
+          onSubmit={async (text) => {
+            await processAcuteEvent(text);
+          }}
+        />
       </div>
     </MainLayout>
   );
