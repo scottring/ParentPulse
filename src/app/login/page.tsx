@@ -295,35 +295,6 @@ export default function LoginPage() {
               </div>
             </section>
 
-            {/* QUOTE */}
-            <section className="w-full max-w-2xl mb-14">
-              <div className="flex items-center gap-4 w-full mx-auto mb-8">
-                <div className="flex-1 flex flex-col gap-[3px]">
-                  <div className="h-[2px]" style={{ background: 'rgba(160, 100, 40, 0.35)' }} />
-                  <div className="h-[1px]" style={{ background: 'rgba(160, 100, 40, 0.18)' }} />
-                </div>
-                <svg width="22" height="20" viewBox="0 0 18 16" fill="none">
-                  <path d="M9 16L0.34 6.5C-1.5 4.5 0 1 3 0.5C5.5 0 7.5 1.5 9 3.5C10.5 1.5 12.5 0 15 0.5C18 1 19.5 4.5 17.66 6.5L9 16Z" fill="#C2773A" fillOpacity="0.5" />
-                </svg>
-                <div className="flex-1 flex flex-col gap-[3px]">
-                  <div className="h-[2px]" style={{ background: 'rgba(160, 100, 40, 0.35)' }} />
-                  <div className="h-[1px]" style={{ background: 'rgba(160, 100, 40, 0.18)' }} />
-                </div>
-              </div>
-              <blockquote
-                className="text-center"
-                style={{
-                  fontFamily: 'var(--font-parent-heading)',
-                  fontSize: 'clamp(18px, 2.5vw, 24px)',
-                  fontWeight: 400,
-                  fontStyle: 'italic',
-                  color: '#3D2010',
-                  lineHeight: 1.5,
-                }}
-              >
-                &ldquo;The operating manuals for the people you love.&rdquo;
-              </blockquote>
-            </section>
 
             {/* FOOTER */}
             <footer
