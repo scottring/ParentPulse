@@ -1,16 +1,49 @@
 'use client';
 
-import { GrowthItem } from '@/types/growth';
+import { useState } from 'react';
+import { GrowthItem, DepthTier } from '@/types/growth';
+import { GrowthStage } from '@/types/growth-arc';
+import { EXERCISE_TYPES } from '@/config/exercise-types';
 import InstrumentBezel from './InstrumentBezel';
 
 interface ActionCardProps {
   items: GrowthItem[];
   onReact?: (itemId: string, reaction: string) => void;
+  onSwapDepth?: (itemId: string, depth: DepthTier) => void;
   onGenerate?: () => void;
   generating?: boolean;
+  domainStage?: { domain: string; stage: GrowthStage } | null;
 }
 
-export default function ActionCard({ items, onReact, onGenerate, generating }: ActionCardProps) {
+const DEPTH_LABELS: Record<DepthTier, { label: string; color: string }> = {
+  light: { label: 'Light', color: '#d97706' },
+  moderate: { label: 'Mod', color: '#65a30d' },
+  deep: { label: 'Deep', color: '#16a34a' },
+};
+
+const DOMAIN_LABELS: Record<string, string> = {
+  self: 'SELF',
+  couple: 'COUPLE',
+  parent_child: 'PARENT',
+};
+
+const STAGE_LABELS: Record<GrowthStage, string> = {
+  learning: 'LEARNING',
+  growing: 'GROWING',
+  mastering: 'MASTERING',
+  assimilating: 'ASSIMILATING',
+};
+
+export default function ActionCard({
+  items,
+  onReact,
+  onSwapDepth,
+  onGenerate,
+  generating,
+  domainStage,
+}: ActionCardProps) {
+  const [expanded, setExpanded] = useState(false);
+
   if (items.length === 0) {
     return (
       <InstrumentBezel title="NEXT MOVE">
@@ -41,49 +74,191 @@ export default function ActionCard({ items, onReact, onGenerate, generating }: A
     );
   }
 
+  const primaryItem = items[0];
+  const remainingItems = items.slice(1);
+  const exerciseType = EXERCISE_TYPES[primaryItem.type];
+
   return (
     <InstrumentBezel title="NEXT MOVE">
-      <div className="divide-y divide-slate-200">
-        {items.slice(0, 2).map((item) => (
-          <div key={item.growthItemId} className="px-4 py-3">
-            {/* Header */}
-            <div className="flex items-start gap-2 mb-1">
-              <span className="text-lg">{item.emoji}</span>
+      <div className="px-4 py-3">
+        {/* Domain + Stage label */}
+        {domainStage && (
+          <div className="flex items-center gap-1.5 mb-2">
+            <span
+              className="font-mono text-[8px] font-bold tracking-widest px-1.5 py-0.5 rounded"
+              style={{
+                color: '#6B6B6B',
+                background: 'rgba(44,44,44,0.04)',
+                border: '1px solid #E8E3DC',
+              }}
+            >
+              {DOMAIN_LABELS[domainStage.domain] || domainStage.domain.toUpperCase()}
+            </span>
+            <span
+              className="font-mono text-[8px] tracking-widest"
+              style={{ color: '#A3A3A3' }}
+            >
+              {STAGE_LABELS[domainStage.stage]}
+            </span>
+          </div>
+        )}
+
+        {/* Depth toggle */}
+        {primaryItem.alternatives && onSwapDepth && (
+          <div className="flex gap-1 mb-2.5">
+            {(['light', 'moderate', 'deep'] as DepthTier[]).map((depth) => {
+              const isActive = (primaryItem.depthTier || 'moderate') === depth;
+              const hasAlt = depth === (primaryItem.depthTier || 'moderate') ||
+                primaryItem.alternatives?.[depth];
+              const info = DEPTH_LABELS[depth];
+
+              return (
+                <button
+                  key={depth}
+                  onClick={() => onSwapDepth(primaryItem.growthItemId, depth)}
+                  disabled={!hasAlt}
+                  className="font-mono text-[9px] font-bold px-2.5 py-1 rounded transition-all disabled:opacity-20"
+                  style={{
+                    color: isActive ? '#FFFFFF' : info.color,
+                    background: isActive ? info.color : 'transparent',
+                    border: `1px solid ${isActive ? info.color : info.color + '40'}`,
+                  }}
+                >
+                  {info.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Primary item */}
+        <div className="flex items-start gap-2 mb-1">
+          <span className="text-lg">{primaryItem.emoji}</span>
+          <div className="flex-1 min-w-0">
+            <h4
+              className="font-mono text-[12px] font-bold leading-tight"
+              style={{ color: '#2C2C2C' }}
+            >
+              {primaryItem.title}
+            </h4>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span
+                className="font-mono text-[9px] tracking-wider"
+                style={{ color: '#6B6B6B' }}
+              >
+                {primaryItem.speed === 'ambient' ? '⚡ TODAY' : '📋 THIS WEEK'}
+              </span>
+              <span
+                className="font-mono text-[9px]"
+                style={{ color: '#A3A3A3' }}
+              >
+                {primaryItem.estimatedMinutes}m
+              </span>
+              {exerciseType && (
+                <span
+                  className="font-mono text-[8px] tracking-wider px-1.5 py-0.5 rounded"
+                  style={{
+                    color: '#A3A3A3',
+                    background: 'rgba(44,44,44,0.04)',
+                  }}
+                >
+                  {exerciseType.label.toUpperCase()}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Body */}
+        <p
+          className="font-mono text-[11px] leading-relaxed mt-1"
+          style={{ color: '#6B6B6B' }}
+        >
+          {primaryItem.body}
+        </p>
+
+        {/* Quick reaction buttons */}
+        {primaryItem.status !== 'completed' && onReact && (
+          <div className="flex gap-1.5 mt-2">
+            {[
+              { emoji: '❤️', key: 'loved_it' },
+              { emoji: '✅', key: 'tried_it' },
+              { emoji: '⏰', key: 'not_now' },
+              { emoji: '❌', key: 'doesnt_fit' },
+            ].map((r) => (
+              <button
+                key={r.key}
+                onClick={() => onReact(primaryItem.growthItemId, r.key)}
+                className="px-2 py-1 rounded text-sm transition-all hover:scale-110"
+                style={{
+                  background: 'rgba(44,44,44,0.04)',
+                  border: '1px solid #E8E3DC',
+                }}
+              >
+                {r.emoji}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* More available */}
+        {remainingItems.length > 0 && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="w-full mt-3 pt-2 font-mono text-[9px] tracking-wider transition-colors"
+            style={{
+              color: '#A3A3A3',
+              borderTop: '1px dashed #E8E3DC',
+            }}
+          >
+            {expanded
+              ? '— hide —'
+              : `┈ ${remainingItems.length} more available ┈`}
+          </button>
+        )}
+
+        {/* Expanded items */}
+        {expanded && remainingItems.map((item) => (
+          <div
+            key={item.growthItemId}
+            className="mt-2 pt-2"
+            style={{ borderTop: '1px solid #F0EBE4' }}
+          >
+            <div className="flex items-start gap-2">
+              <span className="text-sm">{item.emoji}</span>
               <div className="flex-1 min-w-0">
                 <h4
-                  className="font-mono text-[12px] font-bold leading-tight"
+                  className="font-mono text-[11px] font-bold leading-tight"
                   style={{ color: '#2C2C2C' }}
                 >
                   {item.title}
                 </h4>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span
-                    className="font-mono text-[9px] tracking-wider"
-                    style={{ color: '#6B6B6B' }}
-                  >
-                    {item.speed === 'ambient' ? '⚡ TODAY' : '📋 THIS WEEK'}
-                  </span>
-                  <span
-                    className="font-mono text-[9px]"
+                    className="font-mono text-[8px]"
                     style={{ color: '#A3A3A3' }}
                   >
                     {item.estimatedMinutes}m
                   </span>
+                  {EXERCISE_TYPES[item.type] && (
+                    <span
+                      className="font-mono text-[8px] tracking-wider"
+                      style={{ color: '#A3A3A3' }}
+                    >
+                      {EXERCISE_TYPES[item.type].label.toUpperCase()}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
-
-            {/* Body */}
             <p
-              className="font-mono text-[11px] leading-relaxed mt-1"
-              style={{ color: '#6B6B6B' }}
+              className="font-mono text-[10px] leading-relaxed mt-1"
+              style={{ color: '#9A9A9A' }}
             >
               {item.body}
             </p>
-
-            {/* Quick reaction buttons */}
             {item.status !== 'completed' && onReact && (
-              <div className="flex gap-1.5 mt-2">
+              <div className="flex gap-1 mt-1.5">
                 {[
                   { emoji: '❤️', key: 'loved_it' },
                   { emoji: '✅', key: 'tried_it' },
@@ -93,7 +268,7 @@ export default function ActionCard({ items, onReact, onGenerate, generating }: A
                   <button
                     key={r.key}
                     onClick={() => onReact(item.growthItemId, r.key)}
-                    className="px-2 py-1 rounded text-sm transition-all hover:scale-110"
+                    className="px-1.5 py-0.5 rounded text-xs transition-all hover:scale-110"
                     style={{
                       background: 'rgba(44,44,44,0.04)',
                       border: '1px solid #E8E3DC',

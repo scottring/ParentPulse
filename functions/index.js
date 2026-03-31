@@ -4626,7 +4626,53 @@ exports.generateGrowthBatch = onCall(
         return `- ${p.name} (${p.relationshipType || "other"})`;
       }).join("\n");
 
+      // Get user's engagement mode preference
+      const engagementMode = request.data?.engagementMode ||
+        userData.growthPreferences?.engagementMode || "moderate";
+
+      // Configure generation based on engagement mode
+      const modeConfig = {
+        light: {
+          itemCount: "2-3",
+          types: `- "micro_activity": 1-3 min quick action
+- "reflection_prompt": 1-tap emoji check-in
+- "gratitude_practice": 1-3 min appreciation moment
+- "mindfulness": 2-5 min breathing or grounding exercise`,
+          minuteRange: "1-5",
+          emphasis: "Keep it light and achievable. One small step. The user has chosen a gentle pace — respect that.",
+        },
+        moderate: {
+          itemCount: "3-5",
+          types: `- "micro_activity": 1-3 min quick action
+- "reflection_prompt": 1-tap emoji check-in
+- "journaling": 5-10 min guided written reflection
+- "partner_exercise": 10-15 min structured activity for two
+- "gratitude_practice": 1-3 min appreciation moment
+- "mindfulness": 2-5 min breathing or grounding exercise
+- "repair_ritual": 10-15 min reconnection after conflict or distance`,
+          minuteRange: "1-15",
+          emphasis: "Mix quick daily moments with a few deeper activities per week. Balance effort and reward.",
+        },
+        deep: {
+          itemCount: "4-6",
+          types: `- "micro_activity": 1-3 min quick action
+- "reflection_prompt": 1-tap emoji check-in
+- "journaling": 10-15 min deep written reflection with multiple prompts
+- "partner_exercise": 15-20 min structured activity for two
+- "conversation_guide": 20-30 min structured conversation with specific goals
+- "solo_deep_dive": 20-45 min extended self-work (reading, reflection, integration)
+- "repair_ritual": 15-20 min guided reconnection
+- "mindfulness": 5-10 min mindfulness practice
+- "gratitude_practice": 1-3 min appreciation moment`,
+          minuteRange: "1-45",
+          emphasis: "The user is committed to deep transformation. Include challenging exercises that push growth. Longer activities are welcome — this person wants to do the work.",
+        },
+      };
+      const config = modeConfig[engagementMode] || modeConfig.moderate;
+
       const prompt = `You are a warm, practical family growth coach. You understand that families are systems — individual patterns affect relationships, and relationship dynamics affect individuals.
+
+The user's relationship with THEMSELVES is foundational — self-work items should feel as important and concrete as couple or parenting items.
 
 FAMILY MEMBERS:
 ${familyContext}
@@ -4636,41 +4682,54 @@ INDIVIDUAL SYNTHESIS INSIGHTS:
 ${insightsContext}
 ${feedbackContext}
 
-Based on all of this context — both individual insights AND relational dynamics — generate 3-5 growth items. Think about THREE levels:
+ENGAGEMENT MODE: ${engagementMode.toUpperCase()}
+${config.emphasis}
 
-1. INDIVIDUAL: What does each person need to work on for themselves?
+Based on all of this context — both individual insights AND relational dynamics — generate ${config.itemCount} growth items. Think about THREE levels equally:
+
+1. INDIVIDUAL/SELF: What does each person need to work on for themselves? (emotional regulation, self-awareness, stress, personal growth, self-care)
 2. COUPLE: Where do their patterns collide? What could they try together?
 3. FAMILY: How do the adults' dynamics affect the kids? What parenting alignment is needed?
 
-Each item should be one of:
-- "micro_activity": A specific 1-3 minute action (e.g., "Tonight, before responding to Iris's request, pause and ask 'What do you need from me right now — action or listening?'")
-- "reflection_prompt": A 1-tap emoji check-in (e.g., "How connected did you feel to Scott today?")
+IMPORTANT: Generate at least one SELF-focused item. The user's inner work is the foundation.
+
+Each item should be one of these types:
+${config.types}
+
+For EACH item, also generate depth alternatives — a lighter and deeper version of the same insight:
 
 Return JSON:
 {
   "items": [
     {
-      "type": "micro_activity" or "reflection_prompt",
+      "type": "micro_activity" (or any type above),
       "title": "Short title (under 60 chars)",
-      "body": "1-3 sentences of warm, specific instruction. Be concrete — name names, suggest specific times of day, describe exactly what to do or say. Connect it to the actual pattern or gap you're addressing.",
+      "body": "1-3 sentences of warm, specific instruction. Be concrete — name names, suggest specific times of day, describe exactly what to do or say.",
       "emoji": "Single emoji that captures the spirit",
-      "targetPersonNames": ["Name of person(s) this is about"],
-      "sourceInsightId": "The insight ID this addresses (from INDIVIDUAL SYNTHESIS INSIGHTS above)",
+      "targetPersonNames": ["Name(s)"],
+      "sourceInsightId": "The insight ID this addresses",
       "relationalLevel": "individual" or "couple" or "family",
-      "speed": "ambient" (for micro daily moments) or "intentional" (for deeper weekly activities),
-      "estimatedMinutes": 1-5
+      "speed": "ambient" or "intentional",
+      "estimatedMinutes": ${config.minuteRange},
+      "depthTier": "light" or "moderate" or "deep",
+      "dimensionId": "the dimension this targets (e.g. emotional_regulation, love_maps, conflict_style, etc.) or null",
+      "alternatives": {
+        "light": { "body": "1-sentence quick version (1-3 min)", "estimatedMinutes": 1-3, "type": "micro_activity or reflection_prompt" },
+        "moderate": { "body": "2-3 sentence moderate version (5-15 min)", "estimatedMinutes": 5-15, "type": "journaling or partner_exercise" },
+        "deep": { "body": "3-5 sentence deep version (15-45 min)", "estimatedMinutes": 15-45, "type": "conversation_guide or solo_deep_dive" }
+      }
     }
   ]
 }
 
 Rules:
 - Use actual names from the family — never generic
+- At least one item should be self-focused (individual domain)
 - At least one item should be couple-focused (if two adults exist)
-- Micro-activities should fit natural daily moments (bedtime, dinner, car ride, morning coffee)
-- Reflection prompts should be answerable with a single emoji tap
 - Activities should feel like natural outgrowths of the observations, not homework
-- Connect each activity to a specific pattern or gap — the user should feel "ah, this is about THAT thing"
+- Connect each activity to a specific pattern or gap
 - Tone: warm, practical, never clinical or preachy
+- The alternatives should address the SAME insight at different intensities
 - Return ONLY valid JSON, no markdown`;
 
       try {
@@ -4770,6 +4829,9 @@ Rules:
               admin.firestore.Timestamp.fromDate(expiresAt),
             estimatedMinutes: item.estimatedMinutes || 2,
             status: "active",
+            depthTier: item.depthTier || "moderate",
+            alternatives: item.alternatives || null,
+            dimensionId: item.dimensionId || null,
             createdAt: now,
             generatedBy: "ai",
             batchId,
@@ -5651,13 +5713,39 @@ exports.generateGrowthArc = onCall(
       const levelTitle = level === 1 ? "Foundations" :
         level === 2 ? "Deepening" : "Mastery";
 
-      const prompt = `You are designing a structured ${durationWeeks}-week Growth Arc (a mini-course) for the "${dimDef.name}" dimension of ${participantNames}'s ${dimDef.domain === "couple" ? "relationship" : "parent-child relationship"}.
+      // Get user's engagement mode
+      const engagementMode = request.data?.engagementMode ||
+        userData.growthPreferences?.engagementMode || "moderate";
+
+      const arcItemConfig = {
+        light: {
+          itemRange: durationWeeks === 2 ? "6-8" : "8-10",
+          types: "micro_activity, reflection_prompt, gratitude_practice, mindfulness",
+          emphasis: "Keep exercises short and gentle. Maximum 5 minutes each. The user prefers a lighter touch.",
+        },
+        moderate: {
+          itemRange: durationWeeks === 2 ? "8-10" : "10-12",
+          types: "micro_activity, reflection_prompt, journaling, partner_exercise, repair_ritual, mindfulness, gratitude_practice",
+          emphasis: "Mix short daily moments with occasional deeper activities (10-15 min). Balance effort and reward.",
+        },
+        deep: {
+          itemRange: durationWeeks === 2 ? "10-12" : "12-15",
+          types: "micro_activity, reflection_prompt, journaling, partner_exercise, conversation_guide, solo_deep_dive, repair_ritual, mindfulness",
+          emphasis: "Include challenging exercises. Longer activities (15-30 min) are welcome. Push growth with structured conversations, deep journaling, and extended partner exercises.",
+        },
+      };
+      const arcConfig = arcItemConfig[engagementMode] || arcItemConfig.moderate;
+
+      const prompt = `You are designing a structured ${durationWeeks}-week Growth Arc (a mini-course) for the "${dimDef.name}" dimension of ${participantNames}'s ${dimDef.domain === "self" ? "self-relationship" : dimDef.domain === "couple" ? "relationship" : "parent-child relationship"}.
 
 RESEARCH BASIS:
 ${guidance.research || dimDef.name + " — see research literature"}
 
 ARC LEVEL: ${level} (${levelTitle})
 ${level === 1 ? "This is their first time working on this dimension. Start with basics." : level === 2 ? "They've done a foundations arc. Go deeper." : "They've done two arcs. Focus on mastery and subtle refinement."}
+
+ENGAGEMENT MODE: ${engagementMode.toUpperCase()}
+${arcConfig.emphasis}
 
 CURRENT ASSESSMENT:
 Score: ${selectedAssessment.currentScore}/5.0 (confidence: ${selectedAssessment.confidence})
@@ -5668,6 +5756,9 @@ ${feedbackContext ? "\nPrevious feedback on this dimension:" + feedbackContext :
 DATA CONFIDENCE: ${selectedAssessment.confidence}
 ${selectedAssessment.confidence === "low" ? "IMPORTANT: We have limited data on this dimension. The arc should include extra reflection_prompt and assessment_prompt items that help us LEARN about this area — not just practice it. Ask open-ended questions that reveal how they experience this dimension. Every response teaches us something." : selectedAssessment.confidence === "medium" ? "We have moderate data. Include 1-2 reflection prompts that deepen our understanding of nuances." : "We have good data. Focus on practice and growth."}
 
+Available exercise types: ${arcConfig.types}
+(Plus assessment_prompt for pre/post bookends)
+
 Generate a ${durationWeeks}-week Growth Arc with exactly 3 phases:
 
 1. AWARENESS (Week 1): 3-4 items to help them notice the pattern
@@ -5676,13 +5767,16 @@ Generate a ${durationWeeks}-week Growth Arc with exactly 3 phases:
    ${selectedAssessment.confidence === "low" ? "- Include an extra reflection_prompt that asks them to describe their experience in this area in their own words" : ""}
 
 2. PRACTICE (Week ${durationWeeks === 2 ? "1-2" : "2"}): 3-4 items that build new skills
-   - Concrete micro_activities using their actual names
+   - Use a VARIETY of exercise types appropriate for the engagement mode
+   - ${engagementMode === "deep" ? "Include at least one conversation_guide or solo_deep_dive" : engagementMode === "moderate" ? "Include at least one journaling or partner_exercise" : "Keep to micro_activities and reflection_prompts"}
    - Build on awareness phase insights
-   - After each micro_activity, the NEXT item should be a reflection_prompt asking "how did that go?" — this captures real data about their experience
+   - After each substantive activity, the NEXT item should be a reflection_prompt asking "how did that go?" — this captures real data
 
 3. INTEGRATION (Week ${durationWeeks}): 2-3 items that cement the change
    - Include a micro_activity that tests their progress
    - LAST item MUST be an assessment_prompt: the SAME self-rating question as item 1 (this is the post-assessment)
+
+For EACH non-assessment item, also generate depth alternatives:
 
 Return JSON:
 {
@@ -5690,11 +5784,11 @@ Return JSON:
     "title": "Short arc title (under 50 chars)",
     "subtitle": "One line describing what they'll learn",
     "emoji": "Single emoji",
-    "outcomeStatement": "After this arc, [specific felt outcome]. (e.g., 'After this, hard conversations should feel safer between you and Iris.')"
+    "outcomeStatement": "After this arc, [specific felt outcome]."
   },
   "items": [
     {
-      "type": "assessment_prompt" | "micro_activity" | "reflection_prompt",
+      "type": "assessment_prompt" | "micro_activity" | "reflection_prompt" | "journaling" | "partner_exercise" | "conversation_guide" | "solo_deep_dive" | "repair_ritual" | "mindfulness" | "gratitude_practice",
       "title": "Short title (under 60 chars)",
       "body": "1-3 sentences. Be concrete — use their names, suggest times, describe exactly what to do.",
       "emoji": "Single emoji",
@@ -5704,8 +5798,14 @@ Return JSON:
       "dayOffset": 0-${durationWeeks * 7},
       "isAssessment": true/false,
       "speed": "ambient" | "intentional",
-      "estimatedMinutes": 1-10,
-      "relationalLevel": "individual" | "couple" | "family"
+      "estimatedMinutes": 1-45,
+      "depthTier": "light" | "moderate" | "deep",
+      "relationalLevel": "individual" | "couple" | "family",
+      "alternatives": {
+        "light": { "body": "quick version", "estimatedMinutes": 1-3, "type": "micro_activity or reflection_prompt" },
+        "moderate": { "body": "moderate version", "estimatedMinutes": 5-15, "type": "journaling or partner_exercise" },
+        "deep": { "body": "deep version", "estimatedMinutes": 15-45, "type": "conversation_guide or solo_deep_dive" }
+      }
     }
   ]
 }
@@ -5714,9 +5814,10 @@ Rules:
 - Use actual names — never generic
 - Activities should feel like natural outgrowths, not homework
 - The pre and post assessment questions MUST be identical for measuring progress
-- For ${dimDef.domain === "couple" ? "couple" : "parent-child"} dimension: activities should involve both participants
+- For ${dimDef.domain === "self" ? "self" : dimDef.domain === "couple" ? "couple" : "parent-child"} dimension: ${dimDef.domain === "self" ? "exercises focus on the individual's inner work" : "activities should involve both participants"}
 - Tone: warm, practical, never clinical
-- ${durationWeeks === 2 ? "8-10" : "10-12"} items total
+- ${arcConfig.itemRange} items total
+- Assessment items do NOT need alternatives
 - Return ONLY valid JSON`;
 
       try {
@@ -5809,6 +5910,8 @@ Rules:
               admin.firestore.Timestamp.fromDate(expiresAt),
             estimatedMinutes: item.estimatedMinutes || 3,
             status: "active",
+            depthTier: item.depthTier || "moderate",
+            alternatives: item.alternatives || null,
             createdAt: now,
             generatedBy: "ai",
             // Arc linkage
@@ -6272,6 +6375,271 @@ exports.processGrowthFeedback = onDocumentUpdated(
           });
         }
       }
+
+      // ---- 6. UPDATE DOMAIN PROGRESSION ----
+
+      if (after.dimensionId && feedback.reaction !== "not_now") {
+        // Determine domain from dimensionId
+        const dimMapping = DIMENSION_QUESTION_MAPPINGS[after.dimensionId];
+        if (dimMapping) {
+          const domain = dimMapping.domain;
+
+          // Find or create domain progression doc
+          const progSnap = await db.collection("domain_progressions")
+              .where("familyId", "==", after.familyId)
+              .where("domain", "==", domain)
+              .get();
+
+          if (!progSnap.empty) {
+            const progDoc = progSnap.docs[0];
+            const prog = progDoc.data();
+
+            // Get all assessments for this domain to compute criteria
+            const domainAssessSnap = await db
+                .collection("dimension_assessments")
+                .where("familyId", "==", after.familyId)
+                .where("domain", "==", domain)
+                .get();
+
+            let totalScore = 0;
+            let dimCount = 0;
+            let dimsAtLevel = 0;
+            domainAssessSnap.forEach((d) => {
+              const a = d.data();
+              totalScore += a.currentScore;
+              dimCount++;
+              // Count dimensions that have completed arcs
+              const requiredLevel = prog.stage === "mastering" ? 3 :
+                prog.stage === "growing" ? 2 : 1;
+              if ((a.completedArcIds || []).length >= requiredLevel) {
+                dimsAtLevel++;
+              }
+            });
+
+            const avgScore = dimCount > 0 ? totalScore / dimCount : 0;
+
+            // Count total completed items for this domain
+            const domainItemsSnap = await db
+                .collection("growth_items")
+                .where("familyId", "==", after.familyId)
+                .where("status", "==", "completed")
+                .get();
+
+            let totalCompleted = 0;
+            let positiveCount = 0;
+            domainItemsSnap.forEach((d) => {
+              const item = d.data();
+              if (item.dimensionId) {
+                const itemDomain =
+                  DIMENSION_QUESTION_MAPPINGS[item.dimensionId]?.domain;
+                if (itemDomain === domain) {
+                  totalCompleted++;
+                  if (item.feedback &&
+                      (item.feedback.reaction === "loved_it" ||
+                       item.feedback.reaction === "tried_it")) {
+                    positiveCount++;
+                  }
+                }
+              }
+            });
+
+            const positiveRate = totalCompleted > 0 ?
+              positiveCount / totalCompleted : 0;
+
+            const criteria = {
+              dimensionsAtLevel: dimsAtLevel,
+              averageDomainScore: Math.round(avgScore * 10) / 10,
+              totalItemsCompleted: totalCompleted,
+              positiveReactionRate: Math.round(positiveRate * 100) / 100,
+              streakDays: prog.criteria?.streakDays || 0, // TODO: compute from daily activity
+            };
+
+            // Check stage advancement
+            const thresholds = {
+              growing: {
+                dimensionsAtLevel: 2,
+                averageDomainScore: 2.5,
+                totalItemsCompleted: 20,
+              },
+              mastering: {
+                dimensionsAtLevel: 4,
+                averageDomainScore: 3.5,
+                totalItemsCompleted: 60,
+                positiveReactionRate: 0.7,
+              },
+              assimilating: {
+                dimensionsAtLevel: 5,
+                averageDomainScore: 4.2,
+                totalItemsCompleted: 120,
+                positiveReactionRate: 0.8,
+                streakDays: 30,
+              },
+            };
+
+            const nextStages = {
+              learning: "growing",
+              growing: "mastering",
+              mastering: "assimilating",
+            };
+            const nextStage = nextStages[prog.stage];
+
+            let shouldAdvance = false;
+            if (nextStage && thresholds[nextStage]) {
+              const t = thresholds[nextStage];
+              shouldAdvance = true;
+              if (t.dimensionsAtLevel !== undefined &&
+                  criteria.dimensionsAtLevel < t.dimensionsAtLevel) {
+                shouldAdvance = false;
+              }
+              if (t.averageDomainScore !== undefined &&
+                  criteria.averageDomainScore < t.averageDomainScore) {
+                shouldAdvance = false;
+              }
+              if (t.totalItemsCompleted !== undefined &&
+                  criteria.totalItemsCompleted < t.totalItemsCompleted) {
+                shouldAdvance = false;
+              }
+              if (t.positiveReactionRate !== undefined &&
+                  criteria.positiveReactionRate < t.positiveReactionRate) {
+                shouldAdvance = false;
+              }
+              if (t.streakDays !== undefined &&
+                  criteria.streakDays < t.streakDays) {
+                shouldAdvance = false;
+              }
+            }
+
+            // Compute progress toward next stage
+            let stageProgress = 0;
+            if (nextStage && thresholds[nextStage]) {
+              const t = thresholds[nextStage];
+              const factors = [];
+              if (t.dimensionsAtLevel) {
+                factors.push(
+                    Math.min(1, criteria.dimensionsAtLevel /
+                      t.dimensionsAtLevel));
+              }
+              if (t.averageDomainScore) {
+                factors.push(
+                    Math.min(1, criteria.averageDomainScore /
+                      t.averageDomainScore));
+              }
+              if (t.totalItemsCompleted) {
+                factors.push(
+                    Math.min(1, criteria.totalItemsCompleted /
+                      t.totalItemsCompleted));
+              }
+              if (factors.length > 0) {
+                stageProgress = factors.reduce((a, b) => a + b, 0) /
+                  factors.length;
+              }
+            } else if (prog.stage === "assimilating") {
+              stageProgress = 1.0;
+            }
+
+            const progUpdate = {
+              criteria,
+              stageProgress: Math.round(stageProgress * 100) / 100,
+              updatedAt: now,
+            };
+
+            if (shouldAdvance) {
+              progUpdate.stage = nextStage;
+              progUpdate.stageEnteredAt = now;
+
+              logger.info(
+                  `Domain ${domain} advanced: ` +
+                  `${prog.stage} → ${nextStage} ` +
+                  `for family ${after.familyId}`,
+              );
+            }
+
+            // Check regression from assimilating
+            if (prog.stage === "assimilating" &&
+                criteria.averageDomainScore < 3.8) {
+              progUpdate.stage = "mastering";
+              progUpdate.stageEnteredAt = now;
+              logger.info(
+                  `Domain ${domain} regressed: ` +
+                  `assimilating → mastering (score dropped below 3.8)`,
+              );
+            }
+
+            await progDoc.ref.update(progUpdate);
+          }
+        }
+      }
+    },
+);
+
+/**
+ * Seed domain progression documents for a family.
+ * Creates one progression doc per domain (self, couple, parent_child),
+ * all starting at the "learning" stage.
+ * Called after initial analysis or when progression docs don't exist.
+ */
+exports.seedDomainProgressions = onCall(
+    {
+      region: "us-central1",
+      memory: "256MiB",
+      timeoutSeconds: 30,
+    },
+    async (request) => {
+      if (!request.auth) throw new Error("Authentication required");
+
+      const logger = require("firebase-functions/logger");
+      const db = admin.firestore();
+      const now = admin.firestore.Timestamp.now();
+
+      const userDoc = await db.collection("users")
+          .doc(request.auth.uid).get();
+      if (!userDoc.exists) throw new Error("User not found");
+      const familyId = userDoc.data().familyId;
+      if (!familyId) throw new Error("User has no family");
+
+      // Check if progressions already exist
+      const existingSnap = await db.collection("domain_progressions")
+          .where("familyId", "==", familyId).get();
+
+      if (!existingSnap.empty) {
+        return {
+          success: true,
+          message: "Domain progressions already exist",
+          count: existingSnap.size,
+        };
+      }
+
+      const domains = ["self", "couple", "parent_child"];
+      const batch = db.batch();
+
+      for (const domain of domains) {
+        const ref = db.collection("domain_progressions").doc();
+        batch.set(ref, {
+          progressionId: ref.id,
+          familyId,
+          domain,
+          stage: "learning",
+          stageEnteredAt: now,
+          stageProgress: 0,
+          criteria: {
+            dimensionsAtLevel: 0,
+            averageDomainScore: 0,
+            totalItemsCompleted: 0,
+            positiveReactionRate: 0,
+            streakDays: 0,
+          },
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+
+      await batch.commit();
+
+      logger.info(
+          `Seeded 3 domain progressions for family ${familyId}`,
+      );
+
+      return {success: true, count: 3};
     },
 );
 

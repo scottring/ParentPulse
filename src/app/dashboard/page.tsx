@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useGrowthFeed } from '@/hooks/useGrowthFeed';
 import { useRingScores } from '@/hooks/useRingScores';
+import { useProgression } from '@/hooks/useProgression';
 import { usePerson } from '@/hooks/usePerson';
 import MainLayout from '@/components/layout/MainLayout';
 import ThreeRingDiagram from '@/components/dashboard/ThreeRingDiagram';
@@ -31,12 +32,19 @@ export default function DashboardPage() {
   const {
     activeItems,
     submitFeedback,
+    swapDepth,
     seedAssessments,
     generateArc,
     generateBatch,
     processAcuteEvent,
     generating,
   } = useGrowthFeed();
+  const {
+    domainProgressions,
+    overallStage,
+    overallDisplay,
+    seedProgressions,
+  } = useProgression();
   const { health } = useRingScores(assessments);
   const { addPerson, people } = usePerson();
 
@@ -112,6 +120,7 @@ export default function DashboardPage() {
   const handleAnalyze = async () => {
     try {
       await seedAssessments();
+      await seedProgressions();
       await generateArc();
       await generateBatch();
     } catch (err) {
@@ -281,6 +290,14 @@ export default function DashboardPage() {
                   <span className="font-mono text-[10px] tracking-[0.15em]" style={{ color: scoreToColor(health.score) }}>
                     {health.score.toFixed(1)}
                   </span>
+                  {overallDisplay && (
+                    <span
+                      className="font-mono text-[10px] font-bold tracking-wider"
+                      style={{ color: overallDisplay.color }}
+                    >
+                      {overallDisplay.emoji} {overallDisplay.label}
+                    </span>
+                  )}
                   {activeArcCount > 0 && (
                     <span className="font-mono text-[10px] tracking-wider" style={{ color: '#6B6B6B' }}>
                       {activeArcCount} ARC{activeArcCount !== 1 ? 'S' : ''}
@@ -411,10 +428,19 @@ export default function DashboardPage() {
                 }
               />
               <ActionCard
-                items={(activeItems || []).slice(0, 2)}
+                items={activeItems || []}
                 onReact={(itemId, reaction) => submitFeedback(itemId, reaction as any)}
+                onSwapDepth={swapDepth}
                 onGenerate={generateBatch}
                 generating={generating}
+                domainStage={
+                  domainProgressions.length > 0
+                    ? {
+                        domain: domainProgressions[0].domain,
+                        stage: domainProgressions[0].stage,
+                      }
+                    : null
+                }
               />
               <PerspectiveStatusLights
                 selfActive={assessments.some((a) => a.domain === 'self')}
@@ -427,7 +453,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Bottom actions */}
-            <div className="flex items-center justify-between mt-6 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="flex items-center justify-between mt-6 pt-4" style={{ borderTop: '1px solid #E8E3DC' }}>
               {/* Add person */}
               <div className="flex gap-2">
                 <select
@@ -435,9 +461,9 @@ export default function DashboardPage() {
                   onChange={(e) => setAddType(e.target.value as 'spouse' | 'child')}
                   className="font-mono text-[10px] rounded px-2 py-1"
                   style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    color: 'rgba(255,255,255,0.5)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: '#FFFFFF',
+                    color: '#6B6B6B',
+                    border: '1px solid #E8E3DC',
                   }}
                 >
                   <option value="child">Child</option>
@@ -450,9 +476,9 @@ export default function DashboardPage() {
                   placeholder="Name"
                   className="font-mono text-[10px] rounded px-2 py-1 w-24"
                   style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    color: 'rgba(255,255,255,0.7)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: '#FFFFFF',
+                    color: '#2C2C2C',
+                    border: '1px solid #E8E3DC',
                   }}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddPerson()}
                 />
@@ -462,7 +488,7 @@ export default function DashboardPage() {
                   className="font-mono text-[10px] font-bold rounded px-3 py-1 transition-all disabled:opacity-30"
                   style={{
                     color: '#d97706',
-                    border: '1px solid rgba(217,119,6,0.3)',
+                    border: '1px solid rgba(217,119,6,0.4)',
                   }}
                 >
                   + ADD
@@ -476,10 +502,10 @@ export default function DashboardPage() {
                   disabled={generating}
                   className="font-mono text-[10px] font-bold tracking-wider px-4 py-2 rounded transition-all disabled:opacity-30"
                   style={{
-                    background: 'rgba(217,119,6,0.15)',
+                    background: 'rgba(217,119,6,0.1)',
                     color: '#d97706',
-                    border: '1px solid rgba(217,119,6,0.3)',
-                    boxShadow: '0 0 8px rgba(217,119,6,0.1)',
+                    border: '1px solid rgba(217,119,6,0.5)',
+                    boxShadow: '2px 2px 0px 0px rgba(217,119,6,0.4)',
                   }}
                 >
                   {generating ? 'GENERATING...' : 'START GROWTH ARC'}

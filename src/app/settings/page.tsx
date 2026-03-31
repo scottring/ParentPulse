@@ -10,6 +10,8 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { DomainWeights, DEFAULT_DOMAIN_WEIGHTS } from '@/types/ring-scores';
 import { scoreToColor } from '@/lib/scoring-engine';
+import { EngagementMode } from '@/types/growth';
+import { ENGAGEMENT_PRESETS } from '@/types/user-preferences';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -20,6 +22,12 @@ export default function SettingsPage() {
   const [dailyReminder, setDailyReminder] = useState(true);
   const [weeklyInsights, setWeeklyInsights] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Engagement mode state
+  const [engagementMode, setEngagementMode] = useState<EngagementMode>(
+    (user as any)?.growthPreferences?.engagementMode || 'moderate',
+  );
+  const [engagementSaving, setEngagementSaving] = useState(false);
 
   // Domain weight state
   const [weights, setWeights] = useState<DomainWeights>(DEFAULT_DOMAIN_WEIGHTS);
@@ -63,6 +71,22 @@ export default function SettingsPage() {
   const handleResetWeights = useCallback(() => {
     setWeights(DEFAULT_DOMAIN_WEIGHTS);
   }, []);
+
+  const handleSaveEngagement = useCallback(async (mode: EngagementMode) => {
+    if (!user) return;
+    setEngagementMode(mode);
+    setEngagementSaving(true);
+    try {
+      await updateDoc(doc(firestore, 'users', user.userId), {
+        'growthPreferences.engagementMode': mode,
+        'growthPreferences.dailyItemTarget': ENGAGEMENT_PRESETS[mode].dailyItemTarget,
+      });
+    } catch (err) {
+      console.error('Failed to save engagement mode:', err);
+    } finally {
+      setEngagementSaving(false);
+    }
+  }, [user]);
 
   // Invitation state
   const [showInviteForm, setShowInviteForm] = useState(false);
@@ -409,6 +433,66 @@ export default function SettingsPage() {
               >
                 {weightsSaving ? 'Saving...' : 'Save Weights'}
               </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Growth Engagement Mode */}
+        <div className="mb-8 animate-fade-in-up" style={{ animationDelay: '0.27s' }}>
+          <h2 className="parent-heading text-xl mb-4" style={{ color: 'var(--parent-text)' }}>
+            Growth Engagement
+          </h2>
+          <div className="parent-card p-6">
+            <p className="text-sm mb-4" style={{ color: 'var(--parent-text-light)' }}>
+              Choose how much growth work you want each day. You can always adjust
+              the depth of individual activities from the dashboard.
+            </p>
+
+            <div className="space-y-3">
+              {(['light', 'moderate', 'deep'] as EngagementMode[]).map((mode) => {
+                const preset = ENGAGEMENT_PRESETS[mode];
+                const isActive = engagementMode === mode;
+
+                return (
+                  <button
+                    key={mode}
+                    onClick={() => handleSaveEngagement(mode)}
+                    disabled={engagementSaving}
+                    className="w-full text-left p-4 rounded-lg transition-all"
+                    style={{
+                      background: isActive ? 'var(--parent-accent)' + '15' : 'transparent',
+                      border: `2px solid ${isActive ? 'var(--parent-accent)' : 'var(--parent-border)'}`,
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div
+                          className="font-semibold text-sm"
+                          style={{ color: isActive ? 'var(--parent-accent)' : 'var(--parent-text)' }}
+                        >
+                          {preset.label}
+                        </div>
+                        <div className="text-xs mt-0.5" style={{ color: 'var(--parent-text-light)' }}>
+                          {preset.description}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-mono text-xs font-bold" style={{ color: 'var(--parent-text-light)' }}>
+                          ~{preset.minutesPerDay} min/day
+                        </div>
+                        {isActive && (
+                          <span
+                            className="text-xs font-bold"
+                            style={{ color: 'var(--parent-accent)' }}
+                          >
+                            ACTIVE
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

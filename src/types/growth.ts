@@ -6,12 +6,18 @@ import type { DimensionId } from '@/config/relationship-dimensions';
 
 export type GrowthItemType =
   | 'micro_activity'       // 1-3 min action (parent or couple)
-  | 'conversation_guide'   // 15-min structured convo (future)
+  | 'conversation_guide'   // 15-30 min structured convo
   | 'reflection_prompt'    // 1-tap emoji check-in
   | 'assessment_prompt'    // Dimension assessment question (1-tap)
+  | 'journaling'           // 5-10 min written reflection with prompts
+  | 'mindfulness'          // 2-10 min breathing/body scan/grounding
+  | 'partner_exercise'     // 10-20 min structured 2-person activity
+  | 'solo_deep_dive'       // 15-45 min deep self-work (reading + reflection)
+  | 'repair_ritual'        // 10-20 min guided reconnection after conflict
+  | 'gratitude_practice'   // 1-3 min daily appreciation micro-habit
   | 'illustrated_story'    // Kid story for parent to read (future)
   | 'weekly_arc'           // Theme card tying the week together (future)
-  | 'progress_snapshot';   // Monthly "here's what shifted" (future)
+  | 'progress_snapshot';   // "here's what shifted" on stage advancement
 
 export type GrowthItemStatus =
   | 'queued'       // Generated, waiting to be surfaced
@@ -24,6 +30,17 @@ export type GrowthItemStatus =
 export type GrowthItemSpeed = 'ambient' | 'intentional';
 
 export type RelationalLevel = 'individual' | 'couple' | 'family';
+
+// Depth control
+export type DepthTier = 'light' | 'moderate' | 'deep';
+export type EngagementMode = 'light' | 'moderate' | 'deep';
+
+// Depth alternatives: AI generates lighter/deeper versions of the same insight
+export interface DepthAlternatives {
+  light?: { body: string; estimatedMinutes: number; type: GrowthItemType };
+  moderate?: { body: string; estimatedMinutes: number; type: GrowthItemType };
+  deep?: { body: string; estimatedMinutes: number; type: GrowthItemType };
+}
 
 export type FeedbackReaction = 'loved_it' | 'tried_it' | 'not_now' | 'doesnt_fit';
 
@@ -73,6 +90,10 @@ export interface GrowthItem {
   // Status
   status: GrowthItemStatus;
   statusUpdatedAt?: Timestamp;
+
+  // Depth
+  depthTier?: DepthTier;
+  alternatives?: DepthAlternatives;
 
   // Feedback (the 1-3 tap loop)
   feedback?: GrowthFeedback;

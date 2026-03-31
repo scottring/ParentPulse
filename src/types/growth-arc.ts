@@ -151,9 +151,60 @@ export interface DimensionAssessment {
   lastAssessedAt: Timestamp;
 }
 
+// ==================== Domain Progression ====================
+
+export type GrowthStage = 'learning' | 'growing' | 'mastering' | 'assimilating';
+
+export interface StageCriteria {
+  dimensionsAtLevel: number;
+  averageDomainScore: number;
+  totalItemsCompleted: number;
+  positiveReactionRate: number;
+  streakDays: number;
+}
+
+export interface DomainProgression {
+  progressionId: string;
+  familyId: string;
+  domain: DimensionDomain;
+
+  stage: GrowthStage;
+  stageEnteredAt: Timestamp;
+  stageProgress: number; // 0.0 - 1.0
+
+  criteria: StageCriteria;
+
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+// Stage advancement thresholds
+export const STAGE_THRESHOLDS: Record<GrowthStage, Partial<StageCriteria>> = {
+  learning: {}, // starting stage — no requirements
+  growing: {
+    dimensionsAtLevel: 2,
+    averageDomainScore: 2.5,
+    totalItemsCompleted: 20,
+  },
+  mastering: {
+    dimensionsAtLevel: 4,
+    averageDomainScore: 3.5,
+    totalItemsCompleted: 60,
+    positiveReactionRate: 0.7,
+  },
+  assimilating: {
+    dimensionsAtLevel: 5, // all dims at level 3
+    averageDomainScore: 4.2,
+    totalItemsCompleted: 120,
+    positiveReactionRate: 0.8,
+    streakDays: 30,
+  },
+};
+
 // ==================== Collections ====================
 
 export const ARC_COLLECTIONS = {
   GROWTH_ARCS: 'growth_arcs',
   DIMENSION_ASSESSMENTS: 'dimension_assessments',
+  DOMAIN_PROGRESSIONS: 'domain_progressions',
 } as const;

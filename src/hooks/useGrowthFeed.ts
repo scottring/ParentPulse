@@ -20,6 +20,7 @@ import {
   GrowthFeedback,
   FeedbackReaction,
   ImpactRating,
+  DepthTier,
   GROWTH_COLLECTIONS,
 } from '@/types/growth';
 import { GrowthArc, ARC_COLLECTIONS } from '@/types/growth-arc';
@@ -44,6 +45,7 @@ interface UseGrowthFeedReturn {
   error: string | null;
 
   // Actions
+  swapDepth: (itemId: string, newDepth: DepthTier) => Promise<void>;
   submitFeedback: (
     itemId: string,
     reaction: FeedbackReaction,
@@ -288,6 +290,26 @@ export function useGrowthFeed(): UseGrowthFeedReturn {
     }
   }, []);
 
+  // Swap an item's depth tier (updates body/type/estimatedMinutes from alternatives)
+  const swapDepth = useCallback(async (itemId: string, newDepth: DepthTier) => {
+    const item = activeItems.find((i) => i.growthItemId === itemId);
+    if (!item?.alternatives) return;
+
+    const alt = item.alternatives[newDepth];
+    if (!alt) return;
+
+    await updateDoc(
+      doc(firestore, GROWTH_COLLECTIONS.GROWTH_ITEMS, itemId),
+      {
+        body: alt.body,
+        estimatedMinutes: alt.estimatedMinutes,
+        type: alt.type,
+        depthTier: newDepth,
+        statusUpdatedAt: Timestamp.now(),
+      },
+    );
+  }, [activeItems]);
+
   const processAcuteEvent = useCallback(async (freeText: string) => {
     try {
       const fn = httpsCallable(functions, 'processAcuteEvent');
@@ -315,6 +337,7 @@ export function useGrowthFeed(): UseGrowthFeedReturn {
     completedItems,
     loading,
     error,
+    swapDepth,
     submitFeedback,
     markSeen,
     generateBatch,
