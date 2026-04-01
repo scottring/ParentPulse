@@ -57,6 +57,12 @@ const VintageCard = ({ children, className = '' }: { children: React.ReactNode; 
 export default function RegisterPage() {
   const router = useRouter();
   const { register, user, loading: authLoading, error: authError } = useAuth();
+  const [isDemo, setIsDemo] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setIsDemo(params.get('demo') === 'true');
+  }, []);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -98,6 +104,7 @@ export default function RegisterPage() {
         email: email.trim(),
         familyName: familyName.trim(),
         password,
+        ...(isDemo ? { isDemo: true } : {}),
       });
     } catch (err: any) {
       setError(err.message || 'Failed to create account. Please try again.');
@@ -492,6 +499,20 @@ export default function RegisterPage() {
               >
                 Create your account
               </h3>
+
+              {isDemo && (
+                <div
+                  className="mb-5 p-3 rounded-xl text-center"
+                  style={{
+                    background: 'rgba(217,119,6,0.1)',
+                    border: '1px solid rgba(217,119,6,0.3)',
+                  }}
+                >
+                  <p style={{ fontFamily: 'var(--font-parent-heading)', fontSize: '13px', color: '#A3510B', fontWeight: 600 }}>
+                    Demo Mode — fill buttons will appear on all questions
+                  </p>
+                </div>
+              )}
 
               {(error || authError) && (
                 <div

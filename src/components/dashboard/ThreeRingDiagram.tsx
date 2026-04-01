@@ -153,7 +153,9 @@ export default function ThreeRingDiagram({ health, onZoneClick }: ThreeRingDiagr
                     <title>
                       {zone.score > 0
                         ? `${DOMAIN_LAYOUT.find((l) => l.domain === zone.domain)?.label} — ${PERSPECTIVE_LABELS[zone.perspective]}: ${zone.score.toFixed(1)}`
-                        : `Add ${PERSPECTIVE_LABELS[zone.perspective].toLowerCase()} perspective for ${DOMAIN_LAYOUT.find((l) => l.domain === zone.domain)?.label.toLowerCase()}`
+                        : zone.perspective === 'spouse'
+                          ? `Waiting for spouse to share their perspective`
+                          : `Add ${PERSPECTIVE_LABELS[zone.perspective].toLowerCase()} perspective for ${DOMAIN_LAYOUT.find((l) => l.domain === zone.domain)?.label.toLowerCase()}`
                       }
                     </title>
                   </path>
@@ -247,7 +249,7 @@ export default function ThreeRingDiagram({ health, onZoneClick }: ThreeRingDiagr
               );
             })}
 
-            {/* LAYER 3 (center): overall health — flush against middle ring */}
+            {/* LAYER 3 (center): overall harmony — flush against middle ring */}
             <circle
               cx={cx} cy={cy} r={centerRadius}
               fill={`${overallColor}25`}

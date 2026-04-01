@@ -186,7 +186,7 @@ export function SelfWorthAssessmentModal({
       onClose();
     } catch (err) {
       console.error('Error saving self-worth assessment:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save assessment');
+      setError(err instanceof Error ? err.message : 'Failed to save portrait');
     } finally {
       setSaving(false);
       setGenerating(false);
@@ -205,10 +205,10 @@ export function SelfWorthAssessmentModal({
         <div className="flex items-start justify-between mb-8">
           <div>
             <div className="inline-block px-3 py-1 bg-purple-600 text-white font-mono text-xs mb-4">
-              SELF-WORTH ASSESSMENT (RSES)
+              SELF-WORTH PORTRAIT (RSES)
             </div>
             <h2 className="font-mono text-2xl font-bold text-slate-900">
-              Self-Worth Assessment for {personName}
+              Self-Worth Portrait for {personName}
             </h2>
             <p className="font-mono text-sm text-slate-600 mt-2">
               Question {currentQuestionIndex + 1} of {SELF_WORTH_QUESTIONS.length}

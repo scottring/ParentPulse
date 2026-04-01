@@ -203,7 +203,7 @@ export default function ChildQuestionDisplay({
       {/* Input */}
       <div className="mb-8 ml-0 sm:ml-16">
         {renderInput()}
-        {isDemo && !currentAnswer && getDemoAnswer(question.id, 'kid') !== undefined && (
+        {isDemo && getDemoAnswer(question.id, 'kid') !== undefined && (
           <button
             type="button"
             onClick={() => {

@@ -15,7 +15,7 @@ interface QuestionRendererProps {
   personName: string;
   onKeyboardContinue?: () => void;
   isDemo?: boolean;
-  demoPerspective?: 'self' | 'observer' | 'kid';
+  demoPerspective?: 'self' | 'observer' | 'observer_child' | 'kid';
 }
 
 export function QuestionRenderer({
@@ -116,7 +116,7 @@ export function QuestionRenderer({
               }}
               autoFocus
             />
-            {isDemo && getDemoAnswer(question.id, demoPerspective) && !value && (
+            {isDemo && getDemoAnswer(question.id, demoPerspective) !== undefined && (
               <button
                 type="button"
                 onClick={() => {
@@ -134,7 +134,7 @@ export function QuestionRenderer({
     }
   };
 
-  const demoFillable = isDemo && questionType !== 'text' && !primaryValue && getDemoAnswer(question.id, demoPerspective) !== undefined;
+  const demoFillable = isDemo && questionType !== 'text' && getDemoAnswer(question.id, demoPerspective) !== undefined;
 
   return (
     <div className="space-y-6">

@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useState, useCallback, useRef } from 'react';
+import { use, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { progressColor } from '@/utils/progress-color';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -11,6 +11,7 @@ import { getSelfOnboardingSections } from '@/config/self-questions';
 import { OnboardingSection } from '@/config/onboarding-questions';
 import { QuestionAnswer } from '@/types/onboarding';
 import { QuestionRenderer } from '@/components/onboarding/QuestionRenderer';
+import { getDemoAnswer } from '@/config/demo-answers';
 import { DocumentUploader } from '@/components/onboarding/DocumentUploader';
 import { TopicCategory } from '@/types/person-manual';
 import { httpsCallable } from 'firebase/functions';
@@ -46,6 +47,11 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   const { personId } = use(params);
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const isDemo = useMemo(() => {
+    if (user?.isDemo) return true;
+    if (typeof window !== 'undefined') return new URLSearchParams(window.location.search).get('demo') === 'true';
+    return false;
+  }, [user?.isDemo]);
   const { person, loading: personLoading } = usePersonById(personId);
   const { manual, loading: manualLoading } = usePersonManual(personId);
   const { saveDraft, completeDraft, findDraft } = useContribution();
@@ -280,6 +286,21 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
     }
     router.push('/dashboard');
   };
+
+  const handleFillAll = useCallback(() => {
+    const filled: Record<string, Record<string, QuestionAnswer>> = { ...answers };
+    for (const section of sections) {
+      if (!filled[section.sectionId]) filled[section.sectionId] = {};
+      for (const q of section.questions) {
+        const demo = getDemoAnswer(q.id, 'self');
+        if (demo !== undefined) {
+          filled[section.sectionId][q.id] = demo;
+        }
+      }
+    }
+    setAnswers(filled);
+    setSaveStatus('unsaved');
+  }, [answers, sections]);
 
   // Toggle answer visibility
   const toggleVisibility = useCallback((sectionId: string, questionId: string) => {
@@ -886,6 +907,32 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
         </div>
       </div>
 
+      {/* Demo context banner */}
+      {isDemo && (
+        <div className="max-w-3xl mx-auto px-6 pt-4">
+          <div
+            className="flex items-center justify-between px-4 py-2 rounded-lg font-mono text-[11px]"
+            style={{ background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.2)' }}
+          >
+            <div className="flex items-center gap-3">
+              <span style={{ color: '#A3510B', fontWeight: 700 }}>DEMO</span>
+              <span style={{ color: '#6B6B6B' }}>
+                Answering as <strong style={{ color: '#2C2C2C' }}>{user.name}</strong>
+                {' · '}about <strong style={{ color: '#A3510B' }}>yourself</strong>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleFillAll}
+              className="px-3 py-1 rounded font-bold transition-all hover:scale-105"
+              style={{ background: '#d97706', color: 'white', fontSize: '10px' }}
+            >
+              FILL ALL
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Section indicator */}
       <div className="max-w-3xl mx-auto px-6 pt-6">
         <div className="flex gap-2 mb-6">
@@ -942,7 +989,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
             onChange={(value) => handleAnswer(currentQuestion.id, value)}
             personName={user.name}
             onKeyboardContinue={handleNext}
-            isDemo={!!user.isDemo}
+            isDemo={isDemo}
             demoPerspective="self"
           />
 

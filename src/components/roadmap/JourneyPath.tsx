@@ -28,16 +28,16 @@ export default function JourneyPath({ currentStage }: JourneyPathProps) {
                 className="w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all"
                 style={{
                   background: isCurrent
-                    ? display.color + '30'
+                    ? display.color + '20'
                     : isCompleted
-                      ? 'rgba(22,163,74,0.2)'
-                      : 'rgba(255,255,255,0.04)',
+                      ? 'rgba(22,163,74,0.1)'
+                      : '#FAF8F5',
                   border: `2px solid ${
                     isCurrent
                       ? display.color
                       : isCompleted
                         ? 'rgba(22,163,74,0.4)'
-                        : 'rgba(255,255,255,0.08)'
+                        : '#E8E3DC'
                   }`,
                   boxShadow: isCurrent ? `0 0 12px ${display.color}30` : 'none',
                 }}
@@ -51,7 +51,7 @@ export default function JourneyPath({ currentStage }: JourneyPathProps) {
                     ? display.color
                     : isCompleted
                       ? 'rgba(22,163,74,0.5)'
-                      : 'rgba(255,255,255,0.15)',
+                      : '#A3A3A3',
                 }}
               >
                 {display.label}
@@ -65,7 +65,7 @@ export default function JourneyPath({ currentStage }: JourneyPathProps) {
                 style={{
                   background: i < currentIndex
                     ? 'rgba(22,163,74,0.3)'
-                    : 'rgba(255,255,255,0.06)',
+                    : '#E8E3DC',
                 }}
               />
             )}

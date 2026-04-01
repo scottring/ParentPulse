@@ -237,7 +237,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         userCredential.user,
         'parent',
         data.name,
-        familyId
+        familyId,
+        data.isDemo ? { isDemo: true } : undefined
       );
 
       // Auto-create the user's own Person + Manual for family collaboration

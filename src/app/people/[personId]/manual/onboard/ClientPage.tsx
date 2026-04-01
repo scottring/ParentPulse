@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useState, useCallback, useRef } from 'react';
+import { use, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { progressColor } from '@/utils/progress-color';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -10,6 +10,7 @@ import { useContribution } from '@/hooks/useContribution';
 import { getOnboardingSections, OnboardingSection } from '@/config/onboarding-questions';
 import { QuestionAnswer } from '@/types/onboarding';
 import { QuestionRenderer } from '@/components/onboarding/QuestionRenderer';
+import { getDemoAnswer } from '@/config/demo-answers';
 import { RelationshipType } from '@/types/person-manual';
 import { computeAge } from '@/utils/age';
 
@@ -17,6 +18,11 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
   const { personId } = use(params);
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const isDemo = useMemo(() => {
+    if (user?.isDemo) return true;
+    if (typeof window !== 'undefined') return new URLSearchParams(window.location.search).get('demo') === 'true';
+    return false;
+  }, [user?.isDemo]);
   const { person, loading: personLoading } = usePersonById(personId);
   const { manual, loading: manualLoading } = usePersonManual(personId);
   const { saveDraft, completeDraft, findDraft } = useContribution();
@@ -228,6 +234,21 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
     router.push('/dashboard');
   };
 
+  const handleFillAll = useCallback(() => {
+    const filled: Record<string, Record<string, QuestionAnswer>> = { ...answers };
+    for (const section of sections) {
+      if (!filled[section.sectionId]) filled[section.sectionId] = {};
+      for (const q of section.questions) {
+        const demo = getDemoAnswer(q.id, person.relationshipType === 'child' ? 'observer_child' : 'observer');
+        if (demo !== undefined) {
+          filled[section.sectionId][q.id] = demo;
+        }
+      }
+    }
+    setAnswers(filled);
+    setSaveStatus('unsaved');
+  }, [answers, sections]);
+
   // Redirect after completion
   useEffect(() => {
     if (isComplete) {
@@ -338,6 +359,33 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
         </div>
       </div>
 
+      {/* Demo context banner */}
+      {isDemo && (
+        <div className="max-w-3xl mx-auto px-6 pt-4">
+          <div
+            className="flex items-center justify-between px-4 py-2 rounded-lg font-mono text-[11px]"
+            style={{ background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.2)' }}
+          >
+            <div className="flex items-center gap-3">
+              <span style={{ color: '#A3510B', fontWeight: 700 }}>DEMO</span>
+              <span style={{ color: '#6B6B6B' }}>
+                <strong style={{ color: '#2C2C2C' }}>{user?.name}</strong> sharing observations about{' '}
+                <strong style={{ color: '#3B82F6' }}>{person.name}</strong>
+                {person.relationshipType && <> ({person.relationshipType})</>}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleFillAll}
+              className="px-3 py-1 rounded font-bold transition-all hover:scale-105"
+              style={{ background: '#d97706', color: 'white', fontSize: '10px' }}
+            >
+              FILL ALL
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Section indicator */}
       <div className="max-w-3xl mx-auto px-6 pt-6">
         <div className="flex gap-2 mb-6">
@@ -383,8 +431,8 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
             onChange={(value) => handleAnswer(currentQuestion.id, value)}
             personName={person.name}
             onKeyboardContinue={handleNext}
-            isDemo={!!user?.isDemo}
-            demoPerspective="observer"
+            isDemo={isDemo}
+            demoPerspective={person.relationshipType === 'child' ? 'observer_child' : 'observer'}
           />
         </div>
 

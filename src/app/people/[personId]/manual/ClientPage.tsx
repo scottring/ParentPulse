@@ -30,7 +30,29 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
   const [showInvite, setShowInvite] = useState(false);
   const [synthesizing, setSynthesizing] = useState(false);
   type ViewMode = 'synthesized' | 'perspectives' | 'gaps';
-  const [viewMode, setViewMode] = useState<ViewMode>('synthesized');
+  const [viewMode, setViewMode] = useState<ViewMode>(manual?.synthesizedContent ? 'synthesized' : 'perspectives');
+
+  // Shared synthesis handler: runs synthesis then refreshes dimension assessments (life wheel)
+  const runSynthesis = async () => {
+    setSynthesizing(true);
+    try {
+      const synthesize = httpsCallable(functions, 'synthesizeManualContent');
+      await synthesize({ manualId: manual?.manualId });
+      // Refresh assessment scores so the life wheel updates with new synthesis data
+      try {
+        const seedAssessments = httpsCallable(functions, 'seedDimensionAssessments');
+        await seedAssessments({});
+      } catch (assessErr) {
+        console.warn('Assessment refresh after synthesis failed (non-critical):', assessErr);
+      }
+      await fetchByPersonId(personId);
+      setViewMode('synthesized');
+    } catch (err) {
+      console.error('Synthesis failed:', err);
+    } finally {
+      setSynthesizing(false);
+    }
+  };
 
   const loading = authLoading || personLoading || manualLoading || contribLoading;
 
@@ -304,6 +326,60 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
         ) : (
           /* Has perspectives — show view mode tabs + content */
           <div className="space-y-6">
+            {/* Synthesis readiness banner */}
+            {!manual.synthesizedContent && hasAnyPerspective && (
+              <div className="border-2 border-amber-400 bg-amber-50 p-6">
+                <div className="flex items-start gap-4">
+                  <div className="text-2xl flex-shrink-0">&#10024;</div>
+                  <div className="flex-1">
+                    <h3 className="font-mono font-bold text-sm text-amber-900 mb-1">
+                      READY TO SYNTHESIZE
+                    </h3>
+                    <p className="font-mono text-xs text-amber-700 mb-3 leading-relaxed">
+                      {hasSelfPerspective && hasObserverPerspective
+                        ? `You have both self and observer perspectives. Synthesize now to see where they align, where they differ, and what blind spots emerge.`
+                        : hasSelfPerspective
+                        ? `${isSelf ? 'Your' : `${person.name}'s`} self-perspective is in. You can synthesize now, or invite someone to add an observer perspective first for richer insights.`
+                        : `An observer perspective is in. ${isSelf ? 'Add your own perspective' : `Ask ${person.name} to add theirs`} for the richest synthesis, or synthesize now with what you have.`}
+                    </p>
+                    <button
+                      onClick={runSynthesis}
+                      disabled={synthesizing}
+                      className="px-6 py-2.5 bg-amber-600 text-white font-mono text-xs font-bold hover:bg-amber-700 disabled:opacity-50 transition-all"
+                    >
+                      {synthesizing ? 'SYNTHESIZING...' : 'SYNTHESIZE NOW ✦'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* New data available banner */}
+            {manual.synthesizedContent && hasAnyPerspective && (
+              (() => {
+                const synthDate = manual.synthesizedContent.lastSynthesizedAt?.toDate() || new Date(0);
+                const hasNewerContribution = contributions.some((c) => {
+                  const contribDate = c.updatedAt?.toDate() || c.createdAt?.toDate() || new Date(0);
+                  return contribDate > synthDate;
+                });
+                if (!hasNewerContribution) return null;
+                return (
+                  <div className="border-2 border-blue-300 bg-blue-50 px-6 py-4 flex items-center justify-between">
+                    <p className="font-mono text-xs text-blue-800">
+                      <strong>New data available</strong> since last synthesis. Re-synthesize to update insights.
+                    </p>
+                    <button
+                      onClick={runSynthesis}
+                      disabled={synthesizing}
+                      className="px-4 py-2 bg-blue-600 text-white font-mono text-xs font-bold hover:bg-blue-700 disabled:opacity-50 transition-all flex-shrink-0"
+                    >
+                      {synthesizing ? 'UPDATING...' : 'RE-SYNTHESIZE'}
+                    </button>
+                  </div>
+                );
+              })()
+            )}
+
             {/* View mode tabs */}
             <div className="flex border-2 border-slate-200 bg-white">
               {([
@@ -424,18 +500,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
 
                 {/* Re-synthesize button */}
                 <button
-                  onClick={async () => {
-                    setSynthesizing(true);
-                    try {
-                      const synthesize = httpsCallable(functions, 'synthesizeManualContent');
-                      await synthesize({ manualId: manual.manualId });
-                      await fetchByPersonId(personId);
-                    } catch (err) {
-                      console.error('Synthesis failed:', err);
-                    } finally {
-                      setSynthesizing(false);
-                    }
-                  }}
+                  onClick={runSynthesis}
                   disabled={synthesizing}
                   className="w-full px-6 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-600 hover:border-slate-800 disabled:opacity-50 transition-all"
                 >
@@ -452,18 +517,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                   Run AI synthesis to generate insights from the available perspectives.
                 </p>
                 <button
-                  onClick={async () => {
-                    setSynthesizing(true);
-                    try {
-                      const synthesize = httpsCallable(functions, 'synthesizeManualContent');
-                      await synthesize({ manualId: manual.manualId });
-                      await fetchByPersonId(personId);
-                    } catch (err) {
-                      console.error('Synthesis failed:', err);
-                    } finally {
-                      setSynthesizing(false);
-                    }
-                  }}
+                  onClick={runSynthesis}
                   disabled={synthesizing}
                   className="px-6 py-3 bg-amber-600 text-white font-mono font-bold hover:bg-amber-700 disabled:opacity-50 transition-all"
                 >

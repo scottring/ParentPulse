@@ -143,12 +143,12 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
             )}
 
             <div className="space-y-4">
-              {/* Primary CTA: Start your assessment */}
+              {/* Primary CTA: Start your portrait */}
               <Link
                 href={`/people/${personId}/manual/onboard`}
                 className="block w-full p-4 bg-slate-800 text-white font-mono text-sm font-bold hover:bg-amber-600 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] text-center"
               >
-                START YOUR ASSESSMENT OF {person.name.toUpperCase()} →
+                START YOUR PORTRAIT OF {person.name.toUpperCase()} →
               </Link>
 
               {/* Kid self-session */}

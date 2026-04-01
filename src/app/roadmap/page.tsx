@@ -4,6 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useDashboard } from '@/hooks/useDashboard';
+import { usePerson } from '@/hooks/usePerson';
 import { useRingScores } from '@/hooks/useRingScores';
 import { useProgression } from '@/hooks/useProgression';
 import { useGrowthFeed } from '@/hooks/useGrowthFeed';
@@ -25,6 +26,7 @@ export default function RoadmapPage() {
     spouse,
     peopleNeedingContributions,
   } = useDashboard();
+  const { people } = usePerson();
   const { health } = useRingScores(assessments);
   const {
     domainProgressions,
@@ -50,7 +52,7 @@ export default function RoadmapPage() {
 
     steps.push({
       id: 'self-assessment',
-      title: 'Complete your self-assessment',
+      title: 'Complete your self-portrait',
       complete: hasSelfContribution,
       action: selfPerson
         ? { label: 'START', href: `/people/${selfPerson.personId}/manual/self-onboard` }
@@ -65,7 +67,8 @@ export default function RoadmapPage() {
       action: !hasSpouse ? { label: 'ADD', href: '/dashboard' } : null,
     });
 
-    const spousePerson = roles.find((r) => r.otherPerson.relationshipType === 'spouse')?.otherPerson;
+    const spousePerson = roles.find((r) => r.otherPerson.relationshipType === 'spouse')?.otherPerson
+      || people.find((p) => p.relationshipType === 'spouse');
     const hasSpouseObservation = spousePerson
       ? !peopleNeedingContributions.some((p) => p.personId === spousePerson.personId)
       : false;
@@ -103,7 +106,7 @@ export default function RoadmapPage() {
     });
 
     return steps;
-  }, [selfPerson, hasSelfContribution, spouse, roles, assessments, peopleNeedingContributions]);
+  }, [selfPerson, hasSelfContribution, spouse, roles, assessments, peopleNeedingContributions, people]);
 
   if (authLoading || !user) {
     return (
@@ -127,19 +130,19 @@ export default function RoadmapPage() {
     <MainLayout>
       <div
         className="min-h-screen p-4 sm:p-6 lg:p-8"
-        style={{ background: 'linear-gradient(145deg, #1a1a1a, #111)' }}
+        style={{ background: '#FFF8F0' }}
       >
         {/* Header */}
         <div className="max-w-3xl mx-auto mb-6">
           <h1
             className="font-mono font-bold text-xl"
-            style={{ color: 'rgba(255,255,255,0.85)' }}
+            style={{ color: '#2C2C2C' }}
           >
             Your Growth Journey
           </h1>
           <p
             className="font-mono text-[11px] mt-1"
-            style={{ color: 'rgba(255,255,255,0.4)' }}
+            style={{ color: '#6B6B6B' }}
           >
             {totalCompleted} activities completed
             {activeArcCount > 0 && ` \u00B7 ${activeArcCount} active arc${activeArcCount !== 1 ? 's' : ''}`}
@@ -156,13 +159,13 @@ export default function RoadmapPage() {
           <span className="text-4xl">{overallDisplay.emoji}</span>
           <h2
             className="font-mono text-[14px] font-bold tracking-wider mt-2"
-            style={{ color: overallDisplay.color }}
+            style={{ color: '#2C2C2C' }}
           >
             {overallDisplay.label}
           </h2>
           <p
             className="font-mono text-[10px] mt-1"
-            style={{ color: 'rgba(255,255,255,0.35)' }}
+            style={{ color: '#A3A3A3' }}
           >
             {overallDisplay.description}
           </p>
@@ -200,7 +203,7 @@ export default function RoadmapPage() {
           <div className="max-w-3xl mx-auto mt-8">
             <h3
               className="font-mono text-[10px] font-bold tracking-widest mb-3"
-              style={{ color: 'rgba(255,255,255,0.3)' }}
+              style={{ color: '#A3A3A3' }}
             >
               DOMAIN BREAKDOWN
             </h3>
@@ -212,8 +215,8 @@ export default function RoadmapPage() {
                     key={dp.domain}
                     className="rounded-lg p-4"
                     style={{
-                      background: 'rgba(255,255,255,0.03)',
-                      border: '1px solid rgba(255,255,255,0.06)',
+                      background: '#FFFFFF',
+                      border: '1px solid #E8E3DC',
                     }}
                   >
                     <div className="flex items-center gap-2 mb-2">
@@ -221,7 +224,7 @@ export default function RoadmapPage() {
                       <div>
                         <span
                           className="font-mono text-[10px] font-bold tracking-wider block"
-                          style={{ color: 'rgba(255,255,255,0.7)' }}
+                          style={{ color: '#2C2C2C' }}
                         >
                           {dp.domain === 'self' ? 'SELF' : dp.domain === 'couple' ? 'COUPLE' : 'PARENT'}
                         </span>
@@ -237,7 +240,7 @@ export default function RoadmapPage() {
                     {/* Progress bar */}
                     <div
                       className="h-1 rounded-full overflow-hidden mb-2"
-                      style={{ background: 'rgba(255,255,255,0.06)' }}
+                      style={{ background: '#E8E3DC' }}
                     >
                       <div
                         className="h-full rounded-full transition-all duration-700"
@@ -252,25 +255,25 @@ export default function RoadmapPage() {
                     <div className="flex justify-between">
                       <span
                         className="font-mono text-[8px]"
-                        style={{ color: 'rgba(255,255,255,0.25)' }}
+                        style={{ color: '#A3A3A3' }}
                       >
                         Score: {dp.criteria.averageDomainScore.toFixed(1)}
                       </span>
                       <span
                         className="font-mono text-[8px]"
-                        style={{ color: 'rgba(255,255,255,0.25)' }}
+                        style={{ color: '#A3A3A3' }}
                       >
                         {dp.criteria.totalItemsCompleted} done
                       </span>
                     </div>
 
                     {/* Requirements */}
-                    <div className="mt-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div className="mt-2 pt-2" style={{ borderTop: '1px solid #E8E3DC' }}>
                       {dp.requirements.slice(0, 2).map((req, i) => (
                         <p
                           key={i}
                           className="font-mono text-[8px] mt-0.5"
-                          style={{ color: 'rgba(255,255,255,0.2)' }}
+                          style={{ color: '#A3A3A3' }}
                         >
                           &bull; {req}
                         </p>

@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useState, useCallback, useRef } from 'react';
+import { use, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { usePersonById } from '@/hooks/usePerson';
@@ -8,11 +8,17 @@ import { usePersonManual } from '@/hooks/usePersonManual';
 import { useContribution } from '@/hooks/useContribution';
 import { childQuestionnaire, ChildQuestionSection } from '@/config/child-questionnaire';
 import ChildQuestionDisplay from '@/components/onboarding/ChildQuestionDisplay';
+import { getDemoAnswer } from '@/config/demo-answers';
 
 export function KidSessionPage({ params }: { params: Promise<{ personId: string }> }) {
   const { personId } = use(params);
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const isDemo = useMemo(() => {
+    if (user?.isDemo) return true;
+    if (typeof window !== 'undefined') return new URLSearchParams(window.location.search).get('demo') === 'true';
+    return false;
+  }, [user?.isDemo]);
   const { person, loading: personLoading } = usePersonById(personId);
   const { manual, loading: manualLoading } = usePersonManual(personId);
   const { saveDraft, completeDraft, findDraft } = useContribution();
@@ -164,6 +170,20 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
     router.push(`/people/${personId}/manual`);
   };
 
+  const handleFillAll = useCallback(() => {
+    const filled: Record<string, Record<string, any>> = { ...answers };
+    for (const section of sections) {
+      if (!filled[section.id]) filled[section.id] = {};
+      for (const q of section.questions) {
+        const demo = getDemoAnswer(q.id, 'kid');
+        if (demo !== undefined) {
+          filled[section.id][q.id] = demo;
+        }
+      }
+    }
+    setAnswers(filled);
+  }, [answers, sections]);
+
   // Redirect after completion
   useEffect(() => {
     if (isComplete) {
@@ -209,8 +229,11 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
         <div className="max-w-lg text-center space-y-6">
           <div className="text-6xl">&#128218;</div>
           <h1 className="text-2xl font-bold text-slate-800">
-            {person.name}&apos;s Turn
+            {person.name}&apos;s Portrait Session
           </h1>
+          <p className="text-lg text-slate-700 font-medium">
+            Help {person.name} share how they see themselves and the family.
+          </p>
           <p className="text-slate-600">
             Sit with {person.name} and let them answer these questions.
             Read the questions aloud if needed. There are {totalQuestions} questions
@@ -266,6 +289,32 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
         </span>
       </div>
 
+      {/* Demo context banner */}
+      {isDemo && (
+        <div className="max-w-2xl mx-auto px-4 pt-4">
+          <div
+            className="flex items-center justify-between px-4 py-2 rounded-lg font-mono text-[11px]"
+            style={{ background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.2)' }}
+          >
+            <div className="flex items-center gap-3">
+              <span style={{ color: '#A3510B', fontWeight: 700 }}>DEMO</span>
+              <span style={{ color: '#6B6B6B' }}>
+                Parent <strong style={{ color: '#2C2C2C' }}>{user?.name}</strong> supervising{' '}
+                <strong style={{ color: '#3B82F6' }}>{person.name}</strong>&apos;s session
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleFillAll}
+              className="px-3 py-1 rounded font-bold transition-all hover:scale-105"
+              style={{ background: '#d97706', color: 'white', fontSize: '10px' }}
+            >
+              FILL ALL
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Child question display */}
       <div className="max-w-2xl mx-auto px-4 py-6">
         <ChildQuestionDisplay
@@ -282,7 +331,7 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
           }}
           canGoBack={currentSectionIndex > 0 || currentQuestionIndex > 0}
           childName={person.name}
-          isDemo={!!user?.isDemo}
+          isDemo={isDemo}
         />
       </div>
     </div>

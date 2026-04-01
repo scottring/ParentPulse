@@ -95,7 +95,7 @@ export const EXERCISE_TYPES: Record<GrowthItemType, ExerciseTypeDef> = {
   },
   assessment_prompt: {
     label: 'Check-In',
-    description: 'Quick dimension assessment question',
+    description: 'Quick dimension portrait question',
     minMinutes: 1,
     maxMinutes: 2,
     depth: 'light',

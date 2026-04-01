@@ -51,6 +51,8 @@ export interface DashboardData {
   spouse: Person | null;
   // People who need observer contributions from the user
   peopleNeedingContributions: Person[];
+  // All contributions in the family (for portrait inventory freshness)
+  contributions: Contribution[];
 }
 
 export function useDashboard(): DashboardData {
@@ -301,5 +303,6 @@ export function useDashboard(): DashboardData {
     assessments,
     spouse,
     peopleNeedingContributions,
+    contributions,
   };
 }

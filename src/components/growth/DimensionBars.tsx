@@ -30,7 +30,7 @@ export default function DimensionBars({ assessments, activeArcDimensionId }: Dim
   if (assessments.length === 0) {
     return (
       <p className="font-mono text-xs text-slate-400 italic">
-        No assessments yet — start a growth arc to begin measuring
+        No portraits yet — start a growth arc to begin measuring
       </p>
     );
   }

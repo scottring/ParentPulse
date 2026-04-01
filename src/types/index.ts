@@ -54,6 +54,7 @@ export interface RegistrationData {
   password: string;
   name: string;
   familyName: string;
+  isDemo?: boolean;
 }
 
 export interface ChildRegistrationData {

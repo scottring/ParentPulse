@@ -43,17 +43,16 @@ export default function StageCard({
       className="rounded-xl p-5 transition-all"
       style={{
         background: isCurrent
-          ? 'rgba(255,255,255,0.08)'
+          ? '#FFFFFF'
           : isCompleted
-            ? 'rgba(22,163,74,0.05)'
-            : 'rgba(255,255,255,0.02)',
-        border: `1px solid ${
-          isCurrent
-            ? display.color + '60'
-            : isCompleted
-              ? 'rgba(22,163,74,0.15)'
-              : 'rgba(255,255,255,0.04)'
-        }`,
+            ? 'rgba(22,163,74,0.03)'
+            : '#FAF8F5',
+        border: isCurrent
+          ? `2px solid ${display.color}60`
+          : isCompleted
+            ? '1px solid rgba(22,163,74,0.15)'
+            : '1px solid #E8E3DC',
+        boxShadow: isCurrent ? '4px 4px 0px 0px rgba(0,0,0,1)' : 'none',
         opacity: isLocked ? 0.5 : 1,
       }}
     >
@@ -64,13 +63,13 @@ export default function StageCard({
           <div>
             <h3
               className="font-mono text-[13px] font-bold tracking-wider"
-              style={{ color: isCompleted ? 'rgba(22,163,74,0.7)' : display.color }}
+              style={{ color: isCompleted ? 'rgba(22,163,74,0.7)' : '#2C2C2C' }}
             >
               {isCompleted && '✓ '}{display.label}
             </h3>
             <p
               className="font-mono text-[10px] mt-0.5"
-              style={{ color: 'rgba(255,255,255,0.4)' }}
+              style={{ color: '#6B6B6B' }}
             >
               {display.description}
             </p>
@@ -93,7 +92,7 @@ export default function StageCard({
       {/* Philosophy quote */}
       <p
         className="font-mono text-[10px] italic mb-4"
-        style={{ color: 'rgba(255,255,255,0.25)' }}
+        style={{ color: '#A3A3A3' }}
       >
         &ldquo;{display.philosophy}&rdquo;
       </p>
@@ -112,13 +111,13 @@ export default function StageCard({
               <div key={dp.domain} className="flex items-center gap-3">
                 <span
                   className="font-mono text-[9px] font-bold tracking-wider w-14"
-                  style={{ color: 'rgba(255,255,255,0.5)' }}
+                  style={{ color: '#6B6B6B' }}
                 >
                   {DOMAIN_LABELS[dp.domain]}
                 </span>
                 <div
                   className="flex-1 h-1.5 rounded-full overflow-hidden"
-                  style={{ background: 'rgba(255,255,255,0.06)' }}
+                  style={{ background: '#E8E3DC' }}
                 >
                   <div
                     className="h-full rounded-full transition-all duration-700"
@@ -126,13 +125,13 @@ export default function StageCard({
                       width: `${Math.round(domainProgress * 100)}%`,
                       background: domainAtOrPast
                         ? display.color
-                        : 'rgba(255,255,255,0.15)',
+                        : '#E8E3DC',
                     }}
                   />
                 </div>
                 <span
                   className="font-mono text-[8px] w-8 text-right"
-                  style={{ color: 'rgba(255,255,255,0.3)' }}
+                  style={{ color: '#A3A3A3' }}
                 >
                   {Math.round(domainProgress * 100)}%
                 </span>
@@ -151,12 +150,12 @@ export default function StageCard({
               className="flex items-center justify-between rounded-lg px-3 py-2"
               style={{
                 background: step.complete
-                  ? 'rgba(22,163,74,0.08)'
-                  : 'rgba(255,255,255,0.03)',
+                  ? 'rgba(22,163,74,0.05)'
+                  : '#FAF8F5',
                 border: `1px solid ${
                   step.complete
                     ? 'rgba(22,163,74,0.15)'
-                    : 'rgba(255,255,255,0.05)'
+                    : '#E8E3DC'
                 }`,
               }}
             >
@@ -165,7 +164,7 @@ export default function StageCard({
                 style={{
                   color: step.complete
                     ? 'rgba(22,163,74,0.6)'
-                    : 'rgba(255,255,255,0.6)',
+                    : '#2C2C2C',
                   textDecoration: step.complete ? 'line-through' : 'none',
                 }}
               >
@@ -191,10 +190,10 @@ export default function StageCard({
 
       {/* Advancement requirements (when current) */}
       {isCurrent && domainProgressions.length > 0 && (
-        <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="mt-3 pt-3" style={{ borderTop: '1px solid #E8E3DC' }}>
           <span
             className="font-mono text-[8px] font-bold tracking-widest block mb-1.5"
-            style={{ color: 'rgba(255,255,255,0.3)' }}
+            style={{ color: '#A3A3A3' }}
           >
             TO ADVANCE
           </span>
@@ -207,7 +206,7 @@ export default function StageCard({
               <p
                 key={i}
                 className="font-mono text-[9px] mt-0.5"
-                style={{ color: 'rgba(255,255,255,0.35)' }}
+                style={{ color: '#6B6B6B' }}
               >
                 &bull; {req}
               </p>
@@ -220,7 +219,7 @@ export default function StageCard({
         <div className="text-center py-2">
           <span
             className="font-mono text-[9px]"
-            style={{ color: 'rgba(255,255,255,0.2)' }}
+            style={{ color: '#A3A3A3' }}
           >
             Complete {stageOrder[stageIndex - 1]?.toUpperCase()} to unlock
           </span>
