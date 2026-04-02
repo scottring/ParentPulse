@@ -463,6 +463,13 @@ export default function DashboardPage() {
                       {activeArcCount} ARC{activeArcCount !== 1 ? 'S' : ''}
                     </span>
                   )}
+                  <Link
+                    href="/people"
+                    className="font-mono text-[10px] tracking-wider transition-colors"
+                    style={{ color: '#A3A3A3' }}
+                  >
+                    PEOPLE &rarr;
+                  </Link>
                   {selfPerson && (
                     <Link
                       href={`/people/${selfPerson.personId}/manual`}

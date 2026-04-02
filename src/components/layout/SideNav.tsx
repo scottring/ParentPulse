@@ -7,6 +7,7 @@ import {
   ChartBarIcon,
   MapIcon,
   Cog6ToothIcon,
+  UsersIcon,
 } from '@heroicons/react/24/outline';
 
 interface NavItem {
@@ -18,6 +19,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
+  { label: 'People', href: '/people', icon: UsersIcon },
   { label: 'Road Map', href: '/roadmap', icon: MapIcon },
   { label: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ];
