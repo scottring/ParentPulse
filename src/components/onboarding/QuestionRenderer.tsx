@@ -98,7 +98,7 @@ export function QuestionRenderer({
         return (
           <div className="relative">
             <textarea
-              value={typeof value === 'string' ? value : ''}
+              value={typeof value === 'string' ? value : (typeof value === 'object' && value !== null && 'primary' in value ? String((value as StructuredAnswer).primary) : '')}
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={(e) => {
                 if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && onKeyboardContinue) {
