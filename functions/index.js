@@ -6799,3 +6799,657 @@ exports.refreshStaleData = onSchedule(
       }
     },
 );
+
+// ==================== Ask the Manual ====================
+
+/**
+ * Ask the Manual — AI chatbot grounded in a person's manual data.
+ * Assembles full manual context (synthesized content, contributions,
+ * triggers, strategies, boundaries, patterns) and answers questions
+ * about that person. After each response, extracts actionable insights
+ * and writes them back to the manual.
+ */
+exports.askManual = onCall(
+    {
+      region: "us-central1",
+      memory: "512MiB",
+      timeoutSeconds: 120,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const {personId, question, conversationHistory = []} = request.data;
+      if (!personId || !question) {
+        throw new Error("personId and question are required");
+      }
+
+      const db = admin.firestore();
+
+      // Get user data
+      const userDoc = await db.collection("users").doc(request.auth.uid).get();
+      if (!userDoc.exists) {
+        throw new Error("User not found");
+      }
+      const userData = userDoc.data();
+      const familyId = userData.familyId;
+
+      // Get person
+      const personDoc = await db.collection("people").doc(personId).get();
+      if (!personDoc.exists) {
+        throw new Error("Person not found");
+      }
+      const person = personDoc.data();
+      if (person.familyId !== familyId) {
+        throw new Error("Access denied");
+      }
+      const personName = person.name;
+
+      // Get manual
+      const manualSnap = await db.collection("person_manuals")
+          .where("personId", "==", personId)
+          .where("familyId", "==", familyId)
+          .limit(1)
+          .get();
+
+      if (manualSnap.empty) {
+        throw new Error("No manual found for this person");
+      }
+
+      const manualDoc = manualSnap.docs[0];
+      const manual = manualDoc.data();
+      const manualId = manualDoc.id;
+
+      // Get all completed contributions
+      const contribSnap = await db.collection("contributions")
+          .where("manualId", "==", manualId)
+          .where("status", "==", "complete")
+          .get();
+
+      const selfContribs = [];
+      const observerContribs = [];
+      contribSnap.forEach((doc) => {
+        const data = doc.data();
+        if (data.perspectiveType === "self") {
+          selfContribs.push(data);
+        } else {
+          observerContribs.push(data);
+        }
+      });
+
+      // Get growth items for context
+      let growthContext = "";
+      try {
+        const growthSnap = await db.collection("growth_items")
+            .where("sourceManualId", "==", manualId)
+            .orderBy("createdAt", "desc")
+            .limit(10)
+            .get();
+
+        if (!growthSnap.empty) {
+          const items = [];
+          growthSnap.forEach((doc) => {
+            const item = doc.data();
+            let status = item.status;
+            if (item.feedback) {
+              const impact = item.feedback.impactRating ?
+                ["slight", "noticeable", "breakthrough"][
+                    item.feedback.impactRating - 1] : "";
+              status += ` (${item.feedback.reaction}${impact ?
+                ", " + impact + " impact" : ""})`;
+            }
+            items.push(`- ${item.title}: ${status}`);
+          });
+          if (items.length > 0) {
+            growthContext = `\n## Recent Growth Activity\n${items.join("\n")}`;
+          }
+        }
+      } catch (e) {
+        // Non-critical
+      }
+
+      // Build comprehensive context
+      const systemPrompt = buildAskManualSystemPrompt(
+          personName, manual, selfContribs, observerContribs, growthContext,
+      );
+
+      // Build messages array
+      const messages = [];
+      for (const msg of conversationHistory.slice(-16)) {
+        messages.push({
+          role: msg.role,
+          content: msg.content,
+        });
+      }
+      messages.push({role: "user", content: question});
+
+      logger.info(`askManual: question about ${personName} ` +
+        `(${selfContribs.length} self, ${observerContribs.length} observer)`);
+
+      try {
+        const client = getAnthropic();
+
+        // Main response
+        const response = await client.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 2000,
+          temperature: 0.6,
+          system: systemPrompt,
+          messages,
+        });
+
+        const answer = response.content[0].text;
+
+        // Extract insights and update manual in background
+        try {
+          await extractAndApplyInsights(
+              client, db, manualId, personName,
+              question, answer, manual, request.auth.uid,
+          );
+        } catch (insightErr) {
+          logger.warn("Insight extraction failed (non-critical):", insightErr);
+        }
+
+        // Save chat session
+        const sessionRef = db.collection("manual_chat_sessions");
+        const fullMessages = [...conversationHistory.slice(-16),
+          {role: "user", content: question, timestamp: Date.now()},
+          {role: "assistant", content: answer, timestamp: Date.now()},
+        ];
+
+        // Find existing session or create new
+        const existingSessionSnap = await sessionRef
+            .where("personId", "==", personId)
+            .where("userId", "==", request.auth.uid)
+            .where("active", "==", true)
+            .limit(1)
+            .get();
+
+        if (!existingSessionSnap.empty) {
+          await existingSessionSnap.docs[0].ref.update({
+            messages: fullMessages,
+            updatedAt: admin.firestore.Timestamp.now(),
+            messageCount: fullMessages.length,
+          });
+        } else {
+          await sessionRef.add({
+            personId,
+            personName,
+            manualId,
+            familyId,
+            userId: request.auth.uid,
+            messages: fullMessages,
+            active: true,
+            createdAt: admin.firestore.Timestamp.now(),
+            updatedAt: admin.firestore.Timestamp.now(),
+            messageCount: fullMessages.length,
+          });
+        }
+
+        return {
+          success: true,
+          answer,
+          insightsApplied: true,
+        };
+      } catch (err) {
+        logger.error("askManual error:", err);
+        throw new Error(`Failed to generate response: ${err.message}`);
+      }
+    },
+);
+
+/**
+ * Build the system prompt for Ask the Manual with full context
+ */
+function buildAskManualSystemPrompt(
+    personName, manual, selfContribs, observerContribs, growthContext,
+) {
+  // Helper: check if an answer is marked private
+  const isPrivate = (contrib, section, qId) => {
+    return contrib.answerVisibility &&
+      contrib.answerVisibility[section] &&
+      contrib.answerVisibility[section][qId] === "private";
+  };
+
+  // Helper: extract answer text, filtering out private answers
+  const getAnswerText = (contrib, section, qId, answer) => {
+    if (isPrivate(contrib, section, qId)) return null;
+    const text = typeof answer === "string" ?
+      answer :
+      (answer && answer.primary) ?
+        String(answer.primary) :
+        (typeof answer === "object" ? JSON.stringify(answer) : String(answer));
+    return (text && text.trim()) ? text.trim() : null;
+  };
+
+  let context = "";
+
+  // Synthesized content (most valuable — already distilled)
+  if (manual.synthesizedContent) {
+    const sc = manual.synthesizedContent;
+    context += `## Synthesized Understanding\n`;
+    context += `Overview: ${sc.overview}\n\n`;
+
+    if (sc.alignments && sc.alignments.length > 0) {
+      context += `### Where Perspectives Align\n`;
+      for (const a of sc.alignments) {
+        context += `- **${a.topic}**: ${a.synthesis}`;
+        if (a.selfPerspective) {
+          context += ` [Self: "${a.selfPerspective}"]`;
+        }
+        if (a.observerPerspective) {
+          context += ` [Observer: "${a.observerPerspective}"]`;
+        }
+        context += "\n";
+      }
+      context += "\n";
+    }
+
+    if (sc.gaps && sc.gaps.length > 0) {
+      context += `### Where Perspectives Diverge\n`;
+      for (const g of sc.gaps) {
+        context += `- **${g.topic}** (${g.gapSeverity}): ${g.synthesis}`;
+        if (g.selfPerspective) {
+          context += ` [Self: "${g.selfPerspective}"]`;
+        }
+        if (g.observerPerspective) {
+          context += ` [Observer: "${g.observerPerspective}"]`;
+        }
+        context += "\n";
+      }
+      context += "\n";
+    }
+
+    if (sc.blindSpots && sc.blindSpots.length > 0) {
+      context += `### Blind Spots\n`;
+      for (const b of sc.blindSpots) {
+        context += `- **${b.topic}**: ${b.synthesis}`;
+        if (b.selfPerspective) {
+          context += ` [Self: "${b.selfPerspective}"]`;
+        }
+        if (b.observerPerspective) {
+          context += ` [Observer: "${b.observerPerspective}"]`;
+        }
+        context += "\n";
+      }
+      context += "\n";
+    }
+  }
+
+  // Structured manual data
+  if (manual.triggers && manual.triggers.length > 0) {
+    context += `## Known Triggers\n`;
+    for (const t of manual.triggers) {
+      context += `- **${t.description}** (${t.severity})`;
+      if (t.context) context += ` — Context: ${t.context}`;
+      if (t.typicalResponse) context += ` — Typical response: ${t.typicalResponse}`;
+      if (t.deescalationStrategy) {
+        context += ` — What helps: ${t.deescalationStrategy}`;
+      }
+      context += "\n";
+    }
+    context += "\n";
+  }
+
+  if (manual.whatWorks && manual.whatWorks.length > 0) {
+    context += `## Strategies That Work\n`;
+    for (const s of manual.whatWorks) {
+      context += `- **${s.description}** (effectiveness: ${s.effectiveness}/5)`;
+      if (s.context) context += ` — When: ${s.context}`;
+      if (s.notes) context += ` — Note: ${s.notes}`;
+      context += "\n";
+    }
+    context += "\n";
+  }
+
+  if (manual.whatDoesntWork && manual.whatDoesntWork.length > 0) {
+    context += `## What Doesn't Work\n`;
+    for (const s of manual.whatDoesntWork) {
+      context += `- **${s.description}**`;
+      if (s.context) context += ` — ${s.context}`;
+      context += "\n";
+    }
+    context += "\n";
+  }
+
+  if (manual.boundaries && manual.boundaries.length > 0) {
+    context += `## Boundaries\n`;
+    for (const b of manual.boundaries) {
+      context += `- **${b.description}** [${b.category}]`;
+      if (b.context) context += ` — ${b.context}`;
+      if (b.consequences) context += ` — If crossed: ${b.consequences}`;
+      context += "\n";
+    }
+    context += "\n";
+  }
+
+  if (manual.emergingPatterns && manual.emergingPatterns.length > 0) {
+    context += `## Emerging Patterns\n`;
+    for (const p of manual.emergingPatterns) {
+      context += `- **${p.description}** (${p.confidence}) — ${p.frequency}\n`;
+    }
+    context += "\n";
+  }
+
+  // Core info
+  if (manual.coreInfo) {
+    const ci = manual.coreInfo;
+    if (ci.interests?.length) {
+      context += `## Interests: ${ci.interests.join(", ")}\n`;
+    }
+    if (ci.strengths?.length) {
+      context += `## Strengths: ${ci.strengths.join(", ")}\n`;
+    }
+    if (ci.sensoryNeeds?.length) {
+      context += `## Sensory Needs: ${ci.sensoryNeeds.join(", ")}\n`;
+    }
+    if (ci.selfWorthInsights?.length) {
+      context += `## Self-Worth Insights: ${ci.selfWorthInsights.join("; ")}\n`;
+    }
+    context += "\n";
+  }
+
+  // Raw contribution answers (the full picture)
+  if (selfContribs.length > 0) {
+    context += `## ${personName}'s Own Words (Self-Perspective)\n`;
+    for (const contrib of selfContribs) {
+      for (const [section, answers] of Object.entries(contrib.answers)) {
+        if (typeof answers !== "object" || answers === null) continue;
+        const visible = [];
+        for (const [qId, answer] of Object.entries(answers)) {
+          const text = getAnswerText(contrib, section, qId, answer);
+          if (text) visible.push(text);
+        }
+        if (visible.length > 0) {
+          context += `### ${section}\n`;
+          for (const text of visible) {
+            context += `- ${text}\n`;
+          }
+        }
+      }
+    }
+    context += "\n";
+  }
+
+  if (observerContribs.length > 0) {
+    for (const contrib of observerContribs) {
+      const name = contrib.contributorName || "An observer";
+      const rel = contrib.relationshipToSubject || "observer";
+      context += `## ${name}'s Observations (${rel})\n`;
+      for (const [section, answers] of Object.entries(contrib.answers)) {
+        if (typeof answers !== "object" || answers === null) continue;
+        const visible = [];
+        for (const [qId, answer] of Object.entries(answers)) {
+          const text = getAnswerText(contrib, section, qId, answer);
+          if (text) visible.push(text);
+        }
+        if (visible.length > 0) {
+          context += `### ${section}\n`;
+          for (const text of visible) {
+            context += `- ${text}\n`;
+          }
+        }
+      }
+      context += "\n";
+    }
+  }
+
+  // Progress notes
+  if (manual.progressNotes && manual.progressNotes.length > 0) {
+    context += `## Recent Progress Notes\n`;
+    for (const n of manual.progressNotes.slice(-10)) {
+      context += `- [${n.category}] ${n.note}\n`;
+    }
+    context += "\n";
+  }
+
+  // Growth activity
+  if (growthContext) {
+    context += growthContext + "\n";
+  }
+
+  return `You are a relationship advisor who has deeply studied ${personName}'s manual — a living document built from multiple perspectives about how they work, what they need, and how to connect with them.
+
+You have comprehensive access to:
+- What ${personName} says about themselves (self-perspective)
+- What observers have shared about them (observer perspectives)
+- Where these perspectives align and where they diverge
+- Known triggers with severity levels and de-escalation strategies
+- Strategies that work (with effectiveness ratings) and ones that don't
+- Boundaries (immovable, negotiable, preferences)
+- Emerging patterns and progress notes
+
+=== ${personName.toUpperCase()}'S MANUAL ===
+
+${context}
+
+=== GUIDELINES ===
+
+When answering questions:
+1. GROUND every claim in manual data. Say "${personName} described..." or "Based on what [observer] observed..." — never give generic advice when specific data exists.
+2. When perspectives CONFLICT, surface BOTH sides. The gap IS the insight. Say "Interestingly, ${personName} sees this as X, while their [relationship] describes it as Y."
+3. Be SPECIFIC, not generic. Reference actual triggers, actual strategies, actual words from the manual.
+4. Respect boundaries marked as "immovable" — never suggest crossing them.
+5. When suggesting approaches, tie them to strategies with high effectiveness ratings.
+6. Flag clearly when you're inferring beyond what's in the manual.
+7. Be warm and direct. This is about understanding a real person, not clinical analysis.
+8. Keep responses focused and actionable — 2-4 paragraphs unless the question demands more.`;
+}
+
+/**
+ * Extract insights from the conversation and write them back to the manual.
+ * Looks for new triggers, strategies, patterns, and progress notes revealed
+ * in the conversation that aren't already in the manual.
+ */
+async function extractAndApplyInsights(
+    client, db, manualId, personName, question, answer, manual, userId,
+) {
+  const logger = require("firebase-functions/logger");
+
+  const extractionPrompt = `You are analyzing a conversation about ${personName} to extract new insights for their operating manual.
+
+The user asked: "${question}"
+
+The advisor responded: "${answer}"
+
+The manual currently contains:
+- ${(manual.triggers || []).length} triggers
+- ${(manual.whatWorks || []).length} strategies that work
+- ${(manual.whatDoesntWork || []).length} strategies that don't work
+- ${(manual.boundaries || []).length} boundaries
+- ${(manual.emergingPatterns || []).length} patterns
+
+Existing trigger descriptions: ${(manual.triggers || []).map((t) => t.description).join("; ") || "none"}
+Existing strategy descriptions: ${(manual.whatWorks || []).map((s) => s.description).join("; ") || "none"}
+Existing pattern descriptions: ${(manual.emergingPatterns || []).map((p) => p.description).join("; ") || "none"}
+
+Extract ONLY genuinely new insights revealed in this conversation that are NOT already covered by existing manual content. Be conservative — only extract clear, actionable insights.
+
+Return JSON:
+{
+  "newTriggers": [
+    {"description": "...", "context": "...", "typicalResponse": "...", "severity": "mild|moderate|significant"}
+  ],
+  "newStrategies": [
+    {"description": "...", "context": "...", "effectiveness": 3, "type": "whatWorks|whatDoesntWork"}
+  ],
+  "newPatterns": [
+    {"description": "...", "frequency": "..."}
+  ],
+  "progressNotes": [
+    {"note": "...", "category": "improvement|challenge|insight|milestone|concern"}
+  ],
+  "hasNewInsights": true/false
+}
+
+If no genuinely new insights were revealed, set hasNewInsights to false and leave arrays empty. Most conversations won't produce new insights — that's fine. Only flag real discoveries.
+
+Return ONLY valid JSON.`;
+
+  const extractionResponse = await client.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 1000,
+    temperature: 0.3,
+    messages: [{role: "user", content: extractionPrompt}],
+  });
+
+  const extractionText = extractionResponse.content[0].text;
+  let insights;
+  try {
+    const jsonMatch = extractionText.match(/\{[\s\S]*\}/);
+    insights = JSON.parse(jsonMatch ? jsonMatch[0] : extractionText);
+  } catch (e) {
+    logger.warn("Failed to parse insight extraction:", extractionText);
+    return;
+  }
+
+  if (!insights.hasNewInsights) {
+    logger.info("No new insights to apply");
+    return;
+  }
+
+  const updates = {};
+  const now = admin.firestore.Timestamp.now();
+  let insightCount = 0;
+
+  // Apply new triggers
+  if (insights.newTriggers && insights.newTriggers.length > 0) {
+    const newTriggers = insights.newTriggers.map((t, i) => ({
+      id: `chat-trigger-${Date.now()}-${i}`,
+      description: t.description,
+      context: t.context || "",
+      typicalResponse: t.typicalResponse || "",
+      severity: t.severity || "mild",
+      deescalationStrategy: t.deescalationStrategy || "",
+      identifiedDate: now,
+      identifiedBy: "ai-chat",
+      confirmedBy: [],
+    }));
+    updates.triggers = [
+      ...(manual.triggers || []),
+      ...newTriggers,
+    ];
+    updates.totalTriggers = updates.triggers.length;
+    insightCount += newTriggers.length;
+  }
+
+  // Apply new strategies
+  if (insights.newStrategies && insights.newStrategies.length > 0) {
+    for (const s of insights.newStrategies) {
+      const newStrategy = {
+        id: `chat-strategy-${Date.now()}-${Math.random()
+            .toString(36).slice(2, 7)}`,
+        description: s.description,
+        context: s.context || "",
+        effectiveness: s.effectiveness || 3,
+        addedDate: now,
+        addedBy: "ai-chat",
+        sourceType: "discovered",
+      };
+      const field = s.type === "whatDoesntWork" ?
+        "whatDoesntWork" : "whatWorks";
+      if (!updates[field]) {
+        updates[field] = [...(manual[field] || [])];
+      }
+      updates[field].push(newStrategy);
+      insightCount++;
+    }
+    if (updates.whatWorks) {
+      updates.totalStrategies =
+        (updates.whatWorks || manual.whatWorks || []).length +
+        (updates.whatDoesntWork || manual.whatDoesntWork || []).length;
+    }
+  }
+
+  // Apply new patterns
+  if (insights.newPatterns && insights.newPatterns.length > 0) {
+    const newPatterns = insights.newPatterns.map((p, i) => ({
+      id: `chat-pattern-${Date.now()}-${i}`,
+      description: p.description,
+      frequency: p.frequency || "Observed in conversation",
+      firstObserved: now,
+      lastObserved: now,
+      confidence: "emerging",
+      relatedEntries: [],
+      identifiedBy: "ai",
+    }));
+    updates.emergingPatterns = [
+      ...(manual.emergingPatterns || []),
+      ...newPatterns,
+    ];
+    insightCount += newPatterns.length;
+  }
+
+  // Apply progress notes
+  if (insights.progressNotes && insights.progressNotes.length > 0) {
+    const newNotes = insights.progressNotes.map((n, i) => ({
+      id: `chat-note-${Date.now()}-${i}`,
+      date: now,
+      note: n.note,
+      category: n.category || "insight",
+      addedBy: "ai-chat",
+    }));
+    updates.progressNotes = [
+      ...(manual.progressNotes || []),
+      ...newNotes,
+    ];
+    insightCount += newNotes.length;
+  }
+
+  if (insightCount > 0) {
+    updates.updatedAt = now;
+    updates.lastEditedAt = now;
+    updates.lastEditedBy = userId;
+
+    await db.collection("person_manuals").doc(manualId).update(updates);
+    logger.info(`Applied ${insightCount} new insights to manual ${manualId}`);
+
+    // Flag manual for re-synthesis if significant insights were added
+    if (insightCount >= 2) {
+      await db.collection("person_manuals").doc(manualId).update({
+        needsResynthesis: true,
+      });
+    }
+  }
+}
+
+/**
+ * Close a manual chat session (mark as inactive)
+ */
+exports.closeManualChat = onCall(
+    {
+      region: "us-central1",
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const {personId} = request.data;
+      if (!personId) {
+        throw new Error("personId is required");
+      }
+
+      const db = admin.firestore();
+      const sessionSnap = await db.collection("manual_chat_sessions")
+          .where("personId", "==", personId)
+          .where("userId", "==", request.auth.uid)
+          .where("active", "==", true)
+          .get();
+
+      const batch = db.batch();
+      sessionSnap.forEach((doc) => {
+        batch.update(doc.ref, {
+          active: false,
+          closedAt: admin.firestore.Timestamp.now(),
+        });
+      });
+      await batch.commit();
+
+      return {success: true};
+    },
+);

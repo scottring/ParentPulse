@@ -273,6 +273,14 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
       if (!id) throw new Error('Save failed before completion');
       await completeDraft(id, manual.manualId);
       setIsComplete(true);
+
+      // Trigger dimension assessment scoring in the background
+      try {
+        const seedAssessments = httpsCallable(functions, 'seedDimensionAssessments');
+        await seedAssessments({});
+      } catch (assessErr) {
+        console.warn('Assessment scoring after onboarding failed (non-critical):', assessErr);
+      }
     } catch (err) {
       console.error('Failed to save self-onboarding:', err);
     } finally {

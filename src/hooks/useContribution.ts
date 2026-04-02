@@ -53,7 +53,7 @@ interface UseContributionReturn {
 
   updateContribution: (
     contributionId: string,
-    updates: Partial<Pick<Contribution, 'answers' | 'status' | 'draftProgress' | 'answerVisibility' | 'aiGeneratedFields'>>
+    updates: Partial<Pick<Contribution, 'answers' | 'status' | 'draftProgress' | 'answerVisibility' | 'aiGeneratedFields' | 'revisionHistory'>>
   ) => Promise<boolean>;
 
   /** Save or update a draft contribution. Creates on first call, updates thereafter. */
@@ -166,7 +166,7 @@ export function useContribution(manualId?: string): UseContributionReturn {
   const updateContribution = useCallback(
     async (
       contributionId: string,
-      updates: Partial<Pick<Contribution, 'answers' | 'status' | 'draftProgress' | 'answerVisibility' | 'aiGeneratedFields'>>
+      updates: Partial<Pick<Contribution, 'answers' | 'status' | 'draftProgress' | 'answerVisibility' | 'aiGeneratedFields' | 'revisionHistory'>>
     ): Promise<boolean> => {
       try {
         const docRef = doc(

@@ -197,6 +197,12 @@ export interface Contribution {
   // Tracks which answers were AI-generated from document upload (stripped on completion)
   aiGeneratedFields?: Record<string, string[]>;  // sectionId -> questionId[]
 
+  // Revision history: snapshots of previous answers when contribution is revised
+  revisionHistory?: Array<{
+    answers: Record<string, any>;
+    revisedAt: Timestamp;
+  }>;
+
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;

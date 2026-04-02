@@ -13,6 +13,8 @@ import { QuestionRenderer } from '@/components/onboarding/QuestionRenderer';
 import { getDemoAnswer } from '@/config/demo-answers';
 import { RelationshipType } from '@/types/person-manual';
 import { computeAge } from '@/utils/age';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '@/lib/firebase';
 
 export function ObserverOnboardPage({ params }: { params: Promise<{ personId: string }> }) {
   const { personId } = use(params);
@@ -220,6 +222,14 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
       if (!id) throw new Error('Save failed before completion');
       await completeDraft(id, manual.manualId);
       setIsComplete(true);
+
+      // Trigger dimension assessment scoring in the background
+      try {
+        const seedAssessments = httpsCallable(functions, 'seedDimensionAssessments');
+        await seedAssessments({});
+      } catch (assessErr) {
+        console.warn('Assessment scoring after onboarding failed (non-critical):', assessErr);
+      }
     } catch (err) {
       console.error('Failed to save observer onboarding:', err);
     } finally {
@@ -239,7 +249,7 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
     for (const section of sections) {
       if (!filled[section.sectionId]) filled[section.sectionId] = {};
       for (const q of section.questions) {
-        const demo = getDemoAnswer(q.id, person.relationshipType === 'child' ? 'observer_child' : 'observer');
+        const demo = getDemoAnswer(q.id, person?.relationshipType === 'child' ? 'observer_child' : 'observer');
         if (demo !== undefined) {
           filled[section.sectionId][q.id] = demo;
         }
@@ -453,6 +463,19 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
                 &larr; PREVIOUS
               </button>
             </>
+          )}
+          {!isLastQuestion && (
+            <button
+              onClick={() => {
+                saveNow();
+                const lastSection = sections[sections.length - 1];
+                setCurrentSectionIndex(sections.length - 1);
+                setCurrentQuestionIndex(lastSection.questions.length - 1);
+              }}
+              className="px-4 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-500 hover:border-slate-800 hover:text-slate-700 transition-all"
+            >
+              SKIP TO END &raquo;
+            </button>
           )}
           <button
             onClick={handleNext}

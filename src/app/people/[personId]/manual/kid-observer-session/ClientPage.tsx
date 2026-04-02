@@ -9,6 +9,10 @@ import { useContribution } from '@/hooks/useContribution';
 import { getChildObserverQuestions } from '@/config/child-observer-questionnaire';
 import { ChildQuestionSection } from '@/config/child-questionnaire';
 import ChildQuestionDisplay from '@/components/onboarding/ChildQuestionDisplay';
+import { httpsCallable } from 'firebase/functions';
+import { functions, firestore } from '@/lib/firebase';
+import { doc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
+import { PERSON_MANUAL_COLLECTIONS } from '@/types/person-manual';
 
 export function KidObserverSessionPage({ params }: { params: Promise<{ personId: string }> }) {
   const { personId } = use(params);
@@ -19,7 +23,7 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
   const { person: subject, loading: subjectLoading } = usePersonById(personId);
   const { people, loading: peopleLoading } = usePerson();
   const { manual, loading: manualLoading } = usePersonManual(personId);
-  const { saveDraft, completeDraft, findDraft, contributions } = useContribution(manual?.manualId);
+  const { saveDraft, completeDraft, findDraft, updateContribution, contributions } = useContribution(manual?.manualId);
 
   const observerPerson = people.find(p => p.personId === observerPersonId);
 
@@ -32,6 +36,8 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
   const [draftId, setDraftId] = useState<string | null>(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [started, setStarted] = useState(false);
+  const [isRevising, setIsRevising] = useState(false);
+  const [previousAnswers, setPreviousAnswers] = useState<Record<string, any> | null>(null);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -60,18 +66,22 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
         }
         setStarted(true);
       } else {
-        // Also check all contributions for an existing child-observer from this kid
+        // Also check all contributions for an existing child-observer from this kid (draft or complete)
         const existing = contributions.find(
           c => c.relationshipToSubject === 'child-observer' &&
                c.contributorName === observerPerson?.name &&
-               c.status === 'draft'
+               (c.status === 'draft' || c.status === 'complete')
         );
         if (existing) {
           setDraftId(existing.contributionId);
           if (existing.answers) setAnswers(existing.answers);
-          if (existing.draftProgress) {
+          if (existing.status === 'draft' && existing.draftProgress) {
             setCurrentSectionIndex(existing.draftProgress.sectionIndex);
             setCurrentQuestionIndex(existing.draftProgress.questionIndex);
+          }
+          if (existing.status === 'complete') {
+            setIsRevising(true);
+            setPreviousAnswers(JSON.parse(JSON.stringify(existing.answers)));
           }
           setStarted(true);
         }
@@ -88,6 +98,7 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
     (sum, sectionAnswers) => sum + Object.keys(sectionAnswers).filter(k => sectionAnswers[k] != null).length,
     0
   );
+  const currentQuestionNumber = sections.slice(0, currentSectionIndex).reduce((sum, s) => sum + s.questions.length, 0) + currentQuestionIndex + 1;
 
   // Debounced auto-save
   const triggerSave = useCallback(() => {
@@ -96,6 +107,11 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(async () => {
       try {
+        // If revising a completed contribution, update it directly (saveDraft only finds drafts)
+        if (isRevising && draftId) {
+          await updateContribution(draftId, { answers });
+          return;
+        }
         const id = await saveDraft({
           manualId: manual.manualId,
           personId: subject.personId,
@@ -111,7 +127,7 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
         console.error('Kid observer auto-save failed:', err);
       }
     }, 2000);
-  }, [manual, subject, observerPerson, answers, currentSectionIndex, currentQuestionIndex, saveDraft]);
+  }, [manual, subject, observerPerson, answers, currentSectionIndex, currentQuestionIndex, saveDraft, isRevising, draftId, updateContribution]);
 
   useEffect(() => {
     if (answeredQuestions > 0 && draftLoaded && started) {
@@ -169,8 +185,28 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
         questionIndex: currentQuestionIndex,
         contributorName: observerPerson.name,
       });
+
+      // If revising, snapshot previous answers into revision history
+      if (isRevising && previousAnswers) {
+        const contribRef = doc(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS, id);
+        await updateDoc(contribRef, {
+          revisionHistory: arrayUnion({
+            answers: previousAnswers,
+            revisedAt: Timestamp.now(),
+          }),
+        });
+      }
+
       await completeDraft(id, manual.manualId);
       setIsComplete(true);
+
+      // Trigger dimension assessment scoring in the background
+      try {
+        const seedAssessments = httpsCallable(functions, 'seedDimensionAssessments');
+        await seedAssessments({});
+      } catch (assessErr) {
+        console.warn('Assessment scoring after onboarding failed (non-critical):', assessErr);
+      }
     } catch (err) {
       console.error('Failed to save kid observer session:', err);
     } finally {
@@ -253,12 +289,14 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
         <div className="max-w-lg text-center space-y-6">
           <div className="text-6xl">&#128172;</div>
           <h1 className="text-2xl font-bold text-slate-800">
-            {observerPerson.name}&apos;s Turn to Talk About {subject.name}
+            {isRevising
+              ? `${observerPerson.name} Wants to Revise Answers About ${subject.name}`
+              : `${observerPerson.name}'s Turn to Talk About ${subject.name}`}
           </h1>
           <p className="text-slate-600">
-            Sit with {observerPerson.name} and let them answer questions about {subject.name}.
-            Read the questions aloud if needed. There are {totalQuestions} questions
-            across {sections.length} sections — it takes about 10 minutes.
+            {isRevising
+              ? `${observerPerson.name}'s previous answers are loaded. Go through and change anything that needs updating — the old answers will be saved in history.`
+              : `Sit with ${observerPerson.name} and let them answer questions about ${subject.name}. Read the questions aloud if needed. There are ${totalQuestions} questions across ${sections.length} sections — it takes about 10 minutes.`}
           </p>
           <p className="text-sm text-slate-500">
             Answers save automatically. You can stop anytime and come back later.
@@ -305,12 +343,12 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
           <div className="w-32 h-2 bg-purple-100 mt-1 mx-auto rounded-full">
             <div
               className="h-full bg-purple-500 rounded-full transition-all"
-              style={{ width: `${(answeredQuestions / totalQuestions) * 100}%` }}
+              style={{ width: `${(currentQuestionNumber / totalQuestions) * 100}%` }}
             />
           </div>
         </div>
         <span className="text-sm text-slate-400">
-          {answeredQuestions}/{totalQuestions}
+          {currentQuestionNumber}/{totalQuestions}
         </span>
       </div>
 

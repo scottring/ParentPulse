@@ -14,6 +14,7 @@ import { functions } from '@/lib/firebase';
 import MainLayout from '@/components/layout/MainLayout';
 import { getSelfOnboardingSections } from '@/config/self-questions';
 import { getOnboardingSections, OnboardingQuestion } from '@/config/onboarding-questions';
+import { ManualChat } from '@/components/manual/ManualChat';
 
 export function ManualPage({ params }: { params: Promise<{ personId: string }> }) {
   const { personId } = use(params);
@@ -29,6 +30,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [showInvite, setShowInvite] = useState(false);
   const [synthesizing, setSynthesizing] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   type ViewMode = 'synthesized' | 'perspectives' | 'gaps';
   const [viewMode, setViewMode] = useState<ViewMode>(manual?.synthesizedContent ? 'synthesized' : 'perspectives');
 
@@ -101,6 +103,32 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
             {isSelf ? 'Your operating manual' : `Operating manual for ${person.name}`}
           </p>
         </div>
+
+
+        {/* Ask the Manual button */}
+        {hasAnyPerspective && (
+          <button
+            onClick={() => setShowChat(true)}
+            className="w-full mb-6 p-4 border-2 border-slate-800 bg-white font-mono text-sm font-bold text-slate-800 hover:bg-slate-800 hover:text-white transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] flex items-center justify-center gap-3"
+          >
+            <span className="px-2 py-0.5 bg-amber-600 text-white text-xs tracking-wider">ASK</span>
+            Ask about {person.name}
+          </button>
+        )}
+
+        {/* Manual Chat Overlay */}
+        {showChat && (
+          <div className="fixed inset-0 z-50 flex items-stretch justify-end bg-black/30">
+            <div className="w-full max-w-xl h-full">
+              <ManualChat
+                personId={personId}
+                personName={person.name}
+                manual={manual}
+                onClose={() => setShowChat(false)}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Perspective Status */}
         <div className="border-2 border-slate-200 bg-white p-6 mb-6">
@@ -211,7 +239,12 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                             {kid.name}
                           </span>
                           {kidContrib?.status === 'complete' ? (
-                            <span className="font-mono text-xs text-green-600 font-bold">DONE</span>
+                            <Link
+                              href={`/people/${personId}/manual/kid-observer-session?observer=${kid.personId}`}
+                              className="font-mono text-xs text-green-600 font-bold hover:text-amber-600"
+                            >
+                              DONE · REVISE &rarr;
+                            </Link>
                           ) : kidContrib?.status === 'draft' ? (
                             <Link
                               href={`/people/${personId}/manual/kid-observer-session?observer=${kid.personId}`}

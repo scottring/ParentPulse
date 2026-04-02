@@ -9,6 +9,8 @@ import { useContribution } from '@/hooks/useContribution';
 import { childQuestionnaire, ChildQuestionSection } from '@/config/child-questionnaire';
 import ChildQuestionDisplay from '@/components/onboarding/ChildQuestionDisplay';
 import { getDemoAnswer } from '@/config/demo-answers';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '@/lib/firebase';
 
 export function KidSessionPage({ params }: { params: Promise<{ personId: string }> }) {
   const { personId } = use(params);
@@ -144,6 +146,14 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
       });
       await completeDraft(id, manual.manualId);
       setIsComplete(true);
+
+      // Trigger dimension assessment scoring in the background
+      try {
+        const seedAssessments = httpsCallable(functions, 'seedDimensionAssessments');
+        await seedAssessments({});
+      } catch (assessErr) {
+        console.warn('Assessment scoring after onboarding failed (non-critical):', assessErr);
+      }
     } catch (err) {
       console.error('Failed to save kid session:', err);
     } finally {

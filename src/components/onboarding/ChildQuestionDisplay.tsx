@@ -228,8 +228,8 @@ export default function ChildQuestionDisplay({
           disabled={!canGoBack}
           className={`px-8 py-4 rounded-2xl font-bold text-xl transition-all ${
             canGoBack
-              ? 'bg-gray-300 text-gray-800 hover:bg-gray-400 shadow-md'
-              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 shadow-md border-2 border-amber-300'
+              : 'bg-gray-100 text-gray-300 cursor-not-allowed'
           }`}
         >
           ⬅️ Back
