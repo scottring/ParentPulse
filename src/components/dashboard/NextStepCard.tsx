@@ -25,7 +25,7 @@ interface NextStepCardProps {
 }
 
 const DEPTH_LABELS: Record<DepthTier, { label: string; color: string }> = {
-  light: { label: 'Light', color: '#d97706' },
+  light: { label: 'Light', color: '#7C9082' },
   moderate: { label: 'Mod', color: '#65a30d' },
   deep: { label: 'Deep', color: '#16a34a' },
 };

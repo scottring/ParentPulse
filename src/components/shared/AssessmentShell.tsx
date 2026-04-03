@@ -52,23 +52,28 @@ export interface AssessmentShellProps {
 
 const ACCENT_COLORS: Record<string, { bar: string; label: string; hint: { bg: string; border: string; text: string } }> = {
   blue: {
-    bar: 'bg-blue-600',
-    label: 'text-blue-600',
-    hint: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800' },
+    bar: 'bg-[#7C9082]',
+    label: 'text-[#7C9082]',
+    hint: { bg: 'bg-[#7C9082]/10', border: 'border-[#7C9082]/30', text: 'text-[#3A3530]' },
   },
   amber: {
-    bar: 'bg-amber-600',
-    label: 'text-amber-600',
-    hint: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800' },
+    bar: 'bg-[#7C9082]',
+    label: 'text-[#7C9082]',
+    hint: { bg: 'bg-[#7C9082]/10', border: 'border-[#7C9082]/30', text: 'text-[#3A3530]' },
+  },
+  sage: {
+    bar: 'bg-[#7C9082]',
+    label: 'text-[#7C9082]',
+    hint: { bg: 'bg-[#7C9082]/10', border: 'border-[#7C9082]/30', text: 'text-[#3A3530]' },
   },
 };
 
 function saveStatusDot(status: SaveStatus) {
   const cls =
     status === 'saved' ? 'bg-green-500' :
-    status === 'saving' ? 'bg-amber-500 animate-pulse' :
+    status === 'saving' ? 'bg-[#7C9082] animate-pulse' :
     status === 'error' ? 'bg-red-500' :
-    'bg-amber-400';
+    'bg-[#7C9082]/70';
   const title =
     status === 'saved' ? 'All changes saved' :
     status === 'saving' ? 'Saving...' :
@@ -116,27 +121,27 @@ export default function AssessmentShell({
   // Kid variant — simpler, more playful header
   if (variant === 'kid') {
     return (
-      <div className="min-h-screen bg-blue-50">
+      <div className="min-h-screen">
         {/* Minimal header */}
-        <div className="flex items-center justify-between px-6 py-3 bg-white border-b-2 border-blue-200">
+        <div className="flex items-center justify-between px-6 py-3 glass-card" style={{ border: '1px solid rgba(255,255,255,0.4)' }}>
           <button
             onClick={onSaveAndExit}
-            className="text-slate-400 hover:text-slate-600 text-2xl"
+            className="text-2xl" style={{ color: '#8A8078' }}
           >
             &times;
           </button>
           <div className="text-center">
-            <span className="text-sm font-bold text-blue-600">
+            <span className="text-sm font-bold" style={{ fontFamily: 'var(--font-parent-display)', color: '#7C9082' }}>
               {personName}&apos;s Answers
             </span>
-            <div className="w-32 h-2 bg-blue-100 mt-1 mx-auto rounded-full">
+            <div className="w-32 h-2 mt-1 mx-auto rounded-full" style={{ backgroundColor: 'rgba(124,144,130,0.15)' }}>
               <div
-                className="h-full bg-blue-500 rounded-full transition-all"
-                style={{ width: `${progressRatio * 100}%` }}
+                className="h-full rounded-full transition-all"
+                style={{ width: `${progressRatio * 100}%`, backgroundColor: '#7C9082' }}
               />
             </div>
           </div>
-          <span className="text-sm text-slate-400">
+          <span className="text-sm" style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}>
             {answeredQuestions}/{totalQuestions}
           </span>
         </div>
@@ -154,7 +159,7 @@ export default function AssessmentShell({
           {sectionEmoji && (
             <div className="text-center text-2xl mb-2">{sectionEmoji}</div>
           )}
-          <p className="text-center text-sm text-slate-500 font-medium">
+          <p className="text-center text-sm font-medium" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>
             {sectionDescription.replace(/\{\{personName\}\}/g, personName)}
           </p>
         </div>
@@ -169,46 +174,47 @@ export default function AssessmentShell({
 
   // Adult variant — full header with progress tracking
   return (
-    <div className="min-h-screen bg-[#FFF8F0]">
+    <div className="min-h-screen">
       {/* Header */}
-      <div className="border-b-2 border-slate-200 bg-white">
+      <div className="glass-card" style={{ border: '1px solid rgba(255,255,255,0.4)', borderRadius: 0 }}>
         <div className="max-w-3xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
                 onClick={onSaveAndExit}
-                className="text-slate-400 hover:text-slate-800 transition-colors"
+                className="transition-colors"
+                style={{ color: '#8A8078' }}
                 title="Save and exit"
               >
                 <span className="text-xl">&larr;</span>
               </button>
               <div>
-                <span className={`font-mono text-xs ${accent.label} font-bold tracking-wider`}>
+                <span className={`text-xs ${accent.label} font-medium tracking-wider`} style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500 }}>
                   {flowLabel}
                 </span>
-                <h1 className="font-mono font-bold text-lg text-slate-800">
+                <h1 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '22px', color: '#3A3530', fontWeight: 600 }}>
                   {flowTitle}
                 </h1>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <div className="font-mono text-xs text-slate-500 flex items-center justify-end gap-2">
-                  <span>{answeredQuestions} / {totalQuestions} ANSWERED</span>
+                <div className="text-xs flex items-center justify-end gap-2" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>
+                  <span>{answeredQuestions} / {totalQuestions} answered</span>
                   {saveStatus && saveStatusDot(saveStatus)}
                 </div>
                 {/* Dual progress: section track + question track */}
                 <div className="flex items-center gap-2 mt-1">
-                  <div className="w-32 h-2 bg-slate-200">
+                  <div className="w-32 h-2 rounded-full" style={{ backgroundColor: 'rgba(124,144,130,0.15)' }}>
                     <div
-                      className="h-full transition-all"
+                      className="h-full rounded-full transition-all"
                       style={{
                         width: `${progressRatio * 100}%`,
-                        backgroundColor: progressColor(progressRatio),
+                        backgroundColor: '#7C9082',
                       }}
                     />
                   </div>
-                  <span className="font-mono text-[10px] text-slate-400 whitespace-nowrap">
+                  <span className="text-[10px] whitespace-nowrap" style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}>
                     {estimateTimeRemaining(remainingQuestions)}
                   </span>
                 </div>
@@ -216,9 +222,10 @@ export default function AssessmentShell({
               {onSaveAndExit && (
                 <button
                   onClick={onSaveAndExit}
-                  className="px-4 py-2 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-600 hover:border-slate-800 hover:text-slate-800 transition-all"
+                  className="px-4 py-2 rounded-full text-xs font-medium transition-all"
+                  style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.3)' }}
                 >
-                  SAVE &amp; EXIT
+                  Save &amp; Exit
                 </button>
               )}
             </div>
@@ -240,9 +247,8 @@ export default function AssessmentShell({
           {Array.from({ length: totalSections }).map((_, i) => (
             <div
               key={i}
-              className={`h-1 flex-1 ${
-                i <= currentSection ? accent.bar : 'bg-slate-200'
-              }`}
+              className="h-1 flex-1 rounded-full"
+              style={{ backgroundColor: i <= currentSection ? '#7C9082' : 'rgba(124,144,130,0.15)' }}
             />
           ))}
         </div>
@@ -250,18 +256,18 @@ export default function AssessmentShell({
         {/* Section name + description */}
         <div className="flex items-center gap-2">
           {sectionEmoji && <span className="text-lg">{sectionEmoji}</span>}
-          <span className={`font-mono text-xs ${accent.label} font-bold tracking-wider`}>
+          <span className={`text-xs ${accent.label} font-medium tracking-wider`} style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500 }}>
             {sectionName.toUpperCase()}
           </span>
         </div>
-        <p className="font-mono text-sm text-slate-500 mt-1">
+        <p className="text-sm mt-1" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>
           {sectionDescription.replace(/\{\{personName\}\}/g, personName)}
         </p>
 
         {/* First question hint */}
         {firstQuestionHint && currentSection === 0 && currentQuestion === 0 && (
-          <div className={`mt-4 p-3 ${accent.hint.bg} border ${accent.hint.border}`}>
-            <p className={`font-mono text-xs ${accent.hint.text}`}>
+          <div className={`mt-4 p-3 rounded-lg ${accent.hint.bg} border ${accent.hint.border}`}>
+            <p className={`text-xs ${accent.hint.text}`} style={{ fontFamily: 'var(--font-parent-body)' }}>
               {firstQuestionHint}
             </p>
           </div>
@@ -282,9 +288,10 @@ export default function AssessmentShell({
         {canSkip && currentQuestion === 0 && (
           <button
             onClick={onSkipSection}
-            className="mt-4 font-mono text-xs text-slate-400 hover:text-slate-600 transition-colors"
+            className="mt-4 text-xs transition-colors"
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
           >
-            SKIP THIS SECTION &rarr;
+            Skip this section &rarr;
           </button>
         )}
       </div>

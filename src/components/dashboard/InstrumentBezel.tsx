@@ -18,8 +18,8 @@ export default function InstrumentBezel({ title, children, compact }: Instrument
     >
       {title && (
         <div
-          className="text-[10px] font-mono font-bold tracking-widest mb-2 px-1"
-          style={{ color: '#6B6B6B' }}
+          className="text-[10px] font-bold tracking-widest mb-2 px-1"
+          style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6B6B' }}
         >
           {title}
         </div>

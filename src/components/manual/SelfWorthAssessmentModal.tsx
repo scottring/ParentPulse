@@ -198,25 +198,26 @@ export function SelfWorthAssessmentModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
       <div
-        className="relative bg-white border-4 border-purple-600 p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-[12px_12px_0px_0px_rgba(147,51,234,1)]"
+        className="relative glass-card-strong p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-start justify-between mb-8">
           <div>
-            <div className="inline-block px-3 py-1 bg-purple-600 text-white font-mono text-xs mb-4">
-              SELF-WORTH PORTRAIT (RSES)
+            <div className="inline-block px-3 py-1 rounded-full text-white mb-4" style={{ backgroundColor: '#7C9082', fontFamily: 'var(--font-parent-body)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>
+              Self-worth portrait (RSES)
             </div>
-            <h2 className="font-mono text-2xl font-bold text-slate-900">
+            <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '28px', fontWeight: 400, color: '#3A3530' }}>
               Self-Worth Portrait for {personName}
             </h2>
-            <p className="font-mono text-sm text-slate-600 mt-2">
+            <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5C5347' }} className="mt-2">
               Question {currentQuestionIndex + 1} of {SELF_WORTH_QUESTIONS.length}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-3xl font-mono font-bold text-slate-400 hover:text-slate-800 transition-colors"
+            className="text-3xl transition-colors hover:opacity-70"
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
             disabled={saving}
           >
             ×
@@ -225,10 +226,11 @@ export function SelfWorthAssessmentModal({
 
         {/* Progress Bar */}
         <div className="mb-8">
-          <div className="h-3 bg-slate-200 border-2 border-slate-800">
+          <div className="h-2 rounded-full" style={{ background: 'rgba(255,255,255,0.4)' }}>
             <div
-              className="h-full bg-purple-600 transition-all duration-300"
+              className="h-full rounded-full transition-all duration-300"
               style={{
+                backgroundColor: '#7C9082',
                 width: `${((currentQuestionIndex + 1) / SELF_WORTH_QUESTIONS.length) * 100}%`
               }}
             ></div>
@@ -237,17 +239,17 @@ export function SelfWorthAssessmentModal({
 
         {/* Question */}
         <div className="mb-8">
-          <div className="relative bg-purple-50 border-4 border-purple-600 p-8 shadow-[6px_6px_0px_0px_rgba(147,51,234,1)]">
-            <div className="inline-block px-3 py-1 bg-purple-600 text-white font-mono text-xs mb-4">
+          <div className="glass-card p-8 rounded-2xl">
+            <div className="inline-block px-3 py-1 rounded-full text-white mb-4" style={{ backgroundColor: '#7C9082', fontFamily: 'var(--font-parent-body)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>
               {currentQuestion.domain}
             </div>
-            <h3 className="font-mono text-2xl font-bold text-slate-900 mb-6">
+            <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '24px', fontWeight: 400, color: '#3A3530' }} className="mb-6">
               {currentQuestion.question.replace('{{personName}}', personName)}
             </h3>
 
             {/* Likert Scale */}
             <div className="space-y-3">
-              <p className="font-mono text-sm text-slate-600 mb-4">
+              <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5C5347' }} className="mb-4">
                 How much do you agree with this statement?
               </p>
               <div className="grid grid-cols-1 gap-3">
@@ -260,11 +262,15 @@ export function SelfWorthAssessmentModal({
                   <button
                     key={option.value}
                     onClick={() => handleScoreChange(option.value)}
-                    className={`p-4 font-mono text-left font-bold transition-all border-2 ${
-                      currentAnswer?.primary === option.value
-                        ? 'bg-purple-600 text-white border-purple-900 shadow-[4px_4px_0px_0px_rgba(88,28,135,1)]'
-                        : 'bg-white text-slate-700 border-slate-300 hover:border-purple-600 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]'
-                    }`}
+                    className="p-4 text-left rounded-2xl transition-all"
+                    style={{
+                      fontFamily: 'var(--font-parent-body)',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      ...(currentAnswer?.primary === option.value
+                        ? { backgroundColor: '#7C9082', color: 'white', border: '1px solid #7C9082' }
+                        : { background: 'rgba(255,255,255,0.5)', color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)' })
+                    }}
                   >
                     {option.label}
                   </button>
@@ -274,15 +280,16 @@ export function SelfWorthAssessmentModal({
 
             {/* Optional Qualitative Comment */}
             {currentAnswer?.primary && (
-              <div className="mt-6 pt-6 border-t-2 border-purple-300">
-                <label className="block font-mono text-sm text-slate-600 mb-2">
+              <div className="mt-6 pt-6" style={{ borderTop: '1px solid rgba(255,255,255,0.4)' }}>
+                <label style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5C5347' }} className="block mb-2">
                   Optional: Add any additional context or notes
                 </label>
                 <textarea
                   value={currentAnswer.qualitative || ''}
                   onChange={(e) => handleQualitativeChange(e.target.value)}
                   placeholder="e.g., This varies depending on..."
-                  className="w-full px-4 py-3 border-2 border-slate-300 font-mono text-sm text-slate-700 focus:outline-none focus:border-purple-600"
+                  className="w-full px-4 py-3 rounded-xl focus:outline-none"
+                  style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#3A3530', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.5)' }}
                   rows={3}
                 />
               </div>
@@ -292,8 +299,8 @@ export function SelfWorthAssessmentModal({
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border-2 border-red-600">
-            <p className="font-mono text-sm text-red-700">{error}</p>
+          <div className="mb-6 p-4 rounded-2xl" style={{ background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)' }}>
+            <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#dc2626' }}>{error}</p>
           </div>
         )}
 
@@ -302,9 +309,10 @@ export function SelfWorthAssessmentModal({
           <button
             onClick={handlePrevious}
             disabled={currentQuestionIndex === 0 || saving}
-            className="px-6 py-3 border-2 border-slate-300 bg-white font-mono text-sm font-bold text-slate-700 hover:border-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-3 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)' }}
           >
-            ← PREVIOUS
+            Previous
           </button>
 
           <div className="flex gap-3">
@@ -312,17 +320,19 @@ export function SelfWorthAssessmentModal({
               <button
                 onClick={handleNext}
                 disabled={!currentAnswer?.primary || saving}
-                className="px-6 py-3 bg-purple-600 text-white font-mono text-sm font-bold hover:bg-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[4px_4px_0px_0px_rgba(88,28,135,1)]"
+                className="px-6 py-3 rounded-full text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg"
+                style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, backgroundColor: '#7C9082' }}
               >
-                NEXT →
+                Next
               </button>
             ) : (
               <button
                 onClick={handleSubmit}
                 disabled={!allQuestionsAnswered || saving}
-                className="px-8 py-3 bg-green-600 text-white font-mono text-sm font-bold hover:bg-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[4px_4px_0px_0px_rgba(22,101,52,1)]"
+                className="px-8 py-3 rounded-full text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg"
+                style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, backgroundColor: '#7C9082' }}
               >
-                {generating ? 'GENERATING INSIGHTS...' : saving ? 'SAVING...' : 'COMPLETE ASSESSMENT'}
+                {generating ? 'Generating insights...' : saving ? 'Saving...' : 'Complete assessment'}
               </button>
             )}
           </div>
@@ -333,13 +343,14 @@ export function SelfWorthAssessmentModal({
           {SELF_WORTH_QUESTIONS.map((_, idx) => (
             <div
               key={idx}
-              className={`w-3 h-3 rounded-full border-2 ${
-                answers[SELF_WORTH_QUESTIONS[idx].id]?.primary
-                  ? 'bg-purple-600 border-purple-900'
+              className="w-3 h-3 rounded-full transition-all"
+              style={{
+                ...(answers[SELF_WORTH_QUESTIONS[idx].id]?.primary
+                  ? { backgroundColor: '#7C9082' }
                   : idx === currentQuestionIndex
-                  ? 'bg-white border-purple-600'
-                  : 'bg-slate-200 border-slate-300'
-              }`}
+                  ? { background: 'white', border: '2px solid #7C9082' }
+                  : { background: 'rgba(138,128,120,0.3)' })
+              }}
             />
           ))}
         </div>

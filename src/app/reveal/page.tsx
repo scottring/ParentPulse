@@ -37,7 +37,7 @@ function domainScoreToLabel(score: number): string {
 function domainScoreToColor(score: number): string {
   if (score >= 4.0) return '#16a34a';
   if (score >= 3.5) return '#65a30d';
-  if (score >= 3.0) return '#d97706';
+  if (score >= 3.0) return '#7C9082';
   if (score >= 2.0) return '#ea580c';
   if (score > 0) return '#dc2626';
   return '#6b7280';

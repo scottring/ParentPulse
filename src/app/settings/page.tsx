@@ -144,10 +144,10 @@ export default function SettingsPage() {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FFF8F0' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'transparent' }}>
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-slate-800 border-t-amber-600 rounded-full animate-spin"></div>
-          <p className="mt-4 font-mono text-sm text-slate-600">LOADING SETTINGS...</p>
+          <div className="w-12 h-12 border-4 border-[#7C9082]/20 border-t-[#7C9082] rounded-full animate-spin"></div>
+          <p className="mt-4 text-sm" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>Loading settings...</p>
         </div>
       </div>
     );
@@ -158,29 +158,35 @@ export default function SettingsPage() {
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Page Header */}
         <header className="mb-12">
-          <div className="relative bg-white border-4 border-slate-800 p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-            {/* Corner brackets */}
-            <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-amber-600"></div>
-            <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-amber-600"></div>
-            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-amber-600"></div>
-            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-amber-600"></div>
-
+          <div
+            className="relative rounded-2xl p-8"
+            style={{
+              background: 'rgba(255,255,255,0.45)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(124,144,130,0.15)',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+            }}
+          >
             <div className="flex items-start gap-6">
-              <Link href="/dashboard" className="mt-2 font-mono text-3xl font-bold text-slate-800 hover:text-amber-600 transition-colors">
-                ←
+              <Link href="/dashboard" className="mt-2 text-3xl transition-colors" style={{ color: '#3A3530' }}>
+                &#8592;
               </Link>
 
               <div className="flex-1">
-                <div className="inline-block px-3 py-1 bg-slate-800 text-white font-mono text-xs mb-3">
-                  SYSTEM CONFIGURATION
-                </div>
-
-                <h1 className="font-mono text-4xl font-bold tracking-tight text-slate-900 mb-2">
+                <h1
+                  className="mb-2"
+                  style={{
+                    fontFamily: 'var(--font-parent-display)',
+                    fontSize: '32px',
+                    fontWeight: 400,
+                    color: '#3A3530',
+                  }}
+                >
                   Settings
                 </h1>
 
-                <p className="font-mono text-sm text-slate-600">
-                  CONFIGURE SYSTEM PARAMETERS AND USER PREFERENCES
+                <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468' }}>
+                  Configure your preferences
                 </p>
               </div>
             </div>
@@ -395,7 +401,7 @@ export default function SettingsPage() {
                       {desc}
                     </div>
                   </div>
-                  <span className="font-mono text-sm font-bold" style={{ color: 'var(--parent-text)' }}>
+                  <span className="text-sm font-bold" style={{ color: 'var(--parent-text)' }}>
                     {Math.round(weights[key] * 100)}%
                   </span>
                 </div>
@@ -477,7 +483,7 @@ export default function SettingsPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-mono text-xs font-bold" style={{ color: 'var(--parent-text-light)' }}>
+                        <div className="text-xs font-bold" style={{ color: 'var(--parent-text-light)' }}>
                           ~{preset.minutesPerDay} min/day
                         </div>
                         {isActive && (

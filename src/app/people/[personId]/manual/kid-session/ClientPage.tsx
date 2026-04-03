@@ -206,16 +206,16 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
   // Loading
   if (authLoading || personLoading || manualLoading || !draftLoaded) {
     return (
-      <div className="min-h-screen bg-blue-50 flex items-center justify-center">
-        <div className="animate-spin w-12 h-12 border-4 border-blue-400 border-t-transparent rounded-full" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-12 h-12 rounded-full" style={{ border: '3px solid #7C9082', borderTopColor: 'transparent' }} />
       </div>
     );
   }
 
   if (!user || !person || !manual) {
     return (
-      <div className="min-h-screen bg-blue-50 flex items-center justify-center">
-        <p className="text-xl text-slate-600">Something went wrong. Ask a grown-up for help.</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '18px', color: '#5C5347' }}>Something went wrong. Ask a grown-up for help.</p>
       </div>
     );
   }
@@ -223,11 +223,11 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
   // Completion screen
   if (isComplete) {
     return (
-      <div className="min-h-screen bg-green-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="text-6xl">&#127881;</div>
-          <h2 className="text-3xl font-bold text-green-800">Great job, {person.name}!</h2>
-          <p className="text-lg text-green-700">Your answers have been saved. Thank you for sharing!</p>
+          <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '28px', fontWeight: 700, color: '#3A3530' }}>Great job, {person.name}!</h2>
+          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '18px', color: '#5C5347' }}>Your answers have been saved. Thank you for sharing!</p>
         </div>
       </div>
     );
@@ -236,33 +236,34 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
   // Start screen (parent-facing)
   if (!started) {
     return (
-      <div className="min-h-screen bg-blue-50 flex items-center justify-center p-6">
+      <div className="min-h-screen flex items-center justify-center p-6">
         <div className="max-w-lg text-center space-y-6">
           <div className="text-6xl">&#128218;</div>
-          <h1 className="text-2xl font-bold text-slate-800">
+          <h1 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '28px', fontWeight: 700, color: '#3A3530' }}>
             {person.name}&apos;s Portrait Session
           </h1>
-          <p className="text-lg text-slate-700 font-medium">
+          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '18px', fontWeight: 500, color: '#5C5347' }}>
             Help {person.name} share how they see themselves and the family.
           </p>
-          <p className="text-slate-600">
+          <p style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}>
             Sit with {person.name} and let them answer these questions.
             Read the questions aloud if needed. There are {totalQuestions} questions
             across {sections.length} sections — it takes about 10 minutes.
           </p>
-          <p className="text-sm text-slate-500">
+          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468' }}>
             Answers save automatically. You can stop anytime and come back later.
           </p>
           <button
             onClick={() => setStarted(true)}
-            className="px-8 py-4 bg-blue-600 text-white text-xl font-bold rounded-2xl hover:bg-blue-700 transition-all shadow-lg"
+            className="px-8 py-4 text-white text-xl font-bold rounded-full hover:opacity-90 transition-all shadow-lg"
+            style={{ fontFamily: 'var(--font-parent-body)', backgroundColor: '#7C9082' }}
           >
             Let&apos;s Go!
           </button>
           <div>
             <button
               onClick={() => router.push(`/people/${personId}/manual`)}
-              className="text-sm text-slate-400 hover:text-slate-600"
+              style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#8A8078' }}
             >
               Not now
             </button>
@@ -277,23 +278,23 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
   const demoBanner = isDemo ? (
     <div className="max-w-2xl mx-auto px-4 pt-4">
       <div
-        className="flex items-center justify-between px-4 py-2 rounded-lg font-mono text-[11px]"
-        style={{ background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.2)' }}
+        className="flex items-center justify-between px-4 py-2 rounded-lg text-[11px]"
+        style={{ fontFamily: 'var(--font-parent-body)', background: 'rgba(124,144,130,0.08)', border: '1px solid rgba(124,144,130,0.2)' }}
       >
         <div className="flex items-center gap-3">
-          <span style={{ color: '#A3510B', fontWeight: 700 }}>DEMO</span>
-          <span style={{ color: '#6B6B6B' }}>
-            Parent <strong style={{ color: '#2C2C2C' }}>{user?.name}</strong> supervising{' '}
-            <strong style={{ color: '#3B82F6' }}>{person.name}</strong>&apos;s session
+          <span style={{ color: '#7C9082', fontWeight: 700 }}>DEMO</span>
+          <span style={{ color: '#7C7468' }}>
+            Parent <strong style={{ color: '#3A3530' }}>{user?.name}</strong> supervising{' '}
+            <strong style={{ color: '#7C9082' }}>{person.name}</strong>&apos;s session
           </span>
         </div>
         <button
           type="button"
           onClick={handleFillAll}
-          className="px-3 py-1 rounded font-bold transition-all hover:scale-105"
-          style={{ background: '#d97706', color: 'white', fontSize: '10px' }}
+          className="px-3 py-1 rounded-full font-medium transition-all hover:scale-105"
+          style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082', color: 'white', fontSize: '10px', fontWeight: 500 }}
         >
-          FILL ALL
+          Fill All
         </button>
       </div>
     </div>

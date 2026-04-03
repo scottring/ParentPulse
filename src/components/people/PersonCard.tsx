@@ -84,12 +84,12 @@ export default function PersonCard({
     if (!summary) return null;
     for (const step of summary.journeySteps) {
       if (step.status === 'in-progress' && step.actionUrl) {
-        return { label: `CONTINUE: ${step.label.toUpperCase()}`, url: step.actionUrl };
+        return { label: `Continue: ${step.label}`, url: step.actionUrl };
       }
     }
     for (const step of summary.journeySteps) {
       if (step.status === 'not-started' && step.actionUrl) {
-        return { label: `START: ${step.label.toUpperCase()}`, url: step.actionUrl };
+        return { label: `Start: ${step.label}`, url: step.actionUrl };
       }
     }
     return null;
@@ -98,18 +98,26 @@ export default function PersonCard({
   return (
     <div className="relative">
       <div
-        className={`relative transition-all ${
-          hasManual
-            ? 'bg-white border-2 border-slate-300 hover:border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]'
-            : 'bg-amber-50 border-2 border-amber-600 hover:border-slate-800 shadow-[4px_4px_0px_0px_rgba(217,119,6,0.5)] hover:shadow-[6px_6px_0px_0px_rgba(217,119,6,1)]'
-        }`}
+        className="relative transition-all rounded-xl overflow-hidden"
+        style={{
+          background: hasManual
+            ? 'rgba(255,255,255,0.7)'
+            : 'rgba(124,144,130,0.06)',
+          backdropFilter: 'blur(12px)',
+          border: hasManual
+            ? '1px solid rgba(255,255,255,0.4)'
+            : '1px solid rgba(124,144,130,0.3)',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+        }}
         data-testid="person-card"
       >
         {/* Card number label */}
         <div
-          className={`absolute -top-3 -left-3 w-10 h-10 text-white font-mono font-bold flex items-center justify-center border-2 ${
-            hasManual ? 'bg-slate-800 border-green-600' : 'bg-amber-600 border-slate-800'
-          }`}
+          className="absolute -top-2 -left-2 w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium"
+          style={{
+            fontFamily: 'var(--font-parent-body)',
+            background: hasManual ? '#3A3530' : '#7C9082',
+          }}
         >
           {String(index + 1).padStart(2, '0')}
         </div>
@@ -121,7 +129,8 @@ export default function PersonCard({
               e.stopPropagation();
               setShowMenu(!showMenu);
             }}
-            className="p-2 hover:bg-slate-100 rounded font-mono text-slate-600 hover:text-slate-900"
+            className="p-2 rounded-full hover:bg-black/5 transition-colors"
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}
             data-testid="person-menu-button"
           >
             <EllipsisVerticalIcon className="w-5 h-5" />
@@ -143,22 +152,50 @@ export default function PersonCard({
         >
           {/* Header: Name + badges */}
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-mono text-xl font-bold text-slate-900">
+            <h3
+              className="text-xl font-medium"
+              style={{
+                fontFamily: 'var(--font-parent-display)',
+                color: '#3A3530',
+              }}
+            >
               {person.name}
             </h3>
             {isTwin && (
-              <span className="px-1.5 py-0.5 bg-purple-100 border border-purple-300 font-mono text-xs text-purple-700 font-bold">
-                TWIN
+              <span
+                className="px-2 py-0.5 rounded-full text-xs font-medium"
+                style={{
+                  fontFamily: 'var(--font-parent-body)',
+                  background: 'rgba(147,130,195,0.12)',
+                  color: '#7a6b8f',
+                  border: '1px solid rgba(147,130,195,0.2)',
+                }}
+              >
+                Twin
               </span>
             )}
           </div>
           <div className="flex items-center gap-2 mb-4">
-            <span className="font-mono text-xs text-slate-600 uppercase tracking-wider">
-              {person.relationshipType || 'UNSPECIFIED'}
+            <span
+              className="text-xs tracking-wide capitalize"
+              style={{
+                fontFamily: 'var(--font-parent-body)',
+                color: '#7C7468',
+              }}
+            >
+              {person.relationshipType || 'Unspecified'}
             </span>
             {personAge !== null && (
-              <span className="font-mono text-xs text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5">
-                AGE {personAge}
+              <span
+                className="text-xs px-2 py-0.5 rounded-full"
+                style={{
+                  fontFamily: 'var(--font-parent-body)',
+                  color: '#5C5347',
+                  background: 'rgba(124,144,130,0.08)',
+                  border: '1px solid rgba(124,144,130,0.15)',
+                }}
+              >
+                Age {personAge}
               </span>
             )}
           </div>
@@ -169,65 +206,99 @@ export default function PersonCard({
               {/* Progress bar */}
               <div className="mb-3">
                 <div className="flex justify-between items-center mb-1">
-                  <span className="font-mono text-xs text-slate-500">PROGRESS</span>
-                  <span className="font-mono text-xs font-bold text-slate-700">{summary.overallProgress}%</span>
+                  <span
+                    className="text-xs"
+                    style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+                  >
+                    Progress
+                  </span>
+                  <span
+                    className="text-xs font-medium"
+                    style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}
+                  >
+                    {summary.overallProgress}%
+                  </span>
                 </div>
-                <div className="h-2 bg-slate-100 border border-slate-200">
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(0,0,0,0.06)' }}>
                   <div
-                    className={`h-full transition-all ${
-                      summary.overallProgress >= 80
-                        ? 'bg-green-500'
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${summary.overallProgress}%`,
+                      background: summary.overallProgress >= 80
+                        ? '#4ade80'
                         : summary.overallProgress >= 40
-                        ? 'bg-amber-400'
-                        : 'bg-slate-300'
-                    }`}
-                    style={{ width: `${summary.overallProgress}%` }}
+                        ? '#7C9082'
+                        : '#B8B0A6',
+                    }}
                   />
                 </div>
               </div>
 
               {/* Summary line */}
-              <p className="font-mono text-xs text-slate-600 mb-3">
+              <p
+                className="text-xs mb-3"
+                style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}
+              >
                 {getSummaryLine()}
                 {summary.hasSynthesis && (
-                  <span className="ml-2 text-green-700 font-bold">SYNTHESIZED</span>
+                  <span className="ml-2 font-medium" style={{ color: '#16a34a' }}>Synthesized</span>
                 )}
               </p>
 
               {/* Primary CTA */}
               {getPrimaryCta() && (
-                <div className="font-mono text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1.5 mb-3 text-center font-bold">
-                  {getPrimaryCta()!.label} →
+                <div
+                  className="text-xs px-3 py-2 mb-3 text-center rounded-full font-medium"
+                  style={{
+                    fontFamily: 'var(--font-parent-body)',
+                    color: '#7C9082',
+                    background: 'rgba(124,144,130,0.08)',
+                    border: '1px solid rgba(124,144,130,0.2)',
+                  }}
+                >
+                  {getPrimaryCta()!.label}
                 </div>
               )}
 
               {/* View manual link */}
-              <div className="text-center font-mono text-xs font-bold text-slate-800">
-                VIEW MANUAL →
+              <div
+                className="text-center text-xs font-medium"
+                style={{ fontFamily: 'var(--font-parent-body)', color: '#3A3530' }}
+              >
+                View Manual &rarr;
               </div>
             </>
           ) : hasManual && summaryLoading ? (
             <div className="space-y-2 mb-4">
-              <div className="h-4 bg-slate-100 animate-pulse" />
-              <div className="h-4 bg-slate-100 animate-pulse w-3/4" />
-              <div className="h-4 bg-slate-100 animate-pulse w-1/2" />
-              <div className="mt-4 text-center font-mono text-xs font-bold text-slate-800">
-                VIEW MANUAL →
+              <div className="h-4 rounded-full animate-pulse" style={{ background: 'rgba(0,0,0,0.06)' }} />
+              <div className="h-4 rounded-full animate-pulse w-3/4" style={{ background: 'rgba(0,0,0,0.06)' }} />
+              <div className="h-4 rounded-full animate-pulse w-1/2" style={{ background: 'rgba(0,0,0,0.06)' }} />
+              <div
+                className="mt-4 text-center text-xs font-medium"
+                style={{ fontFamily: 'var(--font-parent-body)', color: '#3A3530' }}
+              >
+                View Manual &rarr;
               </div>
             </div>
           ) : (
             <>
-              <div className="inline-block px-2 py-1 font-mono text-xs mb-4 bg-slate-800 text-white">
-                PENDING
+              <div
+                className="inline-block px-3 py-1 rounded-full text-xs mb-4 text-white"
+                style={{ fontFamily: 'var(--font-parent-body)', background: '#3A3530' }}
+              >
+                Pending
               </div>
-              <div className="space-y-2 mb-6 pb-6 border-b border-amber-200">
-                <div className="flex justify-between font-mono text-xs">
-                  <span className="text-slate-500">STATUS:</span>
-                  <span className="text-amber-700">UNINITIALIZED</span>
+              <div className="space-y-2 mb-6 pb-6" style={{ borderBottom: '1px solid rgba(124,144,130,0.15)' }}>
+                <div className="flex justify-between text-xs" style={{ fontFamily: 'var(--font-parent-body)' }}>
+                  <span style={{ color: '#8A8078' }}>Status:</span>
+                  <span style={{ color: '#7C9082' }}>Uninitialized</span>
                 </div>
               </div>
-              <div className="text-center font-mono text-xs font-bold text-amber-600">
-                CREATE MANUAL →
+              <div
+                className="text-center text-xs font-medium"
+                style={{ fontFamily: 'var(--font-parent-body)', color: '#7C9082' }}
+              >
+                Create Manual &rarr;
               </div>
             </>
           )}
@@ -237,41 +308,64 @@ export default function PersonCard({
         {hasManual && summary && !summaryLoading && (
           <button
             onClick={handleExpand}
-            className="w-full px-6 py-2 border-t border-slate-200 flex items-center justify-center gap-1 hover:bg-slate-50 transition-colors"
+            className="w-full px-6 py-2 flex items-center justify-center gap-1 hover:bg-black/[0.02] transition-colors"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.4)' }}
           >
-            <span className="font-mono text-xs text-slate-400">
-              {expanded ? 'LESS' : 'DETAILS'}
+            <span
+              className="text-xs"
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+            >
+              {expanded ? 'Less' : 'Details'}
             </span>
             {expanded ? (
-              <ChevronUpIcon className="w-3 h-3 text-slate-400" />
+              <ChevronUpIcon className="w-3 h-3" style={{ color: '#8A8078' }} />
             ) : (
-              <ChevronDownIcon className="w-3 h-3 text-slate-400" />
+              <ChevronDownIcon className="w-3 h-3" style={{ color: '#8A8078' }} />
             )}
           </button>
         )}
 
         {/* Expanded content */}
         {expanded && summary && (
-          <div className="px-6 pb-6 border-t border-slate-200 pt-4 space-y-5">
+          <div className="px-6 pb-6 pt-4 space-y-5" style={{ borderTop: '1px solid rgba(255,255,255,0.4)' }}>
             {/* Contributor Matrix */}
             <div>
-              <div className="font-mono text-xs text-slate-500 uppercase tracking-wider mb-3">
-                CONTRIBUTORS
+              <div
+                className="text-xs tracking-wide mb-3"
+                style={{
+                  fontFamily: 'var(--font-parent-body)',
+                  color: '#8A8078',
+                  fontWeight: 500,
+                }}
+              >
+                Contributors
               </div>
               <div className="space-y-2">
                 {summary.contributors.map((contributor, i) => (
                   <ContributorRow key={`${contributor.contributorId}-${contributor.perspectiveType}-${i}`} contributor={contributor} />
                 ))}
                 {summary.contributors.length === 0 && (
-                  <p className="font-mono text-xs text-slate-400">No contributors yet</p>
+                  <p
+                    className="text-xs"
+                    style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+                  >
+                    No contributors yet
+                  </p>
                 )}
               </div>
             </div>
 
             {/* Journey Timeline */}
             <div>
-              <div className="font-mono text-xs text-slate-500 uppercase tracking-wider mb-3">
-                JOURNEY
+              <div
+                className="text-xs tracking-wide mb-3"
+                style={{
+                  fontFamily: 'var(--font-parent-body)',
+                  color: '#8A8078',
+                  fontWeight: 500,
+                }}
+              >
+                Journey
               </div>
               <JourneyTimeline steps={summary.journeySteps} />
             </div>
@@ -287,24 +381,36 @@ export default function PersonCard({
             onClick={() => setShowMenu(false)}
           />
           <div
-            className="absolute right-2 top-12 z-30 bg-white border-2 border-slate-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] min-w-[140px]"
+            className="absolute right-2 top-12 z-30 rounded-xl overflow-hidden min-w-[140px]"
+            style={{
+              background: 'rgba(255,255,255,0.9)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255,255,255,0.4)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={handleEdit}
-              className="w-full px-4 py-3 text-left font-mono text-xs hover:bg-slate-100 transition-colors border-b border-slate-200 text-slate-900 flex items-center gap-2"
+              className="w-full px-4 py-3 text-left text-xs hover:bg-black/[0.03] transition-colors flex items-center gap-2"
+              style={{
+                fontFamily: 'var(--font-parent-body)',
+                color: '#3A3530',
+                borderBottom: '1px solid rgba(255,255,255,0.4)',
+              }}
               data-testid="edit-person-button"
             >
               <PencilIcon className="w-4 h-4" />
-              EDIT
+              Edit
             </button>
             <button
               onClick={handleDelete}
-              className="w-full px-4 py-3 text-left font-mono text-xs hover:bg-red-50 transition-colors text-red-600 flex items-center gap-2"
+              className="w-full px-4 py-3 text-left text-xs hover:bg-red-50/50 transition-colors text-red-600 flex items-center gap-2"
+              style={{ fontFamily: 'var(--font-parent-body)' }}
               data-testid="delete-person-button"
             >
               <XMarkIcon className="w-4 h-4" />
-              DELETE
+              Delete
             </button>
           </div>
         </>
@@ -318,20 +424,34 @@ function ContributorRow({ contributor }: { contributor: ContributorInfo }) {
   const isKidObserver = contributor.relationshipToSubject === 'child-observer';
   const isChildSession = contributor.relationshipToSubject === 'child-session';
   const roleLabel = contributor.perspectiveType === 'self'
-    ? (isChildSession ? 'KID SELF' : 'SELF')
-    : (isKidObserver ? 'KID OBS' : 'OBSERVER');
+    ? (isChildSession ? 'Kid Self' : 'Self')
+    : (isKidObserver ? 'Kid Obs' : 'Observer');
 
   return (
     <div className="flex items-center gap-3">
       {/* Avatar */}
       <div
-        className={`w-7 h-7 rounded-full flex items-center justify-center font-mono text-xs font-bold flex-shrink-0 ${
-          contributor.status === 'complete'
-            ? 'bg-green-100 text-green-800 border border-green-300'
+        className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+        style={{
+          fontFamily: 'var(--font-parent-body)',
+          background: contributor.status === 'complete'
+            ? 'rgba(22,163,74,0.1)'
             : contributor.status === 'draft'
-            ? 'bg-amber-100 text-amber-800 border border-amber-300'
-            : 'bg-slate-100 text-slate-500 border border-slate-200'
-        }`}
+            ? 'rgba(124,144,130,0.1)'
+            : 'rgba(0,0,0,0.04)',
+          color: contributor.status === 'complete'
+            ? '#16a34a'
+            : contributor.status === 'draft'
+            ? '#7C9082'
+            : '#8A8078',
+          border: `1px solid ${
+            contributor.status === 'complete'
+              ? 'rgba(22,163,74,0.2)'
+              : contributor.status === 'draft'
+              ? 'rgba(124,144,130,0.2)'
+              : 'rgba(0,0,0,0.08)'
+          }`,
+        }}
       >
         {initial}
       </div>
@@ -339,15 +459,29 @@ function ContributorRow({ contributor }: { contributor: ContributorInfo }) {
       {/* Name + role */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className="font-mono text-xs font-bold text-slate-800 truncate">
+          <span
+            className="text-xs font-medium truncate"
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#3A3530' }}
+          >
             {contributor.contributorName}
           </span>
           <span
-            className={`px-1 py-0.5 font-mono text-xs font-bold ${
-              contributor.perspectiveType === 'self'
-                ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                : 'bg-slate-100 text-slate-600 border border-slate-200'
-            }`}
+            className="px-1.5 py-0.5 text-xs rounded-full"
+            style={{
+              fontFamily: 'var(--font-parent-body)',
+              fontSize: '10px',
+              background: contributor.perspectiveType === 'self'
+                ? 'rgba(59,130,246,0.08)'
+                : 'rgba(0,0,0,0.04)',
+              color: contributor.perspectiveType === 'self'
+                ? '#3b82f6'
+                : '#7C7468',
+              border: `1px solid ${
+                contributor.perspectiveType === 'self'
+                  ? 'rgba(59,130,246,0.15)'
+                  : 'rgba(0,0,0,0.06)'
+              }`,
+            }}
           >
             {roleLabel}
           </span>
@@ -357,16 +491,30 @@ function ContributorRow({ contributor }: { contributor: ContributorInfo }) {
       {/* Status */}
       <div className="flex items-center gap-2 flex-shrink-0">
         {contributor.status === 'complete' ? (
-          <span className="font-mono text-xs text-green-700 font-bold">DONE</span>
+          <span
+            className="text-xs font-medium"
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#16a34a' }}
+          >
+            Done
+          </span>
         ) : (
           <div className="flex items-center gap-1.5">
-            <div className="w-12 h-1.5 bg-slate-100 border border-slate-200">
+            <div
+              className="w-12 h-1.5 rounded-full overflow-hidden"
+              style={{ background: 'rgba(0,0,0,0.06)' }}
+            >
               <div
-                className="h-full bg-amber-400"
-                style={{ width: `${Math.min(100, contributor.progressPercent)}%` }}
+                className="h-full rounded-full"
+                style={{
+                  width: `${Math.min(100, contributor.progressPercent)}%`,
+                  background: '#7C9082',
+                }}
               />
             </div>
-            <span className="font-mono text-xs text-amber-700 w-8 text-right">
+            <span
+              className="text-xs w-8 text-right"
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#7C9082' }}
+            >
               {contributor.progressPercent}%
             </span>
           </div>

@@ -7,10 +7,10 @@
 /* ==================== Core Design Tokens ==================== */
 
 :root {
-  /* Base Typography - Handwritten & Warm */
-  --font-heading: 'Kalam', 'Comic Sans MS', cursive;
-  --font-body: 'Nunito', 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'Fira Code', 'Courier New', monospace;
+  /* Base Typography - Warm Library */
+  --font-heading: var(--font-parent-display), 'Cormorant Garamond', Georgia, serif;
+  --font-body: var(--font-parent-body), 'DM Sans', system-ui, sans-serif;
+  --font-mono: var(--font-parent-body), 'DM Sans', system-ui, sans-serif;
 
   /* Shared Neutrals - Warm Gray Scale */
   --neutral-50: #fafaf9;

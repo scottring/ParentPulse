@@ -110,10 +110,10 @@ export default function RoadmapPage() {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FFF8F0' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'transparent' }}>
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-slate-800 border-t-amber-600 rounded-full animate-spin"></div>
-          <p className="mt-4 font-mono text-sm text-slate-600">LOADING...</p>
+          <div className="w-12 h-12 border-4 border-[#7C9082]/20 border-t-[#7C9082] rounded-full animate-spin"></div>
+          <p className="mt-4 text-sm" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>Loading...</p>
         </div>
       </div>
     );
@@ -128,21 +128,26 @@ export default function RoadmapPage() {
 
   return (
     <MainLayout>
-      <div
-        className="min-h-screen p-4 sm:p-6 lg:p-8"
-        style={{ background: '#FFF8F0' }}
-      >
+      <div className="min-h-screen p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="max-w-3xl mx-auto mb-6">
           <h1
-            className="font-mono font-bold text-xl"
-            style={{ color: '#2C2C2C' }}
+            style={{
+              fontFamily: 'var(--font-parent-display)',
+              fontSize: '32px',
+              fontWeight: 400,
+              color: '#3A3530',
+            }}
           >
             Your Growth Journey
           </h1>
           <p
-            className="font-mono text-[11px] mt-1"
-            style={{ color: '#6B6B6B' }}
+            className="mt-1"
+            style={{
+              fontFamily: 'var(--font-parent-body)',
+              fontSize: '14px',
+              color: '#7C7468',
+            }}
           >
             {totalCompleted} activities completed
             {activeArcCount > 0 && ` \u00B7 ${activeArcCount} active arc${activeArcCount !== 1 ? 's' : ''}`}
@@ -158,14 +163,23 @@ export default function RoadmapPage() {
         <div className="max-w-3xl mx-auto mb-6 text-center">
           <span className="text-4xl">{overallDisplay.emoji}</span>
           <h2
-            className="font-mono text-[14px] font-bold tracking-wider mt-2"
-            style={{ color: '#2C2C2C' }}
+            className="mt-2"
+            style={{
+              fontFamily: 'var(--font-parent-display)',
+              fontSize: '18px',
+              fontWeight: 400,
+              color: '#3A3530',
+            }}
           >
             {overallDisplay.label}
           </h2>
           <p
-            className="font-mono text-[10px] mt-1"
-            style={{ color: '#A3A3A3' }}
+            className="mt-1"
+            style={{
+              fontFamily: 'var(--font-parent-body)',
+              fontSize: '12px',
+              color: '#8A8078',
+            }}
           >
             {overallDisplay.description}
           </p>
@@ -202,8 +216,15 @@ export default function RoadmapPage() {
         {domainProgressions.length > 0 && (
           <div className="max-w-3xl mx-auto mt-8">
             <h3
-              className="font-mono text-[10px] font-bold tracking-widest mb-3"
-              style={{ color: '#A3A3A3' }}
+              className="mb-3"
+              style={{
+                fontFamily: 'var(--font-parent-body)',
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: '#8A8078',
+              }}
             >
               DOMAIN BREAKDOWN
             </h3>
@@ -213,24 +234,35 @@ export default function RoadmapPage() {
                 return (
                   <div
                     key={dp.domain}
-                    className="rounded-lg p-4"
+                    className="rounded-2xl p-4"
                     style={{
-                      background: '#FFFFFF',
-                      border: '1px solid #E8E3DC',
+                      background: 'rgba(255,255,255,0.45)',
+                      backdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(124,144,130,0.15)',
                     }}
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-lg">{display.emoji}</span>
                       <div>
                         <span
-                          className="font-mono text-[10px] font-bold tracking-wider block"
-                          style={{ color: '#2C2C2C' }}
+                          className="block"
+                          style={{
+                            fontFamily: 'var(--font-parent-body)',
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            letterSpacing: '0.08em',
+                            color: '#3A3530',
+                          }}
                         >
                           {dp.domain === 'self' ? 'SELF' : dp.domain === 'couple' ? 'COUPLE' : 'PARENT'}
                         </span>
                         <span
-                          className="font-mono text-[8px] tracking-wider"
-                          style={{ color: display.color }}
+                          style={{
+                            fontFamily: 'var(--font-parent-body)',
+                            fontSize: '10px',
+                            letterSpacing: '0.05em',
+                            color: display.color,
+                          }}
                         >
                           {display.label}
                         </span>
@@ -240,7 +272,7 @@ export default function RoadmapPage() {
                     {/* Progress bar */}
                     <div
                       className="h-1 rounded-full overflow-hidden mb-2"
-                      style={{ background: '#E8E3DC' }}
+                      style={{ background: 'rgba(124,144,130,0.15)' }}
                     >
                       <div
                         className="h-full rounded-full transition-all duration-700"
@@ -254,26 +286,36 @@ export default function RoadmapPage() {
                     {/* Key stats */}
                     <div className="flex justify-between">
                       <span
-                        className="font-mono text-[8px]"
-                        style={{ color: '#A3A3A3' }}
+                        style={{
+                          fontFamily: 'var(--font-parent-body)',
+                          fontSize: '10px',
+                          color: '#8A8078',
+                        }}
                       >
                         Score: {dp.criteria.averageDomainScore.toFixed(1)}
                       </span>
                       <span
-                        className="font-mono text-[8px]"
-                        style={{ color: '#A3A3A3' }}
+                        style={{
+                          fontFamily: 'var(--font-parent-body)',
+                          fontSize: '10px',
+                          color: '#8A8078',
+                        }}
                       >
                         {dp.criteria.totalItemsCompleted} done
                       </span>
                     </div>
 
                     {/* Requirements */}
-                    <div className="mt-2 pt-2" style={{ borderTop: '1px solid #E8E3DC' }}>
+                    <div className="mt-2 pt-2" style={{ borderTop: '1px solid rgba(124,144,130,0.15)' }}>
                       {dp.requirements.slice(0, 2).map((req, i) => (
                         <p
                           key={i}
-                          className="font-mono text-[8px] mt-0.5"
-                          style={{ color: '#A3A3A3' }}
+                          className="mt-0.5"
+                          style={{
+                            fontFamily: 'var(--font-parent-body)',
+                            fontSize: '10px',
+                            color: '#8A8078',
+                          }}
                         >
                           &bull; {req}
                         </p>

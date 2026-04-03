@@ -47,7 +47,7 @@ function trendArrow(prev: number, current: number): { symbol: string; label: str
   const diff = current - prev;
   if (diff > 0.3) return { symbol: '\u2197', label: 'Getting better', color: '#16a34a' };
   if (diff < -0.3) return { symbol: '\u2198', label: 'Needs attention', color: '#dc2626' };
-  return { symbol: '\u2192', label: 'Holding steady', color: '#d97706' };
+  return { symbol: '\u2192', label: 'Holding steady', color: '#7C9082' };
 }
 
 function selectPromptsForDimension(

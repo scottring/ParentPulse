@@ -119,11 +119,11 @@ export function DocumentUploader({ onProcess, processing }: DocumentUploaderProp
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
-        className={`border-2 border-dashed p-8 text-center cursor-pointer transition-all ${
-          dragOver
-            ? 'border-amber-500 bg-amber-50'
-            : 'border-slate-300 bg-white hover:border-slate-400'
-        }`}
+        className="p-8 text-center cursor-pointer transition-all rounded-xl"
+        style={{
+          border: dragOver ? '2px dashed #7C9082' : '2px dashed rgba(255,255,255,0.5)',
+          backgroundColor: dragOver ? 'rgba(124,144,130,0.08)' : 'rgba(255,255,255,0.3)',
+        }}
       >
         <input
           ref={inputRef}
@@ -137,11 +137,11 @@ export function DocumentUploader({ onProcess, processing }: DocumentUploaderProp
           }}
         />
         <div className="space-y-2">
-          <div className="text-3xl text-slate-400">+</div>
-          <p className="font-mono font-bold text-slate-700">
+          <div className="text-3xl" style={{ color: '#8A8078' }}>+</div>
+          <p style={{ fontFamily: 'var(--font-parent-body)', fontWeight: 600, color: '#5C5347' }}>
             Drop files here or click to browse
           </p>
-          <p className="font-mono text-xs text-slate-500">
+          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#7C7468' }}>
             PDF, TXT, PNG, JPG, WEBP &middot; Up to 5 files &middot; 3MB each &middot; 7MB total
           </p>
         </div>
@@ -151,28 +151,29 @@ export function DocumentUploader({ onProcess, processing }: DocumentUploaderProp
       {files.length > 0 && (
         <div className="space-y-2">
           {files.map((f, i) => (
-            <div key={i} className="flex items-center justify-between p-3 bg-white border-2 border-slate-200">
+            <div key={i} className="flex items-center justify-between p-3 glass-card rounded-lg" style={{ border: '1px solid rgba(255,255,255,0.4)' }}>
               <div className="flex items-center gap-3">
-                <span className="font-mono text-xs text-slate-400">
+                <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#8A8078' }}>
                   {f.mimeType.includes('pdf') ? 'PDF' : f.mimeType.includes('text') ? 'TXT' : 'IMG'}
                 </span>
-                <span className="font-mono text-sm text-slate-700 truncate max-w-[200px]">
+                <span className="truncate max-w-[200px]" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5C5347' }}>
                   {f.name}
                 </span>
-                <span className="font-mono text-xs text-slate-400">
+                <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#8A8078' }}>
                   {formatFileSize(f.size)}
                 </span>
               </div>
               <button
                 onClick={() => removeFile(i)}
                 disabled={processing}
-                className="font-mono text-xs text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                className="text-xs transition-colors disabled:opacity-50"
+                style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
               >
-                REMOVE
+                Remove
               </button>
             </div>
           ))}
-          <div className="font-mono text-xs text-slate-500 text-right">
+          <div className="text-right" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#7C7468' }}>
             {files.length} file{files.length !== 1 ? 's' : ''} &middot; {formatFileSize(totalSize)} total
           </div>
         </div>
@@ -180,14 +181,14 @@ export function DocumentUploader({ onProcess, processing }: DocumentUploaderProp
 
       {/* Error */}
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200">
-          <p className="font-mono text-xs text-red-700">{error}</p>
+        <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgba(220,38,38,0.05)', border: '1px solid rgba(220,38,38,0.2)' }}>
+          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#b91c1c' }}>{error}</p>
         </div>
       )}
 
       {/* Privacy notice */}
-      <div className="p-3 bg-slate-50 border border-slate-200">
-        <p className="font-mono text-xs text-slate-600">
+      <div className="p-3 glass-card rounded-lg" style={{ border: '1px solid rgba(255,255,255,0.4)' }}>
+        <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#5C5347' }}>
           Your documents are processed securely and never stored. They are read once to extract
           answers, then immediately discarded. Only the extracted answers are saved as a draft
           for your review.
@@ -198,9 +199,10 @@ export function DocumentUploader({ onProcess, processing }: DocumentUploaderProp
       <button
         onClick={handleProcess}
         disabled={files.length === 0 || processing}
-        className="w-full px-6 py-4 border-2 border-slate-800 bg-slate-800 text-white font-mono font-bold hover:bg-slate-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full px-6 py-4 rounded-full text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{ fontFamily: 'var(--font-parent-body)', fontWeight: 500, backgroundColor: '#7C9082' }}
       >
-        {processing ? 'PROCESSING...' : 'EXTRACT ANSWERS FROM DOCUMENTS'}
+        {processing ? 'Processing...' : 'Extract answers from documents'}
       </button>
     </div>
   );

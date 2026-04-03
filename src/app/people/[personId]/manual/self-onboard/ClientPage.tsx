@@ -517,27 +517,27 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   // --- Loading ---
   if (authLoading || personLoading || manualLoading || !draftLoaded) {
     return (
-      <div className="min-h-screen bg-[#FFF8F0] flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-amber-600 border-t-transparent rounded-full" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 rounded-full" style={{ border: '2px solid #7C9082', borderTopColor: 'transparent' }} />
       </div>
     );
   }
 
   if (!user || !person || !manual) {
     return (
-      <div className="min-h-screen bg-[#FFF8F0] flex items-center justify-center">
-        <p className="font-mono text-slate-600">Unable to load. Please try again.</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <p style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}>Unable to load. Please try again.</p>
       </div>
     );
   }
 
   if (isComplete) {
     return (
-      <div className="min-h-screen bg-[#FFF8F0] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="text-4xl">&#10003;</div>
-          <h2 className="font-mono font-bold text-2xl text-slate-800">YOUR PERSPECTIVE IS SAVED</h2>
-          <p className="font-mono text-slate-600">Redirecting to your manual...</p>
+          <div className="text-4xl" style={{ color: '#7C9082' }}>&#10003;</div>
+          <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '22px', fontWeight: 600, color: '#3A3530' }}>Your perspective is saved</h2>
+          <p style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}>Redirecting to your manual...</p>
         </div>
       </div>
     );
@@ -549,16 +549,16 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   if (mode === 'choose') {
     const hasExistingAnswers = answeredQuestions > 0;
     return (
-      <div className="min-h-screen bg-[#FFF8F0]">
+      <div className="min-h-screen">
         <div className="max-w-3xl mx-auto px-6 py-12">
           <div className="text-center mb-10">
-            <span className="font-mono text-xs text-amber-600 font-bold tracking-wider">
+            <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: '#7C9082', letterSpacing: '0.05em' }}>
               SELF-ONBOARDING
             </span>
-            <h1 className="font-mono font-bold text-2xl text-slate-800 mt-2">
+            <h1 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '28px', fontWeight: 600, color: '#3A3530', marginTop: '8px' }}>
               Tell Us About Yourself
             </h1>
-            <p className="font-mono text-sm text-slate-500 mt-2">
+            <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468', marginTop: '8px' }}>
               Choose how you'd like to get started
             </p>
           </div>
@@ -567,18 +567,19 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
             {/* Upload documents option */}
             <button
               onClick={() => setMode('upload')}
-              className="p-6 border-2 border-slate-200 bg-white text-left hover:border-amber-500 transition-all group"
+              className="p-6 glass-card text-left hover:shadow-lg transition-all group"
+              style={{ border: '1px solid rgba(255,255,255,0.4)' }}
             >
               <div className="text-2xl mb-3">&#128196;</div>
-              <h3 className="font-mono font-bold text-lg text-slate-800 mb-2">
+              <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '18px', fontWeight: 600, color: '#3A3530', marginBottom: '8px' }}>
                 {hasExistingAnswers ? 'Add More from Documents' : 'Upload Personal Documents'}
               </h3>
-              <p className="font-mono text-sm text-slate-500 mb-4">
+              <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468', marginBottom: '16px' }}>
                 {hasExistingAnswers
                   ? 'Upload therapy notes, journal entries, or other documents to fill in remaining questions. Your existing answers are preserved.'
                   : 'Upload therapy notes, journal entries, or other personal documents. AI will extract answers for you to review and edit.'}
               </p>
-              <div className="font-mono text-xs text-slate-400">
+              <div style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#8A8078' }}>
                 PDF, TXT, images &middot; Processed securely, never stored
               </div>
             </button>
@@ -586,18 +587,19 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
             {/* Answer directly option */}
             <button
               onClick={() => setMode('questionnaire')}
-              className="p-6 border-2 border-slate-200 bg-white text-left hover:border-amber-500 transition-all group"
+              className="p-6 glass-card text-left hover:shadow-lg transition-all group"
+              style={{ border: '1px solid rgba(255,255,255,0.4)' }}
             >
               <div className="text-2xl mb-3">&#9997;</div>
-              <h3 className="font-mono font-bold text-lg text-slate-800 mb-2">
+              <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '18px', fontWeight: 600, color: '#3A3530', marginBottom: '8px' }}>
                 {hasExistingAnswers ? 'Continue Answering' : 'Answer Questions Directly'}
               </h3>
-              <p className="font-mono text-sm text-slate-500 mb-4">
+              <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468', marginBottom: '16px' }}>
                 {hasExistingAnswers
                   ? 'Pick up where you left off and continue filling in your answers.'
                   : 'Answer each question yourself at your own pace. You can save and return anytime.'}
               </p>
-              <div className="font-mono text-xs text-slate-400">
+              <div style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#8A8078' }}>
                 16 questions &middot; ~10 minutes &middot; Auto-saves
               </div>
             </button>
@@ -606,9 +608,10 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
           <div className="mt-8 text-center">
             <button
               onClick={() => router.push('/dashboard')}
-              className="font-mono text-xs text-slate-400 hover:text-slate-600 transition-colors"
+              className="transition-colors"
+              style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#8A8078' }}
             >
-              &larr; BACK TO MANUAL
+              &larr; Back to manual
             </button>
           </div>
         </div>
@@ -621,28 +624,29 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   // ==============================================
   if (mode === 'upload') {
     return (
-      <div className="min-h-screen bg-[#FFF8F0]">
+      <div className="min-h-screen">
         <div className="max-w-3xl mx-auto px-6 py-12">
           <div className="flex items-center gap-3 mb-8">
             <button
               onClick={() => setMode('choose')}
-              className="text-slate-400 hover:text-slate-800 transition-colors"
+              className="transition-colors"
+              style={{ color: '#8A8078' }}
             >
               <span className="text-xl">&larr;</span>
             </button>
             <div>
-              <span className="font-mono text-xs text-amber-600 font-bold tracking-wider">
+              <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: '#7C9082', letterSpacing: '0.05em' }}>
                 UPLOAD DOCUMENTS
               </span>
-              <h1 className="font-mono font-bold text-lg text-slate-800">
+              <h1 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '22px', fontWeight: 600, color: '#3A3530' }}>
                 Upload Personal Documents
               </h1>
             </div>
           </div>
 
           {processingError && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200">
-              <p className="font-mono text-sm text-red-700">{processingError}</p>
+            <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'rgba(220,38,38,0.05)', border: '1px solid rgba(220,38,38,0.2)' }}>
+              <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#b91c1c' }}>{processingError}</p>
             </div>
           )}
 
@@ -657,18 +661,18 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   // ==============================================
   if (mode === 'processing') {
     return (
-      <div className="min-h-screen bg-[#FFF8F0] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-6">
-          <div className="animate-spin w-10 h-10 border-2 border-amber-600 border-t-transparent rounded-full mx-auto" />
+          <div className="animate-spin w-10 h-10 rounded-full mx-auto" style={{ border: '2px solid #7C9082', borderTopColor: 'transparent' }} />
           <div>
-            <h2 className="font-mono font-bold text-xl text-slate-800 mb-2">
+            <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '22px', fontWeight: 600, color: '#3A3530', marginBottom: '8px' }}>
               Processing Your Documents
             </h2>
-            <p className="font-mono text-sm text-slate-500 animate-pulse">
+            <p className="animate-pulse" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468' }}>
               {PROCESSING_MESSAGES[processingMessageIndex]}
             </p>
           </div>
-          <p className="font-mono text-xs text-slate-400 max-w-md">
+          <p className="max-w-md" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#8A8078' }}>
             Your documents are being read securely and will be discarded immediately after processing.
             This may take up to a minute.
           </p>
@@ -681,17 +685,18 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   // MODE: CONFLICTS (conflict resolution)
   // ==============================================
   if (mode === 'conflicts') {
+    const conflictBtnStyle = { fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500 } as const;
     return (
-      <div className="min-h-screen bg-[#FFF8F0]">
+      <div className="min-h-screen">
         <div className="max-w-4xl mx-auto px-6 py-12">
           <div className="mb-8">
-            <span className="font-mono text-xs text-amber-600 font-bold tracking-wider">
+            <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: '#7C9082', letterSpacing: '0.05em' }}>
               REVIEW CONFLICTS
             </span>
-            <h1 className="font-mono font-bold text-xl text-slate-800 mt-2">
+            <h1 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '22px', fontWeight: 600, color: '#3A3530', marginTop: '8px' }}>
               Some questions already have answers
             </h1>
-            <p className="font-mono text-sm text-slate-500 mt-2">
+            <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468', marginTop: '8px' }}>
               For each question below, choose how to handle the overlap between your existing answer
               and what was extracted from your documents.
             </p>
@@ -703,25 +708,25 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
               const resolution = conflictResolutions[key];
 
               return (
-                <div key={key} className="border-2 border-slate-200 bg-white p-6">
-                  <h3 className="font-mono font-bold text-sm text-slate-800 mb-4">
+                <div key={key} className="glass-card-strong p-6" style={{ border: '1px solid rgba(255,255,255,0.4)' }}>
+                  <h3 style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 600, color: '#3A3530', marginBottom: '16px' }}>
                     {conflict.questionText}
                   </h3>
 
                   <div className="grid gap-4 md:grid-cols-2 mb-4">
-                    <div className="p-4 bg-slate-50 border border-slate-200">
-                      <div className="font-mono text-xs text-slate-500 font-bold mb-2">
+                    <div className="p-4 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.4)' }}>
+                      <div style={{ ...conflictBtnStyle, color: '#7C7468', marginBottom: '8px' }}>
                         YOUR CURRENT ANSWER
                       </div>
-                      <p className="font-mono text-sm text-slate-700">
+                      <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5C5347' }}>
                         {conflict.manualAnswer}
                       </p>
                     </div>
-                    <div className="p-4 bg-amber-50 border border-amber-200">
-                      <div className="font-mono text-xs text-amber-600 font-bold mb-2">
+                    <div className="p-4 rounded-lg" style={{ backgroundColor: 'rgba(124,144,130,0.08)', border: '1px solid rgba(124,144,130,0.2)' }}>
+                      <div style={{ ...conflictBtnStyle, color: '#7C9082', marginBottom: '8px' }}>
                         EXTRACTED FROM DOCUMENTS
                       </div>
-                      <p className="font-mono text-sm text-slate-700">
+                      <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5C5347' }}>
                         {conflict.aiAnswer}
                       </p>
                     </div>
@@ -736,13 +741,15 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
                           [key]: { resolution: 'keep', value: conflict.manualAnswer },
                         }))
                       }
-                      className={`px-4 py-2 font-mono text-xs font-bold border-2 transition-all ${
-                        resolution?.resolution === 'keep'
-                          ? 'border-slate-800 bg-slate-800 text-white'
-                          : 'border-slate-300 bg-white text-slate-600 hover:border-slate-500'
-                      }`}
+                      className="px-4 py-2 rounded-full transition-all"
+                      style={{
+                        ...conflictBtnStyle,
+                        backgroundColor: resolution?.resolution === 'keep' ? '#3A3530' : 'rgba(255,255,255,0.3)',
+                        color: resolution?.resolution === 'keep' ? 'white' : '#5C5347',
+                        border: resolution?.resolution === 'keep' ? '1px solid #3A3530' : '1px solid rgba(255,255,255,0.4)',
+                      }}
                     >
-                      KEEP MINE
+                      Keep mine
                     </button>
                     <button
                       onClick={() =>
@@ -751,13 +758,15 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
                           [key]: { resolution: 'extracted', value: conflict.aiAnswer },
                         }))
                       }
-                      className={`px-4 py-2 font-mono text-xs font-bold border-2 transition-all ${
-                        resolution?.resolution === 'extracted'
-                          ? 'border-amber-600 bg-amber-600 text-white'
-                          : 'border-slate-300 bg-white text-slate-600 hover:border-amber-400'
-                      }`}
+                      className="px-4 py-2 rounded-full transition-all"
+                      style={{
+                        ...conflictBtnStyle,
+                        backgroundColor: resolution?.resolution === 'extracted' ? '#7C9082' : 'rgba(255,255,255,0.3)',
+                        color: resolution?.resolution === 'extracted' ? 'white' : '#5C5347',
+                        border: resolution?.resolution === 'extracted' ? '1px solid #7C9082' : '1px solid rgba(255,255,255,0.4)',
+                      }}
                     >
-                      USE EXTRACTED
+                      Use extracted
                     </button>
                     <button
                       onClick={() =>
@@ -769,13 +778,15 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
                           },
                         }))
                       }
-                      className={`px-4 py-2 font-mono text-xs font-bold border-2 transition-all ${
-                        resolution?.resolution === 'merge'
-                          ? 'border-blue-600 bg-blue-600 text-white'
-                          : 'border-slate-300 bg-white text-slate-600 hover:border-blue-400'
-                      }`}
+                      className="px-4 py-2 rounded-full transition-all"
+                      style={{
+                        ...conflictBtnStyle,
+                        backgroundColor: resolution?.resolution === 'merge' ? '#7C9082' : 'rgba(255,255,255,0.3)',
+                        color: resolution?.resolution === 'merge' ? 'white' : '#5C5347',
+                        border: resolution?.resolution === 'merge' ? '1px solid #7C9082' : '1px solid rgba(255,255,255,0.4)',
+                      }}
                     >
-                      MERGE BOTH
+                      Merge both
                     </button>
                     <button
                       onClick={() =>
@@ -784,13 +795,15 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
                           [key]: { resolution: 'custom', value: '' },
                         }))
                       }
-                      className={`px-4 py-2 font-mono text-xs font-bold border-2 transition-all ${
-                        resolution?.resolution === 'custom'
-                          ? 'border-green-600 bg-green-600 text-white'
-                          : 'border-slate-300 bg-white text-slate-600 hover:border-green-400'
-                      }`}
+                      className="px-4 py-2 rounded-full transition-all"
+                      style={{
+                        ...conflictBtnStyle,
+                        backgroundColor: resolution?.resolution === 'custom' ? '#7C9082' : 'rgba(255,255,255,0.3)',
+                        color: resolution?.resolution === 'custom' ? 'white' : '#5C5347',
+                        border: resolution?.resolution === 'custom' ? '1px solid #7C9082' : '1px solid rgba(255,255,255,0.4)',
+                      }}
                     >
-                      WRITE MY OWN
+                      Write my own
                     </button>
                   </div>
 
@@ -810,14 +823,14 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
                           : 'Edit the merged answer...'
                       }
                       rows={4}
-                      className="w-full px-4 py-3 border-2 border-slate-200 font-mono text-sm text-slate-700 focus:outline-none focus:border-amber-500 transition-colors"
-                      style={{ resize: 'vertical' }}
+                      className="w-full px-4 py-3 rounded-lg focus:outline-none transition-colors"
+                      style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.4)', resize: 'vertical' }}
                     />
                   )}
 
                   {/* Resolution indicator */}
                   {resolution && (
-                    <div className="mt-2 font-mono text-xs text-green-600">
+                    <div className="mt-2 text-xs" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C9082' }}>
                       &#10003; Resolved
                     </div>
                   )}
@@ -830,18 +843,20 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
           <div className="mt-8 flex gap-4">
             <button
               onClick={() => setMode('choose')}
-              className="px-6 py-3 border-2 border-slate-300 bg-white font-mono font-bold text-slate-600 hover:border-slate-500 transition-all"
+              className="px-6 py-3 rounded-full transition-all"
+              style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.3)' }}
             >
-              &larr; BACK
+              &larr; Back
             </button>
             <button
               onClick={applyConflictResolutions}
               disabled={!allConflictsResolved}
-              className="flex-1 px-6 py-3 border-2 border-slate-800 bg-slate-800 text-white font-mono font-bold hover:bg-slate-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-6 py-3 rounded-full text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, backgroundColor: '#7C9082' }}
             >
               {allConflictsResolved
-                ? 'APPLY & CONTINUE TO REVIEW'
-                : `RESOLVE ALL CONFLICTS (${Object.keys(conflictResolutions).length}/${conflicts.length})`}
+                ? 'Apply & continue to review'
+                : `Resolve all conflicts (${Object.keys(conflictResolutions).length}/${conflicts.length})`}
             </button>
           </div>
         </div>
@@ -863,64 +878,68 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   const demoBanner = isDemo ? (
     <div className="max-w-3xl mx-auto px-6 pt-4">
       <div
-        className="flex items-center justify-between px-4 py-2 rounded-lg font-mono text-[11px]"
-        style={{ background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.2)' }}
+        className="flex items-center justify-between px-4 py-2 rounded-lg text-[11px]"
+        style={{ fontFamily: 'var(--font-parent-body)', background: 'rgba(124,144,130,0.08)', border: '1px solid rgba(124,144,130,0.2)' }}
       >
         <div className="flex items-center gap-3">
-          <span style={{ color: '#A3510B', fontWeight: 700 }}>DEMO</span>
-          <span style={{ color: '#6B6B6B' }}>
-            Answering as <strong style={{ color: '#2C2C2C' }}>{user.name}</strong>
-            {' · '}about <strong style={{ color: '#A3510B' }}>yourself</strong>
+          <span style={{ color: '#7C9082', fontWeight: 700 }}>DEMO</span>
+          <span style={{ color: '#7C7468' }}>
+            Answering as <strong style={{ color: '#3A3530' }}>{user.name}</strong>
+            {' · '}about <strong style={{ color: '#7C9082' }}>yourself</strong>
           </span>
         </div>
         <button
           type="button"
           onClick={handleFillAll}
-          className="px-3 py-1 rounded font-bold transition-all hover:scale-105"
-          style={{ background: '#d97706', color: 'white', fontSize: '10px' }}
+          className="px-3 py-1 rounded-full font-medium transition-all hover:scale-105"
+          style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082', color: 'white', fontSize: '10px', fontWeight: 500 }}
         >
-          FILL ALL
+          Fill All
         </button>
       </div>
     </div>
   ) : null;
 
+  const selfNavBtnStyle = { fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500 } as const;
   const navigation = (
     <div className="flex gap-4 mt-6">
       {(currentSectionIndex > 0 || currentQuestionIndex > 0) && (
         <>
           <button
             onClick={() => { setCurrentSectionIndex(0); setCurrentQuestionIndex(0); }}
-            className="px-4 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-500 hover:border-slate-800 hover:text-slate-700 transition-all"
+            className="px-4 py-3 rounded-full transition-all"
+            style={{ ...selfNavBtnStyle, color: '#7C7468', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.3)' }}
           >
-            &laquo; START
+            &laquo; Start
           </button>
           <button
             onClick={handlePrevious}
-            className="px-6 py-3 border-2 border-slate-300 bg-white font-mono font-bold text-slate-700 hover:border-slate-800 transition-all"
+            className="px-6 py-3 rounded-full transition-all"
+            style={{ ...selfNavBtnStyle, color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.3)' }}
           >
-            &larr; PREVIOUS
+            &larr; Previous
           </button>
         </>
       )}
       <button
         onClick={handleNext}
         disabled={isSubmitting}
-        className="px-6 py-3 border-2 border-slate-800 bg-slate-800 text-white font-mono font-bold hover:bg-slate-700 transition-all disabled:opacity-50 ml-auto"
+        className="px-6 py-3 rounded-full text-white transition-all disabled:opacity-50 ml-auto"
+        style={{ ...selfNavBtnStyle, backgroundColor: '#7C9082' }}
       >
         {isSubmitting
-          ? 'SAVING...'
+          ? 'Saving...'
           : isLastQuestion
-          ? 'COMPLETE'
-          : 'NEXT \u2192'}
+          ? 'Complete'
+          : 'Next \u2192'}
       </button>
     </div>
   );
 
   const aiIndicator = isAiGenerated ? (
-    <div className="mb-4 p-3 bg-amber-50 border border-amber-200 flex items-start gap-2">
-      <span className="text-amber-500 mt-0.5">&#9679;</span>
-      <p className="font-mono text-xs text-amber-700">
+    <div className="mb-4 p-3 rounded-lg flex items-start gap-2" style={{ backgroundColor: 'rgba(124,144,130,0.08)', border: '1px solid rgba(124,144,130,0.2)' }}>
+      <span style={{ color: '#7C9082', marginTop: '2px' }}>&#9679;</span>
+      <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#5C5347' }}>
         This answer was drafted from your uploaded documents. Review and edit as needed.
       </p>
     </div>
@@ -955,14 +974,14 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
       demoBannerSlot={demoBanner}
       navigationSlot={navigation}
     >
-      <div className="border-2 border-slate-200 bg-white p-8">
+      <div className="glass-card-strong p-8" style={{ border: '1px solid rgba(255,255,255,0.4)' }}>
         {aiIndicator}
 
-        <h2 className="font-mono font-bold text-lg text-slate-800 mb-2">
+        <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '22px', fontWeight: 600, color: '#3A3530', marginBottom: '8px' }}>
           {currentQuestion.question}
         </h2>
         {currentQuestion.helperText && (
-          <p className="font-mono text-sm text-slate-500 mb-6">
+          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468', marginBottom: '24px' }}>
             {currentQuestion.helperText}
           </p>
         )}
@@ -979,29 +998,30 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
 
         {/* Visibility toggle */}
         {currentAnswer && (
-          <div className="mt-4 pt-4 border-t border-slate-100">
+          <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.3)' }}>
             <button
               onClick={() => toggleVisibility(currentSection.sectionId, currentQuestion.id)}
-              className="flex items-center gap-2 font-mono text-xs transition-colors group"
+              className="flex items-center gap-2 text-xs transition-colors group"
+              style={{ fontFamily: 'var(--font-parent-body)' }}
             >
               {currentVisibility === 'visible' ? (
                 <>
-                  <span className="text-slate-400 group-hover:text-slate-600">&#128065;</span>
-                  <span className="text-slate-500 group-hover:text-slate-700">
+                  <span style={{ color: '#8A8078' }}>&#128065;</span>
+                  <span style={{ color: '#7C7468' }}>
                     Visible to family
                   </span>
                 </>
               ) : (
                 <>
-                  <span className="text-amber-500">&#128274;</span>
-                  <span className="text-amber-600 font-bold">
+                  <span style={{ color: '#7C9082' }}>&#128274;</span>
+                  <span style={{ color: '#7C9082', fontWeight: 600 }}>
                     Private to me only
                   </span>
                 </>
               )}
             </button>
             {currentVisibility === 'private' && (
-              <p className="font-mono text-xs text-slate-400 mt-1 ml-6">
+              <p className="mt-1 ml-6" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#8A8078' }}>
                 This answer won't appear in your manual or be shared with anyone.
               </p>
             )}

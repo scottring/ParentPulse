@@ -78,16 +78,28 @@ export default function GrowthCard({ item, onFeedback }: GrowthCardProps) {
       : null;
 
     return (
-      <div className="border border-slate-200 bg-slate-50 p-4 opacity-60">
+      <div
+        className="rounded-xl p-4 opacity-60"
+        style={{
+          background: 'rgba(0,0,0,0.02)',
+          border: '1px solid rgba(0,0,0,0.06)',
+        }}
+      >
         <div className="flex items-start gap-3">
           <span className="text-lg">{item.emoji}</span>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-mono text-sm text-slate-500 line-through">
+              <span
+                className="text-sm line-through"
+                style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+              >
                 {item.title}
               </span>
               {feedback && (
-                <span className="font-mono text-xs text-slate-400">
+                <span
+                  className="text-xs"
+                  style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+                >
                   {feedback.reaction === 'loved_it' ? '\u2764\uFE0F' : '\u2705'}
                   {impactLabel && ` ${impactLabel.toLowerCase()}`}
                 </span>
@@ -102,49 +114,81 @@ export default function GrowthCard({ item, onFeedback }: GrowthCardProps) {
   // Relational level badge
   const levelBadge = item.relationalLevel && item.relationalLevel !== 'individual' ? (
     <span
-      className={`font-mono text-[10px] font-bold px-1.5 py-0.5 ${
-        item.relationalLevel === 'couple'
-          ? 'bg-pink-100 text-pink-700'
-          : 'bg-blue-100 text-blue-700'
-      }`}
+      className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+      style={{
+        fontFamily: 'var(--font-parent-body)',
+        background: item.relationalLevel === 'couple'
+          ? 'rgba(200,107,122,0.1)'
+          : 'rgba(59,130,246,0.08)',
+        color: item.relationalLevel === 'couple'
+          ? '#c86b7a'
+          : '#3b82f6',
+      }}
     >
-      {item.relationalLevel === 'couple' ? 'COUPLE' : 'FAMILY'}
+      {item.relationalLevel === 'couple' ? 'Couple' : 'Family'}
     </span>
   ) : null;
 
   return (
-    <div className="border-2 border-slate-800 bg-white p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">
+    <div
+      className="rounded-xl p-5 transition-all"
+      style={{
+        background: 'rgba(255,255,255,0.7)',
+        backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(255,255,255,0.4)',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+      }}
+    >
       {/* Header row */}
       <div className="flex items-start gap-3 mb-3">
         <span className="text-2xl">{item.emoji}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             {levelBadge}
-            <span className="font-mono text-[10px] text-slate-400 uppercase">
-              {item.speed === 'ambient' ? 'TODAY' : 'THIS WEEK'}
+            <span
+              className="text-[10px]"
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+            >
+              {item.speed === 'ambient' ? 'Today' : 'This week'}
             </span>
             {item.estimatedMinutes && (
-              <span className="font-mono text-[10px] text-slate-400">
+              <span
+                className="text-[10px]"
+                style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+              >
                 ~{item.estimatedMinutes} min
               </span>
             )}
           </div>
-          <h3 className="font-mono font-bold text-sm text-slate-900 leading-tight">
+          <h3
+            className="text-sm leading-tight"
+            style={{
+              fontFamily: 'var(--font-parent-display)',
+              fontWeight: 500,
+              color: '#3A3530',
+            }}
+          >
             {item.title}
           </h3>
         </div>
       </div>
 
       {/* Body */}
-      <p className="font-mono text-sm text-slate-600 leading-relaxed mb-4 pl-9">
+      <p
+        className="text-sm leading-relaxed mb-4 pl-9"
+        style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}
+      >
         {item.body}
       </p>
 
       {/* Target people */}
       {item.targetPersonNames.length > 0 && (
         <div className="pl-9 mb-4">
-          <span className="font-mono text-[10px] text-slate-400">
-            ABOUT: {item.targetPersonNames.join(' & ')}
+          <span
+            className="text-[10px]"
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+          >
+            About: {item.targetPersonNames.join(' & ')}
           </span>
         </div>
       )}
@@ -156,7 +200,13 @@ export default function GrowthCard({ item, onFeedback }: GrowthCardProps) {
             <button
               key={reaction}
               onClick={() => handleReaction(reaction)}
-              className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 hover:border-slate-800 hover:bg-slate-50 transition-all font-mono text-xs text-slate-600 hover:text-slate-900"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-black/[0.03] transition-all text-xs"
+              style={{
+                fontFamily: 'var(--font-parent-body)',
+                color: '#5C5347',
+                border: '1px solid rgba(255,255,255,0.4)',
+                background: 'rgba(255,255,255,0.5)',
+              }}
               title={label}
             >
               <span>{emoji}</span>
@@ -169,19 +219,32 @@ export default function GrowthCard({ item, onFeedback }: GrowthCardProps) {
       {/* Impact selector (after positive reaction) */}
       {feedbackState === 'reacted' && isPositive && (
         <div className="pl-9">
-          <p className="font-mono text-[10px] text-slate-400 mb-2">
-            HOW MUCH IMPACT?
+          <p
+            className="text-[10px] mb-2"
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+          >
+            How much impact?
           </p>
           <div className="flex gap-2">
             {IMPACT_LABELS.map(({ value, label }) => (
               <button
                 key={value}
                 onClick={() => handleImpact(value)}
-                className={`px-3 py-2 border font-mono text-xs transition-all ${
-                  selectedImpact === value
-                    ? 'border-slate-800 bg-slate-800 text-white'
-                    : 'border-slate-200 hover:border-slate-800 text-slate-600 hover:text-slate-900'
-                }`}
+                className="px-3 py-2 rounded-full text-xs transition-all"
+                style={{
+                  fontFamily: 'var(--font-parent-body)',
+                  background: selectedImpact === value
+                    ? '#3A3530'
+                    : 'rgba(255,255,255,0.5)',
+                  color: selectedImpact === value
+                    ? '#FFFFFF'
+                    : '#5C5347',
+                  border: `1px solid ${
+                    selectedImpact === value
+                      ? '#3A3530'
+                      : 'rgba(255,255,255,0.4)'
+                  }`,
+                }}
               >
                 {label}
               </button>
@@ -193,13 +256,21 @@ export default function GrowthCard({ item, onFeedback }: GrowthCardProps) {
       {/* Submitting / Done states */}
       {feedbackState === 'submitting' && (
         <div className="pl-9">
-          <span className="font-mono text-xs text-slate-400">Saving...</span>
+          <span
+            className="text-xs"
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+          >
+            Saving...
+          </span>
         </div>
       )}
 
       {feedbackState === 'done' && (
         <div className="pl-9">
-          <span className="font-mono text-xs text-green-600 font-bold">
+          <span
+            className="text-xs font-medium"
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#16a34a' }}
+          >
             {selectedReaction === 'not_now' ? 'Saved for later' : 'Got it, thanks!'}
           </span>
         </div>

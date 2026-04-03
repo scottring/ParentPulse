@@ -95,8 +95,8 @@ export const ManualIcons = {
     const color = colors[level - 1];
     return (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <rect x="9" y="3" width="6" height="14" rx="3" stroke="#64748b" strokeWidth="2" fill="white"/>
-        <circle cx="12" cy="19" r="3" fill={color} stroke="#64748b" strokeWidth="2"/>
+        <rect x="9" y="3" width="6" height="14" rx="3" stroke="#7C7468" strokeWidth="2" fill="white"/>
+        <circle cx="12" cy="19" r="3" fill={color} stroke="#7C7468" strokeWidth="2"/>
         <rect x="10" y="6" width="4" height={12 - (level * 2)} fill={color} rx="2"/>
       </svg>
     );
@@ -157,7 +157,7 @@ export const ManualIcons = {
    * 📏 SPECIFICATION - Key facts, measurements, data
    * Use for: Age, preferences, hard data about the person
    */
-  Specification: ({ size = 24, color = '#0f172a' }: { size?: number; color?: string }) => (
+  Specification: ({ size = 24, color = '#3A3530' }: { size?: number; color?: string }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <rect x="4" y="4" width="16" height="16" rx="2" stroke={color} strokeWidth="2" fill="white"/>
       <path d="M4 8h16M8 4v16" stroke={color} strokeWidth="1.5"/>
@@ -251,13 +251,13 @@ export function WarningLabel({ type, title, description, severity = 'high' }: Wa
     <div
       style={{
         background: colors.bg,
-        border: `2px solid ${colors.border}`,
-        borderRadius: '8px',
+        border: `1px solid ${colors.border}`,
+        borderRadius: '24px',
         padding: '16px',
         display: 'flex',
         gap: '12px',
         alignItems: 'flex-start',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
       }}
     >
       <div style={{ flexShrink: 0 }}>
@@ -266,17 +266,18 @@ export function WarningLabel({ type, title, description, severity = 'high' }: Wa
       <div style={{ flex: 1 }}>
         <div
           style={{
-            fontSize: '14px',
-            fontWeight: 700,
+            fontFamily: 'var(--font-parent-body)',
+            fontSize: '10px',
+            fontWeight: 600,
             color: colors.text,
             marginBottom: '4px',
             textTransform: 'uppercase',
-            letterSpacing: '0.5px'
+            letterSpacing: '0.12em'
           }}
         >
           {title}
         </div>
-        <div style={{ fontSize: '14px', color: colors.text, lineHeight: '1.5' }}>
+        <div style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: colors.text, lineHeight: '1.5' }}>
           {description}
         </div>
       </div>
@@ -295,21 +296,23 @@ export function SpecificationTable({ specs }: SpecTableProps) {
   return (
     <div
       style={{
-        border: '2px solid #e7e5e4',
-        borderRadius: '8px',
+        border: '1px solid rgba(255,255,255,0.4)',
+        borderRadius: '24px',
         overflow: 'hidden',
-        background: 'white'
+        background: 'rgba(255,255,255,0.42)',
+        backdropFilter: 'blur(32px) saturate(1.6)'
       }}
     >
       <div
         style={{
-          background: '#0f172a',
+          background: '#3A3530',
           color: 'white',
           padding: '12px 16px',
-          fontSize: '14px',
-          fontWeight: 700,
+          fontFamily: 'var(--font-parent-body)',
+          fontSize: '10px',
+          fontWeight: 600,
           textTransform: 'uppercase',
-          letterSpacing: '0.5px',
+          letterSpacing: '0.12em',
           display: 'flex',
           alignItems: 'center',
           gap: '8px'
@@ -326,14 +329,14 @@ export function SpecificationTable({ specs }: SpecTableProps) {
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
               padding: '12px 16px',
-              borderBottom: index < specs.length - 1 ? '1px solid #e7e5e4' : 'none',
-              background: index % 2 === 0 ? 'white' : '#fafaf9'
+              borderBottom: index < specs.length - 1 ? '1px solid rgba(255,255,255,0.4)' : 'none',
+              background: index % 2 === 0 ? 'white' : 'rgba(255,255,255,0.3)'
             }}
           >
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#57534e' }}>
+            <div style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 600, color: '#5C5347' }}>
               {spec.label}
             </div>
-            <div style={{ fontSize: '13px', color: '#0f172a', fontWeight: 500 }}>
+            <div style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: '#3A3530', fontWeight: 500 }}>
               {spec.value}
             </div>
           </div>

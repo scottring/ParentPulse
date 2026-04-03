@@ -48,7 +48,7 @@ function getContribState(contributions: Contribution[], contributorId: string, p
 
 const STATE_COLORS: Record<ContribState, string> = {
   complete: '#16a34a',
-  draft: '#d97706',
+  draft: '#7C9082',
   invited: '#3B82F6',
   missing: '#D4D4D4',
 };

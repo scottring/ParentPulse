@@ -124,7 +124,7 @@ export function QuestionRenderer({
                   if (demo !== undefined) onChange(demo);
                 }}
                 className="absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold transition-all hover:scale-105"
-                style={{ background: '#d97706', color: 'white', opacity: 0.85 }}
+                style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082', color: 'white', opacity: 0.85, borderRadius: '9999px', fontWeight: 500 }}
               >
                 Fill
               </button>
@@ -148,7 +148,7 @@ export function QuestionRenderer({
             if (demo !== undefined) onChange(demo);
           }}
           className="px-3 py-1.5 rounded text-xs font-bold transition-all hover:scale-105"
-          style={{ background: '#d97706', color: 'white', opacity: 0.85 }}
+          style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082', color: 'white', opacity: 0.85, borderRadius: '9999px', fontWeight: 500 }}
         >
           Fill
         </button>

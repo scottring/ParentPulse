@@ -277,27 +277,27 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
   // Loading
   if (authLoading || personLoading || manualLoading || !draftLoaded || sections.length === 0) {
     return (
-      <div className="min-h-screen bg-[#FFF8F0] flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-amber-600 border-t-transparent rounded-full" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 rounded-full" style={{ border: '2px solid #7C9082', borderTopColor: 'transparent' }} />
       </div>
     );
   }
 
   if (!user || !person || !manual) {
     return (
-      <div className="min-h-screen bg-[#FFF8F0] flex items-center justify-center">
-        <p className="font-mono text-slate-600">Unable to load. Please try again.</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <p style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}>Unable to load. Please try again.</p>
       </div>
     );
   }
 
   if (isComplete) {
     return (
-      <div className="min-h-screen bg-[#FFF8F0] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="text-4xl">&#10003;</div>
-          <h2 className="font-mono font-bold text-2xl text-slate-800">YOUR OBSERVATIONS ARE SAVED</h2>
-          <p className="font-mono text-slate-600">Redirecting to {person.name}&apos;s manual...</p>
+          <div className="text-4xl" style={{ color: '#7C9082' }}>&#10003;</div>
+          <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '22px', fontWeight: 600, color: '#3A3530' }}>Your observations are saved</h2>
+          <p style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}>Redirecting to {person.name}&apos;s manual...</p>
         </div>
       </div>
     );
@@ -317,29 +317,30 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
   const demoBanner = isDemo ? (
     <div className="max-w-3xl mx-auto px-6 pt-4">
       <div
-        className="flex items-center justify-between px-4 py-2 rounded-lg font-mono text-[11px]"
-        style={{ background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.2)' }}
+        className="flex items-center justify-between px-4 py-2 rounded-lg text-[11px]"
+        style={{ fontFamily: 'var(--font-parent-body)', background: 'rgba(124,144,130,0.08)', border: '1px solid rgba(124,144,130,0.2)' }}
       >
         <div className="flex items-center gap-3">
-          <span style={{ color: '#A3510B', fontWeight: 700 }}>DEMO</span>
-          <span style={{ color: '#6B6B6B' }}>
-            <strong style={{ color: '#2C2C2C' }}>{user?.name}</strong> sharing observations about{' '}
-            <strong style={{ color: '#3B82F6' }}>{person.name}</strong>
+          <span style={{ color: '#7C9082', fontWeight: 700 }}>DEMO</span>
+          <span style={{ color: '#7C7468' }}>
+            <strong style={{ color: '#3A3530' }}>{user?.name}</strong> sharing observations about{' '}
+            <strong style={{ color: '#7C9082' }}>{person.name}</strong>
             {person.relationshipType && <> ({person.relationshipType})</>}
           </span>
         </div>
         <button
           type="button"
           onClick={handleFillAll}
-          className="px-3 py-1 rounded font-bold transition-all hover:scale-105"
-          style={{ background: '#d97706', color: 'white', fontSize: '10px' }}
+          className="px-3 py-1 rounded-full font-medium transition-all hover:scale-105"
+          style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082', color: 'white', fontSize: '10px', fontWeight: 500 }}
         >
-          FILL ALL
+          Fill All
         </button>
       </div>
     </div>
   ) : null;
 
+  const navBtnStyle = { fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500 } as const;
   const navigation = (
     <>
       <div className="flex gap-4 mt-6">
@@ -347,15 +348,17 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
           <>
             <button
               onClick={() => { setCurrentSectionIndex(0); setCurrentQuestionIndex(0); }}
-              className="px-4 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-500 hover:border-slate-800 hover:text-slate-700 transition-all"
+              className="px-4 py-3 rounded-full transition-all"
+              style={{ ...navBtnStyle, color: '#7C7468', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.3)' }}
             >
-              &laquo; START
+              &laquo; Start
             </button>
             <button
               onClick={handlePrevious}
-              className="px-6 py-3 border-2 border-slate-300 bg-white font-mono font-bold text-slate-700 hover:border-slate-800 transition-all"
+              className="px-6 py-3 rounded-full transition-all"
+              style={{ ...navBtnStyle, color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.3)' }}
             >
-              &larr; PREVIOUS
+              &larr; Previous
             </button>
           </>
         )}
@@ -367,21 +370,23 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
               setCurrentSectionIndex(sections.length - 1);
               setCurrentQuestionIndex(lastSection.questions.length - 1);
             }}
-            className="px-4 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-500 hover:border-slate-800 hover:text-slate-700 transition-all"
+            className="px-4 py-3 rounded-full transition-all"
+            style={{ ...navBtnStyle, color: '#7C7468', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.3)' }}
           >
-            SKIP TO END &raquo;
+            Skip to end &raquo;
           </button>
         )}
         <button
           onClick={handleNext}
           disabled={isSubmitting}
-          className="px-6 py-3 border-2 border-slate-800 bg-slate-800 text-white font-mono font-bold hover:bg-slate-700 transition-all disabled:opacity-50 ml-auto"
+          className="px-6 py-3 rounded-full text-white transition-all disabled:opacity-50 ml-auto"
+          style={{ ...navBtnStyle, backgroundColor: '#7C9082', color: 'white' }}
         >
           {isSubmitting
-            ? 'SAVING...'
+            ? 'Saving...'
             : isLastQuestion
-            ? 'COMPLETE'
-            : 'NEXT \u2192'}
+            ? 'Complete'
+            : 'Next \u2192'}
         </button>
       </div>
     </>
@@ -416,12 +421,12 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
       demoBannerSlot={demoBanner}
       navigationSlot={navigation}
     >
-      <div className="border-2 border-slate-200 bg-white p-8">
-        <h2 className="font-mono font-bold text-lg text-slate-800 mb-2">
+      <div className="glass-card-strong p-8" style={{ border: '1px solid rgba(255,255,255,0.4)' }}>
+        <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '22px', fontWeight: 600, color: '#3A3530', marginBottom: '8px' }}>
           {displayQuestion}
         </h2>
         {displayHelper && (
-          <p className="font-mono text-sm text-slate-500 mb-6">
+          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468', marginBottom: '24px' }}>
             {displayHelper}
           </p>
         )}

@@ -42,42 +42,94 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white border-4 border-slate-800 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+    <div
+      className="flex flex-col h-full rounded-xl overflow-hidden"
+      style={{
+        background: 'rgba(255,255,255,0.85)',
+        backdropFilter: 'blur(16px)',
+        border: '1px solid rgba(255,255,255,0.4)',
+        boxShadow: '0 8px 40px rgba(0,0,0,0.1)',
+      }}
+    >
       {/* Header */}
-      <div className="border-b-4 border-slate-800 bg-white p-6">
+      <div
+        className="p-6"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.4)' }}
+      >
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <div className="inline-block px-3 py-1 bg-amber-600 text-white font-mono text-xs mb-3">
-              🤖 AI RELATIONSHIP COACH
+            <div
+              className="inline-block px-3 py-1 rounded-full text-xs text-white mb-3"
+              style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082' }}
+            >
+              Relationship Coach
             </div>
-            <h2 className="font-mono text-2xl font-bold text-slate-900 mb-2">
+            <h2
+              className="text-2xl mb-2"
+              style={{
+                fontFamily: 'var(--font-parent-display)',
+                fontWeight: 500,
+                color: '#3A3530',
+              }}
+            >
               {personName ? `Coaching: ${personName}` : 'General Coaching'}
             </h2>
-            <p className="font-mono text-sm text-slate-600">
+            <p
+              className="text-sm"
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}
+            >
               Ask me anything about {personName || 'parenting, relationships, personal growth'}. I have access to your journals, manuals, and workbooks.
             </p>
 
             {/* Context Info */}
             {context && (
-              <div className="mt-4 flex flex-wrap gap-2 font-mono text-xs">
+              <div className="mt-4 flex flex-wrap gap-2 text-xs" style={{ fontFamily: 'var(--font-parent-body)' }}>
                 {context.journalEntriesFound > 0 && (
-                  <div className="px-2 py-1 bg-blue-50 border border-blue-600 text-blue-900">
-                    📓 {context.journalEntriesFound} journals
+                  <div
+                    className="px-2 py-1 rounded-full"
+                    style={{
+                      background: 'rgba(59,130,246,0.08)',
+                      border: '1px solid rgba(59,130,246,0.15)',
+                      color: '#3b82f6',
+                    }}
+                  >
+                    {context.journalEntriesFound} journals
                   </div>
                 )}
                 {context.knowledgeItemsFound > 0 && (
-                  <div className="px-2 py-1 bg-purple-50 border border-purple-600 text-purple-900">
-                    📚 {context.knowledgeItemsFound} resources
+                  <div
+                    className="px-2 py-1 rounded-full"
+                    style={{
+                      background: 'rgba(147,130,195,0.08)',
+                      border: '1px solid rgba(147,130,195,0.15)',
+                      color: '#7a6b8f',
+                    }}
+                  >
+                    {context.knowledgeItemsFound} resources
                   </div>
                 )}
                 {context.actionsFound > 0 && (
-                  <div className="px-2 py-1 bg-green-50 border border-green-600 text-green-900">
-                    ✓ {context.actionsFound} actions
+                  <div
+                    className="px-2 py-1 rounded-full"
+                    style={{
+                      background: 'rgba(22,163,74,0.08)',
+                      border: '1px solid rgba(22,163,74,0.15)',
+                      color: '#16a34a',
+                    }}
+                  >
+                    {context.actionsFound} actions
                   </div>
                 )}
                 {personId && (
-                  <div className="px-2 py-1 bg-amber-50 border border-amber-600 text-amber-900">
-                    📖 {personName}'s manual
+                  <div
+                    className="px-2 py-1 rounded-full"
+                    style={{
+                      background: 'rgba(124,144,130,0.08)',
+                      border: '1px solid rgba(124,144,130,0.15)',
+                      color: '#7C9082',
+                    }}
+                  >
+                    {personName}&apos;s manual
                   </div>
                 )}
               </div>
@@ -87,9 +139,14 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
           {onClose && (
             <button
               onClick={onClose}
-              className="px-4 py-2 border-2 border-slate-300 bg-white font-mono text-sm font-bold text-slate-700 hover:border-slate-800 transition-all"
+              className="px-4 py-2 rounded-full text-sm font-medium hover:bg-black/[0.03] transition-all"
+              style={{
+                fontFamily: 'var(--font-parent-body)',
+                color: '#5C5347',
+                border: '1px solid rgba(255,255,255,0.4)',
+              }}
             >
-              ✕
+              Close
             </button>
           )}
         </div>
@@ -99,22 +156,33 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {messages.length === 0 && (
           <div className="text-center py-12">
-            <div className="inline-block px-4 py-2 bg-amber-50 border-2 border-amber-600 font-mono text-xs text-amber-900 mb-4">
-              👋 START A CONVERSATION
+            <div
+              className="inline-block px-4 py-2 rounded-full text-xs mb-4"
+              style={{
+                fontFamily: 'var(--font-parent-body)',
+                background: 'rgba(124,144,130,0.08)',
+                border: '1px solid rgba(124,144,130,0.15)',
+                color: '#7C9082',
+              }}
+            >
+              Start a conversation
             </div>
-            <p className="font-mono text-sm text-slate-600 max-w-md mx-auto">
+            <p
+              className="text-sm max-w-md mx-auto"
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}
+            >
               {personName
                 ? `Ask me about ${personName}'s triggers, what strategies work best, or how to handle specific situations.`
                 : 'Ask me about parenting strategies, relationship dynamics, or any challenges you\'re facing.'}
             </p>
 
             {personName && (
-              <div className="mt-6 space-y-2 font-mono text-xs text-slate-500 max-w-md mx-auto text-left">
-                <p className="font-bold text-slate-700 mb-2">Try asking:</p>
-                <p>• "What are {personName}'s main triggers?"</p>
-                <p>• "What strategies work best for {personName}?"</p>
-                <p>• "How should I handle it when {personName} gets overwhelmed?"</p>
-                <p>• "What boundaries are important for {personName}?"</p>
+              <div className="mt-6 space-y-2 text-xs max-w-md mx-auto text-left" style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}>
+                <p className="font-medium mb-2" style={{ color: '#5C5347' }}>Try asking:</p>
+                <p>&bull; &quot;What are {personName}&apos;s main triggers?&quot;</p>
+                <p>&bull; &quot;What strategies work best for {personName}?&quot;</p>
+                <p>&bull; &quot;How should I handle it when {personName} gets overwhelmed?&quot;</p>
+                <p>&bull; &quot;What boundaries are important for {personName}?&quot;</p>
               </div>
             )}
           </div>
@@ -126,15 +194,28 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[80%] p-4 font-mono text-sm ${
-                message.role === 'user'
-                  ? 'bg-slate-800 text-white border-2 border-slate-800'
-                  : 'bg-amber-50 border-2 border-amber-600 text-slate-900'
-              } shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)]`}
+              className="max-w-[80%] p-4 rounded-xl text-sm"
+              style={{
+                fontFamily: 'var(--font-parent-body)',
+                ...(message.role === 'user'
+                  ? {
+                      background: '#3A3530',
+                      color: '#FFFFFF',
+                    }
+                  : {
+                      background: 'rgba(124,144,130,0.08)',
+                      border: '1px solid rgba(124,144,130,0.15)',
+                      color: '#3A3530',
+                    }),
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+              }}
             >
               {message.role === 'assistant' && (
-                <div className="inline-block px-2 py-1 bg-amber-600 text-white text-xs mb-2">
-                  🤖 COACH
+                <div
+                  className="inline-block px-2 py-0.5 rounded-full text-xs text-white mb-2"
+                  style={{ background: '#7C9082' }}
+                >
+                  Coach
                 </div>
               )}
               <div className="whitespace-pre-wrap leading-relaxed">
@@ -146,22 +227,38 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
 
         {loading && (
           <div className="flex justify-start">
-            <div className="max-w-[80%] p-4 bg-amber-50 border-2 border-amber-600 font-mono text-sm text-slate-900">
+            <div
+              className="max-w-[80%] p-4 rounded-xl text-sm"
+              style={{
+                fontFamily: 'var(--font-parent-body)',
+                background: 'rgba(124,144,130,0.08)',
+                border: '1px solid rgba(124,144,130,0.15)',
+                color: '#3A3530',
+              }}
+            >
               <div className="flex items-center gap-2">
                 <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-amber-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-2 h-2 bg-amber-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-2 h-2 bg-amber-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: '#7C9082', animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: '#7C9082', animationDelay: '150ms' }}></div>
+                  <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: '#7C9082', animationDelay: '300ms' }}></div>
                 </div>
-                <span className="text-slate-600">Thinking...</span>
+                <span style={{ color: '#5C5347' }}>Thinking...</span>
               </div>
             </div>
           </div>
         )}
 
         {error && (
-          <div className="p-4 bg-red-50 border-2 border-red-600 font-mono text-sm text-red-900">
-            <div className="font-bold mb-1">❌ Error</div>
+          <div
+            className="p-4 rounded-xl text-sm"
+            style={{
+              fontFamily: 'var(--font-parent-body)',
+              background: 'rgba(220,38,38,0.05)',
+              border: '1px solid rgba(220,38,38,0.15)',
+              color: '#dc2626',
+            }}
+          >
+            <div className="font-medium mb-1">Error</div>
             <div className="text-xs">{error}</div>
           </div>
         )}
@@ -170,7 +267,11 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="border-t-4 border-slate-800 bg-white p-6">
+      <form
+        onSubmit={handleSubmit}
+        className="p-6"
+        style={{ borderTop: '1px solid rgba(255,255,255,0.4)' }}
+      >
         <div className="flex gap-3">
           <textarea
             ref={inputRef}
@@ -180,17 +281,30 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
             placeholder={`Ask about ${personName || 'anything'}...`}
             rows={2}
             disabled={loading}
-            className="flex-1 p-3 border-2 border-slate-300 font-mono text-sm focus:border-slate-800 focus:outline-none resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 p-3 rounded-xl text-sm focus:outline-none resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              fontFamily: 'var(--font-parent-body)',
+              border: '1px solid rgba(255,255,255,0.4)',
+              background: 'rgba(255,255,255,0.5)',
+              color: '#3A3530',
+            }}
           />
           <button
             type="submit"
             disabled={!input.trim() || loading}
-            className="px-6 py-3 bg-slate-800 text-white font-mono font-bold hover:bg-amber-600 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-800"
+            className="px-5 py-2 rounded-full text-white text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              fontFamily: 'var(--font-parent-body)',
+              background: '#3A3530',
+            }}
           >
-            SEND →
+            Send
           </button>
         </div>
-        <div className="mt-2 font-mono text-xs text-slate-500">
+        <div
+          className="mt-2 text-xs"
+          style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+        >
           Press Enter to send, Shift+Enter for new line
         </div>
 
@@ -199,11 +313,19 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
             <button
               type="button"
               onClick={clearConversation}
-              className="px-3 py-1 border-2 border-slate-300 bg-white font-mono text-xs text-slate-600 hover:border-slate-800 transition-all"
+              className="px-3 py-1 rounded-full text-xs hover:bg-black/[0.03] transition-all"
+              style={{
+                fontFamily: 'var(--font-parent-body)',
+                color: '#5C5347',
+                border: '1px solid rgba(255,255,255,0.4)',
+              }}
             >
-              ↻ New Conversation
+              New Conversation
             </button>
-            <div className="font-mono text-xs text-slate-500">
+            <div
+              className="text-xs"
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+            >
               {messages.length} messages
             </div>
           </div>

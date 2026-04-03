@@ -61,19 +61,19 @@ export function AddTriggerModal({ isOpen, onClose, onSave, personName }: AddTrig
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div
-        className="parent-card max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        className="glass-card-strong max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="parent-heading text-2xl flex items-center gap-2" style={{ color: 'var(--parent-text)' }}>
+            <h2 className="flex items-center gap-2" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '24px', fontWeight: 400, color: '#3A3530' }}>
               <span className="text-3xl">⚡</span>
               <span>Add Trigger</span>
             </h2>
             <button
               onClick={onClose}
               className="text-2xl transition-transform hover:scale-110"
-              style={{ color: 'var(--parent-text-light)' }}
+              style={{ color: '#5C5347' }}
             >
               ×
             </button>
@@ -82,7 +82,7 @@ export function AddTriggerModal({ isOpen, onClose, onSave, personName }: AddTrig
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Description */}
             <div>
-              <label className="block font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
+              <label className="block font-medium mb-2" style={{ color: '#3A3530' }}>
                 Trigger Description *
               </label>
               <input
@@ -92,9 +92,9 @@ export function AddTriggerModal({ isOpen, onClose, onSave, personName }: AddTrig
                 placeholder={`e.g., Transitions between activities`}
                 className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
                 style={{
-                  borderColor: 'var(--parent-border)',
-                  backgroundColor: 'var(--parent-bg)',
-                  color: 'var(--parent-text)'
+                  borderColor: 'rgba(255,255,255,0.4)',
+                  backgroundColor: 'rgba(255,255,255,0.5)',
+                  color: '#3A3530'
                 }}
                 required
               />
@@ -102,7 +102,7 @@ export function AddTriggerModal({ isOpen, onClose, onSave, personName }: AddTrig
 
             {/* Context */}
             <div>
-              <label className="block font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
+              <label className="block font-medium mb-2" style={{ color: '#3A3530' }}>
                 Context / When does this happen? *
               </label>
               <textarea
@@ -112,9 +112,9 @@ export function AddTriggerModal({ isOpen, onClose, onSave, personName }: AddTrig
                 rows={3}
                 className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
                 style={{
-                  borderColor: 'var(--parent-border)',
-                  backgroundColor: 'var(--parent-bg)',
-                  color: 'var(--parent-text)'
+                  borderColor: 'rgba(255,255,255,0.4)',
+                  backgroundColor: 'rgba(255,255,255,0.5)',
+                  color: '#3A3530'
                 }}
                 required
               />
@@ -122,7 +122,7 @@ export function AddTriggerModal({ isOpen, onClose, onSave, personName }: AddTrig
 
             {/* Typical Response */}
             <div>
-              <label className="block font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
+              <label className="block font-medium mb-2" style={{ color: '#3A3530' }}>
                 Typical Response
               </label>
               <textarea
@@ -132,16 +132,16 @@ export function AddTriggerModal({ isOpen, onClose, onSave, personName }: AddTrig
                 rows={2}
                 className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
                 style={{
-                  borderColor: 'var(--parent-border)',
-                  backgroundColor: 'var(--parent-bg)',
-                  color: 'var(--parent-text)'
+                  borderColor: 'rgba(255,255,255,0.4)',
+                  backgroundColor: 'rgba(255,255,255,0.5)',
+                  color: '#3A3530'
                 }}
               />
             </div>
 
             {/* De-escalation Strategy */}
             <div>
-              <label className="block font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
+              <label className="block font-medium mb-2" style={{ color: '#3A3530' }}>
                 What Helps / De-escalation Strategy
               </label>
               <textarea
@@ -151,16 +151,16 @@ export function AddTriggerModal({ isOpen, onClose, onSave, personName }: AddTrig
                 rows={2}
                 className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
                 style={{
-                  borderColor: 'var(--parent-border)',
-                  backgroundColor: 'var(--parent-bg)',
-                  color: 'var(--parent-text)'
+                  borderColor: 'rgba(255,255,255,0.4)',
+                  backgroundColor: 'rgba(255,255,255,0.5)',
+                  color: '#3A3530'
                 }}
               />
             </div>
 
             {/* Severity */}
             <div>
-              <label className="block font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
+              <label className="block font-medium mb-2" style={{ color: '#3A3530' }}>
                 Severity
               </label>
               <div className="flex gap-3">
@@ -174,7 +174,7 @@ export function AddTriggerModal({ isOpen, onClose, onSave, personName }: AddTrig
                       onChange={(e) => setSeverity(e.target.value as any)}
                       className="cursor-pointer"
                     />
-                    <span className="capitalize" style={{ color: 'var(--parent-text)' }}>
+                    <span className="capitalize" style={{ color: '#3A3530' }}>
                       {level}
                     </span>
                   </label>
@@ -183,21 +183,21 @@ export function AddTriggerModal({ isOpen, onClose, onSave, personName }: AddTrig
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 mt-6 pt-4 border-t" style={{ borderColor: 'var(--parent-border)' }}>
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.4)' }}>
               <button
                 type="button"
                 onClick={onClose}
                 disabled={saving}
-                className="px-6 py-3 rounded-lg font-medium transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ border: '1px solid var(--parent-border)', color: 'var(--parent-text-light)' }}
+                className="px-6 py-3 rounded-full transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ border: '1px solid rgba(255,255,255,0.4)', color: '#5C5347', fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500 }}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="px-8 py-3 rounded-lg font-semibold text-white transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: 'var(--parent-accent)' }}
+                className="px-8 py-3 rounded-full text-white transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: '#7C9082', fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500 }}
               >
                 {saving ? 'Saving...' : 'Add Trigger'}
               </button>

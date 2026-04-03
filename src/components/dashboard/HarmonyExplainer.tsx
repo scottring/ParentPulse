@@ -122,17 +122,17 @@ export default function HarmonyExplainer({ onClose, diagramRef }: HarmonyExplain
             <>
               <circle
                 cx={reveal.cx} cy={reveal.cy} r={reveal.outerR}
-                fill="none" stroke="#d97706" strokeWidth="2.5" opacity="0.8"
+                fill="none" stroke="#7C9082" strokeWidth="2.5" opacity="0.8"
               />
               <circle
                 cx={reveal.cx} cy={reveal.cy} r={reveal.innerR}
-                fill="none" stroke="#d97706" strokeWidth="2.5" opacity="0.8"
+                fill="none" stroke="#7C9082" strokeWidth="2.5" opacity="0.8"
               />
             </>
           ) : (
             <circle
               cx={reveal.cx} cy={reveal.cy} r={reveal.outerR}
-              fill="none" stroke="#d97706" strokeWidth="3" opacity="0.9"
+              fill="none" stroke="#7C9082" strokeWidth="3" opacity="0.9"
             >
               <animate attributeName="r" values={`${reveal.outerR - 2};${reveal.outerR + 2};${reveal.outerR - 2}`} dur="2s" repeatCount="indefinite" />
             </circle>
@@ -160,32 +160,32 @@ export default function HarmonyExplainer({ onClose, diagramRef }: HarmonyExplain
                   className="h-1 rounded-full transition-all duration-300"
                   style={{
                     width: i === step ? '24px' : '8px',
-                    background: i === step ? '#d97706' : i < step ? '#2C2C2C' : '#E8E3DC',
+                    background: i === step ? '#7C9082' : i < step ? '#2C2C2C' : '#E8E3DC',
                   }}
                 />
               ))}
             </div>
             <button
               onClick={onClose}
-              className="font-mono text-[10px] tracking-wider"
-              style={{ color: '#A3A3A3' }}
+              className="text-[10px] tracking-wider"
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}
             >
               SKIP
             </button>
           </div>
 
           {/* Ring label */}
-          <span className="font-mono text-[9px] font-bold tracking-widest" style={{ color: '#d97706' }}>
+          <span className="text-[9px] font-bold tracking-widest" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C9082' }}>
             {current.ringLabel}
           </span>
 
           {/* Title */}
-          <h3 className="font-mono text-lg font-bold mt-1 mb-2" style={{ color: '#2C2C2C' }}>
+          <h3 className="text-lg font-bold mt-1 mb-2" style={{ fontFamily: 'var(--font-parent-display)', color: '#2C2C2C' }}>
             {current.title}
           </h3>
 
           {/* Description */}
-          <p className="font-mono text-[12px] leading-relaxed" style={{ color: '#6B6B6B' }}>
+          <p className="text-[12px] leading-relaxed" style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6B6B' }}>
             {current.description}
           </p>
 
@@ -198,13 +198,13 @@ export default function HarmonyExplainer({ onClose, diagramRef }: HarmonyExplain
                   className={`rounded-lg px-3 py-2 ${current.details!.length === 3 && current.details![0].label.length < 10 ? 'flex-1 text-center' : 'flex items-center gap-3'}`}
                   style={{ background: '#FAF8F5', border: '1px solid #E8E3DC' }}
                 >
-                  <span className="font-mono text-[11px] font-bold" style={{ color: '#2C2C2C', minWidth: current.details!.length === 3 && current.details![0].label.length < 10 ? undefined : '100px' }}>
+                  <span className="text-[11px] font-bold" style={{ fontFamily: 'var(--font-parent-body)', color: '#2C2C2C', minWidth: current.details!.length === 3 && current.details![0].label.length < 10 ? undefined : '100px' }}>
                     {d.label}
                   </span>
                   {current.details!.length === 3 && current.details![0].label.length < 10 ? (
-                    <span className="font-mono text-[9px] block mt-0.5" style={{ color: '#A3A3A3' }}>{d.desc}</span>
+                    <span className="text-[9px] block mt-0.5" style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}>{d.desc}</span>
                   ) : (
-                    <span className="font-mono text-[10px]" style={{ color: '#6B6B6B' }}>{d.desc}</span>
+                    <span className="text-[10px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6B6B' }}>{d.desc}</span>
                   )}
                 </div>
               ))}
@@ -216,15 +216,15 @@ export default function HarmonyExplainer({ onClose, diagramRef }: HarmonyExplain
             <button
               onClick={handlePrev}
               disabled={step === 0}
-              className="font-mono text-[11px] font-bold px-4 py-2 rounded transition-all disabled:opacity-0"
-              style={{ color: '#6B6B6B', border: '1px solid #E8E3DC' }}
+              className="text-[11px] font-bold px-4 py-2 rounded transition-all disabled:opacity-0"
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6B6B', border: '1px solid #E8E3DC' }}
             >
               &larr; BACK
             </button>
             <button
               onClick={handleNext}
-              className="font-mono text-[11px] font-bold px-5 py-2 rounded transition-all hover:scale-105"
-              style={{ background: '#2C2C2C', color: '#FFFFFF' }}
+              className="text-[11px] font-bold px-5 py-2 rounded transition-all hover:scale-105"
+              style={{ fontFamily: 'var(--font-parent-body)', background: '#2C2C2C', color: '#FFFFFF' }}
             >
               {step < STEPS.length - 1 ? 'NEXT \u2192' : 'GOT IT'}
             </button>

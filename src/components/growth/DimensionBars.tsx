@@ -9,15 +9,15 @@ interface DimensionBarsProps {
 }
 
 function scoreColor(score: number): string {
-  if (score >= 4.0) return 'bg-green-500';
-  if (score >= 3.0) return 'bg-amber-500';
-  return 'bg-red-500';
+  if (score >= 4.0) return '#4ade80';
+  if (score >= 3.0) return '#7C9082';
+  return '#e57373';
 }
 
 function scoreTextColor(score: number): string {
-  if (score >= 4.0) return 'text-green-700';
-  if (score >= 3.0) return 'text-amber-700';
-  return 'text-red-700';
+  if (score >= 4.0) return '#16a34a';
+  if (score >= 3.0) return '#5C5347';
+  return '#dc2626';
 }
 
 function confidenceLabel(confidence: string): string {
@@ -29,7 +29,10 @@ function confidenceLabel(confidence: string): string {
 export default function DimensionBars({ assessments, activeArcDimensionId }: DimensionBarsProps) {
   if (assessments.length === 0) {
     return (
-      <p className="font-mono text-xs text-slate-400 italic">
+      <p
+        className="text-xs italic"
+        style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+      >
         No portraits yet — start a growth arc to begin measuring
       </p>
     );
@@ -53,25 +56,34 @@ export default function DimensionBars({ assessments, activeArcDimensionId }: Dim
             {/* Dimension name */}
             <div className="w-32 flex-shrink-0">
               <span
-                className={`font-mono text-[11px] leading-tight ${
-                  isActiveArc ? 'font-bold text-slate-900' : 'text-slate-500'
-                }`}
+                className="text-[11px] leading-tight"
+                style={{
+                  fontFamily: 'var(--font-parent-body)',
+                  fontWeight: isActiveArc ? 600 : 400,
+                  color: isActiveArc ? '#3A3530' : '#8A8078',
+                }}
               >
                 {name}
               </span>
             </div>
 
             {/* Bar */}
-            <div className="flex-1 h-3 bg-slate-100 border border-slate-200 relative">
+            <div
+              className="flex-1 h-2 rounded-full overflow-hidden relative"
+              style={{ background: 'rgba(0,0,0,0.06)' }}
+            >
               <div
-                className={`h-full ${scoreColor(score)} transition-all duration-700`}
-                style={{ width: `${pct}%` }}
+                className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${pct}%`, background: scoreColor(score) }}
               />
             </div>
 
             {/* Score */}
             <div className="w-10 text-right flex-shrink-0">
-              <span className={`font-mono text-[11px] font-bold ${scoreTextColor(score)}`}>
+              <span
+                className="text-[11px] font-medium"
+                style={{ fontFamily: 'var(--font-parent-body)', color: scoreTextColor(score) }}
+              >
                 {score.toFixed(1)}{conf}
               </span>
             </div>

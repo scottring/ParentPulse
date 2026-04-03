@@ -65,7 +65,8 @@ export default function ChildQuestionDisplay({
             onChange={(e) => setLocalValue(e.target.value)}
             placeholder="Type or tell us your answer..."
             rows={4}
-            className="w-full text-2xl px-6 py-4 border-4 border-blue-300 rounded-2xl focus:border-blue-500 outline-none resize-none transition-colors bg-white"
+            className="w-full text-2xl px-6 py-4 rounded-2xl outline-none resize-none transition-colors"
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#3A3530', border: '2px solid rgba(124,144,130,0.3)', backgroundColor: 'rgba(255,255,255,0.5)' }}
           />
         );
 
@@ -79,11 +80,12 @@ export default function ChildQuestionDisplay({
                   <button
                     key={value}
                     onClick={() => setLocalValue(value)}
-                    className={`text-6xl p-4 rounded-full transition-all transform hover:scale-110 ${
-                      localValue === value
-                        ? 'bg-yellow-200 scale-125 shadow-lg'
-                        : 'bg-gray-100 hover:bg-gray-200'
-                    }`}
+                    className="text-6xl p-4 rounded-full transition-all transform hover:scale-110"
+                    style={{
+                      backgroundColor: localValue === value ? 'rgba(124,144,130,0.2)' : 'rgba(255,255,255,0.3)',
+                      transform: localValue === value ? 'scale(1.25)' : undefined,
+                      boxShadow: localValue === value ? '0 10px 25px rgba(0,0,0,0.1)' : undefined,
+                    }}
                   >
                     {emoji}
                   </button>
@@ -91,7 +93,7 @@ export default function ChildQuestionDisplay({
               })}
             </div>
             {question.scaleLabels && (
-              <div className="flex justify-between text-xl font-medium text-gray-700 px-4">
+              <div className="flex justify-between text-xl font-medium px-4" style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}>
                 <span>{question.scaleLabels.min}</span>
                 <span>{question.scaleLabels.max}</span>
               </div>
@@ -106,14 +108,16 @@ export default function ChildQuestionDisplay({
               <button
                 key={option.value}
                 onClick={() => setLocalValue(option.value)}
-                className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-4 transition-all transform hover:scale-105 ${
-                  localValue === option.value
-                    ? 'bg-blue-100 border-blue-500 scale-105 shadow-lg'
-                    : 'bg-white border-gray-300 hover:border-blue-300'
-                }`}
+                className="flex flex-col items-center gap-3 p-6 rounded-2xl transition-all transform hover:scale-105"
+                style={{
+                  backgroundColor: localValue === option.value ? 'rgba(124,144,130,0.15)' : 'rgba(255,255,255,0.3)',
+                  border: localValue === option.value ? '2px solid #7C9082' : '1px solid rgba(255,255,255,0.4)',
+                  transform: localValue === option.value ? 'scale(1.05)' : undefined,
+                  boxShadow: localValue === option.value ? '0 10px 25px rgba(0,0,0,0.1)' : undefined,
+                }}
               >
                 {option.emoji && <span className="text-5xl">{option.emoji}</span>}
-                <span className="text-xl font-medium text-gray-800">{option.label}</span>
+                <span className="text-xl font-medium" style={{ fontFamily: 'var(--font-parent-body)', color: '#3A3530' }}>{option.label}</span>
               </button>
             ))}
           </div>
@@ -135,16 +139,17 @@ export default function ChildQuestionDisplay({
                       setLocalValue([...selectedValues, option.value]);
                     }
                   }}
-                  className={`flex items-center gap-3 px-5 py-4 text-left rounded-xl border-3 transition-all ${
-                    isSelected
-                      ? 'bg-green-100 border-green-500 shadow-md'
-                      : 'bg-white border-gray-300 hover:border-green-300'
-                  }`}
+                  className="flex items-center gap-3 px-5 py-4 text-left rounded-xl transition-all"
+                  style={{
+                    backgroundColor: isSelected ? 'rgba(124,144,130,0.15)' : 'rgba(255,255,255,0.3)',
+                    border: isSelected ? '2px solid #7C9082' : '1px solid rgba(255,255,255,0.4)',
+                    boxShadow: isSelected ? '0 4px 12px rgba(0,0,0,0.08)' : undefined,
+                  }}
                 >
                   <span className="text-3xl min-w-[40px] text-center">
                     {isSelected ? '✅' : option.emoji || '⬜'}
                   </span>
-                  <span className="text-lg font-medium text-gray-800">{option.label}</span>
+                  <span className="text-lg font-medium" style={{ fontFamily: 'var(--font-parent-body)', color: '#3A3530' }}>{option.label}</span>
                 </button>
               );
             })}
@@ -154,15 +159,16 @@ export default function ChildQuestionDisplay({
       case 'drawing':
         // Future enhancement: Add canvas for drawing
         return (
-          <div className="text-center p-8 bg-gray-100 rounded-2xl">
-            <p className="text-xl text-gray-600">Drawing feature coming soon!</p>
-            <p className="text-lg text-gray-500 mt-2">For now, you can describe what you'd draw:</p>
+          <div className="text-center p-8 rounded-2xl" style={{ backgroundColor: 'rgba(255,255,255,0.3)' }}>
+            <p className="text-xl" style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}>Drawing feature coming soon!</p>
+            <p className="text-lg mt-2" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>For now, you can describe what you'd draw:</p>
             <textarea
               value={localValue}
               onChange={(e) => setLocalValue(e.target.value)}
               placeholder="What would you draw?"
               rows={3}
-              className="mt-4 w-full text-xl px-4 py-3 border-2 border-gray-300 rounded-lg outline-none resize-none"
+              className="mt-4 w-full text-xl px-4 py-3 rounded-lg outline-none resize-none"
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#3A3530', border: '1px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.4)' }}
             />
           </div>
         );
@@ -173,11 +179,11 @@ export default function ChildQuestionDisplay({
   };
 
   return (
-    <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-4xl mx-auto">
+    <div className="glass-card-strong rounded-3xl p-8 max-w-4xl mx-auto" style={{ border: '1px solid rgba(255,255,255,0.4)' }}>
       {/* Section emoji and description */}
       <div className="flex items-center gap-3 mb-6">
         <span className="text-4xl">{sectionEmoji}</span>
-        <p className="text-lg font-semibold text-blue-600">
+        <p className="text-lg font-semibold" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C9082' }}>
           {sectionDescription}
         </p>
       </div>
@@ -187,15 +193,15 @@ export default function ChildQuestionDisplay({
         {question.emoji && (
           <span className="text-5xl flex-shrink-0">{question.emoji}</span>
         )}
-        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">
+        <h2 className="leading-tight" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '28px', fontWeight: 600, color: '#3A3530' }}>
           {replacePlaceholder(question.text)}
-          {question.required && <span className="text-red-500 ml-2">*</span>}
+          {question.required && <span className="ml-2" style={{ color: '#c87a6a' }}>*</span>}
         </h2>
       </div>
 
       {/* Help text */}
       {question.helpText && (
-        <p className="text-xl text-gray-600 mb-6 ml-16">
+        <p className="text-xl mb-6 ml-16" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>
           {replacePlaceholder(question.helpText)}
         </p>
       )}
@@ -213,8 +219,8 @@ export default function ChildQuestionDisplay({
                 onAnswer(demo);
               }
             }}
-            className="mt-2 px-3 py-1.5 rounded text-xs font-bold transition-all hover:scale-105"
-            style={{ background: '#d97706', color: 'white', opacity: 0.85 }}
+            className="mt-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:scale-105"
+            style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082', color: 'white', fontWeight: 500 }}
           >
             Fill
           </button>
@@ -226,42 +232,48 @@ export default function ChildQuestionDisplay({
         <button
           onClick={onBack}
           disabled={!canGoBack}
-          className={`px-8 py-4 rounded-2xl font-bold text-xl transition-all ${
-            canGoBack
-              ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 shadow-md border-2 border-amber-300'
-              : 'bg-gray-100 text-gray-300 cursor-not-allowed'
-          }`}
+          className="px-8 py-4 rounded-2xl font-bold text-xl transition-all"
+          style={{
+            fontFamily: 'var(--font-parent-body)',
+            backgroundColor: canGoBack ? 'rgba(124,144,130,0.1)' : 'rgba(255,255,255,0.15)',
+            color: canGoBack ? '#5C5347' : '#8A8078',
+            border: canGoBack ? '2px solid rgba(124,144,130,0.3)' : '1px solid rgba(255,255,255,0.4)',
+            cursor: canGoBack ? 'pointer' : 'not-allowed',
+          }}
         >
-          ⬅️ Back
+          &larr; Back
         </button>
 
         <div className="flex gap-4">
           {!question.required && (
             <button
               onClick={handleSkipClick}
-              className="px-8 py-4 rounded-2xl font-bold text-xl bg-yellow-200 text-gray-800 hover:bg-yellow-300 transition-all shadow-md"
+              className="px-8 py-4 rounded-2xl font-bold text-xl transition-all"
+              style={{ fontFamily: 'var(--font-parent-body)', backgroundColor: 'rgba(255,255,255,0.3)', color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)' }}
             >
-              Skip ⏭️
+              Skip
             </button>
           )}
           <button
             onClick={handleContinue}
             disabled={question.required && !localValue}
-            className={`px-10 py-4 rounded-2xl font-bold text-xl transition-all shadow-lg ${
-              question.required && !localValue
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-green-500 text-white hover:bg-green-600 transform hover:scale-105'
-            }`}
+            className="px-10 py-4 rounded-2xl font-bold text-xl transition-all transform hover:scale-105"
+            style={{
+              fontFamily: 'var(--font-parent-body)',
+              backgroundColor: (question.required && !localValue) ? 'rgba(124,144,130,0.3)' : '#7C9082',
+              color: 'white',
+              cursor: (question.required && !localValue) ? 'not-allowed' : 'pointer',
+            }}
           >
-            Next ➡️
+            Next &rarr;
           </button>
         </div>
       </div>
 
       {/* Fun progress indicator */}
       <div className="mt-6 text-center">
-        <p className="text-lg text-gray-500">
-          💪 You're doing great, {childName}!
+        <p className="text-lg" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>
+          You're doing great, {childName}!
         </p>
       </div>
     </div>

@@ -48,7 +48,7 @@ function getFreshness(updatedAt?: Date): { color: string; label: string | null }
   if (!updatedAt) return { color: '#D4D4D4', label: null };
   const days = Math.floor((Date.now() - updatedAt.getTime()) / (1000 * 60 * 60 * 24));
   if (days < 30) return { color: '#16a34a', label: null };
-  if (days < 90) return { color: '#d97706', label: 'Needs update' };
+  if (days < 90) return { color: '#7C9082', label: 'Needs update' };
   return { color: '#dc2626', label: 'Getting stale' };
 }
 
@@ -57,7 +57,7 @@ function StatusDot({ status }: { status: ContributionStatus }) {
 
   const dotColor =
     status.state === 'complete' ? (freshness?.color || '#16a34a') :
-    status.state === 'draft' ? '#d97706' :
+    status.state === 'draft' ? '#7C9082' :
     status.state === 'invited' ? '#3B82F6' :
     '#D4D4D4';
 
@@ -270,10 +270,10 @@ export default function PortraitInventory({
               {/* Top line: person name + portrait status dots */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-[11px] font-bold" style={{ color: '#2C2C2C' }}>
+                  <span className="text-[11px] font-bold" style={{ fontFamily: 'var(--font-parent-body)', color: '#2C2C2C' }}>
                     {row.person.name}
                   </span>
-                  <span className="font-mono text-[9px]" style={{ color: '#A3A3A3' }}>
+                  <span className="text-[9px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}>
                     {row.relationshipLabel}
                   </span>
                 </div>
@@ -282,22 +282,22 @@ export default function PortraitInventory({
                 <div className="flex items-center gap-2">
                   {isSelf ? (
                     <div className="flex items-center gap-1">
-                      <span className="font-mono text-[8px]" style={{ color: '#A3A3A3' }}>portrait</span>
+                      <span className="text-[8px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}>portrait</span>
                       <StatusDot status={row.selfPortrait} />
                     </div>
                   ) : (
                     <>
                       <div className="flex items-center gap-1" title="Their self-portrait">
-                        <span className="font-mono text-[8px]" style={{ color: '#A3A3A3' }}>self</span>
+                        <span className="text-[8px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}>self</span>
                         <StatusDot status={row.selfPortrait} />
                       </div>
                       <div className="flex items-center gap-1" title="Your portrait of them">
-                        <span className="font-mono text-[8px]" style={{ color: '#A3A3A3' }}>yours</span>
+                        <span className="text-[8px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}>yours</span>
                         <StatusDot status={row.yourPortrait} />
                       </div>
                       {row.theirPortraitOfYou && (
                         <div className="flex items-center gap-1" title="Their portrait of you">
-                          <span className="font-mono text-[8px]" style={{ color: '#A3A3A3' }}>theirs</span>
+                          <span className="text-[8px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}>theirs</span>
                           <StatusDot status={row.theirPortraitOfYou} />
                         </div>
                       )}
@@ -312,26 +312,26 @@ export default function PortraitInventory({
                   className="mt-2 flex items-center justify-between rounded-lg px-3 py-2"
                   style={{
                     background: row.nextAction.type === 'onboarding'
-                      ? 'rgba(217,119,6,0.06)'
+                      ? 'rgba(124,144,130,0.06)'
                       : '#FAF8F5',
                     border: `1px solid ${
                       row.nextAction.type === 'onboarding'
-                        ? 'rgba(217,119,6,0.15)'
+                        ? 'rgba(124,144,130,0.15)'
                         : '#E8E3DC'
                     }`,
                   }}
                 >
                   <div className="flex-1 min-w-0">
                     <span
-                      className="font-mono text-[10px] font-bold block truncate"
-                      style={{ color: '#2C2C2C' }}
+                      className="text-[10px] font-bold block truncate"
+                      style={{ fontFamily: 'var(--font-parent-body)', color: '#2C2C2C' }}
                     >
                       {row.nextAction.label}
                     </span>
                     {row.nextAction.description && (
                       <span
-                        className="font-mono text-[8px] block mt-0.5"
-                        style={{ color: '#A3A3A3' }}
+                        className="text-[8px] block mt-0.5"
+                        style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}
                       >
                         {row.nextAction.description}
                       </span>
@@ -365,11 +365,11 @@ export default function PortraitInventory({
                     {row.nextAction.type === 'onboarding' && row.nextAction.href && (
                       <Link
                         href={row.nextAction.href}
-                        className="font-mono text-[8px] font-bold px-2 py-1 rounded transition-all hover:scale-105"
+                        className="text-[8px] font-bold px-2 py-1 rounded transition-all hover:scale-105"
                         style={{
-                          color: '#d97706',
-                          border: '1px solid rgba(217,119,6,0.3)',
-                          background: 'rgba(217,119,6,0.1)',
+                          color: '#7C9082',
+                          border: '1px solid rgba(124,144,130,0.3)',
+                          background: 'rgba(124,144,130,0.1)',
                         }}
                       >
                         START
@@ -382,7 +382,7 @@ export default function PortraitInventory({
               {/* All caught up */}
               {!row.nextAction && !isSelf && (
                 <div className="mt-2 px-3 py-1.5">
-                  <span className="font-mono text-[9px]" style={{ color: '#A3A3A3' }}>
+                  <span className="text-[9px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}>
                     All caught up
                   </span>
                 </div>

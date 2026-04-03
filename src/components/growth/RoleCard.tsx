@@ -37,37 +37,67 @@ export default function RoleCard({ role, onFeedback }: RoleCardProps) {
     : 0;
 
   return (
-    <div className="border-2 border-slate-800 bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{
+        background: 'rgba(255,255,255,0.7)',
+        backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(255,255,255,0.4)',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+      }}
+    >
       {/* Role Header */}
       <div className="p-5">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <span className="text-xl">{emoji}</span>
             <div>
-              <h2 className="font-mono font-bold text-sm text-slate-900 uppercase tracking-wider">
+              <h2
+                className="text-sm tracking-wide"
+                style={{
+                  fontFamily: 'var(--font-parent-display)',
+                  fontWeight: 600,
+                  color: '#3A3530',
+                }}
+              >
                 {roleLabel}
               </h2>
-              <p className="font-mono text-xs text-slate-500">
+              <p
+                className="text-xs"
+                style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+              >
                 with {otherPerson.name}
               </p>
             </div>
           </div>
           {assessments.length > 0 && (
             <div className="text-right">
-              <div className={`font-mono text-lg font-bold ${
-                avgScore >= 4.0 ? 'text-green-700' :
-                avgScore >= 3.0 ? 'text-amber-700' : 'text-red-700'
-              }`}>
+              <div
+                className="text-lg font-medium"
+                style={{
+                  fontFamily: 'var(--font-parent-body)',
+                  color: avgScore >= 4.0 ? '#16a34a' :
+                    avgScore >= 3.0 ? '#5C5347' : '#dc2626',
+                }}
+              >
                 {avgScore.toFixed(1)}
               </div>
-              <div className="font-mono text-[9px] text-slate-400 uppercase">overall</div>
+              <div
+                className="text-[9px]"
+                style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+              >
+                overall
+              </div>
             </div>
           )}
         </div>
 
         {/* Warm narrative */}
         {narrative && (
-          <p className="font-mono text-xs text-slate-600 leading-relaxed mb-4 pl-9 italic">
+          <p
+            className="text-xs leading-relaxed mb-4 pl-9 italic"
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}
+          >
             &ldquo;{narrative}&rdquo;
           </p>
         )}
@@ -83,55 +113,84 @@ export default function RoleCard({ role, onFeedback }: RoleCardProps) {
         )}
 
         {/* Manual link */}
-        <div className="pt-2 border-t border-slate-100">
+        <div className="pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.4)' }}>
           <Link
             href={`/people/${otherPerson.personId}/manual`}
-            className="font-mono text-[10px] text-slate-400 hover:text-slate-600 transition-colors"
+            className="text-[10px] hover:opacity-70 transition-colors"
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
           >
-            VIEW {otherPerson.name.toUpperCase()}&apos;S MANUAL &rarr;
+            View {otherPerson.name}&apos;s Manual &rarr;
           </Link>
         </div>
       </div>
 
       {/* Active Arc */}
       {activeArc && (
-        <div className="px-5 py-4 bg-slate-50 border-t border-b border-slate-200">
+        <div
+          className="px-5 py-4"
+          style={{
+            background: 'rgba(0,0,0,0.02)',
+            borderTop: '1px solid rgba(255,255,255,0.4)',
+            borderBottom: '1px solid rgba(255,255,255,0.4)',
+          }}
+        >
           <div className="flex items-center gap-2 mb-1">
             <span className="text-sm">{activeArc.emoji}</span>
-            <span className="font-mono text-[11px] font-bold text-slate-800">
+            <span
+              className="text-[11px] font-medium"
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#3A3530' }}
+            >
               {activeArc.title}
             </span>
           </div>
 
           {/* Outcome statement */}
           {activeArc.outcomeStatement && (
-            <p className="font-mono text-[11px] text-slate-600 mb-2 pl-6 italic">
+            <p
+              className="text-[11px] mb-2 pl-6 italic"
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}
+            >
               &ldquo;{activeArc.outcomeStatement}&rdquo;
             </p>
           )}
 
           <div className="flex items-center gap-3 mb-2 pl-6">
-            <span className="font-mono text-[10px] text-slate-500">
+            <span
+              className="text-[10px]"
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+            >
               Week {activeArc.currentWeek}/{activeArc.durationWeeks}
             </span>
-            <span className="font-mono text-[10px] text-slate-400 capitalize">
+            <span
+              className="text-[10px] capitalize"
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+            >
               {activeArc.currentPhase}
             </span>
-            <span className="font-mono text-[10px] text-slate-400">
+            <span
+              className="text-[10px]"
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+            >
               {activeArc.completedItemCount}/{activeArc.totalItemCount}
             </span>
           </div>
 
           {/* Progress bar */}
-          <div className="w-full h-1.5 bg-slate-200 ml-6" style={{ width: 'calc(100% - 1.5rem)' }}>
+          <div
+            className="h-1.5 rounded-full overflow-hidden ml-6"
+            style={{ width: 'calc(100% - 1.5rem)', background: 'rgba(0,0,0,0.06)' }}
+          >
             <div
-              className="h-full bg-slate-800 transition-all duration-500"
-              style={{ width: `${arcProgress}%` }}
+              className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${arcProgress}%`, background: '#7C9082' }}
             />
           </div>
 
           {activeArc.researchBasis && (
-            <p className="font-mono text-[9px] text-slate-400 mt-1.5 pl-6">
+            <p
+              className="text-[9px] mt-1.5 pl-6"
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+            >
               {activeArc.researchBasis}
             </p>
           )}
@@ -149,7 +208,10 @@ export default function RoleCard({ role, onFeedback }: RoleCardProps) {
             />
           ))}
           {todayItems.length > 2 && (
-            <p className="font-mono text-[10px] text-slate-400 text-center">
+            <p
+              className="text-[10px] text-center"
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+            >
               +{todayItems.length - 2} more
             </p>
           )}
@@ -158,8 +220,14 @@ export default function RoleCard({ role, onFeedback }: RoleCardProps) {
 
       {/* No arc state */}
       {!activeArc && todayItems.length === 0 && assessments.length > 0 && (
-        <div className="px-5 py-3 text-center border-t border-slate-100">
-          <p className="font-mono text-[10px] text-slate-400">
+        <div
+          className="px-5 py-3 text-center"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.4)' }}
+        >
+          <p
+            className="text-[10px]"
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+          >
             No active arc &middot; weakest: {
               [...assessments].sort((a, b) => a.currentScore - b.currentScore)[0]
                 ?.dimensionId.replace(/_/g, ' ')

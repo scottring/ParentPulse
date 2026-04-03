@@ -57,19 +57,19 @@ export function AddBoundaryModal({ isOpen, onClose, onSave, personName }: AddBou
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div
-        className="parent-card max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        className="glass-card-strong max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="parent-heading text-2xl flex items-center gap-2" style={{ color: 'var(--parent-text)' }}>
+            <h2 className="flex items-center gap-2" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '24px', fontWeight: 400, color: '#3A3530' }}>
               <span className="text-3xl">🛡️</span>
               <span>Add Boundary</span>
             </h2>
             <button
               onClick={onClose}
               className="text-2xl transition-transform hover:scale-110"
-              style={{ color: 'var(--parent-text-light)' }}
+              style={{ color: '#5C5347' }}
             >
               ×
             </button>
@@ -78,7 +78,7 @@ export function AddBoundaryModal({ isOpen, onClose, onSave, personName }: AddBou
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Description */}
             <div>
-              <label className="block font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
+              <label className="block font-medium mb-2" style={{ color: '#3A3530' }}>
                 Boundary Description *
               </label>
               <input
@@ -88,9 +88,9 @@ export function AddBoundaryModal({ isOpen, onClose, onSave, personName }: AddBou
                 placeholder={`e.g., No screen time after 8pm`}
                 className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
                 style={{
-                  borderColor: 'var(--parent-border)',
-                  backgroundColor: 'var(--parent-bg)',
-                  color: 'var(--parent-text)'
+                  borderColor: 'rgba(255,255,255,0.4)',
+                  backgroundColor: 'rgba(255,255,255,0.5)',
+                  color: '#3A3530'
                 }}
                 required
               />
@@ -98,7 +98,7 @@ export function AddBoundaryModal({ isOpen, onClose, onSave, personName }: AddBou
 
             {/* Category */}
             <div>
-              <label className="block font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
+              <label className="block font-medium mb-2" style={{ color: '#3A3530' }}>
                 Boundary Type
               </label>
               <div className="space-y-3">
@@ -111,8 +111,8 @@ export function AddBoundaryModal({ isOpen, onClose, onSave, personName }: AddBou
                     key={option.value}
                     className="flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all hover:shadow-sm"
                     style={{
-                      border: `2px solid ${category === option.value ? 'var(--parent-accent)' : 'var(--parent-border)'}`,
-                      backgroundColor: category === option.value ? 'var(--parent-bg)' : 'transparent'
+                      border: `2px solid ${category === option.value ? '#7C9082' : 'rgba(255,255,255,0.4)'}`,
+                      backgroundColor: category === option.value ? 'rgba(124,144,130,0.06)' : 'transparent'
                     }}
                   >
                     <input
@@ -124,10 +124,10 @@ export function AddBoundaryModal({ isOpen, onClose, onSave, personName }: AddBou
                       className="mt-1 cursor-pointer"
                     />
                     <div>
-                      <div className="font-medium" style={{ color: 'var(--parent-text)' }}>
+                      <div className="font-medium" style={{ color: '#3A3530' }}>
                         {option.label}
                       </div>
-                      <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
+                      <div className="text-sm" style={{ color: '#5C5347' }}>
                         {option.description}
                       </div>
                     </div>
@@ -138,7 +138,7 @@ export function AddBoundaryModal({ isOpen, onClose, onSave, personName }: AddBou
 
             {/* Context */}
             <div>
-              <label className="block font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
+              <label className="block font-medium mb-2" style={{ color: '#3A3530' }}>
                 Context / Why is this important?
               </label>
               <textarea
@@ -148,16 +148,16 @@ export function AddBoundaryModal({ isOpen, onClose, onSave, personName }: AddBou
                 rows={2}
                 className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
                 style={{
-                  borderColor: 'var(--parent-border)',
-                  backgroundColor: 'var(--parent-bg)',
-                  color: 'var(--parent-text)'
+                  borderColor: 'rgba(255,255,255,0.4)',
+                  backgroundColor: 'rgba(255,255,255,0.5)',
+                  color: '#3A3530'
                 }}
               />
             </div>
 
             {/* Consequences */}
             <div>
-              <label className="block font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
+              <label className="block font-medium mb-2" style={{ color: '#3A3530' }}>
                 Consequences if crossed
               </label>
               <textarea
@@ -167,29 +167,29 @@ export function AddBoundaryModal({ isOpen, onClose, onSave, personName }: AddBou
                 rows={2}
                 className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
                 style={{
-                  borderColor: 'var(--parent-border)',
-                  backgroundColor: 'var(--parent-bg)',
-                  color: 'var(--parent-text)'
+                  borderColor: 'rgba(255,255,255,0.4)',
+                  backgroundColor: 'rgba(255,255,255,0.5)',
+                  color: '#3A3530'
                 }}
               />
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 mt-6 pt-4 border-t" style={{ borderColor: 'var(--parent-border)' }}>
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.4)' }}>
               <button
                 type="button"
                 onClick={onClose}
                 disabled={saving}
-                className="px-6 py-3 rounded-lg font-medium transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ border: '1px solid var(--parent-border)', color: 'var(--parent-text-light)' }}
+                className="px-6 py-3 rounded-full transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ border: '1px solid rgba(255,255,255,0.4)', color: '#5C5347', fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500 }}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="px-8 py-3 rounded-lg font-semibold text-white transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: 'var(--parent-accent)' }}
+                className="px-8 py-3 rounded-full text-white transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: '#7C9082', fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500 }}
               >
                 {saving ? 'Saving...' : 'Add Boundary'}
               </button>

@@ -10,16 +10,16 @@
  */
 
 /* ==================== Import Fonts ==================== */
-@import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Nunito:wght@400;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
 
 /* ==================== Core Design Tokens ==================== */
 
 :root {
-  /* Brand Typography */
-  --font-heading: 'Kalam', 'Comic Sans MS', cursive;
-  --font-body: 'Nunito', 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'Fira Code', 'Courier New', monospace;
-  --font-technical: 'Courier New', monospace; /* For spec tables */
+  /* Brand Typography - Warm Library */
+  --font-heading: var(--font-parent-display), 'Cormorant Garamond', Georgia, serif;
+  --font-body: var(--font-parent-body), 'DM Sans', system-ui, sans-serif;
+  --font-mono: var(--font-parent-body), 'DM Sans', system-ui, sans-serif;
+  --font-technical: var(--font-parent-body), 'DM Sans', system-ui, sans-serif;
 
   /* Brand Colors - Base Palette */
   --brand-primary: #2d5f4e;      /* Deep forest - trust, growth */

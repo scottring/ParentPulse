@@ -12,7 +12,6 @@ import { useWorkbook } from '@/hooks/useWorkbook';
 import MainLayout from '@/components/layout/MainLayout';
 import { RelationshipType, Person } from '@/types/person-manual';
 import { computeAge } from '@/utils/age';
-import { scoreToColor } from '@/lib/scoring-engine';
 import { getDimension } from '@/config/relationship-dimensions';
 import { Timestamp } from 'firebase/firestore';
 import type { WorkbookChapter } from '@/types/workbook';
@@ -35,6 +34,15 @@ const RELATIONSHIP_OPTIONS: Array<{ type: RelationshipType; label: string }> = [
   { type: 'sibling', label: 'Sibling' },
   { type: 'friend', label: 'Friend' },
 ];
+
+function scoreToBand(score: number): { label: string; color: string } {
+  if (score <= 0) return { label: 'No data', color: '#8A8078' };
+  if (score < 2.0) return { label: 'Needs attention', color: '#B85450' };
+  if (score < 3.0) return { label: 'Growing', color: '#C4864C' };
+  if (score < 3.5) return { label: 'Steady', color: '#7C9082' };
+  if (score < 4.0) return { label: 'Strong', color: '#6B8F71' };
+  return { label: 'Thriving', color: '#4E7A54' };
+}
 
 export default function PeoplePage() {
   const router = useRouter();
@@ -76,10 +84,10 @@ export default function PeoplePage() {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FFF8F0' }}>
+      <div className="min-h-screen flex items-center justify-center">
         <div className="manual-spinner" />
         <style jsx>{`
-          .manual-spinner { width: 48px; height: 48px; border: 4px solid #1e293b; border-top-color: #d97706; border-radius: 50%; animation: spin 1s linear infinite; }
+          .manual-spinner { width: 48px; height: 48px; border: 4px solid #3A3530; border-top-color: #7C9082; border-radius: 50%; animation: spin 1s linear infinite; }
           @keyframes spin { to { transform: rotate(360deg); } }
         `}</style>
       </div>
@@ -131,25 +139,28 @@ export default function PeoplePage() {
           <div>
             <Link
               href="/dashboard"
-              className="font-mono text-[10px] tracking-wider mb-1 block transition-colors"
-              style={{ color: '#A3A3A3' }}
+              className="text-[12px] font-medium mb-1 block transition-colors hover:opacity-70"
+              style={{ color: '#8A8078', fontFamily: 'var(--font-parent-body)' }}
             >
-              &larr; DASHBOARD
+              &larr; Dashboard
             </Link>
-            <h1 className="font-mono font-bold text-xl" style={{ color: '#2C2C2C' }}>
+            <h1
+              className="text-[32px] font-normal leading-tight"
+              style={{ color: '#3A3530', fontFamily: 'var(--font-parent-display)' }}
+            >
               People
             </h1>
           </div>
           <button
             onClick={() => setShowAdd(true)}
-            className="font-mono text-[10px] font-bold tracking-wider px-3 py-1.5 rounded transition-all hover:scale-105"
+            className="text-[12px] font-medium px-4 py-2 rounded-full transition-all hover:scale-105"
             style={{
-              color: '#d97706',
-              border: '1px solid rgba(217,119,6,0.4)',
-              background: 'rgba(217,119,6,0.08)',
+              fontFamily: 'var(--font-parent-body)',
+              color: '#FFFFFF',
+              background: '#7C9082',
             }}
           >
-            + ADD PERSON
+            + Add person
           </button>
         </div>
 
@@ -182,29 +193,37 @@ export default function PeoplePage() {
 
         {/* Empty state */}
         {!peopleLoading && otherPeople.length === 0 && !selfPerson && (
-          <div
-            className="rounded-lg p-8 text-center mt-4"
-            style={{ background: '#FAF8F5', border: '1px solid #E8E3DC' }}
-          >
-            <p className="font-mono text-[11px]" style={{ color: '#6B6B6B' }}>
+          <div className="glass-card rounded-2xl p-8 text-center mt-4">
+            <h3
+              className="text-[22px] font-normal mb-2"
+              style={{ color: '#3A3530', fontFamily: 'var(--font-parent-display)' }}
+            >
+              No one here yet
+            </h3>
+            <p
+              className="text-[13px]"
+              style={{ color: '#7C7468', fontFamily: 'var(--font-parent-body)' }}
+            >
               Add the people in your life to start building relationship portraits.
             </p>
           </div>
         )}
 
-        {/* Add person inline form */}
+        {/* Add person modal */}
         {showAdd && (
           <div
             className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
             onClick={() => !adding && setShowAdd(false)}
           >
             <div
-              className="rounded-lg p-6 max-w-sm w-full"
-              style={{ background: '#FFFFFF', border: '2px solid #E8E3DC' }}
+              className="glass-card-strong rounded-2xl p-6 max-w-sm w-full"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="font-mono text-sm font-bold mb-4" style={{ color: '#2C2C2C' }}>
-                Add Person
+              <h3
+                className="text-[22px] font-normal mb-4"
+                style={{ color: '#3A3530', fontFamily: 'var(--font-parent-display)' }}
+              >
+                Add person
               </h3>
 
               <div className="space-y-3">
@@ -214,8 +233,12 @@ export default function PeoplePage() {
                   onChange={(e) => setAddName(e.target.value)}
                   placeholder="Name"
                   autoFocus
-                  className="w-full font-mono text-sm rounded px-3 py-2"
-                  style={{ border: '1px solid #E8E3DC', background: '#FAF8F5' }}
+                  className="w-full text-[13px] rounded-2xl px-3 py-2"
+                  style={{
+                    fontFamily: 'var(--font-parent-body)',
+                    border: '1px solid rgba(138,128,120,0.2)',
+                    background: 'rgba(255,255,255,0.4)',
+                  }}
                   onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
                 />
 
@@ -224,11 +247,12 @@ export default function PeoplePage() {
                     <button
                       key={opt.type}
                       onClick={() => setAddType(opt.type)}
-                      className="font-mono text-[10px] px-2.5 py-1.5 rounded transition-all"
+                      className="text-[11px] font-medium px-2.5 py-1.5 rounded-full transition-all"
                       style={{
-                        color: addType === opt.type ? '#FFFFFF' : '#6B6B6B',
-                        background: addType === opt.type ? '#d97706' : 'rgba(44,44,44,0.04)',
-                        border: `1px solid ${addType === opt.type ? '#d97706' : '#E8E3DC'}`,
+                        fontFamily: 'var(--font-parent-body)',
+                        color: addType === opt.type ? '#FFFFFF' : '#7C7468',
+                        background: addType === opt.type ? '#7C9082' : 'rgba(138,128,120,0.08)',
+                        border: `1px solid ${addType === opt.type ? '#7C9082' : 'rgba(138,128,120,0.2)'}`,
                       }}
                     >
                       {RELATIONSHIP_EMOJI[opt.type]} {opt.label}
@@ -240,25 +264,34 @@ export default function PeoplePage() {
                   type="date"
                   value={addDob}
                   onChange={(e) => setAddDob(e.target.value)}
-                  className="w-full font-mono text-[11px] rounded px-3 py-2"
-                  style={{ border: '1px solid #E8E3DC', background: '#FAF8F5', color: '#6B6B6B' }}
+                  className="w-full text-[11px] rounded-2xl px-3 py-2"
+                  style={{
+                    fontFamily: 'var(--font-parent-body)',
+                    border: '1px solid rgba(138,128,120,0.2)',
+                    background: 'rgba(255,255,255,0.4)',
+                    color: '#7C7468',
+                  }}
                 />
 
                 <div className="flex gap-2 pt-1">
                   <button
                     onClick={() => setShowAdd(false)}
-                    className="flex-1 font-mono text-[10px] font-bold py-2 rounded"
-                    style={{ color: '#6B6B6B', border: '1px solid #E8E3DC' }}
+                    className="flex-1 text-[12px] font-medium py-2 rounded-full transition-all"
+                    style={{
+                      fontFamily: 'var(--font-parent-body)',
+                      color: '#7C7468',
+                      border: '1px solid rgba(138,128,120,0.2)',
+                    }}
                   >
-                    CANCEL
+                    Cancel
                   </button>
                   <button
                     onClick={handleAdd}
                     disabled={adding || !addName.trim()}
-                    className="flex-1 font-mono text-[10px] font-bold py-2 rounded text-white disabled:opacity-40"
-                    style={{ background: '#d97706' }}
+                    className="flex-1 text-[12px] font-medium py-2 rounded-full text-white disabled:opacity-40 transition-all"
+                    style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082' }}
                   >
-                    {adding ? '...' : 'ADD'}
+                    {adding ? '...' : 'Add'}
                   </button>
                 </div>
               </div>
@@ -273,30 +306,40 @@ export default function PeoplePage() {
             onClick={() => setConfirmDelete(null)}
           >
             <div
-              className="rounded-lg p-6 max-w-sm w-full"
-              style={{ background: '#FFFFFF', border: '2px solid #dc2626' }}
+              className="glass-card-strong rounded-2xl p-6 max-w-sm w-full"
+              style={{ border: '1px solid rgba(220,38,38,0.3)' }}
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="font-mono text-sm font-bold mb-2" style={{ color: '#dc2626' }}>
+              <h3
+                className="text-[22px] font-normal mb-2"
+                style={{ color: '#dc2626', fontFamily: 'var(--font-parent-display)' }}
+              >
                 Delete {confirmDelete.name}?
               </h3>
-              <p className="font-mono text-[11px] mb-4" style={{ color: '#6B6B6B' }}>
+              <p
+                className="text-[13px] mb-4"
+                style={{ color: '#7C7468', fontFamily: 'var(--font-parent-body)' }}
+              >
                 This will remove all their data permanently.
               </p>
               <div className="flex gap-2">
                 <button
                   onClick={() => setConfirmDelete(null)}
-                  className="flex-1 font-mono text-[10px] font-bold py-2 rounded"
-                  style={{ color: '#6B6B6B', border: '1px solid #E8E3DC' }}
+                  className="flex-1 text-[12px] font-medium py-2 rounded-full transition-all"
+                  style={{
+                    fontFamily: 'var(--font-parent-body)',
+                    color: '#7C7468',
+                    border: '1px solid rgba(138,128,120,0.2)',
+                  }}
                 >
-                  CANCEL
+                  Cancel
                 </button>
                 <button
                   onClick={() => handleDelete(confirmDelete)}
-                  className="flex-1 font-mono text-[10px] font-bold py-2 rounded text-white"
-                  style={{ background: '#dc2626' }}
+                  className="flex-1 text-[12px] font-medium py-2 rounded-full text-white transition-all"
+                  style={{ fontFamily: 'var(--font-parent-body)', background: '#dc2626' }}
                 >
-                  DELETE
+                  Delete
                 </button>
               </div>
             </div>
@@ -348,39 +391,54 @@ function PersonCard({
   // Next action
   const nextAction = summary?.journeySteps.find((s) => s.status === 'in-progress' || s.status === 'not-started');
 
+  // Qualitative band from score
+  const band = score ? scoreToBand(score.avgScore) : null;
+
   return (
     <Link
       href={href}
-      className="block rounded-lg transition-all hover:shadow-md group"
-      style={{ background: '#FFFFFF', border: '2px solid #E8E3DC' }}
+      className="block glass-card rounded-2xl transition-all hover:shadow-md group"
     >
       {/* Header band */}
       <div
         className="px-5 py-3 flex items-center justify-between"
-        style={{ background: '#FAF8F5', borderBottom: '1px solid #E8E3DC' }}
+        style={{ borderBottom: '1px solid rgba(138,128,120,0.1)' }}
       >
         <div className="flex items-center gap-2.5">
           <span className="text-2xl">{emoji}</span>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-[14px] font-bold" style={{ color: '#2C2C2C' }}>
+              <span
+                className="text-[22px] font-normal"
+                style={{ color: '#3A3530', fontFamily: 'var(--font-parent-display)' }}
+              >
                 {person.name}
               </span>
               {isSelf && (
                 <span
-                  className="font-mono text-[8px] font-bold tracking-wider px-1.5 py-0.5 rounded"
-                  style={{ color: '#d97706', background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.2)' }}
+                  className="text-[11px] font-medium px-2 py-0.5 rounded-full"
+                  style={{
+                    fontFamily: 'var(--font-parent-body)',
+                    color: '#7C9082',
+                    background: 'rgba(124,144,130,0.1)',
+                  }}
                 >
-                  YOU
+                  You
                 </span>
               )}
             </div>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className="font-mono text-[9px] capitalize" style={{ color: '#A3A3A3' }}>
+              <span
+                className="text-[11px] capitalize"
+                style={{ color: '#8A8078', fontFamily: 'var(--font-parent-body)' }}
+              >
                 {(person.relationshipType || 'other').replace('_', ' ')}
               </span>
               {age !== null && (
-                <span className="font-mono text-[9px]" style={{ color: '#A3A3A3' }}>
+                <span
+                  className="text-[11px]"
+                  style={{ color: '#8A8078', fontFamily: 'var(--font-parent-body)' }}
+                >
                   &middot; age {age}
                 </span>
               )}
@@ -388,26 +446,29 @@ function PersonCard({
           </div>
         </div>
 
-        {/* Score */}
-        {score ? (
-          <div className="text-center">
+        {/* Qualitative band instead of numeric score */}
+        {band ? (
+          <div className="text-right">
             <div
-              className="font-mono text-2xl font-bold leading-none"
-              style={{ color: scoreToColor(score.avgScore) }}
+              className="text-[13px] font-medium"
+              style={{ color: band.color, fontFamily: 'var(--font-parent-body)' }}
             >
-              {score.avgScore.toFixed(1)}
+              {band.label}
             </div>
-            <div className="font-mono text-[7px] tracking-wider mt-0.5" style={{ color: '#A3A3A3' }}>
-              {score.dimensionCount} DIMENSIONS
+            <div
+              className="text-[10px] font-semibold tracking-[0.12em] mt-0.5"
+              style={{ color: '#8A8078', fontFamily: 'var(--font-parent-body)' }}
+            >
+              {score!.dimensionCount} dimensions
             </div>
           </div>
         ) : (
-          <div className="text-center">
-            <div className="font-mono text-2xl font-bold leading-none" style={{ color: '#D4D4D4' }}>
-              —
-            </div>
-            <div className="font-mono text-[7px] tracking-wider mt-0.5" style={{ color: '#A3A3A3' }}>
-              NOT SCORED
+          <div className="text-right">
+            <div
+              className="text-[13px] font-medium"
+              style={{ color: '#8A8078', fontFamily: 'var(--font-parent-body)' }}
+            >
+              Not scored
             </div>
           </div>
         )}
@@ -417,8 +478,11 @@ function PersonCard({
       <div className="px-5 py-4 space-y-3">
         {/* Perspectives */}
         <div>
-          <div className="font-mono text-[8px] tracking-widest mb-1.5" style={{ color: '#A3A3A3' }}>
-            PERSPECTIVES
+          <div
+            className="text-[10px] font-semibold tracking-[0.12em] mb-1.5"
+            style={{ color: '#8A8078', fontFamily: 'var(--font-parent-body)' }}
+          >
+            Perspectives
           </div>
           <div className="flex items-center gap-3">
             <StatusChip
@@ -441,22 +505,28 @@ function PersonCard({
         {summary && (
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="font-mono text-[8px] tracking-widest" style={{ color: '#A3A3A3' }}>
-                JOURNEY
+              <span
+                className="text-[10px] font-semibold tracking-[0.12em]"
+                style={{ color: '#8A8078', fontFamily: 'var(--font-parent-body)' }}
+              >
+                Journey
               </span>
-              <span className="font-mono text-[10px] font-bold" style={{ color: '#6B6B6B' }}>
+              <span
+                className="text-[13px] font-medium"
+                style={{ color: '#5C5347', fontFamily: 'var(--font-parent-body)' }}
+              >
                 {progress}%
               </span>
             </div>
             <div
-              className="w-full h-2 rounded-full overflow-hidden"
-              style={{ background: '#F0EBE4' }}
+              className="w-full h-[2px] rounded-full overflow-hidden"
+              style={{ background: 'rgba(138,128,120,0.15)' }}
             >
               <div
                 className="h-full rounded-full transition-all"
                 style={{
                   width: `${progress}%`,
-                  background: progress >= 80 ? '#16a34a' : progress >= 40 ? '#d97706' : '#A3A3A3',
+                  background: '#7C9082',
                 }}
               />
             </div>
@@ -466,28 +536,42 @@ function PersonCard({
         {/* Next action or draft status */}
         {nextAction && (
           <div
-            className="rounded px-3 py-2"
+            className="rounded-2xl px-3 py-2"
             style={{
-              background: nextAction.status === 'in-progress' ? 'rgba(217,119,6,0.06)' : '#FAF8F5',
-              border: `1px solid ${nextAction.status === 'in-progress' ? 'rgba(217,119,6,0.15)' : '#E8E3DC'}`,
+              background: nextAction.status === 'in-progress' ? 'rgba(124,144,130,0.08)' : 'rgba(138,128,120,0.06)',
+              border: `1px solid ${nextAction.status === 'in-progress' ? 'rgba(124,144,130,0.2)' : 'rgba(138,128,120,0.12)'}`,
             }}
           >
             <div className="flex items-center justify-between">
               <div>
-                <span className="font-mono text-[9px] font-bold" style={{ color: '#2C2C2C' }}>
-                  {nextAction.status === 'in-progress' ? 'CONTINUE' : 'NEXT'}:
+                <span
+                  className="text-[11px] font-medium"
+                  style={{ color: '#3A3530', fontFamily: 'var(--font-parent-body)' }}
+                >
+                  {nextAction.status === 'in-progress' ? 'Continue' : 'Next'}:
                 </span>
-                <span className="font-mono text-[9px] ml-1" style={{ color: '#6B6B6B' }}>
+                <span
+                  className="text-[11px] ml-1"
+                  style={{ color: '#5C5347', fontFamily: 'var(--font-parent-body)' }}
+                >
                   {nextAction.label}
                 </span>
               </div>
-              <span className="font-mono text-[9px]" style={{ color: '#d97706' }}>&rarr;</span>
+              <span
+                className="text-[11px]"
+                style={{ color: '#7C9082' }}
+              >
+                &rarr;
+              </span>
             </div>
           </div>
         )}
 
         {draftCount > 0 && !nextAction && (
-          <span className="font-mono text-[9px]" style={{ color: '#d97706' }}>
+          <span
+            className="text-[11px]"
+            style={{ color: '#7C9082', fontFamily: 'var(--font-parent-body)' }}
+          >
             {draftCount} draft{draftCount !== 1 ? 's' : ''} in progress
           </span>
         )}
@@ -495,16 +579,22 @@ function PersonCard({
         {/* Workbook chapters */}
         {workbookChapters && workbookChapters.length > 0 && (
           <div
-            className="rounded px-3 py-2"
+            className="rounded-2xl px-3 py-2"
             style={{
-              background: 'rgba(216,90,48,0.05)',
-              border: '1px solid rgba(216,90,48,0.15)',
+              background: 'rgba(124,144,130,0.06)',
+              border: '1px solid rgba(124,144,130,0.15)',
             }}
           >
-            <span className="font-mono text-[8px] tracking-widest" style={{ color: '#D85A30' }}>
-              WORKING ON
+            <span
+              className="text-[10px] font-semibold tracking-[0.12em]"
+              style={{ color: '#7C9082', fontFamily: 'var(--font-parent-body)' }}
+            >
+              Working on
             </span>
-            <span className="font-mono text-[9px] ml-1.5" style={{ color: '#6B6B6B' }}>
+            <span
+              className="text-[11px] ml-1.5"
+              style={{ color: '#5C5347', fontFamily: 'var(--font-parent-body)' }}
+            >
               {workbookChapters
                 .map(ch => getDimension(ch.dimensionId)?.name || ch.dimensionId)
                 .join(', ')}
@@ -512,8 +602,8 @@ function PersonCard({
             <Link
               href="/workbook"
               onClick={(e) => e.stopPropagation()}
-              className="font-mono text-[9px] ml-1.5 hover:opacity-70"
-              style={{ color: '#D85A30' }}
+              className="text-[11px] ml-1.5 hover:opacity-70"
+              style={{ color: '#7C9082', fontFamily: 'var(--font-parent-body)' }}
             >
               &rarr;
             </Link>
@@ -525,7 +615,7 @@ function PersonCard({
       {onDelete && (
         <div
           className="px-5 py-2 text-right opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ borderTop: '1px solid #F0EBE4' }}
+          style={{ borderTop: '1px solid rgba(138,128,120,0.1)' }}
         >
           <button
             onClick={(e) => {
@@ -533,10 +623,10 @@ function PersonCard({
               e.stopPropagation();
               onDelete();
             }}
-            className="font-mono text-[9px] px-2 py-1 rounded transition-all hover:bg-red-50"
-            style={{ color: '#dc2626' }}
+            className="text-[11px] px-2 py-1 rounded-full transition-all hover:bg-red-50"
+            style={{ color: '#dc2626', fontFamily: 'var(--font-parent-body)' }}
           >
-            DELETE
+            Delete
           </button>
         </div>
       )}
@@ -548,8 +638,12 @@ function StatusChip({ label, done, draft }: { label: string; done: boolean; draf
   if (done) {
     return (
       <span
-        className="font-mono text-[9px] font-bold px-2 py-1 rounded"
-        style={{ color: '#16a34a', background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.2)' }}
+        className="text-[11px] font-medium px-2.5 py-1 rounded-full"
+        style={{
+          fontFamily: 'var(--font-parent-body)',
+          color: '#7C9082',
+          background: 'rgba(124,144,130,0.1)',
+        }}
       >
         {label} ✓
       </span>
@@ -558,8 +652,12 @@ function StatusChip({ label, done, draft }: { label: string; done: boolean; draf
   if (draft) {
     return (
       <span
-        className="font-mono text-[9px] font-bold px-2 py-1 rounded"
-        style={{ color: '#d97706', background: 'rgba(217,119,6,0.06)', border: '1px solid rgba(217,119,6,0.15)' }}
+        className="text-[11px] font-medium px-2.5 py-1 rounded-full"
+        style={{
+          fontFamily: 'var(--font-parent-body)',
+          color: '#8A8078',
+          background: 'rgba(138,128,120,0.08)',
+        }}
       >
         {label}...
       </span>
@@ -567,8 +665,13 @@ function StatusChip({ label, done, draft }: { label: string; done: boolean; draf
   }
   return (
     <span
-      className="font-mono text-[9px] px-2 py-1 rounded"
-      style={{ color: '#A3A3A3', background: 'rgba(44,44,44,0.03)', border: '1px solid #E8E3DC' }}
+      className="text-[11px] px-2.5 py-1 rounded-full"
+      style={{
+        fontFamily: 'var(--font-parent-body)',
+        color: '#8A8078',
+        background: 'rgba(138,128,120,0.05)',
+        border: '1px solid rgba(138,128,120,0.15)',
+      }}
     >
       {label}
     </span>

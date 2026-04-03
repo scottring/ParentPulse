@@ -81,7 +81,8 @@ export default function QuestionDisplay({
             value={localValue}
             onChange={(e) => setLocalValue(e.target.value)}
             placeholder={question.placeholder ? replacePlaceholder(question.placeholder) : ''}
-            className="w-full text-2xl px-4 py-3 border-b-4 border-gray-300 focus:border-blue-600 outline-none bg-transparent transition-colors"
+            className="w-full text-2xl px-4 py-3 outline-none bg-transparent transition-colors"
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#3A3530', borderBottom: '2px solid rgba(124,144,130,0.3)' }}
           />
         );
 
@@ -93,7 +94,8 @@ export default function QuestionDisplay({
             onChange={(e) => setLocalValue(e.target.value)}
             placeholder={question.placeholder ? replacePlaceholder(question.placeholder) : ''}
             rows={6}
-            className="w-full text-xl px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-600 outline-none resize-none transition-colors"
+            className="w-full text-xl px-4 py-3 rounded-lg outline-none resize-none transition-colors"
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#3A3530', border: '1px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.3)' }}
           />
         );
 
@@ -105,18 +107,21 @@ export default function QuestionDisplay({
                 <button
                   key={value}
                   onClick={() => setLocalValue(value)}
-                  className={`flex-1 py-4 text-2xl font-bold rounded-lg border-2 transition-all ${
-                    localValue === value
-                      ? 'bg-blue-600 text-white border-blue-600 scale-105'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
-                  }`}
+                  className="flex-1 py-4 text-2xl font-bold rounded-xl transition-all"
+                  style={{
+                    fontFamily: 'var(--font-parent-body)',
+                    backgroundColor: localValue === value ? '#7C9082' : 'rgba(255,255,255,0.3)',
+                    color: localValue === value ? 'white' : '#5C5347',
+                    border: localValue === value ? '2px solid #7C9082' : '1px solid rgba(255,255,255,0.4)',
+                    transform: localValue === value ? 'scale(1.05)' : undefined,
+                  }}
                 >
                   {value}
                 </button>
               ))}
             </div>
             {question.scaleLabels && (
-              <div className="flex justify-between text-sm text-gray-600">
+              <div className="flex justify-between text-sm" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>
                 <span>{question.scaleLabels.min}</span>
                 <span>{question.scaleLabels.max}</span>
               </div>
@@ -131,11 +136,13 @@ export default function QuestionDisplay({
               <button
                 key={option.value}
                 onClick={() => setLocalValue(option.value)}
-                className={`w-full text-left px-6 py-4 text-lg rounded-lg border-2 transition-all ${
-                  localValue === option.value
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
-                }`}
+                className="w-full text-left px-6 py-4 text-lg rounded-xl transition-all"
+                style={{
+                  fontFamily: 'var(--font-parent-body)',
+                  backgroundColor: localValue === option.value ? '#7C9082' : 'rgba(255,255,255,0.3)',
+                  color: localValue === option.value ? 'white' : '#5C5347',
+                  border: localValue === option.value ? '2px solid #7C9082' : '1px solid rgba(255,255,255,0.4)',
+                }}
               >
                 {option.label}
               </button>
@@ -159,11 +166,13 @@ export default function QuestionDisplay({
                       setLocalValue([...selectedValues, option.value]);
                     }
                   }}
-                  className={`w-full text-left px-6 py-4 text-lg rounded-lg border-2 transition-all ${
-                    isSelected
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
-                  }`}
+                  className="w-full text-left px-6 py-4 text-lg rounded-xl transition-all"
+                  style={{
+                    fontFamily: 'var(--font-parent-body)',
+                    backgroundColor: isSelected ? '#7C9082' : 'rgba(255,255,255,0.3)',
+                    color: isSelected ? 'white' : '#5C5347',
+                    border: isSelected ? '2px solid #7C9082' : '1px solid rgba(255,255,255,0.4)',
+                  }}
                 >
                   <span className="inline-block w-6 mr-3">
                     {isSelected ? '✓' : ''}
@@ -181,21 +190,21 @@ export default function QuestionDisplay({
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl p-8">
+    <div className="glass-card-strong rounded-2xl p-8" style={{ border: '1px solid rgba(255,255,255,0.4)' }}>
       {/* Section description */}
-      <p className="text-sm font-medium text-blue-600 mb-4">
+      <p className="text-sm font-medium mb-4" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C9082' }}>
         {sectionDescription}
       </p>
 
       {/* Question text */}
-      <h2 className="text-4xl font-bold text-gray-900 mb-8">
+      <h2 className="mb-8" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '32px', fontWeight: 600, color: '#3A3530' }}>
         {replacePlaceholder(question.text)}
-        {question.required && <span className="text-red-500 ml-2">*</span>}
+        {question.required && <span className="ml-2" style={{ color: '#c87a6a' }}>*</span>}
       </h2>
 
       {/* Help text */}
       {question.helpText && (
-        <p className="text-gray-600 mb-6">
+        <p className="mb-6" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>
           {replacePlaceholder(question.helpText)}
         </p>
       )}
@@ -210,20 +219,26 @@ export default function QuestionDisplay({
         <button
           onClick={onBack}
           disabled={!canGoBack}
-          className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-            canGoBack
-              ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-          }`}
+          className="px-6 py-3 rounded-full font-medium transition-colors"
+          style={{
+            fontFamily: 'var(--font-parent-body)',
+            fontSize: '12px',
+            fontWeight: 500,
+            backgroundColor: canGoBack ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)',
+            color: canGoBack ? '#5C5347' : '#8A8078',
+            border: '1px solid rgba(255,255,255,0.4)',
+            cursor: canGoBack ? 'pointer' : 'not-allowed',
+          }}
         >
-          ← Back
+          &larr; Back
         </button>
 
         <div className="flex gap-4">
           {!question.required && (
             <button
               onClick={handleSkipClick}
-              className="px-6 py-3 rounded-lg font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
+              className="px-6 py-3 rounded-full font-medium transition-colors"
+              style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: '#5C5347', background: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.4)' }}
             >
               Skip
             </button>
@@ -231,13 +246,17 @@ export default function QuestionDisplay({
           <button
             onClick={handleContinue}
             disabled={question.required && !localValue}
-            className={`px-8 py-3 rounded-lg font-medium transition-colors ${
-              question.required && !localValue
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            }`}
+            className="px-8 py-3 rounded-full font-medium transition-colors"
+            style={{
+              fontFamily: 'var(--font-parent-body)',
+              fontSize: '12px',
+              fontWeight: 500,
+              backgroundColor: (question.required && !localValue) ? 'rgba(124,144,130,0.3)' : '#7C9082',
+              color: 'white',
+              cursor: (question.required && !localValue) ? 'not-allowed' : 'pointer',
+            }}
           >
-            Continue →
+            Continue &rarr;
           </button>
         </div>
       </div>

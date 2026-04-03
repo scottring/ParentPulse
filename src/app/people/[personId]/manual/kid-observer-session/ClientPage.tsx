@@ -245,22 +245,23 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
   // Loading
   if (authLoading || subjectLoading || peopleLoading || manualLoading || !draftLoaded) {
     return (
-      <div className="min-h-screen bg-purple-50 flex items-center justify-center">
-        <div className="animate-spin w-12 h-12 border-4 border-purple-400 border-t-transparent rounded-full" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-12 h-12 rounded-full" style={{ border: '3px solid #7C9082', borderTopColor: 'transparent' }} />
       </div>
     );
   }
 
   if (!user || !subject || !manual || !observerPerson) {
     return (
-      <div className="min-h-screen bg-purple-50 flex items-center justify-center p-6">
+      <div className="min-h-screen flex items-center justify-center p-6">
         <div className="text-center space-y-4">
-          <p className="text-xl text-slate-600">Something went wrong. Ask a grown-up for help.</p>
+          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '18px', color: '#5C5347' }}>Something went wrong. Ask a grown-up for help.</p>
           <button
             onClick={() => router.push(`/people/${personId}/manual`)}
-            className="px-6 py-3 bg-slate-800 text-white font-mono text-sm font-bold"
+            className="px-6 py-3 rounded-full text-white text-sm"
+            style={{ fontFamily: 'var(--font-parent-body)', fontWeight: 500, backgroundColor: '#7C9082' }}
           >
-            GO BACK
+            Go Back
           </button>
         </div>
       </div>
@@ -270,11 +271,11 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
   // Completion screen
   if (isComplete) {
     return (
-      <div className="min-h-screen bg-green-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="text-6xl">&#127881;</div>
-          <h2 className="text-3xl font-bold text-green-800">Great job, {observerPerson.name}!</h2>
-          <p className="text-lg text-green-700">
+          <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '28px', fontWeight: 700, color: '#3A3530' }}>Great job, {observerPerson.name}!</h2>
+          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '18px', color: '#5C5347' }}>
             Thanks for telling us about {subject.name}! Your answers have been saved.
           </p>
         </div>
@@ -285,32 +286,33 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
   // Start screen (parent-facing)
   if (!started) {
     return (
-      <div className="min-h-screen bg-purple-50 flex items-center justify-center p-6">
+      <div className="min-h-screen flex items-center justify-center p-6">
         <div className="max-w-lg text-center space-y-6">
           <div className="text-6xl">&#128172;</div>
-          <h1 className="text-2xl font-bold text-slate-800">
+          <h1 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '24px', fontWeight: 700, color: '#3A3530' }}>
             {isRevising
               ? `${observerPerson.name} Wants to Revise Answers About ${subject.name}`
               : `${observerPerson.name}'s Turn to Talk About ${subject.name}`}
           </h1>
-          <p className="text-slate-600">
+          <p style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}>
             {isRevising
               ? `${observerPerson.name}'s previous answers are loaded. Go through and change anything that needs updating — the old answers will be saved in history.`
               : `Sit with ${observerPerson.name} and let them answer questions about ${subject.name}. Read the questions aloud if needed. There are ${totalQuestions} questions across ${sections.length} sections — it takes about 10 minutes.`}
           </p>
-          <p className="text-sm text-slate-500">
+          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468' }}>
             Answers save automatically. You can stop anytime and come back later.
           </p>
           <button
             onClick={() => setStarted(true)}
-            className="px-8 py-4 bg-purple-600 text-white text-xl font-bold rounded-2xl hover:bg-purple-700 transition-all shadow-lg"
+            className="px-8 py-4 text-white text-xl font-bold rounded-full hover:opacity-90 transition-all shadow-lg"
+            style={{ fontFamily: 'var(--font-parent-body)', backgroundColor: '#7C9082' }}
           >
             Let&apos;s Go!
           </button>
           <div>
             <button
               onClick={() => router.push(`/people/${personId}/manual`)}
-              className="text-sm text-slate-400 hover:text-slate-600"
+              style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#8A8078' }}
             >
               Not now
             </button>
@@ -327,27 +329,27 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
   const currentAnswer = answers[currentSection.id]?.[currentQuestion.id];
 
   return (
-    <div className="min-h-screen bg-purple-50">
+    <div className="min-h-screen">
       {/* Minimal header */}
-      <div className="flex items-center justify-between px-6 py-3 bg-white border-b-2 border-purple-200">
+      <div className="flex items-center justify-between px-6 py-3 glass-card" style={{ border: '1px solid rgba(255,255,255,0.4)', borderRadius: 0 }}>
         <button
           onClick={handleSaveAndExit}
-          className="text-slate-400 hover:text-slate-600 text-2xl"
+          className="text-2xl" style={{ color: '#8A8078' }}
         >
           &times;
         </button>
         <div className="text-center">
-          <span className="text-sm font-bold text-purple-600">
+          <span className="text-sm font-bold" style={{ fontFamily: 'var(--font-parent-display)', color: '#7C9082' }}>
             {observerPerson.name} on {subject.name}
           </span>
-          <div className="w-32 h-2 bg-purple-100 mt-1 mx-auto rounded-full">
+          <div className="w-32 h-2 mt-1 mx-auto rounded-full" style={{ backgroundColor: 'rgba(124,144,130,0.15)' }}>
             <div
-              className="h-full bg-purple-500 rounded-full transition-all"
-              style={{ width: `${(currentQuestionNumber / totalQuestions) * 100}%` }}
+              className="h-full rounded-full transition-all"
+              style={{ width: `${(currentQuestionNumber / totalQuestions) * 100}%`, backgroundColor: '#7C9082' }}
             />
           </div>
         </div>
-        <span className="text-sm text-slate-400">
+        <span className="text-sm" style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}>
           {currentQuestionNumber}/{totalQuestions}
         </span>
       </div>

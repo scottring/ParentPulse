@@ -18,7 +18,6 @@ export default function JourneyPath({ currentStage }: JourneyPathProps) {
         const display = getStageDisplay(stage);
         const isCompleted = i < currentIndex;
         const isCurrent = i === currentIndex;
-        const isLocked = i > currentIndex;
 
         return (
           <div key={stage} className="flex items-center">
@@ -42,11 +41,12 @@ export default function JourneyPath({ currentStage }: JourneyPathProps) {
                   boxShadow: isCurrent ? `0 0 12px ${display.color}30` : 'none',
                 }}
               >
-                {isCompleted ? '✓' : display.emoji}
+                {isCompleted ? '\u2713' : display.emoji}
               </div>
               <span
-                className="font-mono text-[7px] font-bold tracking-widest mt-1.5"
+                className="text-[7px] font-medium tracking-widest mt-1.5"
                 style={{
+                  fontFamily: 'var(--font-parent-body)',
                   color: isCurrent
                     ? display.color
                     : isCompleted
