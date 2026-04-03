@@ -145,9 +145,20 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                 </span>
               </div>
               {hasSelfPerspective ? (
-                <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#16a34a' }}>
-                  {selfContributions.length} Contribution{selfContributions.length !== 1 ? 's' : ''}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#16a34a' }}>
+                    {selfContributions.length} Contribution{selfContributions.length !== 1 ? 's' : ''}
+                  </span>
+                  {(isSelf || selfContributions.some(c => c.contributorId === user.userId)) && (
+                    <Link
+                      href={`/people/${personId}/manual/self-onboard`}
+                      style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: '#7C9082' }}
+                      className="hover:opacity-70 transition-opacity"
+                    >
+                      Revise &rarr;
+                    </Link>
+                  )}
+                </div>
               ) : isSelf ? (
                 <Link
                   href={`/people/${personId}/manual/self-onboard`}
@@ -208,7 +219,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                     style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: '#7C9082' }}
                     className="hover:opacity-70 transition-opacity"
                   >
-                    {hasObserverPerspective ? 'Add more' : 'Add your observations'} &rarr;
+                    {observerContributions.some(c => c.contributorId === user.userId) ? 'Revise' : hasObserverPerspective ? 'Add more' : 'Add your observations'} &rarr;
                   </Link>
                 )}
               </div>
