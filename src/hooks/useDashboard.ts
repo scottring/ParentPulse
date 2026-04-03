@@ -198,11 +198,34 @@ export function useDashboard(): DashboardData {
     ? people.filter((p) => !allCurrentUserPersonIds.has(p.personId))
     : [];
 
+  // Build equivalence map: for each Person, find all Person IDs that represent
+  // the same real person (e.g. Iris's self Person + Iris's spouse Person).
+  // Two People are equivalent if they share a linkedUserId, or if one is 'self'
+  // and another is 'spouse' with a matching first name.
+  const equivalentIds = (personId: string): string[] => {
+    const person = people.find((p) => p.personId === personId);
+    if (!person) return [personId];
+    const ids = new Set([personId]);
+    const firstName = person.name.toLowerCase().trim().split(' ')[0];
+    for (const p of people) {
+      if (p.personId === personId) continue;
+      // Same linkedUserId
+      if (person.linkedUserId && p.linkedUserId === person.linkedUserId) { ids.add(p.personId); continue; }
+      // Name match between self and spouse
+      if ((person.relationshipType === 'self' && p.relationshipType === 'spouse') ||
+          (person.relationshipType === 'spouse' && p.relationshipType === 'self')) {
+        if (p.name.toLowerCase().trim().split(' ')[0] === firstName) ids.add(p.personId);
+      }
+    }
+    return [...ids];
+  };
+
   // People who need observer contributions from the current user
   const peopleNeedingContributions = otherPeople.filter((p) => {
+    const allIds = equivalentIds(p.personId);
     return !contributions.some(
       (c) => c.contributorId === userId &&
-             c.personId === p.personId &&
+             allIds.includes(c.personId) &&
              c.perspectiveType === 'observer' &&
              c.status === 'complete',
     );
@@ -277,18 +300,20 @@ export function useDashboard(): DashboardData {
         return false;
       });
 
+      const otherEquivIds = equivalentIds(other.personId);
+
       // Get narrative: prefer AI-generated pair narrative from assessment, fall back to synthesis
       const pairNarrative = pairAssessments.find((a) =>
         (a as DimensionAssessment & { narrative?: string }).narrative,
       );
-      const otherManual = manuals.find((m) => m.personId === other.personId);
+      const otherManual = manuals.find((m) => otherEquivIds.includes(m.personId));
       const narrative = (pairNarrative as DimensionAssessment & { narrative?: string })?.narrative
         || otherManual?.synthesizedContent?.overview
         || null;
 
       const hasObserverContribution = contributions.some(
         (c) => c.contributorId === userId &&
-               c.personId === other.personId &&
+               otherEquivIds.includes(c.personId) &&
                c.perspectiveType === 'observer' &&
                c.status === 'complete',
       );
