@@ -38,6 +38,7 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
   const [draftId, setDraftId] = useState<string | null>(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved' | 'error'>('saved');
+  const [previousAnswers, setPreviousAnswers] = useState<Record<string, any> | null>(null);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   // Refs to always have latest values for saves (avoids stale closures)
@@ -95,7 +96,11 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
       if (!snap.empty) {
         const existing = snap.docs[0];
         const data = existing.data();
-        if (data.answers) setAnswers(data.answers);
+        if (data.answers) {
+          setAnswers(data.answers);
+          // Snapshot current answers for revision history
+          setPreviousAnswers(JSON.parse(JSON.stringify(data.answers)));
+        }
         // Set draftId to the existing contribution so updates go there
         setDraftId(existing.id);
       }
@@ -220,7 +225,7 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
       // Always save latest answers before completing
       const id = await saveNow();
       if (!id) throw new Error('Save failed before completion');
-      await completeDraft(id, manual.manualId);
+      await completeDraft(id, manual.manualId, previousAnswers ?? undefined);
       setIsComplete(true);
 
       // Trigger dimension assessment scoring in the background

@@ -65,6 +65,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   const [draftId, setDraftId] = useState<string | null>(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved' | 'error'>('saved');
+  const [previousAnswers, setPreviousAnswers] = useState<Record<string, any> | null>(null);
 
   // --- Document upload state ---
   const [mode, setMode] = useState<PageMode>('choose');
@@ -131,7 +132,11 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
       if (!snap.empty) {
         const existing = snap.docs[0];
         const data = existing.data();
-        if (data.answers) setAnswers(data.answers);
+        if (data.answers) {
+          setAnswers(data.answers);
+          // Snapshot current answers for revision history
+          setPreviousAnswers(JSON.parse(JSON.stringify(data.answers)));
+        }
         if (data.answerVisibility) setAnswerVisibility(data.answerVisibility);
         setDraftId(existing.id);
         setMode('questionnaire');
@@ -271,7 +276,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
     try {
       const id = await saveNow();
       if (!id) throw new Error('Save failed before completion');
-      await completeDraft(id, manual.manualId);
+      await completeDraft(id, manual.manualId, previousAnswers ?? undefined);
       setIsComplete(true);
 
       // Trigger dimension assessment scoring in the background

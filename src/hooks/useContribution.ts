@@ -21,6 +21,7 @@ import {
   addDoc,
   updateDoc,
   setDoc,
+  getDoc,
   query,
   where,
   getDocs,
@@ -70,8 +71,8 @@ interface UseContributionReturn {
     contributorName?: string; // Override contributor name (e.g., kid's name for kid-observer)
   }) => Promise<string>;
 
-  /** Complete a draft — mark as 'complete' and link to manual. */
-  completeDraft: (contributionId: string, manualId: string) => Promise<void>;
+  /** Complete a draft — mark as 'complete' and link to manual. Snapshots previous answers into revisionHistory if this is a revision. */
+  completeDraft: (contributionId: string, manualId: string, previousAnswers?: Record<string, any>) => Promise<void>;
 
   /** Find an existing draft for the current user on a given manual+perspective. */
   findDraft: (
@@ -296,21 +297,44 @@ export function useContribution(manualId?: string): UseContributionReturn {
   );
 
   const completeDraft = useCallback(
-    async (contributionId: string, mid: string) => {
+    async (contributionId: string, mid: string, previousAnswers?: Record<string, any>) => {
       if (!user) throw new Error('Not authenticated');
 
-      // Mark as complete — strip AI provenance but keep visibility
       const docRef = doc(
         firestore,
         PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS,
         contributionId
       );
-      await updateDoc(docRef, {
+
+      // If previousAnswers were passed (revision flow), snapshot them into history.
+      // Otherwise, check if this contribution was previously completed — if so, read
+      // its current answers and snapshot them before overwriting.
+      const answersToSnapshot = previousAnswers || await (async () => {
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.status === 'complete' && data.answers && Object.keys(data.answers).length > 0) {
+            return data.answers;
+          }
+        }
+        return null;
+      })();
+
+      const updates: Record<string, any> = {
         status: 'complete',
         draftProgress: null,
         aiGeneratedFields: null,
         updatedAt: Timestamp.now(),
-      });
+      };
+
+      if (answersToSnapshot) {
+        updates.revisionHistory = arrayUnion({
+          answers: stripUndefined(answersToSnapshot),
+          revisedAt: Timestamp.now(),
+        });
+      }
+
+      await updateDoc(docRef, updates);
 
       // Link to manual
       const contrib = contributions.find((c) => c.contributionId === contributionId);
