@@ -603,6 +603,22 @@ service cloud.firestore {
       // Cloud Functions create via admin SDK (processAcuteEvent)
     }
 
+    // Manual chat sessions (AI chat about a person's manual)
+    match /manual_chat_sessions/{sessionId} {
+      allow read: if belongsToFamily(resource.data.familyId);
+      allow create: if isSignedIn() && belongsToFamily(request.resource.data.familyId);
+      allow update: if belongsToFamily(resource.data.familyId);
+      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
+    // Workbook chapters (growth workbook chapters per dimension)
+    match /workbook_chapters/{chapterId} {
+      allow read: if belongsToFamily(resource.data.familyId);
+      allow create: if isSignedIn() && belongsToFamily(request.resource.data.familyId);
+      allow update: if belongsToFamily(resource.data.familyId);
+      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
     // ==================== Dual Workbook System ====================
 
     // Parent Workbooks

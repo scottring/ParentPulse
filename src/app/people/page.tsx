@@ -95,7 +95,43 @@ export default function PeoplePage() {
   }
 
   const selfPerson = people.find((p) => p.linkedUserId === user.userId);
-  const otherPeople = people.filter((p) => p.personId !== selfPerson?.personId);
+
+  // Deduplicate equivalent persons (e.g. Iris's self Person + Iris's spouse Person).
+  // Prefer the relationship-typed record (spouse/child/etc.) over another user's 'self' record
+  // since it carries the name the current user chose.
+  const otherPeople = useMemo(() => {
+    const candidates = people.filter((p) => p.personId !== selfPerson?.personId);
+    const seen = new Set<string>();
+    const result: Person[] = [];
+
+    // Sort so relationship-typed records come before 'self' records from other users
+    const sorted = [...candidates].sort((a, b) => {
+      const aIsSelf = a.relationshipType === 'self' ? 1 : 0;
+      const bIsSelf = b.relationshipType === 'self' ? 1 : 0;
+      return aIsSelf - bIsSelf;
+    });
+
+    for (const p of sorted) {
+      // Check if an equivalent person was already added
+      const isEquiv = sorted.some(
+        (other) =>
+          other.personId !== p.personId &&
+          seen.has(other.personId) &&
+          (
+            // Same linkedUserId
+            (p.linkedUserId && other.linkedUserId === p.linkedUserId) ||
+            // Name match between self and spouse
+            ((p.relationshipType === 'self' && other.relationshipType === 'spouse') ||
+             (p.relationshipType === 'spouse' && other.relationshipType === 'self')) &&
+            p.name.toLowerCase().trim().split(' ')[0] === other.name.toLowerCase().trim().split(' ')[0]
+          ),
+      );
+      if (isEquiv) continue;
+      seen.add(p.personId);
+      result.push(p);
+    }
+    return result;
+  }, [people, selfPerson]);
 
   const handleAdd = async () => {
     if (!addName.trim()) return;

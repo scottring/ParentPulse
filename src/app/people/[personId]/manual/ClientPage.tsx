@@ -78,8 +78,37 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
     );
   }
 
-  const selfContributions = contributions.filter((c) => c.perspectiveType === 'self');
-  const observerContributions = contributions.filter((c) => c.perspectiveType === 'observer');
+  // Deduplicate contributions: for each contributor+relationship, keep only the latest
+  // complete contribution and (separately) any in-progress draft.
+  const dedup = (list: Contribution[]): Contribution[] => {
+    const byKey = new Map<string, { complete: Contribution | null; draft: Contribution | null }>();
+    for (const c of list) {
+      const key = `${c.contributorId || c.contributorName}::${c.relationshipToSubject}`;
+      const entry = byKey.get(key) || { complete: null, draft: null };
+      if (c.status === 'draft') {
+        if (!entry.draft || (c.updatedAt?.toMillis?.() ?? 0) > (entry.draft.updatedAt?.toMillis?.() ?? 0)) {
+          entry.draft = c;
+        }
+      } else {
+        if (!entry.complete || (c.updatedAt?.toMillis?.() ?? 0) > (entry.complete.updatedAt?.toMillis?.() ?? 0)) {
+          entry.complete = c;
+        }
+      }
+      byKey.set(key, entry);
+    }
+    const result: Contribution[] = [];
+    for (const { complete, draft } of byKey.values()) {
+      if (complete) result.push(complete);
+      // Only show the draft if it's newer than the latest complete (i.e. a revision in progress)
+      if (draft && (!complete || (draft.updatedAt?.toMillis?.() ?? 0) > (complete.updatedAt?.toMillis?.() ?? 0))) {
+        result.push(draft);
+      }
+    }
+    return result;
+  };
+
+  const selfContributions = dedup(contributions.filter((c) => c.perspectiveType === 'self'));
+  const observerContributions = dedup(contributions.filter((c) => c.perspectiveType === 'observer'));
   const isSelf = person.linkedUserId === user.userId;
   const hasSelfPerspective = selfContributions.length > 0;
   const hasObserverPerspective = observerContributions.length > 0;

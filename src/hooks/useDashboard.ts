@@ -253,8 +253,22 @@ export function useDashboard(): DashboardData {
 
     const selfPersonId = selfPerson.personId;
     const result: UserRole[] = [];
+    const processedPersonIds = new Set<string>();
 
-    for (const other of otherPeople) {
+    // Sort so relationship-typed records (spouse, child, etc.) come before
+    // another user's 'self' Person — ensures we display the name the current
+    // user chose (e.g. "Iris Leviner") rather than the other user's self name.
+    const sortedOtherPeople = [...otherPeople].sort((a, b) => {
+      const aIsSelf = a.relationshipType === 'self' ? 1 : 0;
+      const bIsSelf = b.relationshipType === 'self' ? 1 : 0;
+      return aIsSelf - bIsSelf;
+    });
+
+    for (const other of sortedOtherPeople) {
+      // Deduplicate equivalent persons (e.g. Iris's spouse Person + Iris's self Person)
+      const equivIds = equivalentIds(other.personId);
+      if (equivIds.some((id) => processedPersonIds.has(id))) continue;
+      equivIds.forEach((id) => processedPersonIds.add(id));
       let roleLabel: string;
       let domain: DimensionDomain;
 
@@ -281,26 +295,28 @@ export function useDashboard(): DashboardData {
         continue;
       }
 
+      const otherEquivIds = equivalentIds(other.personId);
+      const otherIdSet = new Set(otherEquivIds);
+
       // Match assessments using any of the current user's Person IDs
+      // and any equivalent ID for the other person
       const pairAssessments = assessments.filter((a) =>
         a.domain === domain &&
         a.participantIds.some((id: string) => allCurrentUserPersonIds.has(id)) &&
-        a.participantIds.includes(other.personId),
+        a.participantIds.some((id: string) => otherIdSet.has(id)),
       );
 
       const pairArc = arcs.find((arc) =>
         arc.domain === domain &&
         arc.participantIds.some((id: string) => allCurrentUserPersonIds.has(id)) &&
-        arc.participantIds.includes(other.personId),
+        arc.participantIds.some((id: string) => otherIdSet.has(id)),
       ) || null;
 
       const pairItems = growthItems.filter((item) => {
         if (item.arcId && pairArc && item.arcId === pairArc.arcId) return true;
-        if (item.targetPersonIds?.includes(other.personId)) return true;
+        if (item.targetPersonIds?.some((id: string) => otherIdSet.has(id))) return true;
         return false;
       });
-
-      const otherEquivIds = equivalentIds(other.personId);
 
       // Get narrative: prefer AI-generated pair narrative from assessment, fall back to synthesis
       const pairNarrative = pairAssessments.find((a) =>
