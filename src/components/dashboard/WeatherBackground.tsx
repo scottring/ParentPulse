@@ -3,6 +3,18 @@
 import { useMemo } from 'react';
 import type { ClimateState } from '@/lib/climate-engine';
 
+// Pre-computed sun ray coordinates to avoid hydration mismatches
+const SUN_RAYS = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle) => {
+  const rad = (angle * Math.PI) / 180;
+  return {
+    angle,
+    x1: Math.round((60 + Math.cos(rad) * 35) * 100) / 100,
+    y1: Math.round((60 + Math.sin(rad) * 35) * 100) / 100,
+    x2: Math.round((60 + Math.cos(rad) * 52) * 100) / 100,
+    y2: Math.round((60 + Math.sin(rad) * 52) * 100) / 100,
+  };
+});
+
 interface WeatherBackgroundProps {
   climate: ClimateState;
   children: React.ReactNode;
@@ -114,6 +126,7 @@ export default function WeatherBackground({ climate, children }: WeatherBackgrou
     <div
       className="fixed inset-0 overflow-hidden transition-all duration-[2000ms] ease-in-out"
       style={{ background: config.sky }}
+      suppressHydrationWarning
     >
       {/* Sun */}
       {config.sunOpacity > 0 && (
@@ -138,22 +151,15 @@ export default function WeatherBackground({ climate, children }: WeatherBackgrou
           />
           {/* Sun rays */}
           <svg viewBox="0 0 120 120" className="absolute inset-0 w-full h-full animate-sun-rotate">
-            {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle) => {
-              const rad = (angle * Math.PI) / 180;
-              const x1 = 60 + Math.cos(rad) * 35;
-              const y1 = 60 + Math.sin(rad) * 35;
-              const x2 = 60 + Math.cos(rad) * 52;
-              const y2 = 60 + Math.sin(rad) * 52;
-              return (
-                <line
-                  key={angle}
-                  x1={x1} y1={y1} x2={x2} y2={y2}
-                  stroke="rgba(255,190,60,0.5)"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              );
-            })}
+            {SUN_RAYS.map((ray) => (
+              <line
+                key={ray.angle}
+                x1={ray.x1} y1={ray.y1} x2={ray.x2} y2={ray.y2}
+                stroke="rgba(255,190,60,0.5)"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            ))}
           </svg>
           {/* Sun body */}
           <div
