@@ -177,8 +177,24 @@ export function useDashboard(): DashboardData {
   const spouse = people.find((p) => p.relationshipType === 'spouse') || null;
 
   // Other people (non-self)
+  // Exclude the user's own self Person AND any Person that represents the
+  // current user from another perspective (e.g. a spouse record with matching name,
+  // or any Person the user has provided a self-contribution on)
+  const selfContributedPersonIds = new Set(
+    contributions
+      .filter((c) => c.contributorId === userId && c.perspectiveType === 'self' && c.status === 'complete')
+      .map((c) => c.personId),
+  );
+  const userName = user?.name?.toLowerCase().trim();
   const otherPeople = selfPerson
-    ? people.filter((p) => p.personId !== selfPerson.personId)
+    ? people.filter((p) => {
+        if (p.personId === selfPerson.personId) return false;
+        if (selfContributedPersonIds.has(p.personId)) return false;
+        // Exclude spouse/partner Person whose name matches the current user
+        // (this is the record another user created to represent *this* user)
+        if (p.relationshipType === 'spouse' && userName && p.name.toLowerCase().trim().startsWith(userName.split(' ')[0].toLowerCase())) return false;
+        return true;
+      })
     : [];
 
   // People who need observer contributions from the current user
