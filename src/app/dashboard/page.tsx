@@ -269,6 +269,40 @@ export default function DashboardPage() {
 
           <div className="space-y-4">
 
+            {/* YOUR MANUAL — always accessible when selfPerson exists */}
+            {selfPerson && hasSelfContribution && (
+              <Link
+                href={`/people/${selfPerson.personId}/manual${demoQ}`}
+                className="block glass-card p-5 hover:shadow-lg transition-all weather-card"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3
+                      style={{
+                        fontFamily: 'var(--font-parent-display)',
+                        fontSize: '18px',
+                        fontWeight: 400,
+                        color: dark ? 'rgba(255,255,255,0.95)' : '#3A3530',
+                      }}
+                    >
+                      Your Manual
+                    </h3>
+                    <p
+                      className="mt-1"
+                      style={{
+                        fontFamily: 'var(--font-parent-body)',
+                        fontSize: '13px',
+                        color: dark ? 'rgba(255,255,255,0.5)' : '#7C7468',
+                      }}
+                    >
+                      View, revise, or invite others to contribute
+                    </p>
+                  </div>
+                  <span style={{ color: dark ? 'rgba(255,255,255,0.3)' : '#8A8078', fontSize: '18px' }}>&rarr;</span>
+                </div>
+              </Link>
+            )}
+
             {/* DEEPEN CARDS: Surface when assessment data gaps exist */}
             {state === 'active' && visibleNeeds.map((need) => (
               <DeepenCard

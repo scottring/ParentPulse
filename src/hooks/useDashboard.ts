@@ -221,6 +221,10 @@ export function useDashboard(): DashboardData {
       if (other.relationshipType === 'spouse') {
         roleLabel = 'Spouse';
         domain = 'couple';
+      } else if (other.relationshipType === 'self' && other.linkedUserId && other.linkedUserId !== userId) {
+        // Another user's self Person in the same family — treat as spouse/partner
+        roleLabel = 'Spouse';
+        domain = 'couple';
       } else if (other.relationshipType === 'child') {
         roleLabel = 'Parent';
         domain = 'parent_child';
