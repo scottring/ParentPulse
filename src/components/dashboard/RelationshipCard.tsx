@@ -2,349 +2,179 @@
 
 import Link from 'next/link';
 import type { UserRole } from '@/hooks/useDashboard';
-import { scoreToRelationshipPhrase, computeDataConfidence } from '@/lib/climate-engine';
-import { scoreToColor } from '@/lib/scoring-engine';
+import { scoreToRelationshipPhrase } from '@/lib/climate-engine';
+import { getDimension } from '@/config/relationship-dimensions';
 import { computeAge } from '@/utils/age';
-import type { GrowthItemType, GrowthFeedback } from '@/types/growth';
-
-const TYPE_LABELS: Partial<Record<GrowthItemType, string>> = {
-  micro_activity: 'Activity',
-  conversation_guide: 'Conversation',
-  reflection_prompt: 'Reflection',
-  assessment_prompt: 'Check-in',
-  journaling: 'Journal',
-  mindfulness: 'Mindfulness',
-  partner_exercise: 'Together',
-  solo_deep_dive: 'Deep Dive',
-  repair_ritual: 'Repair',
-  gratitude_practice: 'Gratitude',
-};
+import type { WorkbookChapter } from '@/types/workbook';
 
 interface RelationshipCardProps {
   role: UserRole;
   variant: 'spouse' | 'child';
   demoQ?: string;
-  onReact?: (itemId: string, reaction: string, forUserId?: string) => void;
-  currentUserId?: string;
-  currentUserName?: string;
+  activeChapters?: WorkbookChapter[];
+}
+
+function climateIcon(score: number): string {
+  if (score >= 4.0) return '\u2600\uFE0F'; // sun
+  if (score >= 3.5) return '\u26C5';       // sun behind cloud
+  if (score >= 3.0) return '\u2601\uFE0F'; // cloud
+  if (score >= 2.0) return '\uD83C\uDF25\uFE0F'; // sun behind large cloud
+  return '\u26C8\uFE0F'; // cloud with lightning
 }
 
 export function RelationshipCard({
-  role, variant, demoQ = '', onReact, currentUserId, currentUserName,
+  role, variant, demoQ = '', activeChapters = [],
 }: RelationshipCardProps) {
   const person = role.otherPerson;
-  const age = person.age || (person.dateOfBirth ? computeAge(person.dateOfBirth) : null);
 
   const avgScore = role.assessments.length > 0
     ? role.assessments.reduce((sum, a) => sum + a.currentScore, 0) / role.assessments.length
     : 0;
   const healthPhrase = scoreToRelationshipPhrase(avgScore, role.domain);
-  const healthColor = avgScore > 0 ? scoreToColor(avgScore) : '#ccc';
-  const confidence = computeDataConfidence(role, demoQ);
-  const todayItem = role.todayItems[0] || null;
 
-  const narrativeSnippet = variant === 'spouse' && role.narrative
-    ? role.narrative.length > 140 ? role.narrative.slice(0, 137) + '...' : role.narrative
+  // Find strongest and weakest dimensions
+  const sorted = [...role.assessments]
+    .filter(a => a.currentScore > 0)
+    .sort((a, b) => b.currentScore - a.currentScore);
+
+  const strongDims = sorted.slice(0, 2).map(a => {
+    const dim = getDimension(a.dimensionId);
+    return dim?.name || a.dimensionId;
+  });
+
+  const watchDim = sorted.length > 0
+    ? (() => {
+        const weakest = sorted[sorted.length - 1];
+        const dim = getDimension(weakest.dimensionId);
+        return dim?.name || weakest.dimensionId;
+      })()
     : null;
 
-  const isCouple = todayItem?.relationalLevel === 'couple';
-  const spouseUserId = person.linkedUserId || null;
-  const feedbackByUser = todayItem?.feedbackByUser || {};
-  const currentUserDone = currentUserId ? !!feedbackByUser[currentUserId] : false;
-  const spouseDone = spouseUserId ? !!feedbackByUser[spouseUserId] : false;
+  // Active workbook chapter for this person
+  const activeChapter = activeChapters.find(
+    c => c.personId === person.personId && c.status === 'active'
+  );
+  const activeChapterDim = activeChapter
+    ? getDimension(activeChapter.dimensionId)?.name || activeChapter.dimensionId
+    : null;
 
   return (
     <div className="glass-card weather-card overflow-hidden">
       <div className="p-5 sm:p-6">
 
-        {/* Top row: name + score */}
+        {/* Top row: name + climate icon */}
         <div className="flex items-start justify-between">
-          <div>
-            <h2
-              style={{
-                fontFamily: 'var(--font-parent-display)',
-                fontSize: '20px',
-                fontWeight: 500,
-                color: 'var(--parent-text)',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              {person.name}
-            </h2>
-            <span
-              style={{
-                fontFamily: 'var(--font-parent-body)',
-                fontSize: '11px',
-                fontWeight: 500,
-                color: 'var(--parent-text-light)',
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
-              }}
-            >
-              {variant === 'spouse' ? 'Spouse' : age !== null ? `Age ${age}` : 'Child'}
-            </span>
-          </div>
-
-          {/* Qualitative health badge */}
+          <h2
+            style={{
+              fontFamily: 'var(--font-parent-display)',
+              fontSize: '20px',
+              fontWeight: 500,
+              color: 'var(--parent-text)',
+              letterSpacing: '-0.01em',
+            }}
+          >
+            {person.name}
+          </h2>
           {avgScore > 0 && (
-            <div
-              className="px-3 py-1 rounded-full"
-              style={{
-                background: `${healthColor}15`,
-                border: `1px solid ${healthColor}25`,
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: 'var(--font-parent-body)',
-                  fontSize: '11px',
-                  fontWeight: 500,
-                  color: healthColor,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {healthPhrase}
-              </span>
-            </div>
+            <span style={{ fontSize: '20px', lineHeight: 1 }}>
+              {climateIcon(avgScore)}
+            </span>
           )}
         </div>
 
-        {/* Health phrase */}
-        <div className="flex items-center gap-2 mt-2.5">
-          <div
-            className="w-1.5 h-1.5 rounded-full"
-            style={{ background: healthColor, boxShadow: `0 0 8px ${healthColor}50` }}
-          />
-          <span
+        {/* Qualitative band — no numbers */}
+        {avgScore > 0 && (
+          <p
+            className="mt-1"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: '13px',
+              fontSize: '14px',
               fontWeight: 400,
               fontStyle: 'italic',
               color: 'var(--parent-text)',
             }}
           >
             {healthPhrase}
-          </span>
-        </div>
+          </p>
+        )}
 
-        {/* Narrative */}
-        {narrativeSnippet && (
+        {/* Strong + Watch dimensions */}
+        {sorted.length > 0 && (
+          <div className="mt-3 space-y-1">
+            {strongDims.length > 0 && (
+              <p
+                style={{
+                  fontFamily: 'var(--font-parent-body)',
+                  fontSize: '12.5px',
+                  color: 'var(--parent-text-light)',
+                  lineHeight: 1.5,
+                }}
+              >
+                <span style={{ fontWeight: 500, color: 'var(--parent-text)' }}>Strong:</span>{' '}
+                {strongDims.join(', ')}
+              </p>
+            )}
+            {watchDim && sorted.length > 2 && (
+              <p
+                style={{
+                  fontFamily: 'var(--font-parent-body)',
+                  fontSize: '12.5px',
+                  color: 'var(--parent-text-light)',
+                  lineHeight: 1.5,
+                }}
+              >
+                <span style={{ fontWeight: 500, color: 'var(--parent-text)' }}>Watch:</span>{' '}
+                {watchDim}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Active workbook chapter */}
+        {activeChapterDim && (
           <p
             className="mt-3"
             style={{
               fontFamily: 'var(--font-parent-body)',
               fontSize: '12.5px',
-              lineHeight: 1.65,
               color: 'var(--parent-text-light)',
+              lineHeight: 1.5,
             }}
           >
-            {narrativeSnippet}
+            <span style={{ fontWeight: 500, color: 'var(--parent-text)' }}>Working on:</span>{' '}
+            <Link
+              href="/workbook"
+              className="hover:opacity-70"
+              style={{ color: 'var(--parent-primary)' }}
+            >
+              {activeChapterDim}
+            </Link>
           </p>
         )}
 
-        {/* Confidence bar — styled as a thin atmospheric gauge */}
-        <div className="mt-4">
-          <div className="flex items-center gap-3">
-            <div
-              className="flex-1 h-[3px] rounded-full overflow-hidden"
-              style={{ background: 'rgba(0,0,0,0.05)' }}
-            >
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${confidence.percentage}%`,
-                  background: `linear-gradient(90deg, ${healthColor}90, ${healthColor})`,
-                  transition: 'width 0.8s cubic-bezier(0.22, 1, 0.36, 1)',
-                }}
-              />
-            </div>
-            <span
+        {/* Action links — micro labels */}
+        <div className="flex items-center gap-4 mt-4 pt-3" style={{ borderTop: '1px solid rgba(0,0,0,0.04)' }}>
+          {[
+            { href: `/people/${person.personId}/manual${demoQ ? `?${demoQ.slice(1)}` : ''}`, label: 'Manual' },
+            { href: '/workbook', label: 'Workbook' },
+          ].map((link) => (
+            <Link
+              key={link.label}
+              href={link.href}
+              className="text-[10px] tracking-wide uppercase hover:opacity-70"
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: '10px',
-                fontWeight: 500,
+                fontWeight: 600,
+                letterSpacing: '0.08em',
                 color: 'var(--parent-text-light)',
-                letterSpacing: '0.02em',
+                opacity: 0.6,
               }}
             >
-              {confidence.assessed}/{confidence.total}
-            </span>
-          </div>
-
-          {confidence.needsTopUp && (
-            <Link
-              href={confidence.topUpHref}
-              className="inline-block mt-2 text-[11px] hover:opacity-70"
-              style={{
-                fontFamily: 'var(--font-parent-body)',
-                fontWeight: 500,
-                color: healthColor,
-              }}
-            >
-              {confidence.topUpLabel} &rarr;
+              {link.label}
             </Link>
-          )}
+          ))}
         </div>
-
-        {/* Today's growth item */}
-        {todayItem && (
-          <div
-            className="mt-4 rounded-2xl overflow-hidden"
-            style={{
-              background: 'rgba(255,255,255,0.45)',
-              border: '1px solid rgba(255,255,255,0.5)',
-            }}
-          >
-            <Link
-              href={`/growth/${todayItem.growthItemId}`}
-              className="block px-4 py-3.5 hover:bg-white/20 group"
-            >
-              <div className="flex items-start gap-3">
-                <span className="text-lg mt-0.5 group-hover:scale-110 transition-transform">{todayItem.emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span
-                      style={{
-                        fontFamily: 'var(--font-parent-body)',
-                        fontSize: '10px',
-                        fontWeight: 600,
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                        color: healthColor,
-                      }}
-                    >
-                      {TYPE_LABELS[todayItem.type] || todayItem.type}
-                    </span>
-                    <span
-                      style={{
-                        fontFamily: 'var(--font-parent-body)',
-                        fontSize: '10px',
-                        color: 'var(--parent-text-light)',
-                      }}
-                    >
-                      {todayItem.estimatedMinutes}m
-                    </span>
-                  </div>
-                  <p
-                    style={{
-                      fontFamily: 'var(--font-parent-body)',
-                      fontSize: '13px',
-                      fontWeight: 500,
-                      color: 'var(--parent-text)',
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    {todayItem.title}
-                  </p>
-                  {todayItem.body && (
-                    <p
-                      className="mt-1"
-                      style={{
-                        fontFamily: 'var(--font-parent-body)',
-                        fontSize: '12px',
-                        color: 'var(--parent-text-light)',
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {todayItem.body.length > 80 ? todayItem.body.slice(0, 77) + '...' : todayItem.body}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </Link>
-
-            {/* Quick reactions */}
-            {todayItem.status !== 'completed' && onReact && (
-              <div className="px-4 pb-3">
-                {isCouple && currentUserId ? (
-                  <div className="space-y-1.5 ml-8">
-                    <PersonRow
-                      name={currentUserName || 'You'}
-                      done={currentUserDone}
-                      fb={currentUserId ? feedbackByUser[currentUserId] : undefined}
-                      onReact={(r) => onReact(todayItem.growthItemId, r, currentUserId)}
-                      color={healthColor}
-                    />
-                    {spouseUserId && (
-                      <PersonRow
-                        name={person.name}
-                        done={spouseDone}
-                        fb={feedbackByUser[spouseUserId]}
-                        onReact={(r) => onReact(todayItem.growthItemId, r, spouseUserId)}
-                        color={healthColor}
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex gap-2 ml-8">
-                    <ReactionBtn label="Did it" onClick={() => onReact(todayItem.growthItemId, 'tried_it')} />
-                    <ReactionBtn label="Later" onClick={() => onReact(todayItem.growthItemId, 'not_now')} muted />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
-  );
-}
-
-function PersonRow({ name, done, fb, onReact, color }: {
-  name: string; done: boolean; fb?: GrowthFeedback;
-  onReact: (r: string) => void; color: string;
-}) {
-  const label = fb?.reaction === 'tried_it' ? 'Done' : fb?.reaction === 'loved_it' ? 'Loved' : fb?.reaction === 'not_now' ? 'Later' : null;
-  return (
-    <div className="flex items-center gap-2.5">
-      <span
-        style={{
-          fontFamily: 'var(--font-parent-body)',
-          fontSize: '11px',
-          fontWeight: 500,
-          color: 'var(--parent-text)',
-          width: '56px',
-        }}
-      >
-        {name.split(' ')[0]}
-      </span>
-      {done ? (
-        <span
-          className="text-[10px] font-medium px-2.5 py-1 rounded-full"
-          style={{
-            fontFamily: 'var(--font-parent-body)',
-            background: fb?.reaction === 'not_now' ? 'rgba(0,0,0,0.04)' : `${color}18`,
-            color: fb?.reaction === 'not_now' ? 'var(--parent-text-light)' : color,
-          }}
-        >
-          {label}
-        </span>
-      ) : (
-        <div className="flex gap-1.5">
-          <ReactionBtn label="Did it" onClick={() => onReact('tried_it')} />
-          <ReactionBtn label="Later" onClick={() => onReact('not_now')} muted />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ReactionBtn({ label, onClick, muted }: { label: string; onClick: () => void; muted?: boolean }) {
-  return (
-    <button
-      onClick={onClick}
-      className="px-3 py-1 rounded-full text-[11px] hover:scale-105 active:scale-95"
-      style={{
-        fontFamily: 'var(--font-parent-body)',
-        fontWeight: 500,
-        background: muted ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.7)',
-        border: '1px solid rgba(0,0,0,0.05)',
-        color: muted ? 'var(--parent-text-light)' : 'var(--parent-text)',
-        transition: 'transform 0.15s, background 0.15s',
-      }}
-    >
-      {label}
-    </button>
   );
 }

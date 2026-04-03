@@ -1,79 +1,105 @@
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
+import { usePathname } from 'next/navigation';
+
+const navLinks = [
+  { label: 'home', href: '/dashboard' },
+  { label: 'people', href: '/people' },
+  { label: 'workbook', href: '/workbook' },
+  { label: 'check-in', href: '/checkin' },
+];
 
 export default function Navigation() {
-  const { user, logout } = useAuth();
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      router.push('/');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
+  const { user } = useAuth();
+  const pathname = usePathname();
 
   if (!user) return null;
 
+  // Don't show nav on auth pages
+  if (pathname === '/login' || pathname === '/register' || pathname === '/') {
+    return null;
+  }
+
+  const firstName = user.name?.split(' ')[0] || user.email?.split('@')[0] || '';
+
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b-4 border-slate-800 shadow-[0_4px_0px_0px_rgba(0,0,0,0.1)]">
-      {/* Corner accent brackets */}
-      <div className="absolute top-0 left-4 w-8 h-8 border-t-2 border-l-2 border-amber-600"></div>
-      <div className="absolute top-0 right-4 w-8 h-8 border-t-2 border-r-2 border-amber-600"></div>
+    <nav
+      className="fixed top-0 left-0 right-0 z-50"
+      style={{
+        height: 60,
+        borderBottom: '1px solid rgba(124,100,77,0.08)',
+      }}
+    >
+      <div className="h-full px-6 sm:px-8 flex items-center justify-between max-w-5xl mx-auto">
+        {/* Wordmark */}
+        <Link
+          href="/dashboard"
+          className="hover:opacity-80 transition-opacity"
+          style={{
+            fontFamily: 'var(--font-parent-display)',
+            fontSize: 19,
+            fontWeight: 500,
+            color: '#5C5347',
+            letterSpacing: '-0.01em',
+            textDecoration: 'none',
+          }}
+        >
+          parentpulse
+        </Link>
 
-      <div className="px-4 sm:px-6 lg:pl-8 lg:pr-8">
-        <div className="flex justify-between items-center h-20">
-          {/* Logo - Relish brand */}
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-3 hover:opacity-90 transition-opacity"
-          >
-            <Image
-              src="/Relish-logo.png"
-              alt="Relish - The Operating Manual for Relationships"
-              width={50}
-              height={50}
-              className="object-contain"
-              priority
-            />
-            <div className="hidden sm:block">
-              <div className="font-mono text-xl font-bold text-slate-900 tracking-tight">
-                Relish
-              </div>
-              <div className="font-mono text-xs text-slate-500 tracking-wider">
-                The Operating Manual for Relationships
-              </div>
-            </div>
-          </Link>
-
-          {/* User Menu - Technical style */}
-          <div className="flex items-center gap-4">
-            {/* User info badge */}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-slate-100 border border-slate-300">
-              <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-              <span className="font-mono text-xs text-slate-700 uppercase tracking-wide">
-                {user.email}
-              </span>
-            </div>
-
-            {/* Logout button */}
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-slate-800 text-white font-mono text-xs font-bold uppercase tracking-wider hover:bg-amber-600 transition-all hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-            >
-              LOGOUT
-            </button>
-          </div>
+        {/* Desktop nav links */}
+        <div className="hidden sm:flex items-center gap-6">
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href || pathname.startsWith(link.href + '/');
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                style={{
+                  fontFamily: 'var(--font-parent-body)',
+                  fontSize: 12,
+                  fontWeight: isActive ? 500 : 400,
+                  letterSpacing: '0.04em',
+                  color: '#5C5347',
+                  opacity: isActive ? 1 : 0.45,
+                  textDecoration: 'none',
+                  paddingBottom: 4,
+                  borderBottom: isActive ? '1.5px solid #7C9082' : '1.5px solid transparent',
+                  transition: 'opacity 0.2s ease',
+                }}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
         </div>
-      </div>
 
-      {/* Bottom detail line */}
-      <div className="h-1 bg-gradient-to-r from-transparent via-amber-600 to-transparent opacity-50"></div>
+        {/* User indicator */}
+        <div className="hidden sm:flex items-center gap-2">
+          <div
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: '#7C9082',
+            }}
+          />
+          <span
+            style={{
+              fontFamily: 'var(--font-parent-body)',
+              fontSize: 11,
+              fontWeight: 400,
+              color: '#5C5347',
+            }}
+          >
+            {firstName}
+          </span>
+        </div>
+
+        {/* Mobile: just wordmark centered (handled by flex justify-between with hidden items) */}
+      </div>
     </nav>
   );
 }

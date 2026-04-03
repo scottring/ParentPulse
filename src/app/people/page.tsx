@@ -8,11 +8,14 @@ import { usePerson } from '@/hooks/usePerson';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useRingScores } from '@/hooks/useRingScores';
 import { useManualSummaries } from '@/hooks/useManualSummaries';
+import { useWorkbook } from '@/hooks/useWorkbook';
 import MainLayout from '@/components/layout/MainLayout';
 import { RelationshipType, Person } from '@/types/person-manual';
 import { computeAge } from '@/utils/age';
 import { scoreToColor } from '@/lib/scoring-engine';
+import { getDimension } from '@/config/relationship-dimensions';
 import { Timestamp } from 'firebase/firestore';
+import type { WorkbookChapter } from '@/types/workbook';
 
 const RELATIONSHIP_EMOJI: Record<string, string> = {
   self: '🪞',
@@ -40,6 +43,7 @@ export default function PeoplePage() {
   const { assessments, contributions, roles } = useDashboard();
   const { health } = useRingScores(assessments);
   const { summaries, loading: summariesLoading } = useManualSummaries();
+  const { activeChapters } = useWorkbook();
 
   const [showAdd, setShowAdd] = useState(false);
   const [addName, setAddName] = useState('');
@@ -159,6 +163,7 @@ export default function PeoplePage() {
               summary={summaries.get(selfPerson.personId)}
               contributions={contributions}
               userId={user.userId}
+              workbookChapters={activeChapters.filter(c => c.personId === selfPerson.personId && c.status === 'active')}
             />
           )}
           {otherPeople.map((person) => (
@@ -170,6 +175,7 @@ export default function PeoplePage() {
               contributions={contributions}
               userId={user.userId}
               onDelete={() => setConfirmDelete(person)}
+              workbookChapters={activeChapters.filter(c => c.personId === person.personId && c.status === 'active')}
             />
           ))}
         </div>
@@ -311,6 +317,7 @@ function PersonCard({
   contributions,
   userId,
   onDelete,
+  workbookChapters,
 }: {
   person: Person;
   isSelf?: boolean;
@@ -319,6 +326,7 @@ function PersonCard({
   contributions: any[];
   userId: string;
   onDelete?: () => void;
+  workbookChapters?: WorkbookChapter[];
 }) {
   const router = useRouter();
   const age = person.dateOfBirth ? computeAge(person.dateOfBirth) : null;
@@ -482,6 +490,34 @@ function PersonCard({
           <span className="font-mono text-[9px]" style={{ color: '#d97706' }}>
             {draftCount} draft{draftCount !== 1 ? 's' : ''} in progress
           </span>
+        )}
+
+        {/* Workbook chapters */}
+        {workbookChapters && workbookChapters.length > 0 && (
+          <div
+            className="rounded px-3 py-2"
+            style={{
+              background: 'rgba(216,90,48,0.05)',
+              border: '1px solid rgba(216,90,48,0.15)',
+            }}
+          >
+            <span className="font-mono text-[8px] tracking-widest" style={{ color: '#D85A30' }}>
+              WORKING ON
+            </span>
+            <span className="font-mono text-[9px] ml-1.5" style={{ color: '#6B6B6B' }}>
+              {workbookChapters
+                .map(ch => getDimension(ch.dimensionId)?.name || ch.dimensionId)
+                .join(', ')}
+            </span>
+            <Link
+              href="/workbook"
+              onClick={(e) => e.stopPropagation()}
+              className="font-mono text-[9px] ml-1.5 hover:opacity-70"
+              style={{ color: '#D85A30' }}
+            >
+              &rarr;
+            </Link>
+          </div>
         )}
       </div>
 

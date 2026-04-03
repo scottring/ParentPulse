@@ -2,20 +2,22 @@
 
 import Navigation from './Navigation';
 import SideNav from './SideNav';
+import WeatherBackground from '@/components/dashboard/WeatherBackground';
 
 interface MainLayoutProps {
   children: React.ReactNode;
+  climate?: import('@/lib/climate-engine').ClimateState;
 }
 
-export default function MainLayout({ children }: MainLayoutProps) {
+export default function MainLayout({ children, climate = 'mostly_sunny' }: MainLayoutProps) {
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--parent-bg)' }}>
+    <WeatherBackground climate={climate}>
       <Navigation />
       <SideNav />
 
-      <main className="lg:pl-64 pt-20">
+      <main className="pt-[60px]">
         {children}
       </main>
-    </div>
+    </WeatherBackground>
   );
 }

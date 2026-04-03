@@ -9,8 +9,13 @@
   --parent-accent: #2D5F5D;
   --parent-bg: #FAF8F5;
   --parent-card: #FFFFFF;
-  --parent-text: #2C2C2C;
-  --parent-text-light: #6B6B6B;
+  --parent-text: #3A3530;
+  --parent-text-light: #7C7468;
+  --parent-text-warm: #3A3530;
+  --parent-text-mid: #5C5347;
+  --parent-text-body: #6B6560;
+  --parent-text-secondary: #7C7468;
+  --parent-text-muted: #8A8078;
   --parent-border: #E8E3DC;
 
   /* Child Theme - Playful Joy */
@@ -27,6 +32,12 @@
   --aura-understand: #534AB7;
   --aura-respond: #D85A30;
   --aura-assimilate: #BA7517;
+
+  /* AURA Phase Backgrounds (12% opacity) */
+  --aura-assess-bg: rgba(15, 110, 86, 0.12);
+  --aura-understand-bg: rgba(83, 74, 183, 0.12);
+  --aura-respond-bg: rgba(216, 90, 48, 0.12);
+  --aura-assimilate-bg: rgba(186, 117, 23, 0.12);
 
   /* Shadows */
   --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
@@ -300,6 +311,24 @@ html {
     0 2px 8px rgba(0, 0, 0, 0.03),
     inset 0 1px 0 rgba(255, 255, 255, 0.6);
   border-radius: 24px;
+}
+
+/* Phase-tinted cards — glass base with 2px left border in phase color */
+.phase-card-assess {
+  border-left: 2px solid var(--aura-assess);
+  background: linear-gradient(135deg, var(--aura-assess-bg), rgba(255,255,255,0.4));
+}
+.phase-card-understand {
+  border-left: 2px solid var(--aura-understand);
+  background: linear-gradient(135deg, var(--aura-understand-bg), rgba(255,255,255,0.4));
+}
+.phase-card-respond {
+  border-left: 2px solid var(--aura-respond);
+  background: linear-gradient(135deg, var(--aura-respond-bg), rgba(255,255,255,0.4));
+}
+.phase-card-assimilate {
+  border-left: 2px solid var(--aura-assimilate);
+  background: linear-gradient(135deg, var(--aura-assimilate-bg), rgba(255,255,255,0.4));
 }
 
 /* Horizon fog — adds depth at the bottom of the viewport */

@@ -8,11 +8,15 @@ import { useGrowthFeed } from '@/hooks/useGrowthFeed';
 import { useRingScores } from '@/hooks/useRingScores';
 import { useProgression } from '@/hooks/useProgression';
 import { usePerson } from '@/hooks/usePerson';
+import { useWorkbook } from '@/hooks/useWorkbook';
 import Navigation from '@/components/layout/Navigation';
 import SideNav from '@/components/layout/SideNav';
 import WeatherBackground from '@/components/dashboard/WeatherBackground';
 import { RelationshipCard } from '@/components/dashboard/RelationshipCard';
+import { DeepenCard } from '@/components/dashboard/DeepenCard';
 import { scoreToClimate, getGreeting, buildClimateSummary, getOnboardingClimate } from '@/lib/climate-engine';
+import { useAssessmentNeeds, loadAndClearContradictions } from '@/hooks/useAssessmentNeeds';
+import AuraPhaseIndicator from '@/components/layout/AuraPhaseIndicator';
 import Link from 'next/link';
 import type { ClimateState } from '@/lib/climate-engine';
 
@@ -33,8 +37,6 @@ export default function DashboardPage() {
     contributions,
   } = useDashboard();
   const {
-    activeItems,
-    submitFeedback,
     seedAssessments,
     generateArc,
     generateBatch,
@@ -43,6 +45,19 @@ export default function DashboardPage() {
   const { seedProgressions } = useProgression();
   const { health } = useRingScores(assessments);
   const { addPerson } = usePerson();
+  const { activeChapters } = useWorkbook();
+
+  const activeWorkbookDimIds = useMemo(
+    () => activeChapters.filter(c => c.status === 'active').map(c => c.dimensionId),
+    [activeChapters],
+  );
+  const [contradictionIds] = useState(() => loadAndClearContradictions());
+  const { visibleNeeds, startAssessment, dismissNeed } = useAssessmentNeeds(
+    assessments,
+    activeWorkbookDimIds,
+    undefined,
+    contradictionIds,
+  );
 
   const [addName, setAddName] = useState('');
   const [addType, setAddType] = useState<'spouse' | 'child'>('spouse');
@@ -92,6 +107,7 @@ export default function DashboardPage() {
       await seedProgressions();
       await generateArc();
       await generateBatch();
+      router.push(`/reveal${demoQ}`);
     } catch (err) {
       console.error('Failed to analyze:', err);
     }
@@ -124,10 +140,17 @@ export default function DashboardPage() {
       <Navigation />
       <SideNav />
 
-      <div className="min-h-screen lg:pl-64 pt-20">
+      <div className="min-h-screen pt-[60px]">
 
         {/* ===== HERO SECTION — the emotional center ===== */}
         <div className="max-w-xl mx-auto px-5 sm:px-8 pt-10 pb-6">
+
+          {/* Phase indicator — shown during onboarding states */}
+          {state !== 'active' && (
+            <div className="mb-4">
+              <AuraPhaseIndicator phase="assess" />
+            </div>
+          )}
 
           {/* Demo tag */}
           {isDemo && (
@@ -246,13 +269,24 @@ export default function DashboardPage() {
 
           <div className="space-y-4">
 
+            {/* DEEPEN CARDS: Surface when assessment data gaps exist */}
+            {state === 'active' && visibleNeeds.map((need) => (
+              <DeepenCard
+                key={need.dimensionId}
+                need={need}
+                onStart={() => startAssessment(need)}
+                onDismiss={() => dismissNeed(need)}
+              />
+            ))}
+
             {/* ONBOARDING: Self */}
             {state === 'new_user' && selfPerson && (
               <OnboardingCard
                 title="Start with you"
-                body="How you handle stress, what you need, how you communicate. This becomes the foundation."
+                body="How you handle stress, what you need, how you communicate."
                 ctaLabel="Begin"
                 ctaHref={`/people/${selfPerson.personId}/manual/self-onboard${demoQ}`}
+                phaseClass="phase-card-assess"
               />
             )}
 
@@ -364,51 +398,76 @@ export default function DashboardPage() {
                     role={role}
                     variant={role.domain === 'couple' ? 'spouse' : 'child'}
                     demoQ={demoQ}
-                    onReact={(id, r, forUserId) => submitFeedback(id, r as any, undefined, undefined, forUserId)}
-                    currentUserId={user?.userId}
-                    currentUserName={selfPerson?.name || user?.name}
+                    activeChapters={activeChapters}
                   />
                 ))}
               </div>
             )}
 
-            {/* Footer */}
-            {state === 'active' && (
-              <div className="flex items-center justify-between pt-6 pb-10">
-                <div className="flex items-center gap-5">
-                  {[
-                    { href: '/people', label: 'People' },
-                    selfPerson && { href: `/people/${selfPerson.personId}/manual`, label: 'Manual' },
-                    { href: `/roadmap${demoQ}`, label: 'Roadmap' },
-                  ].filter(Boolean).map((link) => (
-                    <Link
-                      key={link!.href}
-                      href={link!.href}
-                      className="text-[11px] tracking-wide uppercase hover:opacity-70"
-                      style={{
-                        fontFamily: 'var(--font-parent-body)',
-                        fontWeight: 500,
-                        letterSpacing: '0.06em',
-                        color: textTertiary,
-                      }}
-                    >
-                      {link!.label}
-                    </Link>
-                  ))}
-                </div>
-                <button
-                  onClick={handleAnalyze}
-                  disabled={generating}
-                  className="text-[11px] tracking-wide uppercase px-4 py-2 rounded-full glass-card hover:opacity-80 disabled:opacity-30"
-                  style={{
-                    fontFamily: 'var(--font-parent-body)',
-                    fontWeight: 500,
-                    letterSpacing: '0.06em',
-                    color: textTertiary,
-                  }}
+            {/* CHECK-IN PROMPT: Show at bottom when 7+ days overdue */}
+            {state === 'active' && activeChapters.filter(c => c.status === 'active').length > 0 && (() => {
+              const now = Date.now();
+              const sevenDays = 7 * 24 * 60 * 60 * 1000;
+              const lastCompletion = activeChapters
+                .flatMap(c => c.completions)
+                .reduce((latest, comp) => {
+                  const t = comp.completedAt?.toMillis?.() || 0;
+                  return t > latest ? t : latest;
+                }, 0);
+              const needsCheckin = lastCompletion === 0 || (now - lastCompletion) > sevenDays;
+              if (!needsCheckin) return null;
+
+              return (
+                <Link
+                  href={`/checkin${demoQ}`}
+                  className="block glass-card-strong p-5 hover:opacity-90 transition-opacity phase-card-assimilate"
                 >
-                  {generating ? 'Reading...' : 'Re-analyze'}
-                </button>
+                  <h3
+                    style={{
+                      fontFamily: 'var(--font-parent-display)',
+                      fontSize: '16px',
+                      fontWeight: 500,
+                      color: 'var(--parent-text)',
+                    }}
+                  >
+                    It&apos;s been a week. Ready for a quick check-in?
+                  </h3>
+                  <p
+                    className="mt-1"
+                    style={{
+                      fontFamily: 'var(--font-parent-body)',
+                      fontSize: '12.5px',
+                      color: 'var(--parent-text-light)',
+                    }}
+                  >
+                    ~3 minutes
+                  </p>
+                </Link>
+              );
+            })()}
+
+            {/* Footer links — spec: People · Workbook · Manual */}
+            {state === 'active' && (
+              <div className="flex items-center justify-center gap-5 pt-6 pb-10">
+                {[
+                  { href: '/people', label: 'People' },
+                  { href: '/workbook', label: 'Workbook' },
+                  selfPerson && { href: `/people/${selfPerson.personId}/manual`, label: 'Manual' },
+                ].filter(Boolean).map((link) => (
+                  <Link
+                    key={link!.href}
+                    href={link!.href}
+                    className="text-[11px] tracking-wide uppercase hover:opacity-70"
+                    style={{
+                      fontFamily: 'var(--font-parent-body)',
+                      fontWeight: 500,
+                      letterSpacing: '0.06em',
+                      color: textTertiary,
+                    }}
+                  >
+                    {link!.label}
+                  </Link>
+                ))}
               </div>
             )}
           </div>
@@ -428,13 +487,14 @@ function getTimeOfDay(): string {
 // ===== Onboarding Card =====
 
 function OnboardingCard({
-  title, body, ctaLabel, ctaHref, ctaOnClick, disabled,
+  title, body, ctaLabel, ctaHref, ctaOnClick, disabled, phaseClass,
 }: {
   title: string; body: string; ctaLabel: string;
   ctaHref?: string; ctaOnClick?: () => void; disabled?: boolean;
+  phaseClass?: string;
 }) {
   return (
-    <div className="glass-card-strong p-6">
+    <div className={`glass-card-strong p-6 ${phaseClass || ''}`}>
       <h2
         className="text-lg mb-1.5"
         style={{ fontFamily: 'var(--font-parent-display)', fontWeight: 500, color: 'var(--parent-text)' }}
