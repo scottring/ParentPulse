@@ -46,7 +46,7 @@ export default function Navigation() {
             textDecoration: 'none',
           }}
         >
-          parentpulse
+          relish
         </Link>
 
         {/* Desktop nav links */}
