@@ -176,25 +176,26 @@ export function useDashboard(): DashboardData {
   // Find spouse
   const spouse = people.find((p) => p.relationshipType === 'spouse') || null;
 
-  // Other people (non-self)
-  // Exclude the user's own self Person AND any Person that represents the
-  // current user from another perspective (e.g. a spouse record with matching name,
-  // or any Person the user has provided a self-contribution on)
-  const selfContributedPersonIds = new Set(
-    contributions
-      .filter((c) => c.contributorId === userId && c.perspectiveType === 'self' && c.status === 'complete')
-      .map((c) => c.personId),
-  );
+  // All Person IDs that represent the current user across the family:
+  // - Their self Person
+  // - Any Person they've provided a self-contribution on
+  // - Any spouse Person whose first name matches (created by partner to represent them)
   const userName = user?.name?.toLowerCase().trim();
+  const userFirstName = userName?.split(' ')[0];
+  const allCurrentUserPersonIds = new Set<string>();
+  if (selfPerson) allCurrentUserPersonIds.add(selfPerson.personId);
+  contributions
+    .filter((c) => c.contributorId === userId && c.perspectiveType === 'self' && c.status === 'complete')
+    .forEach((c) => allCurrentUserPersonIds.add(c.personId));
+  people.forEach((p) => {
+    if (p.relationshipType === 'spouse' && userFirstName && p.name.toLowerCase().trim().startsWith(userFirstName)) {
+      allCurrentUserPersonIds.add(p.personId);
+    }
+  });
+
+  // Other people (non-self) — exclude all Person records that represent the current user
   const otherPeople = selfPerson
-    ? people.filter((p) => {
-        if (p.personId === selfPerson.personId) return false;
-        if (selfContributedPersonIds.has(p.personId)) return false;
-        // Exclude spouse/partner Person whose name matches the current user
-        // (this is the record another user created to represent *this* user)
-        if (p.relationshipType === 'spouse' && userName && p.name.toLowerCase().trim().startsWith(userName.split(' ')[0].toLowerCase())) return false;
-        return true;
-      })
+    ? people.filter((p) => !allCurrentUserPersonIds.has(p.personId))
     : [];
 
   // People who need observer contributions from the current user
@@ -257,15 +258,16 @@ export function useDashboard(): DashboardData {
         continue;
       }
 
+      // Match assessments using any of the current user's Person IDs
       const pairAssessments = assessments.filter((a) =>
         a.domain === domain &&
-        a.participantIds.includes(selfPersonId) &&
+        a.participantIds.some((id: string) => allCurrentUserPersonIds.has(id)) &&
         a.participantIds.includes(other.personId),
       );
 
       const pairArc = arcs.find((arc) =>
         arc.domain === domain &&
-        arc.participantIds.includes(selfPersonId) &&
+        arc.participantIds.some((id: string) => allCurrentUserPersonIds.has(id)) &&
         arc.participantIds.includes(other.personId),
       ) || null;
 
