@@ -55,8 +55,8 @@ export interface OnboardingQuestion {
   allowQualitativeComment?: boolean;  // Allow optional text after structured answer
   qualitativePlaceholder?: string;    // Placeholder for qualitative comment
 
-  // Clinical metadata
-  clinicalSource?: string;     // e.g., "VIA-IS Item 7", "Vanderbilt ADHD Item 3"
+  // Inspiration metadata
+  inspirationSource?: string;  // e.g., "Inspired by VIA Character Strengths"
   scoringDomain?: string;      // e.g., "Openness", "Inattention", "Attachment Anxiety"
 }
 
@@ -222,7 +222,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'What makes you say this? Any specific examples?',
-        clinicalSource: 'RSES Item 1',
+        inspirationSource: 'Inspired by Rosenberg Self-Esteem Scale',
         scoringDomain: 'Global Self-Worth',
         required: true
       },
@@ -240,7 +240,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'What qualities does {{personName}} recognize in themselves?',
-        clinicalSource: 'RSES Item 3',
+        inspirationSource: 'Inspired by Rosenberg Self-Esteem Scale',
         scoringDomain: 'Self-Perception',
         required: true
       },
@@ -258,7 +258,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'In what areas does {{personName}} feel competent?',
-        clinicalSource: 'RSES Item 4',
+        inspirationSource: 'Inspired by Rosenberg Self-Esteem Scale',
         scoringDomain: 'Self-Efficacy',
         required: true
       },
@@ -276,7 +276,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'How does {{personName}} typically talk about or treat themselves?',
-        clinicalSource: 'RSES Item 7',
+        inspirationSource: 'Inspired by Rosenberg Self-Esteem Scale',
         scoringDomain: 'Self-Acceptance',
         required: true
       },
@@ -294,7 +294,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'How does {{personName}} compare themselves to peers or others?',
-        clinicalSource: 'RSES Item 2',
+        inspirationSource: 'Inspired by Rosenberg Self-Esteem Scale',
         scoringDomain: 'Social Competence',
         required: true
       },
@@ -312,7 +312,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'How does {{personName}} feel about their physical self?',
-        clinicalSource: 'Physical Self-Concept',
+        inspirationSource: 'Physical self-concept research',
         scoringDomain: 'Physical Competence',
         required: true
       }
@@ -320,7 +320,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
   },
   {
     sectionId: 'strengths',
-    sectionName: 'Character Strengths (VIA Survey)',
+    sectionName: 'Character Strengths Snapshot',
     sectionDescription: 'Rate how well each characteristic describes {{personName}}',
     icon: 'FireIcon',
     emoji: '💪',
@@ -340,7 +340,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'Describe a specific example of their creativity...',
-        clinicalSource: 'VIA-IS Creativity',
+        inspirationSource: 'Inspired by VIA Character Strengths',
         scoringDomain: 'Wisdom & Knowledge',
         required: true
       },
@@ -358,7 +358,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'What topics or areas are they most curious about?',
-        clinicalSource: 'VIA-IS Curiosity',
+        inspirationSource: 'Inspired by VIA Character Strengths',
         scoringDomain: 'Wisdom & Knowledge',
         required: true
       },
@@ -376,7 +376,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'Describe a time they persevered through difficulty...',
-        clinicalSource: 'VIA-IS Perseverance',
+        inspirationSource: 'Inspired by VIA Character Strengths',
         scoringDomain: 'Courage',
         required: true
       },
@@ -394,7 +394,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'Share an example of their kindness...',
-        clinicalSource: 'VIA-IS Kindness',
+        inspirationSource: 'Inspired by VIA Character Strengths',
         scoringDomain: 'Humanity',
         required: true
       },
@@ -412,7 +412,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'How do they demonstrate social awareness?',
-        clinicalSource: 'VIA-IS Social Intelligence',
+        inspirationSource: 'Inspired by VIA Character Strengths',
         scoringDomain: 'Humanity',
         required: true
       },
@@ -430,7 +430,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'Describe their teamwork style...',
-        clinicalSource: 'VIA-IS Teamwork',
+        inspirationSource: 'Inspired by VIA Character Strengths',
         scoringDomain: 'Justice',
         required: true
       },
@@ -448,7 +448,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'How do they show fairness?',
-        clinicalSource: 'VIA-IS Fairness',
+        inspirationSource: 'Inspired by VIA Character Strengths',
         scoringDomain: 'Justice',
         required: true
       },
@@ -466,7 +466,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'Describe their self-control abilities...',
-        clinicalSource: 'VIA-IS Self-Regulation',
+        inspirationSource: 'Inspired by VIA Character Strengths',
         scoringDomain: 'Temperance',
         required: true
       },
@@ -484,7 +484,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'How do they express gratitude?',
-        clinicalSource: 'VIA-IS Gratitude',
+        inspirationSource: 'Inspired by VIA Character Strengths',
         scoringDomain: 'Transcendence',
         required: true
       },
@@ -502,7 +502,7 @@ export const UNIVERSAL_ONBOARDING_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'Describe their optimistic outlook...',
-        clinicalSource: 'VIA-IS Hope',
+        inspirationSource: 'Inspired by VIA Character Strengths',
         scoringDomain: 'Transcendence',
         required: true
       }
@@ -591,7 +591,7 @@ export const CHILD_NEURODIVERGENCE_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'Describe specific situations where this happens...',
-        clinicalSource: 'Vanderbilt ADHD - Inattention',
+        inspirationSource: 'Inspired by Vanderbilt ADHD Assessment',
         scoringDomain: 'Inattention',
         required: true
       },
@@ -608,7 +608,7 @@ export const CHILD_NEURODIVERGENCE_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'What organizational challenges do you notice?',
-        clinicalSource: 'Vanderbilt ADHD - Organization',
+        inspirationSource: 'Inspired by Vanderbilt ADHD Assessment',
         scoringDomain: 'Executive Function',
         required: true
       },
@@ -625,7 +625,7 @@ export const CHILD_NEURODIVERGENCE_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'Describe their movement patterns...',
-        clinicalSource: 'Vanderbilt ADHD - Hyperactivity',
+        inspirationSource: 'Inspired by Vanderbilt ADHD Assessment',
         scoringDomain: 'Hyperactivity',
         required: true
       },
@@ -642,7 +642,7 @@ export const CHILD_NEURODIVERGENCE_SECTIONS: OnboardingSection[] = [
         },
         allowQualitativeComment: true,
         qualitativePlaceholder: 'Give examples of impulsive behaviors...',
-        clinicalSource: 'Vanderbilt ADHD - Impulsivity',
+        inspirationSource: 'Inspired by Vanderbilt ADHD Assessment',
         scoringDomain: 'Impulsivity',
         required: true
       }

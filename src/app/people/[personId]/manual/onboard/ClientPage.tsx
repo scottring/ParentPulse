@@ -1,8 +1,8 @@
 'use client';
 
 import { use, useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { progressColor } from '@/utils/progress-color';
 import { useRouter } from 'next/navigation';
+import AssessmentShell from '@/components/shared/AssessmentShell';
 import { useAuth } from '@/context/AuthContext';
 import { usePersonById } from '@/hooks/usePerson';
 import { usePersonManual } from '@/hooks/usePersonManual';
@@ -309,203 +309,128 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
   const displayHelper = currentQuestion.helperText?.replace(/\{\{personName\}\}/g, person.name);
   const displayPlaceholder = currentQuestion.placeholder?.replace(/\{\{personName\}\}/g, person.name);
 
-  return (
-    <div className="min-h-screen bg-[#FFF8F0]">
-      {/* Header */}
-      <div className="border-b-2 border-slate-200 bg-white">
-        <div className="max-w-3xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleSaveAndExit}
-                className="text-slate-400 hover:text-slate-800 transition-colors"
-                title="Back to manual"
-              >
-                <span className="text-xl">&larr;</span>
-              </button>
-              <div>
-                <span className="font-mono text-xs text-blue-600 font-bold tracking-wider">
-                  OBSERVER ONBOARDING
-                </span>
-                <h1 className="font-mono font-bold text-lg text-slate-800">
-                  About {person.name}
-                </h1>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="font-mono text-xs text-slate-500 flex items-center justify-end gap-2">
-                  <span>{answeredQuestions} / {totalQuestions} ANSWERED</span>
-                  <span className={`inline-block w-2 h-2 rounded-full ${
-                    saveStatus === 'saved' ? 'bg-green-500' :
-                    saveStatus === 'saving' ? 'bg-amber-500 animate-pulse' :
-                    saveStatus === 'error' ? 'bg-red-500' :
-                    'bg-amber-400'
-                  }`} title={
-                    saveStatus === 'saved' ? 'All changes saved' :
-                    saveStatus === 'saving' ? 'Saving...' :
-                    saveStatus === 'error' ? 'Save failed — will retry' :
-                    'Unsaved changes'
-                  } />
-                </div>
-                <div className="w-32 h-2 bg-slate-200 mt-1">
-                  <div
-                    className="h-full transition-all"
-                    style={{
-                      width: `${(answeredQuestions / totalQuestions) * 100}%`,
-                      backgroundColor: progressColor(answeredQuestions / totalQuestions),
-                    }}
-                  />
-                </div>
-              </div>
-              <button
-                onClick={handleSaveAndExit}
-                className="px-4 py-2 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-600 hover:border-slate-800 hover:text-slate-800 transition-all"
-              >
-                SAVE &amp; EXIT
-              </button>
-            </div>
-          </div>
+  const demoBanner = isDemo ? (
+    <div className="max-w-3xl mx-auto px-6 pt-4">
+      <div
+        className="flex items-center justify-between px-4 py-2 rounded-lg font-mono text-[11px]"
+        style={{ background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.2)' }}
+      >
+        <div className="flex items-center gap-3">
+          <span style={{ color: '#A3510B', fontWeight: 700 }}>DEMO</span>
+          <span style={{ color: '#6B6B6B' }}>
+            <strong style={{ color: '#2C2C2C' }}>{user?.name}</strong> sharing observations about{' '}
+            <strong style={{ color: '#3B82F6' }}>{person.name}</strong>
+            {person.relationshipType && <> ({person.relationshipType})</>}
+          </span>
         </div>
-      </div>
-
-      {/* Demo context banner */}
-      {isDemo && (
-        <div className="max-w-3xl mx-auto px-6 pt-4">
-          <div
-            className="flex items-center justify-between px-4 py-2 rounded-lg font-mono text-[11px]"
-            style={{ background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.2)' }}
-          >
-            <div className="flex items-center gap-3">
-              <span style={{ color: '#A3510B', fontWeight: 700 }}>DEMO</span>
-              <span style={{ color: '#6B6B6B' }}>
-                <strong style={{ color: '#2C2C2C' }}>{user?.name}</strong> sharing observations about{' '}
-                <strong style={{ color: '#3B82F6' }}>{person.name}</strong>
-                {person.relationshipType && <> ({person.relationshipType})</>}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={handleFillAll}
-              className="px-3 py-1 rounded font-bold transition-all hover:scale-105"
-              style={{ background: '#d97706', color: 'white', fontSize: '10px' }}
-            >
-              FILL ALL
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Section indicator */}
-      <div className="max-w-3xl mx-auto px-6 pt-6">
-        <div className="flex gap-2 mb-6">
-          {sections.map((section, i) => (
-            <div
-              key={section.sectionId}
-              className={`h-1 flex-1 ${
-                i <= currentSectionIndex ? 'bg-blue-600' : 'bg-slate-200'
-              }`}
-            />
-          ))}
-        </div>
-        <span className="font-mono text-xs text-blue-600 font-bold tracking-wider">
-          {currentSection.sectionName.toUpperCase()}
-        </span>
-        <p className="font-mono text-sm text-slate-500 mt-1">
-          {currentSection.sectionDescription.replace(/\{\{personName\}\}/g, person.name)}
-        </p>
-        {currentSectionIndex === 0 && currentQuestionIndex === 0 && (
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200">
-            <p className="font-mono text-xs text-blue-800">
-              Share what you&apos;ve observed about {person.name}. Keep it brief — this is a living document. You can come back to expand or edit anytime. {person.name} can also add their own perspective later.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Question */}
-      <div className="max-w-3xl mx-auto px-6 py-8">
-        <div className="border-2 border-slate-200 bg-white p-8">
-          <h2 className="font-mono font-bold text-lg text-slate-800 mb-2">
-            {displayQuestion}
-          </h2>
-          {displayHelper && (
-            <p className="font-mono text-sm text-slate-500 mb-6">
-              {displayHelper}
-            </p>
-          )}
-
-          <QuestionRenderer
-            question={{ ...currentQuestion, placeholder: displayPlaceholder }}
-            value={currentAnswer}
-            onChange={(value) => handleAnswer(currentQuestion.id, value)}
-            personName={person.name}
-            onKeyboardContinue={handleNext}
-            isDemo={isDemo}
-            demoPerspective={person.relationshipType === 'child' ? 'observer_child' : 'observer'}
-          />
-        </div>
-
-        {/* Navigation */}
-        <div className="flex gap-4 mt-6">
-          {(currentSectionIndex > 0 || currentQuestionIndex > 0) && (
-            <>
-              <button
-                onClick={() => { setCurrentSectionIndex(0); setCurrentQuestionIndex(0); }}
-                className="px-4 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-500 hover:border-slate-800 hover:text-slate-700 transition-all"
-              >
-                &laquo; START
-              </button>
-              <button
-                onClick={handlePrevious}
-                className="px-6 py-3 border-2 border-slate-300 bg-white font-mono font-bold text-slate-700 hover:border-slate-800 transition-all"
-              >
-                &larr; PREVIOUS
-              </button>
-            </>
-          )}
-          {!isLastQuestion && (
-            <button
-              onClick={() => {
-                saveNow();
-                const lastSection = sections[sections.length - 1];
-                setCurrentSectionIndex(sections.length - 1);
-                setCurrentQuestionIndex(lastSection.questions.length - 1);
-              }}
-              className="px-4 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-500 hover:border-slate-800 hover:text-slate-700 transition-all"
-            >
-              SKIP TO END &raquo;
-            </button>
-          )}
-          <button
-            onClick={handleNext}
-            disabled={isSubmitting}
-            className="px-6 py-3 border-2 border-slate-800 bg-slate-800 text-white font-mono font-bold hover:bg-slate-700 transition-all disabled:opacity-50 ml-auto"
-          >
-            {isSubmitting
-              ? 'SAVING...'
-              : isLastQuestion
-              ? 'COMPLETE'
-              : 'NEXT \u2192'}
-          </button>
-        </div>
-
-        {currentSection.skippable && currentQuestionIndex === 0 && (
-          <button
-            onClick={() => {
-              if (currentSectionIndex < sections.length - 1) {
-                setCurrentSectionIndex((i) => i + 1);
-                setCurrentQuestionIndex(0);
-              } else {
-                handleSubmit();
-              }
-            }}
-            className="mt-4 font-mono text-xs text-slate-400 hover:text-slate-600 transition-colors"
-          >
-            SKIP THIS SECTION &rarr;
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={handleFillAll}
+          className="px-3 py-1 rounded font-bold transition-all hover:scale-105"
+          style={{ background: '#d97706', color: 'white', fontSize: '10px' }}
+        >
+          FILL ALL
+        </button>
       </div>
     </div>
+  ) : null;
+
+  const navigation = (
+    <>
+      <div className="flex gap-4 mt-6">
+        {(currentSectionIndex > 0 || currentQuestionIndex > 0) && (
+          <>
+            <button
+              onClick={() => { setCurrentSectionIndex(0); setCurrentQuestionIndex(0); }}
+              className="px-4 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-500 hover:border-slate-800 hover:text-slate-700 transition-all"
+            >
+              &laquo; START
+            </button>
+            <button
+              onClick={handlePrevious}
+              className="px-6 py-3 border-2 border-slate-300 bg-white font-mono font-bold text-slate-700 hover:border-slate-800 transition-all"
+            >
+              &larr; PREVIOUS
+            </button>
+          </>
+        )}
+        {!isLastQuestion && (
+          <button
+            onClick={() => {
+              saveNow();
+              const lastSection = sections[sections.length - 1];
+              setCurrentSectionIndex(sections.length - 1);
+              setCurrentQuestionIndex(lastSection.questions.length - 1);
+            }}
+            className="px-4 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-500 hover:border-slate-800 hover:text-slate-700 transition-all"
+          >
+            SKIP TO END &raquo;
+          </button>
+        )}
+        <button
+          onClick={handleNext}
+          disabled={isSubmitting}
+          className="px-6 py-3 border-2 border-slate-800 bg-slate-800 text-white font-mono font-bold hover:bg-slate-700 transition-all disabled:opacity-50 ml-auto"
+        >
+          {isSubmitting
+            ? 'SAVING...'
+            : isLastQuestion
+            ? 'COMPLETE'
+            : 'NEXT \u2192'}
+        </button>
+      </div>
+    </>
+  );
+
+  return (
+    <AssessmentShell
+      phase="assess"
+      personName={person.name}
+      sectionName={currentSection.sectionName}
+      sectionDescription={currentSection.sectionDescription}
+      flowLabel="OBSERVER ONBOARDING"
+      flowTitle={`About ${person.name}`}
+      accentColor="blue"
+      currentSection={currentSectionIndex}
+      totalSections={sections.length}
+      currentQuestion={currentQuestionIndex}
+      totalQuestions={totalQuestions}
+      answeredQuestions={answeredQuestions}
+      saveStatus={saveStatus}
+      onSaveAndExit={handleSaveAndExit}
+      canSkip={!!currentSection.skippable}
+      onSkipSection={() => {
+        if (currentSectionIndex < sections.length - 1) {
+          setCurrentSectionIndex((i) => i + 1);
+          setCurrentQuestionIndex(0);
+        } else {
+          handleSubmit();
+        }
+      }}
+      firstQuestionHint={`Share what you've observed about ${person.name}. Keep it brief — this is a living document. You can come back to expand or edit anytime. ${person.name} can also add their own perspective later.`}
+      demoBannerSlot={demoBanner}
+      navigationSlot={navigation}
+    >
+      <div className="border-2 border-slate-200 bg-white p-8">
+        <h2 className="font-mono font-bold text-lg text-slate-800 mb-2">
+          {displayQuestion}
+        </h2>
+        {displayHelper && (
+          <p className="font-mono text-sm text-slate-500 mb-6">
+            {displayHelper}
+          </p>
+        )}
+
+        <QuestionRenderer
+          question={{ ...currentQuestion, placeholder: displayPlaceholder }}
+          value={currentAnswer}
+          onChange={(value) => handleAnswer(currentQuestion.id, value)}
+          personName={person.name}
+          onKeyboardContinue={handleNext}
+          isDemo={isDemo}
+          demoPerspective={person.relationshipType === 'child' ? 'observer_child' : 'observer'}
+        />
+      </div>
+    </AssessmentShell>
   );
 }

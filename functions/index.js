@@ -4429,11 +4429,21 @@ exports.generateGrowthBatch = onCall(
           recentInsightIds.add(item.sourceInsightId);
         }
         if (item.feedback) {
+          // Collect per-user notes if available
+          const userNotes = item.feedbackByUser ?
+            Object.values(item.feedbackByUser)
+                .filter((fb) => fb && fb.note)
+                .map((fb) => fb.note) : [];
+          const notesSummary = userNotes.length > 0 ?
+            userNotes.join(" | ") :
+            (item.feedback.note || null);
+
           recentFeedback.push({
             title: item.title,
             reaction: item.feedback.reaction,
             impactRating: item.feedback.impactRating,
             sourceInsightId: item.sourceInsightId,
+            notes: notesSummary,
           });
         }
       });
@@ -4619,7 +4629,8 @@ exports.generateGrowthBatch = onCall(
         recentFeedback.slice(0, 5).map((f) => {
           const impact = f.impactRating ?
             ` (impact: ${["slight", "noticeable", "breakthrough"][f.impactRating - 1]})` : "";
-          return `- "${f.title}" → ${f.reaction}${impact}`;
+          const notes = f.notes ? ` — user notes: "${f.notes}"` : "";
+          return `- "${f.title}" → ${f.reaction}${impact}${notes}`;
         }).join("\n") : "";
 
       const familyContext = Object.values(people).map((p) => {
@@ -5640,10 +5651,20 @@ exports.generateGrowthArc = onCall(
       recentItemsSnap.forEach((doc) => {
         const item = doc.data();
         if (item.feedback) {
+          // Collect per-user notes if available
+          const userNotes = item.feedbackByUser ?
+            Object.values(item.feedbackByUser)
+                .filter((fb) => fb && fb.note)
+                .map((fb) => fb.note) : [];
+          const notesSummary = userNotes.length > 0 ?
+            userNotes.join(" | ") :
+            (item.feedback.note || "");
+
           feedbackContext +=
             `\n- "${item.title}" → ${item.feedback.reaction}` +
             (item.feedback.impactRating ?
-              ` (impact: ${item.feedback.impactRating}/3)` : "");
+              ` (impact: ${item.feedback.impactRating}/3)` : "") +
+            (notesSummary ? ` — notes: "${notesSummary}"` : "");
         }
       });
 
@@ -6077,9 +6098,25 @@ exports.processGrowthFeedback = onDocumentUpdated(
       const feedback = after.feedback;
       const itemId = event.params.itemId;
 
+      // Collect all per-user notes (from feedbackByUser) for richer context
+      const feedbackByUser = after.feedbackByUser || {};
+      const allUserNotes = Object.entries(feedbackByUser)
+          .filter(([, fb]) => fb && fb.note)
+          .map(([userId, fb]) => ({userId, note: fb.note}));
+
+      // Merge notes: legacy feedback.note + all per-user notes
+      const combinedNotes = [
+        ...(feedback.note ? [feedback.note] : []),
+        ...allUserNotes
+            .filter((n) => n.note !== feedback.note) // avoid duplicates
+            .map((n) => n.note),
+      ].join(" | ");
+
       logger.info(
           `Processing feedback on growth item ${itemId}: ` +
-          `${feedback.reaction}`,
+          `${feedback.reaction}` +
+          (allUserNotes.length > 1 ?
+            ` (${allUserNotes.length} user notes)` : ""),
       );
 
       // ---- 1. UPDATE DIMENSION ASSESSMENT ----
@@ -6182,7 +6219,7 @@ exports.processGrowthFeedback = onDocumentUpdated(
               `${feedback.reaction === "loved_it" ? "loved it" : "tried it"}` +
               `${feedback.impactRating === 3 ? " (breakthrough)" :
                 feedback.impactRating === 2 ? " (noticeable impact)" : ""}` +
-              `${feedback.note ? ". Note: " + feedback.note : ""}`,
+              `${combinedNotes ? ". Notes: " + combinedNotes : ""}`,
             category: feedback.impactRating === 3 ?
               "milestone" : "improvement",
             addedBy: "ai",

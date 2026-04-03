@@ -1,8 +1,8 @@
 'use client';
 
 import { use, useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { progressColor } from '@/utils/progress-color';
 import { useRouter } from 'next/navigation';
+import AssessmentShell from '@/components/shared/AssessmentShell';
 import { useAuth } from '@/context/AuthContext';
 import { usePersonById } from '@/hooks/usePerson';
 import { usePersonManual } from '@/hooks/usePersonManual';
@@ -855,232 +855,154 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   const currentVisibility = answerVisibility[currentSection.sectionId]?.[currentQuestion.id] || 'visible';
   const isAiGenerated = aiGeneratedFields[currentSection.sectionId]?.includes(currentQuestion.id);
 
-  return (
-    <div className="min-h-screen bg-[#FFF8F0]">
-      {/* Header */}
-      <div className="border-b-2 border-slate-200 bg-white">
-        <div className="max-w-3xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleSaveAndExit}
-                className="text-slate-400 hover:text-slate-800 transition-colors"
-                title="Back to manual"
-              >
-                <span className="text-xl">&larr;</span>
-              </button>
-              <div>
-              <span className="font-mono text-xs text-amber-600 font-bold tracking-wider">
-                SELF-ONBOARDING
-              </span>
-              <h1 className="font-mono font-bold text-lg text-slate-800">
-                Tell Us About Yourself
-              </h1>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="font-mono text-xs text-slate-500 flex items-center justify-end gap-2">
-                  <span>{answeredQuestions} / {totalQuestions} ANSWERED</span>
-                  <span className={`inline-block w-2 h-2 rounded-full ${
-                    saveStatus === 'saved' ? 'bg-green-500' :
-                    saveStatus === 'saving' ? 'bg-amber-500 animate-pulse' :
-                    saveStatus === 'error' ? 'bg-red-500' :
-                    'bg-amber-400'
-                  }`} title={
-                    saveStatus === 'saved' ? 'All changes saved' :
-                    saveStatus === 'saving' ? 'Saving...' :
-                    saveStatus === 'error' ? 'Save failed — will retry' :
-                    'Unsaved changes'
-                  } />
-                </div>
-                <div className="w-32 h-2 bg-slate-200 mt-1">
-                  <div
-                    className="h-full transition-all"
-                    style={{
-                      width: `${(answeredQuestions / totalQuestions) * 100}%`,
-                      backgroundColor: progressColor(answeredQuestions / totalQuestions),
-                    }}
-                  />
-                </div>
-              </div>
-              <button
-                onClick={handleSaveAndExit}
-                className="px-4 py-2 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-600 hover:border-slate-800 hover:text-slate-800 transition-all"
-              >
-                SAVE &amp; EXIT
-              </button>
-            </div>
-          </div>
+  const demoBanner = isDemo ? (
+    <div className="max-w-3xl mx-auto px-6 pt-4">
+      <div
+        className="flex items-center justify-between px-4 py-2 rounded-lg font-mono text-[11px]"
+        style={{ background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.2)' }}
+      >
+        <div className="flex items-center gap-3">
+          <span style={{ color: '#A3510B', fontWeight: 700 }}>DEMO</span>
+          <span style={{ color: '#6B6B6B' }}>
+            Answering as <strong style={{ color: '#2C2C2C' }}>{user.name}</strong>
+            {' · '}about <strong style={{ color: '#A3510B' }}>yourself</strong>
+          </span>
         </div>
-      </div>
-
-      {/* Demo context banner */}
-      {isDemo && (
-        <div className="max-w-3xl mx-auto px-6 pt-4">
-          <div
-            className="flex items-center justify-between px-4 py-2 rounded-lg font-mono text-[11px]"
-            style={{ background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.2)' }}
-          >
-            <div className="flex items-center gap-3">
-              <span style={{ color: '#A3510B', fontWeight: 700 }}>DEMO</span>
-              <span style={{ color: '#6B6B6B' }}>
-                Answering as <strong style={{ color: '#2C2C2C' }}>{user.name}</strong>
-                {' · '}about <strong style={{ color: '#A3510B' }}>yourself</strong>
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={handleFillAll}
-              className="px-3 py-1 rounded font-bold transition-all hover:scale-105"
-              style={{ background: '#d97706', color: 'white', fontSize: '10px' }}
-            >
-              FILL ALL
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Section indicator */}
-      <div className="max-w-3xl mx-auto px-6 pt-6">
-        <div className="flex gap-2 mb-6">
-          {sections.map((section, i) => (
-            <div
-              key={section.sectionId}
-              className={`h-1 flex-1 ${
-                i <= currentSectionIndex ? 'bg-amber-600' : 'bg-slate-200'
-              }`}
-            />
-          ))}
-        </div>
-        <span className="font-mono text-xs text-amber-600 font-bold tracking-wider">
-          {currentSection.sectionName.toUpperCase()}
-        </span>
-        <p className="font-mono text-sm text-slate-500 mt-1">
-          {currentSection.sectionDescription}
-        </p>
-        {currentSectionIndex === 0 && currentQuestionIndex === 0 && (
-          <div className="mt-4 p-3 bg-amber-50 border border-amber-200">
-            <p className="font-mono text-xs text-amber-800">
-              Keep it brief — this is a living document, not a test. You can come back anytime to expand, edit, or add new thoughts. Your progress saves automatically.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Question */}
-      <div className="max-w-3xl mx-auto px-6 py-8">
-        <div className="border-2 border-slate-200 bg-white p-8">
-          {/* AI-generated indicator */}
-          {isAiGenerated && (
-            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 flex items-start gap-2">
-              <span className="text-amber-500 mt-0.5">&#9679;</span>
-              <p className="font-mono text-xs text-amber-700">
-                This answer was drafted from your uploaded documents. Review and edit as needed.
-              </p>
-            </div>
-          )}
-
-          {/* Question text */}
-          <h2 className="font-mono font-bold text-lg text-slate-800 mb-2">
-            {currentQuestion.question}
-          </h2>
-          {currentQuestion.helperText && (
-            <p className="font-mono text-sm text-slate-500 mb-6">
-              {currentQuestion.helperText}
-            </p>
-          )}
-
-          <QuestionRenderer
-            question={currentQuestion}
-            value={currentAnswer}
-            onChange={(value) => handleAnswer(currentQuestion.id, value)}
-            personName={user.name}
-            onKeyboardContinue={handleNext}
-            isDemo={isDemo}
-            demoPerspective="self"
-          />
-
-          {/* Visibility toggle */}
-          {currentAnswer && (
-            <div className="mt-4 pt-4 border-t border-slate-100">
-              <button
-                onClick={() => toggleVisibility(currentSection.sectionId, currentQuestion.id)}
-                className="flex items-center gap-2 font-mono text-xs transition-colors group"
-              >
-                {currentVisibility === 'visible' ? (
-                  <>
-                    <span className="text-slate-400 group-hover:text-slate-600">&#128065;</span>
-                    <span className="text-slate-500 group-hover:text-slate-700">
-                      Visible to family
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-amber-500">&#128274;</span>
-                    <span className="text-amber-600 font-bold">
-                      Private to me only
-                    </span>
-                  </>
-                )}
-              </button>
-              {currentVisibility === 'private' && (
-                <p className="font-mono text-xs text-slate-400 mt-1 ml-6">
-                  This answer won't appear in your manual or be shared with anyone.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Navigation */}
-        <div className="flex gap-4 mt-6">
-          {(currentSectionIndex > 0 || currentQuestionIndex > 0) && (
-            <>
-              <button
-                onClick={() => { setCurrentSectionIndex(0); setCurrentQuestionIndex(0); }}
-                className="px-4 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-500 hover:border-slate-800 hover:text-slate-700 transition-all"
-              >
-                &laquo; START
-              </button>
-              <button
-                onClick={handlePrevious}
-                className="px-6 py-3 border-2 border-slate-300 bg-white font-mono font-bold text-slate-700 hover:border-slate-800 transition-all"
-              >
-                &larr; PREVIOUS
-              </button>
-            </>
-          )}
-          <button
-            onClick={handleNext}
-            disabled={isSubmitting}
-            className="px-6 py-3 border-2 border-slate-800 bg-slate-800 text-white font-mono font-bold hover:bg-slate-700 transition-all disabled:opacity-50 ml-auto"
-          >
-            {isSubmitting
-              ? 'SAVING...'
-              : isLastQuestion
-              ? 'COMPLETE'
-              : 'NEXT \u2192'}
-          </button>
-        </div>
-
-        {/* Skip section */}
-        {currentSection.skippable && currentQuestionIndex === 0 && (
-          <button
-            onClick={() => {
-              if (currentSectionIndex < sections.length - 1) {
-                setCurrentSectionIndex((i) => i + 1);
-                setCurrentQuestionIndex(0);
-              } else {
-                handleSubmit();
-              }
-            }}
-            className="mt-4 font-mono text-xs text-slate-400 hover:text-slate-600 transition-colors"
-          >
-            SKIP THIS SECTION &rarr;
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={handleFillAll}
+          className="px-3 py-1 rounded font-bold transition-all hover:scale-105"
+          style={{ background: '#d97706', color: 'white', fontSize: '10px' }}
+        >
+          FILL ALL
+        </button>
       </div>
     </div>
+  ) : null;
+
+  const navigation = (
+    <div className="flex gap-4 mt-6">
+      {(currentSectionIndex > 0 || currentQuestionIndex > 0) && (
+        <>
+          <button
+            onClick={() => { setCurrentSectionIndex(0); setCurrentQuestionIndex(0); }}
+            className="px-4 py-3 border-2 border-slate-300 bg-white font-mono text-xs font-bold text-slate-500 hover:border-slate-800 hover:text-slate-700 transition-all"
+          >
+            &laquo; START
+          </button>
+          <button
+            onClick={handlePrevious}
+            className="px-6 py-3 border-2 border-slate-300 bg-white font-mono font-bold text-slate-700 hover:border-slate-800 transition-all"
+          >
+            &larr; PREVIOUS
+          </button>
+        </>
+      )}
+      <button
+        onClick={handleNext}
+        disabled={isSubmitting}
+        className="px-6 py-3 border-2 border-slate-800 bg-slate-800 text-white font-mono font-bold hover:bg-slate-700 transition-all disabled:opacity-50 ml-auto"
+      >
+        {isSubmitting
+          ? 'SAVING...'
+          : isLastQuestion
+          ? 'COMPLETE'
+          : 'NEXT \u2192'}
+      </button>
+    </div>
+  );
+
+  const aiIndicator = isAiGenerated ? (
+    <div className="mb-4 p-3 bg-amber-50 border border-amber-200 flex items-start gap-2">
+      <span className="text-amber-500 mt-0.5">&#9679;</span>
+      <p className="font-mono text-xs text-amber-700">
+        This answer was drafted from your uploaded documents. Review and edit as needed.
+      </p>
+    </div>
+  ) : null;
+
+  return (
+    <AssessmentShell
+      phase="assess"
+      personName={user.name}
+      sectionName={currentSection.sectionName}
+      sectionDescription={currentSection.sectionDescription}
+      flowLabel="SELF-ONBOARDING"
+      flowTitle="Tell Us About Yourself"
+      accentColor="amber"
+      currentSection={currentSectionIndex}
+      totalSections={sections.length}
+      currentQuestion={currentQuestionIndex}
+      totalQuestions={totalQuestions}
+      answeredQuestions={answeredQuestions}
+      saveStatus={saveStatus}
+      onSaveAndExit={handleSaveAndExit}
+      canSkip={!!currentSection.skippable}
+      onSkipSection={() => {
+        if (currentSectionIndex < sections.length - 1) {
+          setCurrentSectionIndex((i) => i + 1);
+          setCurrentQuestionIndex(0);
+        } else {
+          handleSubmit();
+        }
+      }}
+      firstQuestionHint="Keep it brief — this is a living document, not a test. You can come back anytime to expand, edit, or add new thoughts. Your progress saves automatically."
+      demoBannerSlot={demoBanner}
+      navigationSlot={navigation}
+    >
+      <div className="border-2 border-slate-200 bg-white p-8">
+        {aiIndicator}
+
+        <h2 className="font-mono font-bold text-lg text-slate-800 mb-2">
+          {currentQuestion.question}
+        </h2>
+        {currentQuestion.helperText && (
+          <p className="font-mono text-sm text-slate-500 mb-6">
+            {currentQuestion.helperText}
+          </p>
+        )}
+
+        <QuestionRenderer
+          question={currentQuestion}
+          value={currentAnswer}
+          onChange={(value) => handleAnswer(currentQuestion.id, value)}
+          personName={user.name}
+          onKeyboardContinue={handleNext}
+          isDemo={isDemo}
+          demoPerspective="self"
+        />
+
+        {/* Visibility toggle */}
+        {currentAnswer && (
+          <div className="mt-4 pt-4 border-t border-slate-100">
+            <button
+              onClick={() => toggleVisibility(currentSection.sectionId, currentQuestion.id)}
+              className="flex items-center gap-2 font-mono text-xs transition-colors group"
+            >
+              {currentVisibility === 'visible' ? (
+                <>
+                  <span className="text-slate-400 group-hover:text-slate-600">&#128065;</span>
+                  <span className="text-slate-500 group-hover:text-slate-700">
+                    Visible to family
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="text-amber-500">&#128274;</span>
+                  <span className="text-amber-600 font-bold">
+                    Private to me only
+                  </span>
+                </>
+              )}
+            </button>
+            {currentVisibility === 'private' && (
+              <p className="font-mono text-xs text-slate-400 mt-1 ml-6">
+                This answer won't appear in your manual or be shared with anyone.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </AssessmentShell>
   );
 }

@@ -96,7 +96,8 @@ export interface GrowthItem {
   alternatives?: DepthAlternatives;
 
   // Feedback (the 1-3 tap loop)
-  feedback?: GrowthFeedback;
+  feedback?: GrowthFeedback;                              // Legacy single-user feedback
+  feedbackByUser?: Record<string, GrowthFeedback>;        // Per-user feedback (keyed by userId)
 
   // Arc linkage (present when item belongs to a Growth Arc)
   arcId?: string;

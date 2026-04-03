@@ -143,7 +143,7 @@ export function SelfWorthAssessmentModal({
       // Calculate self-worth scores
       const totalScore = Object.values(answers).reduce((sum, ans) => sum + ans.primary, 0);
       const averageScore = totalScore / SELF_WORTH_QUESTIONS.length;
-      const category = totalScore < 13 ? 'low' : totalScore < 19 ? 'moderate' : 'high';
+      const category = totalScore < 13 ? 'area_for_growth' : totalScore < 19 ? 'developing' : 'area_of_strength';
 
       const selfWorthScores = {
         items: Object.entries(answers).reduce((acc, [qId, ans]) => {

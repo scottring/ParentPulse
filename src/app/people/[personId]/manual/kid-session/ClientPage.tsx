@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import AssessmentShell from '@/components/shared/AssessmentShell';
 import { useAuth } from '@/context/AuthContext';
 import { usePersonById } from '@/hooks/usePerson';
 import { usePersonManual } from '@/hooks/usePersonManual';
@@ -273,77 +274,66 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
 
   const currentAnswer = answers[currentSection.id]?.[currentQuestion.id];
 
-  return (
-    <div className="min-h-screen bg-blue-50">
-      {/* Minimal header */}
-      <div className="flex items-center justify-between px-6 py-3 bg-white border-b-2 border-blue-200">
-        <button
-          onClick={handleSaveAndExit}
-          className="text-slate-400 hover:text-slate-600 text-2xl"
-        >
-          &times;
-        </button>
-        <div className="text-center">
-          <span className="text-sm font-bold text-blue-600">
-            {person.name}&apos;s Answers
+  const demoBanner = isDemo ? (
+    <div className="max-w-2xl mx-auto px-4 pt-4">
+      <div
+        className="flex items-center justify-between px-4 py-2 rounded-lg font-mono text-[11px]"
+        style={{ background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.2)' }}
+      >
+        <div className="flex items-center gap-3">
+          <span style={{ color: '#A3510B', fontWeight: 700 }}>DEMO</span>
+          <span style={{ color: '#6B6B6B' }}>
+            Parent <strong style={{ color: '#2C2C2C' }}>{user?.name}</strong> supervising{' '}
+            <strong style={{ color: '#3B82F6' }}>{person.name}</strong>&apos;s session
           </span>
-          <div className="w-32 h-2 bg-blue-100 mt-1 mx-auto rounded-full">
-            <div
-              className="h-full bg-blue-500 rounded-full transition-all"
-              style={{ width: `${(answeredQuestions / totalQuestions) * 100}%` }}
-            />
-          </div>
         </div>
-        <span className="text-sm text-slate-400">
-          {answeredQuestions}/{totalQuestions}
-        </span>
-      </div>
-
-      {/* Demo context banner */}
-      {isDemo && (
-        <div className="max-w-2xl mx-auto px-4 pt-4">
-          <div
-            className="flex items-center justify-between px-4 py-2 rounded-lg font-mono text-[11px]"
-            style={{ background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.2)' }}
-          >
-            <div className="flex items-center gap-3">
-              <span style={{ color: '#A3510B', fontWeight: 700 }}>DEMO</span>
-              <span style={{ color: '#6B6B6B' }}>
-                Parent <strong style={{ color: '#2C2C2C' }}>{user?.name}</strong> supervising{' '}
-                <strong style={{ color: '#3B82F6' }}>{person.name}</strong>&apos;s session
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={handleFillAll}
-              className="px-3 py-1 rounded font-bold transition-all hover:scale-105"
-              style={{ background: '#d97706', color: 'white', fontSize: '10px' }}
-            >
-              FILL ALL
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Child question display */}
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        <ChildQuestionDisplay
-          question={currentQuestion}
-          sectionEmoji={currentSection.emoji}
-          sectionDescription={currentSection.description}
-          currentAnswer={currentAnswer}
-          onAnswer={handleAnswer}
-          onNext={handleNext}
-          onBack={handlePrevious}
-          onSkip={() => {
-            handleAnswer(null);
-            handleNext();
-          }}
-          canGoBack={currentSectionIndex > 0 || currentQuestionIndex > 0}
-          childName={person.name}
-          isDemo={isDemo}
-        />
+        <button
+          type="button"
+          onClick={handleFillAll}
+          className="px-3 py-1 rounded font-bold transition-all hover:scale-105"
+          style={{ background: '#d97706', color: 'white', fontSize: '10px' }}
+        >
+          FILL ALL
+        </button>
       </div>
     </div>
+  ) : null;
+
+  return (
+    <AssessmentShell
+      phase="assess"
+      personName={person.name}
+      sectionName={currentSection.title}
+      sectionDescription={currentSection.description}
+      sectionEmoji={currentSection.emoji}
+      flowLabel="KID SESSION"
+      flowTitle={`${person.name}'s Answers`}
+      accentColor="blue"
+      currentSection={currentSectionIndex}
+      totalSections={sections.length}
+      currentQuestion={currentQuestionIndex}
+      totalQuestions={totalQuestions}
+      answeredQuestions={answeredQuestions}
+      onSaveAndExit={handleSaveAndExit}
+      demoBannerSlot={demoBanner}
+      variant="kid"
+    >
+      <ChildQuestionDisplay
+        question={currentQuestion}
+        sectionEmoji={currentSection.emoji}
+        sectionDescription={currentSection.description}
+        currentAnswer={currentAnswer}
+        onAnswer={handleAnswer}
+        onNext={handleNext}
+        onBack={handlePrevious}
+        onSkip={() => {
+          handleAnswer(null);
+          handleNext();
+        }}
+        canGoBack={currentSectionIndex > 0 || currentQuestionIndex > 0}
+        childName={person.name}
+        isDemo={isDemo}
+      />
+    </AssessmentShell>
   );
 }

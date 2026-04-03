@@ -135,7 +135,7 @@ export interface GeneratedManualContent {
       };
       totalScore: number;      // Sum of all item scores (6-24 for 6 items)
       averageScore: number;    // Average score across items (1.0-4.0)
-      category: 'low' | 'moderate' | 'high';  // low: <13, moderate: 13-18, high: 19-24
+      category: 'area_for_growth' | 'developing' | 'area_of_strength';  // <13: area_for_growth, 13-18: developing, 19-24: area_of_strength
       questionCount: number;   // Number of questions answered (should be 6)
     };
     // Future: adhd, bigFive, etc.

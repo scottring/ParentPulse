@@ -51,6 +51,7 @@ interface UseGrowthFeedReturn {
     reaction: FeedbackReaction,
     impactRating?: ImpactRating,
     note?: string,
+    forUserId?: string,
   ) => Promise<void>;
   markSeen: (itemId: string) => Promise<void>;
   generateBatch: () => Promise<{ success: boolean; itemCount?: number }>;
@@ -200,37 +201,52 @@ export function useGrowthFeed(): UseGrowthFeedReturn {
   const standaloneActiveItems = activeItems.filter((i) => !i.arcId);
   const standaloneCompletedItems = completedItems.filter((i) => !i.arcId);
 
-  // Submit feedback
+  // Submit feedback — writes per-user feedback + legacy feedback field
   const submitFeedback = useCallback(
     async (
       itemId: string,
       reaction: FeedbackReaction,
       impactRating?: ImpactRating,
       note?: string,
+      forUserId?: string,
     ) => {
-      const feedback: GrowthFeedback = {
+      const respondingUserId = forUserId || user?.userId;
+      if (!respondingUserId) return;
+
+      const feedbackEntry: GrowthFeedback = {
         reaction,
         respondedAt: Timestamp.now(),
         ...(impactRating && { impactRating }),
         ...(note && { note }),
       };
 
-      const newStatus = reaction === 'not_now' ? 'active' : 'completed';
-
       const updates: Record<string, unknown> = {
-        feedback,
-        status: newStatus,
+        // Per-user feedback (new)
+        [`feedbackByUser.${respondingUserId}`]: feedbackEntry,
+        // Legacy single feedback (for backward compat with Cloud Functions)
+        feedback: feedbackEntry,
         statusUpdatedAt: Timestamp.now(),
       };
 
       if (reaction === 'not_now') {
-        const newDate = new Date();
-        newDate.setDate(newDate.getDate() + 2);
-        updates.scheduledDate = Timestamp.fromDate(newDate);
-        const newExpiry = new Date(newDate);
-        newExpiry.setDate(newExpiry.getDate() + 1);
-        updates.expiresAt = Timestamp.fromDate(newExpiry);
-        updates.feedback = null;
+        // "Not now" for one person doesn't complete the item
+        // Only reschedule if it's a single-person item
+        const item = activeItems.find((i) => i.growthItemId === itemId);
+        const isCouple = item?.relationalLevel === 'couple';
+
+        if (!isCouple) {
+          const newDate = new Date();
+          newDate.setDate(newDate.getDate() + 2);
+          updates.scheduledDate = Timestamp.fromDate(newDate);
+          const newExpiry = new Date(newDate);
+          newExpiry.setDate(newExpiry.getDate() + 1);
+          updates.expiresAt = Timestamp.fromDate(newExpiry);
+          updates.feedback = null;
+          updates[`feedbackByUser.${respondingUserId}`] = feedbackEntry; // still track the "not now"
+        }
+        updates.status = 'active';
+      } else {
+        updates.status = 'completed';
       }
 
       await updateDoc(
@@ -238,7 +254,7 @@ export function useGrowthFeed(): UseGrowthFeedReturn {
         updates,
       );
     },
-    [],
+    [user?.userId, activeItems],
   );
 
   const markSeen = useCallback(async (itemId: string) => {

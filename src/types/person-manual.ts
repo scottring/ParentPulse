@@ -120,7 +120,7 @@ export interface PersonManual {
       };
       totalScore: number;
       averageScore: number;
-      category: 'low' | 'moderate' | 'high';
+      category: 'area_for_growth' | 'developing' | 'area_of_strength';
       questionCount: number;
     };
   };

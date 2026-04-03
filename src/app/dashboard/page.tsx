@@ -8,10 +8,17 @@ import { useGrowthFeed } from '@/hooks/useGrowthFeed';
 import { useRingScores } from '@/hooks/useRingScores';
 import { useProgression } from '@/hooks/useProgression';
 import { usePerson } from '@/hooks/usePerson';
-import MainLayout from '@/components/layout/MainLayout';
-import { FamilyClimate } from '@/components/dashboard/FamilyClimate';
+import Navigation from '@/components/layout/Navigation';
+import SideNav from '@/components/layout/SideNav';
+import WeatherBackground from '@/components/dashboard/WeatherBackground';
 import { RelationshipCard } from '@/components/dashboard/RelationshipCard';
+import { scoreToClimate, getGreeting, buildClimateSummary, getOnboardingClimate } from '@/lib/climate-engine';
 import Link from 'next/link';
+import type { ClimateState } from '@/lib/climate-engine';
+
+function isDarkSky(climate: ClimateState) {
+  return climate === 'stormy' || climate === 'overcast';
+}
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
@@ -52,6 +59,15 @@ export default function DashboardPage() {
     if (!authLoading && !user) router.push('/login');
   }, [user, authLoading, router]);
 
+  const climateState: ClimateState = useMemo(() => {
+    if (state === 'active' && health) {
+      return scoreToClimate(health.score, health.trend).state;
+    }
+    return 'mostly_sunny';
+  }, [state, health]);
+
+  const dark = isDarkSky(climateState);
+
   const handleAddPerson = async () => {
     if (!addName.trim()) return;
     setAdding(true);
@@ -83,237 +99,359 @@ export default function DashboardPage() {
 
   if (authLoading || state === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--parent-bg)' }}>
-        <div className="animate-spin w-8 h-8 rounded-full border-2 border-t-transparent" style={{ borderColor: 'var(--parent-primary)' }} />
-      </div>
+      <WeatherBackground climate="mostly_sunny">
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin w-8 h-8 rounded-full border-2 border-t-transparent border-white/40" />
+        </div>
+      </WeatherBackground>
     );
   }
 
   if (!user) return null;
 
-  const userName = selfPerson?.name || user.name || 'there';
+  const userName = selfPerson?.name?.split(' ')[0] || user.name?.split(' ')[0] || 'there';
+  const climate = state === 'active' && health ? scoreToClimate(health.score, health.trend) : null;
+  const summary = state === 'active' && health ? buildClimateSummary(health, roles) : null;
+  const onboarding = state !== 'active' ? getOnboardingClimate(state, userName) : null;
+
+  const textPrimary = dark ? 'rgba(255,255,255,0.95)' : '#1a1a1a';
+  const textSecondary = dark ? 'rgba(255,255,255,0.6)' : 'rgba(40,40,40,0.55)';
+  const textTertiary = dark ? 'rgba(255,255,255,0.35)' : 'rgba(40,40,40,0.3)';
+  const textClass = dark ? 'sky-text-dark' : 'sky-text';
 
   return (
-    <MainLayout>
-      <div className="max-w-xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+    <WeatherBackground climate={climateState}>
+      <Navigation />
+      <SideNav />
 
-        {/* Demo banner */}
-        {isDemo && (
-          <div
-            className="flex items-center gap-3 px-4 py-2 rounded-xl text-xs"
-            style={{
-              fontFamily: 'var(--font-parent-body)',
-              background: 'rgba(217,119,6,0.06)',
-              border: '1px solid rgba(217,119,6,0.15)',
-              color: 'var(--parent-text-light)',
-            }}
-          >
-            <span className="font-bold" style={{ color: '#A3510B' }}>DEMO</span>
-            <span>{state}</span>
-          </div>
-        )}
+      <div className="min-h-screen lg:pl-64 pt-20">
 
-        {/* Family Climate — always shown */}
-        <FamilyClimate
-          health={health}
-          dashboardState={state}
-          userName={userName}
-          roles={roles}
-        />
+        {/* ===== HERO SECTION — the emotional center ===== */}
+        <div className="max-w-xl mx-auto px-5 sm:px-8 pt-10 pb-6">
 
-        {/* ===== ONBOARDING STATES ===== */}
-
-        {state === 'new_user' && selfPerson && (
-          <OnboardingCard
-            title="Tell us about yourself"
-            body="How you handle stress, what you need from people, how you communicate. This is the foundation."
-            ctaLabel="Answer questions"
-            ctaHref={`/people/${selfPerson.personId}/manual/self-onboard${demoQ}`}
-          />
-        )}
-
-        {state === 'self_complete' && (
-          <div
-            className="rounded-2xl bg-white p-6"
-            style={{ boxShadow: 'var(--shadow-soft)', border: '1px solid var(--parent-border)' }}
-          >
-            <h2
-              className="text-base font-semibold mb-1"
-              style={{ fontFamily: 'var(--font-parent-heading)', color: 'var(--parent-text)' }}
-            >
-              Add the people in your life
-            </h2>
-            <p
-              className="text-sm mb-4"
-              style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text-light)' }}
-            >
-              Who do you want to understand better?
-            </p>
-            <div className="flex gap-2">
-              <select
-                value={addType}
-                onChange={(e) => setAddType(e.target.value as 'spouse' | 'child')}
-                className="text-sm rounded-lg px-3 py-2.5"
-                style={{
-                  fontFamily: 'var(--font-parent-body)',
-                  background: 'var(--parent-bg)',
-                  color: 'var(--parent-text)',
-                  border: '1px solid var(--parent-border)',
-                }}
-              >
-                <option value="spouse">Spouse / Partner</option>
-                <option value="child">Child</option>
-              </select>
-              <input
-                type="text"
-                value={addName}
-                onChange={(e) => setAddName(e.target.value)}
-                placeholder="Their name"
-                className="flex-1 text-sm rounded-lg px-3 py-2.5"
-                style={{
-                  fontFamily: 'var(--font-parent-body)',
-                  background: 'var(--parent-bg)',
-                  color: 'var(--parent-text)',
-                  border: '1px solid var(--parent-border)',
-                }}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddPerson()}
-              />
-              <button
-                onClick={handleAddPerson}
-                disabled={adding || !addName.trim()}
-                className="text-sm font-medium rounded-xl px-5 py-2.5 text-white transition-all hover:opacity-90 disabled:opacity-40"
-                style={{ fontFamily: 'var(--font-parent-body)', background: 'var(--parent-primary)' }}
-              >
-                {adding ? '...' : 'Add'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {state === 'has_people' && peopleNeedingContributions.map((person) => {
-          const isChild = person.relationshipType === 'child';
-          const href = isChild
-            ? `/people/${person.personId}/manual/kid-session${demoQ}`
-            : `/people/${person.personId}/manual/onboard${demoQ}`;
-          return (
-            <OnboardingCard
-              key={person.personId}
-              title={`Share what you know about ${person.name}`}
-              body={`You know ${person.name} from a perspective they can\u2019t see themselves.`}
-              ctaLabel={isChild ? 'Start portrait session' : `Tell us about ${person.name}`}
-              ctaHref={href}
-            />
-          );
-        })}
-
-        {state === 'has_contributions' && (
-          <OnboardingCard
-            title="Ready to see the picture"
-            body="We\u2019ll assess your relationships across 20 research-backed dimensions and build your first Growth Arc."
-            ctaLabel={generating ? 'Analyzing...' : 'Analyze & start growing'}
-            ctaOnClick={handleAnalyze}
-            disabled={generating}
-          />
-        )}
-
-        {/* ===== ACTIVE STATE: RELATIONSHIP CARDS ===== */}
-
-        {state === 'active' && roles.map((role) => (
-          <RelationshipCard
-            key={role.otherPerson.personId}
-            role={role}
-            variant={role.domain === 'couple' ? 'spouse' : 'child'}
-            demoQ={demoQ}
-            onReact={(id, r) => submitFeedback(id, r as any)}
-          />
-        ))}
-
-        {/* Footer links (active state) */}
-        {state === 'active' && (
-          <div className="flex items-center justify-between pt-2 pb-4">
-            <div className="flex items-center gap-4">
-              <Link
-                href="/people"
-                className="text-xs transition-colors hover:underline"
-                style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text-light)' }}
-              >
-                People
-              </Link>
-              {selfPerson && (
-                <Link
-                  href={`/people/${selfPerson.personId}/manual`}
-                  className="text-xs transition-colors hover:underline"
-                  style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text-light)' }}
-                >
-                  My manual
-                </Link>
-              )}
-              <Link
-                href={`/roadmap${demoQ}`}
-                className="text-xs transition-colors hover:underline"
-                style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text-light)' }}
-              >
-                Roadmap
-              </Link>
-            </div>
-            <button
-              onClick={handleAnalyze}
-              disabled={generating}
-              className="text-xs px-3 py-1.5 rounded-lg transition-all hover:opacity-80 disabled:opacity-30"
+          {/* Demo tag */}
+          {isDemo && (
+            <div
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-6 text-[11px] tracking-wide uppercase"
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                color: 'var(--parent-text-light)',
-                border: '1px solid var(--parent-border)',
+                background: 'rgba(217,119,6,0.12)',
+                color: '#A3510B',
+                border: '1px solid rgba(217,119,6,0.2)',
+                fontWeight: 500,
               }}
             >
-              {generating ? 'Analyzing...' : 'Re-analyze'}
-            </button>
+              Demo &middot; {state}
+            </div>
+          )}
+
+          {/* Greeting — large, editorial */}
+          <h1
+            className={`${textClass} animate-fade-in-up`}
+            style={{
+              fontFamily: 'var(--font-parent-display)',
+              fontSize: 'clamp(2rem, 5vw, 2.75rem)',
+              fontWeight: 300,
+              fontStyle: 'italic',
+              color: textPrimary,
+              lineHeight: 1.15,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Good {getTimeOfDay()}, {userName}
+          </h1>
+
+          {/* Active state: Climate label + trend */}
+          {climate && health && (
+            <div className="mt-6">
+              {/* Climate state as hero text */}
+              <span
+                className="block"
+                style={{
+                  fontFamily: 'var(--font-parent-display)',
+                  fontSize: 'clamp(1.75rem, 5vw, 2.25rem)',
+                  fontWeight: 300,
+                  color: textPrimary,
+                  lineHeight: 1.2,
+                }}
+              >
+                {climate.state === 'clear' ? 'Clear skies' :
+                 climate.state === 'mostly_sunny' ? 'Mostly sunny' :
+                 climate.state === 'partly_cloudy' ? 'Partly cloudy' :
+                 climate.state === 'overcast' ? 'Overcast' :
+                 'Heavy weather'}
+              </span>
+              <span
+                className="block mt-2"
+                style={{
+                  fontFamily: 'var(--font-parent-body)',
+                  fontSize: '13px',
+                  fontWeight: 400,
+                  fontStyle: 'italic',
+                  color: textSecondary,
+                }}
+              >
+                {climate.trendPhrase}
+              </span>
+            </div>
+          )}
+
+          {/* Active state: narrative summary */}
+          {summary && (
+            <p
+              className={`mt-5 max-w-md leading-relaxed ${textClass}`}
+              style={{
+                fontFamily: 'var(--font-parent-body)',
+                fontSize: '14px',
+                fontWeight: 400,
+                color: dark ? 'rgba(255,255,255,0.7)' : 'rgba(30,30,30,0.65)',
+                lineHeight: 1.65,
+              }}
+            >
+              {summary}
+            </p>
+          )}
+
+          {/* Onboarding message */}
+          {onboarding && (
+            <p
+              className={`mt-4 max-w-sm ${textClass}`}
+              style={{
+                fontFamily: 'var(--font-parent-body)',
+                fontSize: '15px',
+                color: textSecondary,
+                lineHeight: 1.6,
+              }}
+            >
+              {onboarding.message}
+            </p>
+          )}
+        </div>
+
+        {/* ===== CONTENT ===== */}
+        <div className="max-w-xl mx-auto px-5 sm:px-8 pb-12">
+
+          {/* Thin separator line */}
+          {state === 'active' && (
+            <div
+              className="mb-6"
+              style={{
+                height: '1px',
+                background: dark
+                  ? 'linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)'
+                  : 'linear-gradient(90deg, transparent, rgba(0,0,0,0.06), transparent)',
+              }}
+            />
+          )}
+
+          <div className="space-y-4">
+
+            {/* ONBOARDING: Self */}
+            {state === 'new_user' && selfPerson && (
+              <OnboardingCard
+                title="Start with you"
+                body="How you handle stress, what you need, how you communicate. This becomes the foundation."
+                ctaLabel="Begin"
+                ctaHref={`/people/${selfPerson.personId}/manual/self-onboard${demoQ}`}
+              />
+            )}
+
+            {/* ONBOARDING: Add people */}
+            {state === 'self_complete' && (
+              <div className="glass-card-strong p-6">
+                <h2
+                  className="text-lg mb-1"
+                  style={{ fontFamily: 'var(--font-parent-display)', fontWeight: 500, color: 'var(--parent-text)' }}
+                >
+                  Who matters most?
+                </h2>
+                <p
+                  className="text-sm mb-5"
+                  style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text-light)', lineHeight: 1.6 }}
+                >
+                  Add the people you want to understand better.
+                </p>
+                <div className="flex gap-2">
+                  <select
+                    value={addType}
+                    onChange={(e) => setAddType(e.target.value as 'spouse' | 'child')}
+                    className="text-sm rounded-2xl px-3 py-2.5"
+                    style={{
+                      fontFamily: 'var(--font-parent-body)',
+                      background: 'rgba(255,255,255,0.5)',
+                      color: 'var(--parent-text)',
+                      border: '1px solid rgba(0,0,0,0.06)',
+                    }}
+                  >
+                    <option value="spouse">Spouse / Partner</option>
+                    <option value="child">Child</option>
+                  </select>
+                  <input
+                    type="text"
+                    value={addName}
+                    onChange={(e) => setAddName(e.target.value)}
+                    placeholder="Their name"
+                    className="flex-1 text-sm rounded-2xl px-4 py-2.5"
+                    style={{
+                      fontFamily: 'var(--font-parent-body)',
+                      background: 'rgba(255,255,255,0.5)',
+                      color: 'var(--parent-text)',
+                      border: '1px solid rgba(0,0,0,0.06)',
+                    }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddPerson()}
+                  />
+                  <button
+                    onClick={handleAddPerson}
+                    disabled={adding || !addName.trim()}
+                    className="text-sm font-medium rounded-2xl px-5 py-2.5 text-white hover:opacity-90 disabled:opacity-40"
+                    style={{ fontFamily: 'var(--font-parent-body)', background: 'var(--parent-primary)' }}
+                  >
+                    {adding ? '...' : 'Add'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ONBOARDING: Contribute */}
+            {state === 'has_people' && peopleNeedingContributions.map((person) => {
+              const isChild = person.relationshipType === 'child';
+              const href = isChild
+                ? `/people/${person.personId}/manual/kid-session${demoQ}`
+                : `/people/${person.personId}/manual/onboard${demoQ}`;
+              return (
+                <OnboardingCard
+                  key={person.personId}
+                  title={`What do you see in ${person.name}?`}
+                  body={`You see ${person.name} from a perspective they can\u2019t see themselves.`}
+                  ctaLabel={isChild ? 'Start session' : `Begin`}
+                  ctaHref={href}
+                />
+              );
+            })}
+
+            {/* ONBOARDING: Analyze */}
+            {state === 'has_contributions' && (
+              <OnboardingCard
+                title="Ready to read the sky"
+                body="We'll map your relationships across 20 dimensions and find where the weather is headed."
+                ctaLabel={generating ? 'Reading...' : 'Analyze'}
+                ctaOnClick={handleAnalyze}
+                disabled={generating}
+              />
+            )}
+
+            {/* ===== ACTIVE: Relationship forecasts ===== */}
+            {state === 'active' && (
+              <div className="space-y-4">
+                {/* Section label */}
+                <span
+                  className="block mb-1"
+                  style={{
+                    fontFamily: 'var(--font-parent-body)',
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    color: textTertiary,
+                  }}
+                >
+                  Forecasts
+                </span>
+
+                {roles.map((role) => (
+                  <RelationshipCard
+                    key={role.otherPerson.personId}
+                    role={role}
+                    variant={role.domain === 'couple' ? 'spouse' : 'child'}
+                    demoQ={demoQ}
+                    onReact={(id, r, forUserId) => submitFeedback(id, r as any, undefined, undefined, forUserId)}
+                    currentUserId={user?.userId}
+                    currentUserName={selfPerson?.name || user?.name}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Footer */}
+            {state === 'active' && (
+              <div className="flex items-center justify-between pt-6 pb-10">
+                <div className="flex items-center gap-5">
+                  {[
+                    { href: '/people', label: 'People' },
+                    selfPerson && { href: `/people/${selfPerson.personId}/manual`, label: 'Manual' },
+                    { href: `/roadmap${demoQ}`, label: 'Roadmap' },
+                  ].filter(Boolean).map((link) => (
+                    <Link
+                      key={link!.href}
+                      href={link!.href}
+                      className="text-[11px] tracking-wide uppercase hover:opacity-70"
+                      style={{
+                        fontFamily: 'var(--font-parent-body)',
+                        fontWeight: 500,
+                        letterSpacing: '0.06em',
+                        color: textTertiary,
+                      }}
+                    >
+                      {link!.label}
+                    </Link>
+                  ))}
+                </div>
+                <button
+                  onClick={handleAnalyze}
+                  disabled={generating}
+                  className="text-[11px] tracking-wide uppercase px-4 py-2 rounded-full glass-card hover:opacity-80 disabled:opacity-30"
+                  style={{
+                    fontFamily: 'var(--font-parent-body)',
+                    fontWeight: 500,
+                    letterSpacing: '0.06em',
+                    color: textTertiary,
+                  }}
+                >
+                  {generating ? 'Reading...' : 'Re-analyze'}
+                </button>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
-    </MainLayout>
+    </WeatherBackground>
   );
 }
 
-// ===== Simple Onboarding Card =====
+function getTimeOfDay(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'morning';
+  if (h < 17) return 'afternoon';
+  return 'evening';
+}
+
+// ===== Onboarding Card =====
 
 function OnboardingCard({
-  title,
-  body,
-  ctaLabel,
-  ctaHref,
-  ctaOnClick,
-  disabled,
+  title, body, ctaLabel, ctaHref, ctaOnClick, disabled,
 }: {
-  title: string;
-  body: string;
-  ctaLabel: string;
-  ctaHref?: string;
-  ctaOnClick?: () => void;
-  disabled?: boolean;
+  title: string; body: string; ctaLabel: string;
+  ctaHref?: string; ctaOnClick?: () => void; disabled?: boolean;
 }) {
   return (
-    <div
-      className="rounded-2xl bg-white p-6"
-      style={{ boxShadow: 'var(--shadow-soft)', border: '1px solid var(--parent-border)' }}
-    >
+    <div className="glass-card-strong p-6">
       <h2
-        className="text-base font-semibold mb-1"
-        style={{ fontFamily: 'var(--font-parent-heading)', color: 'var(--parent-text)' }}
+        className="text-lg mb-1.5"
+        style={{ fontFamily: 'var(--font-parent-display)', fontWeight: 500, color: 'var(--parent-text)' }}
       >
         {title}
       </h2>
       <p
-        className="text-sm mb-4 leading-relaxed"
-        style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text-light)' }}
+        className="text-sm mb-5 leading-relaxed"
+        style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text-light)', lineHeight: 1.6 }}
       >
         {body}
       </p>
       {ctaHref ? (
         <Link
           href={ctaHref}
-          className="inline-flex items-center px-5 py-2.5 rounded-xl text-sm font-medium text-white transition-all hover:opacity-90"
-          style={{ fontFamily: 'var(--font-parent-body)', background: 'var(--parent-primary)' }}
+          className="inline-flex items-center px-6 py-2.5 rounded-full text-[13px] font-medium text-white hover:opacity-90"
+          style={{ fontFamily: 'var(--font-parent-body)', background: 'var(--parent-primary)', letterSpacing: '0.01em' }}
         >
           {ctaLabel}
         </Link>
@@ -321,8 +459,8 @@ function OnboardingCard({
         <button
           onClick={ctaOnClick}
           disabled={disabled}
-          className="inline-flex items-center px-5 py-2.5 rounded-xl text-sm font-medium text-white transition-all hover:opacity-90 disabled:opacity-40"
-          style={{ fontFamily: 'var(--font-parent-body)', background: 'var(--parent-primary)' }}
+          className="inline-flex items-center px-6 py-2.5 rounded-full text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-40"
+          style={{ fontFamily: 'var(--font-parent-body)', background: 'var(--parent-primary)', letterSpacing: '0.01em' }}
         >
           {ctaLabel}
         </button>

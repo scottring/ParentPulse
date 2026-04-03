@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600;700&family=Inter:wght@300;400;500;600;700&family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap');
 
 @import "tailwindcss";
 
@@ -22,14 +22,21 @@
   --child-card: #FFFFFF;
   --child-text: #2C2C2C;
 
+  /* AURA Phase Colors */
+  --aura-assess: #0F6E56;
+  --aura-understand: #534AB7;
+  --aura-respond: #D85A30;
+  --aura-assimilate: #BA7517;
+
   /* Shadows */
   --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
   --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.1);
   --shadow-large: 0 8px 24px rgba(0, 0, 0, 0.12), 0 16px 48px rgba(0, 0, 0, 0.14);
 
   /* Fonts */
-  --font-parent-heading: 'Crimson Pro', serif;
-  --font-parent-body: 'Inter', sans-serif;
+  --font-parent-heading: 'Cormorant Garamond', 'Crimson Pro', serif;
+  --font-parent-body: 'DM Sans', sans-serif;
+  --font-parent-display: 'Cormorant Garamond', serif;
   --font-child-heading: 'Fredoka', sans-serif;
   --font-child-body: 'Nunito', sans-serif;
 }
@@ -206,7 +213,144 @@ html {
   to { transform: rotate(360deg); }
 }
 
-/* Smooth transitions */
+/* ==================== Weather Animations ==================== */
+
+/* Cloud drift — slow, medium, fast */
+@keyframes cloudDrift {
+  0% { transform: translateX(0) scale(var(--cloud-scale, 1)); }
+  100% { transform: translateX(140vw) scale(var(--cloud-scale, 1)); }
+}
+
+.animate-cloud-drift-slow {
+  animation: cloudDrift 80s linear infinite;
+}
+.animate-cloud-drift {
+  animation: cloudDrift 55s linear infinite;
+}
+.animate-cloud-drift-fast {
+  animation: cloudDrift 35s linear infinite;
+}
+
+/* Sun pulse — gentle breathing */
+@keyframes sunPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+.animate-sun-pulse {
+  animation: sunPulse 6s ease-in-out infinite;
+}
+
+/* Sun glow — soft radiance cycle */
+@keyframes sunGlow {
+  0%, 100% { opacity: 0.7; transform: scale(2.5); }
+  50% { opacity: 1; transform: scale(2.8); }
+}
+.animate-sun-glow {
+  animation: sunGlow 4s ease-in-out infinite;
+}
+
+/* Sun rotate — very slow ray rotation */
+@keyframes sunRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-sun-rotate {
+  animation: sunRotate 120s linear infinite;
+}
+
+/* Rain fall */
+@keyframes rainFall {
+  0% { transform: translateY(-5vh); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(105vh); opacity: 0; }
+}
+.animate-rain-fall {
+  animation: rainFall 1s linear infinite;
+}
+
+/* Glass card shimmer on hover */
+@keyframes glassShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Glassmorphism card base — atmospheric frost */
+.glass-card {
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(32px) saturate(1.6);
+  -webkit-backdrop-filter: blur(32px) saturate(1.6);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-top: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.06),
+    0 2px 8px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  border-radius: 24px;
+}
+
+.glass-card-strong {
+  background: rgba(255, 255, 255, 0.58);
+  backdrop-filter: blur(40px) saturate(1.7);
+  -webkit-backdrop-filter: blur(40px) saturate(1.7);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-top: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 12px 48px rgba(0, 0, 0, 0.07),
+    0 2px 8px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  border-radius: 24px;
+}
+
+/* Horizon fog — adds depth at the bottom of the viewport */
+.horizon-fog {
+  background: linear-gradient(
+    0deg,
+    rgba(255,255,255,0.35) 0%,
+    rgba(255,255,255,0.15) 30%,
+    transparent 60%
+  );
+}
+
+/* Atmospheric text shadow for light-on-sky text */
+.sky-text {
+  text-shadow: 0 1px 20px rgba(0,0,0,0.06), 0 0px 4px rgba(0,0,0,0.03);
+}
+.sky-text-dark {
+  text-shadow: 0 2px 16px rgba(0,0,0,0.2), 0 0px 4px rgba(0,0,0,0.1);
+}
+
+/* Score temperature display */
+.score-temp {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+  line-height: 0.85;
+}
+
+/* Relationship card hover lift */
+.weather-card {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+}
+.weather-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 16px 56px rgba(0, 0, 0, 0.08),
+    0 4px 12px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* Smooth transitions — exclude weather animated elements */
 * {
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Disable the global transition on weather-animated elements */
+.animate-cloud-drift-slow,
+.animate-cloud-drift,
+.animate-cloud-drift-fast,
+.animate-sun-pulse,
+.animate-sun-glow,
+.animate-sun-rotate,
+.animate-rain-fall {
+  transition: opacity 2s ease;
 }
