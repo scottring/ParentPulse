@@ -9,6 +9,7 @@ import { useContribution } from '@/hooks/useContribution';
 import { useFamily } from '@/hooks/useFamily';
 import { ManualChat } from '@/components/manual/ManualChat';
 import { useEquivalentManualIds } from '@/hooks/useEquivalentManualIds';
+import { isKidObserverEligible, computeAge } from '@/utils/age';
 import MainLayout from '@/components/layout/MainLayout';
 
 export function ManualPage({ params }: { params: Promise<{ personId: string }> }) {
@@ -137,6 +138,34 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                     Invite {person.name}
                   </button>
                 )}
+                {/* Kid observers — any eligible child (8+) can observe this person */}
+                {people
+                  .filter(p =>
+                    p.relationshipType === 'child' &&
+                    p.personId !== personId &&
+                    p.dateOfBirth && isKidObserverEligible(p.dateOfBirth)
+                  )
+                  .map(kid => {
+                    const kidContrib = contributions.find(
+                      c => c.relationshipToSubject === 'child-observer' && c.contributorName === kid.name
+                    );
+                    return (
+                      <Link
+                        key={kid.personId}
+                        href={`/people/${personId}/manual/kid-observer-session?observer=${kid.personId}`}
+                        className="block px-4 py-3 hover:bg-white/30 transition-all"
+                        style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: '#3A3530' }}
+                        onClick={() => setShowMenu(false)}
+                      >
+                        {kidContrib?.status === 'complete'
+                          ? `${kid.name}'s observations (revise)`
+                          : kidContrib?.status === 'draft'
+                          ? `${kid.name}'s observations (continue)`
+                          : `Let ${kid.name} share about ${person.name}`}
+                      </Link>
+                    );
+                  })
+                }
                 <Link
                   href="/workbook"
                   className="block px-4 py-3 hover:bg-white/30 transition-all"
@@ -150,34 +179,145 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
           </div>
         </div>
 
-        {/* Person name — clean and simple */}
-        <div className="text-center mb-8">
-          <h1
-            style={{
-              fontFamily: 'var(--font-parent-display)',
-              fontSize: '32px',
-              fontWeight: 400,
-              color: '#3A3530',
-            }}
-          >
-            {person.name}&apos;s Manual
-          </h1>
-          {!hasAnyPerspective && (
-            <p
-              style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: '#8A8078' }}
-              className="mt-2"
-            >
-              No perspectives yet.{' '}
-              <Link
-                href={isSelf ? `/people/${personId}/manual/self-onboard` : `/people/${personId}/manual/onboard`}
-                style={{ color: '#7C9082', fontWeight: 500 }}
-                className="hover:opacity-70"
+        {/* Person meta header */}
+        {(() => {
+          const age = person.dateOfBirth ? computeAge(person.dateOfBirth) : null;
+          const relationLabel = person.relationshipType === 'self' ? 'You' :
+            person.relationshipType === 'spouse' ? 'Partner' :
+            person.relationshipType === 'child' ? 'Child' :
+            person.relationshipType || '';
+
+          // Who has contributed observations to this manual
+          const observedByNames = observerContributions
+            .map(c => c.contributorName)
+            .filter((name, i, arr) => arr.indexOf(name) === i);
+          const hasSelf = selfContributions.length > 0;
+
+          // Which other people this person observes (contributed to other manuals)
+          // We derive this from people list — if this person is a child, they may observe parents/siblings
+          const observingNames = people
+            .filter(p => p.personId !== personId && p.hasManual)
+            .map(p => p.name);
+
+          const synthDate = manual.synthesizedContent?.lastSynthesizedAt?.toDate();
+          const hasCrossRefs = (manual.synthesizedContent?.crossReferences?.length || 0) > 0;
+
+          return (
+            <div className="mb-8">
+              <h1
+                style={{
+                  fontFamily: 'var(--font-parent-display)',
+                  fontSize: '32px',
+                  fontWeight: 400,
+                  color: '#3A3530',
+                }}
               >
-                Add one to get started &rarr;
-              </Link>
-            </p>
-          )}
-        </div>
+                {person.name}&apos;s Manual
+              </h1>
+
+              {/* Meta chips */}
+              <div className="flex flex-wrap items-center gap-2 mt-3">
+                {relationLabel && (
+                  <span
+                    className="px-2.5 py-1 rounded-full"
+                    style={{
+                      fontFamily: 'var(--font-parent-body)',
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      color: '#7C9082',
+                      background: 'rgba(124,144,130,0.1)',
+                      border: '1px solid rgba(124,144,130,0.15)',
+                    }}
+                  >
+                    {relationLabel}
+                  </span>
+                )}
+                {age !== null && (
+                  <span
+                    className="px-2.5 py-1 rounded-full"
+                    style={{
+                      fontFamily: 'var(--font-parent-body)',
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      color: '#5C5347',
+                      background: 'rgba(138,128,120,0.06)',
+                      border: '1px solid rgba(138,128,120,0.1)',
+                    }}
+                  >
+                    Age {age}
+                  </span>
+                )}
+                {synthDate && (
+                  <span
+                    className="px-2.5 py-1 rounded-full"
+                    style={{
+                      fontFamily: 'var(--font-parent-body)',
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      color: hasCrossRefs ? '#7C9082' : '#8A8078',
+                      background: hasCrossRefs ? 'rgba(124,144,130,0.08)' : 'rgba(138,128,120,0.06)',
+                      border: `1px solid ${hasCrossRefs ? 'rgba(124,144,130,0.15)' : 'rgba(138,128,120,0.1)'}`,
+                    }}
+                  >
+                    Synced {synthDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                )}
+              </div>
+
+              {/* Observed by / Observing */}
+              <div className="mt-4 space-y-1.5">
+                {/* Observed by */}
+                <div className="flex items-start gap-2">
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-parent-body)',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: '#8A8078',
+                      minWidth: '80px',
+                    }}
+                  >
+                    Observed by
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#5C5347' }}>
+                    {[
+                      ...(hasSelf ? [isSelf ? 'Self' : person.name] : []),
+                      ...observedByNames,
+                    ].join(', ') || (
+                      <Link
+                        href={isSelf ? `/people/${personId}/manual/self-onboard` : `/people/${personId}/manual/onboard`}
+                        style={{ color: '#7C9082', fontWeight: 500 }}
+                        className="hover:opacity-70"
+                      >
+                        Add first perspective &rarr;
+                      </Link>
+                    )}
+                  </span>
+                </div>
+
+                {/* Observing */}
+                {observingNames.length > 0 && (
+                  <div className="flex items-start gap-2">
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-parent-body)',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        color: '#8A8078',
+                        minWidth: '80px',
+                      }}
+                    >
+                      Observing
+                    </span>
+                    <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#5C5347' }}>
+                      {observingNames.join(', ')}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Inline invite form */}
         {showInvite && !inviteSent && (
