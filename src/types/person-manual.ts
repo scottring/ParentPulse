@@ -59,6 +59,11 @@ export interface Person {
   // Metadata
   addedAt: Timestamp;
   addedByUserId: string;
+
+  // Soft-delete (used when merging duplicate Person records)
+  archived?: boolean;
+  archivedAt?: Timestamp;
+  archivedReason?: string;
 }
 
 // ==================== Person Manual (Phase 1: Simplified) ====================

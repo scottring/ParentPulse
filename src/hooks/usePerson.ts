@@ -71,10 +71,12 @@ export function usePerson(): UsePersonReturn {
         );
 
         const querySnapshot = await getDocs(q);
-        const fetchedPeople = querySnapshot.docs.map(doc => ({
-          personId: doc.id,
-          ...doc.data()
-        } as Person));
+        const fetchedPeople = querySnapshot.docs
+          .map(doc => ({
+            personId: doc.id,
+            ...doc.data()
+          } as Person))
+          .filter(p => !p.archived);
 
         setPeople(fetchedPeople);
       } catch (err) {

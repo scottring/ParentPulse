@@ -11,8 +11,8 @@ import { ChildQuestionSection } from '@/config/child-questionnaire';
 import ChildQuestionDisplay from '@/components/onboarding/ChildQuestionDisplay';
 import { httpsCallable } from 'firebase/functions';
 import { functions, firestore } from '@/lib/firebase';
-import { doc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
-import { PERSON_MANUAL_COLLECTIONS } from '@/types/person-manual';
+import { doc, updateDoc, arrayUnion, Timestamp, collection, query, where, getDocs } from 'firebase/firestore';
+import { Contribution, PERSON_MANUAL_COLLECTIONS } from '@/types/person-manual';
 import { useEquivalentManualIds } from '@/hooks/useEquivalentManualIds';
 
 export function KidObserverSessionPage({ params }: { params: Promise<{ personId: string }> }) {
@@ -25,7 +25,7 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
   const { people, loading: peopleLoading } = usePerson();
   const { manual, loading: manualLoading } = usePersonManual(personId);
   const equivalentManualIds = useEquivalentManualIds(personId, people);
-  const { saveDraft, completeDraft, findDraft, updateContribution, contributions } = useContribution(manual?.manualId, equivalentManualIds);
+  const { saveDraft, completeDraft, updateContribution, contributions } = useContribution(manual?.manualId, equivalentManualIds);
 
   const observerPerson = people.find(p => p.personId === observerPersonId);
 
@@ -50,47 +50,69 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
     }
   }, [subject?.name]);
 
-  // Load existing draft for this specific kid-observer pairing
+  // Load existing draft/contribution for this specific kid-observer pairing
   useEffect(() => {
-    if (!manual || !user || draftLoaded || !observerPersonId) return;
+    if (!manual || !user || draftLoaded || !observerPersonId || !observerPerson) return;
 
     (async () => {
-      // Look for an existing draft from this parent's account with child-observer relationship
-      const draft = await findDraft(manual.manualId, 'observer');
-      // Check if this draft is specifically for this kid (by contributorName match)
-      if (draft && draft.relationshipToSubject === 'child-observer' && observerPerson &&
-          draft.contributorName === observerPerson.name) {
-        setDraftId(draft.contributionId);
-        if (draft.answers) setAnswers(draft.answers);
-        if (draft.draftProgress) {
-          setCurrentSectionIndex(draft.draftProgress.sectionIndex);
-          setCurrentQuestionIndex(draft.draftProgress.questionIndex);
+      // Query Firestore directly for this kid's child-observer contributions (draft or complete)
+      // Don't rely on the contributions state array which may not be loaded yet
+      const q = query(
+        collection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS),
+        where('manualId', '==', manual.manualId),
+        where('familyId', '==', user.familyId),
+        where('contributorId', '==', user.userId),
+        where('relationshipToSubject', '==', 'child-observer')
+      );
+      const snapshot = await getDocs(q);
+
+      // Filter to this specific kid by contributorName
+      // Sort: drafts first, then by answer completeness (most filled answers wins), then newest
+      const countAnswers = (c: Contribution): number => {
+        if (!c.answers) return 0;
+        let count = 0;
+        for (const section of Object.values(c.answers)) {
+          if (section && typeof section === 'object') {
+            for (const val of Object.values(section as Record<string, any>)) {
+              if (val != null && val !== '' && !(Array.isArray(val) && val.length === 0)) count++;
+            }
+          }
+        }
+        return count;
+      };
+
+      const matches = snapshot.docs
+        .map(d => ({ ...d.data(), contributionId: d.id }) as Contribution)
+        .filter(c => c.contributorName === observerPerson.name)
+        .sort((a, b) => {
+          // Drafts first
+          if (a.status === 'draft' && b.status !== 'draft') return -1;
+          if (b.status === 'draft' && a.status !== 'draft') return 1;
+          // Then by answer completeness (more filled answers = better)
+          const aCount = countAnswers(a);
+          const bCount = countAnswers(b);
+          if (aCount !== bCount) return bCount - aCount;
+          // Then by updatedAt descending
+          return (b.updatedAt?.toMillis?.() ?? 0) - (a.updatedAt?.toMillis?.() ?? 0);
+        });
+
+      const existing = matches[0];
+      if (existing) {
+        setDraftId(existing.contributionId);
+        if (existing.answers) setAnswers(existing.answers);
+        if (existing.status === 'draft' && existing.draftProgress) {
+          setCurrentSectionIndex(existing.draftProgress.sectionIndex);
+          setCurrentQuestionIndex(existing.draftProgress.questionIndex);
+        }
+        if (existing.status === 'complete') {
+          setIsRevising(true);
+          setPreviousAnswers(JSON.parse(JSON.stringify(existing.answers)));
         }
         setStarted(true);
-      } else {
-        // Also check all contributions for an existing child-observer from this kid (draft or complete)
-        const existing = contributions.find(
-          c => c.relationshipToSubject === 'child-observer' &&
-               c.contributorName === observerPerson?.name &&
-               (c.status === 'draft' || c.status === 'complete')
-        );
-        if (existing) {
-          setDraftId(existing.contributionId);
-          if (existing.answers) setAnswers(existing.answers);
-          if (existing.status === 'draft' && existing.draftProgress) {
-            setCurrentSectionIndex(existing.draftProgress.sectionIndex);
-            setCurrentQuestionIndex(existing.draftProgress.questionIndex);
-          }
-          if (existing.status === 'complete') {
-            setIsRevising(true);
-            setPreviousAnswers(JSON.parse(JSON.stringify(existing.answers)));
-          }
-          setStarted(true);
-        }
       }
       setDraftLoaded(true);
     })();
-  }, [manual, user, draftLoaded, observerPersonId, observerPerson, findDraft, contributions]);
+  }, [manual, user, draftLoaded, observerPersonId, observerPerson]);
 
   const currentSection = sections[currentSectionIndex];
   const currentQuestion = currentSection?.questions[currentQuestionIndex];
