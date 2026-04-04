@@ -137,7 +137,7 @@ export async function createUserOwnManual(
           personName: userName,
           familyId,
           userId,
-          relationshipType: existing.relationshipType || 'self',
+          relationshipType: (existing.relationshipType || 'self') as import('@/types/person-manual').RelationshipType,
         });
 
         await updateDoc(personRef, { hasManual: true, manualId });

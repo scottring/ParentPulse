@@ -149,6 +149,17 @@ export interface SynthesizedContent {
   gaps: SynthesizedInsight[];
   blindSpots: SynthesizedInsight[];
   lastSynthesizedAt: Timestamp;
+  // Cross-family synthesis fields (set by synthesizeFamilyManuals)
+  crossReferences?: CrossReference[];
+  familySynthesisId?: string;
+  familySynthesizedAt?: Timestamp;
+}
+
+export interface CrossReference {
+  relatedPersonName: string;
+  relatedPersonId: string;
+  insight: string;
+  connectionType: 'complementary' | 'tension' | 'shared_pattern' | 'impact';
 }
 
 export interface SynthesizedInsight {
@@ -752,6 +763,22 @@ export interface RelationshipMilestone {
   addedBy: string;
 }
 
+// ==================== Manual Entries (Conversational Logs) ====================
+
+export type ManualEntryType = 'observation' | 'agreement' | 'event' | 'note';
+
+export interface ManualEntry {
+  entryId: string;
+  manualId: string;
+  personId: string;
+  familyId: string;
+  authorUserId: string;
+  content: string;
+  entryType: ManualEntryType;
+  extractedInsights?: string[];
+  createdAt: Timestamp;
+}
+
 // ==================== Firestore Collections ====================
 
 export const PERSON_MANUAL_COLLECTIONS = {
@@ -760,4 +787,5 @@ export const PERSON_MANUAL_COLLECTIONS = {
   CONTRIBUTIONS: 'contributions',
   ROLE_SECTIONS: 'role_sections',
   RELATIONSHIP_MANUALS: 'relationship_manuals',
+  MANUAL_ENTRIES: 'manual_entries',
 } as const;

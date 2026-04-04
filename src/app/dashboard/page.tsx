@@ -17,7 +17,10 @@ import { DeepenCard } from '@/components/dashboard/DeepenCard';
 import { scoreToClimate, getGreeting, buildClimateSummary, getOnboardingClimate } from '@/lib/climate-engine';
 import { useAssessmentNeeds, loadAndClearContradictions } from '@/hooks/useAssessmentNeeds';
 import AuraPhaseIndicator from '@/components/layout/AuraPhaseIndicator';
+import { WeeklyActivitySection } from '@/components/dashboard/WeeklyActivitySection';
 import Link from 'next/link';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '@/lib/firebase';
 import type { ClimateState } from '@/lib/climate-engine';
 
 function isDarkSky(climate: ClimateState) {
@@ -62,6 +65,8 @@ export default function DashboardPage() {
   const [addName, setAddName] = useState('');
   const [addType, setAddType] = useState<'spouse' | 'child'>('spouse');
   const [adding, setAdding] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncDone, setSyncDone] = useState(false);
 
   const isDemo = useMemo(() => {
     if (user?.isDemo) return true;
@@ -110,6 +115,21 @@ export default function DashboardPage() {
       router.push(`/reveal${demoQ}`);
     } catch (err) {
       console.error('Failed to analyze:', err);
+    }
+  };
+
+  const handleFamilySync = async () => {
+    setSyncing(true);
+    setSyncDone(false);
+    try {
+      const synthesizeFamilyManuals = httpsCallable(functions, 'synthesizeFamilyManuals');
+      await synthesizeFamilyManuals({});
+      setSyncDone(true);
+      setTimeout(() => setSyncDone(false), 5000);
+    } catch (err) {
+      console.error('Family sync failed:', err);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -436,6 +456,36 @@ export default function DashboardPage() {
                   />
                 ))}
               </div>
+            )}
+
+            {/* Weekly Activities */}
+            {state === 'active' && (
+              <WeeklyActivitySection
+                textColor={textPrimary}
+                textSecondary={textSecondary}
+                textTertiary={textTertiary}
+              />
+            )}
+
+            {/* Re-synthesize Family button */}
+            {state === 'active' && (
+              <button
+                onClick={handleFamilySync}
+                disabled={syncing}
+                className="w-full px-5 py-3 glass-card rounded-full disabled:opacity-50 transition-all hover:shadow-lg flex items-center justify-center gap-2"
+                style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: textSecondary }}
+              >
+                {syncing ? (
+                  <>
+                    <div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: textTertiary, borderTopColor: 'transparent' }} />
+                    Syncing all manuals...
+                  </>
+                ) : syncDone ? (
+                  <>&#10003; Family manuals synced</>
+                ) : (
+                  'Re-synthesize Family'
+                )}
+              </button>
             )}
 
             {/* CHECK-IN PROMPT: Show at bottom when 7+ days overdue */}

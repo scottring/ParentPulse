@@ -611,6 +611,14 @@ service cloud.firestore {
       allow delete: if isParent() && belongsToFamily(resource.data.familyId);
     }
 
+    // Manual entries (conversational logs — observations, agreements, events)
+    match /manual_entries/{entryId} {
+      allow read: if belongsToFamily(resource.data.familyId);
+      allow create: if isSignedIn() && belongsToFamily(request.resource.data.familyId);
+      allow update: if belongsToFamily(resource.data.familyId);
+      allow delete: if isParent() && belongsToFamily(resource.data.familyId);
+    }
+
     // Workbook chapters (growth workbook chapters per dimension)
     match /workbook_chapters/{chapterId} {
       allow read: if belongsToFamily(resource.data.familyId);
