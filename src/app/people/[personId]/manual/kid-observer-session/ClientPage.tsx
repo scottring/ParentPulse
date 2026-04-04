@@ -13,6 +13,7 @@ import { httpsCallable } from 'firebase/functions';
 import { functions, firestore } from '@/lib/firebase';
 import { doc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
 import { PERSON_MANUAL_COLLECTIONS } from '@/types/person-manual';
+import { useEquivalentManualIds } from '@/hooks/useEquivalentManualIds';
 
 export function KidObserverSessionPage({ params }: { params: Promise<{ personId: string }> }) {
   const { personId } = use(params);
@@ -23,7 +24,8 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
   const { person: subject, loading: subjectLoading } = usePersonById(personId);
   const { people, loading: peopleLoading } = usePerson();
   const { manual, loading: manualLoading } = usePersonManual(personId);
-  const { saveDraft, completeDraft, findDraft, updateContribution, contributions } = useContribution(manual?.manualId);
+  const equivalentManualIds = useEquivalentManualIds(personId, people);
+  const { saveDraft, completeDraft, findDraft, updateContribution, contributions } = useContribution(manual?.manualId, equivalentManualIds);
 
   const observerPerson = people.find(p => p.personId === observerPersonId);
 
