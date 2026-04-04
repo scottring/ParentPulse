@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useCallback } from 'react';
+import { use, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { usePersonById, usePerson } from '@/hooks/usePerson';
@@ -15,15 +15,17 @@ import MainLayout from '@/components/layout/MainLayout';
 import { getSelfOnboardingSections } from '@/config/self-questions';
 import { getOnboardingSections, OnboardingQuestion } from '@/config/onboarding-questions';
 import { ManualChat } from '@/components/manual/ManualChat';
+import { useEquivalentManualIds } from '@/hooks/useEquivalentManualIds';
 
 export function ManualPage({ params }: { params: Promise<{ personId: string }> }) {
   const { personId } = use(params);
   const { user, loading: authLoading } = useAuth();
   const { person, loading: personLoading } = usePersonById(personId);
   const { manual, loading: manualLoading, fetchByPersonId } = usePersonManual(personId);
-  const { contributions, loading: contribLoading, updateContribution } = useContribution(manual?.manualId);
-  const { family, inviteParent } = useFamily();
   const { people } = usePerson();
+  const equivalentManualIds = useEquivalentManualIds(personId, people);
+  const { contributions, loading: contribLoading, updateContribution } = useContribution(manual?.manualId, equivalentManualIds);
+  const { family, inviteParent } = useFamily();
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviting, setInviting] = useState(false);
   const [inviteSent, setInviteSent] = useState(false);

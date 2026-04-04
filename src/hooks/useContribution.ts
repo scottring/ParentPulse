@@ -85,25 +85,35 @@ interface UseContributionReturn {
   getByPerspective: (perspectiveType: PerspectiveType) => Contribution[];
 }
 
-export function useContribution(manualId?: string): UseContributionReturn {
+export function useContribution(manualId?: string, additionalManualIds?: string[]): UseContributionReturn {
   const { user } = useAuth();
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Listen to all contributions (draft + complete) for a specific manual
+  // Stable key for all manual IDs to avoid unnecessary re-subscriptions
+  const allManualIds = [manualId, ...(additionalManualIds || [])].filter(Boolean) as string[];
+  const manualIdsKey = allManualIds.sort().join(',');
+
+  // Listen to all contributions (draft + complete) for the manual(s)
   useEffect(() => {
-    if (!user || !manualId) {
+    if (!user || allManualIds.length === 0) {
       setContributions([]);
       setLoading(false);
       return;
     }
 
-    const q = query(
-      collection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS),
-      where('manualId', '==', manualId),
-      where('familyId', '==', user.familyId)
-    );
+    const q = allManualIds.length === 1
+      ? query(
+          collection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS),
+          where('manualId', '==', allManualIds[0]),
+          where('familyId', '==', user.familyId)
+        )
+      : query(
+          collection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS),
+          where('manualId', 'in', allManualIds),
+          where('familyId', '==', user.familyId)
+        );
 
     const unsubscribe = onSnapshot(
       q,
@@ -123,7 +133,7 @@ export function useContribution(manualId?: string): UseContributionReturn {
     );
 
     return unsubscribe;
-  }, [user, manualId]);
+  }, [user, manualIdsKey]);
 
   const createContribution = useCallback(
     async (data: {
