@@ -49,6 +49,10 @@ export interface DashboardData {
   assessments: DimensionAssessment[];
   // For onboarding: the first spouse (if any)
   spouse: Person | null;
+  // All people in the family
+  people: Person[];
+  // All person manuals in the family
+  manuals: PersonManual[];
   // People who need observer contributions from the user
   peopleNeedingContributions: Person[];
   // All contributions in the family (for portrait inventory freshness)

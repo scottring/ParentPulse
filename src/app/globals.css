@@ -383,3 +383,362 @@ html {
 .animate-rain-fall {
   transition: opacity 2s ease;
 }
+
+/* ==================== Relish Book Design System ==================== */
+
+.relish-page {
+  min-height: 100vh;
+  background: #ECEAE5;
+  color: #3A3530;
+}
+
+.relish-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.relish-label {
+  font-family: var(--font-parent-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #6B7B6B;
+}
+
+.relish-card {
+  background: #FAF8F5;
+  border: 1px solid #E5E0D8;
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+}
+
+/* The main panel — cream bg, rounded, drop shadow */
+.relish-panel {
+  background: #F7F5F0;
+  border: 1px solid #E5E0D8;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.03);
+}
+
+/* ===== Book cards ===== */
+
+.book-card-family { background: linear-gradient(160deg, #8B7B5E, #7A6B4E); color: #FFF; }
+.book-card-growth { background: linear-gradient(160deg, #7C9082, #6B8072); color: #FFF; }
+.book-card-reports { background: linear-gradient(160deg, #7B8494, #6A7384); color: #FFF; }
+
+.book-card-family,
+.book-card-growth,
+.book-card-reports {
+  border-radius: 12px;
+  padding: 44px 28px 52px;
+  min-height: 240px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.book-card-family:hover,
+.book-card-growth:hover,
+.book-card-reports:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.book-card-spine {
+  position: absolute;
+  bottom: 18px;
+  left: 28px;
+  right: 28px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.bookshelf-line {
+  height: 6px;
+  background: linear-gradient(180deg, #6B5B4B, #5A4A3A);
+  border-radius: 0 0 3px 3px;
+  box-shadow: 0 2px 6px rgba(60, 40, 20, 0.12);
+}
+
+/* ===== Two-page spread ===== */
+
+.spread-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.spread-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: #E5E0D8;
+  transform: translateX(-50%);
+}
+
+.spread-page {
+  padding: 32px 36px;
+}
+
+/* Right page and timeline get the cream tint */
+.spread-page-right {
+  background: #F2F0EB;
+  border-radius: 0 14px 0 0;
+}
+
+/* ===== Constellation ===== */
+
+.constellation-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  text-decoration: none;
+  position: absolute;
+}
+
+.constellation-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-parent-body);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: #FFFFFF;
+  transition: transform 0.15s ease;
+}
+
+.constellation-avatar:hover {
+  transform: scale(1.06);
+}
+
+/* ===== Insight cards — thin border all around, slight rounding, tinted bg ===== */
+
+.insight-card {
+  padding: 14px 20px;
+  border-radius: 6px;
+  border: 1px solid;
+  font-family: var(--font-parent-body);
+  font-size: 14px;
+  line-height: 1.5;
+  color: #3A3530;
+}
+
+.insight-gap {
+  background: #FBF3EA;
+  border-color: #E8D8C4;
+}
+
+.insight-stale {
+  background: #FDF8E4;
+  border-color: #E8DDB0;
+}
+
+.insight-strength {
+  background: #EDF4EE;
+  border-color: #C8D8CA;
+}
+
+/* ===== One Thing card ===== */
+
+.one-thing-card {
+  background: #FFFFFF;
+  border: 1px solid #D8D3CA;
+  border-radius: 12px;
+  padding: 24px 28px;
+}
+
+.one-thing-title {
+  font-family: var(--font-parent-display);
+  font-size: 22px;
+  font-weight: 400;
+  color: #3A3530;
+  line-height: 1.35;
+}
+
+.one-thing-body {
+  font-family: var(--font-parent-body);
+  font-size: 14px;
+  color: #7C7468;
+  line-height: 1.6;
+  margin-top: 8px;
+}
+
+.one-thing-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: 1px solid #D8D3CA;
+  background: #FFFFFF;
+  font-family: var(--font-parent-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: #3A3530;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  text-decoration: none;
+}
+
+.one-thing-cta:hover {
+  background: #F5F3EF;
+}
+
+/* ===== Timeline — no vertical divider, full width, cream bg ===== */
+
+.timeline-section {
+  background: #F2F0EB;
+  border-top: 1px solid #E5E0D8;
+  border-radius: 0 0 14px 14px;
+}
+
+.timeline-track {
+  position: relative;
+  padding: 28px 40px;
+}
+
+.timeline-line {
+  position: absolute;
+  left: 40px;
+  right: 40px;
+  top: 50%;
+  height: 1px;
+  background: #D8D3CA;
+}
+
+.timeline-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  position: relative;
+  text-decoration: none;
+}
+
+.timeline-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #D0CCC4;
+  background: #F7F5F0;
+  z-index: 1;
+}
+
+.timeline-dot-above { border-color: #8B9B8B; }
+.timeline-dot-below { border-color: #9B9488; }
+
+.timeline-stem {
+  width: 1px;
+  height: 24px;
+  background: #D0CCC4;
+}
+
+.timeline-entry-label {
+  font-family: var(--font-parent-body);
+  font-size: 11px;
+  color: #5C5347;
+  text-align: center;
+  max-width: 110px;
+  line-height: 1.3;
+}
+
+.timeline-entry-date {
+  font-family: var(--font-parent-body);
+  font-size: 10px;
+  color: #9B9488;
+}
+
+/* ===== What's New ===== */
+
+.whats-new-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.whats-new-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.whats-new-text {
+  font-family: var(--font-parent-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: #3A3530;
+  line-height: 1.4;
+}
+
+.whats-new-date {
+  font-family: var(--font-parent-body);
+  font-size: 12px;
+  color: #9B9488;
+  margin-top: 1px;
+}
+
+/* ===== Growth bar ===== */
+
+.growth-bar-track {
+  height: 8px;
+  border-radius: 4px;
+  background: #E0DCD5;
+}
+
+.growth-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: #7C9082;
+  transition: width 0.5s ease;
+}
+
+/* ===== Attention badge ===== */
+
+.attention-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #7C9082;
+  color: #FFFFFF;
+  font-family: var(--font-parent-body);
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+/* ===== Mobile ===== */
+
+@media (max-width: 768px) {
+  .spread-container { grid-template-columns: 1fr; }
+  .spread-divider { display: none; }
+  .spread-page { padding: 24px 20px; }
+  .spread-page-right { border-radius: 0; }
+  .relish-container { padding: 0 16px; }
+  .timeline-track { padding: 20px 16px; }
+  .timeline-line { left: 16px; right: 16px; }
+}

@@ -3,9 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  ChartBarIcon,
-  Cog6ToothIcon,
-  UsersIcon,
+  HomeIcon,
   BookOpenIcon,
   ArrowPathIcon,
   ClipboardDocumentListIcon,
@@ -15,14 +13,14 @@ interface NavItem {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  matchPrefixes: string[];
 }
 
 const mobileItems: NavItem[] = [
-  { label: 'Home', href: '/dashboard', icon: ChartBarIcon },
-  { label: 'People', href: '/people', icon: UsersIcon },
-  { label: 'Reports', href: '/reports', icon: ClipboardDocumentListIcon },
-  { label: 'Check-in', href: '/checkin', icon: ArrowPathIcon },
-  { label: 'Settings', href: '/settings', icon: Cog6ToothIcon },
+  { label: 'Home', href: '/dashboard', icon: HomeIcon, matchPrefixes: ['/dashboard'] },
+  { label: 'Family Manual', href: '/family-manual', icon: BookOpenIcon, matchPrefixes: ['/family-manual', '/people'] },
+  { label: 'Growth', href: '/workbook', icon: ArrowPathIcon, matchPrefixes: ['/workbook', '/checkin', '/deepen'] },
+  { label: 'Reports', href: '/reports', icon: ClipboardDocumentListIcon, matchPrefixes: ['/reports'] },
 ];
 
 export default function SideNav() {
@@ -47,7 +45,9 @@ export default function SideNav() {
       }}
     >
       {mobileItems.map((item) => {
-        const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+        const isActive = item.matchPrefixes.some(
+          (p) => pathname === p || pathname.startsWith(p + '/')
+        );
 
         return (
           <Link

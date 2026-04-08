@@ -9,28 +9,15 @@ import { useRingScores } from '@/hooks/useRingScores';
 import { useProgression } from '@/hooks/useProgression';
 import { usePerson } from '@/hooks/usePerson';
 import { useWorkbook } from '@/hooks/useWorkbook';
-import Navigation from '@/components/layout/Navigation';
-import SideNav from '@/components/layout/SideNav';
-import WeatherBackground from '@/components/dashboard/WeatherBackground';
-import { RelationshipCard } from '@/components/dashboard/RelationshipCard';
-import { DeepenCard } from '@/components/dashboard/DeepenCard';
-import { scoreToClimate, getGreeting, buildClimateSummary, getOnboardingClimate } from '@/lib/climate-engine';
-import { useAssessmentNeeds, loadAndClearContradictions } from '@/hooks/useAssessmentNeeds';
-import AuraPhaseIndicator from '@/components/layout/AuraPhaseIndicator';
-import { WeeklyActivitySection } from '@/components/dashboard/WeeklyActivitySection';
-import { FamilyCompletenessRing } from '@/components/dashboard/FamilyCompletenessRing';
-import { ActionFeed } from '@/components/dashboard/ActionFeed';
-import { FamilyStatusRow } from '@/components/dashboard/FamilyStatusRow';
 import { useFreshness } from '@/hooks/useFreshness';
 import { useActionItems } from '@/hooks/useActionItems';
+import { computeOneThing } from '@/lib/one-thing-engine';
+import Navigation from '@/components/layout/Navigation';
+import SideNav from '@/components/layout/SideNav';
 import Link from 'next/link';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
-import type { ClimateState } from '@/lib/climate-engine';
-
-function isDarkSky(climate: ClimateState) {
-  return climate === 'stormy' || climate === 'overcast';
-}
+import type { GrowthArc } from '@/types/growth-arc';
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
@@ -57,29 +44,14 @@ export default function DashboardPage() {
   const { addPerson } = usePerson();
   const { activeChapters } = useWorkbook();
 
-  const activeWorkbookDimIds = useMemo(
-    () => activeChapters.filter(c => c.status === 'active').map(c => c.dimensionId),
-    [activeChapters],
-  );
-  const [contradictionIds] = useState(() => loadAndClearContradictions());
-  const { visibleNeeds, startAssessment, dismissNeed } = useAssessmentNeeds(
-    assessments,
-    activeWorkbookDimIds,
-    undefined,
-    contradictionIds,
-  );
-
-  // Freshness & action items (Phase 2 perfectification)
   const { familyCompleteness } = useFreshness({ people, manuals, contributions });
-  const { items: actionItems, dismiss: dismissAction } = useActionItems({
+  const { items: actionItems } = useActionItems({
     people, manuals, contributions, assessments, userId: user?.userId || '',
   });
 
   const [addName, setAddName] = useState('');
   const [addType, setAddType] = useState<'spouse' | 'child'>('spouse');
   const [adding, setAdding] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [syncDone, setSyncDone] = useState(false);
 
   const isDemo = useMemo(() => {
     if (user?.isDemo) return true;
@@ -92,14 +64,21 @@ export default function DashboardPage() {
     if (!authLoading && !user) router.push('/login');
   }, [user, authLoading, router]);
 
-  const climateState: ClimateState = useMemo(() => {
-    if (state === 'active' && health) {
-      return scoreToClimate(health.score, health.trend).state;
-    }
-    return 'mostly_sunny';
-  }, [state, health]);
+  const todayItems = useMemo(() => roles.flatMap((r) => r.todayItems), [roles]);
+  const activeArcs = useMemo(
+    () => roles.map((r) => r.activeArc).filter((a): a is GrowthArc => a !== null),
+    [roles],
+  );
 
-  const dark = isDarkSky(climateState);
+  const oneThing = useMemo(
+    () => computeOneThing({
+      state, userId: user?.userId || '',
+      userName: selfPerson?.name?.split(' ')[0] || user?.name?.split(' ')[0] || 'there',
+      selfPerson, people, manuals, contributions, assessments,
+      roles, activeArcs, todayItems, hasSelfContribution,
+    }),
+    [state, user, selfPerson, people, manuals, contributions, assessments, roles, activeArcs, todayItems, hasSelfContribution],
+  );
 
   const handleAddPerson = async () => {
     if (!addName.trim()) return;
@@ -131,323 +110,285 @@ export default function DashboardPage() {
     }
   };
 
-  const handleFamilySync = async () => {
-    setSyncing(true);
-    setSyncDone(false);
-    try {
-      const synthesizeFamilyManuals = httpsCallable(functions, 'synthesizeFamilyManuals');
-      await synthesizeFamilyManuals({});
-      setSyncDone(true);
-      setTimeout(() => setSyncDone(false), 5000);
-    } catch (err) {
-      console.error('Family sync failed:', err);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
+  // Loading
   if (authLoading || state === 'loading') {
     return (
-      <WeatherBackground climate="mostly_sunny">
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin w-8 h-8 rounded-full border-2 border-t-transparent border-white/40" />
-        </div>
-      </WeatherBackground>
+      <div className="relish-page flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 rounded-full border-2 border-t-transparent" style={{ borderColor: 'var(--parent-primary)', borderTopColor: 'transparent' }} />
+      </div>
     );
   }
 
   if (!user) return null;
 
   const userName = selfPerson?.name?.split(' ')[0] || user.name?.split(' ')[0] || 'there';
-  const climate = state === 'active' && health ? scoreToClimate(health.score, health.trend) : null;
-  const summary = state === 'active' && health ? buildClimateSummary(health, roles) : null;
-  const onboarding = state !== 'active' ? getOnboardingClimate(state, userName) : null;
+  const urgentCount = actionItems.filter((i) => i.priority === 'high').length;
 
-  const textPrimary = dark ? 'rgba(255,255,255,0.95)' : '#1a1a1a';
-  const textSecondary = dark ? 'rgba(255,255,255,0.6)' : 'rgba(40,40,40,0.55)';
-  const textTertiary = dark ? 'rgba(255,255,255,0.35)' : 'rgba(40,40,40,0.3)';
-  const textClass = dark ? 'sky-text-dark' : 'sky-text';
-
-  return (
-    <WeatherBackground climate={climateState}>
-      <Navigation />
-      <SideNav />
-
-      <div className="min-h-screen pt-[60px]">
-
-        {/* ===== HERO SECTION ===== */}
-        <div className="max-w-5xl mx-auto px-5 sm:px-8 pt-6 pb-3">
-
-          {/* Phase indicator — shown during onboarding states */}
-          {state !== 'active' && (
-            <div className="mb-4">
-              <AuraPhaseIndicator phase="assess" />
-            </div>
-          )}
-
-          {/* Demo tag */}
-          {isDemo && (
-            <div
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-6 text-[11px] tracking-wide uppercase"
-              style={{
-                fontFamily: 'var(--font-parent-body)',
-                background: 'rgba(217,119,6,0.12)',
-                color: '#A3510B',
-                border: '1px solid rgba(217,119,6,0.2)',
-                fontWeight: 500,
-              }}
-            >
-              Demo &middot; {state}
-            </div>
-          )}
-
-          {/* Greeting — large, editorial */}
-          <h1
-            className={`${textClass} animate-fade-in-up`}
-            style={{
-              fontFamily: 'var(--font-parent-display)',
-              fontSize: 'clamp(2rem, 5vw, 2.75rem)',
-              fontWeight: 300,
-              fontStyle: 'italic',
-              color: textPrimary,
-              lineHeight: 1.15,
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Good {getTimeOfDay()}, {userName}
-          </h1>
-
-          {/* Active state: Climate label + trend */}
-          {climate && health && (
-            <div className="mt-6">
-              {/* Climate state as hero text */}
-              <span
-                className="block"
+  // ==================== ONBOARDING STATES ====================
+  if (state !== 'active') {
+    return (
+      <div className="relish-page">
+        <Navigation />
+        <SideNav />
+        <div className="pt-[60px]">
+          <div className="relish-container" style={{ maxWidth: 600 }}>
+            <div className="pt-16 pb-12 text-center">
+              <h1
                 style={{
                   fontFamily: 'var(--font-parent-display)',
-                  fontSize: 'clamp(1.75rem, 5vw, 2.25rem)',
+                  fontSize: 'clamp(2rem, 5vw, 2.75rem)',
                   fontWeight: 300,
-                  color: textPrimary,
-                  lineHeight: 1.2,
+                  color: '#3A3530',
+                  lineHeight: 1.15,
                 }}
               >
-                {climate.state === 'clear' ? 'Clear skies' :
-                 climate.state === 'mostly_sunny' ? 'Mostly sunny' :
-                 climate.state === 'partly_cloudy' ? 'Partly cloudy' :
-                 climate.state === 'overcast' ? 'Overcast' :
-                 'Heavy weather'}
-              </span>
-              <span
-                className="block mt-2"
-                style={{
-                  fontFamily: 'var(--font-parent-body)',
-                  fontSize: '13px',
-                  fontWeight: 400,
-                  fontStyle: 'italic',
-                  color: textSecondary,
-                }}
-              >
-                {climate.trendPhrase}
-              </span>
+                Welcome back
+              </h1>
+              <p className="mt-3" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#A09888' }}>
+                {oneThing.description}
+              </p>
             </div>
-          )}
 
-          {/* Active state: narrative summary */}
-          {summary && (
-            <p
-              className={`mt-5 max-w-md leading-relaxed ${textClass}`}
-              style={{
-                fontFamily: 'var(--font-parent-body)',
-                fontSize: '14px',
-                fontWeight: 400,
-                color: dark ? 'rgba(255,255,255,0.7)' : 'rgba(30,30,30,0.65)',
-                lineHeight: 1.65,
-              }}
-            >
-              {summary}
-            </p>
-          )}
-
-          {/* Onboarding message */}
-          {onboarding && (
-            <p
-              className={`mt-4 max-w-sm ${textClass}`}
-              style={{
-                fontFamily: 'var(--font-parent-body)',
-                fontSize: '15px',
-                color: textSecondary,
-                lineHeight: 1.6,
-              }}
-            >
-              {onboarding.message}
-            </p>
-          )}
-        </div>
-
-        {/* ===== CONTENT ===== */}
-        <div className="max-w-5xl mx-auto px-5 sm:px-8 pb-12">
-
-          {/* Onboarding states — single column, centered */}
-          {state !== 'active' && (
-            <div className="max-w-xl mx-auto space-y-4">
+            <div className="space-y-4 pb-16">
               {state === 'new_user' && selfPerson && (
                 <OnboardingCard
                   title="Start with you"
                   body="How you handle stress, what you need, how you communicate."
                   ctaLabel="Begin"
                   ctaHref={`/people/${selfPerson.personId}/manual/self-onboard${demoQ}`}
-                  phaseClass="phase-card-assess"
                 />
               )}
+
               {state === 'self_complete' && (
-                <div className="glass-card-strong p-6">
-                  <h2 className="text-lg mb-1" style={{ fontFamily: 'var(--font-parent-display)', fontWeight: 500, color: 'var(--parent-text)' }}>
+                <div className="relish-card p-6">
+                  <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '20px', fontWeight: 400, color: '#3A3530' }}>
                     Who matters most?
                   </h2>
-                  <p className="text-sm mb-5" style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text-light)', lineHeight: 1.6 }}>
+                  <p className="mt-1 mb-5" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468', lineHeight: 1.6 }}>
                     Add the people you want to understand better.
                   </p>
                   <div className="flex gap-2">
-                    <select value={addType} onChange={(e) => setAddType(e.target.value as 'spouse' | 'child')} className="text-sm rounded-2xl px-3 py-2.5" style={{ fontFamily: 'var(--font-parent-body)', background: 'rgba(255,255,255,0.5)', color: 'var(--parent-text)', border: '1px solid rgba(0,0,0,0.06)' }}>
+                    <select
+                      value={addType}
+                      onChange={(e) => setAddType(e.target.value as 'spouse' | 'child')}
+                      className="text-sm rounded-lg px-3 py-2.5"
+                      style={{ fontFamily: 'var(--font-parent-body)', background: '#F5F3EF', color: '#3A3530', border: '1px solid #E8E3DC' }}
+                    >
                       <option value="spouse">Spouse / Partner</option>
                       <option value="child">Child</option>
                     </select>
-                    <input type="text" value={addName} onChange={(e) => setAddName(e.target.value)} placeholder="Their name" className="flex-1 text-sm rounded-2xl px-4 py-2.5" style={{ fontFamily: 'var(--font-parent-body)', background: 'rgba(255,255,255,0.5)', color: 'var(--parent-text)', border: '1px solid rgba(0,0,0,0.06)' }} onKeyDown={(e) => e.key === 'Enter' && handleAddPerson()} />
-                    <button onClick={handleAddPerson} disabled={adding || !addName.trim()} className="text-sm font-medium rounded-2xl px-5 py-2.5 text-white hover:opacity-90 disabled:opacity-40" style={{ fontFamily: 'var(--font-parent-body)', background: 'var(--parent-primary)' }}>
+                    <input
+                      type="text"
+                      value={addName}
+                      onChange={(e) => setAddName(e.target.value)}
+                      placeholder="Their name"
+                      className="flex-1 text-sm rounded-lg px-4 py-2.5"
+                      style={{ fontFamily: 'var(--font-parent-body)', background: '#F5F3EF', color: '#3A3530', border: '1px solid #E8E3DC' }}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddPerson()}
+                    />
+                    <button
+                      onClick={handleAddPerson}
+                      disabled={adding || !addName.trim()}
+                      className="text-sm font-medium rounded-lg px-5 py-2.5 text-white disabled:opacity-40"
+                      style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082' }}
+                    >
                       {adding ? '...' : 'Add'}
                     </button>
                   </div>
                 </div>
               )}
+
               {state === 'has_people' && peopleNeedingContributions.map((person) => {
                 const isChild = person.relationshipType === 'child';
                 const href = isChild ? `/people/${person.personId}/manual/kid-session${demoQ}` : `/people/${person.personId}/manual/onboard${demoQ}`;
                 return (
-                  <OnboardingCard key={person.personId} title={`What do you see in ${person.name}?`} body={`You see ${person.name} from a perspective they can\u2019t see themselves.`} ctaLabel={isChild ? 'Start session' : 'Begin'} ctaHref={href} />
+                  <OnboardingCard
+                    key={person.personId}
+                    title={`What do you see in ${person.name}?`}
+                    body={`You see ${person.name} from a perspective they can\u2019t see themselves.`}
+                    ctaLabel={isChild ? 'Start session' : 'Begin'}
+                    ctaHref={href}
+                  />
                 );
               })}
+
               {state === 'has_contributions' && (
-                <OnboardingCard title="Ready to read the sky" body="We'll map your relationships across 20 dimensions and find where the weather is headed." ctaLabel={generating ? 'Reading...' : 'Analyze'} ctaOnClick={handleAnalyze} disabled={generating} />
+                <OnboardingCard
+                  title="Ready to see the picture"
+                  body="We'll map your relationships across 20 dimensions."
+                  ctaLabel={generating ? 'Reading...' : 'Analyze'}
+                  ctaOnClick={handleAnalyze}
+                  disabled={generating}
+                />
               )}
             </div>
-          )}
-
-          {/* ===== ACTIVE STATE ===== */}
-          {state === 'active' && (
-            <div className="space-y-5">
-
-              {/* ROW 1: Health ring + Your Manual side by side */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {familyCompleteness.perPerson.length > 0 && (
-                  <div className="glass-card p-5 space-y-4">
-                    <FamilyCompletenessRing completeness={familyCompleteness} dark={dark} />
-                    <FamilyStatusRow people={familyCompleteness.perPerson} dark={dark} />
-                  </div>
-                )}
-                <div className="space-y-3">
-                  {selfPerson && hasSelfContribution && (
-                    <Link
-                      href={`/people/${selfPerson.personId}/manual${demoQ}`}
-                      className="block glass-card p-5 hover:shadow-lg transition-all weather-card"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '18px', fontWeight: 400, color: dark ? 'rgba(255,255,255,0.95)' : '#3A3530' }}>Your Manual</h3>
-                          <p className="mt-1" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: dark ? 'rgba(255,255,255,0.5)' : '#7C7468' }}>View, revise, or invite others to contribute</p>
-                        </div>
-                        <span style={{ color: dark ? 'rgba(255,255,255,0.3)' : '#8A8078', fontSize: '18px' }}>&rarr;</span>
-                      </div>
-                    </Link>
-                  )}
-                  {/* Check-in prompt */}
-                  {activeChapters.filter(c => c.status === 'active').length > 0 && (() => {
-                    const now = Date.now();
-                    const sevenDays = 7 * 24 * 60 * 60 * 1000;
-                    const lastCompletion = activeChapters.flatMap(c => c.completions).reduce((latest, comp) => { const t = comp.completedAt?.toMillis?.() || 0; return t > latest ? t : latest; }, 0);
-                    if (lastCompletion !== 0 && (now - lastCompletion) <= sevenDays) return null;
-                    return (
-                      <Link href={`/checkin${demoQ}`} className="block glass-card-strong p-5 hover:opacity-90 transition-opacity phase-card-assimilate">
-                        <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '16px', fontWeight: 500, color: 'var(--parent-text)' }}>Ready for a quick check-in?</h3>
-                        <p className="mt-1" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12.5px', color: 'var(--parent-text-light)' }}>~3 minutes</p>
-                      </Link>
-                    );
-                  })()}
-                  {/* Re-sync */}
-                  <button
-                    onClick={handleFamilySync}
-                    disabled={syncing}
-                    className="w-full px-5 py-3 glass-card rounded-full disabled:opacity-50 transition-all hover:shadow-lg flex items-center justify-center gap-2"
-                    style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: textSecondary }}
-                  >
-                    {syncing ? (<><div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: textTertiary, borderTopColor: 'transparent' }} /> Syncing...</>) : syncDone ? (<>&#10003; Synced</>) : ('Re-synthesize Family')}
-                  </button>
-                </div>
-              </div>
-
-              {/* ROW 2: Action items + Deepen — side by side */}
-              {(actionItems.length > 0 || visibleNeeds.length > 0) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <ActionFeed items={actionItems} onDismiss={dismissAction} dark={dark} />
-                  {visibleNeeds.length > 0 && (
-                    <div className="space-y-3">
-                      {visibleNeeds.map((need) => (
-                        <DeepenCard key={need.dimensionId} need={need} onStart={() => startAssessment(need)} onDismiss={() => dismissNeed(need)} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ROW 3: Forecasts — cards in a responsive grid */}
-              <div>
-                <span className="block mb-2" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: textTertiary }}>
-                  Forecasts
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {roles.map((role) => (
-                    <RelationshipCard
-                      key={role.otherPerson.personId}
-                      role={role}
-                      variant={role.domain === 'couple' ? 'spouse' : 'child'}
-                      demoQ={demoQ}
-                      activeChapters={activeChapters}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* ROW 4: Weekly Activities — full width */}
-              <WeeklyActivitySection
-                textColor={textPrimary}
-                textSecondary={textSecondary}
-                textTertiary={textTertiary}
-              />
-            </div>
-          )}
-
-          {/* Footer links */}
-          {state === 'active' && (
-            <div className="flex items-center justify-center gap-5 pt-8 pb-10">
-              {[
-                { href: '/people', label: 'People' },
-                { href: '/reports', label: 'Reports' },
-                { href: '/workbook', label: 'Workbook' },
-                selfPerson && { href: `/people/${selfPerson.personId}/manual`, label: 'Manual' },
-              ].filter(Boolean).map((link) => (
-                <Link
-                  key={link!.href}
-                  href={link!.href}
-                  className="text-[11px] tracking-wide uppercase hover:opacity-70"
-                  style={{ fontFamily: 'var(--font-parent-body)', fontWeight: 500, letterSpacing: '0.06em', color: textTertiary }}
-                >
-                  {link!.label}
-                </Link>
-              ))}
-            </div>
-          )}
+          </div>
         </div>
       </div>
-    </WeatherBackground>
+    );
+  }
+
+  // ==================== ACTIVE STATE: BOOKSHELF ====================
+
+  const completenessPercent = familyCompleteness.overallPercent;
+  const growthProgress = activeArcs.length > 0
+    ? Math.round((activeArcs[0].completedItemCount / Math.max(activeArcs[0].totalItemCount, 1)) * 100)
+    : 0;
+
+  return (
+    <div className="relish-page">
+      <Navigation />
+      <SideNav />
+
+      <div className="pt-[60px] flex items-center justify-center min-h-[calc(100vh-60px)]">
+        <div className="relish-container w-full">
+          {/* Greeting */}
+          <div className="pb-8 text-center">
+            <h1
+              className="animate-fade-in-up"
+              style={{
+                fontFamily: 'var(--font-parent-display)',
+                fontSize: 'clamp(2.5rem, 6vw, 3.5rem)',
+                fontWeight: 600,
+                color: '#3A3530',
+                lineHeight: 1.15,
+              }}
+            >
+              Welcome back
+            </h1>
+            <p className="mt-3" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#9B9488' }}>
+              Your family&apos;s manual needs attention
+            </p>
+          </div>
+
+          {/* The Three Books */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 pb-3">
+            <Link href={`/family-manual${demoQ}`} className="book-card-family relative">
+              {urgentCount > 0 && (
+                <div className="attention-badge">{urgentCount}</div>
+              )}
+              <div className="flex flex-col items-center text-center gap-4">
+                <BookIcon />
+                <div>
+                  <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '20px', fontWeight: 500 }}>
+                    The Family Manual
+                  </h2>
+                  <p className="mt-1.5" style={{ fontSize: '13px', opacity: 0.75 }}>
+                    Your family&apos;s living guide
+                  </p>
+                </div>
+              </div>
+              <div className="book-card-spine">
+                <div style={{ position: 'absolute', inset: 0, borderRadius: 2, background: 'rgba(255,255,255,0.35)', width: `${completenessPercent}%` }} />
+              </div>
+            </Link>
+
+            <Link href={`/workbook${demoQ}`} className="book-card-growth">
+              <div className="flex flex-col items-center text-center gap-4">
+                <WorkbookIcon />
+                <div>
+                  <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '20px', fontWeight: 500 }}>
+                    The Growth Workbook
+                  </h2>
+                  <p className="mt-1.5" style={{ fontSize: '13px', opacity: 0.75 }}>
+                    Daily practice & reflections
+                  </p>
+                </div>
+              </div>
+              <div className="book-card-spine">
+                <div style={{ position: 'absolute', inset: 0, borderRadius: 2, background: 'rgba(255,255,255,0.35)', width: `${growthProgress}%` }} />
+              </div>
+            </Link>
+
+            <Link href={`/reports${demoQ}`} className="book-card-reports">
+              <div className="flex flex-col items-center text-center gap-4">
+                <ReportsIcon />
+                <div>
+                  <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '20px', fontWeight: 500 }}>
+                    The Reports Binder
+                  </h2>
+                  <p className="mt-1.5" style={{ fontSize: '13px', opacity: 0.75 }}>
+                    Progress & summaries
+                  </p>
+                </div>
+              </div>
+              <div className="book-card-spine">
+                <div style={{ position: 'absolute', inset: 0, borderRadius: 2, background: 'rgba(255,255,255,0.35)', width: '0%' }} />
+              </div>
+            </Link>
+          </div>
+
+          {/* Shelf line */}
+          <div className="bookshelf-line" />
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Onboarding Card ====================
+
+function OnboardingCard({
+  title, body, ctaLabel, ctaHref, ctaOnClick, disabled,
+}: {
+  title: string; body: string; ctaLabel: string;
+  ctaHref?: string; ctaOnClick?: () => void; disabled?: boolean;
+}) {
+  return (
+    <div className="relish-card p-6">
+      <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '20px', fontWeight: 400, color: '#3A3530' }}>
+        {title}
+      </h2>
+      <p className="mt-1 mb-5" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468', lineHeight: 1.6 }}>
+        {body}
+      </p>
+      {ctaHref ? (
+        <Link
+          href={ctaHref}
+          className="one-thing-cta"
+        >
+          {ctaLabel}
+        </Link>
+      ) : ctaOnClick ? (
+        <button onClick={ctaOnClick} disabled={disabled} className="one-thing-cta disabled:opacity-40">
+          {ctaLabel}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+// ==================== Icons ====================
+
+function BookIcon() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+      <rect x="8" y="6" width="24" height="28" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none" />
+      <path d="M14 6v28" stroke="currentColor" strokeWidth="1.5" opacity="0.3" />
+      <path d="M18 14h10M18 18h8M18 22h6" stroke="currentColor" strokeWidth="1" opacity="0.5" />
+    </svg>
+  );
+}
+
+function WorkbookIcon() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+      <path d="M8 8h10c2 0 2 2 2 2v22s0-2-2-2H8V8z" stroke="currentColor" strokeWidth="1.5" fill="none" />
+      <path d="M32 8H22c-2 0-2 2-2 2v22s0-2 2-2h10V8z" stroke="currentColor" strokeWidth="1.5" fill="none" />
+      <path d="M20 10v22" stroke="currentColor" strokeWidth="1" opacity="0.3" />
+    </svg>
+  );
+}
+
+function ReportsIcon() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+      <rect x="10" y="6" width="20" height="28" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none" />
+      <path d="M10 12h20" stroke="currentColor" strokeWidth="1" opacity="0.3" />
+      <path d="M15 18h10M15 22h8M15 26h6" stroke="currentColor" strokeWidth="1" opacity="0.5" />
+      <rect x="15" y="8" width="4" height="2" rx="0.5" fill="currentColor" opacity="0.3" />
+    </svg>
   );
 }
 
@@ -456,49 +397,4 @@ function getTimeOfDay(): string {
   if (h < 12) return 'morning';
   if (h < 17) return 'afternoon';
   return 'evening';
-}
-
-// ===== Onboarding Card =====
-
-function OnboardingCard({
-  title, body, ctaLabel, ctaHref, ctaOnClick, disabled, phaseClass,
-}: {
-  title: string; body: string; ctaLabel: string;
-  ctaHref?: string; ctaOnClick?: () => void; disabled?: boolean;
-  phaseClass?: string;
-}) {
-  return (
-    <div className={`glass-card-strong p-6 ${phaseClass || ''}`}>
-      <h2
-        className="text-lg mb-1.5"
-        style={{ fontFamily: 'var(--font-parent-display)', fontWeight: 500, color: 'var(--parent-text)' }}
-      >
-        {title}
-      </h2>
-      <p
-        className="text-sm mb-5 leading-relaxed"
-        style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text-light)', lineHeight: 1.6 }}
-      >
-        {body}
-      </p>
-      {ctaHref ? (
-        <Link
-          href={ctaHref}
-          className="inline-flex items-center px-6 py-2.5 rounded-full text-[13px] font-medium text-white hover:opacity-90"
-          style={{ fontFamily: 'var(--font-parent-body)', background: 'var(--parent-primary)', letterSpacing: '0.01em' }}
-        >
-          {ctaLabel}
-        </Link>
-      ) : ctaOnClick ? (
-        <button
-          onClick={ctaOnClick}
-          disabled={disabled}
-          className="inline-flex items-center px-6 py-2.5 rounded-full text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-40"
-          style={{ fontFamily: 'var(--font-parent-body)', background: 'var(--parent-primary)', letterSpacing: '0.01em' }}
-        >
-          {ctaLabel}
-        </button>
-      ) : null}
-    </div>
-  );
 }

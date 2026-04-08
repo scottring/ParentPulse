@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { usePerson } from '@/hooks/usePerson';
 import { usePersonManual } from '@/hooks/usePersonManual';
 import { useContribution } from '@/hooks/useContribution';
-import { useRoleSection } from '@/hooks/useRoleSection';
+import { useRoleSections } from '@/hooks/useRoleSection';
 import Navigation from '@/components/layout/Navigation';
 import SideNav from '@/components/layout/SideNav';
 import { PortraitHeader } from '@/components/portrait/PortraitHeader';
@@ -22,7 +22,7 @@ export default function PortraitPage() {
   const { people } = usePerson();
   const { manual, loading: manualLoading } = usePersonManual(personId);
   const { contributions } = useContribution();
-  const { roleSections } = useRoleSection(personId);
+  const { roleSections } = useRoleSections(manual?.manualId);
 
   const [activeSection, setActiveSection] = useState<'synthesis' | 'perspectives' | 'roles' | 'private'>('synthesis');
 

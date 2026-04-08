@@ -7,11 +7,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const navLinks = [
-  { label: 'home', href: '/dashboard' },
-  { label: 'people', href: '/people' },
-  { label: 'workbook', href: '/workbook' },
-  { label: 'check-in', href: '/checkin' },
-  { label: 'reports', href: '/reports' },
+  { label: 'home', href: '/dashboard', matchPrefixes: ['/dashboard'] },
+  { label: 'family manual', href: '/family-manual', matchPrefixes: ['/family-manual', '/people'] },
+  { label: 'growth workbook', href: '/workbook', matchPrefixes: ['/workbook', '/checkin', '/deepen'] },
+  { label: 'reports binder', href: '/reports', matchPrefixes: ['/reports'] },
 ];
 
 export default function Navigation() {
@@ -57,7 +56,7 @@ export default function Navigation() {
         borderBottom: '1px solid rgba(124,100,77,0.08)',
       }}
     >
-      <div className="h-full px-6 sm:px-8 flex items-center justify-between max-w-5xl mx-auto">
+      <div className="h-full px-6 sm:px-8 flex items-center justify-between mx-auto" style={{ maxWidth: 1200 }}>
         {/* Wordmark */}
         <Link
           href="/dashboard"
@@ -77,7 +76,9 @@ export default function Navigation() {
         {/* Desktop nav links */}
         <div className="hidden sm:flex items-center gap-6">
           {navLinks.map((link) => {
-            const isActive = pathname === link.href || pathname.startsWith(link.href + '/');
+            const isActive = link.matchPrefixes.some(
+              (p) => pathname === p || pathname.startsWith(p + '/')
+            );
             return (
               <Link
                 key={link.href}
