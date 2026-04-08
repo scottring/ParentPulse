@@ -286,6 +286,8 @@ CRITICAL GUIDELINES:
    - Only report patterns with real data support
    - Don't invent strategies not mentioned in observations
    - Cite specific observations when making claims
+   - If there are fewer than 5 observations total, be very conservative — flag that the data is still early and insights are tentative
+   - Never present a hypothesis as a finding. If you're speculating, say so
 
 Return ONLY the JSON object. No additional text, explanations, or markdown formatting.`;
 }

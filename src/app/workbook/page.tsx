@@ -1,355 +1,367 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useWorkbook } from '@/hooks/useWorkbook';
-import { useWeeklyActivities } from '@/hooks/useWeeklyActivities';
-import { useRingScores } from '@/hooks/useRingScores';
 import { useDashboard } from '@/hooks/useDashboard';
-import { scoreToClimate } from '@/lib/climate-engine';
+import { useWorkbook } from '@/hooks/useWorkbook';
+import { getDimension } from '@/config/relationship-dimensions';
 import Navigation from '@/components/layout/Navigation';
 import SideNav from '@/components/layout/SideNav';
-import WeatherBackground from '@/components/dashboard/WeatherBackground';
-import AuraPhaseIndicator from '@/components/layout/AuraPhaseIndicator';
-import WorkbookChapterCard from '@/components/workbook/WorkbookChapterCard';
 import Link from 'next/link';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/lib/firebase';
-import type { ClimateState } from '@/lib/climate-engine';
+
+type BalanceLevel = 'in_balance' | 'growing' | 'needs_attention' | 'getting_started';
+
+const BALANCE_CONFIG: Record<BalanceLevel, { label: string; color: string }> = {
+  in_balance: { label: 'In balance', color: '#7C9082' },
+  growing: { label: 'Growing', color: '#C4A265' },
+  needs_attention: { label: 'Needs attention', color: '#C08070' },
+  getting_started: { label: 'Getting started', color: '#9B9488' },
+};
+
+function computeBalance(scores: number[]): BalanceLevel {
+  if (scores.length < 2) return 'getting_started';
+  const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+  const variance = scores.reduce((sum, s) => sum + (s - mean) ** 2, 0) / scores.length;
+  const stdDev = Math.sqrt(variance);
+  if (stdDev < 0.5) return 'in_balance';
+  if (stdDev < 1.0) return 'growing';
+  return 'needs_attention';
+}
+
+interface RelationshipNode {
+  personId: string;
+  name: string;
+  relationshipType?: string;
+  balance: BalanceLevel;
+  activeChapter: { dimensionName: string } | null;
+}
 
 export default function WorkbookPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { activeChapters, loading: wbLoading, completeExercise, pauseChapter, resumeChapter } = useWorkbook();
-  const { weeklyByPerson, totalCompleted, totalPending, loading: weeklyLoading } = useWeeklyActivities();
-  const { assessments } = useDashboard();
-  const { health } = useRingScores(assessments);
-
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [generating, setGenerating] = useState(false);
+  const { roles, state } = useDashboard();
+  const { activeChapters } = useWorkbook();
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login');
   }, [user, authLoading, router]);
 
-  const climateState: ClimateState = useMemo(() => {
-    if (health) {
-      return scoreToClimate(health.score, health.trend).state;
-    }
-    return 'mostly_sunny';
-  }, [health]);
+  const relationships: RelationshipNode[] = useMemo(() => {
+    return roles.map((role) => {
+      const personId = role.otherPerson.personId;
+      const name = role.otherPerson.name;
+      const scores = role.assessments.map((a) => a.currentScore);
+      const balance = computeBalance(scores);
 
-  const handleGenerate = async () => {
-    setGenerating(true);
-    try {
-      const generateBatch = httpsCallable(functions, 'generateGrowthBatch');
-      await generateBatch({});
-    } catch (err) {
-      console.error('Failed to generate activities:', err);
-    } finally {
-      setGenerating(false);
-    }
-  };
+      const chapter = activeChapters.find(
+        (c) => c.personId === personId && c.status === 'active'
+      );
+      const dim = chapter ? getDimension(chapter.dimensionId) : null;
 
-  if (authLoading || wbLoading) {
+      return {
+        personId,
+        name,
+        relationshipType: role.otherPerson.relationshipType,
+        balance,
+        activeChapter: chapter
+          ? { dimensionName: dim?.name || chapter.dimensionId }
+          : null,
+      };
+    });
+  }, [roles, activeChapters]);
+
+  if (authLoading || state === 'loading') {
     return (
-      <WeatherBackground climate="mostly_sunny">
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin w-8 h-8 rounded-full border-2 border-t-transparent border-white/40" />
-        </div>
-      </WeatherBackground>
+      <div className="relish-page flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 rounded-full border-2 border-t-transparent" style={{ borderColor: '#7C9082', borderTopColor: 'transparent' }} />
+      </div>
     );
   }
 
   if (!user) return null;
 
-  const active = activeChapters.filter((c) => c.status === 'active');
-  const paused = activeChapters.filter((c) => c.status === 'paused');
-  const total = totalCompleted + totalPending;
-
-  // Week label
-  const now = new Date();
-  const day = now.getDay();
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + diffToMonday);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  const weekLabel = `${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+  const userName = user.name?.split(' ')[0] || 'You';
 
   return (
-    <WeatherBackground climate={climateState}>
+    <div className="relish-page">
       <Navigation />
       <SideNav />
 
-      <div className="min-h-screen pt-[60px]">
-        <div className="max-w-xl mx-auto px-5 sm:px-8 pt-10 pb-12">
-          {/* Phase indicator */}
-          <div className="mb-6">
-            <AuraPhaseIndicator phase="respond" />
+      <div className="pt-[60px]">
+        <div className="relish-container" style={{ maxWidth: 720 }}>
+          {/* Back to bookshelf */}
+          <div className="pt-4 pb-6">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-1 text-[13px] hover:opacity-70"
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}
+            >
+              &larr; Back to Bookshelf
+            </Link>
           </div>
 
-          {/* Page heading */}
-          <h1
-            style={{
-              fontFamily: 'var(--font-parent-display)',
-              fontSize: 'clamp(1.75rem, 5vw, 2.25rem)',
-              fontWeight: 300,
-              fontStyle: 'italic',
-              color: 'var(--parent-text)',
-              lineHeight: 1.15,
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Your workbook
-          </h1>
-          <p
-            className="mt-2 mb-8"
-            style={{
-              fontFamily: 'var(--font-parent-body)',
-              fontSize: '14px',
-              color: 'var(--parent-text-light)',
-              lineHeight: 1.6,
-            }}
-          >
-            Weekly activities for your family
-          </p>
-
-          {/* ===== THIS WEEK — grouped by person ===== */}
-          <div className="mb-10">
-            <div className="flex items-center justify-between mb-4">
-              <span
-                style={{
-                  fontFamily: 'var(--font-parent-body)',
-                  fontSize: '10px',
-                  fontWeight: 600,
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  color: 'var(--parent-text-light)',
-                }}
-              >
-                This Week
-              </span>
-              <span
-                style={{
-                  fontFamily: 'var(--font-parent-body)',
-                  fontSize: '11px',
-                  color: 'var(--parent-text-light)',
-                }}
-              >
-                {weekLabel}
-              </span>
-            </div>
-
-            {total === 0 ? (
-              <div className="glass-card-strong p-6 text-center">
-                <p
-                  style={{
-                    fontFamily: 'var(--font-parent-body)',
-                    fontSize: '14px',
-                    color: 'var(--parent-text-light)',
-                    lineHeight: 1.6,
-                  }}
-                >
-                  No activities scheduled this week.
-                </p>
-                <button
-                  onClick={handleGenerate}
-                  disabled={generating}
-                  className="inline-flex items-center mt-4 px-6 py-2.5 rounded-full text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-50"
-                  style={{
-                    fontFamily: 'var(--font-parent-body)',
-                    background: 'var(--parent-primary)',
-                  }}
-                >
-                  {generating ? 'Generating...' : 'Generate this week\'s activities'}
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Summary */}
-                <div className="glass-card-strong px-5 py-3 flex items-center justify-between rounded-xl">
-                  <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: 'var(--parent-text)' }}>
-                    {totalCompleted} of {total} done
-                  </span>
-                  <div className="flex gap-1">
-                    {Array.from({ length: Math.min(total, 12) }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: i < totalCompleted ? '#7C9082' : 'rgba(138,128,120,0.2)' }}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Per-person sections */}
-                {Array.from(weeklyByPerson.entries()).map(([personId, data]) => {
-                  const isExpanded = expanded === personId;
-                  const personTotal = data.completed.length + data.pending.length;
-                  return (
-                    <div key={personId} className="glass-card-strong rounded-xl overflow-hidden">
-                      <button
-                        onClick={() => setExpanded(isExpanded ? null : personId)}
-                        className="w-full px-5 py-4 flex items-center justify-between hover:bg-white/10 transition-all"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span style={{ fontFamily: 'var(--font-parent-display)', fontSize: '18px', fontWeight: 400, color: 'var(--parent-text)' }}>
-                            {data.personName}
-                          </span>
-                          <span
-                            className="px-2 py-0.5 rounded-full"
-                            style={{
-                              fontFamily: 'var(--font-parent-body)',
-                              fontSize: '11px',
-                              fontWeight: 500,
-                              color: data.completed.length === personTotal ? '#7C9082' : 'var(--parent-text-light)',
-                              background: data.completed.length === personTotal ? 'rgba(124,144,130,0.1)' : 'rgba(138,128,120,0.08)',
-                            }}
-                          >
-                            {data.completed.length}/{personTotal}
-                          </span>
-                        </div>
-                        <svg
-                          width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--parent-text-light)" strokeWidth="2"
-                          className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                        >
-                          <polyline points="6 9 12 15 18 9" />
-                        </svg>
-                      </button>
-
-                      {isExpanded && (
-                        <div className="px-5 pb-4 space-y-2" style={{ borderTop: '1px solid rgba(255,255,255,0.3)' }}>
-                          {data.pending.map((item) => (
-                            <Link
-                              key={item.growthItemId}
-                              href={`/growth/${item.growthItemId}`}
-                              className="flex items-start gap-3 py-2 group hover:opacity-80 transition-opacity"
-                            >
-                              <span className="text-base mt-0.5">{item.emoji}</span>
-                              <div className="flex-1 min-w-0">
-                                <span
-                                  className="block"
-                                  style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: 'var(--parent-text)' }}
-                                >
-                                  {item.title}
-                                </span>
-                                <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '11px', color: 'var(--parent-text-light)' }}>
-                                  {item.estimatedMinutes} min &middot; {item.speed}
-                                </span>
-                              </div>
-                            </Link>
-                          ))}
-                          {data.completed.map((item) => (
-                            <div key={item.growthItemId} className="flex items-start gap-3 py-2 opacity-45">
-                              <span style={{ color: '#7C9082', fontSize: '14px', marginTop: '2px' }}>&#10003;</span>
-                              <div>
-                                <span
-                                  style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: 'var(--parent-text)', textDecoration: 'line-through' }}
-                                >
-                                  {item.emoji} {item.title}
-                                </span>
-                                {item.feedback && (
-                                  <span className="block" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '11px', color: '#7C9082' }}>
-                                    {item.feedback.reaction === 'loved_it' ? 'Loved it' :
-                                     item.feedback.reaction === 'tried_it' ? 'Tried it' :
-                                     item.feedback.reaction === 'not_now' ? 'Not now' : 'Skipped'}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+          {/* Header */}
+          <div className="pb-6">
+            <h1
+              style={{
+                fontFamily: 'var(--font-parent-display)',
+                fontSize: 'clamp(1.75rem, 5vw, 2.25rem)',
+                fontWeight: 500,
+                color: '#3A3530',
+                lineHeight: 1.15,
+              }}
+            >
+              Growth Workbook
+            </h1>
           </div>
 
-          {/* ===== DEEPER WORK — existing workbook chapters ===== */}
-          {(active.length > 0 || paused.length > 0) && (
-            <div>
-              <span
-                className="block mb-4"
-                style={{
-                  fontFamily: 'var(--font-parent-body)',
-                  fontSize: '10px',
-                  fontWeight: 600,
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  color: 'var(--parent-text-light)',
-                }}
-              >
-                Deeper Work
-              </span>
-
-              {active.length > 0 && (
-                <div className="space-y-4">
-                  {active.map((chapter) => (
-                    <WorkbookChapterCard
-                      key={chapter.chapterId}
-                      chapter={chapter}
-                      onCompleteExercise={completeExercise}
-                      onPause={pauseChapter}
-                      onResume={resumeChapter}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {paused.length > 0 && (
-                <div className="mt-6">
-                  <span
-                    className="block mb-3"
-                    style={{
-                      fontFamily: 'var(--font-parent-body)',
-                      fontSize: '10px',
-                      fontWeight: 600,
-                      letterSpacing: '0.12em',
-                      textTransform: 'uppercase',
-                      color: 'var(--parent-text-light)',
-                      opacity: 0.5,
-                    }}
-                  >
-                    Paused
-                  </span>
-                  <div className="space-y-4">
-                    {paused.map((chapter) => (
-                      <WorkbookChapterCard
-                        key={chapter.chapterId}
-                        chapter={chapter}
-                        onCompleteExercise={completeExercise}
-                        onPause={pauseChapter}
-                        onResume={resumeChapter}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
+          {relationships.length > 0 ? (
+            <GrowthTree userName={userName} relationships={relationships} />
+          ) : (
+            <div className="relish-panel text-center" style={{ padding: '48px 28px' }}>
+              <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#9B9488', lineHeight: 1.6 }}>
+                Complete your family manuals first to unlock growth work.
+              </p>
+              <Link href="/family-manual" className="one-thing-cta inline-block mt-4">
+                Go to Family Manual
+              </Link>
             </div>
           )}
 
-          {/* Footer link */}
-          <div className="mt-8 flex justify-center">
-            <Link
-              href="/dashboard"
-              className="text-[11px] tracking-wide uppercase hover:opacity-70"
-              style={{
-                fontFamily: 'var(--font-parent-body)',
-                fontWeight: 500,
-                letterSpacing: '0.06em',
-                color: 'var(--parent-text-light)',
-                opacity: 0.5,
-              }}
-            >
-              Back to dashboard
-            </Link>
-          </div>
+          <div className="pb-16" />
         </div>
       </div>
-    </WeatherBackground>
+    </div>
+  );
+}
+
+// ==================== Growth Tree ====================
+
+function GrowthTree({ userName, relationships }: { userName: string; relationships: RelationshipNode[] }) {
+  // Layout constants
+  const width = 600;
+  const nodeRadius = 28;
+  const trunkWidth = 6;
+  const branchWidth = 3;
+
+  // Trunk: centered, from bottom up
+  const trunkX = width / 2;
+  const trunkTop = 60;
+  const trunkBottom = 80 + relationships.length * 110;
+  const totalHeight = trunkBottom + 60;
+
+  // Root node (you) at the base of the trunk
+  const rootY = trunkBottom;
+
+  // Branch nodes alternate left and right, spaced vertically up the trunk
+  const nodes = relationships.map((rel, i) => {
+    const side = i % 2 === 0 ? 1 : -1; // right first, then alternate
+    const y = trunkBottom - 100 - i * 110;
+    const x = trunkX + side * 160;
+    return { ...rel, x, y, side };
+  });
+
+  // Branch junction points on the trunk
+  const junctions = nodes.map((n) => ({ x: trunkX, y: n.y + 10 }));
+
+  return (
+    <div className="relative" style={{ width: '100%', maxWidth: width, margin: '0 auto' }}>
+      <svg
+        viewBox={`0 0 ${width} ${totalHeight}`}
+        width="100%"
+        height={totalHeight}
+        style={{ overflow: 'visible' }}
+      >
+        {/* Trunk */}
+        <line
+          x1={trunkX} y1={trunkTop}
+          x2={trunkX} y2={trunkBottom}
+          stroke="#8B7B5E"
+          strokeWidth={trunkWidth}
+          strokeLinecap="round"
+        />
+
+        {/* Small roots at the base */}
+        <path
+          d={`M${trunkX} ${trunkBottom} Q${trunkX - 20} ${trunkBottom + 20} ${trunkX - 35} ${trunkBottom + 30}`}
+          stroke="#8B7B5E" strokeWidth={2.5} fill="none" strokeLinecap="round" opacity={0.5}
+        />
+        <path
+          d={`M${trunkX} ${trunkBottom} Q${trunkX + 15} ${trunkBottom + 22} ${trunkX + 30} ${trunkBottom + 28}`}
+          stroke="#8B7B5E" strokeWidth={2} fill="none" strokeLinecap="round" opacity={0.4}
+        />
+
+        {/* Branches — organic curves from trunk to nodes */}
+        {nodes.map((node, i) => {
+          const jx = junctions[i].x;
+          const jy = junctions[i].y;
+          // Quadratic bezier: junction on trunk → control point → node
+          const cpX = jx + node.side * 60;
+          const cpY = jy - 30;
+          return (
+            <path
+              key={`branch-${node.personId}`}
+              d={`M${jx} ${jy} Q${cpX} ${cpY} ${node.x} ${node.y}`}
+              stroke="#8B7B5E"
+              strokeWidth={branchWidth}
+              fill="none"
+              strokeLinecap="round"
+              opacity={0.6}
+            />
+          );
+        })}
+
+        {/* Small crown at the top of the trunk */}
+        <circle cx={trunkX} cy={trunkTop} r={4} fill="#7C9082" opacity={0.5} />
+        <path
+          d={`M${trunkX} ${trunkTop} Q${trunkX - 12} ${trunkTop - 15} ${trunkX - 8} ${trunkTop - 25}`}
+          stroke="#7C9082" strokeWidth={2} fill="none" strokeLinecap="round" opacity={0.35}
+        />
+        <path
+          d={`M${trunkX} ${trunkTop} Q${trunkX + 10} ${trunkTop - 18} ${trunkX + 12} ${trunkTop - 24}`}
+          stroke="#7C9082" strokeWidth={2} fill="none" strokeLinecap="round" opacity={0.3}
+        />
+
+        {/* Relationship nodes */}
+        {nodes.map((node) => {
+          const config = BALANCE_CONFIG[node.balance];
+          return (
+            <g key={node.personId}>
+              {/* Node background */}
+              <circle
+                cx={node.x} cy={node.y}
+                r={nodeRadius + 3}
+                fill="none"
+                stroke={config.color}
+                strokeWidth={2}
+                opacity={0.5}
+              />
+              <circle
+                cx={node.x} cy={node.y}
+                r={nodeRadius}
+                fill="#F7F5F0"
+                stroke="#E5E0D8"
+                strokeWidth={1}
+              />
+              {/* Initials */}
+              <text
+                x={node.x} y={node.y}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fill="#5C5347"
+                fontFamily="var(--font-parent-body)"
+                fontSize="13"
+                fontWeight="500"
+              >
+                {node.name.split(' ')[0].slice(0, 1).toUpperCase()}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Root node — You */}
+        <circle
+          cx={trunkX} cy={rootY}
+          r={nodeRadius}
+          fill="#F7F5F0"
+          stroke="#8B7B5E"
+          strokeWidth={2}
+        />
+        <text
+          x={trunkX} y={rootY}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fill="#5C5347"
+          fontFamily="var(--font-parent-body)"
+          fontSize="12"
+          fontWeight="500"
+        >
+          {userName}
+        </text>
+      </svg>
+
+      {/* Clickable overlays with labels — positioned absolutely over the SVG */}
+      {nodes.map((node) => {
+        const config = BALANCE_CONFIG[node.balance];
+        // Label on the outside of the node (away from trunk)
+        const labelSide = node.side;
+        const labelX = node.side === 1
+          ? node.x + nodeRadius + 12
+          : node.x - nodeRadius - 12;
+
+        return (
+          <Link
+            key={node.personId}
+            href={`/workbook/${node.personId}`}
+            className="absolute hover:opacity-80 transition-opacity"
+            style={{
+              left: labelSide === 1 ? `${(labelX / width) * 100}%` : 'auto',
+              right: labelSide === -1 ? `${((width - labelX) / width) * 100}%` : 'auto',
+              top: `${((node.y - 20) / totalHeight) * 100}%`,
+              textAlign: labelSide === 1 ? 'left' : 'right',
+            }}
+          >
+            <span
+              className="block"
+              style={{
+                fontFamily: 'var(--font-parent-display)',
+                fontSize: '17px',
+                fontWeight: 500,
+                color: '#3A3530',
+              }}
+            >
+              You & {node.name.split(' ')[0]}
+            </span>
+            <span
+              className="flex items-center gap-1.5"
+              style={{
+                fontFamily: 'var(--font-parent-body)',
+                fontSize: '11px',
+                fontWeight: 500,
+                color: config.color,
+                justifyContent: labelSide === 1 ? 'flex-start' : 'flex-end',
+              }}
+            >
+              <span
+                style={{
+                  width: 6, height: 6, borderRadius: '50%',
+                  background: config.color, display: 'inline-block',
+                }}
+              />
+              {config.label}
+            </span>
+            {node.activeChapter && (
+              <span
+                className="block mt-0.5"
+                style={{
+                  fontFamily: 'var(--font-parent-body)',
+                  fontSize: '11px',
+                  color: '#9B9488',
+                }}
+              >
+                {node.activeChapter.dimensionName}
+              </span>
+            )}
+          </Link>
+        );
+      })}
+
+      {/* Tap target over each SVG node */}
+      {nodes.map((node) => (
+        <Link
+          key={`tap-${node.personId}`}
+          href={`/workbook/${node.personId}`}
+          className="absolute rounded-full"
+          style={{
+            left: `${((node.x - nodeRadius - 5) / width) * 100}%`,
+            top: `${((node.y - nodeRadius - 5) / totalHeight) * 100}%`,
+            width: (nodeRadius + 5) * 2,
+            height: (nodeRadius + 5) * 2,
+          }}
+          aria-label={`Growth with ${node.name}`}
+        />
+      ))}
+    </div>
   );
 }

@@ -310,6 +310,8 @@ Important:
 - Keep each synthesis to 1-2 sentences
 - Generate 2-5 items per category (alignments, gaps, blind spots)
 - If there's only one perspective type, still generate insights but note that the other perspective is missing
+- DATA PROVENANCE: Questionnaire answers and user-logged entries are primary evidence — trust them fully. Items tagged "ai-chat" or "identifiedBy: ai" are AI-inferred and should be treated as hypotheses, not facts. Do not build confident synthesis on top of AI-inferred data alone. If the only evidence for a pattern is AI-derived, note it as tentative.
+- If the total amount of human-sourced data is thin (e.g., sparse questionnaire answers, few entries), say so in the overview. Do not inflate thin data into rich-sounding narrative. A shorter, honest synthesis is better than a confident-sounding one built on speculation.
 - Return ONLY valid JSON, no markdown or extra text`;
 
       try {
@@ -1100,16 +1102,14 @@ async function generateChatResponse(messages, context) {
  * Build system message with relevant context
  */
 function buildChatSystemMessage(context) {
-  let systemMessage = `You are an empathetic AI relationship coach with access to this person's personal journey. You can reference their journal entries, saved knowledge, and action items to provide personalized advice on all relationships - parenting, partnerships, friendships, family dynamics, and personal growth.
+  let systemMessage = `You are a thoughtful companion who has read this person's journal, their family's operating manuals, and their saved resources. You help them think through what's happening in their relationships — not by prescribing solutions, but by connecting dots and asking good questions.
 
-Your role:
-- Provide supportive, non-judgmental guidance on any relationship topic
-- Reference specific entries, articles, or actions when relevant
-- Help people see patterns in their experiences and relationships
-- Suggest practical strategies based on what has worked for them before
-- Acknowledge the challenges they're facing in any relationship context
-- Be conversational, warm, and adaptable to any relationship topic
-- Cover parenting, romantic relationships, friendships, family, work relationships, and self-relationship
+Your approach:
+- Help people understand what's happening, not just what to do about it
+- Reference specific entries, manual data, or saved resources when you have them — but only when they're genuinely relevant, not to perform thoroughness
+- When the data is thin or you'd be stretching to make a connection, say so. Ask a clarifying question instead of fabricating insight
+- Be conversational, warm, and concise — talk like a thoughtful friend, not a therapist
+- If someone shares something new, acknowledge it. If they ask something you can't answer well from the available data, be honest and help them explore what they're really getting at
 
 Available Context:
 
@@ -1230,13 +1230,13 @@ Available Context:
   }
 
   systemMessage += `When answering questions:
-- Cite specific journal entries, manual items, or knowledge when relevant
-- Reference their person's triggers, strategies, and boundaries directly
-- Remind them of strategies that worked before
-- Help connect their experiences to broader patterns
-- Be concise but thorough
-- When suggesting new strategies or triggers, make them specific and actionable
-- Use a warm, supportive tone`;
+- Only cite specific data (journal entries, manual items, knowledge) when it's genuinely relevant — don't namedrop data to sound thorough
+- When you have strong data that speaks to the question, use it with confidence and attribution
+- When the data is thin or tangential, be honest: "I don't have much to go on here" — then ask a clarifying question to help them think it through
+- Help connect experiences to patterns, but only patterns the data actually supports
+- Be concise. 1-3 short paragraphs. Brevity shows confidence
+- Never dress up AI inference as established fact. If something came from AI analysis (not the user's own words), treat it as a hypothesis
+- Talk like a warm, thoughtful person — not a clinician or a chatbot`;
 
   return systemMessage;
 }
@@ -5056,9 +5056,11 @@ exports.generateGrowthBatch = onCall(
       };
       const config = modeConfig[engagementMode] || modeConfig.moderate;
 
-      const prompt = `You are a warm, practical family growth coach. You understand that families are systems — individual patterns affect relationships, and relationship dynamics affect individuals.
+      const prompt = `You are generating growth activities for a family. You understand that families are systems — individual patterns affect relationships, and relationship dynamics affect individuals.
 
 The user's relationship with THEMSELVES is foundational — self-work items should feel as important and concrete as couple or parenting items.
+
+IMPORTANT: Only generate activities grounded in the synthesis insights and manual data below. If the data for a particular area is thin or AI-inferred (not from direct human input), generate lighter-touch items for that area — reflection prompts that help gather more understanding, rather than prescriptive exercises built on speculation.
 
 FAMILY MEMBERS:
 ${familyContext}
@@ -5777,7 +5779,7 @@ exports.processAcuteEvent = onCall(
         `Active arc: ${a.title} targeting ${a.dimensionId} (week ${a.currentWeek}/${a.durationWeeks})`,
       ).join("\n") || "No active growth arcs";
 
-      const prompt = `You are a relationship health AI advisor. A user has reported an acute event in their family life. Analyze it in context of their current dimension scores and active growth trajectory.
+      const prompt = `A user has reported an acute event in their family life. Analyze it in context of their current dimension scores and active growth trajectory. Be conservative — only flag dimension impacts you're confident about based on what the user actually described. Don't over-interpret.
 
 EVENT: "${freeText}"
 
@@ -7442,7 +7444,8 @@ If it's a question, use entryType "note".`,
         try {
           await extractAndApplyInsights(
               client, db, manualId, personName,
-              question, answer, manual, request.auth.uid,
+              question, manual, request.auth.uid,
+              [...conversationHistory, {role: "user", content: question}],
           );
         } catch (insightErr) {
           logger.warn("Insight extraction failed (non-critical):", insightErr);
@@ -7712,33 +7715,42 @@ function buildAskManualSystemPrompt(
     context += entriesContext + "\n";
   }
 
-  return `You are a relationship advisor who has deeply studied ${personName}'s manual — a living document built from multiple perspectives about how they work, what they need, and how to connect with them.
+  return `You are the living voice of ${personName}'s operating manual — a document built from multiple perspectives about who they are, how they work, and what makes them tick. You help people *understand* ${personName}. You do not diagnose, prescribe, or play therapist.
 
-You have comprehensive access to:
-- What ${personName} says about themselves (self-perspective)
-- What observers have shared about them (observer perspectives)
-- Where these perspectives align and where they diverge
-- Known triggers with severity levels and de-escalation strategies
-- Strategies that work (with effectiveness ratings) and ones that don't
-- Conversational entries: observations, agreements, and events logged by the user
-- Boundaries (immovable, negotiable, preferences)
-- Emerging patterns and progress notes
+Think of yourself as a wise friend who knows ${personName} deeply — someone who can illuminate what's going on beneath the surface, not someone who hands out scripts or interventions.
 
 === ${personName.toUpperCase()}'S MANUAL ===
 
 ${context}
 
-=== GUIDELINES ===
+=== CRITICAL: KNOW WHAT YOU DON'T KNOW ===
 
-When answering questions:
-1. GROUND every claim in manual data. Say "${personName} described..." or "Based on what [observer] observed..." — never give generic advice when specific data exists.
-2. When perspectives CONFLICT, surface BOTH sides. The gap IS the insight. Say "Interestingly, ${personName} sees this as X, while their [relationship] describes it as Y."
-3. Be SPECIFIC, not generic. Reference actual triggers, actual strategies, actual words from the manual.
-4. Respect boundaries marked as "immovable" — never suggest crossing them.
-5. When suggesting approaches, tie them to strategies with high effectiveness ratings.
-6. Flag clearly when you're inferring beyond what's in the manual.
-7. Be warm and direct. This is about understanding a real person, not clinical analysis.
-8. Keep responses focused and actionable — 2-4 paragraphs unless the question demands more.`;
+Before responding, honestly assess: does the manual contain enough specific, relevant data to answer this question with real substance?
+
+**If YES** — the manual has direct, relevant data (specific answers, observations, patterns) that clearly speak to the question — respond with confidence, grounding every claim in that data.
+
+**If NO** — the manual data is thin, tangential, or you'd have to stretch connections to say something meaningful — do NOT fabricate confidence. Instead:
+1. Be honest: "The manual doesn't have much to go on for this specific question yet."
+2. Ask 1-2 clarifying questions to help the user articulate what they're really getting at. Often people come with a surface question that has a deeper need underneath. Help them find it. Examples:
+   - "Can you tell me more about what prompted this? What happened?"
+   - "What's the feeling underneath this for you — frustration, worry, curiosity?"
+   - "Are you trying to understand why this happens, or looking for a way to respond to it?"
+3. If the topic has well-established research behind it (attachment styles, love languages, developmental stages, family dynamics), offer that general knowledge clearly labeled as general — not as something from the manual. Say "Research suggests..." or "Generally speaking..." — never dress up outside knowledge as manual insight.
+4. Suggest that logging more observations about this topic would help the manual get smarter about it over time.
+
+The worst thing you can do is stretch thin data into confident-sounding analysis. Silence or curiosity is better than fabricated insight. Your credibility depends on only speaking with authority when you've earned it.
+
+=== HOW TO RESPOND ===
+
+1. GROUND every claim in manual data. Say "${personName} described..." or "Based on what [observer] shared..." — never invent specifics or present inferences as facts.
+2. When perspectives DIFFER, surface both sides without picking a winner. The gap between how someone sees themselves and how others experience them is where the real understanding lives.
+3. Be SPECIFIC. Reference actual words, actual patterns, actual observations from the manual — not generic relationship advice.
+4. ILLUMINATE, don't prescribe. Help the asker understand *why* ${personName} does what they do, what it means, what's behind it. Don't tell them what to say or do unless they explicitly ask for suggestions.
+5. Protect dignity. ${personName} is a whole person, not a problem to solve. Never pathologize behavior that has positive intent — name the intent.
+6. When you ARE asked for suggestions, keep them grounded in what the manual says actually works for ${personName}, not generic advice.
+7. Be warm, concise, and conversational — not clinical. No bold section headers, no therapeutic framing. Talk like a person, not a counselor.
+8. Respect boundaries marked as "immovable" without question.
+9. Keep responses to 1-3 short paragraphs. Brevity shows confidence in what you know.`;
 }
 
 /**
@@ -7747,15 +7759,33 @@ When answering questions:
  * in the conversation that aren't already in the manual.
  */
 async function extractAndApplyInsights(
-    client, db, manualId, personName, question, answer, manual, userId,
+    client, db, manualId, personName, question, manual, userId,
+    conversationHistory = [],
 ) {
   const logger = require("firebase-functions/logger");
 
-  const extractionPrompt = `You are analyzing a conversation about ${personName} to extract new insights for their operating manual.
+  // IMPORTANT: Only extract insights from what the USER said, never from
+  // the AI's own response. AI responses are derivative — mining them for
+  // "insights" creates a feedback loop where AI-generated speculation
+  // gets written back to the manual as if it were real data.
 
-The user asked: "${question}"
+  // Filter conversation history to only user messages
+  const userMessages = conversationHistory
+      .filter((m) => m.role === "user")
+      .map((m) => m.content);
 
-The advisor responded: "${answer}"
+  // If user only asked a simple question with no new information, skip
+  if (userMessages.length === 0) {
+    logger.info("No user messages to extract insights from");
+    return;
+  }
+
+  const extractionPrompt = `You are analyzing what a USER said in conversation about ${personName} to extract new insights for their operating manual.
+
+CRITICAL: You are ONLY looking at what the user explicitly stated or described. Do NOT extract insights from the AI advisor's responses — those are derivative, not raw data.
+
+What the user said:
+${userMessages.map((m) => `- "${m}"`).join("\n")}
 
 The manual currently contains:
 - ${(manual.triggers || []).length} triggers
@@ -7768,7 +7798,7 @@ Existing trigger descriptions: ${(manual.triggers || []).map((t) => t.descriptio
 Existing strategy descriptions: ${(manual.whatWorks || []).map((s) => s.description).join("; ") || "none"}
 Existing pattern descriptions: ${(manual.emergingPatterns || []).map((p) => p.description).join("; ") || "none"}
 
-Extract ONLY genuinely new insights revealed in this conversation that are NOT already covered by existing manual content. Be conservative — only extract clear, actionable insights.
+Extract ONLY genuinely new information the USER explicitly shared — things they described seeing, experiencing, or knowing firsthand. Do NOT infer, speculate, or read between the lines. If the user just asked a question without sharing new information, return hasNewInsights: false.
 
 Return JSON:
 {
@@ -7787,7 +7817,7 @@ Return JSON:
   "hasNewInsights": true/false
 }
 
-If no genuinely new insights were revealed, set hasNewInsights to false and leave arrays empty. Most conversations won't produce new insights — that's fine. Only flag real discoveries.
+Most conversations will NOT produce new insights — the user is usually asking, not telling. Default to hasNewInsights: false unless the user clearly shared something new and concrete.
 
 Return ONLY valid JSON.`;
 
@@ -7952,5 +7982,118 @@ exports.closeManualChat = onCall(
       await batch.commit();
 
       return {success: true};
+    },
+);
+
+/**
+ * One-time cleanup: Remove AI-on-AI derived data from manuals.
+ * Strips triggers, strategies, patterns, and progress notes that were
+ * generated by "ai-chat" (extracted from AI's own responses).
+ * Flags affected manuals for re-synthesis with clean data.
+ *
+ * Call once via: firebase functions:shell > cleanupAiDerivedData()
+ */
+exports.cleanupAiDerivedData = onCall(
+    {
+      region: "us-central1",
+      timeoutSeconds: 300,
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const db = admin.firestore();
+      const manualsSnap = await db.collection("person_manuals").get();
+
+      let manualsUpdated = 0;
+      let totalRemoved = 0;
+
+      for (const doc of manualsSnap.docs) {
+        const manual = doc.data();
+        const updates = {};
+        let removedFromThis = 0;
+
+        // Strip AI-chat triggers
+        if (manual.triggers && manual.triggers.length > 0) {
+          const clean = manual.triggers.filter(
+              (t) => t.identifiedBy !== "ai-chat" && t.identifiedBy !== "ai",
+          );
+          if (clean.length < manual.triggers.length) {
+            removedFromThis += manual.triggers.length - clean.length;
+            updates.triggers = clean;
+            updates.totalTriggers = clean.length;
+          }
+        }
+
+        // Strip AI-chat strategies (whatWorks)
+        if (manual.whatWorks && manual.whatWorks.length > 0) {
+          const clean = manual.whatWorks.filter(
+              (s) => s.addedBy !== "ai-chat" && s.sourceType !== "discovered",
+          );
+          if (clean.length < manual.whatWorks.length) {
+            removedFromThis += manual.whatWorks.length - clean.length;
+            updates.whatWorks = clean;
+          }
+        }
+
+        // Strip AI-chat strategies (whatDoesntWork)
+        if (manual.whatDoesntWork && manual.whatDoesntWork.length > 0) {
+          const clean = manual.whatDoesntWork.filter(
+              (s) => s.addedBy !== "ai-chat" && s.sourceType !== "discovered",
+          );
+          if (clean.length < manual.whatDoesntWork.length) {
+            removedFromThis += manual.whatDoesntWork.length - clean.length;
+            updates.whatDoesntWork = clean;
+          }
+        }
+
+        // Strip AI-inferred patterns
+        if (manual.emergingPatterns && manual.emergingPatterns.length > 0) {
+          const clean = manual.emergingPatterns.filter(
+              (p) => p.identifiedBy !== "ai" && p.identifiedBy !== "ai-chat",
+          );
+          if (clean.length < manual.emergingPatterns.length) {
+            removedFromThis +=
+              manual.emergingPatterns.length - clean.length;
+            updates.emergingPatterns = clean;
+          }
+        }
+
+        // Strip AI-chat progress notes
+        if (manual.progressNotes && manual.progressNotes.length > 0) {
+          const clean = manual.progressNotes.filter(
+              (n) => n.addedBy !== "ai-chat",
+          );
+          if (clean.length < manual.progressNotes.length) {
+            removedFromThis += manual.progressNotes.length - clean.length;
+            updates.progressNotes = clean;
+          }
+        }
+
+        if (removedFromThis > 0) {
+          updates.updatedAt = admin.firestore.Timestamp.now();
+          updates.needsResynthesis = true;
+          await doc.ref.update(updates);
+          manualsUpdated++;
+          totalRemoved += removedFromThis;
+          logger.info(
+              `Cleaned manual ${doc.id}: removed ${removedFromThis} AI-derived items`,
+          );
+        }
+      }
+
+      logger.info(
+          `Cleanup complete: ${manualsUpdated} manuals updated, ` +
+          `${totalRemoved} AI-derived items removed`,
+      );
+
+      return {
+        success: true,
+        manualsUpdated,
+        totalItemsRemoved: totalRemoved,
+      };
     },
 );

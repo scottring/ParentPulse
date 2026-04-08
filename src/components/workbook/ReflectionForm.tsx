@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import AuraPhaseIndicator from '@/components/layout/AuraPhaseIndicator';
 import type { Exercise, ReflectionRating, SuggestedManualEntry } from '@/types/workbook';
 
 const RATING_OPTIONS: { value: ReflectionRating; label: string; emoji: string }[] = [
@@ -87,11 +86,6 @@ export default function ReflectionForm({
         }}
       >
         <div className="p-6 sm:p-8">
-          {/* Phase indicator */}
-          <div className="flex justify-center mb-4">
-            <AuraPhaseIndicator phase="assimilate" />
-          </div>
-
           {/* Header */}
           <div className="flex items-start justify-between mb-6">
             <div>

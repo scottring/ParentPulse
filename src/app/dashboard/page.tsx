@@ -243,7 +243,7 @@ export default function DashboardPage() {
       <div className="pt-[60px] flex items-center justify-center min-h-[calc(100vh-60px)]">
         <div className="relish-container w-full">
           {/* Greeting */}
-          <div className="pb-8 text-center">
+          <div className="pb-12 text-center">
             <h1
               className="animate-fade-in-up"
               style={{
@@ -256,9 +256,6 @@ export default function DashboardPage() {
             >
               Welcome back
             </h1>
-            <p className="mt-3" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#9B9488' }}>
-              Your family&apos;s manual needs attention
-            </p>
           </div>
 
           {/* The Three Books */}
