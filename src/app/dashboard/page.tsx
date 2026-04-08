@@ -175,8 +175,8 @@ export default function DashboardPage() {
 
       <div className="min-h-screen pt-[60px]">
 
-        {/* ===== HERO SECTION — compact, full width ===== */}
-        <div className="max-w-5xl mx-auto px-5 sm:px-8 pt-8 pb-4">
+        {/* ===== HERO SECTION ===== */}
+        <div className="max-w-5xl mx-auto px-5 sm:px-8 pt-6 pb-3">
 
           {/* Phase indicator — shown during onboarding states */}
           {state !== 'active' && (
@@ -332,113 +332,96 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* ===== ACTIVE STATE: 2-column grid ===== */}
+          {/* ===== ACTIVE STATE ===== */}
           {state === 'active' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div className="space-y-5">
 
-              {/* LEFT COLUMN — status & actions (1/3 width) */}
-              <div className="space-y-4">
-                {/* Family health ring */}
+              {/* ROW 1: Health ring + Your Manual side by side */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {familyCompleteness.perPerson.length > 0 && (
                   <div className="glass-card p-5 space-y-4">
                     <FamilyCompletenessRing completeness={familyCompleteness} dark={dark} />
                     <FamilyStatusRow people={familyCompleteness.perPerson} dark={dark} />
                   </div>
                 )}
-
-                {/* Your Manual */}
-                {selfPerson && hasSelfContribution && (
-                  <Link
-                    href={`/people/${selfPerson.personId}/manual${demoQ}`}
-                    className="block glass-card p-4 hover:shadow-lg transition-all weather-card"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '16px', fontWeight: 400, color: dark ? 'rgba(255,255,255,0.95)' : '#3A3530' }}>
-                          Your Manual
-                        </h3>
-                        <p className="mt-0.5" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: dark ? 'rgba(255,255,255,0.5)' : '#7C7468' }}>
-                          View, revise, or invite others
-                        </p>
+                <div className="space-y-3">
+                  {selfPerson && hasSelfContribution && (
+                    <Link
+                      href={`/people/${selfPerson.personId}/manual${demoQ}`}
+                      className="block glass-card p-5 hover:shadow-lg transition-all weather-card"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '18px', fontWeight: 400, color: dark ? 'rgba(255,255,255,0.95)' : '#3A3530' }}>Your Manual</h3>
+                          <p className="mt-1" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: dark ? 'rgba(255,255,255,0.5)' : '#7C7468' }}>View, revise, or invite others to contribute</p>
+                        </div>
+                        <span style={{ color: dark ? 'rgba(255,255,255,0.3)' : '#8A8078', fontSize: '18px' }}>&rarr;</span>
                       </div>
-                      <span style={{ color: dark ? 'rgba(255,255,255,0.3)' : '#8A8078', fontSize: '16px' }}>&rarr;</span>
-                    </div>
-                  </Link>
-                )}
-
-                {/* Action items */}
-                <ActionFeed items={actionItems} onDismiss={dismissAction} dark={dark} />
-
-                {/* Deepen cards */}
-                {visibleNeeds.map((need) => (
-                  <DeepenCard key={need.dimensionId} need={need} onStart={() => startAssessment(need)} onDismiss={() => dismissNeed(need)} />
-                ))}
-
-                {/* Re-sync button */}
-                <button
-                  onClick={handleFamilySync}
-                  disabled={syncing}
-                  className="w-full px-4 py-2.5 glass-card rounded-full disabled:opacity-50 transition-all hover:shadow-lg flex items-center justify-center gap-2"
-                  style={{ fontFamily: 'var(--font-parent-body)', fontSize: '11px', fontWeight: 500, color: textSecondary }}
-                >
-                  {syncing ? (
-                    <><div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: textTertiary, borderTopColor: 'transparent' }} /> Syncing...</>
-                  ) : syncDone ? (
-                    <>&#10003; Synced</>
-                  ) : (
-                    'Re-synthesize Family'
-                  )}
-                </button>
-              </div>
-
-              {/* RIGHT COLUMN — forecasts & activity (2/3 width) */}
-              <div className="lg:col-span-2 space-y-4">
-                {/* Forecasts */}
-                <div>
-                  <span className="block mb-2" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: textTertiary }}>
-                    Forecasts
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {roles.map((role) => (
-                      <RelationshipCard
-                        key={role.otherPerson.personId}
-                        role={role}
-                        variant={role.domain === 'couple' ? 'spouse' : 'child'}
-                        demoQ={demoQ}
-                        activeChapters={activeChapters}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Weekly Activities */}
-                <WeeklyActivitySection
-                  textColor={textPrimary}
-                  textSecondary={textSecondary}
-                  textTertiary={textTertiary}
-                />
-
-                {/* Check-in prompt */}
-                {activeChapters.filter(c => c.status === 'active').length > 0 && (() => {
-                  const now = Date.now();
-                  const sevenDays = 7 * 24 * 60 * 60 * 1000;
-                  const lastCompletion = activeChapters
-                    .flatMap(c => c.completions)
-                    .reduce((latest, comp) => {
-                      const t = comp.completedAt?.toMillis?.() || 0;
-                      return t > latest ? t : latest;
-                    }, 0);
-                  if (lastCompletion !== 0 && (now - lastCompletion) <= sevenDays) return null;
-                  return (
-                    <Link href={`/checkin${demoQ}`} className="block glass-card-strong p-5 hover:opacity-90 transition-opacity phase-card-assimilate">
-                      <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '16px', fontWeight: 500, color: 'var(--parent-text)' }}>
-                        It&apos;s been a week. Ready for a quick check-in?
-                      </h3>
-                      <p className="mt-1" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12.5px', color: 'var(--parent-text-light)' }}>~3 minutes</p>
                     </Link>
-                  );
-                })()}
+                  )}
+                  {/* Check-in prompt */}
+                  {activeChapters.filter(c => c.status === 'active').length > 0 && (() => {
+                    const now = Date.now();
+                    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+                    const lastCompletion = activeChapters.flatMap(c => c.completions).reduce((latest, comp) => { const t = comp.completedAt?.toMillis?.() || 0; return t > latest ? t : latest; }, 0);
+                    if (lastCompletion !== 0 && (now - lastCompletion) <= sevenDays) return null;
+                    return (
+                      <Link href={`/checkin${demoQ}`} className="block glass-card-strong p-5 hover:opacity-90 transition-opacity phase-card-assimilate">
+                        <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '16px', fontWeight: 500, color: 'var(--parent-text)' }}>Ready for a quick check-in?</h3>
+                        <p className="mt-1" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12.5px', color: 'var(--parent-text-light)' }}>~3 minutes</p>
+                      </Link>
+                    );
+                  })()}
+                  {/* Re-sync */}
+                  <button
+                    onClick={handleFamilySync}
+                    disabled={syncing}
+                    className="w-full px-5 py-3 glass-card rounded-full disabled:opacity-50 transition-all hover:shadow-lg flex items-center justify-center gap-2"
+                    style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: textSecondary }}
+                  >
+                    {syncing ? (<><div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: textTertiary, borderTopColor: 'transparent' }} /> Syncing...</>) : syncDone ? (<>&#10003; Synced</>) : ('Re-synthesize Family')}
+                  </button>
+                </div>
               </div>
+
+              {/* ROW 2: Action items + Deepen — side by side */}
+              {(actionItems.length > 0 || visibleNeeds.length > 0) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <ActionFeed items={actionItems} onDismiss={dismissAction} dark={dark} />
+                  {visibleNeeds.length > 0 && (
+                    <div className="space-y-3">
+                      {visibleNeeds.map((need) => (
+                        <DeepenCard key={need.dimensionId} need={need} onStart={() => startAssessment(need)} onDismiss={() => dismissNeed(need)} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ROW 3: Forecasts — cards in a responsive grid */}
+              <div>
+                <span className="block mb-2" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: textTertiary }}>
+                  Forecasts
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {roles.map((role) => (
+                    <RelationshipCard
+                      key={role.otherPerson.personId}
+                      role={role}
+                      variant={role.domain === 'couple' ? 'spouse' : 'child'}
+                      demoQ={demoQ}
+                      activeChapters={activeChapters}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* ROW 4: Weekly Activities — full width */}
+              <WeeklyActivitySection
+                textColor={textPrimary}
+                textSecondary={textSecondary}
+                textTertiary={textTertiary}
+              />
             </div>
           )}
 
