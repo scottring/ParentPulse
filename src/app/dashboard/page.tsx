@@ -175,8 +175,8 @@ export default function DashboardPage() {
 
       <div className="min-h-screen pt-[60px]">
 
-        {/* ===== HERO SECTION — the emotional center ===== */}
-        <div className="max-w-xl mx-auto px-5 sm:px-8 pt-10 pb-6">
+        {/* ===== HERO SECTION — compact, full width ===== */}
+        <div className="max-w-5xl mx-auto px-5 sm:px-8 pt-8 pb-4">
 
           {/* Phase indicator — shown during onboarding states */}
           {state !== 'active' && (
@@ -285,302 +285,183 @@ export default function DashboardPage() {
         </div>
 
         {/* ===== CONTENT ===== */}
-        <div className="max-w-xl mx-auto px-5 sm:px-8 pb-12">
+        <div className="max-w-5xl mx-auto px-5 sm:px-8 pb-12">
 
-          {/* Thin separator line */}
-          {state === 'active' && (
-            <div
-              className="mb-6"
-              style={{
-                height: '1px',
-                background: dark
-                  ? 'linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)'
-                  : 'linear-gradient(90deg, transparent, rgba(0,0,0,0.06), transparent)',
-              }}
-            />
+          {/* Onboarding states — single column, centered */}
+          {state !== 'active' && (
+            <div className="max-w-xl mx-auto space-y-4">
+              {state === 'new_user' && selfPerson && (
+                <OnboardingCard
+                  title="Start with you"
+                  body="How you handle stress, what you need, how you communicate."
+                  ctaLabel="Begin"
+                  ctaHref={`/people/${selfPerson.personId}/manual/self-onboard${demoQ}`}
+                  phaseClass="phase-card-assess"
+                />
+              )}
+              {state === 'self_complete' && (
+                <div className="glass-card-strong p-6">
+                  <h2 className="text-lg mb-1" style={{ fontFamily: 'var(--font-parent-display)', fontWeight: 500, color: 'var(--parent-text)' }}>
+                    Who matters most?
+                  </h2>
+                  <p className="text-sm mb-5" style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text-light)', lineHeight: 1.6 }}>
+                    Add the people you want to understand better.
+                  </p>
+                  <div className="flex gap-2">
+                    <select value={addType} onChange={(e) => setAddType(e.target.value as 'spouse' | 'child')} className="text-sm rounded-2xl px-3 py-2.5" style={{ fontFamily: 'var(--font-parent-body)', background: 'rgba(255,255,255,0.5)', color: 'var(--parent-text)', border: '1px solid rgba(0,0,0,0.06)' }}>
+                      <option value="spouse">Spouse / Partner</option>
+                      <option value="child">Child</option>
+                    </select>
+                    <input type="text" value={addName} onChange={(e) => setAddName(e.target.value)} placeholder="Their name" className="flex-1 text-sm rounded-2xl px-4 py-2.5" style={{ fontFamily: 'var(--font-parent-body)', background: 'rgba(255,255,255,0.5)', color: 'var(--parent-text)', border: '1px solid rgba(0,0,0,0.06)' }} onKeyDown={(e) => e.key === 'Enter' && handleAddPerson()} />
+                    <button onClick={handleAddPerson} disabled={adding || !addName.trim()} className="text-sm font-medium rounded-2xl px-5 py-2.5 text-white hover:opacity-90 disabled:opacity-40" style={{ fontFamily: 'var(--font-parent-body)', background: 'var(--parent-primary)' }}>
+                      {adding ? '...' : 'Add'}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {state === 'has_people' && peopleNeedingContributions.map((person) => {
+                const isChild = person.relationshipType === 'child';
+                const href = isChild ? `/people/${person.personId}/manual/kid-session${demoQ}` : `/people/${person.personId}/manual/onboard${demoQ}`;
+                return (
+                  <OnboardingCard key={person.personId} title={`What do you see in ${person.name}?`} body={`You see ${person.name} from a perspective they can\u2019t see themselves.`} ctaLabel={isChild ? 'Start session' : 'Begin'} ctaHref={href} />
+                );
+              })}
+              {state === 'has_contributions' && (
+                <OnboardingCard title="Ready to read the sky" body="We'll map your relationships across 20 dimensions and find where the weather is headed." ctaLabel={generating ? 'Reading...' : 'Analyze'} ctaOnClick={handleAnalyze} disabled={generating} />
+              )}
+            </div>
           )}
 
-          <div className="space-y-4">
+          {/* ===== ACTIVE STATE: 2-column grid ===== */}
+          {state === 'active' && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-            {/* FAMILY HEALTH — completeness ring + status row (active state) */}
-            {state === 'active' && familyCompleteness.perPerson.length > 0 && (
-              <div className="glass-card p-5 space-y-4">
-                <FamilyCompletenessRing completeness={familyCompleteness} dark={dark} />
-                <FamilyStatusRow people={familyCompleteness.perPerson} dark={dark} />
-              </div>
-            )}
-
-            {/* ACTION ITEMS — what needs attention (active state) */}
-            {state === 'active' && actionItems.length > 0 && (
-              <ActionFeed items={actionItems} onDismiss={dismissAction} dark={dark} />
-            )}
-
-            {/* YOUR MANUAL — always accessible when selfPerson exists */}
-            {selfPerson && hasSelfContribution && (
-              <Link
-                href={`/people/${selfPerson.personId}/manual${demoQ}`}
-                className="block glass-card p-5 hover:shadow-lg transition-all weather-card"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3
-                      style={{
-                        fontFamily: 'var(--font-parent-display)',
-                        fontSize: '18px',
-                        fontWeight: 400,
-                        color: dark ? 'rgba(255,255,255,0.95)' : '#3A3530',
-                      }}
-                    >
-                      Your Manual
-                    </h3>
-                    <p
-                      className="mt-1"
-                      style={{
-                        fontFamily: 'var(--font-parent-body)',
-                        fontSize: '13px',
-                        color: dark ? 'rgba(255,255,255,0.5)' : '#7C7468',
-                      }}
-                    >
-                      View, revise, or invite others to contribute
-                    </p>
-                  </div>
-                  <span style={{ color: dark ? 'rgba(255,255,255,0.3)' : '#8A8078', fontSize: '18px' }}>&rarr;</span>
-                </div>
-              </Link>
-            )}
-
-            {/* DEEPEN CARDS: Surface when assessment data gaps exist */}
-            {state === 'active' && visibleNeeds.map((need) => (
-              <DeepenCard
-                key={need.dimensionId}
-                need={need}
-                onStart={() => startAssessment(need)}
-                onDismiss={() => dismissNeed(need)}
-              />
-            ))}
-
-            {/* ONBOARDING: Self */}
-            {state === 'new_user' && selfPerson && (
-              <OnboardingCard
-                title="Start with you"
-                body="How you handle stress, what you need, how you communicate."
-                ctaLabel="Begin"
-                ctaHref={`/people/${selfPerson.personId}/manual/self-onboard${demoQ}`}
-                phaseClass="phase-card-assess"
-              />
-            )}
-
-            {/* ONBOARDING: Add people */}
-            {state === 'self_complete' && (
-              <div className="glass-card-strong p-6">
-                <h2
-                  className="text-lg mb-1"
-                  style={{ fontFamily: 'var(--font-parent-display)', fontWeight: 500, color: 'var(--parent-text)' }}
-                >
-                  Who matters most?
-                </h2>
-                <p
-                  className="text-sm mb-5"
-                  style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text-light)', lineHeight: 1.6 }}
-                >
-                  Add the people you want to understand better.
-                </p>
-                <div className="flex gap-2">
-                  <select
-                    value={addType}
-                    onChange={(e) => setAddType(e.target.value as 'spouse' | 'child')}
-                    className="text-sm rounded-2xl px-3 py-2.5"
-                    style={{
-                      fontFamily: 'var(--font-parent-body)',
-                      background: 'rgba(255,255,255,0.5)',
-                      color: 'var(--parent-text)',
-                      border: '1px solid rgba(0,0,0,0.06)',
-                    }}
-                  >
-                    <option value="spouse">Spouse / Partner</option>
-                    <option value="child">Child</option>
-                  </select>
-                  <input
-                    type="text"
-                    value={addName}
-                    onChange={(e) => setAddName(e.target.value)}
-                    placeholder="Their name"
-                    className="flex-1 text-sm rounded-2xl px-4 py-2.5"
-                    style={{
-                      fontFamily: 'var(--font-parent-body)',
-                      background: 'rgba(255,255,255,0.5)',
-                      color: 'var(--parent-text)',
-                      border: '1px solid rgba(0,0,0,0.06)',
-                    }}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddPerson()}
-                  />
-                  <button
-                    onClick={handleAddPerson}
-                    disabled={adding || !addName.trim()}
-                    className="text-sm font-medium rounded-2xl px-5 py-2.5 text-white hover:opacity-90 disabled:opacity-40"
-                    style={{ fontFamily: 'var(--font-parent-body)', background: 'var(--parent-primary)' }}
-                  >
-                    {adding ? '...' : 'Add'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ONBOARDING: Contribute */}
-            {state === 'has_people' && peopleNeedingContributions.map((person) => {
-              const isChild = person.relationshipType === 'child';
-              const href = isChild
-                ? `/people/${person.personId}/manual/kid-session${demoQ}`
-                : `/people/${person.personId}/manual/onboard${demoQ}`;
-              return (
-                <OnboardingCard
-                  key={person.personId}
-                  title={`What do you see in ${person.name}?`}
-                  body={`You see ${person.name} from a perspective they can\u2019t see themselves.`}
-                  ctaLabel={isChild ? 'Start session' : `Begin`}
-                  ctaHref={href}
-                />
-              );
-            })}
-
-            {/* ONBOARDING: Analyze */}
-            {state === 'has_contributions' && (
-              <OnboardingCard
-                title="Ready to read the sky"
-                body="We'll map your relationships across 20 dimensions and find where the weather is headed."
-                ctaLabel={generating ? 'Reading...' : 'Analyze'}
-                ctaOnClick={handleAnalyze}
-                disabled={generating}
-              />
-            )}
-
-            {/* ===== ACTIVE: Relationship forecasts ===== */}
-            {state === 'active' && (
+              {/* LEFT COLUMN — status & actions (1/3 width) */}
               <div className="space-y-4">
-                {/* Section label */}
-                <span
-                  className="block mb-1"
-                  style={{
-                    fontFamily: 'var(--font-parent-body)',
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase',
-                    color: textTertiary,
-                  }}
-                >
-                  Forecasts
-                </span>
-
-                {roles.map((role) => (
-                  <RelationshipCard
-                    key={role.otherPerson.personId}
-                    role={role}
-                    variant={role.domain === 'couple' ? 'spouse' : 'child'}
-                    demoQ={demoQ}
-                    activeChapters={activeChapters}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Weekly Activities */}
-            {state === 'active' && (
-              <WeeklyActivitySection
-                textColor={textPrimary}
-                textSecondary={textSecondary}
-                textTertiary={textTertiary}
-              />
-            )}
-
-            {/* Re-synthesize Family button */}
-            {state === 'active' && (
-              <button
-                onClick={handleFamilySync}
-                disabled={syncing}
-                className="w-full px-5 py-3 glass-card rounded-full disabled:opacity-50 transition-all hover:shadow-lg flex items-center justify-center gap-2"
-                style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: textSecondary }}
-              >
-                {syncing ? (
-                  <>
-                    <div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: textTertiary, borderTopColor: 'transparent' }} />
-                    Syncing all manuals...
-                  </>
-                ) : syncDone ? (
-                  <>&#10003; Family manuals synced</>
-                ) : (
-                  'Re-synthesize Family'
+                {/* Family health ring */}
+                {familyCompleteness.perPerson.length > 0 && (
+                  <div className="glass-card p-5 space-y-4">
+                    <FamilyCompletenessRing completeness={familyCompleteness} dark={dark} />
+                    <FamilyStatusRow people={familyCompleteness.perPerson} dark={dark} />
+                  </div>
                 )}
-              </button>
-            )}
 
-            {/* CHECK-IN PROMPT: Show at bottom when 7+ days overdue */}
-            {state === 'active' && activeChapters.filter(c => c.status === 'active').length > 0 && (() => {
-              const now = Date.now();
-              const sevenDays = 7 * 24 * 60 * 60 * 1000;
-              const lastCompletion = activeChapters
-                .flatMap(c => c.completions)
-                .reduce((latest, comp) => {
-                  const t = comp.completedAt?.toMillis?.() || 0;
-                  return t > latest ? t : latest;
-                }, 0);
-              const needsCheckin = lastCompletion === 0 || (now - lastCompletion) > sevenDays;
-              if (!needsCheckin) return null;
-
-              return (
-                <Link
-                  href={`/checkin${demoQ}`}
-                  className="block glass-card-strong p-5 hover:opacity-90 transition-opacity phase-card-assimilate"
-                >
-                  <h3
-                    style={{
-                      fontFamily: 'var(--font-parent-display)',
-                      fontSize: '16px',
-                      fontWeight: 500,
-                      color: 'var(--parent-text)',
-                    }}
-                  >
-                    It&apos;s been a week. Ready for a quick check-in?
-                  </h3>
-                  <p
-                    className="mt-1"
-                    style={{
-                      fontFamily: 'var(--font-parent-body)',
-                      fontSize: '12.5px',
-                      color: 'var(--parent-text-light)',
-                    }}
-                  >
-                    ~3 minutes
-                  </p>
-                </Link>
-              );
-            })()}
-
-            {/* Footer links — spec: People · Workbook · Manual */}
-            {state === 'active' && (
-              <div className="flex items-center justify-center gap-5 pt-6 pb-10">
-                {[
-                  { href: '/people', label: 'People' },
-                  { href: '/workbook', label: 'Workbook' },
-                  selfPerson && { href: `/people/${selfPerson.personId}/manual`, label: 'Manual' },
-                ].filter(Boolean).map((link) => (
+                {/* Your Manual */}
+                {selfPerson && hasSelfContribution && (
                   <Link
-                    key={link!.href}
-                    href={link!.href}
-                    className="text-[11px] tracking-wide uppercase hover:opacity-70"
-                    style={{
-                      fontFamily: 'var(--font-parent-body)',
-                      fontWeight: 500,
-                      letterSpacing: '0.06em',
-                      color: textTertiary,
-                    }}
+                    href={`/people/${selfPerson.personId}/manual${demoQ}`}
+                    className="block glass-card p-4 hover:shadow-lg transition-all weather-card"
                   >
-                    {link!.label}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '16px', fontWeight: 400, color: dark ? 'rgba(255,255,255,0.95)' : '#3A3530' }}>
+                          Your Manual
+                        </h3>
+                        <p className="mt-0.5" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: dark ? 'rgba(255,255,255,0.5)' : '#7C7468' }}>
+                          View, revise, or invite others
+                        </p>
+                      </div>
+                      <span style={{ color: dark ? 'rgba(255,255,255,0.3)' : '#8A8078', fontSize: '16px' }}>&rarr;</span>
+                    </div>
                   </Link>
+                )}
+
+                {/* Action items */}
+                <ActionFeed items={actionItems} onDismiss={dismissAction} dark={dark} />
+
+                {/* Deepen cards */}
+                {visibleNeeds.map((need) => (
+                  <DeepenCard key={need.dimensionId} need={need} onStart={() => startAssessment(need)} onDismiss={() => dismissNeed(need)} />
                 ))}
+
+                {/* Re-sync button */}
+                <button
+                  onClick={handleFamilySync}
+                  disabled={syncing}
+                  className="w-full px-4 py-2.5 glass-card rounded-full disabled:opacity-50 transition-all hover:shadow-lg flex items-center justify-center gap-2"
+                  style={{ fontFamily: 'var(--font-parent-body)', fontSize: '11px', fontWeight: 500, color: textSecondary }}
+                >
+                  {syncing ? (
+                    <><div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: textTertiary, borderTopColor: 'transparent' }} /> Syncing...</>
+                  ) : syncDone ? (
+                    <>&#10003; Synced</>
+                  ) : (
+                    'Re-synthesize Family'
+                  )}
+                </button>
               </div>
-            )}
-          </div>
+
+              {/* RIGHT COLUMN — forecasts & activity (2/3 width) */}
+              <div className="lg:col-span-2 space-y-4">
+                {/* Forecasts */}
+                <div>
+                  <span className="block mb-2" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: textTertiary }}>
+                    Forecasts
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {roles.map((role) => (
+                      <RelationshipCard
+                        key={role.otherPerson.personId}
+                        role={role}
+                        variant={role.domain === 'couple' ? 'spouse' : 'child'}
+                        demoQ={demoQ}
+                        activeChapters={activeChapters}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Weekly Activities */}
+                <WeeklyActivitySection
+                  textColor={textPrimary}
+                  textSecondary={textSecondary}
+                  textTertiary={textTertiary}
+                />
+
+                {/* Check-in prompt */}
+                {activeChapters.filter(c => c.status === 'active').length > 0 && (() => {
+                  const now = Date.now();
+                  const sevenDays = 7 * 24 * 60 * 60 * 1000;
+                  const lastCompletion = activeChapters
+                    .flatMap(c => c.completions)
+                    .reduce((latest, comp) => {
+                      const t = comp.completedAt?.toMillis?.() || 0;
+                      return t > latest ? t : latest;
+                    }, 0);
+                  if (lastCompletion !== 0 && (now - lastCompletion) <= sevenDays) return null;
+                  return (
+                    <Link href={`/checkin${demoQ}`} className="block glass-card-strong p-5 hover:opacity-90 transition-opacity phase-card-assimilate">
+                      <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '16px', fontWeight: 500, color: 'var(--parent-text)' }}>
+                        It&apos;s been a week. Ready for a quick check-in?
+                      </h3>
+                      <p className="mt-1" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12.5px', color: 'var(--parent-text-light)' }}>~3 minutes</p>
+                    </Link>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* Footer links */}
+          {state === 'active' && (
+            <div className="flex items-center justify-center gap-5 pt-8 pb-10">
+              {[
+                { href: '/people', label: 'People' },
+                { href: '/reports', label: 'Reports' },
+                { href: '/workbook', label: 'Workbook' },
+                selfPerson && { href: `/people/${selfPerson.personId}/manual`, label: 'Manual' },
+              ].filter(Boolean).map((link) => (
+                <Link
+                  key={link!.href}
+                  href={link!.href}
+                  className="text-[11px] tracking-wide uppercase hover:opacity-70"
+                  style={{ fontFamily: 'var(--font-parent-body)', fontWeight: 500, letterSpacing: '0.06em', color: textTertiary }}
+                >
+                  {link!.label}
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </WeatherBackground>
