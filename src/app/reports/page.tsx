@@ -8,7 +8,7 @@ import { useRingScores } from '@/hooks/useRingScores';
 import { useFreshness } from '@/hooks/useFreshness';
 import Navigation from '@/components/layout/Navigation';
 import SideNav from '@/components/layout/SideNav';
-import { PeriodSelector, ReportPeriod } from '@/components/reports/PeriodSelector';
+import { PeriodSelector, ReportPeriod, periodToMs } from '@/components/reports/PeriodSelector';
 import { PersonStatusCard } from '@/components/reports/PersonStatusCard';
 import { TherapistReportPreview, TherapistReportData } from '@/components/reports/TherapistReportPreview';
 import { scoreToClimate } from '@/lib/climate-engine';
@@ -203,6 +203,7 @@ export default function ReportsPage() {
                 person={person}
                 manual={manualMap.get(person.personId)}
                 assessments={assessments}
+                periodMs={periodToMs(period)}
               />
             ))}
           </div>

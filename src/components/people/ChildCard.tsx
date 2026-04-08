@@ -226,7 +226,7 @@ export function ChildCard({ person, manual, assessments }: Props) {
         </Link>
         {hasManual && (
           <Link
-            href={`/people/${person.personId}/manual`}
+            href={`/people/${person.personId}/portrait`}
             className="text-[12px] font-medium px-4 py-2 rounded-full text-center transition-all hover:opacity-80"
             style={{
               fontFamily: 'var(--font-parent-body)',
@@ -234,7 +234,7 @@ export function ChildCard({ person, manual, assessments }: Props) {
               border: '1px solid rgba(138,128,120,0.2)',
             }}
           >
-            View
+            Portrait
           </Link>
         )}
       </div>

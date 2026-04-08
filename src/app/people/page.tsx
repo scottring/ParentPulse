@@ -11,6 +11,8 @@ import { useManualSummaries } from '@/hooks/useManualSummaries';
 import { useWorkbook } from '@/hooks/useWorkbook';
 import MainLayout from '@/components/layout/MainLayout';
 import { RelationshipType, Person } from '@/types/person-manual';
+import { SpouseCard } from '@/components/people/SpouseCard';
+import { ChildCard } from '@/components/people/ChildCard';
 import { computeAge } from '@/utils/age';
 import { getDimension } from '@/config/relationship-dimensions';
 import { Timestamp } from 'firebase/firestore';
@@ -48,7 +50,7 @@ export default function PeoplePage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { people, loading: peopleLoading, addPerson, deletePerson } = usePerson();
-  const { assessments, contributions, roles } = useDashboard();
+  const { assessments, contributions, manuals, roles } = useDashboard();
   const { health } = useRingScores(assessments);
   const { summaries, loading: summariesLoading } = useManualSummaries();
   const { activeChapters } = useWorkbook();
@@ -203,31 +205,91 @@ export default function PeoplePage() {
           </button>
         </div>
 
-        {/* People cards grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* === SECTIONED PEOPLE LAYOUT === */}
+        <div className="space-y-8">
+
+          {/* Your Manual */}
           {selfPerson && (
-            <PersonCard
-              person={selfPerson}
-              isSelf
-              score={personScores.get(selfPerson.personId)}
-              summary={summaries.get(selfPerson.personId)}
-              contributions={contributions}
-              userId={user.userId}
-              workbookChapters={activeChapters.filter(c => c.personId === selfPerson.personId && c.status === 'active')}
-            />
+            <section>
+              <SectionLabel label="You" />
+              <PersonCard
+                person={selfPerson}
+                isSelf
+                score={personScores.get(selfPerson.personId)}
+                summary={summaries.get(selfPerson.personId)}
+                contributions={contributions}
+                userId={user.userId}
+                workbookChapters={activeChapters.filter(c => c.personId === selfPerson.personId && c.status === 'active')}
+              />
+            </section>
           )}
-          {otherPeople.map((person) => (
-            <PersonCard
-              key={person.personId}
-              person={person}
-              score={personScores.get(person.personId)}
-              summary={summaries.get(person.personId)}
-              contributions={contributions}
-              userId={user.userId}
-              onDelete={() => setConfirmDelete(person)}
-              workbookChapters={activeChapters.filter(c => c.personId === person.personId && c.status === 'active')}
-            />
-          ))}
+
+          {/* Partner */}
+          {(() => {
+            const spouses = otherPeople.filter((p) => p.relationshipType === 'spouse');
+            if (spouses.length === 0) return null;
+            return (
+              <section>
+                <SectionLabel label="Partner" />
+                <div className="space-y-3">
+                  {spouses.map((person) => (
+                    <SpouseCard
+                      key={person.personId}
+                      person={person}
+                      manual={manuals.find((m) => m.personId === person.personId)}
+                      assessments={assessments}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })()}
+
+          {/* Children */}
+          {(() => {
+            const children = otherPeople.filter((p) => p.relationshipType === 'child');
+            if (children.length === 0) return null;
+            return (
+              <section>
+                <SectionLabel label="Children" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {children.map((person) => (
+                    <ChildCard
+                      key={person.personId}
+                      person={person}
+                      manual={manuals.find((m) => m.personId === person.personId)}
+                      assessments={assessments}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })()}
+
+          {/* Others (elderly parent, sibling, friend, etc.) */}
+          {(() => {
+            const others = otherPeople.filter((p) => p.relationshipType !== 'spouse' && p.relationshipType !== 'child');
+            if (others.length === 0) return null;
+            return (
+              <section>
+                <SectionLabel label="Others" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {others.map((person) => (
+                    <PersonCard
+                      key={person.personId}
+                      person={person}
+                      score={personScores.get(person.personId)}
+                      summary={summaries.get(person.personId)}
+                      contributions={contributions}
+                      userId={user.userId}
+                      onDelete={() => setConfirmDelete(person)}
+                      workbookChapters={activeChapters.filter(c => c.personId === person.personId && c.status === 'active')}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })()}
         </div>
 
         {/* Empty state */}
@@ -386,6 +448,23 @@ export default function PeoplePage() {
         )}
       </div>
     </MainLayout>
+  );
+}
+
+// --- Section Label ---
+
+function SectionLabel({ label }: { label: string }) {
+  return (
+    <span
+      className="block mb-3 text-[10px] font-semibold uppercase tracking-wider"
+      style={{
+        fontFamily: 'var(--font-parent-body)',
+        color: 'rgba(40,40,40,0.3)',
+        letterSpacing: '0.12em',
+      }}
+    >
+      {label}
+    </span>
   );
 }
 

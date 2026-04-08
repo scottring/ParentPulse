@@ -10,6 +10,7 @@ interface Props {
   person: Person;
   manual?: PersonManual;
   assessments: DimensionAssessment[];
+  periodMs?: number;
 }
 
 const TREND_DISPLAY: Record<string, { symbol: string; color: string; label: string }> = {
@@ -19,12 +20,24 @@ const TREND_DISPLAY: Record<string, { symbol: string; color: string; label: stri
   insufficient_data: { symbol: '\u00B7', color: '#9ca3af', label: 'Insufficient data' },
 };
 
-export function PersonStatusCard({ person, manual, assessments }: Props) {
+export function PersonStatusCard({ person, manual, assessments, periodMs }: Props) {
   const [expanded, setExpanded] = useState(false);
 
-  const personAssessments = assessments.filter((a) =>
-    a.participantIds?.includes(person.personId) || a.participantNames?.includes(person.name),
-  );
+  const cutoff = periodMs ? Date.now() - periodMs : 0;
+  const personAssessments = assessments
+    .filter((a) =>
+      a.participantIds?.includes(person.personId) || a.participantNames?.includes(person.name),
+    )
+    .map((a) => {
+      if (!periodMs) return a;
+      // Filter score history to only include snapshots within the period
+      return {
+        ...a,
+        scoreHistory: a.scoreHistory.filter(
+          (s) => s.timestamp.toMillis() >= cutoff,
+        ),
+      };
+    });
 
   const synth = manual?.synthesizedContent;
   const recentGaps = synth?.gaps?.filter((g) => g.gapSeverity === 'significant_gap') ?? [];

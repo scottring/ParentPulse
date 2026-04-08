@@ -355,6 +355,24 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
           </div>
         )}
 
+        {/* View tabs */}
+        <div className="flex gap-1 mb-5 border-b" style={{ borderColor: 'rgba(138,128,120,0.1)' }}>
+          <span
+            className="text-[12px] px-4 py-2.5 relative"
+            style={{ fontFamily: 'var(--font-parent-body)', fontWeight: 600, color: '#3A3530' }}
+          >
+            Chat
+            <div className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full" style={{ background: '#7C9082' }} />
+          </span>
+          <Link
+            href={`/people/${personId}/portrait`}
+            className="text-[12px] px-4 py-2.5 transition-colors hover:opacity-70"
+            style={{ fontFamily: 'var(--font-parent-body)', fontWeight: 400, color: '#9ca3af' }}
+          >
+            Portrait
+          </Link>
+        </div>
+
         {/* The chat — the entire interface */}
         <ManualChat
           personId={personId}

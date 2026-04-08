@@ -21,7 +21,19 @@ const TYPE_STYLES: Record<ActionItemType, { bg: string; border: string; icon: st
 
 export function ActionFeed({ items, onDismiss, maxItems = 5, dark }: Props) {
   const visible = items.slice(0, maxItems);
-  if (visible.length === 0) return null;
+
+  if (visible.length === 0) {
+    const textSecondary = dark ? 'rgba(255,255,255,0.5)' : '#7C7468';
+    return (
+      <div
+        className="glass-card rounded-xl p-5 text-center"
+      >
+        <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: textSecondary }}>
+          You&apos;re all caught up. Nothing needs attention right now.
+        </p>
+      </div>
+    );
+  }
 
   const textColor = dark ? 'rgba(255,255,255,0.95)' : '#3A3530';
   const textSecondary = dark ? 'rgba(255,255,255,0.5)' : '#7C7468';
