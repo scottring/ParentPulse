@@ -380,16 +380,6 @@ html {
 .animate-sun-pulse,
 .animate-sun-glow,
 .animate-sun-rotate,
-.animate-rain-fall,
-.animate-skyline-scroll {
+.animate-rain-fall {
   transition: opacity 2s ease;
-}
-
-/* Skyline scroll — neighborhood silhouette drifts slowly */
-@keyframes skylineScroll {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-.animate-skyline-scroll {
-  animation: skylineScroll 120s linear infinite;
 }
