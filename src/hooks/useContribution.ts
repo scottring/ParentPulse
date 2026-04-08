@@ -38,6 +38,32 @@ import {
   PERSON_MANUAL_COLLECTIONS,
 } from '@/types/person-manual';
 
+/**
+ * Strip answers marked 'private' from a contribution when the viewer is not the contributor.
+ * The contributor themselves always sees their own private answers.
+ */
+function filterPrivateAnswers(contribution: Contribution, viewerUserId: string): Contribution {
+  // Contributor sees everything
+  if (contribution.contributorId === viewerUserId) return contribution;
+
+  const visibility = contribution.answerVisibility;
+  if (!visibility || Object.keys(visibility).length === 0) return contribution;
+
+  // Deep-clone answers so we don't mutate the Firestore cache
+  const filtered = { ...contribution, answers: { ...contribution.answers } };
+  for (const sectionId of Object.keys(visibility)) {
+    if (!filtered.answers[sectionId]) continue;
+    const sectionVis = visibility[sectionId];
+    filtered.answers[sectionId] = { ...filtered.answers[sectionId] };
+    for (const questionId of Object.keys(sectionVis)) {
+      if (sectionVis[questionId] === 'private') {
+        delete filtered.answers[sectionId][questionId];
+      }
+    }
+  }
+  return filtered;
+}
+
 interface UseContributionReturn {
   contributions: Contribution[];
   loading: boolean;
@@ -118,11 +144,13 @@ export function useContribution(manualId?: string, additionalManualIds?: string[
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const docs = snapshot.docs.map((doc) => ({
-          ...doc.data(),
-          contributionId: doc.id,
+        const docs = snapshot.docs.map((d) => ({
+          ...d.data(),
+          contributionId: d.id,
         })) as Contribution[];
-        setContributions(docs);
+        // Strip private answers from other people's contributions
+        const filtered = docs.map((c) => filterPrivateAnswers(c, user.userId));
+        setContributions(filtered);
         setLoading(false);
       },
       (err) => {
@@ -401,5 +429,6 @@ async function linkContributionToManual(
     contributionIds: arrayUnion(contributionId),
     ...perspectiveUpdate,
     updatedAt: Timestamp.now(),
+    lastContributionAt: Timestamp.now(),
   });
 }

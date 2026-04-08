@@ -285,9 +285,19 @@ service cloud.firestore {
     // ==================== Contributions (Multi-Perspective Input) ====================
 
     // Contributions collection (collaborative manual input)
+    // NOTE: Firestore rules cannot do field-level filtering. Private answers
+    // (answerVisibility) are stripped client-side in useContribution and
+    // server-side in Cloud Functions before synthesis/chat. Draft contributions
+    // are restricted to the contributor only.
     match /contributions/{contributionId} {
-      // Family members can read contributions in their family
-      allow read: if belongsToFamily(resource.data.familyId);
+      // Contributors can always read their own contributions (draft or complete)
+      allow read: if isSignedIn()
+        && resource.data.contributorId == request.auth.uid
+        && belongsToFamily(resource.data.familyId);
+
+      // Family members can read completed contributions (not drafts)
+      allow read: if belongsToFamily(resource.data.familyId)
+        && resource.data.status == 'complete';
 
       // Authenticated family members can create contributions
       allow create: if isSignedIn() && belongsToFamily(request.resource.data.familyId);

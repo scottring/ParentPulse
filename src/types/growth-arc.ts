@@ -96,6 +96,7 @@ export interface ScoreSnapshot {
   confidence: 'low' | 'medium' | 'high';
   timestamp: Timestamp;
   trigger: 'initial' | 'assessment_prompt' | 'arc_completion' | 'feedback_signal';
+  isBaseline?: boolean;
 }
 
 export interface DimensionDataSource {

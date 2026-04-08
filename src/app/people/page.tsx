@@ -82,19 +82,10 @@ export default function PeoplePage() {
     return map;
   }, [people, assessments]);
 
-  if (authLoading || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="manual-spinner" />
-        <style jsx>{`
-          .manual-spinner { width: 48px; height: 48px; border: 4px solid #3A3530; border-top-color: #7C9082; border-radius: 50%; animation: spin 1s linear infinite; }
-          @keyframes spin { to { transform: rotate(360deg); } }
-        `}</style>
-      </div>
-    );
-  }
-
-  const selfPerson = people.find((p) => p.linkedUserId === user.userId);
+  const selfPerson = useMemo(
+    () => people.find((p) => p.linkedUserId === user?.userId),
+    [people, user?.userId],
+  );
 
   // Deduplicate equivalent persons (e.g. Iris's self Person + Iris's spouse Person).
   // Prefer the relationship-typed record (spouse/child/etc.) over another user's 'self' record
@@ -132,6 +123,18 @@ export default function PeoplePage() {
     }
     return result;
   }, [people, selfPerson]);
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="manual-spinner" />
+        <style jsx>{`
+          .manual-spinner { width: 48px; height: 48px; border: 4px solid #3A3530; border-top-color: #7C9082; border-radius: 50%; animation: spin 1s linear infinite; }
+          @keyframes spin { to { transform: rotate(360deg); } }
+        `}</style>
+      </div>
+    );
+  }
 
   const handleAdd = async () => {
     if (!addName.trim()) return;
@@ -407,7 +410,6 @@ function PersonCard({
   onDelete?: () => void;
   workbookChapters?: WorkbookChapter[];
 }) {
-  const router = useRouter();
   const age = person.dateOfBirth ? computeAge(person.dateOfBirth) : null;
   const emoji = RELATIONSHIP_EMOJI[person.relationshipType || 'other'] || '👤';
 
@@ -420,9 +422,42 @@ function PersonCard({
   const hasSynthesis = summary?.hasSynthesis;
   const progress = summary?.overallProgress || 0;
 
-  const href = person.hasManual
-    ? `/people/${person.personId}/manual`
-    : `/people/${person.personId}/create-manual`;
+  // Determine the primary action for this person
+  const hasObserverContrib = observerContribs.length > 0;
+  const myObserverContrib = personContribs.find((c: any) => c.perspectiveType === 'observer' && c.contributorId === userId && c.status === 'complete');
+  const myObserverDraft = personContribs.find((c: any) => c.perspectiveType === 'observer' && c.contributorId === userId && c.status === 'draft');
+  const selfDraft = personContribs.find((c: any) => c.perspectiveType === 'self' && c.status === 'draft');
+
+  const assessHref = !person.hasManual
+    ? `/people/${person.personId}/create-manual`
+    : isSelf
+      ? `/people/${person.personId}/manual/self-onboard`
+      : `/people/${person.personId}/manual/onboard`;
+
+  const manualHref = person.hasManual ? `/people/${person.personId}/manual` : null;
+
+  // What label for the primary action button?
+  let actionLabel: string;
+  let actionSublabel: string | null = null;
+  if (!person.hasManual) {
+    actionLabel = 'Set up manual';
+  } else if (isSelf) {
+    if (selfDraft) {
+      actionLabel = 'Continue assessment';
+    } else if (selfContrib) {
+      actionLabel = 'Revise your answers';
+    } else {
+      actionLabel = 'Assess yourself';
+    }
+  } else {
+    if (myObserverDraft) {
+      actionLabel = 'Continue assessment';
+    } else if (myObserverContrib) {
+      actionLabel = 'Revise your observations';
+    } else {
+      actionLabel = `Assess ${person.name}`;
+    }
+  }
 
   // Next action
   const nextAction = summary?.journeySteps.find((s) => s.status === 'in-progress' || s.status === 'not-started');
@@ -431,8 +466,7 @@ function PersonCard({
   const band = score ? scoreToBand(score.avgScore) : null;
 
   return (
-    <Link
-      href={href}
+    <div
       className="block glass-card rounded-2xl transition-all hover:shadow-md group"
     >
       {/* Header band */}
@@ -569,49 +603,6 @@ function PersonCard({
           </div>
         )}
 
-        {/* Next action or draft status */}
-        {nextAction && (
-          <div
-            className="rounded-2xl px-3 py-2"
-            style={{
-              background: nextAction.status === 'in-progress' ? 'rgba(124,144,130,0.08)' : 'rgba(138,128,120,0.06)',
-              border: `1px solid ${nextAction.status === 'in-progress' ? 'rgba(124,144,130,0.2)' : 'rgba(138,128,120,0.12)'}`,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <span
-                  className="text-[11px] font-medium"
-                  style={{ color: '#3A3530', fontFamily: 'var(--font-parent-body)' }}
-                >
-                  {nextAction.status === 'in-progress' ? 'Continue' : 'Next'}:
-                </span>
-                <span
-                  className="text-[11px] ml-1"
-                  style={{ color: '#5C5347', fontFamily: 'var(--font-parent-body)' }}
-                >
-                  {nextAction.label}
-                </span>
-              </div>
-              <span
-                className="text-[11px]"
-                style={{ color: '#7C9082' }}
-              >
-                &rarr;
-              </span>
-            </div>
-          </div>
-        )}
-
-        {draftCount > 0 && !nextAction && (
-          <span
-            className="text-[11px]"
-            style={{ color: '#7C9082', fontFamily: 'var(--font-parent-body)' }}
-          >
-            {draftCount} draft{draftCount !== 1 ? 's' : ''} in progress
-          </span>
-        )}
-
         {/* Workbook chapters */}
         {workbookChapters && workbookChapters.length > 0 && (
           <div
@@ -637,7 +628,6 @@ function PersonCard({
             </span>
             <Link
               href="/workbook"
-              onClick={(e) => e.stopPropagation()}
               className="text-[11px] ml-1.5 hover:opacity-70"
               style={{ color: '#7C9082', fontFamily: 'var(--font-parent-body)' }}
             >
@@ -647,26 +637,42 @@ function PersonCard({
         )}
       </div>
 
-      {/* Delete footer — only for non-self */}
-      {onDelete && (
-        <div
-          className="px-5 py-2 text-right opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ borderTop: '1px solid rgba(138,128,120,0.1)' }}
+      {/* Action buttons */}
+      <div
+        className="px-5 py-3 flex items-center gap-2"
+        style={{ borderTop: '1px solid rgba(138,128,120,0.1)' }}
+      >
+        <Link
+          href={assessHref}
+          className="flex-1 text-[12px] font-medium py-2 rounded-full text-center text-white transition-all hover:opacity-90"
+          style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082' }}
         >
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onDelete();
+          {actionLabel} &rarr;
+        </Link>
+        {manualHref && (
+          <Link
+            href={manualHref}
+            className="text-[12px] font-medium px-4 py-2 rounded-full text-center transition-all hover:opacity-80"
+            style={{
+              fontFamily: 'var(--font-parent-body)',
+              color: '#5C5347',
+              border: '1px solid rgba(138,128,120,0.2)',
             }}
-            className="text-[11px] px-2 py-1 rounded-full transition-all hover:bg-red-50"
+          >
+            View manual
+          </Link>
+        )}
+        {onDelete && (
+          <button
+            onClick={onDelete}
+            className="text-[11px] px-2 py-1 rounded-full transition-all hover:bg-red-50 opacity-0 group-hover:opacity-100"
             style={{ color: '#dc2626', fontFamily: 'var(--font-parent-body)' }}
           >
             Delete
           </button>
-        </div>
-      )}
-    </Link>
+        )}
+      </div>
+    </div>
   );
 }
 

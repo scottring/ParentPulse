@@ -130,6 +130,9 @@ export interface PersonManual {
     };
   };
 
+  // Freshness tracking
+  lastContributionAt?: Timestamp;
+
   // Multi-perspective contributions
   contributionIds: string[];
   perspectives: {

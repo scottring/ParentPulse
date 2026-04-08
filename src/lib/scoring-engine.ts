@@ -196,6 +196,24 @@ function computePerspectiveZones(
   });
 }
 
+/**
+ * Find the baseline (first "initial") snapshot for a dimension assessment.
+ * Returns null if no baseline exists.
+ */
+export function getBaselineSnapshot(assessment: DimensionAssessment): ScoreSnapshot | null {
+  if (!assessment.scoreHistory || assessment.scoreHistory.length === 0) return null;
+
+  // Prefer explicitly flagged baseline
+  const flagged = assessment.scoreHistory.find((s) => s.isBaseline);
+  if (flagged) return flagged;
+
+  // Fall back to first 'initial' trigger
+  const sorted = [...assessment.scoreHistory].sort(
+    (a, b) => a.timestamp.toMillis() - b.timestamp.toMillis(),
+  );
+  return sorted.find((s) => s.trigger === 'initial') ?? sorted[0];
+}
+
 function aggregateTrends(trends: ScoreTrend[]): ScoreTrend {
   const meaningful = trends.filter((t) => t !== 'insufficient_data');
   if (meaningful.length === 0) return 'insufficient_data';
