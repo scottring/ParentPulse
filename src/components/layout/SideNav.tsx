@@ -8,6 +8,7 @@ import {
   UsersIcon,
   BookOpenIcon,
   ArrowPathIcon,
+  ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
 
 interface NavItem {
@@ -19,7 +20,7 @@ interface NavItem {
 const mobileItems: NavItem[] = [
   { label: 'Home', href: '/dashboard', icon: ChartBarIcon },
   { label: 'People', href: '/people', icon: UsersIcon },
-  { label: 'Workbook', href: '/workbook', icon: BookOpenIcon },
+  { label: 'Reports', href: '/reports', icon: ClipboardDocumentListIcon },
   { label: 'Check-in', href: '/checkin', icon: ArrowPathIcon },
   { label: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ];

@@ -11,6 +11,7 @@ const navLinks = [
   { label: 'people', href: '/people' },
   { label: 'workbook', href: '/workbook' },
   { label: 'check-in', href: '/checkin' },
+  { label: 'reports', href: '/reports' },
 ];
 
 export default function Navigation() {
