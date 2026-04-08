@@ -18,6 +18,11 @@ import { scoreToClimate, getGreeting, buildClimateSummary, getOnboardingClimate 
 import { useAssessmentNeeds, loadAndClearContradictions } from '@/hooks/useAssessmentNeeds';
 import AuraPhaseIndicator from '@/components/layout/AuraPhaseIndicator';
 import { WeeklyActivitySection } from '@/components/dashboard/WeeklyActivitySection';
+import { FamilyCompletenessRing } from '@/components/dashboard/FamilyCompletenessRing';
+import { ActionFeed } from '@/components/dashboard/ActionFeed';
+import { FamilyStatusRow } from '@/components/dashboard/FamilyStatusRow';
+import { useFreshness } from '@/hooks/useFreshness';
+import { useActionItems } from '@/hooks/useActionItems';
 import Link from 'next/link';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
@@ -36,6 +41,8 @@ export default function DashboardPage() {
     hasSelfContribution,
     roles,
     assessments,
+    people,
+    manuals,
     peopleNeedingContributions,
     contributions,
   } = useDashboard();
@@ -61,6 +68,12 @@ export default function DashboardPage() {
     undefined,
     contradictionIds,
   );
+
+  // Freshness & action items (Phase 2 perfectification)
+  const { familyCompleteness } = useFreshness({ people, manuals, contributions });
+  const { items: actionItems, dismiss: dismissAction } = useActionItems({
+    people, manuals, contributions, assessments, userId: user?.userId || '',
+  });
 
   const [addName, setAddName] = useState('');
   const [addType, setAddType] = useState<'spouse' | 'child'>('spouse');
@@ -288,6 +301,19 @@ export default function DashboardPage() {
           )}
 
           <div className="space-y-4">
+
+            {/* FAMILY HEALTH — completeness ring + status row (active state) */}
+            {state === 'active' && familyCompleteness.perPerson.length > 0 && (
+              <div className="glass-card p-5 space-y-4">
+                <FamilyCompletenessRing completeness={familyCompleteness} dark={dark} />
+                <FamilyStatusRow people={familyCompleteness.perPerson} dark={dark} />
+              </div>
+            )}
+
+            {/* ACTION ITEMS — what needs attention (active state) */}
+            {state === 'active' && actionItems.length > 0 && (
+              <ActionFeed items={actionItems} onDismiss={dismissAction} dark={dark} />
+            )}
 
             {/* YOUR MANUAL — always accessible when selfPerson exists */}
             {selfPerson && hasSelfContribution && (

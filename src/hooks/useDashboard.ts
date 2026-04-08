@@ -365,6 +365,8 @@ export function useDashboard(): DashboardData {
     hasAssessments: assessments.length > 0,
     assessments,
     spouse,
+    people,
+    manuals,
     peopleNeedingContributions,
     contributions,
   };
