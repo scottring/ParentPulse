@@ -174,10 +174,10 @@ export function computeFamilyCompleteness(
     0,
   );
   const maxPerspectives = activePeople.length * 2; // ideal: self + at least 1 observer each
-  const depth = maxPerspectives > 0 ? totalPerspectives / maxPerspectives : 0;
+  const depth = maxPerspectives > 0 ? Math.min(totalPerspectives / maxPerspectives, 1) : 0;
 
-  // Overall: weighted average
-  const overallPercent = Math.round((coverage * 0.4 + freshness * 0.3 + depth * 0.3) * 100);
+  // Overall: weighted average (capped at 100)
+  const overallPercent = Math.min(100, Math.round((coverage * 0.4 + freshness * 0.3 + depth * 0.3) * 100));
 
   return { overallPercent, coverage, freshness, depth, perPerson };
 }
