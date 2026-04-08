@@ -24,7 +24,7 @@ export default function PortraitPage() {
   const { contributions } = useContribution();
   const { roleSections } = useRoleSection(personId);
 
-  const [activeSection, setActiveSection] = useState<'synthesis' | 'perspectives' | 'roles'>('synthesis');
+  const [activeSection, setActiveSection] = useState<'synthesis' | 'perspectives' | 'roles' | 'private'>('synthesis');
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login');
@@ -72,11 +72,31 @@ export default function PortraitPage() {
   const patterns = manual.emergingPatterns ?? [];
   const progressNotes = manual.progressNotes ?? [];
 
+  // Is this the current user's own portrait?
+  const isOwnPortrait = person.linkedUserId === user?.userId;
+
+  // Private contribution answers (only shown on own portrait)
+  const privateAnswerCount = isOwnPortrait
+    ? personContribs.reduce((count, c) => {
+        if (!c.answerVisibility) return count;
+        return count + Object.values(c.answerVisibility).reduce(
+          (sum, section) => sum + Object.values(section).filter((v) => v === 'private').length,
+          0,
+        );
+      }, 0)
+    : 0;
+
+  // Private progress notes
+  const privateNotes = isOwnPortrait
+    ? (manual.progressNotes ?? []).filter((n) => n.addedBy === user?.userId)
+    : [];
+
   const tabs = [
-    { key: 'synthesis', label: 'Synthesis' },
-    { key: 'perspectives', label: 'Perspectives' },
-    { key: 'roles', label: `Roles (${roleSections.length})` },
-  ] as const;
+    { key: 'synthesis' as const, label: 'Synthesis' },
+    { key: 'perspectives' as const, label: 'Perspectives' },
+    { key: 'roles' as const, label: `Roles (${roleSections.length})` },
+    ...(isOwnPortrait ? [{ key: 'private' as const, label: '\uD83D\uDD12 Private' }] : []),
+  ];
 
   return (
     <>
@@ -228,6 +248,83 @@ export default function PortraitPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Private tab content — only on own portrait */}
+          {activeSection === 'private' && isOwnPortrait && (
+            <div className="space-y-4">
+              <div
+                className="rounded-xl p-5"
+                style={{ background: 'rgba(124,58,237,0.03)', border: '1px solid rgba(124,58,237,0.1)' }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <span style={{ fontSize: '16px' }}>{'\uD83D\uDD12'}</span>
+                  <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '16px', fontWeight: 500, color: '#3A3530' }}>
+                    Private to you
+                  </h3>
+                </div>
+                <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#7C7468', lineHeight: 1.6 }}>
+                  This section is only visible to you. It includes private journal entries, private contribution answers, and therapy notes.
+                  The AI uses this data to improve <em>your</em> manual only — it never appears in shared views or other family members&apos; data.
+                </p>
+              </div>
+
+              {/* Private contribution answers */}
+              {privateAnswerCount > 0 && (
+                <div className="glass-card rounded-xl p-4">
+                  <h4 style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', fontWeight: 600, color: '#3A3530', marginBottom: '4px' }}>
+                    Private answers
+                  </h4>
+                  <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#7C7468' }}>
+                    {privateAnswerCount} answer{privateAnswerCount !== 1 ? 's' : ''} marked as private across your contributions.
+                    These feed your self-synthesis but aren&apos;t visible to other family members.
+                  </p>
+                </div>
+              )}
+
+              {/* Private notes */}
+              {privateNotes.length > 0 && (
+                <div>
+                  <h4
+                    className="mb-2"
+                    style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 600, color: '#3A3530' }}
+                  >
+                    Your notes ({privateNotes.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {privateNotes.map((n) => (
+                      <div key={n.id} className="rounded-lg p-3" style={{ background: 'rgba(124,58,237,0.03)' }}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span
+                            className="text-[10px] px-1.5 py-0.5 rounded-full font-medium capitalize"
+                            style={{ fontFamily: 'var(--font-parent-body)', background: 'rgba(124,58,237,0.06)', color: '#5b21b6' }}
+                          >
+                            {n.category}
+                          </span>
+                          <span className="text-[10px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#9ca3af' }}>
+                            {n.date?.toDate?.()?.toLocaleDateString?.() ?? ''}
+                          </span>
+                        </div>
+                        <p className="text-[12px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347', lineHeight: 1.5 }}>
+                          {n.note}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {privateAnswerCount === 0 && privateNotes.length === 0 && (
+                <div
+                  className="rounded-xl p-8 text-center"
+                  style={{ background: 'rgba(0,0,0,0.02)', border: '1px dashed rgba(138,128,120,0.2)' }}
+                >
+                  <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: '#7C7468' }}>
+                    No private notes yet. Mark journal entries or contribution answers as private and they&apos;ll appear here.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

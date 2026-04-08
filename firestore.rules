@@ -81,8 +81,12 @@ service cloud.firestore {
 
     // Journal entries collection
     match /journal_entries/{entryId} {
-      // Parents can read entries in their family
-      allow read: if isParent() && belongsToFamily(resource.data.familyId);
+      // Private entries: only the author can read
+      // Non-private entries: any parent in the family can read
+      allow read: if isParent() && (
+        resource.data.authorId == request.auth.uid ||
+        (belongsToFamily(resource.data.familyId) && resource.data.isPrivate != true)
+      );
 
       // Parents can create entries in their family
       allow create: if isParent() && belongsToFamily(request.resource.data.familyId);

@@ -827,7 +827,7 @@ exports.chatWithCoach = onCall(
 
       try {
         // Retrieve relevant context from the user's data (includes manual if personId provided)
-        const context = await retrieveChatContext(familyId, message, personId);
+        const context = await retrieveChatContext(familyId, message, personId, request.auth.uid);
 
         // Get or create conversation
         let conversation = null;
@@ -904,7 +904,7 @@ exports.chatWithCoach = onCall(
 /**
  * Retrieve relevant context for chat based on user's message
  */
-async function retrieveChatContext(familyId, userMessage, personId = null) {
+async function retrieveChatContext(familyId, userMessage, personId = null, userId = null) {
   const logger = require("firebase-functions/logger");
 
   // Get recent journal entries (last 30 days)
@@ -919,13 +919,20 @@ async function retrieveChatContext(familyId, userMessage, personId = null) {
       .limit(20)
       .get();
 
-  const journalEntries = journalSnapshot.docs.map((doc) => ({
-    id: doc.id,
-    text: doc.data().text,
-    category: doc.data().category,
-    date: doc.data().createdAt.toDate().toLocaleDateString(),
-    tags: doc.data().tags || [],
-  }));
+  const journalEntries = journalSnapshot.docs
+    .filter((doc) => {
+      // Include private entries only if the requesting user is the author
+      if (doc.data().isPrivate) return doc.data().authorId === userId;
+      return true;
+    })
+    .map((doc) => ({
+      id: doc.id,
+      text: doc.data().text,
+      category: doc.data().category,
+      date: doc.data().createdAt.toDate().toLocaleDateString(),
+      tags: doc.data().tags || [],
+      isPrivate: doc.data().isPrivate || false,
+    }));
 
   // Get knowledge base items
   const knowledgeSnapshot = await admin.firestore()
@@ -1259,18 +1266,20 @@ async function processFamilyAnalysis(familyId) {
     return {actionsCreated: 0};
   }
 
-  // Prepare journal entries for AI
-  const entries = entriesSnapshot.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      text: data.text,
-      category: data.category,
-      stressLevel: data.context?.stressLevel || 3,
-      timeOfDay: data.context?.timeOfDay || "unknown",
-      childId: data.childId,
-    };
-  });
+  // Prepare journal entries for AI (exclude private entries from family-wide analysis)
+  const entries = entriesSnapshot.docs
+    .filter((doc) => !doc.data().isPrivate)
+    .map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        text: data.text,
+        category: data.category,
+        stressLevel: data.context?.stressLevel || 3,
+        timeOfDay: data.context?.timeOfDay || "unknown",
+        childId: data.childId,
+      };
+    });
 
   // Get children info for context
   const childrenSnapshot = await admin.firestore()
@@ -1705,7 +1714,10 @@ exports.generateStrategicPlan = onCall(
             .limit(20)
             .get();
 
-        const journalEntries = journalSnapshot.docs.map((doc) => ({
+        // Exclude private journal entries from strategic plan context
+        const journalEntries = journalSnapshot.docs
+          .filter((doc) => !doc.data().isPrivate)
+          .map((doc) => ({
           id: doc.id,
           text: doc.data().text,
           category: doc.data().category,
