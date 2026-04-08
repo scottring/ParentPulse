@@ -65,17 +65,26 @@ export function computeOneThing(params: {
   const candidates: OneThing[] = [];
 
   // 1. Unfinished business — draft contributions
+  // Exclude drafts for people where the user already has a completed contribution
+  const completedPersonIds = new Set(
+    contributions
+      .filter((c) => c.contributorId === userId && c.status === 'complete')
+      .map((c) => c.personId),
+  );
   const drafts = contributions.filter(
-    (c) => c.contributorId === userId && c.status === 'draft',
+    (c) => c.contributorId === userId && c.status === 'draft' && !completedPersonIds.has(c.personId),
   );
   if (drafts.length > 0) {
     const draft = drafts[0];
     const person = people.find((p) => p.personId === draft.personId);
+    // Safety: only route to self-onboard if this is actually the user's own person record
+    const isSelfPerson = selfPerson && draft.personId === selfPerson.personId;
+    const routeIsSelf = draft.perspectiveType === 'self' && isSelfPerson;
     candidates.push({
       type: 'unfinished',
       title: `Finish your contribution for ${person?.name || 'someone'}`,
       description: 'You started this but didn\u2019t finish. Pick up where you left off.',
-      actionRoute: draft.perspectiveType === 'self'
+      actionRoute: routeIsSelf
         ? `/people/${draft.personId}/manual/self-onboard`
         : `/people/${draft.personId}/manual/onboard`,
       actionLabel: 'Continue',
@@ -97,7 +106,7 @@ export function computeOneThing(params: {
       type: 'time_sensitive',
       title: 'Today\u2019s practice',
       description: item.title || item.body?.slice(0, 80) || 'A growth activity is waiting for you.',
-      actionRoute: '/dashboard',
+      actionRoute: '/workbook',
       actionLabel: 'Do it now',
       priority: 1,
     });
@@ -180,7 +189,7 @@ export function computeOneThing(params: {
       type: 'growth_step',
       title: item.title || 'Today\u2019s growth practice',
       description: item.body?.slice(0, 100) || 'A new activity is ready for you.',
-      actionRoute: '/dashboard',
+      actionRoute: '/workbook',
       actionLabel: 'Start',
       personName: person?.name,
       personId: person?.personId,
@@ -342,11 +351,15 @@ export function computePersonOneThing(params: {
     (c) => c.personId === personId && c.contributorId === userId && c.status === 'draft',
   );
   if (draft) {
+    // Only route to self-onboard if this is genuinely a self-perspective draft
+    // AND the person's linkedUserId matches the current user
+    const isTrulySelf = draft.perspectiveType === 'self' &&
+      manual.perspectives?.self?.contributorId === userId;
     return {
       type: 'unfinished',
       title: 'You have an unfinished contribution',
       description: 'Pick up where you left off.',
-      actionRoute: draft.perspectiveType === 'self'
+      actionRoute: isTrulySelf
         ? `/people/${personId}/manual/self-onboard`
         : `/people/${personId}/manual/onboard`,
       actionLabel: 'Continue',

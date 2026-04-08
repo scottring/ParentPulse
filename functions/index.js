@@ -8097,3 +8097,52 @@ exports.cleanupAiDerivedData = onCall(
       };
     },
 );
+
+/**
+ * Cleanup stale drafts: mark any draft as 'abandoned' if the same user
+ * already has a completed contribution for the same manual.
+ */
+exports.cleanupStaleDrafts = onCall(
+    {
+      region: "us-central1",
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const db = admin.firestore();
+      const draftsSnap = await db.collection("contributions")
+          .where("status", "==", "draft")
+          .get();
+
+      let abandoned = 0;
+
+      for (const draftDoc of draftsSnap.docs) {
+        const draft = draftDoc.data();
+
+        // Check if same user has a completed contribution for same manual
+        const completedSnap = await db.collection("contributions")
+            .where("manualId", "==", draft.manualId)
+            .where("contributorId", "==", draft.contributorId)
+            .where("status", "==", "complete")
+            .limit(1)
+            .get();
+
+        if (!completedSnap.empty) {
+          await draftDoc.ref.update({
+            status: "abandoned",
+            updatedAt: admin.firestore.Timestamp.now(),
+            abandonedReason: `Superseded by completed contribution ${completedSnap.docs[0].id}`,
+          });
+          abandoned++;
+          logger.info(`Abandoned stale draft ${draftDoc.id} for manual ${draft.manualId}`);
+        }
+      }
+
+      logger.info(`Cleanup complete: ${abandoned} stale drafts abandoned`);
+      return {success: true, draftsAbandoned: abandoned};
+    },
+);

@@ -188,9 +188,17 @@ export function useDashboard(): DashboardData {
   const userFirstName = userName?.split(' ')[0];
   const allCurrentUserPersonIds = new Set<string>();
   if (selfPerson) allCurrentUserPersonIds.add(selfPerson.personId);
+  // Only count a self-perspective contribution as "this person IS the current user"
+  // if the person record actually has relationshipType 'self' or has linkedUserId matching.
+  // Otherwise a misrouted self-contribution (e.g. on a child) would hide that person.
   contributions
     .filter((c) => c.contributorId === userId && c.perspectiveType === 'self' && c.status === 'complete')
-    .forEach((c) => allCurrentUserPersonIds.add(c.personId));
+    .forEach((c) => {
+      const person = people.find((p) => p.personId === c.personId);
+      if (person && (person.relationshipType === 'self' || person.linkedUserId === userId)) {
+        allCurrentUserPersonIds.add(c.personId);
+      }
+    });
   people.forEach((p) => {
     if (p.relationshipType === 'spouse' && userFirstName && p.name.toLowerCase().trim().startsWith(userFirstName)) {
       allCurrentUserPersonIds.add(p.personId);

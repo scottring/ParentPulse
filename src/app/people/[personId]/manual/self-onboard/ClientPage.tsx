@@ -553,10 +553,10 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
         <div className="max-w-3xl mx-auto px-6 py-12">
           <div className="text-center mb-10">
             <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: '#7C9082', letterSpacing: '0.05em' }}>
-              SELF-ONBOARDING
+              {person?.name ? `${person.name.toUpperCase()}\u2019S MANUAL` : 'SELF-ONBOARDING'}
             </span>
             <h1 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '28px', fontWeight: 600, color: '#3A3530', marginTop: '8px' }}>
-              Tell Us About Yourself
+              Your Own Perspective
             </h1>
             <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468', marginTop: '8px' }}>
               Choose how you'd like to get started
@@ -951,8 +951,8 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
       personName={user.name}
       sectionName={currentSection.sectionName}
       sectionDescription={currentSection.sectionDescription}
-      flowLabel="SELF-ONBOARDING"
-      flowTitle="Tell Us About Yourself"
+      flowLabel={`${person?.name ? person.name.toUpperCase() + '\u2019S MANUAL' : 'SELF-ONBOARDING'}`}
+      flowTitle="Your Own Perspective"
       accentColor="amber"
       currentSection={currentSectionIndex}
       totalSections={sections.length}

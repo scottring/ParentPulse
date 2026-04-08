@@ -365,6 +365,35 @@ export function useContribution(manualId?: string, additionalManualIds?: string[
         updatedAt: Timestamp.now(),
       };
 
+      // Clean up any OTHER drafts this user has for the same person/manual.
+      // This prevents stale drafts from lingering when the user completes
+      // via a different perspective type or route than the original draft.
+      try {
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const completedData = snap.data();
+          const staleDraftQuery = query(
+            collection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS),
+            where('manualId', '==', mid),
+            where('contributorId', '==', user.userId),
+            where('status', '==', 'draft'),
+          );
+          const staleDrafts = await getDocs(staleDraftQuery);
+          for (const staleDoc of staleDrafts.docs) {
+            if (staleDoc.id !== contributionId) {
+              console.log('Cleaning up stale draft:', staleDoc.id);
+              await updateDoc(staleDoc.ref, {
+                status: 'abandoned',
+                updatedAt: Timestamp.now(),
+                abandonedReason: `Superseded by completed contribution ${contributionId}`,
+              });
+            }
+          }
+        }
+      } catch (cleanupErr) {
+        console.warn('Stale draft cleanup failed (non-critical):', cleanupErr);
+      }
+
       if (answersToSnapshot) {
         updates.revisionHistory = arrayUnion({
           answers: stripUndefined(answersToSnapshot),
