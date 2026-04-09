@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import JournalCapture from '@/components/journal/JournalCapture';
 
 const navLinks = [
   { label: 'home', href: '/dashboard', matchPrefixes: ['/dashboard'] },
@@ -49,6 +50,7 @@ export default function Navigation() {
   };
 
   return (
+    <>
     <nav
       className="fixed top-0 left-0 right-0 z-50"
       style={{
@@ -168,5 +170,8 @@ export default function Navigation() {
         </div>
       </div>
     </nav>
+
+    <JournalCapture />
+    </>
   );
 }
