@@ -121,7 +121,7 @@ export default function QuestionDisplay({
               ))}
             </div>
             {question.scaleLabels && (
-              <div className="flex justify-between text-sm" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>
+              <div className="flex justify-between text-sm" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
                 <span>{question.scaleLabels.min}</span>
                 <span>{question.scaleLabels.max}</span>
               </div>
@@ -204,7 +204,7 @@ export default function QuestionDisplay({
 
       {/* Help text */}
       {question.helpText && (
-        <p className="mb-6" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>
+        <p className="mb-6" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
           {replacePlaceholder(question.helpText)}
         </p>
       )}
@@ -222,10 +222,10 @@ export default function QuestionDisplay({
           className="px-6 py-3 rounded-full font-medium transition-colors"
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '12px',
+            fontSize: '14px',
             fontWeight: 500,
             backgroundColor: canGoBack ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)',
-            color: canGoBack ? '#5C5347' : '#8A8078',
+            color: canGoBack ? '#5C5347' : '#6B6254',
             border: '1px solid rgba(255,255,255,0.4)',
             cursor: canGoBack ? 'pointer' : 'not-allowed',
           }}
@@ -238,7 +238,7 @@ export default function QuestionDisplay({
             <button
               onClick={handleSkipClick}
               className="px-6 py-3 rounded-full font-medium transition-colors"
-              style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: '#5C5347', background: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.4)' }}
+              style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500, color: '#5C5347', background: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.4)' }}
             >
               Skip
             </button>
@@ -249,7 +249,7 @@ export default function QuestionDisplay({
             className="px-8 py-3 rounded-full font-medium transition-colors"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: '12px',
+              fontSize: '14px',
               fontWeight: 500,
               backgroundColor: (question.required && !localValue) ? 'rgba(124,144,130,0.3)' : '#7C9082',
               color: 'white',

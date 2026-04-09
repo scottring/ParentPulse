@@ -50,7 +50,7 @@ export function WeeklyActivitySection({ textColor, textSecondary, textTertiary }
         <span
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '10px',
+            fontSize: '12px',
             fontWeight: 600,
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
@@ -62,7 +62,7 @@ export function WeeklyActivitySection({ textColor, textSecondary, textTertiary }
         <span
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '11px',
+            fontSize: '15px',
             color: textTertiary,
           }}
         >
@@ -79,7 +79,7 @@ export function WeeklyActivitySection({ textColor, textSecondary, textTertiary }
             onClick={handleGenerate}
             disabled={generating}
             className="px-5 py-2 rounded-full text-white disabled:opacity-50 transition-all hover:shadow-lg"
-            style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, backgroundColor: '#7C9082' }}
+            style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500, backgroundColor: '#7C9082' }}
           >
             {generating ? 'Generating...' : 'Generate this week\'s activities'}
           </button>
@@ -88,7 +88,7 @@ export function WeeklyActivitySection({ textColor, textSecondary, textTertiary }
         <div className="glass-card overflow-hidden">
           {/* Summary bar */}
           <div className="px-5 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.3)' }}>
-            <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: textColor }}>
+            <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: textColor }}>
               {totalCompleted} of {total} done
             </span>
             {/* Progress dots */}
@@ -117,7 +117,7 @@ export function WeeklyActivitySection({ textColor, textSecondary, textTertiary }
                     <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500, color: textColor }}>
                       {data.personName}
                     </span>
-                    <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: textTertiary }}>
+                    <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: textTertiary }}>
                       {data.completed.length}/{personTotal}
                     </span>
                   </div>
@@ -134,7 +134,7 @@ export function WeeklyActivitySection({ textColor, textSecondary, textTertiary }
                     {data.completed.map((item) => (
                       <div key={item.growthItemId} className="flex items-start gap-2.5">
                         <span style={{ color: '#7C9082', fontSize: '14px', marginTop: '1px' }}>&#10003;</span>
-                        <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: textSecondary, textDecoration: 'line-through', opacity: 0.6 }}>
+                        <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: textSecondary, textDecoration: 'line-through', opacity: 0.6 }}>
                           {item.emoji} {item.title}
                         </span>
                       </div>
@@ -146,7 +146,7 @@ export function WeeklyActivitySection({ textColor, textSecondary, textTertiary }
                         className="flex items-start gap-2.5 group hover:opacity-80 transition-opacity"
                       >
                         <span style={{ color: textTertiary, fontSize: '14px', marginTop: '1px' }}>&#9675;</span>
-                        <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: textColor }}>
+                        <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: textColor }}>
                           {item.emoji} {item.title}
                         </span>
                       </Link>

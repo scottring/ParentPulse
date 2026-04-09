@@ -247,13 +247,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('Successfully created user own manual during registration');
       } catch (manualError) {
         // Don't fail registration if manual creation fails - they can create it later
-        console.error('Failed to create user own manual (non-fatal):', manualError);
+        console.warn('Failed to create user own manual (non-fatal):', manualError);
       }
 
       setUser(userData);
       isRegistering.current = false; // Clear flag after successful registration
     } catch (err: any) {
-      console.error('Registration error:', err.code || err.message);
+      // Use console.warn (not console.error) so Next.js dev overlay
+      // doesn't treat an expected registration failure like a crash.
+      console.warn('Registration failed:', err.code || err.message);
       isRegistering.current = false; // Clear flag on error
 
       // If we created a Firebase auth user but failed to create Firestore documents,
@@ -263,7 +265,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           await userCredential.user.delete();
           console.log('Cleaned up orphaned auth user');
         } catch (deleteErr) {
-          console.error('Failed to cleanup auth user:', deleteErr);
+          console.warn('Failed to cleanup auth user:', deleteErr);
         }
       }
 
@@ -310,7 +312,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setUser(userData);
     } catch (err: any) {
-      console.error('Login error:', err.code || err.message);
+      // Use console.warn (not console.error) so Next.js dev overlay
+      // doesn't treat an expected auth failure like a crash.
+      console.warn('Login failed:', err.code || err.message);
 
       // Translate Firebase error codes to user-friendly messages
       let errorMessage = 'Failed to sign in. Please try again.';

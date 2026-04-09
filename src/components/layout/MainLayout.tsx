@@ -2,22 +2,23 @@
 
 import Navigation from './Navigation';
 import SideNav from './SideNav';
-import WeatherBackground from '@/components/dashboard/WeatherBackground';
 
 interface MainLayoutProps {
   children: React.ReactNode;
-  climate?: import('@/lib/climate-engine').ClimateState;
+  // climate prop kept for back-compat with existing callers but ignored —
+  // the weather backdrop has been retired in favour of the press aesthetic.
+  climate?: unknown;
 }
 
-export default function MainLayout({ children, climate = 'mostly_sunny' }: MainLayoutProps) {
+export default function MainLayout({ children }: MainLayoutProps) {
   return (
-    <WeatherBackground climate={climate}>
+    <div className="relish-page">
       <Navigation />
       <SideNav />
 
-      <main className="pt-[60px]">
+      <main className="pt-[64px]">
         {children}
       </main>
-    </WeatherBackground>
+    </div>
   );
 }

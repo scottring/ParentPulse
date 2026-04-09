@@ -22,14 +22,12 @@ export function QuestionRenderer({
   question,
   value,
   onChange,
-  personName,
   onKeyboardContinue,
   isDemo,
   demoPerspective = 'self',
 }: QuestionRendererProps) {
   const questionType = question.questionType || 'text';
 
-  // Extract primary value and qualitative comment from structured answer
   const primaryValue = typeof value === 'object' && value !== null && 'primary' in value
     ? (value as StructuredAnswer).primary
     : value;
@@ -38,17 +36,15 @@ export function QuestionRenderer({
     ? (value as StructuredAnswer).qualitative
     : undefined;
 
-  // Handle primary answer change
   const handlePrimaryChange = (newPrimary: string | number | string[] | boolean) => {
     const newValue: StructuredAnswer = {
       primary: newPrimary,
       qualitative: qualitativeValue,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
     onChange(newValue);
   };
 
-  // Handle qualitative comment change
   const handleQualitativeChange = (newQualitative: string) => {
     const currentPrimary = typeof value === 'object' && value !== null && 'primary' in value
       ? (value as StructuredAnswer).primary
@@ -57,12 +53,11 @@ export function QuestionRenderer({
     const newValue: StructuredAnswer = {
       primary: currentPrimary,
       qualitative: newQualitative,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
     onChange(newValue);
   };
 
-  // Render appropriate question type component
   const renderQuestionInput = () => {
     switch (questionType) {
       case 'likert':
@@ -94,25 +89,38 @@ export function QuestionRenderer({
 
       case 'text':
       default:
-        // Legacy text input (textarea)
         return (
           <div className="relative">
             <textarea
-              value={typeof value === 'string' ? value : (typeof value === 'object' && value !== null && 'primary' in value ? String((value as StructuredAnswer).primary) : '')}
+              value={
+                typeof value === 'string'
+                  ? value
+                  : typeof value === 'object' && value !== null && 'primary' in value
+                    ? String((value as StructuredAnswer).primary)
+                    : ''
+              }
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={(e) => {
                 if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && onKeyboardContinue) {
                   onKeyboardContinue();
                 }
               }}
-              placeholder={question.placeholder || 'Type your answer here...'}
+              placeholder={question.placeholder || 'Write in your own words&hellip;'}
               rows={6}
-              className="w-full px-6 py-4 rounded-lg border-2 focus:outline-none focus:ring-4 transition-all text-lg sm:text-xl"
+              className="w-full focus:outline-none"
               style={{
-                borderColor: 'var(--parent-border)',
-                backgroundColor: 'var(--parent-bg)',
-                color: 'var(--parent-text)',
-                resize: 'vertical'
+                fontFamily: 'var(--font-parent-display)',
+                fontSize: 21,
+                fontStyle: 'italic',
+                color: '#3A3530',
+                background: 'transparent',
+                border: 0,
+                borderBottom: '1px solid rgba(200, 190, 172, 0.6)',
+                padding: '10px 2px 14px',
+                resize: 'none',
+                lineHeight: 1.55,
+                letterSpacing: '0.002em',
+                minHeight: 160,
               }}
               autoFocus
             />
@@ -123,10 +131,10 @@ export function QuestionRenderer({
                   const demo = getDemoAnswer(question.id, demoPerspective);
                   if (demo !== undefined) onChange(demo);
                 }}
-                className="absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold transition-all hover:scale-105"
-                style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082', color: 'white', opacity: 0.85, borderRadius: '9999px', fontWeight: 500 }}
+                className="press-link-sm absolute top-0 right-0"
+                style={{ background: 'transparent', cursor: 'pointer', fontSize: 14 }}
               >
-                Fill
+                Fill ⟶
               </button>
             )}
           </div>
@@ -134,39 +142,52 @@ export function QuestionRenderer({
     }
   };
 
-  const demoFillable = isDemo && questionType !== 'text' && getDemoAnswer(question.id, demoPerspective) !== undefined;
+  const demoFillable =
+    isDemo &&
+    questionType !== 'text' &&
+    getDemoAnswer(question.id, demoPerspective) !== undefined;
 
   return (
-    <div className="space-y-6">
-      {/* Primary question input */}
+    <div>
       {renderQuestionInput()}
+
       {demoFillable && (
-        <button
-          type="button"
-          onClick={() => {
-            const demo = getDemoAnswer(question.id, demoPerspective);
-            if (demo !== undefined) onChange(demo);
-          }}
-          className="px-3 py-1.5 rounded text-xs font-bold transition-all hover:scale-105"
-          style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082', color: 'white', opacity: 0.85, borderRadius: '9999px', fontWeight: 500 }}
-        >
-          Fill
-        </button>
+        <div style={{ textAlign: 'right', marginTop: 14 }}>
+          <button
+            type="button"
+            onClick={() => {
+              const demo = getDemoAnswer(question.id, demoPerspective);
+              if (demo !== undefined) onChange(demo);
+            }}
+            className="press-link-sm"
+            style={{ background: 'transparent', cursor: 'pointer', fontSize: 14 }}
+          >
+            Fill for demo ⟶
+          </button>
+        </div>
       )}
 
-      {/* Qualitative comment (optional embellishment) */}
+      {/* Qualitative comment — optional embellishment */}
       {question.allowQualitativeComment && questionType !== 'text' && (
-        <QualitativeComment
-          value={qualitativeValue || ''}
-          onChange={handleQualitativeChange}
-          placeholder={question.qualitativePlaceholder}
-        />
+        <div style={{ marginTop: 28 }}>
+          <QualitativeComment
+            value={qualitativeValue || ''}
+            onChange={handleQualitativeChange}
+            placeholder={question.qualitativePlaceholder}
+          />
+        </div>
       )}
 
-      {/* Keyboard hint for text questions */}
+      {/* Keyboard hint */}
       {questionType === 'text' && (
-        <p className="text-sm mt-2" style={{ color: 'var(--parent-text-light)' }}>
-          Press <kbd className="px-2 py-1 rounded" style={{ backgroundColor: 'var(--parent-border)' }}>Ctrl</kbd> + <kbd className="px-2 py-1 rounded" style={{ backgroundColor: 'var(--parent-border)' }}>Enter</kbd> to continue
+        <p
+          className="press-marginalia"
+          style={{ fontSize: 15, marginTop: 14, textAlign: 'right', color: '#7A6E5C' }}
+        >
+          press <span className="press-sc" style={{ fontSize: 14 }}>⌘</span>
+          {' '}+{' '}
+          <span className="press-sc" style={{ fontSize: 14 }}>enter</span>
+          {' '}to continue
         </p>
       )}
     </div>

@@ -354,7 +354,7 @@ export function computePersonOneThing(params: {
     // Only route to self-onboard if this is genuinely a self-perspective draft
     // AND the person's linkedUserId matches the current user
     const isTrulySelf = draft.perspectiveType === 'self' &&
-      manual.perspectives?.self?.contributorId === userId;
+      manual.perspectives?.self === userId;
     return {
       type: 'unfinished',
       title: 'You have an unfinished contribution',

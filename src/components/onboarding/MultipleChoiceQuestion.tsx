@@ -9,14 +9,34 @@ interface MultipleChoiceQuestionProps {
   onChange: (value: string) => void;
 }
 
-export function MultipleChoiceQuestion({ options, value, onChange }: MultipleChoiceQuestionProps) {
+function toRoman(n: number): string {
+  if (n < 1) return '0';
+  const map: Array<[number, string]> = [
+    [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i'],
+  ];
+  let result = '';
+  let num = n;
+  for (const [value, numeral] of map) {
+    while (num >= value) {
+      result += numeral;
+      num -= value;
+    }
+  }
+  return result;
+}
+
+export function MultipleChoiceQuestion({
+  options,
+  value,
+  onChange,
+}: MultipleChoiceQuestionProps) {
   const [hoveredValue, setHoveredValue] = useState<string | null>(null);
 
   return (
-    <div className="space-y-3 animate-fade-in-up">
-      {options.map((option) => {
-        const isSelected = value === option.value;
-        const isHovered = hoveredValue === option.value;
+    <div>
+      {options.map((option, i) => {
+        const isSelected = value === String(option.value);
+        const isHovered = hoveredValue === String(option.value);
 
         return (
           <button
@@ -25,60 +45,72 @@ export function MultipleChoiceQuestion({ options, value, onChange }: MultipleCho
             onClick={() => onChange(String(option.value))}
             onMouseEnter={() => setHoveredValue(String(option.value))}
             onMouseLeave={() => setHoveredValue(null)}
-            className={`
-              w-full text-left px-6 py-5 rounded-xl border-2 transition-all duration-200
-              ${isSelected ? 'scale-[1.02] shadow-lg' : 'hover:scale-[1.02]'}
-              ${isSelected || isHovered ? 'shadow-md' : ''}
-            `}
+            className="w-full text-left"
             style={{
-              borderColor: isSelected ? 'var(--parent-accent)' : 'var(--parent-border)',
-              backgroundColor: isSelected ? 'var(--parent-card)' : 'transparent',
+              background: 'transparent',
+              border: 0,
+              padding: '18px 0',
+              borderBottom:
+                i === options.length - 1
+                  ? 'none'
+                  : '1px solid rgba(200,190,172,0.4)',
+              cursor: 'pointer',
+              paddingLeft: isSelected || isHovered ? 14 : 0,
+              transition: 'padding-left 0.18s ease',
             }}
             autoFocus={option.value === options[0].value}
           >
-            <div className="flex items-start gap-4">
-              {/* Radio indicator */}
-              <div
-                className={`
-                  mt-1 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0
-                  transition-all
-                `}
+            <div className="flex items-baseline" style={{ gap: 16 }}>
+              {/* Roman numeral marker */}
+              <span
+                className="press-chapter-label"
                 style={{
-                  backgroundColor: isSelected ? 'var(--parent-accent)' : 'transparent',
-                  border: `2px solid ${isSelected ? 'var(--parent-accent)' : 'var(--parent-border)'}`,
+                  width: 24,
+                  flexShrink: 0,
+                  color: isSelected ? '#2D5F5D' : '#6B6254',
                 }}
               >
-                {isSelected && (
-                  <div className="w-3 h-3 rounded-full bg-white"></div>
-                )}
-              </div>
+                {toRoman(i + 1)}.
+              </span>
 
-              {/* Label and description */}
+              {/* Label + description */}
               <div className="flex-1">
-                <div
-                  className="text-lg font-semibold mb-1"
-                  style={{ color: isSelected ? 'var(--parent-accent)' : 'var(--parent-text)' }}
+                <h3
+                  style={{
+                    fontFamily: 'var(--font-parent-display)',
+                    fontSize: 22,
+                    fontStyle: 'italic',
+                    color: isSelected ? '#3A3530' : '#5C5347',
+                    fontWeight: isSelected ? 500 : 400,
+                    lineHeight: 1.2,
+                    margin: 0,
+                  }}
                 >
                   {option.label}
-                </div>
+                </h3>
                 {option.description && (
-                  <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
+                  <p
+                    className="press-marginalia mt-1"
+                    style={{ fontSize: 15, lineHeight: 1.5 }}
+                  >
                     {option.description}
-                  </div>
+                  </p>
                 )}
               </div>
 
-              {/* Selection checkmark */}
+              {/* Selected marker */}
               {isSelected && (
-                <div className="flex-shrink-0" style={{ color: 'var(--parent-accent)' }}>
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-parent-display)',
+                    fontStyle: 'italic',
+                    color: '#2D5F5D',
+                    fontSize: 18,
+                    flexShrink: 0,
+                  }}
+                >
+                  ✓
+                </span>
               )}
             </div>
           </button>

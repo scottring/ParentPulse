@@ -65,7 +65,7 @@ export default function ActionCard({
           ) : (
             <span
               className="text-[11px]"
-              style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
             >
               ALL CLEAR — NO ACTIONS RIGHT NOW
             </span>
@@ -89,7 +89,7 @@ export default function ActionCard({
               className="text-[8px] font-bold tracking-widest px-1.5 py-0.5 rounded"
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                color: '#6B6B6B',
+                color: '#4A4238',
                 background: 'rgba(44,44,44,0.04)',
                 border: '1px solid #E8E3DC',
               }}
@@ -98,7 +98,7 @@ export default function ActionCard({
             </span>
             <span
               className="text-[8px] tracking-widest"
-              style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
             >
               {STAGE_LABELS[domainStage.stage]}
             </span>
@@ -147,13 +147,13 @@ export default function ActionCard({
             <div className="flex items-center gap-2 mt-0.5">
               <span
                 className="text-[9px] tracking-wider"
-                style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6B6B' }}
+                style={{ fontFamily: 'var(--font-parent-body)', color: '#4A4238' }}
               >
                 {primaryItem.speed === 'ambient' ? '⚡ TODAY' : '📋 THIS WEEK'}
               </span>
               <span
                 className="text-[9px]"
-                style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}
+                style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
               >
                 {primaryItem.estimatedMinutes}m
               </span>
@@ -162,7 +162,7 @@ export default function ActionCard({
                   className="text-[8px] tracking-wider px-1.5 py-0.5 rounded"
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    color: '#A3A3A3',
+                    color: '#5F564B',
                     background: 'rgba(44,44,44,0.04)',
                   }}
                 >
@@ -176,7 +176,7 @@ export default function ActionCard({
         {/* Body */}
         <p
           className="text-[11px] leading-relaxed mt-1"
-          style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6B6B' }}
+          style={{ fontFamily: 'var(--font-parent-body)', color: '#4A4238' }}
         >
           {primaryItem.body}
         </p>
@@ -212,7 +212,7 @@ export default function ActionCard({
             className="w-full mt-3 pt-2 text-[9px] tracking-wider transition-colors"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              color: '#A3A3A3',
+              color: '#5F564B',
               borderTop: '1px dashed #E8E3DC',
             }}
           >
@@ -241,14 +241,14 @@ export default function ActionCard({
                 <div className="flex items-center gap-2 mt-0.5">
                   <span
                     className="text-[8px]"
-                    style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}
+                    style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
                   >
                     {item.estimatedMinutes}m
                   </span>
                   {EXERCISE_TYPES[item.type] && (
                     <span
                       className="text-[8px] tracking-wider"
-                      style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}
+                      style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
                     >
                       {EXERCISE_TYPES[item.type].label.toUpperCase()}
                     </span>

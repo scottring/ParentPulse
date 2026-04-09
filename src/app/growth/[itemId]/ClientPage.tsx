@@ -1,28 +1,101 @@
 'use client';
 
-import { useEffect, useState, useCallback, use } from 'react';
+import { useEffect, useState, useCallback, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { useGrowthFeed } from '@/hooks/useGrowthFeed';
 import { usePerson } from '@/hooks/usePerson';
-import MainLayout from '@/components/layout/MainLayout';
+import Navigation from '@/components/layout/Navigation';
+import SideNav from '@/components/layout/SideNav';
 import { EXERCISE_TYPES } from '@/config/exercise-types';
-import type { GrowthItem, FeedbackReaction, ImpactRating } from '@/types/growth';
+import type { GrowthItem, GrowthItemType, FeedbackReaction, ImpactRating } from '@/types/growth';
 
-const DEPTH_COLORS = {
-  light: { bg: 'rgba(124,144,130,0.08)', text: '#7C9082', border: 'rgba(124,144,130,0.2)' },
-  moderate: { bg: 'rgba(212,165,116,0.08)', text: '#D4A574', border: 'rgba(212,165,116,0.2)' },
-  deep: { bg: 'rgba(45,95,93,0.08)', text: '#2D5F5D', border: 'rgba(45,95,93,0.2)' },
-};
+// ================================================================
+// Types
+// ================================================================
+type Step = 'brief' | 'doing' | 'reflect' | 'complete';
+type PerformanceMode = 'writing' | 'timer' | 'steps' | 'default';
+
+// ================================================================
+// Helpers
+// ================================================================
+function toRoman(n: number): string {
+  if (n < 1) return '';
+  const map: Array<[number, string]> = [
+    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
+    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
+    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
+  ];
+  let result = '';
+  let num = n;
+  for (const [value, numeral] of map) {
+    while (num >= value) {
+      result += numeral;
+      num -= value;
+    }
+  }
+  return result;
+}
+
+function romanMinutes(n: number): string {
+  if (n <= 20) return toRoman(n).toUpperCase();
+  return String(n);
+}
+
+function getPerformanceMode(type: GrowthItemType): PerformanceMode {
+  switch (type) {
+    case 'journaling':
+    case 'reflection_prompt':
+    case 'solo_deep_dive':
+    case 'gratitude_practice':
+      return 'writing';
+    case 'mindfulness':
+    case 'micro_activity':
+      return 'timer';
+    case 'conversation_guide':
+    case 'partner_exercise':
+    case 'repair_ritual':
+      return 'steps';
+    default:
+      return 'default';
+  }
+}
+
+function parseSteps(body: string): string[] {
+  if (!body.match(/\d+[\.\)]\s/)) return [];
+  return body
+    .split(/(?=\d+[\.\)]\s)/)
+    .map((s) => s.replace(/^\d+[\.\)]\s*/, '').trim())
+    .filter(Boolean);
+}
 
 const IMPACT_LABELS: { value: ImpactRating; label: string; description: string }[] = [
-  { value: 1, label: 'Slight', description: 'I noticed something small' },
-  { value: 2, label: 'Noticeable', description: 'Something shifted for me' },
-  { value: 3, label: 'Breakthrough', description: 'This was a real moment' },
+  { value: 1, label: 'Something small', description: 'I noticed a flicker' },
+  { value: 2, label: 'Something shifted', description: 'I felt it land' },
+  { value: 3, label: 'A real moment', description: 'Something opened up' },
 ];
 
+const EXERCISE_LABELS: Record<string, string> = {
+  micro_activity: 'A brief practice',
+  conversation_guide: 'A conversation',
+  reflection_prompt: 'A reflection',
+  assessment_prompt: 'A small assessment',
+  journaling: 'A journal entry',
+  mindfulness: 'A moment of stillness',
+  partner_exercise: 'A practice for two',
+  solo_deep_dive: 'A longer sit',
+  repair_ritual: 'A repair',
+  gratitude_practice: 'A gratitude',
+  illustrated_story: 'A story',
+  weekly_arc: 'A weekly arc',
+  progress_snapshot: 'A progress note',
+};
+
+// ================================================================
+// Main page
+// ================================================================
 export default function GrowthItemWorkspace({ params }: { params: Promise<{ itemId: string }> }) {
   const { itemId } = use(params);
   const { user, loading: authLoading } = useAuth();
@@ -32,11 +105,10 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
 
   const [item, setItem] = useState<GrowthItem | null>(null);
   const [loading, setLoading] = useState(true);
-  const [step, setStep] = useState<'exercise' | 'reflect' | 'complete'>('exercise');
+  const [step, setStep] = useState<Step>('brief');
   const [selectedReaction, setSelectedReaction] = useState<FeedbackReaction | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Per-person notes for couple exercises
   const [myNote, setMyNote] = useState('');
   const [partnerNote, setPartnerNote] = useState('');
 
@@ -53,11 +125,7 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
     })();
   }, [itemId, user, authLoading, router]);
 
-  // Derive participant info from the actual target people on the item
-  const selfPerson = people.find((p) => p.linkedUserId === user?.userId);
-  const myName = selfPerson?.name || user?.name || 'You';
-
-  // Find the other participant(s) — people named in targetPersonNames who aren't the current user
+  const myName = user?.name?.split(' ')[0] || 'You';
   const otherParticipants = item ? (item.targetPersonNames || [])
     .filter((name) => name !== myName)
     .map((name) => {
@@ -65,7 +133,6 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
       return { name, userId: person?.linkedUserId || null };
     }) : [];
 
-  // Show per-person reflections when there are 2+ named participants
   const isMultiPerson = (item?.targetPersonNames?.length || 0) >= 2;
   const otherPerson = otherParticipants[0] || null;
 
@@ -74,14 +141,10 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
     setSubmitting(true);
     setSelectedReaction(reaction);
     try {
-      // Submit current user's feedback
       await submitFeedback(item.growthItemId, reaction, impact, myNote || undefined, user.userId);
-
-      // If multi-person exercise and the other person has a linked account + note, submit theirs too
       if (isMultiPerson && otherPerson?.userId && partnerNote.trim()) {
         await submitFeedback(item.growthItemId, reaction, impact, partnerNote, otherPerson.userId);
       }
-
       setStep('complete');
     } catch (err) {
       console.error('Failed to submit feedback:', err);
@@ -92,479 +155,1087 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
 
   if (authLoading || loading) {
     return (
-      <MainLayout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin w-8 h-8 rounded-full border-2 border-t-transparent" style={{ borderColor: 'var(--parent-primary)' }} />
+      <div className="relish-page">
+        <Navigation />
+        <SideNav />
+        <div className="pt-[64px]">
+          <div className="press-loading">Turning to the page&hellip;</div>
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
   if (!item) {
     return (
-      <MainLayout>
-        <div className="max-w-lg mx-auto px-4 py-16 text-center">
-          <p style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text-light)' }}>
-            Exercise not found.
-          </p>
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="mt-4 text-sm underline"
-            style={{ color: 'var(--parent-primary)' }}
-          >
-            Back to dashboard
-          </button>
+      <div className="relish-page">
+        <Navigation />
+        <SideNav />
+        <div className="pt-[64px]">
+          <div className="press-binder">
+            <div className="press-empty" style={{ padding: '80px 20px' }}>
+              <p className="press-empty-title">This page is missing from the volume.</p>
+              <p className="press-empty-body">The practice may have been removed or expired.</p>
+              <button
+                onClick={() => router.push('/workbook')}
+                className="press-link"
+                style={{ background: 'transparent', cursor: 'pointer' }}
+              >
+                Return to the workbook
+                <span className="arrow">⟶</span>
+              </button>
+            </div>
+          </div>
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
-  const typeDef = EXERCISE_TYPES[item.type];
-  const depth = item.depthTier || typeDef?.depth || 'light';
-  const depthStyle = DEPTH_COLORS[depth];
   const isAlreadyDone = item.status === 'completed' || item.status === 'skipped';
-  const reflectionLabel = getReflectionLabel(item.type);
-  const reflectionPrompt = getReflectionPrompt(item.type);
+  const performanceMode = getPerformanceMode(item.type);
+
+  // If already done when the user lands, skip straight to the complete view
+  if (isAlreadyDone && step === 'brief') {
+    return <CompleteView item={item} isAlreadyDone onReturn={() => router.push('/workbook')} />;
+  }
 
   return (
-    <MainLayout>
-      <div className="max-w-lg mx-auto px-4 sm:px-6 py-8">
+    <div className="relish-page">
+      <Navigation />
+      <SideNav />
 
-        {/* Back link */}
-        <button
-          onClick={() => router.push('/dashboard')}
-          className="text-sm mb-6 flex items-center gap-1.5 hover:underline"
-          style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text-light)' }}
-        >
-          &larr; Dashboard
-        </button>
-
-        {/* Header card */}
-        <div
-          className="rounded-2xl overflow-hidden mb-6"
-          style={{ background: 'white', boxShadow: 'var(--shadow-soft)', border: '1px solid var(--parent-border)' }}
-        >
-          <div style={{ height: '4px', background: depthStyle.text }} />
-          <div className="px-6 py-6">
-            <div className="flex items-center gap-2 flex-wrap mb-3">
-              <span
-                className="text-xs font-medium px-2.5 py-1 rounded-full"
-                style={{ background: depthStyle.bg, color: depthStyle.text, border: `1px solid ${depthStyle.border}` }}
-              >
-                {typeDef?.emoji} {typeDef?.label || item.type}
-              </span>
-              <span
-                className="text-xs px-2.5 py-1 rounded-full"
-                style={{ background: 'rgba(0,0,0,0.04)', color: 'var(--parent-text-light)' }}
-              >
-                ~{item.estimatedMinutes} min
-              </span>
-              {item.targetPersonNames.length > 0 && (
-                <span
-                  className="text-xs px-2.5 py-1 rounded-full"
-                  style={{ background: 'rgba(0,0,0,0.04)', color: 'var(--parent-text-light)' }}
-                >
-                  with {item.targetPersonNames.join(' & ')}
-                </span>
-              )}
-            </div>
-            <h1
-              className="text-xl font-semibold leading-snug mb-1"
-              style={{ fontFamily: 'var(--font-parent-heading)', color: 'var(--parent-text)' }}
-            >
-              {item.emoji} {item.title}
-            </h1>
-          </div>
-        </div>
-
-        {/* ===== EXERCISE STEP ===== */}
-        {step === 'exercise' && !isAlreadyDone && (
-          <div className="space-y-4">
-            {/* Exercise content */}
-            <div
-              className="rounded-2xl px-6 py-5"
-              style={{ background: 'white', boxShadow: 'var(--shadow-soft)', border: '1px solid var(--parent-border)' }}
-            >
-              <ExerciseContent item={item} />
-            </div>
-
-            {/* Reflection area — per-person for couple, single for individual */}
-            {isMultiPerson && otherPerson ? (
-              <>
-                {/* Person 1: Current user */}
-                <ReflectionCard
-                  name={myName}
-                  label={reflectionLabel}
-                  prompt={reflectionPrompt}
-                  value={myNote}
-                  onChange={setMyNote}
-                  accent={DEPTH_COLORS.moderate.text}
-                />
-                {/* Person 2: The other participant */}
-                <ReflectionCard
-                  name={otherPerson.name}
-                  label={reflectionLabel}
-                  prompt={getPartnerReflectionPrompt(item.type, otherPerson.name)}
-                  value={partnerNote}
-                  onChange={setPartnerNote}
-                  accent={DEPTH_COLORS.moderate.text}
-                />
-              </>
-            ) : (
-              <div
-                className="rounded-2xl px-6 py-5"
-                style={{ background: 'white', boxShadow: 'var(--shadow-soft)', border: '1px solid var(--parent-border)' }}
-              >
-                <h3
-                  className="text-sm font-semibold mb-2"
-                  style={{ fontFamily: 'var(--font-parent-heading)', color: 'var(--parent-text)' }}
-                >
-                  {reflectionLabel}
-                </h3>
-                <p
-                  className="text-xs mb-3"
-                  style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text-light)' }}
-                >
-                  {reflectionPrompt}
-                </p>
-                <textarea
-                  value={myNote}
-                  onChange={(e) => setMyNote(e.target.value)}
-                  placeholder="Write anything that comes to mind..."
-                  rows={4}
-                  className="w-full text-sm rounded-xl px-4 py-3 resize-none focus:outline-none focus:ring-2"
-                  style={{
-                    fontFamily: 'var(--font-parent-body)',
-                    background: 'var(--parent-bg)',
-                    color: 'var(--parent-text)',
-                    border: '1px solid var(--parent-border)',
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Action buttons */}
-            <div className="flex gap-3">
-              <button
-                onClick={() => setStep('reflect')}
-                className="flex-1 py-3 rounded-xl text-sm font-medium text-white hover:opacity-90"
-                style={{ fontFamily: 'var(--font-parent-body)', background: 'var(--parent-primary)' }}
-              >
-                {isMultiPerson ? 'We did this' : 'I did this'}
-              </button>
-              <button
-                onClick={() => handleComplete('not_now')}
-                disabled={submitting}
-                className="px-5 py-3 rounded-xl text-sm font-medium hover:opacity-80 disabled:opacity-40"
-                style={{
-                  fontFamily: 'var(--font-parent-body)',
-                  color: 'var(--parent-text-light)',
-                  background: 'white',
-                  border: '1px solid var(--parent-border)',
-                }}
-              >
-                Not now
-              </button>
-            </div>
-          </div>
+      <div className="pt-[64px] pb-24">
+        {step === 'brief' && (
+          <BriefView
+            item={item}
+            onBegin={() => setStep('doing')}
+            onAlreadyDid={() => setStep('reflect')}
+            onDefer={() => handleComplete('not_now')}
+            submitting={submitting}
+          />
         )}
 
-        {/* ===== REFLECT STEP ===== */}
+        {step === 'doing' && (
+          <DoingView
+            item={item}
+            mode={performanceMode}
+            myNote={myNote}
+            setMyNote={setMyNote}
+            onDone={() => setStep('reflect')}
+            onBack={() => setStep('brief')}
+          />
+        )}
+
         {step === 'reflect' && (
-          <div
-            className="rounded-2xl px-6 py-6"
-            style={{ background: 'white', boxShadow: 'var(--shadow-soft)', border: '1px solid var(--parent-border)' }}
-          >
-            <h3
-              className="text-base font-semibold mb-1"
-              style={{ fontFamily: 'var(--font-parent-heading)', color: 'var(--parent-text)' }}
-            >
-              How did that land?
-            </h3>
-            <p
-              className="text-sm mb-5"
-              style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text-light)' }}
-            >
-              This helps us learn what works for {isMultiPerson ? 'you both' : 'you'}.
-            </p>
-
-            <div className="space-y-2">
-              {IMPACT_LABELS.map(({ value, label, description }) => (
-                <button
-                  key={value}
-                  onClick={() => handleComplete('tried_it', value)}
-                  disabled={submitting}
-                  className="w-full text-left px-4 py-3 rounded-xl hover:scale-[1.01] disabled:opacity-40"
-                  style={{
-                    background: 'var(--parent-bg)',
-                    border: '1px solid var(--parent-border)',
-                    transition: 'transform 0.15s, box-shadow 0.15s',
-                  }}
-                >
-                  <span
-                    className="text-sm font-medium block"
-                    style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text)' }}
-                  >
-                    {label}
-                  </span>
-                  <span
-                    className="text-xs"
-                    style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text-light)' }}
-                  >
-                    {description}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={() => handleComplete('loved_it', 3)}
-              disabled={submitting}
-              className="w-full mt-4 py-3 rounded-xl text-sm font-medium text-white hover:opacity-90 disabled:opacity-40"
-              style={{ fontFamily: 'var(--font-parent-body)', background: 'var(--parent-accent)' }}
-            >
-              This was a real moment
-            </button>
-          </div>
+          <ReflectView
+            item={item}
+            myName={myName}
+            otherPerson={otherPerson}
+            isMultiPerson={isMultiPerson}
+            myNote={myNote}
+            setMyNote={setMyNote}
+            partnerNote={partnerNote}
+            setPartnerNote={setPartnerNote}
+            performanceMode={performanceMode}
+            submitting={submitting}
+            onRate={(impact) => handleComplete('tried_it', impact)}
+            onSkipRating={() => handleComplete('loved_it', 3)}
+          />
         )}
 
-        {/* ===== COMPLETE STEP ===== */}
-        {(step === 'complete' || isAlreadyDone) && (
-          <div
-            className="rounded-2xl px-6 py-8 text-center"
-            style={{ background: 'white', boxShadow: 'var(--shadow-soft)', border: '1px solid var(--parent-border)' }}
-          >
-            <div className="text-3xl mb-3">
-              {selectedReaction === 'loved_it' ? '\u2764\uFE0F' :
-               selectedReaction === 'not_now' ? '\uD83D\uDD52' :
-               '\u2705'}
-            </div>
-            <h3
-              className="text-base font-semibold mb-1"
-              style={{ fontFamily: 'var(--font-parent-heading)', color: 'var(--parent-text)' }}
-            >
-              {selectedReaction === 'not_now' ? 'Saved for later' :
-               isAlreadyDone ? 'Already completed' :
-               'Nice work'}
-            </h3>
-            <p
-              className="text-sm mb-6"
-              style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text-light)' }}
-            >
-              {selectedReaction === 'not_now'
-                ? "We'll bring this back in a couple days."
-                : 'Every small step matters.'}
-            </p>
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="px-6 py-2.5 rounded-xl text-sm font-medium text-white hover:opacity-90"
-              style={{ fontFamily: 'var(--font-parent-body)', background: 'var(--parent-primary)' }}
-            >
-              Back to dashboard
-            </button>
-          </div>
+        {step === 'complete' && (
+          <CompleteView
+            item={item}
+            isAlreadyDone={false}
+            selectedReaction={selectedReaction}
+            onReturn={() => router.push('/workbook')}
+          />
         )}
-      </div>
-    </MainLayout>
-  );
-}
-
-// ===== Per-person reflection card =====
-
-function ReflectionCard({
-  name,
-  label,
-  prompt,
-  value,
-  onChange,
-  accent,
-}: {
-  name: string;
-  label: string;
-  prompt: string;
-  value: string;
-  onChange: (v: string) => void;
-  accent: string;
-}) {
-  return (
-    <div
-      className="rounded-2xl overflow-hidden"
-      style={{ background: 'white', boxShadow: 'var(--shadow-soft)', border: '1px solid var(--parent-border)' }}
-    >
-      {/* Person name tab */}
-      <div
-        className="px-6 py-2 flex items-center gap-2"
-        style={{ background: `${accent}10`, borderBottom: '1px solid var(--parent-border)' }}
-      >
-        <span
-          className="w-2 h-2 rounded-full"
-          style={{ background: accent }}
-        />
-        <span
-          className="text-xs font-semibold"
-          style={{ fontFamily: 'var(--font-parent-heading)', color: accent }}
-        >
-          {name}&rsquo;s reflection
-        </span>
-      </div>
-
-      <div className="px-6 py-4">
-        <h3
-          className="text-sm font-semibold mb-1"
-          style={{ fontFamily: 'var(--font-parent-heading)', color: 'var(--parent-text)' }}
-        >
-          {label}
-        </h3>
-        <p
-          className="text-xs mb-3"
-          style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text-light)' }}
-        >
-          {prompt}
-        </p>
-        <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Write anything that comes to mind..."
-          rows={3}
-          className="w-full text-sm rounded-xl px-4 py-3 resize-none focus:outline-none focus:ring-2"
-          style={{
-            fontFamily: 'var(--font-parent-body)',
-            background: 'var(--parent-bg)',
-            color: 'var(--parent-text)',
-            border: '1px solid var(--parent-border)',
-          }}
-        />
       </div>
     </div>
   );
 }
 
-// ===== Exercise content by type =====
-
-function ExerciseContent({ item }: { item: GrowthItem }) {
-  const type = item.type;
-  const bodySteps = item.body.match(/\d+[\.\)]\s/g) ? item.body.split(/(?=\d+[\.\)]\s)/) : null;
+// ================================================================
+// BRIEF VIEW — the opening page
+// ================================================================
+function BriefView({
+  item,
+  onBegin,
+  onAlreadyDid,
+  onDefer,
+  submitting,
+}: {
+  item: GrowthItem;
+  onBegin: () => void;
+  onAlreadyDid: () => void;
+  onDefer: () => void;
+  submitting: boolean;
+}) {
+  const typeDef = EXERCISE_TYPES[item.type];
+  const minutes = item.estimatedMinutes || 0;
+  const forWhom = item.assignedToUserName?.split(' ')[0] || 'you';
+  const about = item.targetPersonNames?.join(' & ');
+  const exerciseLabel = EXERCISE_LABELS[item.type] || typeDef?.label || 'A practice';
+  const level =
+    item.relationalLevel === 'couple' ? 'A practice for two'
+      : item.relationalLevel === 'family' ? 'A family practice'
+      : 'Individual';
+  const fromChat = Boolean(
+    (item as unknown as { sourceChatSessionId?: string }).sourceChatSessionId,
+  );
+  const router = useRouter();
 
   return (
-    <div>
-      {(type === 'partner_exercise' || type === 'conversation_guide' || type === 'repair_ritual') && (
-        <div
-          className="flex items-center gap-2 mb-3 pb-3"
-          style={{ borderBottom: '1px solid var(--parent-border)' }}
-        >
-          <span className="text-xs font-medium" style={{ color: 'var(--parent-text-light)' }}>
-            {type === 'partner_exercise' ? 'Do this with your partner' :
-             type === 'conversation_guide' ? 'Have this conversation together' :
-             'A guided reconnection exercise'}
-          </span>
-        </div>
-      )}
+    <div className="press-binder" style={{ maxWidth: 680 }}>
 
-      {type === 'mindfulness' && (
-        <div
-          className="flex items-center gap-2 mb-3 pb-3"
-          style={{ borderBottom: '1px solid var(--parent-border)' }}
-        >
-          <span className="text-xs font-medium" style={{ color: 'var(--parent-text-light)' }}>
-            Find a quiet moment. {item.estimatedMinutes} minutes.
-          </span>
-        </div>
-      )}
+      {/* Running header */}
+      <div className="press-running-header" style={{ paddingTop: 28 }}>
+        <span>The Workbook</span>
+        <span className="sep">·</span>
+        <span>A practice</span>
+      </div>
 
-      {bodySteps ? (
-        <ol className="space-y-3">
-          {bodySteps.filter(Boolean).map((s, i) => (
-            <li key={i} className="flex gap-3">
-              <span
-                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5"
-                style={{ background: 'var(--parent-bg)', color: 'var(--parent-text-light)' }}
-              >
-                {i + 1}
-              </span>
-              <p
-                className="text-sm leading-relaxed flex-1"
-                style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text)' }}
-              >
-                {s.replace(/^\d+[\.\)]\s*/, '').trim()}
-              </p>
-            </li>
-          ))}
-        </ol>
-      ) : (
+      {/* Back link */}
+      <div style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 18 }}>
+        <button
+          onClick={() => router.push('/workbook')}
+          className="press-link-sm"
+          style={{ background: 'transparent', cursor: 'pointer' }}
+        >
+          ⟵ Return to the workbook
+        </button>
+      </div>
+
+      {/* Title */}
+      <div style={{ textAlign: 'center', paddingBottom: 6 }}>
+        <span className="press-chapter-label" style={{ display: 'block', textAlign: 'center' }}>
+          {exerciseLabel}
+        </span>
+      </div>
+      <h1 className="press-binder-title" style={{ textAlign: 'center', fontSize: 'clamp(36px, 5vw, 48px)' }}>
+        {item.title}
+      </h1>
+
+      {/* Meta line */}
+      <p
+        className="press-meta-line"
+        style={{ textAlign: 'center', marginTop: 18, marginBottom: 10 }}
+      >
+        {romanMinutes(minutes)} minutes
+        {about && (
+          <>
+            <span className="dot">·</span>
+            about <span className="press-sc">{about}</span>
+          </>
+        )}
+        <span className="dot">·</span>
+        for <span className="press-sc">{forWhom}</span>
+        <span className="dot">·</span>
+        {level}
+      </p>
+
+      {fromChat && (
         <p
-          className="text-sm leading-relaxed"
-          style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text)' }}
+          className="press-marginalia"
+          style={{ textAlign: 'center', fontSize: 14, marginBottom: 8 }}
+        >
+          drawn from a conversation with the manual
+        </p>
+      )}
+
+      <div className="press-asterism" aria-hidden="true" style={{ margin: '22px 0 20px' }} />
+
+      {/* The briefing body */}
+      <div style={{ padding: '0 20px 32px' }}>
+        <p className="press-body" style={{ textAlign: 'center', maxWidth: 560, margin: '0 auto' }}>
+          {item.body.length > 280
+            ? item.body.slice(0, 280).trim() + '…'
+            : item.body}
+        </p>
+      </div>
+
+      <hr className="press-rule" style={{ width: '60%', margin: '0 auto 32px' }} />
+
+      {/* Primary action — begin */}
+      <div style={{ textAlign: 'center', padding: '0 20px' }}>
+        <button
+          onClick={onBegin}
+          className="press-link"
+          style={{
+            background: 'transparent',
+            cursor: 'pointer',
+            fontSize: 24,
+          }}
+        >
+          Begin this practice
+          <span className="arrow">⟶</span>
+        </button>
+      </div>
+
+      {/* Secondary actions */}
+      <div
+        style={{
+          textAlign: 'center',
+          paddingTop: 28,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+        }}
+      >
+        <button
+          onClick={onAlreadyDid}
+          className="press-link-sm"
+          style={{ background: 'transparent', cursor: 'pointer' }}
+        >
+          I already did this — skip to reflection
+        </button>
+        <button
+          onClick={onDefer}
+          disabled={submitting}
+          className="press-marginalia"
+          style={{
+            background: 'transparent',
+            border: 0,
+            cursor: submitting ? 'wait' : 'pointer',
+            fontSize: 14,
+            color: '#7A6E5C',
+            opacity: submitting ? 0.5 : 1,
+          }}
+        >
+          not this time — bring it back later
+        </button>
+      </div>
+
+      <div className="press-fleuron mt-12">❦</div>
+    </div>
+  );
+}
+
+// ================================================================
+// DOING VIEW — the performance phase, adapts to type
+// ================================================================
+function DoingView({
+  item,
+  mode,
+  myNote,
+  setMyNote,
+  onDone,
+  onBack,
+}: {
+  item: GrowthItem;
+  mode: PerformanceMode;
+  myNote: string;
+  setMyNote: (v: string) => void;
+  onDone: () => void;
+  onBack: () => void;
+}) {
+  if (mode === 'writing') {
+    return <WritingPerformance item={item} myNote={myNote} setMyNote={setMyNote} onDone={onDone} onBack={onBack} />;
+  }
+  if (mode === 'timer') {
+    return <TimerPerformance item={item} onDone={onDone} onBack={onBack} />;
+  }
+  if (mode === 'steps') {
+    return <StepsPerformance item={item} onDone={onDone} onBack={onBack} />;
+  }
+  return <DefaultPerformance item={item} onDone={onDone} onBack={onBack} />;
+}
+
+// ================================================================
+// WRITING PERFORMANCE — a proper writing surface
+// ================================================================
+function WritingPerformance({
+  item,
+  myNote,
+  setMyNote,
+  onDone,
+  onBack,
+}: {
+  item: GrowthItem;
+  myNote: string;
+  setMyNote: (v: string) => void;
+  onDone: () => void;
+  onBack: () => void;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const t = setTimeout(() => textareaRef.current?.focus(), 200);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const wordCount = myNote.trim() ? myNote.trim().split(/\s+/).length : 0;
+  const elapsedMinutes = Math.floor(elapsed / 60);
+
+  return (
+    <div className="press-binder" style={{ maxWidth: 720 }}>
+
+      {/* Running header */}
+      <div className="press-running-header" style={{ paddingTop: 28 }}>
+        <span>In the writing</span>
+        <span className="sep">·</span>
+        <span>{item.title}</span>
+      </div>
+
+      {/* Back link */}
+      <div style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 16 }}>
+        <button
+          onClick={onBack}
+          className="press-link-sm"
+          style={{ background: 'transparent', cursor: 'pointer' }}
+        >
+          ⟵ Back to the briefing
+        </button>
+      </div>
+
+      {/* Title + prompt */}
+      <div style={{ padding: '0 56px' }}>
+        <span className="press-chapter-label">The prompt</span>
+        <p
+          className="press-body-italic mt-2"
+          style={{ fontSize: 17, color: '#5C5347', lineHeight: 1.55 }}
         >
           {item.body}
         </p>
-      )}
+      </div>
 
-      {item.alternatives && (
-        <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--parent-border)' }}>
-          <p className="text-xs mb-2" style={{ color: 'var(--parent-text-light)' }}>
-            Want a different version?
-          </p>
-          <div className="flex gap-2">
-            {item.alternatives.light && item.depthTier !== 'light' && (
-              <DepthPill label="Lighter" minutes={item.alternatives.light.estimatedMinutes} depth="light" />
-            )}
-            {item.alternatives.deep && item.depthTier !== 'deep' && (
-              <DepthPill label="Go deeper" minutes={item.alternatives.deep.estimatedMinutes} depth="deep" />
-            )}
-          </div>
-        </div>
-      )}
+      <hr className="press-rule" style={{ margin: '28px 56px', width: 'auto' }} />
+
+      {/* The writing surface — large, editorial */}
+      <div style={{ padding: '0 56px 20px' }}>
+        <textarea
+          ref={textareaRef}
+          value={myNote}
+          onChange={(e) => setMyNote(e.target.value)}
+          placeholder="Let yourself think on paper&hellip;"
+          rows={14}
+          className="w-full focus:outline-none"
+          style={{
+            fontFamily: 'var(--font-parent-display)',
+            fontSize: 21,
+            fontStyle: 'italic',
+            color: '#3A3530',
+            background: 'transparent',
+            border: 0,
+            lineHeight: 1.55,
+            resize: 'none',
+            padding: '8px 2px',
+            letterSpacing: '0.002em',
+            minHeight: 380,
+          }}
+        />
+      </div>
+
+      {/* Word count + elapsed time — marginalia */}
+      <div
+        className="flex items-baseline justify-between"
+        style={{ padding: '0 56px 20px' }}
+      >
+        <p className="press-marginalia" style={{ fontSize: 14 }}>
+          {wordCount > 0 ? (
+            <>
+              {toRoman(wordCount).toLowerCase()} words &middot; {elapsedMinutes === 0 ? 'just begun' : `${toRoman(elapsedMinutes).toLowerCase()} min in`}
+            </>
+          ) : (
+            'blank page'
+          )}
+        </p>
+        <p className="press-marginalia" style={{ fontSize: 15, color: '#7A6E5C' }}>
+          autosaved as you go
+        </p>
+      </div>
+
+      <hr className="press-rule" style={{ margin: '0 56px 24px', width: 'auto' }} />
+
+      {/* Action */}
+      <div style={{ textAlign: 'center', padding: '0 20px' }}>
+        <button
+          onClick={onDone}
+          className="press-link"
+          style={{
+            background: 'transparent',
+            cursor: 'pointer',
+            fontSize: 20,
+            opacity: wordCount === 0 ? 0.5 : 1,
+          }}
+        >
+          I&rsquo;ve written what I need
+          <span className="arrow">⟶</span>
+        </button>
+      </div>
+
+      <div className="press-fleuron mt-10">❦</div>
     </div>
   );
 }
 
-function DepthPill({ label, minutes, depth }: { label: string; minutes: number; depth: 'light' | 'moderate' | 'deep' }) {
-  const style = DEPTH_COLORS[depth];
+// ================================================================
+// TIMER PERFORMANCE — a countdown that holds you through it
+// ================================================================
+function TimerPerformance({
+  item,
+  onDone,
+  onBack,
+}: {
+  item: GrowthItem;
+  onDone: () => void;
+  onBack: () => void;
+}) {
+  const totalSeconds = (item.estimatedMinutes || 1) * 60;
+  const [remaining, setRemaining] = useState(totalSeconds);
+  const [running, setRunning] = useState(false);
+
+  useEffect(() => {
+    if (!running || remaining <= 0) return;
+    const id = setInterval(() => setRemaining((r) => Math.max(0, r - 1)), 1000);
+    return () => clearInterval(id);
+  }, [running, remaining]);
+
+  const minutes = Math.floor(remaining / 60);
+  const seconds = remaining % 60;
+  const progress = 1 - remaining / totalSeconds;
+
+  // Editorial phrasing of time remaining
+  const timePhrase = remaining === 0
+    ? 'the time has passed'
+    : minutes === 0
+      ? `${seconds} second${seconds !== 1 ? 's' : ''} remain`
+      : minutes === 1 && seconds === 0
+        ? 'one minute remains'
+        : `${toRoman(minutes).toLowerCase()}${seconds > 0 ? ` ${String(seconds).padStart(2, '0')}` : ''} min remain`;
+
   return (
-    <span
-      className="text-xs px-3 py-1.5 rounded-full cursor-pointer hover:opacity-80"
-      style={{ background: style.bg, color: style.text, border: `1px solid ${style.border}` }}
-    >
-      {label} (~{minutes}m)
-    </span>
+    <div className="press-binder" style={{ maxWidth: 680 }}>
+
+      {/* Running header */}
+      <div className="press-running-header" style={{ paddingTop: 28 }}>
+        <span>In the practice</span>
+        <span className="sep">·</span>
+        <span>{item.title}</span>
+      </div>
+
+      {/* Back link */}
+      <div style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 18 }}>
+        <button
+          onClick={onBack}
+          className="press-link-sm"
+          style={{ background: 'transparent', cursor: 'pointer' }}
+        >
+          ⟵ Back to the briefing
+        </button>
+      </div>
+
+      {/* Instruction — always visible */}
+      <div
+        style={{
+          padding: '24px 56px',
+          borderTop: '1px solid rgba(200,190,172,0.5)',
+          borderBottom: '1px solid rgba(200,190,172,0.5)',
+          background: 'rgba(247,245,240,0.6)',
+        }}
+      >
+        <span className="press-chapter-label">What to do</span>
+        <p
+          className="press-body-italic mt-2"
+          style={{ fontSize: 17, color: '#3A3530', lineHeight: 1.55 }}
+        >
+          {item.body}
+        </p>
+      </div>
+
+      {/* The timer — editorial, no digital-clock feel */}
+      <div
+        style={{
+          textAlign: 'center',
+          padding: '60px 20px 40px',
+        }}
+      >
+        <span className="press-chapter-label" style={{ display: 'block', textAlign: 'center' }}>
+          {!running && remaining === totalSeconds
+            ? 'when you are ready'
+            : remaining === 0
+              ? 'time is up'
+              : 'currently'}
+        </span>
+        <h2
+          className="press-display-lg"
+          style={{
+            fontSize: 'clamp(56px, 9vw, 88px)',
+            fontStyle: 'italic',
+            margin: '20px 0 14px',
+            letterSpacing: '-0.02em',
+          }}
+        >
+          {timePhrase}
+        </h2>
+
+        {/* Progress as a thin horizontal rule */}
+        <div
+          style={{
+            maxWidth: 420,
+            margin: '30px auto 0',
+            position: 'relative',
+            height: 1,
+            background: 'rgba(200,190,172,0.5)',
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              height: 1,
+              width: `${progress * 100}%`,
+              background: '#7C9082',
+              transition: running ? 'width 1s linear' : 'width 0.3s ease',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div
+        className="flex items-baseline justify-center"
+        style={{ gap: 32, padding: '20px 20px 28px' }}
+      >
+        {!running && remaining > 0 && (
+          <button
+            onClick={() => setRunning(true)}
+            className="press-link"
+            style={{
+              background: 'transparent',
+              cursor: 'pointer',
+              fontSize: 20,
+            }}
+          >
+            {remaining === totalSeconds ? 'Begin the timer' : 'Resume'}
+            <span className="arrow">⟶</span>
+          </button>
+        )}
+        {running && remaining > 0 && (
+          <button
+            onClick={() => setRunning(false)}
+            className="press-link-sm"
+            style={{ background: 'transparent', cursor: 'pointer' }}
+          >
+            Pause
+          </button>
+        )}
+        <button
+          onClick={onDone}
+          className={remaining === 0 ? 'press-link' : 'press-link-sm'}
+          style={{
+            background: 'transparent',
+            cursor: 'pointer',
+            fontSize: remaining === 0 ? 20 : 15,
+          }}
+        >
+          {remaining === 0 ? "I'm done" : 'Finish early'}
+          {remaining === 0 && <span className="arrow">⟶</span>}
+        </button>
+      </div>
+
+      <hr className="press-rule-short" style={{ margin: '8px auto 12px' }} />
+
+      <div className="press-fleuron">❦</div>
+    </div>
   );
 }
 
-// ===== Reflection prompts =====
+// ================================================================
+// STEPS PERFORMANCE — multi-step conversation/partner exercises
+// ================================================================
+function StepsPerformance({
+  item,
+  onDone,
+  onBack,
+}: {
+  item: GrowthItem;
+  onDone: () => void;
+  onBack: () => void;
+}) {
+  const steps = parseSteps(item.body);
+  const [current, setCurrent] = useState(0);
 
-function getReflectionLabel(type: string): string {
-  switch (type) {
-    case 'conversation_guide':
-    case 'partner_exercise': return 'How did it go?';
-    case 'reflection_prompt':
-    case 'journaling':
-    case 'solo_deep_dive': return 'Your reflection';
-    case 'repair_ritual': return 'What shifted?';
-    case 'mindfulness': return 'What did you notice?';
-    case 'gratitude_practice': return 'What came up?';
-    default: return 'Any thoughts?';
+  // If the body has no numbered steps, fall back to default
+  if (steps.length === 0) {
+    return <DefaultPerformance item={item} onDone={onDone} onBack={onBack} />;
   }
+
+  const isLast = current === steps.length - 1;
+  const isFirst = current === 0;
+
+  return (
+    <div className="press-binder" style={{ maxWidth: 680 }}>
+
+      {/* Running header */}
+      <div className="press-running-header" style={{ paddingTop: 28 }}>
+        <span>In the conversation</span>
+        <span className="sep">·</span>
+        <span>{item.title}</span>
+      </div>
+
+      {/* Back link */}
+      <div style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 18 }}>
+        <button
+          onClick={onBack}
+          className="press-link-sm"
+          style={{ background: 'transparent', cursor: 'pointer' }}
+        >
+          ⟵ Back to the briefing
+        </button>
+      </div>
+
+      {/* Step indicator — row of hairlines */}
+      <div
+        className="flex gap-1.5"
+        style={{ padding: '0 56px 28px' }}
+      >
+        {steps.map((_, i) => (
+          <div
+            key={i}
+            style={{
+              flex: 1,
+              height: 1.5,
+              background: i <= current ? '#7C9082' : 'rgba(200,190,172,0.5)',
+              transition: 'background 0.3s ease',
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Step label */}
+      <div style={{ textAlign: 'center', paddingBottom: 12 }}>
+        <span className="press-chapter-label">
+          Prompt {toRoman(current + 1)} of {toRoman(steps.length)}
+        </span>
+      </div>
+
+      {/* The current step — large, readable */}
+      <div
+        style={{
+          padding: '40px 56px 50px',
+          minHeight: 280,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <p
+          className="press-body"
+          style={{
+            fontSize: 'clamp(22px, 3vw, 28px)',
+            lineHeight: 1.4,
+            textAlign: 'center',
+            maxWidth: 540,
+            fontFamily: 'var(--font-parent-display)',
+            fontStyle: 'italic',
+            color: '#3A3530',
+          }}
+        >
+          {steps[current]}
+        </p>
+      </div>
+
+      <hr className="press-rule" style={{ margin: '0 56px 24px', width: 'auto' }} />
+
+      {/* Navigation */}
+      <div
+        className="flex items-baseline justify-between"
+        style={{ padding: '0 56px 28px' }}
+      >
+        <button
+          onClick={() => setCurrent((c) => Math.max(0, c - 1))}
+          disabled={isFirst}
+          className="press-link-sm"
+          style={{
+            background: 'transparent',
+            cursor: isFirst ? 'not-allowed' : 'pointer',
+            opacity: isFirst ? 0.3 : 1,
+          }}
+        >
+          ⟵ Previous
+        </button>
+
+        {!isLast ? (
+          <button
+            onClick={() => setCurrent((c) => Math.min(steps.length - 1, c + 1))}
+            className="press-link"
+            style={{
+              background: 'transparent',
+              cursor: 'pointer',
+              fontSize: 20,
+            }}
+          >
+            Next prompt
+            <span className="arrow">⟶</span>
+          </button>
+        ) : (
+          <button
+            onClick={onDone}
+            className="press-link"
+            style={{
+              background: 'transparent',
+              cursor: 'pointer',
+              fontSize: 20,
+            }}
+          >
+            We&rsquo;ve completed this
+            <span className="arrow">⟶</span>
+          </button>
+        )}
+      </div>
+
+      <div className="press-fleuron">❦</div>
+    </div>
+  );
 }
 
-function getReflectionPrompt(type: string): string {
-  switch (type) {
-    case 'conversation_guide': return 'What surprised you? Was there a moment that felt important?';
-    case 'partner_exercise': return 'What did you learn about each other? Anything unexpected?';
-    case 'reflection_prompt': return 'Write whatever comes to mind. There are no wrong answers.';
-    case 'journaling': return 'Let yourself think on paper. Stream of consciousness is fine.';
-    case 'repair_ritual': return 'Did something soften? What felt different afterward?';
-    case 'mindfulness': return 'Any sensations, thoughts, or feelings that stood out?';
-    case 'gratitude_practice': return 'Why does this matter to you right now?';
-    case 'solo_deep_dive': return 'What insight are you taking away? What do you want to try?';
-    default: return 'Jot down anything worth remembering. This is just for you.';
-  }
+// ================================================================
+// DEFAULT PERFORMANCE — instruction held large with a done button
+// ================================================================
+function DefaultPerformance({
+  item,
+  onDone,
+  onBack,
+}: {
+  item: GrowthItem;
+  onDone: () => void;
+  onBack: () => void;
+}) {
+  return (
+    <div className="press-binder" style={{ maxWidth: 680 }}>
+
+      <div className="press-running-header" style={{ paddingTop: 28 }}>
+        <span>In the practice</span>
+        <span className="sep">·</span>
+        <span>{item.title}</span>
+      </div>
+
+      <div style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 18 }}>
+        <button
+          onClick={onBack}
+          className="press-link-sm"
+          style={{ background: 'transparent', cursor: 'pointer' }}
+        >
+          ⟵ Back to the briefing
+        </button>
+      </div>
+
+      {/* Instruction — large editorial body */}
+      <div style={{ padding: '20px 56px 40px' }}>
+        <span
+          className="press-chapter-label"
+          style={{ display: 'block', textAlign: 'center', marginBottom: 20 }}
+        >
+          What to do
+        </span>
+        <p
+          className="press-body press-drop-cap"
+          style={{ fontSize: 20 }}
+        >
+          {item.body}
+        </p>
+      </div>
+
+      <hr className="press-rule" style={{ margin: '0 56px 24px', width: 'auto' }} />
+
+      <div style={{ textAlign: 'center', padding: '0 20px 28px' }}>
+        <button
+          onClick={onDone}
+          className="press-link"
+          style={{
+            background: 'transparent',
+            cursor: 'pointer',
+            fontSize: 20,
+          }}
+        >
+          I&rsquo;ve done this
+          <span className="arrow">⟶</span>
+        </button>
+      </div>
+
+      <div className="press-fleuron">❦</div>
+    </div>
+  );
 }
 
-function getPartnerReflectionPrompt(type: string, name: string): string {
-  switch (type) {
-    case 'conversation_guide': return `What stood out to ${name}? What did they notice?`;
-    case 'partner_exercise': return `What was ${name}'s experience? What did they say?`;
-    case 'repair_ritual': return `How did ${name} feel afterward? Did something shift for them?`;
-    default: return `What did ${name} think? Capture their perspective here.`;
-  }
+// ================================================================
+// REFLECT VIEW — the rating step
+// ================================================================
+function ReflectView({
+  item,
+  myName,
+  otherPerson,
+  isMultiPerson,
+  myNote,
+  setMyNote,
+  partnerNote,
+  setPartnerNote,
+  performanceMode,
+  submitting,
+  onRate,
+  onSkipRating,
+}: {
+  item: GrowthItem;
+  myName: string;
+  otherPerson: { name: string; userId: string | null } | null;
+  isMultiPerson: boolean;
+  myNote: string;
+  setMyNote: (v: string) => void;
+  partnerNote: string;
+  setPartnerNote: (v: string) => void;
+  performanceMode: PerformanceMode;
+  submitting: boolean;
+  onRate: (impact: ImpactRating) => void;
+  onSkipRating: () => void;
+}) {
+  // For writing mode the note was already captured during the doing phase,
+  // so we only show the reflection textarea for non-writing modes.
+  const showReflectionField = performanceMode !== 'writing';
+
+  return (
+    <div className="press-binder" style={{ maxWidth: 680 }}>
+
+      {/* Running header */}
+      <div className="press-running-header" style={{ paddingTop: 28 }}>
+        <span>What remained</span>
+        <span className="sep">·</span>
+        <span>{item.title}</span>
+      </div>
+
+      {/* Title */}
+      <div style={{ textAlign: 'center', paddingTop: 20, paddingBottom: 10 }}>
+        <span className="press-chapter-label">Looking back</span>
+      </div>
+      <h2
+        className="press-display-md"
+        style={{ textAlign: 'center', marginTop: 10, marginBottom: 8, fontSize: 'clamp(28px, 4vw, 36px)' }}
+      >
+        How did it land?
+      </h2>
+      <p
+        className="press-marginalia"
+        style={{ textAlign: 'center', fontSize: 14, marginBottom: 28 }}
+      >
+        A single word on how much it moved for {isMultiPerson ? 'you both' : 'you'}.
+      </p>
+
+      <hr className="press-rule-short" style={{ margin: '0 auto 28px' }} />
+
+      {/* Optional short reflection note (for non-writing modes) */}
+      {showReflectionField && (
+        <div style={{ padding: '0 56px 28px' }}>
+          {isMultiPerson && otherPerson ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+              <ReflectionFieldPress
+                name={myName}
+                value={myNote}
+                onChange={setMyNote}
+              />
+              <ReflectionFieldPress
+                name={otherPerson.name}
+                value={partnerNote}
+                onChange={setPartnerNote}
+              />
+            </div>
+          ) : (
+            <ReflectionFieldPress
+              name={null}
+              value={myNote}
+              onChange={setMyNote}
+            />
+          )}
+          <hr className="press-rule" style={{ marginTop: 28 }} />
+        </div>
+      )}
+
+      {/* Rating options */}
+      <div style={{ padding: '0 56px' }}>
+        <span
+          className="press-chapter-label"
+          style={{ display: 'block', textAlign: 'center', marginBottom: 16 }}
+        >
+          Rate what happened
+        </span>
+        {IMPACT_LABELS.map(({ value, label, description }) => (
+          <button
+            key={value}
+            onClick={() => onRate(value)}
+            disabled={submitting}
+            className="block w-full text-left py-5"
+            style={{
+              background: 'transparent',
+              cursor: submitting ? 'wait' : 'pointer',
+              opacity: submitting ? 0.4 : 1,
+              borderBottom: '1px solid rgba(200,190,172,0.5)',
+              transition: 'padding 0.2s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.paddingLeft = '10px')}
+            onMouseLeave={(e) => (e.currentTarget.style.paddingLeft = '0')}
+          >
+            <span
+              className="press-chapter-label"
+              style={{ marginBottom: 6 }}
+            >
+              {toRoman(value)}.
+            </span>
+            <div
+              className="press-display-sm"
+              style={{ fontStyle: 'italic', fontSize: 22 }}
+            >
+              {label}
+            </div>
+            <p
+              className="press-marginalia"
+              style={{ marginTop: 4, fontSize: 15 }}
+            >
+              {description}
+            </p>
+          </button>
+        ))}
+      </div>
+
+      {/* Skip */}
+      <div style={{ textAlign: 'center', paddingTop: 28 }}>
+        <button
+          onClick={onSkipRating}
+          disabled={submitting}
+          className="press-link-sm"
+          style={{
+            background: 'transparent',
+            cursor: submitting ? 'wait' : 'pointer',
+            opacity: submitting ? 0.5 : 1,
+          }}
+        >
+          Skip the rating
+        </button>
+      </div>
+
+      <div className="press-fleuron mt-10">❦</div>
+    </div>
+  );
+}
+
+// ================================================================
+// Reflection field — a quiet labeled textarea, no card chrome
+// ================================================================
+function ReflectionFieldPress({
+  name,
+  value,
+  onChange,
+}: {
+  name: string | null;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      {name && (
+        <div className="press-chapter-label" style={{ marginBottom: 8 }}>
+          {name}&rsquo;s reflection
+        </div>
+      )}
+      <p
+        className="press-marginalia"
+        style={{ marginBottom: 10, fontSize: 15 }}
+      >
+        {name ? `What did ${name} notice?` : 'What did you notice?'}
+      </p>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Write anything that stayed with you&hellip;"
+        rows={3}
+        className="w-full focus:outline-none"
+        style={{
+          fontFamily: 'var(--font-parent-display)',
+          fontSize: 17,
+          fontStyle: 'italic',
+          color: '#3A3530',
+          background: 'transparent',
+          border: 0,
+          borderBottom: '1px solid rgba(200,190,172,0.6)',
+          padding: '10px 2px',
+          resize: 'none',
+          lineHeight: 1.55,
+        }}
+      />
+    </div>
+  );
+}
+
+// ================================================================
+// COMPLETE VIEW — the final page
+// ================================================================
+function CompleteView({
+  item,
+  isAlreadyDone,
+  selectedReaction,
+  onReturn,
+}: {
+  item: GrowthItem;
+  isAlreadyDone: boolean;
+  selectedReaction?: FeedbackReaction | null;
+  onReturn: () => void;
+}) {
+  void item;
+  return (
+    <div className="press-binder" style={{ maxWidth: 680 }}>
+      <div className="press-running-header" style={{ paddingTop: 28 }}>
+        <span>The Workbook</span>
+        <span className="sep">·</span>
+        <span>Kept</span>
+      </div>
+
+      <div style={{ padding: '60px 20px 30px', textAlign: 'center' }}>
+        <span className="press-chapter-label" style={{ display: 'block', textAlign: 'center' }}>
+          {selectedReaction === 'not_now' ? 'Set aside' : isAlreadyDone ? 'Already kept' : 'Kept'}
+        </span>
+        <h2
+          className="press-display-lg"
+          style={{ marginTop: 16, fontSize: 'clamp(36px, 5vw, 48px)' }}
+        >
+          {selectedReaction === 'not_now'
+            ? 'Gently tucked away'
+            : isAlreadyDone
+              ? 'This practice is behind you'
+              : 'Well done'}
+        </h2>
+        <p
+          className="press-body-italic"
+          style={{
+            textAlign: 'center',
+            marginTop: 20,
+            maxWidth: 420,
+            marginLeft: 'auto',
+            marginRight: 'auto',
+          }}
+        >
+          {selectedReaction === 'not_now'
+            ? 'The workbook will bring it back in a few days.'
+            : 'Small keepings accumulate. Come back tomorrow for the next page.'}
+        </p>
+
+        <div className="press-asterism" aria-hidden="true" style={{ margin: '32px 0 24px' }} />
+
+        <button
+          onClick={onReturn}
+          className="press-link"
+          style={{ background: 'transparent', cursor: 'pointer' }}
+        >
+          Return to the workbook
+          <span className="arrow">⟶</span>
+        </button>
+
+        <div className="press-fleuron mt-12">❦</div>
+      </div>
+    </div>
+  );
 }

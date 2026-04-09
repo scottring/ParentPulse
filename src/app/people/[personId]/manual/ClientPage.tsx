@@ -10,24 +10,38 @@ import { useFamily } from '@/hooks/useFamily';
 import { ManualChat } from '@/components/manual/ManualChat';
 import { useEquivalentManualIds } from '@/hooks/useEquivalentManualIds';
 import { isKidObserverEligible, computeAge } from '@/utils/age';
-import MainLayout from '@/components/layout/MainLayout';
-import { PersonManual } from '@/types/person-manual';
+import Navigation from '@/components/layout/Navigation';
+import SideNav from '@/components/layout/SideNav';
 
-const C = {
-  sage: '#7C9082',
-  sageBg: 'rgba(124,144,130,0.07)',
-  sageBorder: 'rgba(124,144,130,0.16)',
-  amber: '#C4A265',
-  amberBg: 'rgba(196,162,101,0.07)',
-  amberBorder: 'rgba(196,162,101,0.16)',
-  coral: '#C08070',
-  text: '#3A3530',
-  textMuted: '#7C7468',
-  textLight: '#9B9488',
-  border: '#EEEBE5',
-  cardBg: '#FAFAF7',
-};
+// ================================================================
+// Roman numeral helper
+// ================================================================
+function toRoman(n: number): string {
+  if (n < 1) return '';
+  const map: Array<[number, string]> = [
+    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
+    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
+    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
+  ];
+  let result = '';
+  let num = n;
+  for (const [value, numeral] of map) {
+    while (num >= value) {
+      result += numeral;
+      num -= value;
+    }
+  }
+  return result;
+}
 
+function spellCount(n: number): string {
+  const names = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+  return n >= 0 && n <= 10 ? names[n] : String(n);
+}
+
+// ================================================================
+// Main page
+// ================================================================
 export function ManualPage({ params }: { params: Promise<{ personId: string }> }) {
   const { personId } = use(params);
   const { user, loading: authLoading } = useAuth();
@@ -58,8 +72,8 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
     try {
       await inviteParent(inviteEmail.trim());
       setInviteSent(true);
-    } catch (err: any) {
-      setInviteError(err.message || 'Failed to send invite');
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : 'Failed to send invite');
     } finally {
       setInviting(false);
     }
@@ -67,21 +81,36 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
 
   if (loading) {
     return (
-      <MainLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="animate-spin w-8 h-8 border-2 border-t-transparent rounded-full" style={{ borderColor: C.sage, borderTopColor: 'transparent' }} />
+      <div className="relish-page">
+        <Navigation />
+        <SideNav />
+        <div className="pt-[64px]">
+          <div className="press-loading">Opening the volume&hellip;</div>
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
   if (!user || !person || !manual) {
     return (
-      <MainLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <p style={{ fontFamily: 'var(--font-parent-body)', color: C.textMuted, fontSize: '15px' }}>Manual not found.</p>
+      <div className="relish-page">
+        <Navigation />
+        <SideNav />
+        <div className="pt-[64px]">
+          <div className="press-binder">
+            <div className="press-empty" style={{ padding: '80px 20px' }}>
+              <p className="press-empty-title">This volume is missing.</p>
+              <p className="press-empty-body">
+                The manual may have been archived or is still being prepared.
+              </p>
+              <Link href="/family-manual" className="press-link">
+                Return to the family manual
+                <span className="arrow">⟶</span>
+              </Link>
+            </div>
+          </div>
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
@@ -89,259 +118,550 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
   const synth = manual.synthesizedContent;
   const topGap = synth?.gaps?.[0] || null;
 
-  // Top 3 strategies sorted by effectiveness
+  // Top strategies sorted by effectiveness
   const topStrategies = [...(manual.whatWorks || [])]
     .sort((a, b) => b.effectiveness - a.effectiveness)
-    .slice(0, 3);
+    .slice(0, 4);
 
-  // Top 2 triggers sorted by severity
+  // Top triggers sorted by severity
   const topTriggers = [...(manual.triggers || [])]
     .sort((a, b) => {
       const ord = { significant: 0, moderate: 1, mild: 2 };
       return (ord[a.severity] ?? 3) - (ord[b.severity] ?? 3);
     })
-    .slice(0, 2);
+    .slice(0, 3);
 
-  // Strength chips
+  // Strengths
   const strengths = manual.coreInfo?.strengths?.slice(0, 6) || [];
 
-  // Meta
+  // Patterns
+  const patterns = (manual.emergingPatterns || []).slice(0, 3);
+
+  // Perspective count
   const perspectiveCount =
     (selfContributions.length > 0 ? 1 : 0) +
     observerContributions.map((c) => c.contributorName).filter((n, i, a) => a.indexOf(n) === i).length;
 
-  const font = (size: number, weight = 400, color = C.text) => ({
-    fontFamily: 'var(--font-parent-body)' as const,
-    fontSize: size,
-    fontWeight: weight,
-    color,
-    lineHeight: 1.55,
-  });
-
-  const displayFont = (size: number, weight = 400, color = C.text) => ({
-    fontFamily: 'var(--font-parent-display)' as const,
-    fontSize: size,
-    fontWeight: weight,
-    color,
-    lineHeight: 1.2,
-  });
+  // Relationship label
+  const relationshipLabel =
+    person.relationshipType === 'self' ? 'Self'
+      : person.relationshipType === 'spouse' ? `Partner${age !== null ? ` · age ${toRoman(age).toLowerCase()}` : ''}`
+      : person.relationshipType === 'child' && age !== null ? `Child · age ${toRoman(age).toLowerCase()}`
+      : person.relationshipType === 'elderly_parent' ? 'Parent'
+      : person.relationshipType === 'sibling' ? 'Sibling'
+      : person.relationshipType === 'friend' ? 'Friend'
+      : 'Of the family';
 
   return (
-    <MainLayout>
-      <div className="max-w-2xl mx-auto px-6 py-8" style={{ minHeight: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }}>
+    <div className="relish-page">
+      <Navigation />
+      <SideNav />
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <Link href="/family-manual" style={font(12, 400, C.textLight)} className="hover:opacity-70">
-            &larr; Family Manual
-          </Link>
-          <div className="relative">
-            <button onClick={() => setShowMenu(!showMenu)} className="p-2 rounded-full hover:bg-black/5" style={{ color: C.textLight }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
-              </svg>
-            </button>
-            {showMenu && <DropdownMenu {...{ personId, person, isSelf, selfContributions, observerContributions, people, contributions, user, setShowMenu, setShowInvite }} />}
-          </div>
-        </div>
+      <div className="pt-[64px] pb-24">
+        <div className="relish-container" style={{ maxWidth: 1120 }}>
 
-        {/* Name */}
-        <h1 style={displayFont(36, 400)}>
-          {person.name}
-        </h1>
+          {/* The volume */}
+          <div className="press-volume mt-8 relative overflow-hidden">
 
-        {/* Meta line */}
-        <p style={{ ...font(13, 400, C.textLight), marginTop: 4, marginBottom: 24 }}>
-          {[
-            person.relationshipType === 'self' ? 'You' :
-              person.relationshipType === 'spouse' ? 'Partner' :
-              person.relationshipType === 'child' && age !== null ? `Age ${age}` :
-              person.relationshipType || '',
-            perspectiveCount > 0 ? `${perspectiveCount} perspective${perspectiveCount !== 1 ? 's' : ''}` : '',
-          ].filter(Boolean).join(' \u00b7 ')}
-        </p>
-
-        {/* Invite form */}
-        {showInvite && !inviteSent && (
-          <InviteForm {...{ person, inviteEmail, setInviteEmail, inviting, handleInvite, inviteError, setShowInvite }} />
-        )}
-        {inviteSent && (
-          <div className="rounded-xl p-4 mb-6" style={{ background: C.sageBg, border: `1px solid ${C.sageBorder}` }}>
-            <p style={font(14)}>Invite sent to <strong>{inviteEmail}</strong>.</p>
-          </div>
-        )}
-
-        {/* Overview */}
-        {synth?.overview && (
-          <p style={{ ...font(17, 400, C.text), lineHeight: 1.7, marginBottom: 28 }}>
-            {synth.overview}
-          </p>
-        )}
-
-        {/* Strengths chips */}
-        {strengths.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-8">
-            {strengths.map((s, i) => (
-              <span
-                key={i}
-                className="px-3 py-1.5 rounded-full"
-                style={{ ...font(13, 500, C.sage), background: C.sageBg, border: `1px solid ${C.sageBorder}` }}
-              >
-                {s}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Two columns: What Works + Handle With Care */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6 mb-8">
-          {/* What works */}
-          <div>
-            <p style={{ ...font(11, 600, C.textLight), letterSpacing: '0.06em', textTransform: 'uppercase' as const, marginBottom: 10 }}>
-              What works
-            </p>
-            {topStrategies.length > 0 ? (
-              <div className="space-y-3">
-                {topStrategies.map((s) => (
-                  <p key={s.id} style={font(15)}>
-                    {s.description}
-                  </p>
-                ))}
-              </div>
-            ) : (
-              <p style={font(14, 400, C.textLight)}>Not enough data yet.</p>
-            )}
-          </div>
-
-          {/* Handle with care */}
-          <div>
-            <p style={{ ...font(11, 600, C.textLight), letterSpacing: '0.06em', textTransform: 'uppercase' as const, marginBottom: 10 }}>
-              Handle with care
-            </p>
-            {topTriggers.length > 0 ? (
-              <div className="space-y-3">
-                {topTriggers.map((t) => (
-                  <div key={t.id}>
-                    <p style={font(15)}>{t.description}</p>
-                    {t.deescalationStrategy && (
-                      <p style={{ ...font(13, 400, C.sage), marginTop: 2 }}>
-                        {t.deescalationStrategy}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p style={font(14, 400, C.textLight)}>Not enough data yet.</p>
-            )}
-          </div>
-        </div>
-
-        {/* The #1 gap — the most interesting perspective difference */}
-        {topGap && (
-          <div className="rounded-xl px-5 py-4 mb-8" style={{ background: C.amberBg, border: `1px solid ${C.amberBorder}` }}>
-            <p style={{ ...font(11, 600, C.amber), letterSpacing: '0.06em', textTransform: 'uppercase' as const, marginBottom: 8 }}>
-              Where perspectives differ
-            </p>
-            <p style={{ ...font(16, 500, C.text), marginBottom: 8 }}>
-              {topGap.topic}
-            </p>
-            {topGap.selfPerspective && (
-              <div className="flex gap-2 items-start mb-2">
-                <div className="shrink-0 mt-1.5 w-1 h-4 rounded-full" style={{ background: C.sage, opacity: 0.5 }} />
-                <p style={font(14)}>
-                  <span style={{ color: C.textLight }}>Their words: </span>
-                  &ldquo;{topGap.selfPerspective}&rdquo;
-                </p>
-              </div>
-            )}
-            {topGap.observerPerspective && (
-              <div className="flex gap-2 items-start">
-                <div className="shrink-0 mt-1.5 w-1 h-4 rounded-full" style={{ background: C.amber, opacity: 0.5 }} />
-                <p style={font(14)}>
-                  <span style={{ color: C.textLight }}>Observer: </span>
-                  &ldquo;{topGap.observerPerspective}&rdquo;
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Spacer pushes chat to bottom */}
-        <div className="flex-1" />
-
-        {/* Chat — always at the bottom */}
-        {!chatOpen ? (
-          <button
-            onClick={() => setChatOpen(true)}
-            className="w-full flex items-center gap-3 px-5 py-4 rounded-xl hover:shadow-sm transition-all"
-            style={{ background: C.cardBg, border: `1px solid ${C.border}`, cursor: 'pointer' }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.textLight} strokeWidth="1.5">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
-            <span style={font(15, 400, C.textMuted)}>
-              Ask about {person.name}, or log something new...
-            </span>
-          </button>
-        ) : (
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <p style={{ ...font(11, 600, C.textLight), letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
-                Ask the Manual
-              </p>
-              <button onClick={() => setChatOpen(false)} style={font(11, 400, C.textLight)} className="hover:opacity-70">
-                Collapse
-              </button>
+            {/* Running header */}
+            <div className="press-running-header">
+              <span>The Family Manual</span>
+              <span className="sep">·</span>
+              <span>{person.name}</span>
             </div>
-            <ManualChat personId={personId} personName={person.name} manual={manual} />
-          </div>
-        )}
 
-        <div className="pb-8" />
+            {/* Back link + menu — in a thin strip */}
+            <div
+              className="flex items-center justify-between px-14 pt-2 pb-4"
+              style={{ borderBottom: '1px solid rgba(200,190,172,0.4)' }}
+            >
+              <Link
+                href="/family-manual"
+                className="press-link-sm"
+              >
+                ⟵ Return to the family manual
+              </Link>
+              <div className="relative">
+                <button
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="press-link-sm"
+                  style={{ background: 'transparent', cursor: 'pointer' }}
+                >
+                  Contribute ⟶
+                </button>
+                {showMenu && (
+                  <DropdownMenu
+                    personId={personId}
+                    person={person}
+                    isSelf={isSelf}
+                    selfContributions={selfContributions}
+                    observerContributions={observerContributions}
+                    people={people}
+                    contributions={contributions}
+                    user={user}
+                    setShowMenu={setShowMenu}
+                    setShowInvite={setShowInvite}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Two-page spread */}
+            <div className="spread-container relative">
+              <div className="press-gutter" aria-hidden="true" />
+
+              {/* ============ LEFT PAGE — Identity + Overview ============ */}
+              <div className="press-page-left" style={{ minHeight: 620 }}>
+
+                {/* Name as big italic display */}
+                <span className="press-chapter-label">Volume on</span>
+                <h1
+                  className="press-display-lg mt-2 mb-1"
+                  style={{ fontSize: 'clamp(40px, 5vw, 54px)' }}
+                >
+                  {person.name}
+                </h1>
+
+                <p
+                  className="press-marginalia"
+                  style={{ marginBottom: 18 }}
+                >
+                  {relationshipLabel}
+                  {perspectiveCount > 0 && (
+                    <> &middot; {spellCount(perspectiveCount)} {perspectiveCount === 1 ? 'perspective' : 'perspectives'} kept</>
+                  )}
+                </p>
+
+                <hr className="press-rule" />
+
+                {/* Invite form */}
+                {showInvite && !inviteSent && (
+                  <div className="mt-5 mb-6">
+                    <InviteForm
+                      person={person}
+                      inviteEmail={inviteEmail}
+                      setInviteEmail={setInviteEmail}
+                      inviting={inviting}
+                      handleInvite={handleInvite}
+                      inviteError={inviteError}
+                      setShowInvite={setShowInvite}
+                    />
+                  </div>
+                )}
+                {inviteSent && (
+                  <p className="press-body-italic mt-5 mb-6" style={{ fontSize: 15 }}>
+                    An invitation has been sent to <span className="press-sc">{inviteEmail}</span>.
+                  </p>
+                )}
+
+                {/* Overview */}
+                {synth?.overview ? (
+                  <div className="mt-6">
+                    <p className="press-body press-drop-cap" style={{ fontSize: 18 }}>
+                      {synth.overview}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-6">
+                    <p className="press-body-italic" style={{ fontSize: 17 }}>
+                      No overview yet. The synthesis gathers as
+                      perspectives are added to this volume.
+                    </p>
+                  </div>
+                )}
+
+                {/* Strengths as italic running phrase */}
+                {strengths.length > 0 && (
+                  <>
+                    <div className="press-fleuron mt-8 mb-4">❦</div>
+                    <span className="press-chapter-label">In their nature</span>
+                    <p
+                      className="press-body-italic mt-2"
+                      style={{ fontSize: 18, lineHeight: 1.55 }}
+                    >
+                      {strengths.slice(0, -1).map((s, i) => (
+                        <span key={i}>{s.toLowerCase()}, </span>
+                      ))}
+                      {strengths.length > 1 && <span>and </span>}
+                      <span>{strengths[strengths.length - 1].toLowerCase()}.</span>
+                    </p>
+                  </>
+                )}
+
+                {/* The gap — where perspectives differ */}
+                {topGap && (
+                  <>
+                    <div className="press-fleuron mt-8 mb-4">❦</div>
+                    <span className="press-chapter-label">Where perspectives differ</span>
+                    <h3
+                      className="press-display-sm mt-2"
+                      style={{ fontSize: 21, marginBottom: 10 }}
+                    >
+                      {topGap.topic}
+                    </h3>
+                    {topGap.selfPerspective && (
+                      <blockquote
+                        className="press-body-italic"
+                        style={{
+                          fontSize: 15,
+                          marginBottom: 10,
+                          paddingLeft: 18,
+                          borderLeft: '1px solid rgba(124,144,130,0.5)',
+                        }}
+                      >
+                        <span
+                          className="press-chapter-label"
+                          style={{ fontSize: 9, display: 'block', marginBottom: 3 }}
+                        >
+                          In their own words
+                        </span>
+                        &ldquo;{topGap.selfPerspective}&rdquo;
+                      </blockquote>
+                    )}
+                    {topGap.observerPerspective && (
+                      <blockquote
+                        className="press-body-italic"
+                        style={{
+                          fontSize: 15,
+                          paddingLeft: 18,
+                          borderLeft: '1px solid rgba(196,162,101,0.5)',
+                        }}
+                      >
+                        <span
+                          className="press-chapter-label"
+                          style={{ fontSize: 9, display: 'block', marginBottom: 3 }}
+                        >
+                          From the outside
+                        </span>
+                        &ldquo;{topGap.observerPerspective}&rdquo;
+                      </blockquote>
+                    )}
+                  </>
+                )}
+
+                {/* Folio */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: 56,
+                    bottom: 76,
+                    pointerEvents: 'none',
+                  }}
+                  className="press-folio"
+                >
+                  i
+                </div>
+              </div>
+
+              {/* ============ RIGHT PAGE — Working Chapters ============ */}
+              <div className="press-page-right" style={{ minHeight: 620 }}>
+
+                {/* Chapter: What works */}
+                <span className="press-chapter-label">Chapter I</span>
+                <h2 className="press-display-md mt-1 mb-4">What works</h2>
+
+                {topStrategies.length > 0 ? (
+                  <div>
+                    {topStrategies.map((s, i) => (
+                      <div
+                        key={s.id}
+                        style={{
+                          paddingBottom: 16,
+                          marginBottom: 16,
+                          borderBottom: i === topStrategies.length - 1
+                            ? 'none'
+                            : '1px solid rgba(200,190,172,0.4)',
+                        }}
+                      >
+                        <p
+                          className="press-body"
+                          style={{ fontSize: 17, textAlign: 'left' }}
+                        >
+                          {s.description}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="press-body-italic" style={{ fontSize: 15 }}>
+                    Not yet written. This chapter fills itself as you
+                    and others contribute observations.
+                  </p>
+                )}
+
+                {/* Chapter: Handle with care */}
+                <div className="press-fleuron mt-10 mb-6">❦</div>
+                <span className="press-chapter-label">Chapter II</span>
+                <h2 className="press-display-md mt-1 mb-4">Handle with care</h2>
+
+                {topTriggers.length > 0 ? (
+                  <div>
+                    {topTriggers.map((t, i) => (
+                      <div
+                        key={t.id}
+                        style={{
+                          paddingBottom: 16,
+                          marginBottom: 16,
+                          borderBottom: i === topTriggers.length - 1 && !patterns.length
+                            ? 'none'
+                            : '1px solid rgba(200,190,172,0.4)',
+                        }}
+                      >
+                        <p
+                          className="press-body"
+                          style={{ fontSize: 17, textAlign: 'left', marginBottom: 6 }}
+                        >
+                          {t.description}
+                        </p>
+                        {t.deescalationStrategy && (
+                          <p
+                            className="press-marginalia"
+                            style={{ fontSize: 14 }}
+                          >
+                            <em>{t.deescalationStrategy}</em>
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="press-body-italic" style={{ fontSize: 15 }}>
+                    Not yet written.
+                  </p>
+                )}
+
+                {/* Chapter: Patterns (if any) */}
+                {patterns.length > 0 && (
+                  <>
+                    <div className="press-fleuron mt-10 mb-6">❦</div>
+                    <span className="press-chapter-label">Chapter III</span>
+                    <h2 className="press-display-md mt-1 mb-4">Patterns observed</h2>
+                    <div>
+                      {patterns.map((p, i) => (
+                        <div
+                          key={p.id}
+                          style={{
+                            paddingBottom: 14,
+                            marginBottom: 14,
+                            borderBottom: i === patterns.length - 1
+                              ? 'none'
+                              : '1px solid rgba(200,190,172,0.4)',
+                          }}
+                        >
+                          <p
+                            className="press-body"
+                            style={{ fontSize: 17, textAlign: 'left' }}
+                          >
+                            {p.description}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* Folio */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    right: 56,
+                    bottom: 76,
+                    pointerEvents: 'none',
+                  }}
+                  className="press-folio"
+                >
+                  ii
+                </div>
+              </div>
+            </div>
+
+            {/* Chat section — below the spread, full width, editorial */}
+            <div
+              style={{
+                borderTop: '1px solid rgba(200,190,172,0.6)',
+                background: '#F2F0EB',
+                padding: '32px 56px 36px',
+                borderRadius: '0 0 3px 3px',
+              }}
+            >
+              {!chatOpen ? (
+                <div style={{ textAlign: 'center' }}>
+                  <span className="press-chapter-label">A question</span>
+                  <h3
+                    className="press-display-sm mt-2 mb-4"
+                    style={{ fontSize: 22 }}
+                  >
+                    Ask this manual anything
+                  </h3>
+                  <button
+                    onClick={() => setChatOpen(true)}
+                    className="press-link"
+                    style={{
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      fontSize: 18,
+                    }}
+                  >
+                    Open the conversation
+                    <span className="arrow">⟶</span>
+                  </button>
+                  <p
+                    className="press-marginalia mt-4"
+                    style={{ fontSize: 14, textAlign: 'center' }}
+                  >
+                    A companion grounded in everything above. Your own
+                    words feed back into the volume.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="press-chapter-label">
+                      Ask the manual
+                    </span>
+                    <button
+                      onClick={() => setChatOpen(false)}
+                      className="press-link-sm"
+                      style={{ background: 'transparent', cursor: 'pointer' }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                  <ManualChat
+                    personId={personId}
+                    personName={person.name}
+                    manual={manual}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
-    </MainLayout>
+    </div>
   );
 }
 
-// ==================== Extracted Components ====================
+// ================================================================
+// Dropdown menu — restyled as a quiet italic list
+// ================================================================
+interface DropdownMenuProps {
+  personId: string;
+  person: {
+    personId: string;
+    name: string;
+    canSelfContribute?: boolean;
+    relationshipType?: string;
+    linkedUserId?: string;
+  };
+  isSelf: boolean;
+  selfContributions: Array<{ contributorId?: string }>;
+  observerContributions: Array<{ contributorId?: string }>;
+  people: Array<{
+    personId: string;
+    name: string;
+    relationshipType?: string;
+    dateOfBirth?: { toDate: () => Date } | Date;
+  }>;
+  contributions: Array<{
+    relationshipToSubject?: string;
+    contributorName?: string;
+    status?: string;
+  }>;
+  user: { userId: string };
+  setShowMenu: (v: boolean) => void;
+  setShowInvite: (v: boolean) => void;
+}
 
-function DropdownMenu({ personId, person, isSelf, selfContributions, observerContributions, people, contributions, user, setShowMenu, setShowInvite }: any) {
-  const font13 = { fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: '#3A3530' } as const;
-  const itemClass = "block px-4 py-3 hover:bg-black/[0.03] transition-all";
+function DropdownMenu({
+  personId, person, isSelf, selfContributions, observerContributions,
+  people, contributions, user, setShowMenu, setShowInvite,
+}: DropdownMenuProps) {
+  const itemStyle: React.CSSProperties = {
+    display: 'block',
+    padding: '12px 20px',
+    fontFamily: 'var(--font-parent-display)',
+    fontSize: 15,
+    fontStyle: 'italic',
+    color: '#3A3530',
+    textDecoration: 'none',
+    borderBottom: '1px solid rgba(200,190,172,0.3)',
+    background: 'transparent',
+    width: '100%',
+    textAlign: 'left',
+    cursor: 'pointer',
+  };
 
   return (
     <div
-      className="absolute right-0 top-full mt-1 w-56 rounded-xl shadow-lg overflow-hidden z-10"
-      style={{ background: '#FAFAF7', border: '1px solid #EEEBE5' }}
+      className="absolute right-0 top-full mt-2 w-72 rounded z-10"
+      style={{
+        background: '#FAF8F3',
+        border: '1px solid rgba(200,190,172,0.6)',
+        boxShadow: '0 8px 32px rgba(60,48,28,0.12)',
+      }}
     >
       {isSelf && (
-        <Link href={`/people/${personId}/manual/self-onboard`} className={itemClass} style={font13} onClick={() => setShowMenu(false)}>
-          {selfContributions.length > 0 ? 'Revise your perspective' : 'Add your perspective'}
+        <Link
+          href={`/people/${personId}/manual/self-onboard`}
+          style={itemStyle}
+          onClick={() => setShowMenu(false)}
+        >
+          {selfContributions.length > 0 ? 'Revise your perspective' : 'Add your own perspective'}
         </Link>
       )}
       {!isSelf && (
-        <Link href={`/people/${personId}/manual/onboard`} className={itemClass} style={font13} onClick={() => setShowMenu(false)}>
-          {observerContributions.some((c: any) => c.contributorId === user.userId) ? 'Revise your observations' : 'Add your observations'}
+        <Link
+          href={`/people/${personId}/manual/onboard`}
+          style={itemStyle}
+          onClick={() => setShowMenu(false)}
+        >
+          {observerContributions.some((c) => c.contributorId === user.userId)
+            ? 'Revise your observations'
+            : 'Add your observations'}
         </Link>
       )}
       {person.canSelfContribute && person.relationshipType === 'child' && (
-        <Link href={`/people/${personId}/manual/kid-session`} className={itemClass} style={font13} onClick={() => setShowMenu(false)}>
+        <Link
+          href={`/people/${personId}/manual/kid-session`}
+          style={itemStyle}
+          onClick={() => setShowMenu(false)}
+        >
           Let {person.name} add their voice
         </Link>
       )}
       {!person.linkedUserId && person.canSelfContribute && person.relationshipType !== 'child' && (
-        <button onClick={() => { setShowInvite(true); setShowMenu(false); }} className={`${itemClass} w-full text-left`} style={font13}>
+        <button
+          onClick={() => { setShowInvite(true); setShowMenu(false); }}
+          style={itemStyle}
+        >
           Invite {person.name}
         </button>
       )}
       {people
-        .filter((p: any) => p.relationshipType === 'child' && p.personId !== personId && p.dateOfBirth && isKidObserverEligible(p.dateOfBirth))
-        .map((kid: any) => {
-          const kidContrib = contributions.find((c: any) => c.relationshipToSubject === 'child-observer' && c.contributorName === kid.name);
+        .filter((p) =>
+          p.relationshipType === 'child' &&
+          p.personId !== personId &&
+          p.dateOfBirth &&
+          isKidObserverEligible(p.dateOfBirth as Date),
+        )
+        .map((kid) => {
+          const kidContrib = contributions.find(
+            (c) => c.relationshipToSubject === 'child-observer' &&
+            c.contributorName === kid.name,
+          );
           return (
-            <Link key={kid.personId} href={`/people/${personId}/manual/kid-observer-session?observer=${kid.personId}`} className={itemClass} style={font13} onClick={() => setShowMenu(false)}>
-              {kidContrib?.status === 'complete' ? `${kid.name}\u2019s observations (revise)` : kidContrib?.status === 'draft' ? `${kid.name}\u2019s observations (continue)` : `Let ${kid.name} share about ${person.name}`}
+            <Link
+              key={kid.personId}
+              href={`/people/${personId}/manual/kid-observer-session?observer=${kid.personId}`}
+              style={itemStyle}
+              onClick={() => setShowMenu(false)}
+            >
+              {kidContrib?.status === 'complete'
+                ? `${kid.name}'s observations (revise)`
+                : kidContrib?.status === 'draft'
+                ? `${kid.name}'s observations (continue)`
+                : `Let ${kid.name} observe ${person.name}`}
             </Link>
           );
         })
@@ -350,27 +670,79 @@ function DropdownMenu({ personId, person, isSelf, selfContributions, observerCon
   );
 }
 
-function InviteForm({ person, inviteEmail, setInviteEmail, inviting, handleInvite, inviteError, setShowInvite }: any) {
+// ================================================================
+// Invite form — minimal, inline
+// ================================================================
+interface InviteFormProps {
+  person: { name: string };
+  inviteEmail: string;
+  setInviteEmail: (v: string) => void;
+  inviting: boolean;
+  handleInvite: () => void;
+  inviteError: string | null;
+  setShowInvite: (v: boolean) => void;
+}
+
+function InviteForm({
+  person, inviteEmail, setInviteEmail, inviting, handleInvite, inviteError, setShowInvite,
+}: InviteFormProps) {
   return (
-    <div className="rounded-xl p-5 mb-6" style={{ background: '#FAFAF7', border: '1px solid rgba(124,144,130,0.16)' }}>
-      <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#3A3530' }} className="mb-3">
+    <div
+      style={{
+        padding: '18px 20px',
+        borderTop: '1px solid rgba(200,190,172,0.5)',
+        borderBottom: '1px solid rgba(200,190,172,0.5)',
+      }}
+    >
+      <p className="press-body-italic mb-3" style={{ fontSize: 15 }}>
         Invite {person.name} to add their own perspective.
       </p>
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-baseline">
         <input
           type="email"
           value={inviteEmail}
-          onChange={(e: any) => setInviteEmail(e.target.value)}
-          placeholder={`${person.name}'s email`}
-          className="flex-1 px-3 py-2 rounded-lg focus:outline-none"
-          style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', border: '1px solid #EEEBE5', background: 'white', color: '#3A3530' }}
+          onChange={(e) => setInviteEmail(e.target.value)}
+          placeholder={`${person.name.toLowerCase()}@…`}
+          className="flex-1 focus:outline-none"
+          style={{
+            fontFamily: 'var(--font-parent-display)',
+            fontSize: 16,
+            fontStyle: 'italic',
+            color: '#3A3530',
+            background: 'transparent',
+            border: 0,
+            borderBottom: '1px solid rgba(200,190,172,0.6)',
+            padding: '6px 2px',
+          }}
         />
-        <button onClick={handleInvite} disabled={inviting || !inviteEmail.trim()} className="px-4 py-2 rounded-lg text-white disabled:opacity-50" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', backgroundColor: '#7C9082' }}>
-          {inviting ? '...' : 'Send'}
+        <button
+          onClick={handleInvite}
+          disabled={inviting || !inviteEmail.trim()}
+          className="press-link-sm"
+          style={{
+            background: 'transparent',
+            cursor: inviting ? 'wait' : 'pointer',
+            opacity: inviting ? 0.5 : 1,
+          }}
+        >
+          {inviting ? 'Sending…' : 'Send ⟶'}
         </button>
-        <button onClick={() => setShowInvite(false)} style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#9B9488' }}>Cancel</button>
+        <button
+          onClick={() => setShowInvite(false)}
+          className="press-link-sm"
+          style={{ background: 'transparent', cursor: 'pointer' }}
+        >
+          Cancel
+        </button>
       </div>
-      {inviteError && <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#dc2626' }} className="mt-2">{inviteError}</p>}
+      {inviteError && (
+        <p
+          className="press-marginalia mt-2"
+          style={{ color: '#C08070', fontSize: 14 }}
+        >
+          {inviteError}
+        </p>
+      )}
     </div>
   );
 }

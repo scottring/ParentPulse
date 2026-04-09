@@ -18,7 +18,7 @@ export function FamilyConstellation({ people, insights }: FamilyConstellationPro
     return (
       <div className="parchment-card p-8 text-center">
         <p className="storybook-heading text-xl mb-2">Your Family Tree</p>
-        <p className="storybook-body text-sm" style={{ color: '#7C7468' }}>
+        <p className="storybook-body text-sm" style={{ color: '#5F564B' }}>
           Add people to start growing your family tree.
         </p>
       </div>

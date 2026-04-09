@@ -183,7 +183,7 @@ export function AddStrategyModal({ isOpen, onClose, onSave, personName, type }: 
                 onClick={onClose}
                 disabled={saving}
                 className="px-6 py-3 rounded-full transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ border: '1px solid rgba(255,255,255,0.4)', color: '#5C5347', fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500 }}
+                style={{ border: '1px solid rgba(255,255,255,0.4)', color: '#5C5347', fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500 }}
               >
                 Cancel
               </button>
@@ -191,7 +191,7 @@ export function AddStrategyModal({ isOpen, onClose, onSave, personName, type }: 
                 type="submit"
                 disabled={saving}
                 className="px-8 py-3 rounded-full text-white transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: '#7C9082', fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500 }}
+                style={{ backgroundColor: '#7C9082', fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500 }}
               >
                 {saving ? 'Saving...' : 'Add Strategy'}
               </button>

@@ -130,7 +130,7 @@ export default function PersonCard({
               setShowMenu(!showMenu);
             }}
             className="p-2 rounded-full hover:bg-black/5 transition-colors"
-            style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
             data-testid="person-menu-button"
           >
             <EllipsisVerticalIcon className="w-5 h-5" />
@@ -180,7 +180,7 @@ export default function PersonCard({
               className="text-xs tracking-wide capitalize"
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                color: '#7C7468',
+                color: '#5F564B',
               }}
             >
               {person.relationshipType || 'Unspecified'}
@@ -208,7 +208,7 @@ export default function PersonCard({
                 <div className="flex justify-between items-center mb-1">
                   <span
                     className="text-xs"
-                    style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+                    style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
                   >
                     Progress
                   </span>
@@ -237,7 +237,7 @@ export default function PersonCard({
               {/* Summary line */}
               <p
                 className="text-xs mb-3"
-                style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}
+                style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
               >
                 {getSummaryLine()}
                 {summary.hasSynthesis && (
@@ -290,7 +290,7 @@ export default function PersonCard({
               </div>
               <div className="space-y-2 mb-6 pb-6" style={{ borderBottom: '1px solid rgba(124,144,130,0.15)' }}>
                 <div className="flex justify-between text-xs" style={{ fontFamily: 'var(--font-parent-body)' }}>
-                  <span style={{ color: '#8A8078' }}>Status:</span>
+                  <span style={{ color: '#6B6254' }}>Status:</span>
                   <span style={{ color: '#7C9082' }}>Uninitialized</span>
                 </div>
               </div>
@@ -313,14 +313,14 @@ export default function PersonCard({
           >
             <span
               className="text-xs"
-              style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
             >
               {expanded ? 'Less' : 'Details'}
             </span>
             {expanded ? (
-              <ChevronUpIcon className="w-3 h-3" style={{ color: '#8A8078' }} />
+              <ChevronUpIcon className="w-3 h-3" style={{ color: '#6B6254' }} />
             ) : (
-              <ChevronDownIcon className="w-3 h-3" style={{ color: '#8A8078' }} />
+              <ChevronDownIcon className="w-3 h-3" style={{ color: '#6B6254' }} />
             )}
           </button>
         )}
@@ -334,7 +334,7 @@ export default function PersonCard({
                 className="text-xs tracking-wide mb-3"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  color: '#8A8078',
+                  color: '#6B6254',
                   fontWeight: 500,
                 }}
               >
@@ -347,7 +347,7 @@ export default function PersonCard({
                 {summary.contributors.length === 0 && (
                   <p
                     className="text-xs"
-                    style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+                    style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
                   >
                     No contributors yet
                   </p>
@@ -361,7 +361,7 @@ export default function PersonCard({
                 className="text-xs tracking-wide mb-3"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  color: '#8A8078',
+                  color: '#6B6254',
                   fontWeight: 500,
                 }}
               >
@@ -443,7 +443,7 @@ function ContributorRow({ contributor }: { contributor: ContributorInfo }) {
             ? '#16a34a'
             : contributor.status === 'draft'
             ? '#7C9082'
-            : '#8A8078',
+            : '#6B6254',
           border: `1px solid ${
             contributor.status === 'complete'
               ? 'rgba(22,163,74,0.2)'
@@ -469,13 +469,13 @@ function ContributorRow({ contributor }: { contributor: ContributorInfo }) {
             className="px-1.5 py-0.5 text-xs rounded-full"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: '10px',
+              fontSize: '12px',
               background: contributor.perspectiveType === 'self'
                 ? 'rgba(59,130,246,0.08)'
                 : 'rgba(0,0,0,0.04)',
               color: contributor.perspectiveType === 'self'
                 ? '#3b82f6'
-                : '#7C7468',
+                : '#5F564B',
               border: `1px solid ${
                 contributor.perspectiveType === 'self'
                   ? 'rgba(59,130,246,0.15)'

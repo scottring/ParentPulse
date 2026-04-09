@@ -23,7 +23,7 @@ export function PerspectivePanel({ contributions }: Props) {
           border: '1px dashed rgba(138,128,120,0.2)',
         }}
       >
-        <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: '#7C7468' }}>
+        <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#5F564B' }}>
           No contributions yet. Invite someone to share their perspective.
         </p>
       </div>
@@ -58,7 +58,7 @@ export function PerspectivePanel({ contributions }: Props) {
       {current && (
         <div className="space-y-3">
           {/* Meta */}
-          <div className="flex items-center gap-3 text-[11px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#9ca3af' }}>
+          <div className="flex items-center gap-3 text-[11px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
             <span>{current.perspectiveType === 'self' ? 'Self-perspective' : `Observer (${current.relationshipToSubject})`}</span>
             <span>{current.updatedAt?.toDate?.()?.toLocaleDateString?.() ?? ''}</span>
           </div>
@@ -70,7 +70,7 @@ export function PerspectivePanel({ contributions }: Props) {
                 className="mb-2"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '12px',
+                  fontSize: '14px',
                   fontWeight: 600,
                   color: '#3A3530',
                   textTransform: 'capitalize',
@@ -84,7 +84,7 @@ export function PerspectivePanel({ contributions }: Props) {
                       <div key={qKey}>
                         <span
                           className="text-[10px] font-medium"
-                          style={{ fontFamily: 'var(--font-parent-body)', color: '#9ca3af' }}
+                          style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
                         >
                           {qKey.replace(/_/g, ' ')}
                         </span>

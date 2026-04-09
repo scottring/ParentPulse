@@ -91,14 +91,14 @@ export default function GrowthCard({ item, onFeedback }: GrowthCardProps) {
             <div className="flex items-center gap-2">
               <span
                 className="text-sm line-through"
-                style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+                style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
               >
                 {item.title}
               </span>
               {feedback && (
                 <span
                   className="text-xs"
-                  style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+                  style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
                 >
                   {feedback.reaction === 'loved_it' ? '\u2764\uFE0F' : '\u2705'}
                   {impactLabel && ` ${impactLabel.toLowerCase()}`}
@@ -147,14 +147,14 @@ export default function GrowthCard({ item, onFeedback }: GrowthCardProps) {
             {levelBadge}
             <span
               className="text-[10px]"
-              style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
             >
               {item.speed === 'ambient' ? 'Today' : 'This week'}
             </span>
             {item.estimatedMinutes && (
               <span
                 className="text-[10px]"
-                style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+                style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
               >
                 ~{item.estimatedMinutes} min
               </span>
@@ -186,7 +186,7 @@ export default function GrowthCard({ item, onFeedback }: GrowthCardProps) {
         <div className="pl-9 mb-4">
           <span
             className="text-[10px]"
-            style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
           >
             About: {item.targetPersonNames.join(' & ')}
           </span>
@@ -221,7 +221,7 @@ export default function GrowthCard({ item, onFeedback }: GrowthCardProps) {
         <div className="pl-9">
           <p
             className="text-[10px] mb-2"
-            style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
           >
             How much impact?
           </p>
@@ -258,7 +258,7 @@ export default function GrowthCard({ item, onFeedback }: GrowthCardProps) {
         <div className="pl-9">
           <span
             className="text-xs"
-            style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
           >
             Saving...
           </span>

@@ -31,7 +31,7 @@ const TREND_ARROWS: Record<string, { symbol: string; color: string }> = {
   improving: { symbol: '\u2197', color: '#16a34a' },
   stable: { symbol: '\u2192', color: '#d97706' },
   declining: { symbol: '\u2198', color: '#dc2626' },
-  insufficient_data: { symbol: '\u00B7', color: '#9ca3af' },
+  insufficient_data: { symbol: '\u00B7', color: '#5F564B' },
 };
 
 /**
@@ -97,8 +97,8 @@ export function ChildCard({ person, manual, assessments }: Props) {
                   <span
                     style={{
                       fontFamily: 'var(--font-parent-body)',
-                      fontSize: '11px',
-                      color: '#7C7468',
+                      fontSize: '15px',
+                      color: '#5F564B',
                     }}
                   >
                     Age {age}
@@ -127,12 +127,12 @@ export function ChildCard({ person, manual, assessments }: Props) {
       <div className="px-5 py-2">
         <div className="flex items-center justify-between mb-1">
           <span
-            style={{ fontFamily: 'var(--font-parent-body)', fontSize: '10px', color: '#7C7468', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}
+            style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#5F564B', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}
           >
             Visibility
           </span>
           <span
-            style={{ fontFamily: 'var(--font-parent-body)', fontSize: '11px', color: '#3A3530', fontWeight: 600 }}
+            style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#3A3530', fontWeight: 600 }}
           >
             {visibilityScore}%
           </span>
@@ -159,7 +159,7 @@ export function ChildCard({ person, manual, assessments }: Props) {
                   fontFamily: 'var(--font-parent-body)',
                   fontWeight: 500,
                   background: p.confidence === 'validated' ? 'rgba(22,163,74,0.08)' : p.confidence === 'consistent' ? 'rgba(217,119,6,0.08)' : 'rgba(156,163,175,0.1)',
-                  color: p.confidence === 'validated' ? '#166534' : p.confidence === 'consistent' ? '#92400e' : '#6b7280',
+                  color: p.confidence === 'validated' ? '#166534' : p.confidence === 'consistent' ? '#92400e' : '#4A4238',
                 }}
               >
                 {p.confidence}
@@ -184,7 +184,7 @@ export function ChildCard({ person, manual, assessments }: Props) {
               <span
                 key={d.name}
                 className="text-[10px] flex items-center gap-0.5"
-                style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}
+                style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
               >
                 <span style={{ color: t.color }}>{t.symbol}</span>
                 {d.name}
@@ -201,8 +201,8 @@ export function ChildCard({ person, manual, assessments }: Props) {
             className="line-clamp-2"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: '11px',
-              color: '#7C7468',
+              fontSize: '15px',
+              color: '#5F564B',
               lineHeight: 1.5,
               fontStyle: 'italic',
             }}

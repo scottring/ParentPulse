@@ -147,7 +147,7 @@ export default function SettingsPage() {
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'transparent' }}>
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-[#7C9082]/20 border-t-[#7C9082] rounded-full animate-spin"></div>
-          <p className="mt-4 text-sm" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>Loading settings...</p>
+          <p className="mt-4 text-sm" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>Loading settings...</p>
         </div>
       </div>
     );
@@ -185,7 +185,7 @@ export default function SettingsPage() {
                   Settings
                 </h1>
 
-                <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468' }}>
+                <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5F564B' }}>
                   Configure your preferences
                 </p>
               </div>

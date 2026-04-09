@@ -133,7 +133,7 @@ export default function OnboardingWizard({
           <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '20px', color: '#5C5347', marginBottom: '32px' }}>
             We'll ask you about 30 questions to understand {child.name} better. This will take about 10-15 minutes.
           </p>
-          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '18px', color: '#7C7468', marginBottom: '48px' }}>
+          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '18px', color: '#5F564B', marginBottom: '48px' }}>
             Your answers will help us create a personalized manual with strategies that work for your family.
           </p>
           <div className="flex gap-4 justify-center">
@@ -153,7 +153,7 @@ export default function OnboardingWizard({
             </button>
           </div>
           {answeredQuestions > 0 && (
-            <p className="mt-8" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>
+            <p className="mt-8" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
               You've already answered {answeredQuestions} questions. We'll pick up where you left off!
             </p>
           )}
@@ -222,7 +222,7 @@ export default function OnboardingWizard({
 
         {/* Navigation hints */}
         <div className="glass-card py-3" style={{ border: '1px solid rgba(255,255,255,0.4)', borderRadius: 0 }}>
-          <div className="max-w-4xl mx-auto px-4 text-center" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468' }}>
+          <div className="max-w-4xl mx-auto px-4 text-center" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5F564B' }}>
             Press <kbd className="px-2 py-1 rounded" style={{ background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.4)' }}>Enter</kbd> to continue
             {!currentQuestion.required && (
               <> or <kbd className="px-2 py-1 rounded" style={{ background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.4)' }}>Tab</kbd> then <kbd className="px-2 py-1 rounded" style={{ background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.4)' }}>Enter</kbd> to skip</>

@@ -52,7 +52,7 @@ export default function EventInjectionModal({
           <button
             onClick={onClose}
             className="text-[11px] px-2 py-0.5 rounded"
-            style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6B6B' }}
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#4A4238' }}
           >
             ✕
           </button>
@@ -60,7 +60,7 @@ export default function EventInjectionModal({
 
         <p
           className="text-[11px] mb-3"
-          style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6B6B' }}
+          style={{ fontFamily: 'var(--font-parent-body)', color: '#4A4238' }}
         >
           Tell us what happened. The AI will map it to your dimensions and decide whether to adjust your growth trajectory.
         </p>
@@ -88,7 +88,7 @@ export default function EventInjectionModal({
             className="text-[11px] px-4 py-2 rounded"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              color: '#6B6B6B',
+              color: '#4A4238',
               border: '1px solid #E8E3DC',
             }}
           >

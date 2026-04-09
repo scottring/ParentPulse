@@ -9,7 +9,7 @@ interface PerspectiveLightProps {
 }
 
 function StatusLight({ label, active, count }: PerspectiveLightProps) {
-  const color = active ? '#16a34a' : '#6b7280';
+  const color = active ? '#16a34a' : '#4A4238';
   return (
     <div className="flex items-center gap-2 px-3 py-1.5">
       <div
@@ -21,14 +21,14 @@ function StatusLight({ label, active, count }: PerspectiveLightProps) {
       />
       <span
         className="text-[11px] tracking-wide"
-        style={{ fontFamily: 'var(--font-parent-body)', color: active ? '#2C2C2C' : '#A3A3A3' }}
+        style={{ fontFamily: 'var(--font-parent-body)', color: active ? '#2C2C2C' : '#5F564B' }}
       >
         {label}
       </span>
       {count !== undefined && count > 0 && (
         <span
           className="text-[9px] ml-auto"
-          style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}
+          style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
         >
           {count}
         </span>

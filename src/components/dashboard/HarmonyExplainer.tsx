@@ -168,7 +168,7 @@ export default function HarmonyExplainer({ onClose, diagramRef }: HarmonyExplain
             <button
               onClick={onClose}
               className="text-[10px] tracking-wider"
-              style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
             >
               SKIP
             </button>
@@ -185,7 +185,7 @@ export default function HarmonyExplainer({ onClose, diagramRef }: HarmonyExplain
           </h3>
 
           {/* Description */}
-          <p className="text-[12px] leading-relaxed" style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6B6B' }}>
+          <p className="text-[12px] leading-relaxed" style={{ fontFamily: 'var(--font-parent-body)', color: '#4A4238' }}>
             {current.description}
           </p>
 
@@ -202,9 +202,9 @@ export default function HarmonyExplainer({ onClose, diagramRef }: HarmonyExplain
                     {d.label}
                   </span>
                   {current.details!.length === 3 && current.details![0].label.length < 10 ? (
-                    <span className="text-[9px] block mt-0.5" style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}>{d.desc}</span>
+                    <span className="text-[9px] block mt-0.5" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>{d.desc}</span>
                   ) : (
-                    <span className="text-[10px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6B6B' }}>{d.desc}</span>
+                    <span className="text-[10px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#4A4238' }}>{d.desc}</span>
                   )}
                 </div>
               ))}
@@ -217,7 +217,7 @@ export default function HarmonyExplainer({ onClose, diagramRef }: HarmonyExplain
               onClick={handlePrev}
               disabled={step === 0}
               className="text-[11px] font-bold px-4 py-2 rounded transition-all disabled:opacity-0"
-              style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6B6B', border: '1px solid #E8E3DC' }}
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#4A4238', border: '1px solid #E8E3DC' }}
             >
               &larr; BACK
             </button>

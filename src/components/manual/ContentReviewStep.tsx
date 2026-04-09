@@ -209,7 +209,7 @@ export function ContentReviewStep({ content, personName }: ContentReviewStepProp
                       backgroundColor: boundary.category === 'immovable' ? '#fee2e2' :
                                       boundary.category === 'negotiable' ? '#dbeafe' : '#f3f4f6',
                       color: boundary.category === 'immovable' ? '#991b1b' :
-                             boundary.category === 'negotiable' ? '#1e40af' : '#6b7280'
+                             boundary.category === 'negotiable' ? '#1e40af' : '#4A4238'
                     }}
                   >
                     {boundary.category}

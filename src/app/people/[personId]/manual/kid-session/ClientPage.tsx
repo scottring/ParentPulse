@@ -206,16 +206,18 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
   // Loading
   if (authLoading || personLoading || manualLoading || !draftLoaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-12 h-12 rounded-full" style={{ border: '3px solid #7C9082', borderTopColor: 'transparent' }} />
+      <div className="relish-page">
+        <div className="press-loading">Preparing the session&hellip;</div>
       </div>
     );
   }
 
   if (!user || !person || !manual) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '18px', color: '#5C5347' }}>Something went wrong. Ask a grown-up for help.</p>
+      <div className="relish-page">
+        <div className="press-loading">
+          Something went wrong — ask a grown-up for help.
+        </div>
       </div>
     );
   }
@@ -223,50 +225,118 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
   // Completion screen
   if (isComplete) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="text-6xl">&#127881;</div>
-          <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '28px', fontWeight: 700, color: '#3A3530' }}>Great job, {person.name}!</h2>
-          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '18px', color: '#5C5347' }}>Your answers have been saved. Thank you for sharing!</p>
+      <div className="relish-page">
+        <div className="pt-[64px] pb-24">
+          <div className="press-binder" style={{ maxWidth: 540 }}>
+            <div className="press-empty" style={{ padding: '80px 20px' }}>
+              <div style={{ fontSize: 52, marginBottom: 20 }}>🎉</div>
+              <span
+                className="press-chapter-label"
+                style={{ display: 'block', textAlign: 'center' }}
+              >
+                Kept
+              </span>
+              <h2
+                className="press-empty-title mt-4"
+                style={{ fontSize: 34 }}
+              >
+                Great work, {person.name}.
+              </h2>
+              <p className="press-empty-body">
+                Your answers have been saved. Thank you for sharing.
+              </p>
+              <div className="press-fleuron" style={{ fontSize: 18 }}>
+                ❦
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Start screen (parent-facing)
+  // Start screen (parent-facing briefing)
   if (!started) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="max-w-lg text-center space-y-6">
-          <div className="text-6xl">&#128218;</div>
-          <h1 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '28px', fontWeight: 700, color: '#3A3530' }}>
-            {person.name}&apos;s Portrait Session
-          </h1>
-          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '18px', fontWeight: 500, color: '#5C5347' }}>
-            Help {person.name} share how they see themselves and the family.
-          </p>
-          <p style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}>
-            Sit with {person.name} and let them answer these questions.
-            Read the questions aloud if needed. There are {totalQuestions} questions
-            across {sections.length} sections — it takes about 10 minutes.
-          </p>
-          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468' }}>
-            Answers save automatically. You can stop anytime and come back later.
-          </p>
-          <button
-            onClick={() => setStarted(true)}
-            className="px-8 py-4 text-white text-xl font-bold rounded-full hover:opacity-90 transition-all shadow-lg"
-            style={{ fontFamily: 'var(--font-parent-body)', backgroundColor: '#7C9082' }}
-          >
-            Let&apos;s Go!
-          </button>
-          <div>
-            <button
-              onClick={() => router.push(`/people/${personId}/manual`)}
-              style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#8A8078' }}
+      <div className="relish-page">
+        <div className="pt-[64px] pb-24">
+          <div className="press-binder" style={{ maxWidth: 640 }}>
+            <div className="press-running-header" style={{ paddingTop: 28 }}>
+              <span>{person.name}&rsquo;s session</span>
+              <span className="sep">·</span>
+              <span>A note for the grown-up</span>
+            </div>
+
+            <div style={{ padding: '40px 40px 20px', textAlign: 'center' }}>
+              <div style={{ fontSize: 44, marginBottom: 18 }}>📖</div>
+              <span className="press-chapter-label">For the grown-up</span>
+              <h1
+                className="press-binder-title mt-2"
+                style={{ fontSize: 'clamp(34px, 5vw, 44px)' }}
+              >
+                {person.name}&rsquo;s session
+              </h1>
+              <p className="press-binder-sub">
+                Help {person.name} share how they see themselves and
+                the people in the family.
+              </p>
+            </div>
+
+            <hr className="press-rule-short" style={{ margin: '0 auto 28px' }} />
+
+            <div style={{ padding: '0 40px' }}>
+              <p
+                className="press-body-italic"
+                style={{ fontSize: 17, textAlign: 'center', color: '#5C5347' }}
+              >
+                Sit with {person.name} and let them answer in their
+                own words. Read the questions aloud if they need it.
+                There are {totalQuestions} questions across{' '}
+                {sections.length} sections — about ten minutes
+                altogether.
+              </p>
+              <p
+                className="press-marginalia"
+                style={{
+                  fontSize: 15,
+                  textAlign: 'center',
+                  marginTop: 20,
+                  color: '#746856',
+                }}
+              >
+                Answers save automatically. You can stop any time and
+                come back later.
+              </p>
+            </div>
+
+            <hr className="press-rule" style={{ margin: '36px 40px 24px' }} />
+
+            <div
+              className="flex flex-col items-center"
+              style={{ gap: 20, padding: '0 20px 40px' }}
             >
-              Not now
-            </button>
+              <button
+                onClick={() => setStarted(true)}
+                className="press-link"
+                style={{
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontSize: 22,
+                }}
+              >
+                Begin the session
+                <span className="arrow">⟶</span>
+              </button>
+              <button
+                onClick={() => router.push(`/people/${personId}/manual`)}
+                className="press-link-sm"
+                style={{ background: 'transparent', cursor: 'pointer' }}
+              >
+                Not now
+              </button>
+            </div>
+
+            <div className="press-fleuron">❦</div>
           </div>
         </div>
       </div>
@@ -276,27 +346,38 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
   const currentAnswer = answers[currentSection.id]?.[currentQuestion.id];
 
   const demoBanner = isDemo ? (
-    <div className="max-w-2xl mx-auto px-4 pt-4">
-      <div
-        className="flex items-center justify-between px-4 py-2 rounded-lg text-[11px]"
-        style={{ fontFamily: 'var(--font-parent-body)', background: 'rgba(124,144,130,0.08)', border: '1px solid rgba(124,144,130,0.2)' }}
-      >
-        <div className="flex items-center gap-3">
-          <span style={{ color: '#7C9082', fontWeight: 700 }}>DEMO</span>
-          <span style={{ color: '#7C7468' }}>
-            Parent <strong style={{ color: '#3A3530' }}>{user?.name}</strong> supervising{' '}
-            <strong style={{ color: '#7C9082' }}>{person.name}</strong>&apos;s session
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={handleFillAll}
-          className="px-3 py-1 rounded-full font-medium transition-all hover:scale-105"
-          style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082', color: 'white', fontSize: '10px', fontWeight: 500 }}
+    <div
+      className="flex items-center justify-between"
+      style={{
+        padding: '12px 18px',
+        borderLeft: '2px solid rgba(124,144,130,0.5)',
+        background: 'rgba(124,144,130,0.05)',
+      }}
+    >
+      <p className="press-marginalia" style={{ fontSize: 14 }}>
+        <span className="press-sc" style={{ fontSize: 14 }}>DEMO</span> &nbsp;
+        Grown-up{' '}
+        <strong
+          style={{ color: '#3A3530', fontStyle: 'normal', fontWeight: 500 }}
         >
-          Fill All
-        </button>
-      </div>
+          {user?.name}
+        </strong>{' '}
+        supervising{' '}
+        <strong
+          style={{ color: '#2D5F5D', fontStyle: 'normal', fontWeight: 500 }}
+        >
+          {person.name}
+        </strong>
+        &rsquo;s session
+      </p>
+      <button
+        type="button"
+        onClick={handleFillAll}
+        className="press-link-sm"
+        style={{ background: 'transparent', cursor: 'pointer' }}
+      >
+        Fill all ⟶
+      </button>
     </div>
   ) : null;
 

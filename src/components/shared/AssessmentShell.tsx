@@ -1,14 +1,35 @@
 'use client';
 
 import { ReactNode } from 'react';
-import AuraPhaseIndicator, { AuraPhase } from '@/components/layout/AuraPhaseIndicator';
-import { progressColor } from '@/utils/progress-color';
+import Navigation from '@/components/layout/Navigation';
+import SideNav from '@/components/layout/SideNav';
 
 export type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error';
 
+// ================================================================
+// Roman numeral helper
+// ================================================================
+function toRoman(n: number): string {
+  if (n < 1) return '';
+  const map: Array<[number, string]> = [
+    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
+    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
+    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
+  ];
+  let result = '';
+  let num = n;
+  for (const [value, numeral] of map) {
+    while (num >= value) {
+      result += numeral;
+      num -= value;
+    }
+  }
+  return result;
+}
+
 export interface AssessmentShellProps {
   // Context
-  phase?: AuraPhase;
+  phase?: string;
   personName: string;
   sectionName: string;
   sectionDescription: string;
@@ -16,9 +37,9 @@ export interface AssessmentShellProps {
   sectionEmoji?: string;
 
   // Header
-  flowLabel: string; // e.g. "OBSERVER ONBOARDING", "SELF-ONBOARDING"
-  flowTitle: string; // e.g. "About Iris", "Tell Us About Yourself"
-  accentColor?: string; // e.g. 'blue' for observer, 'amber' for self, 'blue' for kid
+  flowLabel: string;
+  flowTitle: string;
+  accentColor?: string;
 
   // Progress
   currentSection: number;
@@ -50,54 +71,37 @@ export interface AssessmentShellProps {
   variant?: 'adult' | 'kid';
 }
 
-const ACCENT_COLORS: Record<string, { bar: string; label: string; hint: { bg: string; border: string; text: string } }> = {
-  blue: {
-    bar: 'bg-[#7C9082]',
-    label: 'text-[#7C9082]',
-    hint: { bg: 'bg-[#7C9082]/10', border: 'border-[#7C9082]/30', text: 'text-[#3A3530]' },
-  },
-  amber: {
-    bar: 'bg-[#7C9082]',
-    label: 'text-[#7C9082]',
-    hint: { bg: 'bg-[#7C9082]/10', border: 'border-[#7C9082]/30', text: 'text-[#3A3530]' },
-  },
-  sage: {
-    bar: 'bg-[#7C9082]',
-    label: 'text-[#7C9082]',
-    hint: { bg: 'bg-[#7C9082]/10', border: 'border-[#7C9082]/30', text: 'text-[#3A3530]' },
-  },
-};
+function saveStatusLabel(status: SaveStatus): string {
+  switch (status) {
+    case 'saved': return 'saved';
+    case 'saving': return 'saving…';
+    case 'error': return 'save failed — will retry';
+    default: return 'unsaved';
+  }
+}
 
-function saveStatusDot(status: SaveStatus) {
-  const cls =
-    status === 'saved' ? 'bg-green-500' :
-    status === 'saving' ? 'bg-[#7C9082] animate-pulse' :
-    status === 'error' ? 'bg-red-500' :
-    'bg-[#7C9082]/70';
-  const title =
-    status === 'saved' ? 'All changes saved' :
-    status === 'saving' ? 'Saving...' :
-    status === 'error' ? 'Save failed — will retry' :
-    'Unsaved changes';
-  return <span className={`inline-block w-2 h-2 rounded-full ${cls}`} title={title} />;
+function saveStatusColor(status: SaveStatus): string {
+  switch (status) {
+    case 'saved': return '#7C9082';
+    case 'saving': return '#C4A265';
+    case 'error': return '#C08070';
+    default: return '#7A6E5C';
+  }
 }
 
 function estimateTimeRemaining(remainingQuestions: number): string {
   const minutes = Math.ceil(remainingQuestions * 1.5);
-  if (minutes <= 1) return '~1 min left';
-  if (minutes >= 60) return `~${Math.round(minutes / 60)} hr left`;
-  return `~${minutes} min left`;
+  if (minutes <= 1) return 'about a minute';
+  if (minutes >= 60) return `about ${Math.round(minutes / 60)} hours`;
+  return `about ${minutes} minutes`;
 }
 
 export default function AssessmentShell({
-  phase = 'assess',
   personName,
   sectionName,
   sectionDescription,
-  sectionEmoji,
   flowLabel,
   flowTitle,
-  accentColor = 'blue',
   currentSection,
   totalSections,
   currentQuestion,
@@ -114,186 +118,212 @@ export default function AssessmentShell({
   canSkip = false,
   variant = 'adult',
 }: AssessmentShellProps) {
-  const accent = ACCENT_COLORS[accentColor] || ACCENT_COLORS.blue;
   const remainingQuestions = totalQuestions - answeredQuestions;
-  const progressRatio = totalQuestions > 0 ? answeredQuestions / totalQuestions : 0;
 
-  // Kid variant — simpler, more playful header
+  // ==============================================================
+  // Kid variant — simpler, warmer
+  // ==============================================================
   if (variant === 'kid') {
     return (
-      <div className="min-h-screen">
-        {/* Minimal header */}
-        <div className="flex items-center justify-between px-6 py-3 glass-card" style={{ border: '1px solid rgba(255,255,255,0.4)' }}>
-          <button
-            onClick={onSaveAndExit}
-            className="text-2xl" style={{ color: '#8A8078' }}
-          >
-            &times;
-          </button>
-          <div className="text-center">
-            <span className="text-sm font-bold" style={{ fontFamily: 'var(--font-parent-display)', color: '#7C9082' }}>
-              {personName}&apos;s Answers
-            </span>
-            <div className="w-32 h-2 mt-1 mx-auto rounded-full" style={{ backgroundColor: 'rgba(124,144,130,0.15)' }}>
-              <div
-                className="h-full rounded-full transition-all"
-                style={{ width: `${progressRatio * 100}%`, backgroundColor: '#7C9082' }}
-              />
+      <div className="relish-page">
+        <Navigation />
+        <SideNav />
+
+        <div className="pt-[64px] pb-24">
+          <div className="press-binder" style={{ maxWidth: 560 }}>
+
+            {/* Running header */}
+            <div className="press-running-header" style={{ paddingTop: 28 }}>
+              <span>{personName}&rsquo;s session</span>
+              <span className="sep">·</span>
+              <span>{answeredQuestions} of {totalQuestions}</span>
+            </div>
+
+            {/* Close */}
+            <div style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 12 }}>
+              <button
+                onClick={onSaveAndExit}
+                className="press-link-sm"
+                style={{ background: 'transparent', cursor: 'pointer' }}
+              >
+                ⟵ Save and close
+              </button>
+            </div>
+
+            {/* Title */}
+            <div className="press-binder-head" style={{ paddingBottom: 20 }}>
+              <h1 className="press-binder-title" style={{ fontSize: 'clamp(34px, 5vw, 42px)' }}>
+                {sectionName}
+              </h1>
+              <p className="press-binder-sub" style={{ fontSize: 15 }}>
+                {sectionDescription.replace(/\{\{personName\}\}/g, personName)}
+              </p>
+            </div>
+
+            {demoBannerSlot}
+
+            <div style={{ padding: '24px 32px 40px' }}>
+              {children}
             </div>
           </div>
-          <span className="text-sm" style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}>
-            {answeredQuestions}/{totalQuestions}
-          </span>
-        </div>
-
-        {/* Phase indicator */}
-        <div className="flex justify-center pt-4">
-          <AuraPhaseIndicator phase={phase} compact />
-        </div>
-
-        {/* Demo banner */}
-        {demoBannerSlot}
-
-        {/* Section context */}
-        <div className="max-w-lg mx-auto px-6 pt-4">
-          {sectionEmoji && (
-            <div className="text-center text-2xl mb-2">{sectionEmoji}</div>
-          )}
-          <p className="text-center text-sm font-medium" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>
-            {sectionDescription.replace(/\{\{personName\}\}/g, personName)}
-          </p>
-        </div>
-
-        {/* Question content */}
-        <div className="max-w-lg mx-auto px-6 py-6">
-          {children}
         </div>
       </div>
     );
   }
 
-  // Adult variant — full header with progress tracking
+  // ==============================================================
+  // Adult variant — press-styled, editorial
+  // ==============================================================
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <div className="glass-card" style={{ border: '1px solid rgba(255,255,255,0.4)', borderRadius: 0 }}>
-        <div className="max-w-3xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={onSaveAndExit}
-                className="transition-colors"
-                style={{ color: '#8A8078' }}
-                title="Save and exit"
+    <div className="relish-page">
+      <Navigation />
+      <SideNav />
+
+      <div className="pt-[64px] pb-24">
+        <div className="press-binder" style={{ maxWidth: 720 }}>
+
+          {/* Running header */}
+          <div className="press-running-header" style={{ paddingTop: 28 }}>
+            <span>{flowLabel.toLowerCase()}</span>
+            <span className="sep">·</span>
+            <span>{flowTitle}</span>
+            <span className="sep">·</span>
+            <span>
+              Section {toRoman(currentSection + 1).toLowerCase()} of {toRoman(totalSections).toLowerCase()}
+            </span>
+          </div>
+
+          {/* Save & exit */}
+          <div style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 6 }}>
+            <button
+              onClick={onSaveAndExit}
+              className="press-link-sm"
+              style={{ background: 'transparent', cursor: 'pointer' }}
+            >
+              ⟵ Save and close the volume
+            </button>
+          </div>
+
+          {/* Section indicator — a row of thin hairlines, one per section */}
+          <div
+            className="flex gap-1.5"
+            style={{ padding: '20px 56px 16px' }}
+          >
+            {Array.from({ length: totalSections }).map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  flex: 1,
+                  height: 1.5,
+                  background: i < currentSection
+                    ? '#7C9082'
+                    : i === currentSection
+                      ? 'linear-gradient(to right, #7C9082 60%, rgba(124,144,130,0.25))'
+                      : 'rgba(200,190,172,0.4)',
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Section name + progress line */}
+          <div style={{ padding: '0 56px 12px', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+            <div>
+              <span className="press-chapter-label">
+                Chapter {toRoman(currentSection + 1).toUpperCase()}
+              </span>
+              <h2
+                className="press-display-md mt-1"
+                style={{ fontSize: 28 }}
               >
-                <span className="text-xl">&larr;</span>
-              </button>
-              <div>
-                <span className={`text-xs ${accent.label} font-medium tracking-wider`} style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500 }}>
-                  {flowLabel}
-                </span>
-                <h1 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '22px', color: '#3A3530', fontWeight: 600 }}>
-                  {flowTitle}
-                </h1>
-              </div>
+                {sectionName}
+              </h2>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="text-xs flex items-center justify-end gap-2" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>
-                  <span>{answeredQuestions} / {totalQuestions} answered</span>
-                  {saveStatus && saveStatusDot(saveStatus)}
-                </div>
-                {/* Dual progress: section track + question track */}
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="w-32 h-2 rounded-full" style={{ backgroundColor: 'rgba(124,144,130,0.15)' }}>
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: `${progressRatio * 100}%`,
-                        backgroundColor: '#7C9082',
-                      }}
-                    />
-                  </div>
-                  <span className="text-[10px] whitespace-nowrap" style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}>
-                    {estimateTimeRemaining(remainingQuestions)}
-                  </span>
-                </div>
+            <div style={{ textAlign: 'right' }}>
+              <div
+                className="press-marginalia"
+                style={{ fontSize: 14 }}
+              >
+                {answeredQuestions} of {totalQuestions} kept
               </div>
-              {onSaveAndExit && (
-                <button
-                  onClick={onSaveAndExit}
-                  className="px-4 py-2 rounded-full text-xs font-medium transition-all"
-                  style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.3)' }}
+              {saveStatus && (
+                <div
+                  className="press-marginalia mt-1"
+                  style={{ fontSize: 15, color: saveStatusColor(saveStatus) }}
                 >
-                  Save &amp; Exit
-                </button>
+                  — {saveStatusLabel(saveStatus)}
+                </div>
+              )}
+              {remainingQuestions > 0 && (
+                <div
+                  className="press-marginalia mt-1"
+                  style={{ fontSize: 15 }}
+                >
+                  {estimateTimeRemaining(remainingQuestions)} left
+                </div>
               )}
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Phase indicator */}
-      <div className="flex justify-center pt-4">
-        <AuraPhaseIndicator phase={phase} compact />
-      </div>
-
-      {/* Demo banner */}
-      {demoBannerSlot}
-
-      {/* Section indicator bars */}
-      <div className="max-w-3xl mx-auto px-6 pt-4">
-        <div className="flex gap-2 mb-6">
-          {Array.from({ length: totalSections }).map((_, i) => (
-            <div
-              key={i}
-              className="h-1 flex-1 rounded-full"
-              style={{ backgroundColor: i <= currentSection ? '#7C9082' : 'rgba(124,144,130,0.15)' }}
-            />
-          ))}
-        </div>
-
-        {/* Section name + description */}
-        <div className="flex items-center gap-2">
-          {sectionEmoji && <span className="text-lg">{sectionEmoji}</span>}
-          <span className={`text-xs ${accent.label} font-medium tracking-wider`} style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500 }}>
-            {sectionName.toUpperCase()}
-          </span>
-        </div>
-        <p className="text-sm mt-1" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>
-          {sectionDescription.replace(/\{\{personName\}\}/g, personName)}
-        </p>
-
-        {/* First question hint */}
-        {firstQuestionHint && currentSection === 0 && currentQuestion === 0 && (
-          <div className={`mt-4 p-3 rounded-lg ${accent.hint.bg} border ${accent.hint.border}`}>
-            <p className={`text-xs ${accent.hint.text}`} style={{ fontFamily: 'var(--font-parent-body)' }}>
-              {firstQuestionHint}
+          {/* Section description */}
+          <div style={{ padding: '0 56px' }}>
+            <p className="press-body-italic" style={{ fontSize: 15 }}>
+              {sectionDescription.replace(/\{\{personName\}\}/g, personName)}
             </p>
           </div>
-        )}
 
-        {/* Extra header content (e.g. AI-generated indicator) */}
-        {headerExtraSlot}
-      </div>
+          {/* Demo banner */}
+          {demoBannerSlot && (
+            <div style={{ padding: '16px 56px 0' }}>
+              {demoBannerSlot}
+            </div>
+          )}
 
-      {/* Question content */}
-      <div className="max-w-3xl mx-auto px-6 py-8">
-        {children}
+          {/* First question hint */}
+          {firstQuestionHint && currentSection === 0 && currentQuestion === 0 && (
+            <div style={{ padding: '20px 56px 0' }}>
+              <div
+                className="press-marginalia"
+                style={{
+                  fontSize: 15,
+                  fontStyle: 'italic',
+                  padding: '14px 18px',
+                  borderLeft: '2px solid rgba(124,144,130,0.45)',
+                  background: 'rgba(124,144,130,0.05)',
+                }}
+              >
+                {firstQuestionHint}
+              </div>
+            </div>
+          )}
 
-        {/* Navigation */}
-        {navigationSlot}
+          {/* Extra header content */}
+          {headerExtraSlot && (
+            <div style={{ padding: '16px 56px 0' }}>
+              {headerExtraSlot}
+            </div>
+          )}
 
-        {/* Skip section */}
-        {canSkip && currentQuestion === 0 && (
-          <button
-            onClick={onSkipSection}
-            className="mt-4 text-xs transition-colors"
-            style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
-          >
-            Skip this section &rarr;
-          </button>
-        )}
+          <hr className="press-rule" style={{ margin: '28px 56px 20px', width: 'auto' }} />
+
+          {/* Question content */}
+          <div style={{ padding: '12px 56px 40px' }}>
+            {children}
+            {navigationSlot}
+            {canSkip && currentQuestion === 0 && (
+              <div style={{ marginTop: 16, textAlign: 'center' }}>
+                <button
+                  onClick={onSkipSection}
+                  className="press-link-sm"
+                  style={{ background: 'transparent', cursor: 'pointer' }}
+                >
+                  Skip this chapter ⟶
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="press-fleuron">❦</div>
+        </div>
       </div>
     </div>
   );

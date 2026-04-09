@@ -73,7 +73,7 @@ export default function StageCard({
             </h3>
             <p
               className="text-[10px] mt-0.5"
-              style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
             >
               {display.description}
             </p>
@@ -97,7 +97,7 @@ export default function StageCard({
       {/* Philosophy quote */}
       <p
         className="text-[10px] italic mb-4"
-        style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+        style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
       >
         &ldquo;{display.philosophy}&rdquo;
       </p>
@@ -116,7 +116,7 @@ export default function StageCard({
               <div key={dp.domain} className="flex items-center gap-3">
                 <span
                   className="text-[9px] font-medium tracking-wider w-14"
-                  style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}
+                  style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
                 >
                   {DOMAIN_LABELS[dp.domain]}
                 </span>
@@ -136,7 +136,7 @@ export default function StageCard({
                 </div>
                 <span
                   className="text-[8px] w-8 text-right"
-                  style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+                  style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
                 >
                   {Math.round(domainProgress * 100)}%
                 </span>
@@ -200,7 +200,7 @@ export default function StageCard({
         <div className="mt-3 pt-3" style={{ borderTop: '1px solid #E8E3DC' }}>
           <span
             className="text-[8px] font-medium tracking-widest block mb-1.5"
-            style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
           >
             TO ADVANCE
           </span>
@@ -213,7 +213,7 @@ export default function StageCard({
               <p
                 key={i}
                 className="text-[9px] mt-0.5"
-                style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}
+                style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
               >
                 &bull; {req}
               </p>
@@ -226,7 +226,7 @@ export default function StageCard({
         <div className="text-center py-2">
           <span
             className="text-[9px]"
-            style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
           >
             Complete {stageOrder[stageIndex - 1]?.toUpperCase()} to unlock
           </span>

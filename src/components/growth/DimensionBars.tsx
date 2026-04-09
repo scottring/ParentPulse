@@ -31,7 +31,7 @@ export default function DimensionBars({ assessments, activeArcDimensionId }: Dim
     return (
       <p
         className="text-xs italic"
-        style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+        style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
       >
         No portraits yet — start a growth arc to begin measuring
       </p>
@@ -60,7 +60,7 @@ export default function DimensionBars({ assessments, activeArcDimensionId }: Dim
                 style={{
                   fontFamily: 'var(--font-parent-body)',
                   fontWeight: isActiveArc ? 600 : 400,
-                  color: isActiveArc ? '#3A3530' : '#8A8078',
+                  color: isActiveArc ? '#3A3530' : '#6B6254',
                 }}
               >
                 {name}

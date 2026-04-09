@@ -39,7 +39,7 @@ export function PortraitHeader({ person, manual }: Props) {
   const freshnessColors: Record<FreshnessStatus, string> = {
     fresh: '#16a34a',
     aging: '#d97706',
-    stale: '#9ca3af',
+    stale: '#5F564B',
   };
 
   return (
@@ -80,7 +80,7 @@ export function PortraitHeader({ person, manual }: Props) {
             {age !== null && (
               <span
                 className="text-[11px]"
-                style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}
+                style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
               >
                 Age {age}
               </span>
@@ -103,7 +103,7 @@ export function PortraitHeader({ person, manual }: Props) {
               style={{ fontFamily: 'var(--font-parent-body)' }}
             >
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: freshnessColors[freshness] }} />
-              <span style={{ color: '#7C7468' }}>{freshLabel}</span>
+              <span style={{ color: '#5F564B' }}>{freshLabel}</span>
             </span>
           </div>
         </div>

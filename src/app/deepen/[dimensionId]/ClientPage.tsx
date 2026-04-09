@@ -14,7 +14,6 @@ import {
 } from '@/config/relationship-dimensions';
 import Navigation from '@/components/layout/Navigation';
 import SideNav from '@/components/layout/SideNav';
-import WeatherBackground from '@/components/dashboard/WeatherBackground';
 import AuraPhaseIndicator from '@/components/layout/AuraPhaseIndicator';
 import { scoreToClimate } from '@/lib/climate-engine';
 import type { ClimateState } from '@/lib/climate-engine';
@@ -138,17 +137,17 @@ export default function DeepenPage() {
   // Loading
   if (authLoading || state === 'loading') {
     return (
-      <WeatherBackground climate="mostly_sunny">
+      <div className="relish-page">
         <div className="min-h-screen flex items-center justify-center">
           <div className="animate-spin w-8 h-8 rounded-full border-2 border-t-transparent border-white/40" />
         </div>
-      </WeatherBackground>
+      </div>
     );
   }
 
   if (!user || !dimension) {
     return (
-      <WeatherBackground climate="mostly_sunny">
+      <div className="relish-page">
         <Navigation />
         <SideNav />
         <div className="min-h-screen pt-[60px] flex items-center justify-center">
@@ -175,7 +174,7 @@ export default function DeepenPage() {
             </Link>
           </div>
         </div>
-      </WeatherBackground>
+      </div>
     );
   }
 
@@ -200,7 +199,7 @@ export default function DeepenPage() {
   const newLabel = scoreToQualitativeBand(blendedScore);
 
   return (
-    <WeatherBackground climate={climateState}>
+    <div className="relish-page">
       <Navigation />
       <SideNav />
 
@@ -220,7 +219,7 @@ export default function DeepenPage() {
                   className="block mb-1"
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '10px',
+                    fontSize: '12px',
                     fontWeight: 600,
                     letterSpacing: '0.12em',
                     textTransform: 'uppercase',
@@ -462,6 +461,6 @@ export default function DeepenPage() {
           )}
         </div>
       </div>
-    </WeatherBackground>
+    </div>
   );
 }

@@ -85,12 +85,12 @@ export function TherapistReportPreview({ report, onClose }: Props) {
           <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '18px', fontWeight: 500, color: '#3A3530' }}>
             Therapist Report
           </h2>
-          <button onClick={onClose} className="text-[20px]" style={{ color: '#9ca3af' }}>&times;</button>
+          <button onClick={onClose} className="text-[20px]" style={{ color: '#5F564B' }}>&times;</button>
         </div>
 
         <div className="px-6 py-5 space-y-6">
           {/* Period */}
-          <div className="text-[12px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#9ca3af' }}>
+          <div className="text-[12px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
             Period: {report.period} &middot; Generated: {report.generatedAt}
           </div>
 
@@ -139,7 +139,7 @@ export function TherapistReportPreview({ report, onClose }: Props) {
 
           {/* Raw Data */}
           <ReportSection title="Raw Data Summary">
-            <p className="text-[12px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468', lineHeight: 1.6 }}>
+            <p className="text-[12px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B', lineHeight: 1.6 }}>
               {report.rawDataSummary}
             </p>
           </ReportSection>
@@ -180,7 +180,7 @@ function ReportSection({ title, children }: { title: string; children: React.Rea
       <h3
         style={{
           fontFamily: 'var(--font-parent-body)',
-          fontSize: '11px',
+          fontSize: '15px',
           fontWeight: 600,
           letterSpacing: '0.08em',
           textTransform: 'uppercase',

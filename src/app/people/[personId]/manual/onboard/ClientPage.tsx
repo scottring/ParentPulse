@@ -277,27 +277,38 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
   // Loading
   if (authLoading || personLoading || manualLoading || !draftLoaded || sections.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 rounded-full" style={{ border: '2px solid #7C9082', borderTopColor: 'transparent' }} />
+      <div className="relish-page">
+        <div className="press-loading">Preparing the page&hellip;</div>
       </div>
     );
   }
 
   if (!user || !person || !manual) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}>Unable to load. Please try again.</p>
+      <div className="relish-page">
+        <div className="press-loading">Unable to open the volume.</div>
       </div>
     );
   }
 
   if (isComplete) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="text-4xl" style={{ color: '#7C9082' }}>&#10003;</div>
-          <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '22px', fontWeight: 600, color: '#3A3530' }}>Your observations are saved</h2>
-          <p style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}>Redirecting to {person.name}&apos;s manual...</p>
+      <div className="relish-page">
+        <div className="pt-[64px] pb-24">
+          <div className="press-binder" style={{ maxWidth: 560 }}>
+            <div className="press-empty" style={{ padding: '80px 20px' }}>
+              <span className="press-chapter-label" style={{ display: 'block', textAlign: 'center' }}>
+                Saved
+              </span>
+              <h2 className="press-empty-title mt-4" style={{ fontSize: 34 }}>
+                Your observations are kept.
+              </h2>
+              <p className="press-empty-body">
+                Returning to {person.name}&rsquo;s volume&hellip;
+              </p>
+              <div className="press-fleuron" style={{ fontSize: 18 }}>❦</div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -315,81 +326,81 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
   const displayPlaceholder = currentQuestion.placeholder?.replace(/\{\{personName\}\}/g, person.name);
 
   const demoBanner = isDemo ? (
-    <div className="max-w-3xl mx-auto px-6 pt-4">
-      <div
-        className="flex items-center justify-between px-4 py-2 rounded-lg text-[11px]"
-        style={{ fontFamily: 'var(--font-parent-body)', background: 'rgba(124,144,130,0.08)', border: '1px solid rgba(124,144,130,0.2)' }}
+    <div
+      className="flex items-center justify-between"
+      style={{
+        padding: '12px 18px',
+        borderLeft: '2px solid rgba(124,144,130,0.5)',
+        background: 'rgba(124,144,130,0.05)',
+      }}
+    >
+      <p className="press-marginalia" style={{ fontSize: 14 }}>
+        <span className="press-sc" style={{ fontSize: 14 }}>DEMO</span> &nbsp;
+        <strong style={{ color: '#3A3530', fontStyle: 'normal', fontWeight: 500 }}>{user?.name}</strong>
+        {' '}sharing observations about{' '}
+        <strong style={{ color: '#2D5F5D', fontStyle: 'normal', fontWeight: 500 }}>{person.name}</strong>
+      </p>
+      <button
+        type="button"
+        onClick={handleFillAll}
+        className="press-link-sm"
+        style={{ background: 'transparent', cursor: 'pointer' }}
       >
-        <div className="flex items-center gap-3">
-          <span style={{ color: '#7C9082', fontWeight: 700 }}>DEMO</span>
-          <span style={{ color: '#7C7468' }}>
-            <strong style={{ color: '#3A3530' }}>{user?.name}</strong> sharing observations about{' '}
-            <strong style={{ color: '#7C9082' }}>{person.name}</strong>
-            {person.relationshipType && <> ({person.relationshipType})</>}
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={handleFillAll}
-          className="px-3 py-1 rounded-full font-medium transition-all hover:scale-105"
-          style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082', color: 'white', fontSize: '10px', fontWeight: 500 }}
-        >
-          Fill All
-        </button>
-      </div>
+        Fill all ⟶
+      </button>
     </div>
   ) : null;
 
-  const navBtnStyle = { fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500 } as const;
   const navigation = (
-    <>
-      <div className="flex gap-4 mt-6">
+    <div
+      className="flex items-baseline justify-between mt-10 pt-6"
+      style={{ borderTop: '1px solid rgba(200,190,172,0.4)' }}
+    >
+      <div className="flex items-baseline gap-6">
         {(currentSectionIndex > 0 || currentQuestionIndex > 0) && (
-          <>
-            <button
-              onClick={() => { setCurrentSectionIndex(0); setCurrentQuestionIndex(0); }}
-              className="px-4 py-3 rounded-full transition-all"
-              style={{ ...navBtnStyle, color: '#7C7468', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.3)' }}
-            >
-              &laquo; Start
-            </button>
-            <button
-              onClick={handlePrevious}
-              className="px-6 py-3 rounded-full transition-all"
-              style={{ ...navBtnStyle, color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.3)' }}
-            >
-              &larr; Previous
-            </button>
-          </>
-        )}
-        {!isLastQuestion && (
           <button
-            onClick={() => {
-              saveNow();
-              const lastSection = sections[sections.length - 1];
-              setCurrentSectionIndex(sections.length - 1);
-              setCurrentQuestionIndex(lastSection.questions.length - 1);
-            }}
-            className="px-4 py-3 rounded-full transition-all"
-            style={{ ...navBtnStyle, color: '#7C7468', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.3)' }}
+            onClick={handlePrevious}
+            className="press-link-sm"
+            style={{ background: 'transparent', cursor: 'pointer' }}
           >
-            Skip to end &raquo;
+            ⟵ Previous
           </button>
         )}
-        <button
-          onClick={handleNext}
-          disabled={isSubmitting}
-          className="px-6 py-3 rounded-full text-white transition-all disabled:opacity-50 ml-auto"
-          style={{ ...navBtnStyle, backgroundColor: '#7C9082', color: 'white' }}
-        >
-          {isSubmitting
-            ? 'Saving...'
-            : isLastQuestion
-            ? 'Complete'
-            : 'Next \u2192'}
-        </button>
+        {(currentSectionIndex > 0 || currentQuestionIndex > 0) && (
+          <button
+            onClick={() => { setCurrentSectionIndex(0); setCurrentQuestionIndex(0); }}
+            className="press-marginalia"
+            style={{
+              background: 'transparent',
+              border: 0,
+              cursor: 'pointer',
+              fontSize: 14,
+              color: '#7A6E5C',
+            }}
+          >
+            back to the first page
+          </button>
+        )}
       </div>
-    </>
+      <button
+        onClick={handleNext}
+        disabled={isSubmitting}
+        className="press-link"
+        style={{
+          background: 'transparent',
+          cursor: isSubmitting ? 'wait' : 'pointer',
+          opacity: isSubmitting ? 0.5 : 1,
+          fontSize: 19,
+        }}
+      >
+        {isSubmitting
+          ? 'Saving…'
+          : isLastQuestion
+          ? 'Complete the chapter'
+          : 'Next'}
+        {!isSubmitting && <span className="arrow">⟶</span>}
+      </button>
+    </div>
   );
 
   return (
@@ -421,12 +432,18 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
       demoBannerSlot={demoBanner}
       navigationSlot={navigation}
     >
-      <div className="glass-card-strong p-8" style={{ border: '1px solid rgba(255,255,255,0.4)' }}>
-        <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '22px', fontWeight: 600, color: '#3A3530', marginBottom: '8px' }}>
+      <div>
+        <h2
+          className="press-display-md"
+          style={{ fontSize: 'clamp(26px, 3vw, 32px)', marginBottom: 12, lineHeight: 1.2 }}
+        >
           {displayQuestion}
         </h2>
         {displayHelper && (
-          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468', marginBottom: '24px' }}>
+          <p
+            className="press-body-italic"
+            style={{ fontSize: 15, marginBottom: 28, color: '#5F564B' }}
+          >
             {displayHelper}
           </p>
         )}

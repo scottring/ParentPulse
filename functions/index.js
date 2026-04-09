@@ -7358,9 +7358,10 @@ exports.askManual = onCall(
           growthContext, entriesContext,
       );
 
-      // Build messages array
+      // Build messages array — use full conversation history so the
+      // model sees the whole arc, not just the last few turns.
       const messages = [];
-      for (const msg of conversationHistory.slice(-16)) {
+      for (const msg of conversationHistory) {
         messages.push({
           role: msg.role,
           content: msg.content,
@@ -7374,26 +7375,30 @@ exports.askManual = onCall(
       try {
         const client = getAnthropic();
 
-        // Detect if this is an entry (statement/log) vs a question
+        // Detect intent: entry (log), question (ask), or activity_request
+        // (user wants practices/workbook items created)
         const entryDetectionResponse = await client.messages.create({
           model: "claude-haiku-4-5-20251001",
           max_tokens: 200,
           messages: [{
             role: "user",
-            content: `Classify this message as either "entry" or "question".
+            content: `Classify this message as one of: "entry", "question", or "activity_request".
 
 An "entry" is when someone is logging an observation, event, agreement, or note about a person (e.g., "Today Iris was upset that...", "What I agreed to: ...", "Noticed that Ella...", "We decided to...").
 
 A "question" is when someone is asking for information or advice (e.g., "What does Iris need when...", "How should I handle...", "Why does Ella...").
 
+An "activity_request" is when someone is explicitly asking the system to CREATE practices, reflections, workbook items, or activities in their workbook (e.g., "Give me activities to work on this", "Create a workbook for this", "I need reflections and practices for...", "Set up some exercises for...", "What should I practice this week?").
+
 Message: "${question}"
 
-Respond with ONLY a JSON object: {"type": "entry" or "question", "entryType": "observation" or "agreement" or "event" or "note"}
-If it's a question, use entryType "note".`,
+Respond with ONLY a JSON object: {"type": "entry" | "question" | "activity_request", "entryType": "observation" | "agreement" | "event" | "note"}
+If it's a question or activity_request, use entryType "note".`,
           }],
         });
 
         let isEntry = false;
+        let isActivityRequest = false;
         let entryType = "note";
         try {
           const classJson = entryDetectionResponse.content[0].text;
@@ -7401,6 +7406,7 @@ If it's a question, use entryType "note".`,
           const classification = JSON.parse(
               classMatch ? classMatch[0] : classJson);
           isEntry = classification.type === "entry";
+          isActivityRequest = classification.type === "activity_request";
           entryType = classification.entryType || "note";
         } catch (e) {
           // Default to question if classification fails
@@ -7425,10 +7431,13 @@ If it's a question, use entryType "note".`,
           }
         }
 
-        // Main response — system prompt now includes entry awareness
-        const entryAwareSystemPrompt = isEntry ?
-          systemPrompt + `\n\n=== IMPORTANT ===\nThe user just logged a new entry/observation. Acknowledge what they've shared, confirm it's been noted in the manual, and optionally suggest a brief follow-up insight or question based on what you know about ${personName}. Be warm and brief.` :
-          systemPrompt;
+        // Main response — system prompt adapts to detected intent
+        let entryAwareSystemPrompt = systemPrompt;
+        if (isEntry) {
+          entryAwareSystemPrompt += `\n\n=== IMPORTANT ===\nThe user just logged a new entry/observation. Acknowledge what they've shared, confirm it's been noted in the manual, and optionally suggest a brief follow-up insight or question based on what you know about ${personName}. Be warm and brief.`;
+        } else if (isActivityRequest) {
+          entryAwareSystemPrompt += `\n\n=== IMPORTANT ===\nThe user is asking you to create workbook activities or practices. Do NOT ask clarifying questions about format or learning style. Instead: (1) briefly name the underlying issue in 1-2 sentences, (2) tell them you're adding 3-6 concrete practices to their workbook right now. The system will generate the actual activities from this conversation in the background — your job is just to acknowledge and frame. Be warm, decisive, and under 5 sentences. Never ask "what format would you like" or similar. Never punt.`;
+        }
 
         const response = await client.messages.create({
           model: "claude-sonnet-4-20250514",
@@ -7451,14 +7460,34 @@ If it's a question, use entryType "note".`,
           logger.warn("Insight extraction failed (non-critical):", insightErr);
         }
 
-        // Save chat session
+        // If this was an activity request, generate workbook items in the
+        // background. Don't await — the response goes back immediately, the
+        // items show up in the workbook within seconds.
+        if (isActivityRequest) {
+          generateActivitiesFromChatContext(
+              client, db, {
+                personId, personName, manualId, familyId,
+                userId: request.auth.uid,
+                manual,
+                conversationHistory: [
+                  ...conversationHistory,
+                  {role: "user", content: question},
+                  {role: "assistant", content: answer},
+                ],
+              },
+          ).catch((err) => {
+            logger.warn("Activity generation failed (non-critical):", err);
+          });
+        }
+
+        // Save chat session — full history, no truncation
         const sessionRef = db.collection("manual_chat_sessions");
-        const fullMessages = [...conversationHistory.slice(-16),
+        const newPair = [
           {role: "user", content: question, timestamp: Date.now()},
           {role: "assistant", content: answer, timestamp: Date.now()},
         ];
 
-        // Find existing session or create new
+        // Find existing active session or create new
         const existingSessionSnap = await sessionRef
             .where("personId", "==", personId)
             .where("userId", "==", request.auth.uid)
@@ -7466,12 +7495,56 @@ If it's a question, use entryType "note".`,
             .limit(1)
             .get();
 
+        // Auto-close threshold: sessions longer than this are sealed and
+        // a new one starts on the next message. Keeps individual session
+        // docs from growing unbounded and gives whole-session synthesis
+        // a natural trigger point.
+        const AUTO_CLOSE_THRESHOLD = 30;
+
+        let closedSessionForSynthesis = null;
+
         if (!existingSessionSnap.empty) {
-          await existingSessionSnap.docs[0].ref.update({
-            messages: fullMessages,
-            updatedAt: admin.firestore.Timestamp.now(),
-            messageCount: fullMessages.length,
-          });
+          const existingDoc = existingSessionSnap.docs[0];
+          const existingData = existingDoc.data();
+          const existingMessages = existingData.messages || [];
+          const updatedMessages = [...existingMessages, ...newPair];
+
+          if (updatedMessages.length >= AUTO_CLOSE_THRESHOLD) {
+            // Seal this session and start a new one with just the new pair
+            await existingDoc.ref.update({
+              messages: updatedMessages,
+              updatedAt: admin.firestore.Timestamp.now(),
+              messageCount: updatedMessages.length,
+              active: false,
+              closedAt: admin.firestore.Timestamp.now(),
+              closedReason: "auto_threshold",
+            });
+            closedSessionForSynthesis = {
+              id: existingDoc.id,
+              data: {...existingData, messages: updatedMessages},
+            };
+
+            // Start a fresh session so the next turn has continuity
+            await sessionRef.add({
+              personId,
+              personName,
+              manualId,
+              familyId,
+              userId: request.auth.uid,
+              messages: [],
+              active: true,
+              createdAt: admin.firestore.Timestamp.now(),
+              updatedAt: admin.firestore.Timestamp.now(),
+              messageCount: 0,
+              continuedFrom: existingDoc.id,
+            });
+          } else {
+            await existingDoc.ref.update({
+              messages: updatedMessages,
+              updatedAt: admin.firestore.Timestamp.now(),
+              messageCount: updatedMessages.length,
+            });
+          }
         } else {
           await sessionRef.add({
             personId,
@@ -7479,11 +7552,22 @@ If it's a question, use entryType "note".`,
             manualId,
             familyId,
             userId: request.auth.uid,
-            messages: fullMessages,
+            messages: newPair,
             active: true,
             createdAt: admin.firestore.Timestamp.now(),
             updatedAt: admin.firestore.Timestamp.now(),
-            messageCount: fullMessages.length,
+            messageCount: newPair.length,
+          });
+        }
+
+        // If we just closed a session at threshold, run whole-session
+        // synthesis in the background. Don't block the response on it.
+        if (closedSessionForSynthesis) {
+          synthesizeClosedSession(
+              client, db, closedSessionForSynthesis.id,
+              closedSessionForSynthesis.data, manual, manualId,
+          ).catch((err) => {
+            logger.warn("Whole-session synthesis failed (non-critical):", err);
           });
         }
 
@@ -7491,6 +7575,7 @@ If it's a question, use entryType "note".`,
           success: true,
           answer,
           insightsApplied: true,
+          activitiesBeingGenerated: isActivityRequest,
         };
       } catch (err) {
         logger.error("askManual error:", err);
@@ -7949,13 +8034,19 @@ Return ONLY valid JSON.`;
 }
 
 /**
- * Close a manual chat session (mark as inactive)
+ * Close a manual chat session (mark as inactive) and trigger
+ * whole-session synthesis on any sessions with enough content.
  */
 exports.closeManualChat = onCall(
     {
       region: "us-central1",
+      memory: "512MiB",
+      timeoutSeconds: 120,
+      secrets: ["ANTHROPIC_API_KEY"],
     },
     async (request) => {
+      const logger = require("firebase-functions/logger");
+
       if (!request.auth) {
         throw new Error("Authentication required");
       }
@@ -7972,18 +8063,416 @@ exports.closeManualChat = onCall(
           .where("active", "==", true)
           .get();
 
+      const sessionsToSynthesize = [];
       const batch = db.batch();
       sessionSnap.forEach((doc) => {
         batch.update(doc.ref, {
           active: false,
           closedAt: admin.firestore.Timestamp.now(),
+          closedReason: "user_closed",
         });
+        const data = doc.data();
+        // Only synthesize sessions with real content (at least 2 user turns)
+        const userTurns = (data.messages || [])
+            .filter((m) => m.role === "user").length;
+        if (userTurns >= 2) {
+          sessionsToSynthesize.push({id: doc.id, data});
+        }
       });
       await batch.commit();
 
-      return {success: true};
+      // Background synthesis for each qualifying session
+      if (sessionsToSynthesize.length > 0) {
+        const client = getAnthropic();
+        // Load manual once (all sessions here share personId)
+        const manualSnap = await db.collection("person_manuals")
+            .where("personId", "==", personId)
+            .limit(1)
+            .get();
+        if (!manualSnap.empty) {
+          const manualDoc = manualSnap.docs[0];
+          const manual = manualDoc.data();
+          const manualId = manualDoc.id;
+
+          // Fire and forget — don't block the user's close request
+          Promise.all(
+              sessionsToSynthesize.map((s) =>
+                synthesizeClosedSession(
+                    client, db, s.id, s.data, manual, manualId,
+                ).catch((err) => {
+                  logger.warn(
+                      `Synthesis failed for session ${s.id}:`, err.message,
+                  );
+                }),
+              ),
+          );
+        }
+      }
+
+      return {success: true, sessionsClosed: sessionSnap.size};
     },
 );
+
+/**
+ * Whole-session synthesis — reads a closed chat session in full
+ * and extracts insights that only become visible across the arc
+ * of a conversation (not turn-by-turn).
+ *
+ * Same guardrail as per-turn extraction: only mines USER messages,
+ * never the AI's own responses. AI responses are derivative.
+ */
+async function synthesizeClosedSession(
+    client, db, sessionId, sessionData, manual, manualId,
+) {
+  const logger = require("firebase-functions/logger");
+  const messages = sessionData.messages || [];
+  const personName = sessionData.personName || "the person";
+
+  // Only keep user messages — never extract from AI output
+  const userMessages = messages
+      .filter((m) => m.role === "user")
+      .map((m) => m.content);
+
+  if (userMessages.length < 2) {
+    logger.info(`Session ${sessionId}: too few user turns, skipping`);
+    return;
+  }
+
+  const synthPrompt = `You are reviewing a complete conversation about ${personName} to identify patterns, insights, and themes that only become visible across the WHOLE arc of the conversation — not turn-by-turn.
+
+CRITICAL: You are ONLY analyzing what the USER said. The AI's responses are derivative and must not be mined for insights. Do not extract anything the AI inferred or speculated.
+
+What the user said across the entire conversation:
+${userMessages.map((m, i) => `${i + 1}. "${m}"`).join("\n\n")}
+
+The manual currently contains:
+- ${(manual.triggers || []).length} triggers
+- ${(manual.whatWorks || []).length} strategies that work
+- ${(manual.whatDoesntWork || []).length} strategies that don't work
+- ${(manual.emergingPatterns || []).length} patterns
+
+Existing trigger descriptions: ${(manual.triggers || []).map((t) => t.description).join("; ") || "none"}
+Existing pattern descriptions: ${(manual.emergingPatterns || []).map((p) => p.description).join("; ") || "none"}
+
+Look for:
+1. **Narrative patterns** — a recurring sequence of events, or a cause-and-effect chain the user described
+2. **New triggers or strategies** the user explicitly mentioned (that per-turn extraction may have missed)
+3. **Themes** — something the user kept returning to across turns, even if each individual mention was brief
+4. **Shifts** — did the user's understanding evolve during the conversation? What did they realize?
+
+Only extract what the user explicitly shared. Do not infer. If the conversation is mostly the user asking questions without sharing new data, return hasNewInsights: false.
+
+Return JSON:
+{
+  "narrativeSummary": "2-3 sentence summary of the whole conversation, focused on what the USER brought",
+  "newTriggers": [
+    {"description": "...", "context": "...", "typicalResponse": "...", "severity": "mild|moderate|significant"}
+  ],
+  "newStrategies": [
+    {"description": "...", "context": "...", "effectiveness": 3, "type": "whatWorks|whatDoesntWork"}
+  ],
+  "newPatterns": [
+    {"description": "...", "frequency": "..."}
+  ],
+  "themes": ["theme 1", "theme 2"],
+  "userRealizations": ["realization 1"],
+  "hasNewInsights": true/false
+}
+
+Return ONLY valid JSON.`;
+
+  const response = await client.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 2000,
+    temperature: 0.3,
+    messages: [{role: "user", content: synthPrompt}],
+  });
+
+  const text = response.content[0].text;
+  let synthesis;
+  try {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    synthesis = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+  } catch (e) {
+    logger.warn(`Session ${sessionId}: failed to parse synthesis`, text);
+    return;
+  }
+
+  // Always write the narrative summary back to the session doc itself
+  // — even if there are no new insights, the summary is useful for
+  // browsing chat history later.
+  const sessionUpdate = {
+    synthesis: {
+      narrativeSummary: synthesis.narrativeSummary || "",
+      themes: synthesis.themes || [],
+      userRealizations: synthesis.userRealizations || [],
+      synthesizedAt: admin.firestore.Timestamp.now(),
+    },
+  };
+  await db.collection("manual_chat_sessions").doc(sessionId).update(sessionUpdate);
+
+  if (!synthesis.hasNewInsights) {
+    logger.info(`Session ${sessionId}: no new insights from whole-session synthesis`);
+    return;
+  }
+
+  // Apply insights to the manual (same shape as per-turn extraction)
+  const updates = {};
+  const now = admin.firestore.Timestamp.now();
+  let insightCount = 0;
+
+  if (synthesis.newTriggers && synthesis.newTriggers.length > 0) {
+    const newTriggers = synthesis.newTriggers.map((t, i) => ({
+      id: `chat-session-trigger-${Date.now()}-${i}`,
+      description: t.description,
+      context: t.context || "",
+      typicalResponse: t.typicalResponse || "",
+      severity: t.severity || "mild",
+      deescalationStrategy: "",
+      identifiedDate: now,
+      identifiedBy: "ai-chat-session",
+      sourceSessionId: sessionId,
+      confirmedBy: [],
+    }));
+    updates.triggers = [...(manual.triggers || []), ...newTriggers];
+    updates.totalTriggers = updates.triggers.length;
+    insightCount += newTriggers.length;
+  }
+
+  if (synthesis.newStrategies && synthesis.newStrategies.length > 0) {
+    for (const s of synthesis.newStrategies) {
+      const newStrategy = {
+        id: `chat-session-strategy-${Date.now()}-${Math.random()
+            .toString(36).slice(2, 7)}`,
+        description: s.description,
+        context: s.context || "",
+        effectiveness: s.effectiveness || 3,
+        addedDate: now,
+        addedBy: "ai-chat-session",
+        sourceSessionId: sessionId,
+        sourceType: "discovered",
+      };
+      const field = s.type === "whatDoesntWork" ?
+        "whatDoesntWork" : "whatWorks";
+      if (!updates[field]) {
+        updates[field] = [...(manual[field] || [])];
+      }
+      updates[field].push(newStrategy);
+      insightCount++;
+    }
+  }
+
+  if (synthesis.newPatterns && synthesis.newPatterns.length > 0) {
+    const newPatterns = synthesis.newPatterns.map((p, i) => ({
+      id: `chat-session-pattern-${Date.now()}-${i}`,
+      description: p.description,
+      frequency: p.frequency || "unknown",
+      firstObserved: now,
+      lastObserved: now,
+      confidence: "emerging",
+      identifiedBy: "ai-chat-session",
+      sourceSessionId: sessionId,
+    }));
+    updates.emergingPatterns = [
+      ...(manual.emergingPatterns || []), ...newPatterns,
+    ];
+    insightCount += newPatterns.length;
+  }
+
+  if (Object.keys(updates).length > 0) {
+    updates.lastChatSynthesisAt = now;
+    await db.collection("person_manuals").doc(manualId).update(updates);
+    logger.info(
+        `Session ${sessionId}: applied ${insightCount} insights to manual ${manualId}`,
+    );
+  }
+}
+
+/**
+ * Generate workbook activities (GrowthItems) from a chat conversation.
+ *
+ * Invoked in the background when askManual detects an activity_request.
+ * Reads the conversation arc + the target person's manual and asks
+ * Claude to generate 3-6 concrete, grounded practices that get written
+ * as GrowthItem documents assigned to the user who asked.
+ *
+ * The activities are marked with sourceChatSessionId so the workbook can
+ * show lineage back to the conversation they came from.
+ */
+async function generateActivitiesFromChatContext(client, db, ctx) {
+  const logger = require("firebase-functions/logger");
+  const {
+    personId, personName, manualId, familyId, userId, manual,
+    conversationHistory,
+  } = ctx;
+
+  // Only the user's own words — AI responses are derivative
+  const userMessages = conversationHistory
+      .filter((m) => m.role === "user")
+      .map((m) => m.content);
+
+  if (userMessages.length === 0) {
+    logger.info("No user messages, skipping activity generation");
+    return;
+  }
+
+  // Look up the requesting user for assignedTo fields
+  const userDoc = await db.collection("users").doc(userId).get();
+  const userName = userDoc.exists ?
+    (userDoc.data().name || userDoc.data().displayName || "you") : "you";
+
+  // Look up the spouse/partner if there is one (for couple exercises)
+  const familySnap = await db.collection("users")
+      .where("familyId", "==", familyId)
+      .where("role", "==", "parent")
+      .get();
+  const parents = [];
+  familySnap.forEach((d) => {
+    parents.push({
+      userId: d.id,
+      name: d.data().name || d.data().displayName || "Parent",
+    });
+  });
+  const partner = parents.find((p) => p.userId !== userId);
+
+  // Active session ID for lineage
+  const activeSessionSnap = await db.collection("manual_chat_sessions")
+      .where("personId", "==", personId)
+      .where("userId", "==", userId)
+      .where("active", "==", true)
+      .orderBy("updatedAt", "desc")
+      .limit(1)
+      .get();
+  const sourceSessionId = activeSessionSnap.empty ?
+    null : activeSessionSnap.docs[0].id;
+
+  // Build the generation prompt
+  const manualSummary = {
+    triggers: (manual.triggers || []).slice(0, 5).map((t) => t.description),
+    whatWorks: (manual.whatWorks || []).slice(0, 5).map((s) => s.description),
+    whatDoesntWork: (manual.whatDoesntWork || []).slice(0, 5)
+        .map((s) => s.description),
+    emergingPatterns: (manual.emergingPatterns || []).slice(0, 5)
+        .map((p) => p.description),
+  };
+
+  const prompt = `Generate workbook activities based on a conversation with a parent about ${personName}.
+
+What the user said in the conversation:
+${userMessages.map((m, i) => `${i + 1}. "${m}"`).join("\n\n")}
+
+${personName}'s manual (what we know works and doesn't work):
+- Known triggers: ${manualSummary.triggers.join("; ") || "none yet"}
+- What works: ${manualSummary.whatWorks.join("; ") || "none yet"}
+- What doesn't work: ${manualSummary.whatDoesntWork.join("; ") || "none yet"}
+- Patterns: ${manualSummary.emergingPatterns.join("; ") || "none yet"}
+
+The requesting user is: ${userName}${partner ? `. Their partner is ${partner.name}.` : ""}
+
+Generate 3-6 concrete workbook activities that address the underlying issue raised in the conversation. Each activity must be:
+- Specific and actionable (not vague advice)
+- Grounded in what ${personName}'s manual already shows works
+- Short body text (2-4 sentences max, imperative voice)
+- Realistic in time estimate (minutes, not hours)
+
+Mix types: include at least one reflection_prompt, one micro_activity, and if a partner exists, one partner_exercise.
+
+${partner ? `Some activities should be assigned to ${userName} and some to ${partner.name}, based on who the activity is for.` : `All activities are for ${userName}.`}
+
+Return JSON:
+{
+  "activities": [
+    {
+      "type": "reflection_prompt" | "micro_activity" | "conversation_guide" | "journaling" | "partner_exercise" | "solo_deep_dive" | "gratitude_practice",
+      "title": "Short, scannable title (under 60 chars)",
+      "body": "2-4 sentence instruction. Be specific.",
+      "emoji": "◎" | "✦" | "◆" | "▲" | "♡",
+      "estimatedMinutes": 2 | 3 | 5 | 10 | 15,
+      "assignTo": "user" | "partner",
+      "relationalLevel": "individual" | "couple"
+    }
+  ]
+}
+
+Return ONLY valid JSON.`;
+
+  const response = await client.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 2000,
+    temperature: 0.6,
+    messages: [{role: "user", content: prompt}],
+  });
+
+  const text = response.content[0].text;
+  let parsed;
+  try {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+  } catch (e) {
+    logger.warn("Failed to parse activity generation:", text);
+    return;
+  }
+
+  if (!parsed.activities || !Array.isArray(parsed.activities)) {
+    logger.warn("No activities in generation response");
+    return;
+  }
+
+  // Write each activity as a GrowthItem
+  const now = admin.firestore.Timestamp.now();
+  const expiresAt = admin.firestore.Timestamp.fromMillis(
+      Date.now() + 7 * 24 * 60 * 60 * 1000,
+  );
+  const batchId = `chat-${sourceSessionId || Date.now()}`;
+
+  const batch = db.batch();
+  let createdCount = 0;
+
+  for (const act of parsed.activities) {
+    if (!act.title || !act.body) continue;
+
+    const assigneeUserId = (act.assignTo === "partner" && partner) ?
+      partner.userId : userId;
+    const assigneeName = (act.assignTo === "partner" && partner) ?
+      partner.name : userName;
+
+    const item = {
+      familyId,
+      type: act.type || "micro_activity",
+      title: act.title,
+      body: act.body,
+      emoji: act.emoji || "✦",
+      targetPersonIds: [personId],
+      targetPersonNames: [personName],
+      assignedToUserId: assigneeUserId,
+      assignedToUserName: assigneeName,
+      sourceManualId: manualId,
+      sourceChatSessionId: sourceSessionId,
+      sourceInsightType: "gap",
+      relationalLevel: act.relationalLevel || "individual",
+      speed: "intentional",
+      scheduledDate: now,
+      expiresAt,
+      estimatedMinutes: act.estimatedMinutes || 5,
+      status: "active",
+      statusUpdatedAt: now,
+      createdAt: now,
+      generatedBy: "ai",
+      batchId,
+    };
+
+    const ref = db.collection("growth_items").doc();
+    batch.set(ref, {...item, growthItemId: ref.id});
+    createdCount++;
+  }
+
+  if (createdCount > 0) {
+    await batch.commit();
+    logger.info(
+        `Generated ${createdCount} activities from chat session ${sourceSessionId || "?"} for ${personName}`,
+    );
+  }
+}
 
 /**
  * One-time cleanup: Remove AI-on-AI derived data from manuals.

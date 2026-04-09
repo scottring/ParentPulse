@@ -177,7 +177,7 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
             </p>
 
             {personName && (
-              <div className="mt-6 space-y-2 text-xs max-w-md mx-auto text-left" style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}>
+              <div className="mt-6 space-y-2 text-xs max-w-md mx-auto text-left" style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}>
                 <p className="font-medium mb-2" style={{ color: '#5C5347' }}>Try asking:</p>
                 <p>&bull; &quot;What are {personName}&apos;s main triggers?&quot;</p>
                 <p>&bull; &quot;What strategies work best for {personName}?&quot;</p>
@@ -303,7 +303,7 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
         </div>
         <div
           className="mt-2 text-xs"
-          style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+          style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
         >
           Press Enter to send, Shift+Enter for new line
         </div>
@@ -324,7 +324,7 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
             </button>
             <div
               className="text-xs"
-              style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
             >
               {messages.length} messages
             </div>
