@@ -517,27 +517,38 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   // --- Loading ---
   if (authLoading || personLoading || manualLoading || !draftLoaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 rounded-full" style={{ border: '2px solid #7C9082', borderTopColor: 'transparent' }} />
+      <div className="relish-page">
+        <div className="press-loading">Opening your volume&hellip;</div>
       </div>
     );
   }
 
   if (!user || !person || !manual) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}>Unable to load. Please try again.</p>
+      <div className="relish-page">
+        <div className="press-loading">Unable to open the volume.</div>
       </div>
     );
   }
 
   if (isComplete) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="text-4xl" style={{ color: '#7C9082' }}>&#10003;</div>
-          <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '22px', fontWeight: 600, color: '#3A3530' }}>Your perspective is saved</h2>
-          <p style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}>Redirecting to your manual...</p>
+      <div className="relish-page">
+        <div className="pt-[64px] pb-24">
+          <div className="press-binder" style={{ maxWidth: 560 }}>
+            <div className="press-empty" style={{ padding: '80px 20px' }}>
+              <span className="press-chapter-label" style={{ display: 'block', textAlign: 'center' }}>
+                Kept
+              </span>
+              <h2 className="press-empty-title mt-4" style={{ fontSize: 34 }}>
+                Your perspective is saved.
+              </h2>
+              <p className="press-empty-body">
+                Returning to your volume&hellip;
+              </p>
+              <div className="press-fleuron" style={{ fontSize: 18 }}>❦</div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -549,70 +560,130 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   if (mode === 'choose') {
     const hasExistingAnswers = answeredQuestions > 0;
     return (
-      <div className="min-h-screen">
-        <div className="max-w-3xl mx-auto px-6 py-12">
-          <div className="text-center mb-10">
-            <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: '#7C9082', letterSpacing: '0.05em' }}>
-              {person?.name ? `${person.name.toUpperCase()}\u2019S MANUAL` : 'SELF-ONBOARDING'}
-            </span>
-            <h1 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '28px', fontWeight: 600, color: '#3A3530', marginTop: '8px' }}>
-              Your Own Perspective
-            </h1>
-            <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468', marginTop: '8px' }}>
-              Choose how you'd like to get started
-            </p>
-          </div>
+      <div className="relish-page">
+        <div className="pt-[64px] pb-24">
+          <div className="press-binder" style={{ maxWidth: 680 }}>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Upload documents option */}
-            <button
-              onClick={() => setMode('upload')}
-              className="p-6 glass-card text-left hover:shadow-lg transition-all group"
-              style={{ border: '1px solid rgba(255,255,255,0.4)' }}
-            >
-              <div className="text-2xl mb-3">&#128196;</div>
-              <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '18px', fontWeight: 600, color: '#3A3530', marginBottom: '8px' }}>
-                {hasExistingAnswers ? 'Add More from Documents' : 'Upload Personal Documents'}
-              </h3>
-              <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468', marginBottom: '16px' }}>
-                {hasExistingAnswers
-                  ? 'Upload therapy notes, journal entries, or other documents to fill in remaining questions. Your existing answers are preserved.'
-                  : 'Upload therapy notes, journal entries, or other personal documents. AI will extract answers for you to review and edit.'}
+            {/* Running header */}
+            <div className="press-running-header" style={{ paddingTop: 28 }}>
+              <span>{person?.name ? `${person.name}'s volume` : 'Your volume'}</span>
+              <span className="sep">·</span>
+              <span>Your own perspective</span>
+            </div>
+
+            {/* Back link */}
+            <div style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 12 }}>
+              <button
+                onClick={() => router.push(`/people/${personId}/manual`)}
+                className="press-link-sm"
+                style={{ background: 'transparent', cursor: 'pointer' }}
+              >
+                ⟵ Return to the volume
+              </button>
+            </div>
+
+            {/* Title */}
+            <div className="press-binder-head">
+              <span className="press-chapter-label">Your own words</span>
+              <h1 className="press-binder-title mt-2">
+                How would you like to begin?
+              </h1>
+              <p className="press-binder-sub">
+                Two ways to bring your perspective into the volume.
               </p>
-              <div style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#8A8078' }}>
-                PDF, TXT, images &middot; Processed securely, never stored
-              </div>
-            </button>
+            </div>
 
-            {/* Answer directly option */}
-            <button
-              onClick={() => setMode('questionnaire')}
-              className="p-6 glass-card text-left hover:shadow-lg transition-all group"
-              style={{ border: '1px solid rgba(255,255,255,0.4)' }}
-            >
-              <div className="text-2xl mb-3">&#9997;</div>
-              <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '18px', fontWeight: 600, color: '#3A3530', marginBottom: '8px' }}>
-                {hasExistingAnswers ? 'Continue Answering' : 'Answer Questions Directly'}
-              </h3>
-              <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468', marginBottom: '16px' }}>
-                {hasExistingAnswers
-                  ? 'Pick up where you left off and continue filling in your answers.'
-                  : 'Answer each question yourself at your own pace. You can save and return anytime.'}
-              </p>
-              <div style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#8A8078' }}>
-                16 questions &middot; ~10 minutes &middot; Auto-saves
-              </div>
-            </button>
-          </div>
+            <hr className="press-rule-short" style={{ margin: '0 auto 20px' }} />
 
-          <div className="mt-8 text-center">
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="transition-colors"
-              style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#8A8078' }}
-            >
-              &larr; Back to manual
-            </button>
+            {/* Two options as chapter entries */}
+            <div style={{ padding: '20px 48px 32px' }}>
+              {/* Upload documents option */}
+              <button
+                onClick={() => setMode('upload')}
+                className="w-full text-left py-6"
+                style={{
+                  background: 'transparent',
+                  border: 0,
+                  borderBottom: '1px solid rgba(200,190,172,0.4)',
+                  cursor: 'pointer',
+                  transition: 'padding-left 0.2s ease',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.paddingLeft = '10px'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.paddingLeft = '0'; }}
+              >
+                <div className="flex items-baseline gap-4">
+                  <span className="press-chapter-label" style={{ width: 30, flexShrink: 0 }}>I.</span>
+                  <div className="flex-1">
+                    <h3
+                      style={{
+                        fontFamily: 'var(--font-parent-display)',
+                        fontSize: 22,
+                        fontStyle: 'italic',
+                        fontWeight: 500,
+                        color: '#3A3530',
+                        lineHeight: 1.2,
+                        margin: 0,
+                      }}
+                    >
+                      {hasExistingAnswers ? 'Add more from your documents' : 'Upload your own documents'}
+                    </h3>
+                    <p className="press-marginalia mt-2" style={{ fontSize: 14, lineHeight: 1.5 }}>
+                      {hasExistingAnswers
+                        ? 'Bring therapy notes, journal entries, or letters. The system reads them and fills in what\'s missing — your answers stay as they are.'
+                        : 'Bring therapy notes, journal entries, or letters. The system reads them and drafts answers for you to review before keeping.'}
+                    </p>
+                    <p className="press-marginalia mt-1" style={{ fontSize: 14, color: '#7A6E5C' }}>
+                      PDF, text, or images · read in passing, never stored
+                    </p>
+                  </div>
+                  <span style={{ color: '#6B6254', fontSize: 16 }}>⟶</span>
+                </div>
+              </button>
+
+              {/* Answer directly option */}
+              <button
+                onClick={() => setMode('questionnaire')}
+                className="w-full text-left py-6"
+                style={{
+                  background: 'transparent',
+                  border: 0,
+                  cursor: 'pointer',
+                  transition: 'padding-left 0.2s ease',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.paddingLeft = '10px'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.paddingLeft = '0'; }}
+              >
+                <div className="flex items-baseline gap-4">
+                  <span className="press-chapter-label" style={{ width: 30, flexShrink: 0 }}>II.</span>
+                  <div className="flex-1">
+                    <h3
+                      style={{
+                        fontFamily: 'var(--font-parent-display)',
+                        fontSize: 22,
+                        fontStyle: 'italic',
+                        fontWeight: 500,
+                        color: '#3A3530',
+                        lineHeight: 1.2,
+                        margin: 0,
+                      }}
+                    >
+                      {hasExistingAnswers ? 'Continue answering by hand' : 'Answer by hand, at your own pace'}
+                    </h3>
+                    <p className="press-marginalia mt-2" style={{ fontSize: 14, lineHeight: 1.5 }}>
+                      {hasExistingAnswers
+                        ? 'Pick up where you left off. Each answer is saved the moment you keep it.'
+                        : 'A handful of questions, thought through at your own pace. Autosaved as you go.'}
+                    </p>
+                    <p className="press-marginalia mt-1" style={{ fontSize: 14, color: '#7A6E5C' }}>
+                      sixteen questions · about ten minutes
+                    </p>
+                  </div>
+                  <span style={{ color: '#2D5F5D', fontSize: 16 }}>⟶</span>
+                </div>
+              </button>
+            </div>
+
+            <div className="press-fleuron">❦</div>
           </div>
         </div>
       </div>
@@ -624,33 +695,61 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   // ==============================================
   if (mode === 'upload') {
     return (
-      <div className="min-h-screen">
-        <div className="max-w-3xl mx-auto px-6 py-12">
-          <div className="flex items-center gap-3 mb-8">
-            <button
-              onClick={() => setMode('choose')}
-              className="transition-colors"
-              style={{ color: '#8A8078' }}
-            >
-              <span className="text-xl">&larr;</span>
-            </button>
-            <div>
-              <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: '#7C9082', letterSpacing: '0.05em' }}>
-                UPLOAD DOCUMENTS
-              </span>
-              <h1 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '22px', fontWeight: 600, color: '#3A3530' }}>
-                Upload Personal Documents
+      <div className="relish-page">
+        <div className="pt-[64px] pb-24">
+          <div className="press-binder" style={{ maxWidth: 680 }}>
+            <div className="press-running-header" style={{ paddingTop: 28 }}>
+              <span>Your own perspective</span>
+              <span className="sep">·</span>
+              <span>From documents</span>
+            </div>
+
+            <div style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 12 }}>
+              <button
+                onClick={() => setMode('choose')}
+                className="press-link-sm"
+                style={{ background: 'transparent', cursor: 'pointer' }}
+              >
+                ⟵ Choose a different way
+              </button>
+            </div>
+
+            <div className="press-binder-head">
+              <span className="press-chapter-label">From documents</span>
+              <h1 className="press-binder-title mt-2" style={{ fontSize: 'clamp(36px, 5vw, 48px)' }}>
+                Bring your own words
               </h1>
+              <p className="press-binder-sub">
+                The system will read what you share and draft answers
+                for you to keep, revise, or discard.
+              </p>
             </div>
+
+            <hr className="press-rule-short" style={{ margin: '0 auto 28px' }} />
+
+            {processingError && (
+              <div style={{ padding: '0 48px 20px' }}>
+                <p
+                  className="press-marginalia"
+                  style={{
+                    fontSize: 14,
+                    color: '#C08070',
+                    padding: '14px 18px',
+                    borderLeft: '2px solid rgba(192,128,112,0.5)',
+                    background: 'rgba(192,128,112,0.05)',
+                  }}
+                >
+                  — {processingError}
+                </p>
+              </div>
+            )}
+
+            <div style={{ padding: '0 48px 40px' }}>
+              <DocumentUploader onProcess={handleDocumentProcess} processing={false} />
+            </div>
+
+            <div className="press-fleuron">❦</div>
           </div>
-
-          {processingError && (
-            <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'rgba(220,38,38,0.05)', border: '1px solid rgba(220,38,38,0.2)' }}>
-              <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#b91c1c' }}>{processingError}</p>
-            </div>
-          )}
-
-          <DocumentUploader onProcess={handleDocumentProcess} processing={false} />
         </div>
       </div>
     );
@@ -661,21 +760,26 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   // ==============================================
   if (mode === 'processing') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-6">
-          <div className="animate-spin w-10 h-10 rounded-full mx-auto" style={{ border: '2px solid #7C9082', borderTopColor: 'transparent' }} />
-          <div>
-            <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '22px', fontWeight: 600, color: '#3A3530', marginBottom: '8px' }}>
-              Processing Your Documents
-            </h2>
-            <p className="animate-pulse" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468' }}>
-              {PROCESSING_MESSAGES[processingMessageIndex]}
-            </p>
+      <div className="relish-page">
+        <div className="pt-[64px] pb-24">
+          <div className="press-binder" style={{ maxWidth: 560 }}>
+            <div className="press-empty" style={{ padding: '100px 20px' }}>
+              <span className="press-chapter-label" style={{ display: 'block', textAlign: 'center' }}>
+                Reading
+              </span>
+              <h2 className="press-empty-title mt-4" style={{ fontSize: 34 }}>
+                Reading your documents
+              </h2>
+              <p className="press-empty-body" style={{ fontStyle: 'italic' }}>
+                {PROCESSING_MESSAGES[processingMessageIndex]}
+              </p>
+              <p className="press-marginalia" style={{ fontSize: 14, color: '#7A6E5C', maxWidth: 320, margin: '20px auto 0' }}>
+                Read in passing and discarded immediately after. This
+                may take up to a minute.
+              </p>
+              <div className="press-fleuron mt-10" style={{ fontSize: 18 }}>❦</div>
+            </div>
           </div>
-          <p className="max-w-md" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#8A8078' }}>
-            Your documents are being read securely and will be discarded immediately after processing.
-            This may take up to a minute.
-          </p>
         </div>
       </div>
     );
@@ -685,22 +789,31 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   // MODE: CONFLICTS (conflict resolution)
   // ==============================================
   if (mode === 'conflicts') {
-    const conflictBtnStyle = { fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500 } as const;
+    const conflictBtnStyle = { fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500 } as const;
     return (
-      <div className="min-h-screen">
-        <div className="max-w-4xl mx-auto px-6 py-12">
-          <div className="mb-8">
-            <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: '#7C9082', letterSpacing: '0.05em' }}>
-              REVIEW CONFLICTS
-            </span>
-            <h1 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '22px', fontWeight: 600, color: '#3A3530', marginTop: '8px' }}>
-              Some questions already have answers
+      <div className="relish-page">
+        <div className="pt-[64px] pb-24">
+        <div className="press-binder" style={{ maxWidth: 820 }}>
+          <div className="press-running-header" style={{ paddingTop: 28 }}>
+            <span>Your own perspective</span>
+            <span className="sep">·</span>
+            <span>Two readings to reconcile</span>
+          </div>
+
+          <div className="press-binder-head">
+            <span className="press-chapter-label">Review</span>
+            <h1 className="press-binder-title mt-2" style={{ fontSize: 'clamp(36px, 5vw, 46px)' }}>
+              Some answers already exist
             </h1>
-            <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468', marginTop: '8px' }}>
-              For each question below, choose how to handle the overlap between your existing answer
-              and what was extracted from your documents.
+            <p className="press-binder-sub">
+              For each question below, choose which version to keep —
+              what you wrote, or what was drawn from your documents.
             </p>
           </div>
+
+          <hr className="press-rule-short" style={{ margin: '0 auto 28px' }} />
+
+          <div style={{ padding: '0 48px' }}>
 
           <div className="space-y-8">
             {conflicts.map((conflict) => {
@@ -715,7 +828,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
 
                   <div className="grid gap-4 md:grid-cols-2 mb-4">
                     <div className="p-4 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.4)' }}>
-                      <div style={{ ...conflictBtnStyle, color: '#7C7468', marginBottom: '8px' }}>
+                      <div style={{ ...conflictBtnStyle, color: '#5F564B', marginBottom: '8px' }}>
                         YOUR CURRENT ANSWER
                       </div>
                       <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5C5347' }}>
@@ -839,26 +952,37 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
             })}
           </div>
 
-          {/* Apply button */}
-          <div className="mt-8 flex gap-4">
+          </div>
+
+          {/* Apply button row */}
+          <hr className="press-rule" style={{ marginTop: 32, marginBottom: 24 }} />
+          <div style={{ padding: '0 48px 40px', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
             <button
               onClick={() => setMode('choose')}
-              className="px-6 py-3 rounded-full transition-all"
-              style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.3)' }}
+              className="press-link-sm"
+              style={{ background: 'transparent', cursor: 'pointer' }}
             >
-              &larr; Back
+              ⟵ Back
             </button>
             <button
               onClick={applyConflictResolutions}
               disabled={!allConflictsResolved}
-              className="flex-1 px-6 py-3 rounded-full text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, backgroundColor: '#7C9082' }}
+              className="press-link"
+              style={{
+                background: 'transparent',
+                cursor: allConflictsResolved ? 'pointer' : 'not-allowed',
+                opacity: allConflictsResolved ? 1 : 0.4,
+              }}
             >
               {allConflictsResolved
-                ? 'Apply & continue to review'
-                : `Resolve all conflicts (${Object.keys(conflictResolutions).length}/${conflicts.length})`}
+                ? 'Apply and continue'
+                : `Resolve all (${Object.keys(conflictResolutions).length}/${conflicts.length})`}
+              {allConflictsResolved && <span className="arrow">⟶</span>}
             </button>
           </div>
+
+          <div className="press-fleuron">❦</div>
+        </div>
         </div>
       </div>
     );
@@ -876,71 +1000,95 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   const isAiGenerated = aiGeneratedFields[currentSection.sectionId]?.includes(currentQuestion.id);
 
   const demoBanner = isDemo ? (
-    <div className="max-w-3xl mx-auto px-6 pt-4">
-      <div
-        className="flex items-center justify-between px-4 py-2 rounded-lg text-[11px]"
-        style={{ fontFamily: 'var(--font-parent-body)', background: 'rgba(124,144,130,0.08)', border: '1px solid rgba(124,144,130,0.2)' }}
+    <div
+      className="flex items-center justify-between"
+      style={{
+        padding: '12px 18px',
+        borderLeft: '2px solid rgba(124,144,130,0.5)',
+        background: 'rgba(124,144,130,0.05)',
+      }}
+    >
+      <p className="press-marginalia" style={{ fontSize: 14 }}>
+        <span className="press-sc" style={{ fontSize: 14 }}>DEMO</span> &nbsp;
+        Answering as{' '}
+        <strong style={{ color: '#3A3530', fontStyle: 'normal', fontWeight: 500 }}>{user.name}</strong>
+        {' '}· about{' '}
+        <strong style={{ color: '#2D5F5D', fontStyle: 'normal', fontWeight: 500 }}>yourself</strong>
+      </p>
+      <button
+        type="button"
+        onClick={handleFillAll}
+        className="press-link-sm"
+        style={{ background: 'transparent', cursor: 'pointer' }}
       >
-        <div className="flex items-center gap-3">
-          <span style={{ color: '#7C9082', fontWeight: 700 }}>DEMO</span>
-          <span style={{ color: '#7C7468' }}>
-            Answering as <strong style={{ color: '#3A3530' }}>{user.name}</strong>
-            {' · '}about <strong style={{ color: '#7C9082' }}>yourself</strong>
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={handleFillAll}
-          className="px-3 py-1 rounded-full font-medium transition-all hover:scale-105"
-          style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082', color: 'white', fontSize: '10px', fontWeight: 500 }}
-        >
-          Fill All
-        </button>
-      </div>
+        Fill all ⟶
+      </button>
     </div>
   ) : null;
 
-  const selfNavBtnStyle = { fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500 } as const;
   const navigation = (
-    <div className="flex gap-4 mt-6">
-      {(currentSectionIndex > 0 || currentQuestionIndex > 0) && (
-        <>
-          <button
-            onClick={() => { setCurrentSectionIndex(0); setCurrentQuestionIndex(0); }}
-            className="px-4 py-3 rounded-full transition-all"
-            style={{ ...selfNavBtnStyle, color: '#7C7468', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.3)' }}
-          >
-            &laquo; Start
-          </button>
+    <div
+      className="flex items-baseline justify-between mt-10 pt-6"
+      style={{ borderTop: '1px solid rgba(200,190,172,0.4)' }}
+    >
+      <div className="flex items-baseline gap-6">
+        {(currentSectionIndex > 0 || currentQuestionIndex > 0) && (
           <button
             onClick={handlePrevious}
-            className="px-6 py-3 rounded-full transition-all"
-            style={{ ...selfNavBtnStyle, color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.3)' }}
+            className="press-link-sm"
+            style={{ background: 'transparent', cursor: 'pointer' }}
           >
-            &larr; Previous
+            ⟵ Previous
           </button>
-        </>
-      )}
+        )}
+        {(currentSectionIndex > 0 || currentQuestionIndex > 0) && (
+          <button
+            onClick={() => { setCurrentSectionIndex(0); setCurrentQuestionIndex(0); }}
+            className="press-marginalia"
+            style={{
+              background: 'transparent',
+              border: 0,
+              cursor: 'pointer',
+              fontSize: 14,
+              color: '#7A6E5C',
+            }}
+          >
+            back to the first page
+          </button>
+        )}
+      </div>
       <button
         onClick={handleNext}
         disabled={isSubmitting}
-        className="px-6 py-3 rounded-full text-white transition-all disabled:opacity-50 ml-auto"
-        style={{ ...selfNavBtnStyle, backgroundColor: '#7C9082' }}
+        className="press-link"
+        style={{
+          background: 'transparent',
+          cursor: isSubmitting ? 'wait' : 'pointer',
+          opacity: isSubmitting ? 0.5 : 1,
+          fontSize: 19,
+        }}
       >
         {isSubmitting
-          ? 'Saving...'
+          ? 'Saving…'
           : isLastQuestion
-          ? 'Complete'
-          : 'Next \u2192'}
+          ? 'Complete the chapter'
+          : 'Next'}
+        {!isSubmitting && <span className="arrow">⟶</span>}
       </button>
     </div>
   );
 
   const aiIndicator = isAiGenerated ? (
-    <div className="mb-4 p-3 rounded-lg flex items-start gap-2" style={{ backgroundColor: 'rgba(124,144,130,0.08)', border: '1px solid rgba(124,144,130,0.2)' }}>
-      <span style={{ color: '#7C9082', marginTop: '2px' }}>&#9679;</span>
-      <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#5C5347' }}>
-        This answer was drafted from your uploaded documents. Review and edit as needed.
+    <div
+      className="mb-5"
+      style={{
+        padding: '12px 18px',
+        borderLeft: '2px solid rgba(124,144,130,0.5)',
+        background: 'rgba(124,144,130,0.05)',
+      }}
+    >
+      <p className="press-marginalia" style={{ fontSize: 15 }}>
+        — this answer was drafted from your documents. Review and revise as you wish.
       </p>
     </div>
   ) : null;
@@ -974,14 +1122,20 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
       demoBannerSlot={demoBanner}
       navigationSlot={navigation}
     >
-      <div className="glass-card-strong p-8" style={{ border: '1px solid rgba(255,255,255,0.4)' }}>
+      <div>
         {aiIndicator}
 
-        <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '22px', fontWeight: 600, color: '#3A3530', marginBottom: '8px' }}>
+        <h2
+          className="press-display-md"
+          style={{ fontSize: 'clamp(26px, 3vw, 32px)', marginBottom: 12, lineHeight: 1.2 }}
+        >
           {currentQuestion.question}
         </h2>
         {currentQuestion.helperText && (
-          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468', marginBottom: '24px' }}>
+          <p
+            className="press-body-italic"
+            style={{ fontSize: 15, marginBottom: 28, color: '#5F564B' }}
+          >
             {currentQuestion.helperText}
           </p>
         )}
@@ -1006,8 +1160,8 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
             >
               {currentVisibility === 'visible' ? (
                 <>
-                  <span style={{ color: '#8A8078' }}>&#128065;</span>
-                  <span style={{ color: '#7C7468' }}>
+                  <span style={{ color: '#6B6254' }}>&#128065;</span>
+                  <span style={{ color: '#5F564B' }}>
                     Visible to family
                   </span>
                 </>
@@ -1021,7 +1175,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
               )}
             </button>
             {currentVisibility === 'private' && (
-              <p className="mt-1 ml-6" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#8A8078' }}>
+              <p className="mt-1 ml-6" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#6B6254' }}>
                 This answer won't appear in your manual or be shared with anyone.
               </p>
             )}

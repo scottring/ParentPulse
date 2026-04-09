@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useDashboard } from '@/hooks/useDashboard';
@@ -8,74 +8,147 @@ import { useRingScores } from '@/hooks/useRingScores';
 import { useFreshness } from '@/hooks/useFreshness';
 import Navigation from '@/components/layout/Navigation';
 import SideNav from '@/components/layout/SideNav';
-import { PeriodSelector, ReportPeriod, periodToMs } from '@/components/reports/PeriodSelector';
-import { PersonStatusCard } from '@/components/reports/PersonStatusCard';
-import { TherapistReportPreview, TherapistReportData } from '@/components/reports/TherapistReportPreview';
+import Link from 'next/link';
 import { scoreToClimate } from '@/lib/climate-engine';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
+import { TherapistReportPreview, TherapistReportData } from '@/components/reports/TherapistReportPreview';
 
+// ================================================================
+// Roman numeral helpers
+// ================================================================
+function toRoman(n: number): string {
+  if (n < 1) return '';
+  const map: Array<[number, string]> = [
+    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
+    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
+    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
+  ];
+  let result = '';
+  let num = n;
+  for (const [value, numeral] of map) {
+    while (num >= value) {
+      result += numeral;
+      num -= value;
+    }
+  }
+  return result;
+}
+
+// ================================================================
+// Synthetic archive builder — assembles past "reports" from what
+// we have in Firestore so the index isn't empty. When the real
+// generateTherapistReport cloud function gains a history endpoint,
+// swap this for that data.
+// ================================================================
+interface ArchiveEntry {
+  id: string;
+  year: number;
+  month: number;   // 0-indexed
+  monthName: string;
+  number: number;  // within the month
+  title: string;
+  dateLabel: string;
+  route?: string;
+}
+
+function buildArchiveFromState(params: {
+  manuals: Array<{ manualId: string; personName: string; synthesizedContent?: { lastSynthesizedAt?: { toDate?: () => Date } } }>;
+}): ArchiveEntry[] {
+  const entries: ArchiveEntry[] = [];
+
+  // Synthesis events become archive entries
+  params.manuals.forEach((m) => {
+    const ts = m.synthesizedContent?.lastSynthesizedAt?.toDate?.();
+    if (!ts) return;
+    entries.push({
+      id: `synth-${m.manualId}`,
+      year: ts.getFullYear(),
+      month: ts.getMonth(),
+      monthName: ts.toLocaleDateString('en-US', { month: 'long' }).toUpperCase(),
+      number: 0, // renumbered below
+      title: `Synthesis of ${m.personName}’s volume`,
+      dateLabel: ts.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toLowerCase(),
+    });
+  });
+
+  // Sort reverse chronological
+  entries.sort((a, b) => {
+    if (a.year !== b.year) return b.year - a.year;
+    return b.month - a.month;
+  });
+
+  // Renumber within each month
+  const byMonth = new Map<string, ArchiveEntry[]>();
+  for (const e of entries) {
+    const key = `${e.year}-${e.month}`;
+    if (!byMonth.has(key)) byMonth.set(key, []);
+    byMonth.get(key)!.push(e);
+  }
+  byMonth.forEach((list) => {
+    list.forEach((entry, idx) => {
+      entry.number = list.length - idx;
+    });
+  });
+
+  return entries;
+}
+
+// ================================================================
+// Main page
+// ================================================================
 export default function ReportsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { state, people, manuals, assessments, contributions, roles } = useDashboard();
+  const { state, people, manuals, assessments, contributions } = useDashboard();
   const { health } = useRingScores(assessments);
   const { familyCompleteness } = useFreshness({ people, manuals, contributions });
 
-  const [period, setPeriod] = useState<ReportPeriod>('month');
   const [therapistReport, setTherapistReport] = useState<TherapistReportData | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [lastGenerated, setLastGenerated] = useState<Date | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login');
   }, [user, authLoading, router]);
 
-  const climate = health ? scoreToClimate(health.score, health.trend) : null;
-
-  const manualMap = useMemo(
-    () => new Map(manuals.map((m) => [m.personId, m])),
+  const archive = useMemo(
+    () => buildArchiveFromState({ manuals }),
     [manuals],
   );
 
-  const activePeople = useMemo(
-    () => people.filter((p) => !p.archived),
-    [people],
-  );
-
-  // Cross-family patterns
-  const crossPatterns = useMemo(() => {
-    const patterns: Array<{ insight: string; people: string[] }> = [];
-    for (const manual of manuals) {
-      const refs = manual.synthesizedContent?.crossReferences ?? [];
-      for (const ref of refs) {
-        patterns.push({
-          insight: ref.insight,
-          people: [manual.personName, ref.relatedPersonName],
-        });
-      }
+  // Group archive by year, then by month
+  const archiveByYear = useMemo(() => {
+    const map = new Map<number, Map<string, ArchiveEntry[]>>();
+    for (const e of archive) {
+      if (!map.has(e.year)) map.set(e.year, new Map());
+      const monthMap = map.get(e.year)!;
+      if (!monthMap.has(e.monthName)) monthMap.set(e.monthName, []);
+      monthMap.get(e.monthName)!.push(e);
     }
-    // Deduplicate by insight text
-    const seen = new Set<string>();
-    return patterns.filter((p) => {
-      if (seen.has(p.insight)) return false;
-      seen.add(p.insight);
-      return true;
-    });
-  }, [manuals]);
+    return Array.from(map.entries())
+      .sort(([a], [b]) => b - a)
+      .map(([year, months]) => ({
+        year,
+        months: Array.from(months.entries()),
+      }));
+  }, [archive]);
 
-  const handleGenerateReport = async () => {
+  const handleGenerate = async () => {
     setGenerating(true);
     try {
       const generateTherapistReport = httpsCallable(functions, 'generateTherapistReport');
-      const result = await generateTherapistReport({ period });
+      const result = await generateTherapistReport({ period: 'month' });
       setTherapistReport(result.data as TherapistReportData);
+      setLastGenerated(new Date());
     } catch (err) {
       console.error('Failed to generate therapist report:', err);
-      // Fallback: generate a basic report client-side
+      // Fallback client-side
       const now = new Date();
-      const periodLabel = period === '2weeks' ? 'Last 2 weeks' : period === 'month' ? 'Last 30 days' : 'Last 90 days';
+      const activePeople = people.filter((p) => !p.archived);
+      const climate = health ? scoreToClimate(health.score, health.trend) : null;
       setTherapistReport({
-        period: periodLabel,
+        period: 'Last 30 days',
         generatedAt: now.toLocaleDateString(),
         familyOverview: `Family of ${activePeople.length} members. Overall health score: ${health?.score?.toFixed(1) ?? 'N/A'}/5.0. Climate: ${climate?.state ?? 'unknown'}.`,
         patternsOfNote: manuals
@@ -86,13 +159,15 @@ export default function ReportsPage() {
           .flatMap((m) => m.synthesizedContent?.blindSpots ?? [])
           .slice(0, 3)
           .map((b) => `${b.topic}: ${b.synthesis}`),
-        progressSummary: health?.trend === 'improving'
-          ? 'Overall family health is trending positively.'
-          : health?.trend === 'declining'
-          ? 'Some areas show declining trends that may benefit from discussion.'
-          : 'Family health is stable across most dimensions.',
-        rawDataSummary: `${assessments.length} dimensions tracked across ${activePeople.length} family members. ${contributions.filter((c) => c.status === 'complete').length} completed contributions. Completeness: ${familyCompleteness.overallPercent}%.`,
+        progressSummary:
+          health?.trend === 'improving'
+            ? 'Overall family health is trending positively.'
+            : health?.trend === 'declining'
+            ? 'Some areas show declining trends that may benefit from discussion.'
+            : 'Family health is stable across most dimensions.',
+        rawDataSummary: `${assessments.length} dimensions tracked across ${activePeople.length} family members. Completeness: ${familyCompleteness.overallPercent}%.`,
       });
+      setLastGenerated(new Date());
     } finally {
       setGenerating(false);
     }
@@ -100,184 +175,132 @@ export default function ReportsPage() {
 
   if (authLoading || state === 'loading') {
     return (
-      <>
+      <div className="relish-page">
         <Navigation />
         <SideNav />
-        <div className="min-h-screen pt-[60px] flex items-center justify-center">
-          <div className="animate-spin w-8 h-8 rounded-full border-2 border-t-transparent border-gray-300" />
+        <div className="pt-[64px]">
+          <div className="press-loading">Opening the archive&hellip;</div>
         </div>
-      </>
+      </div>
     );
   }
 
   if (!user) return null;
 
+  const daysSinceLast = lastGenerated
+    ? Math.floor((Date.now() - lastGenerated.getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+
   return (
-    <>
+    <div className="relish-page">
       <Navigation />
       <SideNav />
 
-      <div className="min-h-screen pt-[60px] pb-20" style={{ background: '#FAF8F5' }}>
-        <div className="max-w-2xl mx-auto px-5 sm:px-8 pt-8">
+      <div className="pt-[64px] pb-24">
+        <div className="press-binder">
 
-          {/* Header */}
-          <h1
-            style={{
-              fontFamily: 'var(--font-parent-display)',
-              fontSize: 'clamp(1.5rem, 4vw, 2rem)',
-              fontWeight: 300,
-              fontStyle: 'italic',
-              color: '#3A3530',
-              lineHeight: 1.2,
-            }}
-          >
-            Reports
-          </h1>
-
-          {/* Period selector */}
-          <div className="mt-5 mb-6">
-            <PeriodSelector value={period} onChange={setPeriod} />
+          {/* Running header — tiny small caps, centered */}
+          <div className="press-running-header" style={{ paddingTop: 28 }}>
+            <span>The Archive</span>
+            <span className="sep">·</span>
+            <span>Reports, summaries, and letters</span>
           </div>
 
-          {/* Family overview card */}
-          {health && (
-            <div className="glass-card rounded-xl p-5 mb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span
-                    className="text-[10px] font-medium uppercase tracking-wider"
-                    style={{ fontFamily: 'var(--font-parent-body)', color: '#9ca3af' }}
-                  >
-                    Family health
-                  </span>
-                  <div className="flex items-baseline gap-2 mt-1">
-                    <span
-                      style={{
-                        fontFamily: 'var(--font-parent-display)',
-                        fontSize: '28px',
-                        fontWeight: 400,
-                        color: '#3A3530',
-                      }}
-                    >
-                      {health.score.toFixed(1)}
-                    </span>
-                    <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: '#7C7468' }}>
-                      / 5.0
-                    </span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  {climate && (
-                    <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: '#5C5347' }}>
-                      {climate.state.replace(/_/g, ' ')}
-                    </span>
-                  )}
-                  <span
-                    className="block text-[11px] mt-0.5"
-                    style={{ fontFamily: 'var(--font-parent-body)', color: '#9ca3af' }}
-                  >
-                    {health.trend === 'improving' ? '\u2197 Improving' : health.trend === 'declining' ? '\u2198 Declining' : health.trend === 'stable' ? '\u2192 Stable' : ''}
-                  </span>
-                  <span
-                    className="block text-[11px]"
-                    style={{ fontFamily: 'var(--font-parent-body)', color: '#9ca3af' }}
-                  >
-                    Completeness: {familyCompleteness.overallPercent}%
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Per-person cards */}
-          <div className="space-y-2 mb-6">
-            <span
-              className="block mb-2 text-[10px] font-semibold uppercase tracking-wider"
-              style={{ fontFamily: 'var(--font-parent-body)', color: 'rgba(40,40,40,0.3)' }}
-            >
-              By person
-            </span>
-            {activePeople.map((person) => (
-              <PersonStatusCard
-                key={person.personId}
-                person={person}
-                manual={manualMap.get(person.personId)}
-                assessments={assessments}
-                periodMs={periodToMs(period)}
-              />
-            ))}
+          {/* Binder title — huge italic Cormorant */}
+          <div className="press-binder-head">
+            <h1 className="press-binder-title">The Archive</h1>
+            <p className="press-binder-sub">
+              A record of what has been said and what has shifted.
+            </p>
           </div>
 
-          {/* Cross-family patterns */}
-          {crossPatterns.length > 0 && (
-            <div className="mb-6">
-              <span
-                className="block mb-2 text-[10px] font-semibold uppercase tracking-wider"
-                style={{ fontFamily: 'var(--font-parent-body)', color: 'rgba(40,40,40,0.3)' }}
-              >
-                Cross-family patterns
-              </span>
-              <div className="space-y-2">
-                {crossPatterns.slice(0, 5).map((cp, i) => (
-                  <div
-                    key={i}
-                    className="glass-card rounded-xl p-4"
-                  >
-                    <div className="flex items-center gap-1.5 mb-1">
-                      {cp.people.map((name) => (
-                        <span
-                          key={name}
-                          className="text-[10px] px-1.5 py-0.5 rounded-full"
-                          style={{
-                            fontFamily: 'var(--font-parent-body)',
-                            background: 'rgba(45,95,93,0.06)',
-                            color: '#2D5F5D',
-                            fontWeight: 500,
-                          }}
-                        >
-                          {name}
-                        </span>
-                      ))}
-                    </div>
-                    <p className="text-[12px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347', lineHeight: 1.5 }}>
-                      {cp.insight}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Therapist report CTA */}
-          <div
-            className="glass-card-strong rounded-xl p-6 text-center"
-            style={{ border: '1px solid rgba(124,144,130,0.15)' }}
-          >
-            <h3
+          {/* The one action — italic link, not a button */}
+          <div className="press-binder-action">
+            <button
+              onClick={handleGenerate}
+              disabled={generating}
+              className="press-link"
               style={{
-                fontFamily: 'var(--font-parent-display)',
-                fontSize: '17px',
-                fontWeight: 500,
-                color: '#3A3530',
+                background: 'transparent',
+                cursor: generating ? 'wait' : 'pointer',
+                opacity: generating ? 0.5 : 1,
               }}
             >
-              Therapist Report
-            </h3>
-            <p
-              className="mt-1 mb-4"
-              style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: '#7C7468', lineHeight: 1.6 }}
-            >
-              Generate a clinical-tone summary to bring to your therapist. You can redact anything before sharing.
-            </p>
-            <button
-              onClick={handleGenerateReport}
-              disabled={generating}
-              className="inline-flex items-center px-6 py-2.5 rounded-full text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-40 transition-all"
-              style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082' }}
-            >
-              {generating ? 'Generating...' : 'Generate Report'}
+              {generating ? 'Composing…' : 'Compose a new report'}
+              {!generating && <span className="arrow">⟶</span>}
             </button>
+            {daysSinceLast !== null && (
+              <p
+                className="press-marginalia mt-4"
+                style={{ fontSize: 14, textAlign: 'center' }}
+              >
+                last composed {daysSinceLast === 0 ? 'today' : `${daysSinceLast} days ago`}
+              </p>
+            )}
           </div>
+
+          {/* The archive table of contents */}
+          <div className="press-binder-archive">
+            {archiveByYear.length === 0 ? (
+              <EmptyArchive />
+            ) : (
+              <>
+                <div
+                  className="press-chapter-label"
+                  style={{ textAlign: 'center', paddingTop: 32, marginBottom: 0 }}
+                >
+                  Past reports
+                </div>
+                <div className="press-asterism" aria-hidden="true" />
+                <div style={{ padding: '0 48px 20px' }}>
+                  {archiveByYear.map(({ year, months }) => (
+                    <div key={year}>
+                      <div className="press-archive-year">
+                        {toRoman(year)}
+                      </div>
+                      {months.map(([monthName, entries]) => (
+                        <div key={monthName}>
+                          <div className="press-archive-month">{monthName}</div>
+                          {entries.map((entry) => (
+                            <Link
+                              key={entry.id}
+                              href={entry.route || '#'}
+                              className="press-archive-entry"
+                            >
+                              <span className="press-archive-num">
+                                {toRoman(entry.number)}.
+                              </span>
+                              <span className="press-archive-title">
+                                {entry.title}
+                              </span>
+                              <span className="press-archive-dots" />
+                              <span className="press-archive-date">
+                                {entry.dateLabel}
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Fleuron at bottom */}
+          <div className="press-fleuron mt-10" style={{ fontSize: 19 }}>
+            ❦
+          </div>
+
+          {/* Colophon — a tiny note at the very bottom */}
+          <p
+            className="press-marginalia text-center mt-6"
+            style={{ fontSize: 15, color: '#7A6E5C' }}
+          >
+            Reports are generated on demand. Private entries and
+            perspectives marked confidential are never included.
+          </p>
         </div>
       </div>
 
@@ -288,6 +311,21 @@ export default function ReportsPage() {
           onClose={() => setTherapistReport(null)}
         />
       )}
-    </>
+    </div>
+  );
+}
+
+function EmptyArchive() {
+  return (
+    <div className="press-empty" style={{ padding: '56px 40px' }}>
+      <p className="press-empty-title" style={{ fontSize: 26 }}>
+        The archive is empty.
+      </p>
+      <p className="press-empty-body" style={{ fontSize: 15 }}>
+        Past reports and summaries will gather here after your first
+        synthesis or therapist report is composed.
+      </p>
+      <div className="press-fleuron" style={{ fontSize: 16 }}>❦</div>
+    </div>
   );
 }

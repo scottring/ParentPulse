@@ -119,7 +119,7 @@ export default function WorkbookChapterCard({
               <span
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '12px',
+                  fontSize: '14px',
                   color: 'var(--parent-text-light)',
                 }}
               >
@@ -138,7 +138,7 @@ export default function WorkbookChapterCard({
               <span
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '10px',
+                  fontSize: '12px',
                   fontWeight: 600,
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase' as const,
@@ -155,7 +155,7 @@ export default function WorkbookChapterCard({
             <span
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: '12px',
+                fontSize: '14px',
                 color: 'var(--parent-text-light)',
               }}
             >
@@ -164,7 +164,7 @@ export default function WorkbookChapterCard({
             <span
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: '12px',
+                fontSize: '14px',
                 color: 'var(--parent-text-light)',
               }}
             >
@@ -173,7 +173,7 @@ export default function WorkbookChapterCard({
             <span
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: '12px',
+                fontSize: '14px',
                 fontWeight: 500,
                 color: scoreColor,
               }}
@@ -190,7 +190,7 @@ export default function WorkbookChapterCard({
                 className="block mb-2"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '10px',
+                  fontSize: '12px',
                   fontWeight: 600,
                   letterSpacing: '0.12em',
                   textTransform: 'uppercase',
@@ -239,7 +239,7 @@ export default function WorkbookChapterCard({
                   className="mt-2"
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '11px',
+                    fontSize: '15px',
                     color: 'var(--parent-text-light)',
                   }}
                 >
@@ -314,7 +314,7 @@ export default function WorkbookChapterCard({
                 className="ml-1.5"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '10px',
+                  fontSize: '12px',
                   color: 'var(--parent-text-light)',
                 }}
               >

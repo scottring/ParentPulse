@@ -5,12 +5,12 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import CaptureSheet from '@/components/capture/CaptureSheet';
 
 const navLinks = [
-  { label: 'home', href: '/dashboard', matchPrefixes: ['/dashboard'] },
+  { label: 'workbook', href: '/workbook', matchPrefixes: ['/workbook', '/dashboard', '/checkin', '/deepen'] },
   { label: 'family manual', href: '/family-manual', matchPrefixes: ['/family-manual', '/people'] },
-  { label: 'growth workbook', href: '/workbook', matchPrefixes: ['/workbook', '/checkin', '/deepen'] },
-  { label: 'reports binder', href: '/reports', matchPrefixes: ['/reports'] },
+  { label: 'reports', href: '/reports', matchPrefixes: ['/reports'] },
 ];
 
 export default function Navigation() {
@@ -49,32 +49,36 @@ export default function Navigation() {
   };
 
   return (
+    <>
     <nav
       className="fixed top-0 left-0 right-0 z-50"
       style={{
-        height: 60,
-        borderBottom: '1px solid rgba(124,100,77,0.08)',
+        height: 64,
+        background: '#ECEAE5',
+        borderBottom: '1px solid rgba(120, 100, 70, 0.12)',
       }}
     >
-      <div className="h-full px-6 sm:px-8 flex items-center justify-between mx-auto" style={{ maxWidth: 1200 }}>
-        {/* Wordmark */}
+      <div className="h-full px-6 sm:px-10 flex items-center justify-between mx-auto" style={{ maxWidth: 1200 }}>
+        {/* Wordmark — italic Cormorant, like a book's half-title */}
         <Link
-          href="/dashboard"
+          href="/workbook"
           className="hover:opacity-80 transition-opacity"
           style={{
             fontFamily: 'var(--font-parent-display)',
-            fontSize: 19,
-            fontWeight: 500,
-            color: '#5C5347',
-            letterSpacing: '-0.01em',
+            fontSize: 26,
+            fontWeight: 300,
+            fontStyle: 'italic',
+            color: '#3A3530',
+            letterSpacing: '-0.015em',
             textDecoration: 'none',
+            lineHeight: 1,
           }}
         >
-          relish
+          Relish
         </Link>
 
-        {/* Desktop nav links */}
-        <div className="hidden sm:flex items-center gap-6">
+        {/* Desktop nav links — italic Cormorant, like chapter entries */}
+        <div className="hidden sm:flex items-center" style={{ gap: 32 }}>
           {navLinks.map((link) => {
             const isActive = link.matchPrefixes.some(
               (p) => pathname === p || pathname.startsWith(p + '/')
@@ -84,16 +88,16 @@ export default function Navigation() {
                 key={link.href}
                 href={link.href}
                 style={{
-                  fontFamily: 'var(--font-parent-body)',
-                  fontSize: 12,
-                  fontWeight: isActive ? 500 : 400,
-                  letterSpacing: '0.04em',
-                  color: '#5C5347',
-                  opacity: isActive ? 1 : 0.45,
+                  fontFamily: 'var(--font-parent-display)',
+                  fontSize: 16,
+                  fontWeight: 400,
+                  fontStyle: 'italic',
+                  letterSpacing: '0.005em',
+                  color: isActive ? '#3A3530' : '#6B6254',
                   textDecoration: 'none',
-                  paddingBottom: 4,
-                  borderBottom: isActive ? '1.5px solid #7C9082' : '1.5px solid transparent',
-                  transition: 'opacity 0.2s ease',
+                  paddingBottom: 3,
+                  borderBottom: isActive ? '1px solid #3A3530' : '1px solid transparent',
+                  transition: 'color 0.2s ease, border-color 0.2s ease',
                 }}
               >
                 {link.label}
@@ -102,7 +106,7 @@ export default function Navigation() {
           })}
         </div>
 
-        {/* User indicator with dropdown */}
+        {/* User indicator with dropdown — italic name, small caps feel */}
         <div className="hidden sm:block relative" ref={menuRef}>
           <button
             onClick={() => setShowMenu(!showMenu)}
@@ -110,8 +114,8 @@ export default function Navigation() {
           >
             <div
               style={{
-                width: 6,
-                height: 6,
+                width: 5,
+                height: 5,
                 borderRadius: '50%',
                 background: '#7C9082',
               }}
@@ -119,8 +123,10 @@ export default function Navigation() {
             <span
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: 11,
-                fontWeight: 400,
+                fontSize: 15,
+                fontWeight: 600,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
                 color: '#5C5347',
               }}
             >
@@ -144,7 +150,7 @@ export default function Navigation() {
                 className="block px-4 py-2 transition-colors hover:bg-black/5"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: 12,
+                  fontSize: 14,
                   color: '#5C5347',
                   textDecoration: 'none',
                 }}
@@ -157,8 +163,8 @@ export default function Navigation() {
                 className="block w-full text-left px-4 py-2 transition-colors hover:bg-black/5"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: 12,
-                  color: '#8A8078',
+                  fontSize: 14,
+                  color: '#6B6254',
                 }}
               >
                 Log out
@@ -168,5 +174,8 @@ export default function Navigation() {
         </div>
       </div>
     </nav>
+
+    <CaptureSheet />
+    </>
   );
 }

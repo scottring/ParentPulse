@@ -65,7 +65,7 @@ export default function RelationshipNavigator({ familyName, members, onNavigate 
       professional: '#5d8396',
       family: '#3a7a63'
     };
-    return colors[type] || '#6b7280';
+    return colors[type] || '#4A4238';
   };
 
   const groupedMembers = members.reduce((acc, member) => {

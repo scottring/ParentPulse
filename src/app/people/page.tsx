@@ -5,55 +5,66 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { usePerson } from '@/hooks/usePerson';
-import { useDashboard } from '@/hooks/useDashboard';
-import { useRingScores } from '@/hooks/useRingScores';
-import { useManualSummaries } from '@/hooks/useManualSummaries';
-import { useWorkbook } from '@/hooks/useWorkbook';
-import MainLayout from '@/components/layout/MainLayout';
+import Navigation from '@/components/layout/Navigation';
+import SideNav from '@/components/layout/SideNav';
 import { RelationshipType, Person } from '@/types/person-manual';
-import { SpouseCard } from '@/components/people/SpouseCard';
-import { ChildCard } from '@/components/people/ChildCard';
 import { computeAge } from '@/utils/age';
-import { getDimension } from '@/config/relationship-dimensions';
 import { Timestamp } from 'firebase/firestore';
-import type { WorkbookChapter } from '@/types/workbook';
 
-const RELATIONSHIP_EMOJI: Record<string, string> = {
-  self: '🪞',
-  spouse: '💑',
-  child: '👶',
-  elderly_parent: '👴',
-  friend: '🤝',
-  sibling: '👫',
-  professional: '💼',
-  other: '👤',
-};
-
-const RELATIONSHIP_OPTIONS: Array<{ type: RelationshipType; label: string }> = [
-  { type: 'spouse', label: 'Spouse/Partner' },
-  { type: 'child', label: 'Child' },
-  { type: 'elderly_parent', label: 'Elderly Parent' },
-  { type: 'sibling', label: 'Sibling' },
-  { type: 'friend', label: 'Friend' },
-];
-
-function scoreToBand(score: number): { label: string; color: string } {
-  if (score <= 0) return { label: 'No data', color: '#8A8078' };
-  if (score < 2.0) return { label: 'Needs attention', color: '#B85450' };
-  if (score < 3.0) return { label: 'Growing', color: '#C4864C' };
-  if (score < 3.5) return { label: 'Steady', color: '#7C9082' };
-  if (score < 4.0) return { label: 'Strong', color: '#6B8F71' };
-  return { label: 'Thriving', color: '#4E7A54' };
+// ================================================================
+// Roman numeral helper
+// ================================================================
+function toRoman(n: number): string {
+  if (n < 1) return '';
+  const map: Array<[number, string]> = [
+    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
+    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
+    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
+  ];
+  let result = '';
+  let num = n;
+  for (const [value, numeral] of map) {
+    while (num >= value) {
+      result += numeral;
+      num -= value;
+    }
+  }
+  return result;
 }
 
+// ================================================================
+// Relationship options — editorial phrasing
+// ================================================================
+const RELATIONSHIP_OPTIONS: Array<{ type: RelationshipType; label: string; sub: string }> = [
+  { type: 'spouse', label: 'A partner', sub: 'spouse, husband, wife, companion' },
+  { type: 'child', label: 'A child', sub: 'son, daughter, stepchild' },
+  { type: 'elderly_parent', label: 'A parent', sub: 'mother, father, grandparent' },
+  { type: 'sibling', label: 'A sibling', sub: 'brother, sister, half-sibling' },
+  { type: 'friend', label: 'A friend', sub: 'close friend, chosen family' },
+];
+
+function relationshipLabel(person: Person): string {
+  const age = person.dateOfBirth ? computeAge(person.dateOfBirth) : null;
+  const ageStr = age !== null ? ` · age ${toRoman(age).toLowerCase()}` : '';
+  switch (person.relationshipType) {
+    case 'self': return 'Self';
+    case 'spouse': return `Partner${ageStr}`;
+    case 'child': return `Child${ageStr}`;
+    case 'elderly_parent': return `Parent${ageStr}`;
+    case 'sibling': return `Sibling${ageStr}`;
+    case 'friend': return 'Friend';
+    case 'professional': return 'Professional';
+    default: return 'Of the family';
+  }
+}
+
+// ================================================================
+// Main page
+// ================================================================
 export default function PeoplePage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { people, loading: peopleLoading, addPerson, deletePerson } = usePerson();
-  const { assessments, contributions, manuals, roles } = useDashboard();
-  const { health } = useRingScores(assessments);
-  const { summaries, loading: summariesLoading } = useManualSummaries();
-  const { activeChapters } = useWorkbook();
 
   const [showAdd, setShowAdd] = useState(false);
   const [addName, setAddName] = useState('');
@@ -61,100 +72,39 @@ export default function PeoplePage() {
   const [addDob, setAddDob] = useState('');
   const [adding, setAdding] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Person | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login');
   }, [user, authLoading, router]);
 
-  // Build per-person score map from assessments
-  const personScores = useMemo(() => {
-    const map = new Map<string, { avgScore: number; dimensionCount: number }>();
-    for (const person of people) {
-      const relevant = assessments.filter((a) =>
-        a.participantIds?.includes(person.personId),
-      );
-      if (relevant.length > 0) {
-        const avg = relevant.reduce((s, a) => s + a.currentScore, 0) / relevant.length;
-        map.set(person.personId, {
-          avgScore: Math.round(avg * 10) / 10,
-          dimensionCount: relevant.length,
-        });
-      }
-    }
-    return map;
-  }, [people, assessments]);
-
-  const selfPerson = useMemo(
-    () => people.find((p) => p.linkedUserId === user?.userId),
-    [people, user?.userId],
-  );
-
-  // Deduplicate equivalent persons (e.g. Iris's self Person + Iris's spouse Person).
-  // Prefer the relationship-typed record (spouse/child/etc.) over another user's 'self' record
-  // since it carries the name the current user chose.
-  const otherPeople = useMemo(() => {
-    const candidates = people.filter((p) => p.personId !== selfPerson?.personId);
-    const seen = new Set<string>();
-    const result: Person[] = [];
-
-    // Sort so relationship-typed records come before 'self' records from other users
-    const sorted = [...candidates].sort((a, b) => {
-      const aIsSelf = a.relationshipType === 'self' ? 1 : 0;
-      const bIsSelf = b.relationshipType === 'self' ? 1 : 0;
-      return aIsSelf - bIsSelf;
+  // Active people sorted: self first, then by addedAt
+  const sortedPeople = useMemo(() => {
+    const active = people.filter((p) => !p.archived);
+    return [...active].sort((a, b) => {
+      if (a.relationshipType === 'self') return -1;
+      if (b.relationshipType === 'self') return 1;
+      return (b.addedAt?.toMillis?.() || 0) - (a.addedAt?.toMillis?.() || 0);
     });
-
-    for (const p of sorted) {
-      // Check if an equivalent person was already added
-      const isEquiv = sorted.some(
-        (other) =>
-          other.personId !== p.personId &&
-          seen.has(other.personId) &&
-          (
-            // Same linkedUserId
-            (p.linkedUserId && other.linkedUserId === p.linkedUserId) ||
-            // Name match between self and spouse
-            ((p.relationshipType === 'self' && other.relationshipType === 'spouse') ||
-             (p.relationshipType === 'spouse' && other.relationshipType === 'self')) &&
-            p.name.toLowerCase().trim().split(' ')[0] === other.name.toLowerCase().trim().split(' ')[0]
-          ),
-      );
-      if (isEquiv) continue;
-      seen.add(p.personId);
-      result.push(p);
-    }
-    return result;
-  }, [people, selfPerson]);
-
-  if (authLoading || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="manual-spinner" />
-        <style jsx>{`
-          .manual-spinner { width: 48px; height: 48px; border: 4px solid #3A3530; border-top-color: #7C9082; border-radius: 50%; animation: spin 1s linear infinite; }
-          @keyframes spin { to { transform: rotate(360deg); } }
-        `}</style>
-      </div>
-    );
-  }
+  }, [people]);
 
   const handleAdd = async () => {
-    if (!addName.trim()) return;
+    if (!addName.trim() || adding) return;
     setAdding(true);
     try {
-      const data: any = {
+      const personData: Omit<Person, 'personId' | 'familyId' | 'addedAt' | 'addedByUserId' | 'hasManual'> = {
         name: addName.trim(),
         relationshipType: addType,
-        canSelfContribute: ['spouse', 'sibling', 'friend'].includes(addType),
+        canSelfContribute: addType === 'spouse' || addType === 'child' || addType === 'elderly_parent',
       };
       if (addDob) {
-        data.dateOfBirth = Timestamp.fromDate(new Date(addDob));
-        data.age = computeAge(new Date(addDob));
+        personData.dateOfBirth = Timestamp.fromDate(new Date(addDob));
       }
-      const personId = await addPerson(data);
+      const personId = await addPerson(personData);
+      setShowAdd(false);
       setAddName('');
       setAddDob('');
-      setShowAdd(false);
+      setAddType('spouse');
       router.push(`/people/${personId}/create-manual`);
     } catch (err) {
       console.error('Failed to add person:', err);
@@ -163,638 +113,529 @@ export default function PeoplePage() {
     }
   };
 
-  const handleDelete = async (person: Person) => {
+  const handleDelete = async () => {
+    if (!confirmDelete || deleting) return;
+    setDeleting(true);
     try {
-      await deletePerson(person.personId);
+      await deletePerson(confirmDelete.personId);
       setConfirmDelete(null);
     } catch (err) {
       console.error('Failed to delete:', err);
+    } finally {
+      setDeleting(false);
     }
   };
 
-  return (
-    <MainLayout>
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <Link
-              href="/dashboard"
-              className="text-[12px] font-medium mb-1 block transition-colors hover:opacity-70"
-              style={{ color: '#8A8078', fontFamily: 'var(--font-parent-body)' }}
-            >
-              &larr; Dashboard
-            </Link>
-            <h1
-              className="text-[32px] font-normal leading-tight"
-              style={{ color: '#3A3530', fontFamily: 'var(--font-parent-display)' }}
-            >
-              People
-            </h1>
-          </div>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="text-[12px] font-medium px-4 py-2 rounded-full transition-all hover:scale-105"
-            style={{
-              fontFamily: 'var(--font-parent-body)',
-              color: '#FFFFFF',
-              background: '#7C9082',
-            }}
-          >
-            + Add person
-          </button>
+  if (authLoading || peopleLoading) {
+    return (
+      <div className="relish-page">
+        <Navigation />
+        <SideNav />
+        <div className="pt-[64px]">
+          <div className="press-loading">Opening the index&hellip;</div>
         </div>
-
-        {/* === SECTIONED PEOPLE LAYOUT === */}
-        <div className="space-y-8">
-
-          {/* Your Manual */}
-          {selfPerson && (
-            <section>
-              <SectionLabel label="You" />
-              <PersonCard
-                person={selfPerson}
-                isSelf
-                score={personScores.get(selfPerson.personId)}
-                summary={summaries.get(selfPerson.personId)}
-                contributions={contributions}
-                userId={user.userId}
-                workbookChapters={activeChapters.filter(c => c.personId === selfPerson.personId && c.status === 'active')}
-              />
-            </section>
-          )}
-
-          {/* Partner */}
-          {(() => {
-            const spouses = otherPeople.filter((p) => p.relationshipType === 'spouse');
-            if (spouses.length === 0) return null;
-            return (
-              <section>
-                <SectionLabel label="Partner" />
-                <div className="space-y-3">
-                  {spouses.map((person) => (
-                    <SpouseCard
-                      key={person.personId}
-                      person={person}
-                      manual={manuals.find((m) => m.personId === person.personId)}
-                      assessments={assessments}
-                    />
-                  ))}
-                </div>
-              </section>
-            );
-          })()}
-
-          {/* Children */}
-          {(() => {
-            const children = otherPeople.filter((p) => p.relationshipType === 'child');
-            if (children.length === 0) return null;
-            return (
-              <section>
-                <SectionLabel label="Children" />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {children.map((person) => (
-                    <ChildCard
-                      key={person.personId}
-                      person={person}
-                      manual={manuals.find((m) => m.personId === person.personId)}
-                      assessments={assessments}
-                    />
-                  ))}
-                </div>
-              </section>
-            );
-          })()}
-
-          {/* Others (elderly parent, sibling, friend, etc.) */}
-          {(() => {
-            const others = otherPeople.filter((p) => p.relationshipType !== 'spouse' && p.relationshipType !== 'child');
-            if (others.length === 0) return null;
-            return (
-              <section>
-                <SectionLabel label="Others" />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {others.map((person) => (
-                    <PersonCard
-                      key={person.personId}
-                      person={person}
-                      score={personScores.get(person.personId)}
-                      summary={summaries.get(person.personId)}
-                      contributions={contributions}
-                      userId={user.userId}
-                      onDelete={() => setConfirmDelete(person)}
-                      workbookChapters={activeChapters.filter(c => c.personId === person.personId && c.status === 'active')}
-                    />
-                  ))}
-                </div>
-              </section>
-            );
-          })()}
-        </div>
-
-        {/* Empty state */}
-        {!peopleLoading && otherPeople.length === 0 && !selfPerson && (
-          <div className="glass-card rounded-2xl p-8 text-center mt-4">
-            <h3
-              className="text-[22px] font-normal mb-2"
-              style={{ color: '#3A3530', fontFamily: 'var(--font-parent-display)' }}
-            >
-              No one here yet
-            </h3>
-            <p
-              className="text-[13px]"
-              style={{ color: '#7C7468', fontFamily: 'var(--font-parent-body)' }}
-            >
-              Add the people in your life to start building relationship portraits.
-            </p>
-          </div>
-        )}
-
-        {/* Add person modal */}
-        {showAdd && (
-          <div
-            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-            onClick={() => !adding && setShowAdd(false)}
-          >
-            <div
-              className="glass-card-strong rounded-2xl p-6 max-w-sm w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3
-                className="text-[22px] font-normal mb-4"
-                style={{ color: '#3A3530', fontFamily: 'var(--font-parent-display)' }}
-              >
-                Add person
-              </h3>
-
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  value={addName}
-                  onChange={(e) => setAddName(e.target.value)}
-                  placeholder="Name"
-                  autoFocus
-                  className="w-full text-[13px] rounded-2xl px-3 py-2"
-                  style={{
-                    fontFamily: 'var(--font-parent-body)',
-                    border: '1px solid rgba(138,128,120,0.2)',
-                    background: 'rgba(255,255,255,0.4)',
-                  }}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-                />
-
-                <div className="flex flex-wrap gap-1.5">
-                  {RELATIONSHIP_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.type}
-                      onClick={() => setAddType(opt.type)}
-                      className="text-[11px] font-medium px-2.5 py-1.5 rounded-full transition-all"
-                      style={{
-                        fontFamily: 'var(--font-parent-body)',
-                        color: addType === opt.type ? '#FFFFFF' : '#7C7468',
-                        background: addType === opt.type ? '#7C9082' : 'rgba(138,128,120,0.08)',
-                        border: `1px solid ${addType === opt.type ? '#7C9082' : 'rgba(138,128,120,0.2)'}`,
-                      }}
-                    >
-                      {RELATIONSHIP_EMOJI[opt.type]} {opt.label}
-                    </button>
-                  ))}
-                </div>
-
-                <input
-                  type="date"
-                  value={addDob}
-                  onChange={(e) => setAddDob(e.target.value)}
-                  className="w-full text-[11px] rounded-2xl px-3 py-2"
-                  style={{
-                    fontFamily: 'var(--font-parent-body)',
-                    border: '1px solid rgba(138,128,120,0.2)',
-                    background: 'rgba(255,255,255,0.4)',
-                    color: '#7C7468',
-                  }}
-                />
-
-                <div className="flex gap-2 pt-1">
-                  <button
-                    onClick={() => setShowAdd(false)}
-                    className="flex-1 text-[12px] font-medium py-2 rounded-full transition-all"
-                    style={{
-                      fontFamily: 'var(--font-parent-body)',
-                      color: '#7C7468',
-                      border: '1px solid rgba(138,128,120,0.2)',
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleAdd}
-                    disabled={adding || !addName.trim()}
-                    className="flex-1 text-[12px] font-medium py-2 rounded-full text-white disabled:opacity-40 transition-all"
-                    style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082' }}
-                  >
-                    {adding ? '...' : 'Add'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Delete confirmation */}
-        {confirmDelete && (
-          <div
-            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-            onClick={() => setConfirmDelete(null)}
-          >
-            <div
-              className="glass-card-strong rounded-2xl p-6 max-w-sm w-full"
-              style={{ border: '1px solid rgba(220,38,38,0.3)' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3
-                className="text-[22px] font-normal mb-2"
-                style={{ color: '#dc2626', fontFamily: 'var(--font-parent-display)' }}
-              >
-                Delete {confirmDelete.name}?
-              </h3>
-              <p
-                className="text-[13px] mb-4"
-                style={{ color: '#7C7468', fontFamily: 'var(--font-parent-body)' }}
-              >
-                This will remove all their data permanently.
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setConfirmDelete(null)}
-                  className="flex-1 text-[12px] font-medium py-2 rounded-full transition-all"
-                  style={{
-                    fontFamily: 'var(--font-parent-body)',
-                    color: '#7C7468',
-                    border: '1px solid rgba(138,128,120,0.2)',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleDelete(confirmDelete)}
-                  className="flex-1 text-[12px] font-medium py-2 rounded-full text-white transition-all"
-                  style={{ fontFamily: 'var(--font-parent-body)', background: '#dc2626' }}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
-    </MainLayout>
-  );
-}
-
-// --- Section Label ---
-
-function SectionLabel({ label }: { label: string }) {
-  return (
-    <span
-      className="block mb-3 text-[10px] font-semibold uppercase tracking-wider"
-      style={{
-        fontFamily: 'var(--font-parent-body)',
-        color: 'rgba(40,40,40,0.3)',
-        letterSpacing: '0.12em',
-      }}
-    >
-      {label}
-    </span>
-  );
-}
-
-// --- Person Card Component ---
-
-function PersonCard({
-  person,
-  isSelf,
-  score,
-  summary,
-  contributions,
-  userId,
-  onDelete,
-  workbookChapters,
-}: {
-  person: Person;
-  isSelf?: boolean;
-  score?: { avgScore: number; dimensionCount: number };
-  summary?: import('@/hooks/useManualSummaries').ManualSummary;
-  contributions: any[];
-  userId: string;
-  onDelete?: () => void;
-  workbookChapters?: WorkbookChapter[];
-}) {
-  const age = person.dateOfBirth ? computeAge(person.dateOfBirth) : null;
-  const emoji = RELATIONSHIP_EMOJI[person.relationshipType || 'other'] || '👤';
-
-  // Contribution status
-  const personContribs = contributions.filter((c: any) => c.personId === person.personId);
-  const selfContrib = personContribs.find((c: any) => c.perspectiveType === 'self' && c.status === 'complete');
-  const observerContribs = personContribs.filter((c: any) => c.perspectiveType === 'observer' && c.status === 'complete');
-  const draftCount = personContribs.filter((c: any) => c.status === 'draft').length;
-
-  const hasSynthesis = summary?.hasSynthesis;
-  const progress = summary?.overallProgress || 0;
-
-  // Determine the primary action for this person
-  const hasObserverContrib = observerContribs.length > 0;
-  const myObserverContrib = personContribs.find((c: any) => c.perspectiveType === 'observer' && c.contributorId === userId && c.status === 'complete');
-  const myObserverDraft = personContribs.find((c: any) => c.perspectiveType === 'observer' && c.contributorId === userId && c.status === 'draft');
-  const selfDraft = personContribs.find((c: any) => c.perspectiveType === 'self' && c.status === 'draft');
-
-  const assessHref = !person.hasManual
-    ? `/people/${person.personId}/create-manual`
-    : isSelf
-      ? `/people/${person.personId}/manual/self-onboard`
-      : `/people/${person.personId}/manual/onboard`;
-
-  const manualHref = person.hasManual ? `/people/${person.personId}/manual` : null;
-
-  // What label for the primary action button?
-  let actionLabel: string;
-  let actionSublabel: string | null = null;
-  if (!person.hasManual) {
-    actionLabel = 'Set up manual';
-  } else if (isSelf) {
-    if (selfDraft) {
-      actionLabel = 'Continue assessment';
-    } else if (selfContrib) {
-      actionLabel = 'Revise your answers';
-    } else {
-      actionLabel = 'Assess yourself';
-    }
-  } else {
-    if (myObserverDraft) {
-      actionLabel = 'Continue assessment';
-    } else if (myObserverContrib) {
-      actionLabel = 'Revise your observations';
-    } else {
-      actionLabel = `Assess ${person.name}`;
-    }
+    );
   }
 
-  // Next action
-  const nextAction = summary?.journeySteps.find((s) => s.status === 'in-progress' || s.status === 'not-started');
+  if (!user) return null;
 
-  // Qualitative band from score
-  const band = score ? scoreToBand(score.avgScore) : null;
+  return (
+    <div className="relish-page">
+      <Navigation />
+      <SideNav />
+
+      <div className="pt-[64px] pb-24">
+        <div className="press-binder" style={{ maxWidth: 720 }}>
+
+          {/* Running header */}
+          <div className="press-running-header" style={{ paddingTop: 28 }}>
+            <span>The Family Manual</span>
+            <span className="sep">·</span>
+            <span>Index of People</span>
+          </div>
+
+          {/* Back link */}
+          <div style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 12 }}>
+            <Link href="/family-manual" className="press-link-sm">
+              ⟵ Return to the family manual
+            </Link>
+          </div>
+
+          {/* Title */}
+          <div className="press-binder-head">
+            <h1 className="press-binder-title">The people</h1>
+            <p className="press-binder-sub">
+              Everyone with a volume in this manual, and room for
+              those yet to come.
+            </p>
+          </div>
+
+          {/* The one action — add a new volume */}
+          <div className="press-binder-action">
+            <button
+              onClick={() => setShowAdd(true)}
+              className="press-link"
+              style={{ background: 'transparent', cursor: 'pointer' }}
+            >
+              Begin a new volume
+              <span className="arrow">⟶</span>
+            </button>
+          </div>
+
+          {/* The list of existing people */}
+          {sortedPeople.length > 0 && (
+            <div className="press-binder-archive" style={{ padding: '20px 0 32px' }}>
+              <div
+                className="press-chapter-label"
+                style={{ textAlign: 'center', paddingTop: 20, marginBottom: 0 }}
+              >
+                Kept in the family
+              </div>
+              <div className="press-asterism" aria-hidden="true" />
+
+              <div style={{ padding: '0 48px' }}>
+                {sortedPeople.map((person, i) => (
+                  <PersonRow
+                    key={person.personId}
+                    person={person}
+                    index={i + 1}
+                    onDelete={
+                      person.relationshipType === 'self'
+                        ? undefined
+                        : () => setConfirmDelete(person)
+                    }
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {sortedPeople.length === 0 && (
+            <div className="press-empty" style={{ padding: '40px 20px 60px' }}>
+              <p className="press-empty-title" style={{ fontSize: 26 }}>
+                The index is empty.
+              </p>
+              <p className="press-empty-body" style={{ fontSize: 15 }}>
+                Begin by adding the first person you want to
+                understand more fully.
+              </p>
+            </div>
+          )}
+
+          {/* Fleuron */}
+          <div className="press-fleuron mt-6" style={{ fontSize: 17 }}>
+            ❦
+          </div>
+        </div>
+      </div>
+
+      {/* Add person modal — press styled */}
+      {showAdd && (
+        <AddPersonDialog
+          addName={addName}
+          setAddName={setAddName}
+          addType={addType}
+          setAddType={setAddType}
+          addDob={addDob}
+          setAddDob={setAddDob}
+          adding={adding}
+          onConfirm={handleAdd}
+          onClose={() => !adding && setShowAdd(false)}
+        />
+      )}
+
+      {/* Delete confirmation — press styled */}
+      {confirmDelete && (
+        <DeleteDialog
+          person={confirmDelete}
+          deleting={deleting}
+          onConfirm={handleDelete}
+          onClose={() => !deleting && setConfirmDelete(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ================================================================
+// A person row — book-catalog style entry
+// ================================================================
+function PersonRow({
+  person,
+  index,
+  onDelete,
+}: {
+  person: Person;
+  index: number;
+  onDelete?: () => void;
+}) {
+  const label = relationshipLabel(person);
+  const hasManual = person.hasManual;
 
   return (
     <div
-      className="block glass-card rounded-2xl transition-all hover:shadow-md group"
+      className="flex items-baseline gap-4 py-5"
+      style={{ borderBottom: '1px solid rgba(200,190,172,0.4)' }}
     >
-      {/* Header band */}
-      <div
-        className="px-5 py-3 flex items-center justify-between"
-        style={{ borderBottom: '1px solid rgba(138,128,120,0.1)' }}
+      {/* Volume number */}
+      <span
+        className="press-chapter-label"
+        style={{ width: 40, flexShrink: 0, color: '#6B6254' }}
       >
-        <div className="flex items-center gap-2.5">
-          <span className="text-2xl">{emoji}</span>
-          <div>
-            <div className="flex items-center gap-2">
-              <span
-                className="text-[22px] font-normal"
-                style={{ color: '#3A3530', fontFamily: 'var(--font-parent-display)' }}
-              >
-                {person.name}
-              </span>
-              {isSelf && (
-                <span
-                  className="text-[11px] font-medium px-2 py-0.5 rounded-full"
+        {toRoman(index)}.
+      </span>
+
+      {/* Name + meta — the main content */}
+      <Link
+        href={
+          hasManual
+            ? `/people/${person.personId}/manual`
+            : `/people/${person.personId}/create-manual`
+        }
+        className="flex-1 min-w-0 block"
+        style={{ textDecoration: 'none', color: 'inherit' }}
+      >
+        <h3
+          className="press-display-sm"
+          style={{
+            fontSize: 22,
+            lineHeight: 1.2,
+            margin: 0,
+          }}
+        >
+          {person.name}
+        </h3>
+        <p
+          className="press-marginalia mt-1"
+          style={{ fontSize: 15 }}
+        >
+          {label}
+          {!hasManual && (
+            <> &middot; <em style={{ color: '#C4A265' }}>volume not yet written</em></>
+          )}
+        </p>
+      </Link>
+
+      {/* Open arrow */}
+      <Link
+        href={
+          hasManual
+            ? `/people/${person.personId}/manual`
+            : `/people/${person.personId}/create-manual`
+        }
+        className="press-link-sm"
+        style={{ flexShrink: 0 }}
+      >
+        {hasManual ? 'Open' : 'Begin'} ⟶
+      </Link>
+
+      {/* Delete — quiet ghost button */}
+      {onDelete && (
+        <button
+          onClick={onDelete}
+          className="press-marginalia"
+          style={{
+            background: 'transparent',
+            border: 0,
+            cursor: 'pointer',
+            fontSize: 15,
+            color: '#7A6E5C',
+            marginLeft: 8,
+            flexShrink: 0,
+          }}
+          aria-label={`Archive ${person.name}`}
+        >
+          archive
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ================================================================
+// Add person dialog — press styled
+// ================================================================
+interface AddDialogProps {
+  addName: string;
+  setAddName: (v: string) => void;
+  addType: RelationshipType;
+  setAddType: (v: RelationshipType) => void;
+  addDob: string;
+  setAddDob: (v: string) => void;
+  adding: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}
+
+function AddPersonDialog({
+  addName, setAddName, addType, setAddType, addDob, setAddDob,
+  adding, onConfirm, onClose,
+}: AddDialogProps) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{
+        background: 'rgba(58, 48, 32, 0.4)',
+        padding: 20,
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="press-volume relative overflow-hidden"
+        style={{ maxWidth: 540, width: '100%' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Running header */}
+        <div className="press-running-header">
+          <span>A new volume</span>
+          <span className="sep">·</span>
+          <span>Begin here</span>
+        </div>
+
+        <div style={{ padding: '24px 56px 40px' }}>
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <span className="press-chapter-label">Begin</span>
+            <h2
+              className="press-display-md mt-2"
+              style={{ fontSize: 32 }}
+            >
+              A new volume
+            </h2>
+            <p className="press-marginalia mt-2" style={{ fontSize: 14 }}>
+              Someone you&rsquo;d like to understand more fully.
+            </p>
+          </div>
+
+          <hr className="press-rule" />
+
+          {/* Name field */}
+          <div className="mt-6">
+            <span className="press-chapter-label">Their name</span>
+            <input
+              type="text"
+              value={addName}
+              onChange={(e) => setAddName(e.target.value)}
+              placeholder="e.g. Iris"
+              autoFocus
+              className="w-full focus:outline-none mt-2"
+              style={{
+                fontFamily: 'var(--font-parent-display)',
+                fontSize: 24,
+                fontStyle: 'italic',
+                color: '#3A3530',
+                background: 'transparent',
+                border: 0,
+                borderBottom: '1px solid rgba(200,190,172,0.6)',
+                padding: '8px 2px 10px',
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && handleEnter(e, onConfirm)}
+            />
+          </div>
+
+          {/* Relationship field */}
+          <div className="mt-8">
+            <span className="press-chapter-label">Who they are to you</span>
+            <div className="mt-3">
+              {RELATIONSHIP_OPTIONS.map((opt) => (
+                <button
+                  key={opt.type}
+                  onClick={() => setAddType(opt.type)}
+                  className="w-full text-left py-3"
                   style={{
-                    fontFamily: 'var(--font-parent-body)',
-                    color: '#7C9082',
-                    background: 'rgba(124,144,130,0.1)',
+                    background: 'transparent',
+                    border: 0,
+                    borderBottom: '1px solid rgba(200,190,172,0.35)',
+                    cursor: 'pointer',
+                    transition: 'padding 0.2s ease',
+                    paddingLeft: addType === opt.type ? 14 : 0,
                   }}
                 >
-                  You
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span
-                className="text-[11px] capitalize"
-                style={{ color: '#8A8078', fontFamily: 'var(--font-parent-body)' }}
-              >
-                {(person.relationshipType || 'other').replace('_', ' ')}
-              </span>
-              {age !== null && (
-                <span
-                  className="text-[11px]"
-                  style={{ color: '#8A8078', fontFamily: 'var(--font-parent-body)' }}
-                >
-                  &middot; age {age}
-                </span>
-              )}
+                  <div className="flex items-baseline gap-3">
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-parent-display)',
+                        fontSize: 20,
+                        fontStyle: 'italic',
+                        color: addType === opt.type ? '#3A3530' : '#6B6254',
+                        fontWeight: addType === opt.type ? 500 : 400,
+                      }}
+                    >
+                      {opt.label}
+                    </span>
+                    <span
+                      className="press-marginalia"
+                      style={{ fontSize: 14 }}
+                    >
+                      {opt.sub}
+                    </span>
+                    {addType === opt.type && (
+                      <span
+                        style={{
+                          marginLeft: 'auto',
+                          fontFamily: 'var(--font-parent-display)',
+                          fontStyle: 'italic',
+                          color: '#7C9082',
+                          fontSize: 16,
+                        }}
+                      >
+                        ✓
+                      </span>
+                    )}
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
-        </div>
 
-        {/* Qualitative band instead of numeric score */}
-        {band ? (
-          <div className="text-right">
-            <div
-              className="text-[13px] font-medium"
-              style={{ color: band.color, fontFamily: 'var(--font-parent-body)' }}
-            >
-              {band.label}
-            </div>
-            <div
-              className="text-[10px] font-semibold tracking-[0.12em] mt-0.5"
-              style={{ color: '#8A8078', fontFamily: 'var(--font-parent-body)' }}
-            >
-              {score!.dimensionCount} dimensions
-            </div>
-          </div>
-        ) : (
-          <div className="text-right">
-            <div
-              className="text-[13px] font-medium"
-              style={{ color: '#8A8078', fontFamily: 'var(--font-parent-body)' }}
-            >
-              Not scored
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Body */}
-      <div className="px-5 py-4 space-y-3">
-        {/* Perspectives */}
-        <div>
-          <div
-            className="text-[10px] font-semibold tracking-[0.12em] mb-1.5"
-            style={{ color: '#8A8078', fontFamily: 'var(--font-parent-body)' }}
-          >
-            Perspectives
-          </div>
-          <div className="flex items-center gap-3">
-            <StatusChip
-              label="Self"
-              done={!!selfContrib}
-              draft={!selfContrib && personContribs.some((c: any) => c.perspectiveType === 'self' && c.status === 'draft')}
-            />
-            <StatusChip
-              label={observerContribs.length > 1 ? `${observerContribs.length} Observers` : 'Observer'}
-              done={observerContribs.length > 0}
-              draft={!observerContribs.length && personContribs.some((c: any) => c.perspectiveType === 'observer' && c.status === 'draft')}
-            />
-            {hasSynthesis && (
-              <StatusChip label="Synthesized" done />
-            )}
-          </div>
-        </div>
-
-        {/* Progress */}
-        {summary && (
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span
-                className="text-[10px] font-semibold tracking-[0.12em]"
-                style={{ color: '#8A8078', fontFamily: 'var(--font-parent-body)' }}
-              >
-                Journey
-              </span>
-              <span
-                className="text-[13px] font-medium"
-                style={{ color: '#5C5347', fontFamily: 'var(--font-parent-body)' }}
-              >
-                {progress}%
-              </span>
-            </div>
-            <div
-              className="w-full h-[2px] rounded-full overflow-hidden"
-              style={{ background: 'rgba(138,128,120,0.15)' }}
-            >
-              <div
-                className="h-full rounded-full transition-all"
-                style={{
-                  width: `${progress}%`,
-                  background: '#7C9082',
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Workbook chapters */}
-        {workbookChapters && workbookChapters.length > 0 && (
-          <div
-            className="rounded-2xl px-3 py-2"
-            style={{
-              background: 'rgba(124,144,130,0.06)',
-              border: '1px solid rgba(124,144,130,0.15)',
-            }}
-          >
-            <span
-              className="text-[10px] font-semibold tracking-[0.12em]"
-              style={{ color: '#7C9082', fontFamily: 'var(--font-parent-body)' }}
-            >
-              Working on
+          {/* Birthday field */}
+          <div className="mt-8">
+            <span className="press-chapter-label">
+              Date of birth <em style={{ textTransform: 'none', letterSpacing: 0, color: '#7A6E5C' }}>(optional)</em>
             </span>
-            <span
-              className="text-[11px] ml-1.5"
-              style={{ color: '#5C5347', fontFamily: 'var(--font-parent-body)' }}
-            >
-              {workbookChapters
-                .map(ch => getDimension(ch.dimensionId)?.name || ch.dimensionId)
-                .join(', ')}
-            </span>
-            <Link
-              href="/workbook"
-              className="text-[11px] ml-1.5 hover:opacity-70"
-              style={{ color: '#7C9082', fontFamily: 'var(--font-parent-body)' }}
-            >
-              &rarr;
-            </Link>
+            <input
+              type="date"
+              value={addDob}
+              onChange={(e) => setAddDob(e.target.value)}
+              className="w-full focus:outline-none mt-2"
+              style={{
+                fontFamily: 'var(--font-parent-display)',
+                fontSize: 17,
+                fontStyle: 'italic',
+                color: addDob ? '#3A3530' : '#746856',
+                background: 'transparent',
+                border: 0,
+                borderBottom: '1px solid rgba(200,190,172,0.6)',
+                padding: '8px 2px 10px',
+              }}
+            />
           </div>
-        )}
-      </div>
 
-      {/* Action buttons */}
-      <div
-        className="px-5 py-3 flex items-center gap-2"
-        style={{ borderTop: '1px solid rgba(138,128,120,0.1)' }}
-      >
-        <Link
-          href={assessHref}
-          className="flex-1 text-[12px] font-medium py-2 rounded-full text-center text-white transition-all hover:opacity-90"
-          style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082' }}
-        >
-          {actionLabel} &rarr;
-        </Link>
-        {manualHref && (
-          <Link
-            href={manualHref}
-            className="text-[12px] font-medium px-4 py-2 rounded-full text-center transition-all hover:opacity-80"
-            style={{
-              fontFamily: 'var(--font-parent-body)',
-              color: '#5C5347',
-              border: '1px solid rgba(138,128,120,0.2)',
-            }}
-          >
-            View manual
-          </Link>
-        )}
-        {onDelete && (
-          <button
-            onClick={onDelete}
-            className="text-[11px] px-2 py-1 rounded-full transition-all hover:bg-red-50 opacity-0 group-hover:opacity-100"
-            style={{ color: '#dc2626', fontFamily: 'var(--font-parent-body)' }}
-          >
-            Delete
-          </button>
-        )}
+          <hr className="press-rule" style={{ marginTop: 36 }} />
+
+          {/* Actions */}
+          <div className="mt-6 flex items-center justify-between">
+            <button
+              onClick={onClose}
+              disabled={adding}
+              className="press-link-sm"
+              style={{
+                background: 'transparent',
+                cursor: adding ? 'not-allowed' : 'pointer',
+                opacity: adding ? 0.4 : 1,
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={!addName.trim() || adding}
+              className="press-link"
+              style={{
+                background: 'transparent',
+                cursor: !addName.trim() || adding ? 'not-allowed' : 'pointer',
+                opacity: !addName.trim() || adding ? 0.4 : 1,
+              }}
+            >
+              {adding ? 'Beginning…' : 'Begin the volume'}
+              {!adding && <span className="arrow">⟶</span>}
+            </button>
+          </div>
+
+          <div className="press-fleuron mt-8">❦</div>
+        </div>
       </div>
     </div>
   );
 }
 
-function StatusChip({ label, done, draft }: { label: string; done: boolean; draft?: boolean }) {
-  if (done) {
-    return (
-      <span
-        className="text-[11px] font-medium px-2.5 py-1 rounded-full"
-        style={{
-          fontFamily: 'var(--font-parent-body)',
-          color: '#7C9082',
-          background: 'rgba(124,144,130,0.1)',
-        }}
-      >
-        {label} ✓
-      </span>
-    );
-  }
-  if (draft) {
-    return (
-      <span
-        className="text-[11px] font-medium px-2.5 py-1 rounded-full"
-        style={{
-          fontFamily: 'var(--font-parent-body)',
-          color: '#8A8078',
-          background: 'rgba(138,128,120,0.08)',
-        }}
-      >
-        {label}...
-      </span>
-    );
-  }
+function handleEnter(e: React.KeyboardEvent<HTMLInputElement>, onConfirm: () => void) {
+  e.preventDefault();
+  onConfirm();
+}
+
+// ================================================================
+// Delete confirmation dialog
+// ================================================================
+function DeleteDialog({
+  person,
+  deleting,
+  onConfirm,
+  onClose,
+}: {
+  person: Person;
+  deleting: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
   return (
-    <span
-      className="text-[11px] px-2.5 py-1 rounded-full"
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
       style={{
-        fontFamily: 'var(--font-parent-body)',
-        color: '#8A8078',
-        background: 'rgba(138,128,120,0.05)',
-        border: '1px solid rgba(138,128,120,0.15)',
+        background: 'rgba(58, 48, 32, 0.4)',
+        padding: 20,
       }}
+      onClick={onClose}
     >
-      {label}
-    </span>
+      <div
+        className="press-volume relative overflow-hidden"
+        style={{ maxWidth: 480, width: '100%' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="press-running-header">
+          <span>Archive a volume</span>
+        </div>
+
+        <div style={{ padding: '24px 48px 36px', textAlign: 'center' }}>
+          <span className="press-chapter-label">Confirm</span>
+          <h2
+            className="press-display-md mt-2"
+            style={{ fontSize: 26 }}
+          >
+            Archive {person.name}&rsquo;s volume?
+          </h2>
+          <p
+            className="press-body-italic mt-4"
+            style={{ fontSize: 15, maxWidth: 340, margin: '16px auto 0' }}
+          >
+            The volume will be set aside. Its contents remain in the
+            archive and can be restored later.
+          </p>
+
+          <hr className="press-rule" style={{ marginTop: 28 }} />
+
+          <div className="mt-6 flex items-center justify-between">
+            <button
+              onClick={onClose}
+              disabled={deleting}
+              className="press-link-sm"
+              style={{
+                background: 'transparent',
+                cursor: deleting ? 'wait' : 'pointer',
+                opacity: deleting ? 0.4 : 1,
+              }}
+            >
+              Keep the volume
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={deleting}
+              className="press-link"
+              style={{
+                background: 'transparent',
+                cursor: deleting ? 'wait' : 'pointer',
+                opacity: deleting ? 0.5 : 1,
+                color: '#C08070',
+                borderBottomColor: 'rgba(192,128,112,0.4)',
+              }}
+            >
+              {deleting ? 'Archiving…' : 'Archive'}
+              {!deleting && <span className="arrow">⟶</span>}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

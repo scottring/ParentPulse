@@ -42,7 +42,7 @@ function InsightCard({ insight, variant }: { insight: SynthesizedInsight; varian
       <h4
         style={{
           fontFamily: 'var(--font-parent-body)',
-          fontSize: '13px',
+          fontSize: '15px',
           fontWeight: 600,
           color: '#3A3530',
           marginBottom: '4px',
@@ -53,7 +53,7 @@ function InsightCard({ insight, variant }: { insight: SynthesizedInsight; varian
       <p
         style={{
           fontFamily: 'var(--font-parent-body)',
-          fontSize: '12px',
+          fontSize: '14px',
           color: '#5C5347',
           lineHeight: 1.6,
         }}
@@ -63,12 +63,12 @@ function InsightCard({ insight, variant }: { insight: SynthesizedInsight; varian
       {(insight.selfPerspective || insight.observerPerspective) && (
         <div className="mt-3 space-y-1.5">
           {insight.selfPerspective && (
-            <div className="text-[11px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>
+            <div className="text-[11px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
               <span className="font-medium">Self:</span> {insight.selfPerspective}
             </div>
           )}
           {insight.observerPerspective && (
-            <div className="text-[11px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>
+            <div className="text-[11px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
               <span className="font-medium">Observer:</span> {insight.observerPerspective}
             </div>
           )}
@@ -157,13 +157,13 @@ function Section({ title, subtitle, count, children }: { title: string; subtitle
         >
           {title}
         </h3>
-        <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '11px', color: '#9ca3af' }}>
+        <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#5F564B' }}>
           {count}
         </span>
       </div>
       <p
         className="mb-3"
-        style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#7C7468' }}
+        style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5F564B' }}
       >
         {subtitle}
       </p>

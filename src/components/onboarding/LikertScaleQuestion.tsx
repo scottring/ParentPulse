@@ -9,29 +9,46 @@ interface LikertScaleQuestionProps {
   onChange: (value: number) => void;
 }
 
+function toRoman(n: number): string {
+  if (n < 1) return '0';
+  const map: Array<[number, string]> = [
+    [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i'],
+  ];
+  let result = '';
+  let num = n;
+  for (const [value, numeral] of map) {
+    while (num >= value) {
+      result += numeral;
+      num -= value;
+    }
+  }
+  return result;
+}
+
 export function LikertScaleQuestion({ scale, value, onChange }: LikertScaleQuestionProps) {
   const [hoveredValue, setHoveredValue] = useState<number | null>(null);
 
-  // Generate scale points
   const scalePoints = Array.from(
     { length: scale.max - scale.min + 1 },
-    (_, i) => scale.min + i
+    (_, i) => scale.min + i,
   );
 
-  // Get label for a scale point
   const getLabel = (point: number): string => {
     if (point === scale.min) return scale.minLabel;
     if (point === scale.max) return scale.maxLabel;
     if (scale.midLabel && point === Math.floor((scale.min + scale.max) / 2)) {
       return scale.midLabel;
     }
-    return scale.type === 'numeric' ? point.toString() : '';
+    return '';
   };
 
   return (
-    <div className="space-y-8 animate-fade-in-up">
-      {/* Scale buttons - LARGE and prominent */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+    <div>
+      {/* Scale row — quiet, editorial, no chunky borders */}
+      <div
+        className="flex items-stretch justify-between"
+        style={{ gap: 12, marginBottom: 22 }}
+      >
         {scalePoints.map((point) => {
           const label = getLabel(point);
           const isSelected = value === point;
@@ -44,41 +61,61 @@ export function LikertScaleQuestion({ scale, value, onChange }: LikertScaleQuest
               onClick={() => onChange(point)}
               onMouseEnter={() => setHoveredValue(point)}
               onMouseLeave={() => setHoveredValue(null)}
-              className={`
-                flex-1 px-4 sm:px-6 py-4 sm:py-6 rounded-xl border-2 transition-all duration-200
-                ${isSelected ? 'scale-105 shadow-lg' : 'hover:scale-105'}
-                ${isSelected || isHovered ? 'shadow-md' : ''}
-              `}
+              className="flex-1 transition-all"
               style={{
-                borderColor: isSelected ? 'var(--parent-accent)' : 'var(--parent-border)',
-                backgroundColor: isSelected ? 'var(--parent-card)' : 'transparent',
-                color: isSelected ? 'var(--parent-accent)' : 'var(--parent-text)'
+                background: 'transparent',
+                border: 0,
+                padding: '16px 8px 14px',
+                borderBottom: `2px solid ${
+                  isSelected
+                    ? '#2D5F5D'
+                    : isHovered
+                      ? 'rgba(45,95,93,0.35)'
+                      : 'rgba(200,190,172,0.55)'
+                }`,
+                cursor: 'pointer',
+                transition: 'all 0.18s ease',
               }}
               autoFocus={point === scale.min}
             >
-              <div className="flex flex-col items-center gap-2">
-                {/* Number or dot */}
-                <div
-                  className={`
-                    w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center
-                    text-xl sm:text-2xl font-bold transition-all
-                  `}
+              <div className="flex flex-col items-center" style={{ gap: 10 }}>
+                {/* Roman numeral */}
+                <span
                   style={{
-                    backgroundColor: isSelected
-                      ? 'var(--parent-accent)'
+                    fontFamily: 'var(--font-parent-display)',
+                    fontStyle: 'italic',
+                    fontSize: 26,
+                    fontWeight: 300,
+                    lineHeight: 1,
+                    color: isSelected
+                      ? '#2D5F5D'
                       : isHovered
-                      ? 'var(--parent-border)'
-                      : 'transparent',
-                    color: isSelected ? 'white' : 'var(--parent-text)',
-                    border: `2px solid ${isSelected ? 'var(--parent-accent)' : 'var(--parent-border)'}`
+                        ? '#5C5347'
+                        : '#746856',
+                    transition: 'color 0.18s ease',
                   }}
                 >
-                  {scale.type === 'numeric' ? point : '●'}
-                </div>
-
-                {/* Label (if exists) */}
-                {label && label !== point.toString() && (
-                  <span className="text-sm sm:text-base font-medium text-center leading-tight">
+                  {scale.type === 'numeric' ? point : toRoman(point)}
+                </span>
+                {/* Label if present */}
+                {label && (
+                  <span
+                    className="text-center"
+                    style={{
+                      fontFamily: 'var(--font-parent-body)',
+                      fontSize: 14,
+                      fontWeight: 600,
+                      letterSpacing: '0.14em',
+                      textTransform: 'uppercase',
+                      color: isSelected
+                        ? '#2D5F5D'
+                        : isHovered
+                          ? '#5C5347'
+                          : '#6B6254',
+                      lineHeight: 1.35,
+                      transition: 'color 0.18s ease',
+                    }}
+                  >
                     {label}
                   </span>
                 )}
@@ -88,17 +125,28 @@ export function LikertScaleQuestion({ scale, value, onChange }: LikertScaleQuest
         })}
       </div>
 
-      {/* Min/Max labels below scale (for mobile) */}
-      <div className="flex sm:hidden justify-between text-sm" style={{ color: 'var(--parent-text-light)' }}>
+      {/* Mobile-only min/max labels */}
+      <div
+        className="flex sm:hidden justify-between press-marginalia"
+        style={{ fontSize: 15, marginTop: 6 }}
+      >
         <span>{scale.minLabel}</span>
         <span>{scale.maxLabel}</span>
       </div>
 
-      {/* Selected value indicator */}
+      {/* Selected value echo */}
       {value !== undefined && (
-        <div className="text-center text-lg font-medium animate-fade-in" style={{ color: 'var(--parent-accent)' }}>
-          {getLabel(value) || `Selected: ${value}`}
-        </div>
+        <p
+          className="press-body-italic"
+          style={{
+            fontSize: 15,
+            textAlign: 'center',
+            color: '#5C5347',
+            marginTop: 4,
+          }}
+        >
+          — {getLabel(value) || `selected: ${value}`}
+        </p>
       )}
     </div>
   );

@@ -36,7 +36,7 @@ export default function ArcHeader({ arc, progress }: ArcHeaderProps) {
         </span>
         <span
           className="text-[10px]"
-          style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+          style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
         >
           Level {arc.level} &middot; {arc.levelTitle}
         </span>
@@ -59,7 +59,7 @@ export default function ArcHeader({ arc, progress }: ArcHeaderProps) {
           {arc.subtitle && (
             <p
               className="text-sm mt-0.5"
-              style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
             >
               {arc.subtitle}
             </p>
@@ -71,7 +71,7 @@ export default function ArcHeader({ arc, progress }: ArcHeaderProps) {
       {arc.researchBasis && (
         <p
           className="text-[10px] mb-3 pl-9"
-          style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+          style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
         >
           {arc.researchBasis}
         </p>
@@ -82,13 +82,13 @@ export default function ArcHeader({ arc, progress }: ArcHeaderProps) {
         <div className="flex items-center justify-between mb-1">
           <span
             className="text-[10px]"
-            style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
           >
             Week {arc.currentWeek} of {arc.durationWeeks} &middot; {phaseLabel} Phase
           </span>
           <span
             className="text-[10px]"
-            style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
           >
             {arc.completedItemCount}/{arc.totalItemCount}
           </span>
@@ -108,7 +108,7 @@ export default function ArcHeader({ arc, progress }: ArcHeaderProps) {
       <div className="pl-9 mt-3">
         <span
           className="text-[10px]"
-          style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+          style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
         >
           {arc.participantNames.join(' & ')} &middot; {arc.dimensionName}
         </span>

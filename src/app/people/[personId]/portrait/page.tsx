@@ -52,7 +52,7 @@ export default function PortraitPage() {
         <SideNav />
         <div className="min-h-screen pt-[60px] flex items-center justify-center">
           <div className="text-center space-y-3">
-            <p style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>
+            <p style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
               No portrait data found for this person.
             </p>
             <Link
@@ -135,7 +135,7 @@ export default function PortraitPage() {
                 style={{
                   fontFamily: 'var(--font-parent-body)',
                   fontWeight: activeSection === tab.key ? 600 : 400,
-                  color: activeSection === tab.key ? '#3A3530' : '#9ca3af',
+                  color: activeSection === tab.key ? '#3A3530' : '#5F564B',
                 }}
               >
                 {tab.label}
@@ -164,7 +164,7 @@ export default function PortraitPage() {
               className="rounded-xl p-8 text-center"
               style={{ background: 'rgba(0,0,0,0.02)', border: '1px dashed rgba(138,128,120,0.2)' }}
             >
-              <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: '#7C7468' }}>
+              <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#5F564B' }}>
                 No synthesis yet. Add more perspectives to generate insights.
               </p>
             </div>
@@ -181,7 +181,7 @@ export default function PortraitPage() {
                   className="rounded-xl p-8 text-center"
                   style={{ background: 'rgba(0,0,0,0.02)', border: '1px dashed rgba(138,128,120,0.2)' }}
                 >
-                  <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: '#7C7468' }}>
+                  <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#5F564B' }}>
                     No role sections yet.
                   </p>
                 </div>
@@ -241,7 +241,7 @@ export default function PortraitPage() {
                   )}
 
                   {/* Triggers count + strategies count */}
-                  <div className="mt-3 flex gap-4 text-[11px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#9ca3af' }}>
+                  <div className="mt-3 flex gap-4 text-[11px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
                     {role.triggers.length > 0 && <span>{role.triggers.length} triggers</span>}
                     {role.whatWorks.length > 0 && <span>{role.whatWorks.length} strategies</span>}
                     {role.emergingPatterns.length > 0 && <span>{role.emergingPatterns.length} patterns</span>}
@@ -264,7 +264,7 @@ export default function PortraitPage() {
                     Private to you
                   </h3>
                 </div>
-                <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#7C7468', lineHeight: 1.6 }}>
+                <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5F564B', lineHeight: 1.6 }}>
                   This section is only visible to you. It includes private journal entries, private contribution answers, and therapy notes.
                   The AI uses this data to improve <em>your</em> manual only — it never appears in shared views or other family members&apos; data.
                 </p>
@@ -273,10 +273,10 @@ export default function PortraitPage() {
               {/* Private contribution answers */}
               {privateAnswerCount > 0 && (
                 <div className="glass-card rounded-xl p-4">
-                  <h4 style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', fontWeight: 600, color: '#3A3530', marginBottom: '4px' }}>
+                  <h4 style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', fontWeight: 600, color: '#3A3530', marginBottom: '4px' }}>
                     Private answers
                   </h4>
-                  <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#7C7468' }}>
+                  <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5F564B' }}>
                     {privateAnswerCount} answer{privateAnswerCount !== 1 ? 's' : ''} marked as private across your contributions.
                     These feed your self-synthesis but aren&apos;t visible to other family members.
                   </p>
@@ -288,7 +288,7 @@ export default function PortraitPage() {
                 <div>
                   <h4
                     className="mb-2"
-                    style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 600, color: '#3A3530' }}
+                    style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 600, color: '#3A3530' }}
                   >
                     Your notes ({privateNotes.length})
                   </h4>
@@ -302,7 +302,7 @@ export default function PortraitPage() {
                           >
                             {n.category}
                           </span>
-                          <span className="text-[10px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#9ca3af' }}>
+                          <span className="text-[10px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
                             {n.date?.toDate?.()?.toLocaleDateString?.() ?? ''}
                           </span>
                         </div>
@@ -320,7 +320,7 @@ export default function PortraitPage() {
                   className="rounded-xl p-8 text-center"
                   style={{ background: 'rgba(0,0,0,0.02)', border: '1px dashed rgba(138,128,120,0.2)' }}
                 >
-                  <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: '#7C7468' }}>
+                  <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#5F564B' }}>
                     No private notes yet. Mark journal entries or contribution answers as private and they&apos;ll appear here.
                   </p>
                 </div>
@@ -360,7 +360,7 @@ export default function PortraitPage() {
                           className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 mt-0.5 font-medium"
                           style={{
                             background: p.confidence === 'validated' ? 'rgba(22,163,74,0.08)' : p.confidence === 'consistent' ? 'rgba(217,119,6,0.08)' : 'rgba(156,163,175,0.1)',
-                            color: p.confidence === 'validated' ? '#166534' : p.confidence === 'consistent' ? '#92400e' : '#6b7280',
+                            color: p.confidence === 'validated' ? '#166534' : p.confidence === 'consistent' ? '#92400e' : '#4A4238',
                           }}
                         >
                           {p.confidence}
@@ -369,7 +369,7 @@ export default function PortraitPage() {
                           <span className="text-[12px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#3A3530' }}>
                             {p.description}
                           </span>
-                          <span className="block text-[10px] mt-0.5" style={{ fontFamily: 'var(--font-parent-body)', color: '#9ca3af' }}>
+                          <span className="block text-[10px] mt-0.5" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
                             {p.frequency}
                           </span>
                         </div>
@@ -406,7 +406,7 @@ export default function PortraitPage() {
                           >
                             {n.category}
                           </span>
-                          <span className="text-[10px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#9ca3af' }}>
+                          <span className="text-[10px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
                             {n.date?.toDate?.()?.toLocaleDateString?.() ?? ''}
                           </span>
                         </div>
@@ -438,7 +438,7 @@ export default function PortraitPage() {
             <Link
               href="/people"
               className="text-[12px] hover:underline"
-              style={{ fontFamily: 'var(--font-parent-body)', color: '#9ca3af' }}
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
             >
               Back to People
             </Link>

@@ -273,7 +273,7 @@ export default function PortraitInventory({
                   <span className="text-[11px] font-bold" style={{ fontFamily: 'var(--font-parent-body)', color: '#2C2C2C' }}>
                     {row.person.name}
                   </span>
-                  <span className="text-[9px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}>
+                  <span className="text-[9px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
                     {row.relationshipLabel}
                   </span>
                 </div>
@@ -282,22 +282,22 @@ export default function PortraitInventory({
                 <div className="flex items-center gap-2">
                   {isSelf ? (
                     <div className="flex items-center gap-1">
-                      <span className="text-[8px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}>portrait</span>
+                      <span className="text-[8px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>portrait</span>
                       <StatusDot status={row.selfPortrait} />
                     </div>
                   ) : (
                     <>
                       <div className="flex items-center gap-1" title="Their self-portrait">
-                        <span className="text-[8px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}>self</span>
+                        <span className="text-[8px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>self</span>
                         <StatusDot status={row.selfPortrait} />
                       </div>
                       <div className="flex items-center gap-1" title="Your portrait of them">
-                        <span className="text-[8px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}>yours</span>
+                        <span className="text-[8px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>yours</span>
                         <StatusDot status={row.yourPortrait} />
                       </div>
                       {row.theirPortraitOfYou && (
                         <div className="flex items-center gap-1" title="Their portrait of you">
-                          <span className="text-[8px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}>theirs</span>
+                          <span className="text-[8px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>theirs</span>
                           <StatusDot status={row.theirPortraitOfYou} />
                         </div>
                       )}
@@ -331,7 +331,7 @@ export default function PortraitInventory({
                     {row.nextAction.description && (
                       <span
                         className="text-[8px] block mt-0.5"
-                        style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}
+                        style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
                       >
                         {row.nextAction.description}
                       </span>
@@ -382,7 +382,7 @@ export default function PortraitInventory({
               {/* All caught up */}
               {!row.nextAction && !isSelf && (
                 <div className="mt-2 px-3 py-1.5">
-                  <span className="text-[9px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#A3A3A3' }}>
+                  <span className="text-[9px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
                     All caught up
                   </span>
                 </div>

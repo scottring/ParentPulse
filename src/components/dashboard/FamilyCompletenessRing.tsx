@@ -32,7 +32,7 @@ export function FamilyCompletenessRing({ completeness, dark }: Props) {
   let currentAngle = -90; // start from top
 
   const textColor = dark ? 'rgba(255,255,255,0.95)' : '#3A3530';
-  const textSecondary = dark ? 'rgba(255,255,255,0.5)' : '#7C7468';
+  const textSecondary = dark ? 'rgba(255,255,255,0.5)' : '#5F564B';
   const trackColor = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)';
 
   return (
@@ -122,7 +122,7 @@ export function FamilyCompletenessRing({ completeness, dark }: Props) {
               <span
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '12px',
+                  fontSize: '14px',
                   color: textSecondary,
                 }}
               >
@@ -131,7 +131,7 @@ export function FamilyCompletenessRing({ completeness, dark }: Props) {
               <span
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '12px',
+                  fontSize: '14px',
                   fontWeight: 600,
                   color: textColor,
                 }}

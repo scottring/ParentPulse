@@ -12,7 +12,7 @@ const TREND_CONFIG: Record<ScoreTrend, { rotation: number; label: string; color:
   improving: { rotation: -45, label: 'IMPROVING', color: '#16a34a' },
   stable: { rotation: 0, label: 'STABLE', color: '#7C9082' },
   declining: { rotation: 45, label: 'DECLINING', color: '#dc2626' },
-  insufficient_data: { rotation: 0, label: 'GATHERING', color: '#6b7280' },
+  insufficient_data: { rotation: 0, label: 'GATHERING', color: '#4A4238' },
 };
 
 export default function TrajectoryCompass({ trend, primaryDimension }: TrajectoryCompassProps) {
@@ -87,7 +87,7 @@ export default function TrajectoryCompass({ trend, primaryDimension }: Trajector
         {primaryDimension && (
           <span
             className="text-[9px] mt-1 text-center"
-            style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6B6B' }}
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#4A4238' }}
           >
             {primaryDimension}
           </span>

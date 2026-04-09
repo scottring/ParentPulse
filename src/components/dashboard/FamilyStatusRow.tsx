@@ -12,13 +12,13 @@ const STATUS_COLORS = {
   complete: '#16a34a',  // green
   partial: '#d97706',   // amber
   empty: '#dc2626',     // red
-  stale: '#9ca3af',     // gray
+  stale: '#5F564B',     // gray
 } as const;
 
 const FRESHNESS_RING = {
   fresh: '#16a34a',
   aging: '#d97706',
-  stale: '#9ca3af',
+  stale: '#5F564B',
 } as const;
 
 /**
@@ -85,7 +85,7 @@ export function FamilyStatusRow({ people, dark }: Props) {
               className="max-w-[56px] truncate text-center"
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: '10px',
+                fontSize: '12px',
                 fontWeight: 500,
                 color: textColor,
               }}

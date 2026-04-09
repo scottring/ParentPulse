@@ -23,12 +23,12 @@ export function ActionFeed({ items, onDismiss, maxItems = 5, dark }: Props) {
   const visible = items.slice(0, maxItems);
 
   if (visible.length === 0) {
-    const textSecondary = dark ? 'rgba(255,255,255,0.5)' : '#7C7468';
+    const textSecondary = dark ? 'rgba(255,255,255,0.5)' : '#5F564B';
     return (
       <div
         className="glass-card rounded-xl p-5 text-center"
       >
-        <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: textSecondary }}>
+        <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: textSecondary }}>
           You&apos;re all caught up. Nothing needs attention right now.
         </p>
       </div>
@@ -36,7 +36,7 @@ export function ActionFeed({ items, onDismiss, maxItems = 5, dark }: Props) {
   }
 
   const textColor = dark ? 'rgba(255,255,255,0.95)' : '#3A3530';
-  const textSecondary = dark ? 'rgba(255,255,255,0.5)' : '#7C7468';
+  const textSecondary = dark ? 'rgba(255,255,255,0.5)' : '#5F564B';
   const textTertiary = dark ? 'rgba(255,255,255,0.35)' : 'rgba(40,40,40,0.3)';
 
   return (
@@ -45,7 +45,7 @@ export function ActionFeed({ items, onDismiss, maxItems = 5, dark }: Props) {
         className="block mb-1"
         style={{
           fontFamily: 'var(--font-parent-body)',
-          fontSize: '10px',
+          fontSize: '12px',
           fontWeight: 600,
           letterSpacing: '0.12em',
           textTransform: 'uppercase',
@@ -69,7 +69,7 @@ export function ActionFeed({ items, onDismiss, maxItems = 5, dark }: Props) {
                 <h4
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '13px',
+                    fontSize: '15px',
                     fontWeight: 600,
                     color: textColor,
                   }}
@@ -80,7 +80,7 @@ export function ActionFeed({ items, onDismiss, maxItems = 5, dark }: Props) {
                   className="mt-0.5"
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '12px',
+                    fontSize: '14px',
                     color: textSecondary,
                     lineHeight: 1.5,
                   }}
@@ -112,7 +112,7 @@ export function ActionFeed({ items, onDismiss, maxItems = 5, dark }: Props) {
       {items.length > maxItems && (
         <p
           className="text-center pt-1"
-          style={{ fontFamily: 'var(--font-parent-body)', fontSize: '11px', color: textSecondary }}
+          style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: textSecondary }}
         >
           +{items.length - maxItems} more
         </p>

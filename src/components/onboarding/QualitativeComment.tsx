@@ -8,7 +8,11 @@ interface QualitativeCommentProps {
   placeholder?: string;
 }
 
-export function QualitativeComment({ value, onChange, placeholder }: QualitativeCommentProps) {
+export function QualitativeComment({
+  value,
+  onChange,
+  placeholder,
+}: QualitativeCommentProps) {
   const [isExpanded, setIsExpanded] = useState(!!value);
 
   if (!isExpanded) {
@@ -16,56 +20,60 @@ export function QualitativeComment({ value, onChange, placeholder }: Qualitative
       <button
         type="button"
         onClick={() => setIsExpanded(true)}
-        className="w-full px-6 py-4 rounded-lg border-2 border-dashed transition-all hover:shadow-md text-left"
+        className="press-link-sm"
         style={{
-          borderColor: 'var(--parent-border)',
-          color: 'var(--parent-text-light)'
+          background: 'transparent',
+          cursor: 'pointer',
+          textAlign: 'left',
+          fontSize: 14,
         }}
       >
-        <div className="flex items-center justify-between">
-          <span className="text-base sm:text-lg">
-            ✍️ Add specific examples or context (optional)
-          </span>
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </div>
+        — add a specific example or note ⟶
       </button>
     );
   }
 
   return (
-    <div className="space-y-2 animate-fade-in-up">
-      <div className="flex items-center justify-between">
-        <label className="text-sm font-medium" style={{ color: 'var(--parent-text)' }}>
-          ✍️ Add specific examples or context (optional)
-        </label>
+    <div>
+      <div className="flex items-baseline justify-between mb-2">
+        <span className="press-chapter-label">
+          A specific example or note
+        </span>
         <button
           type="button"
           onClick={() => {
             setIsExpanded(false);
             onChange('');
           }}
-          className="text-sm px-3 py-1 rounded transition-all hover:shadow-sm"
+          className="press-marginalia"
           style={{
-            border: '1px solid var(--parent-border)',
-            color: 'var(--parent-text-light)'
+            background: 'transparent',
+            border: 0,
+            cursor: 'pointer',
+            fontSize: 15,
+            color: '#7A6E5C',
           }}
         >
-          Clear
+          clear
         </button>
       </div>
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder || 'Describe specific situations, examples, or additional context...'}
-        rows={4}
-        className="w-full px-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-4 transition-all text-base sm:text-lg"
+        placeholder={placeholder || 'A situation, a moment, or a detail that clarifies your answer…'}
+        rows={3}
+        className="w-full focus:outline-none"
         style={{
-          borderColor: 'var(--parent-border)',
-          backgroundColor: 'var(--parent-bg)',
-          color: 'var(--parent-text)',
-          resize: 'vertical'
+          fontFamily: 'var(--font-parent-display)',
+          fontSize: 17,
+          fontStyle: 'italic',
+          color: '#3A3530',
+          background: 'transparent',
+          border: 0,
+          borderBottom: '1px solid rgba(200, 190, 172, 0.6)',
+          padding: '8px 2px 10px',
+          resize: 'none',
+          lineHeight: 1.55,
         }}
         autoFocus
       />

@@ -12,7 +12,6 @@ import { getExercisesForDimension } from '@/config/exercises';
 import { computeAssessmentNeeds } from '@/lib/assessment-needs-engine';
 import Navigation from '@/components/layout/Navigation';
 import SideNav from '@/components/layout/SideNav';
-import WeatherBackground from '@/components/dashboard/WeatherBackground';
 import AuraPhaseIndicator from '@/components/layout/AuraPhaseIndicator';
 import type { AuraPhase } from '@/components/layout/AuraPhaseIndicator';
 import type { ClimateState } from '@/lib/climate-engine';
@@ -195,11 +194,11 @@ export default function CheckInPage() {
   // Loading state
   if (authLoading || wbLoading) {
     return (
-      <WeatherBackground climate="mostly_sunny">
+      <div className="relish-page">
         <div className="min-h-screen flex items-center justify-center">
           <div className="animate-spin w-8 h-8 rounded-full border-2 border-t-transparent border-white/40" />
         </div>
-      </WeatherBackground>
+      </div>
     );
   }
 
@@ -209,7 +208,7 @@ export default function CheckInPage() {
   const active = activeChapters.filter((c) => c.status === 'active');
   if (active.length === 0) {
     return (
-      <WeatherBackground climate={climateState}>
+      <div className="relish-page">
         <Navigation />
         <SideNav />
         <div className="min-h-screen pt-[60px]">
@@ -238,12 +237,12 @@ export default function CheckInPage() {
             </div>
           </div>
         </div>
-      </WeatherBackground>
+      </div>
     );
   }
 
   return (
-    <WeatherBackground climate={climateState}>
+    <div className="relish-page">
       <Navigation />
       <SideNav />
 
@@ -289,7 +288,7 @@ export default function CheckInPage() {
           )}
         </div>
       </div>
-    </WeatherBackground>
+    </div>
   );
 }
 
@@ -318,7 +317,7 @@ function AssessStep({
           className="block mb-1"
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '10px',
+            fontSize: '12px',
             fontWeight: 600,
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
@@ -343,7 +342,7 @@ function AssessStep({
           className="mt-1"
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '13px',
+            fontSize: '15px',
             color: 'var(--parent-text-light)',
           }}
         >
@@ -407,7 +406,7 @@ function AssessStep({
           <p
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: '13px',
+              fontSize: '15px',
               color: 'var(--parent-text-light)',
             }}
           >
@@ -452,7 +451,7 @@ function UnderstandStep({
           className="block mb-1"
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '10px',
+            fontSize: '12px',
             fontWeight: 600,
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
@@ -509,7 +508,7 @@ function UnderstandStep({
                   <span
                     style={{
                       fontFamily: 'var(--font-parent-body)',
-                      fontSize: '12px',
+                      fontSize: '14px',
                       color: 'var(--parent-text-light)',
                     }}
                   >
@@ -531,7 +530,7 @@ function UnderstandStep({
                 <span
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '13px',
+                    fontSize: '15px',
                     color: 'var(--parent-text-light)',
                   }}
                 >
@@ -540,7 +539,7 @@ function UnderstandStep({
                 <span
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '13px',
+                    fontSize: '15px',
                     color: 'var(--parent-text-light)',
                   }}
                 >
@@ -549,7 +548,7 @@ function UnderstandStep({
                 <span
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '13px',
+                    fontSize: '15px',
                     fontWeight: 600,
                     color: trend.color,
                   }}
@@ -612,7 +611,7 @@ function RespondStep({
           className="block mb-1"
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '10px',
+            fontSize: '12px',
             fontWeight: 600,
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
@@ -673,7 +672,7 @@ function RespondStep({
                 className="block mb-3"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '12px',
+                  fontSize: '14px',
                   color: 'var(--parent-text-light)',
                 }}
               >
@@ -691,7 +690,7 @@ function RespondStep({
                   <p
                     style={{
                       fontFamily: 'var(--font-parent-body)',
-                      fontSize: '13px',
+                      fontSize: '15px',
                       color: 'var(--parent-text-light)',
                       fontStyle: 'italic',
                       marginBottom: '6px',
@@ -745,7 +744,7 @@ function RespondStep({
                   <p
                     style={{
                       fontFamily: 'var(--font-parent-body)',
-                      fontSize: '13px',
+                      fontSize: '15px',
                       color: 'var(--aura-respond)',
                       fontWeight: 500,
                       marginBottom: '6px',
@@ -783,7 +782,7 @@ function RespondStep({
                 <p
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '13px',
+                    fontSize: '15px',
                     color: 'var(--parent-text-light)',
                     fontStyle: 'italic',
                   }}
@@ -862,7 +861,7 @@ function AssimilateStep({
           className="block mb-1"
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '10px',
+            fontSize: '12px',
             fontWeight: 600,
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
@@ -935,7 +934,7 @@ function AssimilateStep({
             <span
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: '12px',
+                fontSize: '14px',
                 color: 'var(--parent-text-light)',
               }}
             >

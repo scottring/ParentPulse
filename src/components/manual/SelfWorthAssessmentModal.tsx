@@ -204,7 +204,7 @@ export function SelfWorthAssessmentModal({
         {/* Header */}
         <div className="flex items-start justify-between mb-8">
           <div>
-            <div className="inline-block px-3 py-1 rounded-full text-white mb-4" style={{ backgroundColor: '#7C9082', fontFamily: 'var(--font-parent-body)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>
+            <div className="inline-block px-3 py-1 rounded-full text-white mb-4" style={{ backgroundColor: '#7C9082', fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>
               Self-worth portrait (RSES)
             </div>
             <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '28px', fontWeight: 400, color: '#3A3530' }}>
@@ -217,7 +217,7 @@ export function SelfWorthAssessmentModal({
           <button
             onClick={onClose}
             className="text-3xl transition-colors hover:opacity-70"
-            style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+            style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
             disabled={saving}
           >
             ×
@@ -240,7 +240,7 @@ export function SelfWorthAssessmentModal({
         {/* Question */}
         <div className="mb-8">
           <div className="glass-card p-8 rounded-2xl">
-            <div className="inline-block px-3 py-1 rounded-full text-white mb-4" style={{ backgroundColor: '#7C9082', fontFamily: 'var(--font-parent-body)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>
+            <div className="inline-block px-3 py-1 rounded-full text-white mb-4" style={{ backgroundColor: '#7C9082', fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>
               {currentQuestion.domain}
             </div>
             <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '24px', fontWeight: 400, color: '#3A3530' }} className="mb-6">
@@ -310,7 +310,7 @@ export function SelfWorthAssessmentModal({
             onClick={handlePrevious}
             disabled={currentQuestionIndex === 0 || saving}
             className="px-6 py-3 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)' }}
+            style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500, color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)' }}
           >
             Previous
           </button>
@@ -321,7 +321,7 @@ export function SelfWorthAssessmentModal({
                 onClick={handleNext}
                 disabled={!currentAnswer?.primary || saving}
                 className="px-6 py-3 rounded-full text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg"
-                style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, backgroundColor: '#7C9082' }}
+                style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500, backgroundColor: '#7C9082' }}
               >
                 Next
               </button>
@@ -330,7 +330,7 @@ export function SelfWorthAssessmentModal({
                 onClick={handleSubmit}
                 disabled={!allQuestionsAnswered || saving}
                 className="px-8 py-3 rounded-full text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg"
-                style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 500, backgroundColor: '#7C9082' }}
+                style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500, backgroundColor: '#7C9082' }}
               >
                 {generating ? 'Generating insights...' : saving ? 'Saving...' : 'Complete assessment'}
               </button>

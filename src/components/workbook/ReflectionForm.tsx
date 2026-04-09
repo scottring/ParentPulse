@@ -103,7 +103,7 @@ export default function ReflectionForm({
                 className="mt-1"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '13px',
+                  fontSize: '15px',
                   color: 'var(--parent-text-light)',
                   fontStyle: 'italic',
                 }}
@@ -167,7 +167,7 @@ export default function ReflectionForm({
                 className="block mb-1.5"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '13px',
+                  fontSize: '15px',
                   fontWeight: 500,
                   color: 'var(--parent-text)',
                 }}
@@ -198,7 +198,7 @@ export default function ReflectionForm({
               className="block mb-1.5"
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: '13px',
+                fontSize: '15px',
                 fontWeight: 500,
                 color: 'var(--parent-text)',
               }}
@@ -234,7 +234,7 @@ export default function ReflectionForm({
                 className="mb-3"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '10px',
+                  fontSize: '12px',
                   fontWeight: 600,
                   letterSpacing: '0.12em',
                   textTransform: 'uppercase',

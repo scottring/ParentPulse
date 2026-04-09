@@ -7,7 +7,6 @@ import { useDashboard } from '@/hooks/useDashboard';
 import { useRingScores } from '@/hooks/useRingScores';
 import Navigation from '@/components/layout/Navigation';
 import SideNav from '@/components/layout/SideNav';
-import WeatherBackground from '@/components/dashboard/WeatherBackground';
 import AuraPhaseIndicator from '@/components/layout/AuraPhaseIndicator';
 import {
   scoreToClimate,
@@ -40,7 +39,7 @@ function domainScoreToColor(score: number): string {
   if (score >= 3.0) return '#7C9082';
   if (score >= 2.0) return '#ea580c';
   if (score > 0) return '#dc2626';
-  return '#6b7280';
+  return '#4A4238';
 }
 
 function isDarkSky(climate: ClimateState) {
@@ -132,11 +131,11 @@ export default function RevealPage() {
   // Loading state
   if (authLoading || state === 'loading') {
     return (
-      <WeatherBackground climate="mostly_sunny">
+      <div className="relish-page">
         <div className="min-h-screen flex items-center justify-center">
           <div className="animate-spin w-8 h-8 rounded-full border-2 border-t-transparent border-white/40" />
         </div>
-      </WeatherBackground>
+      </div>
     );
   }
 
@@ -145,7 +144,7 @@ export default function RevealPage() {
   // If no assessments yet, redirect to dashboard
   if (state !== 'active') {
     return (
-      <WeatherBackground climate="mostly_sunny">
+      <div className="relish-page">
         <Navigation />
         <SideNav />
         <div className="min-h-screen pt-[60px] flex items-center justify-center">
@@ -180,7 +179,7 @@ export default function RevealPage() {
             </Link>
           </div>
         </div>
-      </WeatherBackground>
+      </div>
     );
   }
 
@@ -189,7 +188,7 @@ export default function RevealPage() {
   const textTertiary = dark ? 'rgba(255,255,255,0.35)' : 'rgba(40,40,40,0.3)';
 
   return (
-    <WeatherBackground climate={climateState}>
+    <div className="relish-page">
       <Navigation />
       <SideNav />
 
@@ -240,7 +239,7 @@ export default function RevealPage() {
                     <h3
                       style={{
                         fontFamily: 'var(--font-parent-body)',
-                        fontSize: '11px',
+                        fontSize: '15px',
                         fontWeight: 600,
                         letterSpacing: '0.06em',
                         textTransform: 'uppercase',
@@ -302,7 +301,7 @@ export default function RevealPage() {
                   className="block mb-1"
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '10px',
+                    fontSize: '12px',
                     fontWeight: 600,
                     letterSpacing: '0.12em',
                     textTransform: 'uppercase',
@@ -329,7 +328,7 @@ export default function RevealPage() {
                   className="block mb-1"
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '10px',
+                    fontSize: '12px',
                     fontWeight: 600,
                     letterSpacing: '0.12em',
                     textTransform: 'uppercase',
@@ -418,6 +417,6 @@ export default function RevealPage() {
           </div>
         </div>
       </div>
-    </WeatherBackground>
+    </div>
   );
 }

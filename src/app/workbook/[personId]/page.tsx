@@ -196,7 +196,7 @@ export default function WorkbookPersonPage() {
             <Link
               href="/workbook"
               className="inline-flex items-center gap-1 text-[13px] hover:opacity-70"
-              style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
             >
               &larr; Back to Workbook
             </Link>
@@ -227,7 +227,7 @@ export default function WorkbookPersonPage() {
                     {dimensionName} with {personName}
                   </h1>
                   <div className="flex items-center gap-2 mt-1.5">
-                    <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: '#9B9488' }}>
+                    <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#746856' }}>
                       Day {daysIn}
                     </span>
                     <span style={{ color: '#D8D3CA' }}>&middot;</span>
@@ -235,7 +235,7 @@ export default function WorkbookPersonPage() {
                       className="px-2 py-0.5 rounded-full"
                       style={{
                         fontFamily: 'var(--font-parent-body)',
-                        fontSize: '11px',
+                        fontSize: '15px',
                         fontWeight: 500,
                         color: '#7C9082',
                         background: 'rgba(124,144,130,0.1)',
@@ -254,7 +254,7 @@ export default function WorkbookPersonPage() {
                   <div className="growth-bar-fill" style={{ width: `${progressPercent}%` }} />
                 </div>
                 <div className="flex justify-end mt-1">
-                  <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#9B9488' }}>
+                  <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#746856' }}>
                     {progressPercent}%
                   </span>
                 </div>
@@ -283,7 +283,7 @@ export default function WorkbookPersonPage() {
                     style={{
                       fontFamily: 'var(--font-parent-body)',
                       fontSize: '14px',
-                      color: '#7C7468',
+                      color: '#5F564B',
                       lineHeight: 1.6,
                     }}
                   >
@@ -335,7 +335,7 @@ export default function WorkbookPersonPage() {
                 <span className="relish-label">Reflection</span>
                 <p
                   className="mt-2 mb-3"
-                  style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#7C7468' }}
+                  style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5F564B' }}
                 >
                   What did you notice? How did it go?
                 </p>
@@ -363,9 +363,9 @@ export default function WorkbookPersonPage() {
                         <span
                           style={{
                             fontFamily: 'var(--font-parent-body)',
-                            fontSize: '10px',
+                            fontSize: '12px',
                             fontWeight: selected ? 500 : 400,
-                            color: selected ? '#7C9082' : '#9B9488',
+                            color: selected ? '#7C9082' : '#746856',
                           }}
                         >
                           {opt.label}
@@ -414,7 +414,7 @@ export default function WorkbookPersonPage() {
                           >
                             {item.title}
                           </span>
-                          <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#9B9488' }}>
+                          <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#746856' }}>
                             {item.date}
                           </span>
                         </div>
@@ -429,7 +429,7 @@ export default function WorkbookPersonPage() {
                 <button
                   onClick={() => pauseChapter(chapter.chapterId)}
                   className="text-[12px] hover:opacity-70"
-                  style={{ fontFamily: 'var(--font-parent-body)', color: '#9B9488' }}
+                  style={{ fontFamily: 'var(--font-parent-body)', color: '#746856' }}
                 >
                   Pause this practice
                 </button>
@@ -449,7 +449,7 @@ export default function WorkbookPersonPage() {
               >
                 You & {personName}
               </h1>
-              <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#9B9488', lineHeight: 1.6, marginBottom: 24 }}>
+              <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#746856', lineHeight: 1.6, marginBottom: 24 }}>
                 Choose an area to begin practicing together.
               </p>
 
@@ -478,8 +478,8 @@ export default function WorkbookPersonPage() {
                             className="mt-1"
                             style={{
                               fontFamily: 'var(--font-parent-body)',
-                              fontSize: '13px',
-                              color: '#7C7468',
+                              fontSize: '15px',
+                              color: '#5F564B',
                               lineHeight: 1.5,
                             }}
                           >
@@ -498,7 +498,7 @@ export default function WorkbookPersonPage() {
                   })}
                 </div>
               ) : (
-                <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#9B9488', textAlign: 'center' }}>
+                <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#746856', textAlign: 'center' }}>
                   Complete assessments first to unlock growth areas.
                 </p>
               )}
@@ -512,7 +512,7 @@ export default function WorkbookPersonPage() {
                       const dim = getDimension(ch.dimensionId);
                       return (
                         <div key={ch.chapterId} className="flex items-center justify-between px-4 py-3 rounded-xl" style={{ background: '#F7F5F0' }}>
-                          <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: '#7C7468' }}>
+                          <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#5F564B' }}>
                             {dim?.name || ch.dimensionId}
                           </span>
                           <button

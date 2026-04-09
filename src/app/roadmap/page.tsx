@@ -113,7 +113,7 @@ export default function RoadmapPage() {
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'transparent' }}>
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-[#7C9082]/20 border-t-[#7C9082] rounded-full animate-spin"></div>
-          <p className="mt-4 text-sm" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>Loading...</p>
+          <p className="mt-4 text-sm" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>Loading...</p>
         </div>
       </div>
     );
@@ -146,7 +146,7 @@ export default function RoadmapPage() {
             style={{
               fontFamily: 'var(--font-parent-body)',
               fontSize: '14px',
-              color: '#7C7468',
+              color: '#5F564B',
             }}
           >
             {totalCompleted} activities completed
@@ -177,8 +177,8 @@ export default function RoadmapPage() {
             className="mt-1"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: '12px',
-              color: '#8A8078',
+              fontSize: '14px',
+              color: '#6B6254',
             }}
           >
             {overallDisplay.description}
@@ -219,11 +219,11 @@ export default function RoadmapPage() {
               className="mb-3"
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: '10px',
+                fontSize: '12px',
                 fontWeight: 700,
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
-                color: '#8A8078',
+                color: '#6B6254',
               }}
             >
               DOMAIN BREAKDOWN
@@ -248,7 +248,7 @@ export default function RoadmapPage() {
                           className="block"
                           style={{
                             fontFamily: 'var(--font-parent-body)',
-                            fontSize: '10px',
+                            fontSize: '12px',
                             fontWeight: 700,
                             letterSpacing: '0.08em',
                             color: '#3A3530',
@@ -259,7 +259,7 @@ export default function RoadmapPage() {
                         <span
                           style={{
                             fontFamily: 'var(--font-parent-body)',
-                            fontSize: '10px',
+                            fontSize: '12px',
                             letterSpacing: '0.05em',
                             color: display.color,
                           }}
@@ -288,8 +288,8 @@ export default function RoadmapPage() {
                       <span
                         style={{
                           fontFamily: 'var(--font-parent-body)',
-                          fontSize: '10px',
-                          color: '#8A8078',
+                          fontSize: '12px',
+                          color: '#6B6254',
                         }}
                       >
                         Score: {dp.criteria.averageDomainScore.toFixed(1)}
@@ -297,8 +297,8 @@ export default function RoadmapPage() {
                       <span
                         style={{
                           fontFamily: 'var(--font-parent-body)',
-                          fontSize: '10px',
-                          color: '#8A8078',
+                          fontSize: '12px',
+                          color: '#6B6254',
                         }}
                       >
                         {dp.criteria.totalItemsCompleted} done
@@ -313,8 +313,8 @@ export default function RoadmapPage() {
                           className="mt-0.5"
                           style={{
                             fontFamily: 'var(--font-parent-body)',
-                            fontSize: '10px',
-                            color: '#8A8078',
+                            fontSize: '12px',
+                            color: '#6B6254',
                           }}
                         >
                           &bull; {req}

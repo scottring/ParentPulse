@@ -61,7 +61,7 @@ export default function SideNav() {
             <span
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: 10,
+                fontSize: 14,
                 fontWeight: isActive ? 600 : 400,
                 color: isActive ? '#7C9082' : '#5C5347',
                 opacity: isActive ? 1 : 0.5,

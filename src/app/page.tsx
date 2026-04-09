@@ -11,7 +11,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!loading) {
-      router.push(user ? '/dashboard' : '/login');
+      router.push(user ? '/workbook' : '/login');
     }
   }, [user, loading, router]);
 
@@ -48,8 +48,8 @@ export default function Home() {
         <p
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '13px',
-            color: '#8A8078',
+            fontSize: '15px',
+            color: '#6B6254',
           }}
         >
           Loading...

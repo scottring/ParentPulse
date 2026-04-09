@@ -24,8 +24,8 @@ const ACCEPTED_TYPES = [
 
 const ACCEPTED_EXTENSIONS = '.pdf,.txt,.png,.jpg,.jpeg,.webp';
 const MAX_FILES = 5;
-const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB per file
-const MAX_TOTAL_SIZE = 7 * 1024 * 1024; // 7MB total
+const MAX_FILE_SIZE = 3 * 1024 * 1024;
+const MAX_TOTAL_SIZE = 7 * 1024 * 1024;
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -41,56 +41,63 @@ export function DocumentUploader({ onProcess, processing }: DocumentUploaderProp
 
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
 
-  const validateAndAddFiles = useCallback((newFiles: FileList | File[]) => {
-    setError(null);
-    const fileArray = Array.from(newFiles);
-    const currentCount = files.length;
+  const validateAndAddFiles = useCallback(
+    (newFiles: FileList | File[]) => {
+      setError(null);
+      const fileArray = Array.from(newFiles);
+      const currentCount = files.length;
 
-    if (currentCount + fileArray.length > MAX_FILES) {
-      setError(`Maximum ${MAX_FILES} files allowed. You have ${currentCount} already.`);
-      return;
-    }
-
-    const validated: UploadedFile[] = [];
-    let newTotal = totalSize;
-
-    for (const file of fileArray) {
-      if (!ACCEPTED_TYPES.includes(file.type)) {
-        setError(`"${file.name}" is not a supported format. Use PDF, TXT, PNG, JPG, or WEBP.`);
+      if (currentCount + fileArray.length > MAX_FILES) {
+        setError(`At most ${MAX_FILES} documents may be added — you already have ${currentCount}.`);
         return;
       }
-      if (file.size > MAX_FILE_SIZE) {
-        setError(`"${file.name}" is too large (${formatFileSize(file.size)}). Maximum is 3MB per file.`);
-        return;
-      }
-      newTotal += file.size;
-      if (newTotal > MAX_TOTAL_SIZE) {
-        setError(`Total size would exceed 7MB. Remove some files first.`);
-        return;
-      }
-      validated.push({ file, name: file.name, size: file.size, mimeType: file.type });
-    }
 
-    setFiles((prev) => [...prev, ...validated]);
-  }, [files.length, totalSize]);
+      const validated: UploadedFile[] = [];
+      let newTotal = totalSize;
+
+      for (const file of fileArray) {
+        if (!ACCEPTED_TYPES.includes(file.type)) {
+          setError(`"${file.name}" is not a supported format. Use PDF, TXT, PNG, JPG, or WEBP.`);
+          return;
+        }
+        if (file.size > MAX_FILE_SIZE) {
+          setError(
+            `"${file.name}" is too large (${formatFileSize(file.size)}). Maximum is 3 MB per document.`,
+          );
+          return;
+        }
+        newTotal += file.size;
+        if (newTotal > MAX_TOTAL_SIZE) {
+          setError('Total size would exceed 7 MB. Remove some first.');
+          return;
+        }
+        validated.push({ file, name: file.name, size: file.size, mimeType: file.type });
+      }
+
+      setFiles((prev) => [...prev, ...validated]);
+    },
+    [files.length, totalSize],
+  );
 
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
     setError(null);
   };
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    if (e.dataTransfer.files.length > 0) {
-      validateAndAddFiles(e.dataTransfer.files);
-    }
-  }, [validateAndAddFiles]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragOver(false);
+      if (e.dataTransfer.files.length > 0) {
+        validateAndAddFiles(e.dataTransfer.files);
+      }
+    },
+    [validateAndAddFiles],
+  );
 
   const handleProcess = async () => {
     if (files.length === 0) return;
 
-    // Read all files to base64
     const base64Files = await Promise.all(
       files.map(
         (f) =>
@@ -98,31 +105,35 @@ export function DocumentUploader({ onProcess, processing }: DocumentUploaderProp
             const reader = new FileReader();
             reader.onload = () => {
               const result = reader.result as string;
-              // Strip the data:...;base64, prefix
               const base64Data = result.split(',')[1];
               resolve({ name: f.name, mimeType: f.mimeType, base64Data });
             };
             reader.onerror = () => reject(new Error(`Failed to read ${f.name}`));
             reader.readAsDataURL(f.file);
-          })
-      )
+          }),
+      ),
     );
 
     onProcess(base64Files);
   };
 
   return (
-    <div className="space-y-6">
-      {/* Drop zone */}
+    <div>
+      {/* Drop zone — quiet, typographic, no chunky rounded card */}
       <div
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
-        className="p-8 text-center cursor-pointer transition-all rounded-xl"
+        className="transition-all cursor-pointer"
         style={{
-          border: dragOver ? '2px dashed #7C9082' : '2px dashed rgba(255,255,255,0.5)',
-          backgroundColor: dragOver ? 'rgba(124,144,130,0.08)' : 'rgba(255,255,255,0.3)',
+          padding: '40px 24px',
+          textAlign: 'center',
+          border: `1px dashed ${dragOver ? '#7C9082' : 'rgba(200, 190, 172, 0.7)'}`,
+          background: dragOver ? 'rgba(124,144,130,0.04)' : 'transparent',
         }}
       >
         <input
@@ -136,74 +147,142 @@ export function DocumentUploader({ onProcess, processing }: DocumentUploaderProp
             e.target.value = '';
           }}
         />
-        <div className="space-y-2">
-          <div className="text-3xl" style={{ color: '#8A8078' }}>+</div>
-          <p style={{ fontFamily: 'var(--font-parent-body)', fontWeight: 600, color: '#5C5347' }}>
-            Drop files here or click to browse
-          </p>
-          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#7C7468' }}>
-            PDF, TXT, PNG, JPG, WEBP &middot; Up to 5 files &middot; 3MB each &middot; 7MB total
-          </p>
-        </div>
+        <span className="press-chapter-label" style={{ display: 'block' }}>
+          Drop here or click to browse
+        </span>
+        <p
+          className="press-body-italic"
+          style={{ fontSize: 17, marginTop: 10, marginBottom: 8 }}
+        >
+          Bring therapy notes, journal entries, or letters.
+        </p>
+        <p className="press-marginalia" style={{ fontSize: 15 }}>
+          PDF, TXT, PNG, JPG, or WEBP &middot; up to five files &middot;
+          three MB each &middot; seven MB total
+        </p>
       </div>
 
-      {/* File list */}
+      {/* File list — classical index style */}
       {files.length > 0 && (
-        <div className="space-y-2">
-          {files.map((f, i) => (
-            <div key={i} className="flex items-center justify-between p-3 glass-card rounded-lg" style={{ border: '1px solid rgba(255,255,255,0.4)' }}>
-              <div className="flex items-center gap-3">
-                <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#8A8078' }}>
-                  {f.mimeType.includes('pdf') ? 'PDF' : f.mimeType.includes('text') ? 'TXT' : 'IMG'}
-                </span>
-                <span className="truncate max-w-[200px]" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5C5347' }}>
-                  {f.name}
-                </span>
-                <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#8A8078' }}>
-                  {formatFileSize(f.size)}
-                </span>
-              </div>
-              <button
-                onClick={() => removeFile(i)}
-                disabled={processing}
-                className="text-xs transition-colors disabled:opacity-50"
-                style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+        <div style={{ marginTop: 24 }}>
+          <span className="press-chapter-label">Kept for reading</span>
+          <div style={{ marginTop: 12 }}>
+            {files.map((f, i) => (
+              <div
+                key={i}
+                className="flex items-baseline justify-between"
+                style={{
+                  padding: '10px 0',
+                  borderBottom: '1px solid rgba(200, 190, 172, 0.4)',
+                }}
               >
-                Remove
-              </button>
-            </div>
-          ))}
-          <div className="text-right" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#7C7468' }}>
-            {files.length} file{files.length !== 1 ? 's' : ''} &middot; {formatFileSize(totalSize)} total
+                <div className="flex items-baseline gap-3 min-w-0 flex-1">
+                  <span
+                    className="press-chapter-label"
+                    style={{ width: 24, flexShrink: 0, color: '#7A6E5C' }}
+                  >
+                    {f.mimeType.includes('pdf') ? 'pdf' : f.mimeType.includes('text') ? 'txt' : 'img'}
+                  </span>
+                  <span
+                    className="truncate"
+                    style={{
+                      fontFamily: 'var(--font-parent-display)',
+                      fontStyle: 'italic',
+                      fontSize: 16,
+                      color: '#3A3530',
+                      flex: 1,
+                      minWidth: 0,
+                    }}
+                  >
+                    {f.name}
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-4 shrink-0">
+                  <span className="press-marginalia" style={{ fontSize: 15 }}>
+                    {formatFileSize(f.size)}
+                  </span>
+                  <button
+                    onClick={() => removeFile(i)}
+                    disabled={processing}
+                    className="press-link-sm"
+                    style={{
+                      background: 'transparent',
+                      cursor: processing ? 'not-allowed' : 'pointer',
+                      fontSize: 14,
+                    }}
+                  >
+                    remove
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
+          <p
+            className="press-marginalia"
+            style={{ fontSize: 15, textAlign: 'right', marginTop: 8, color: '#7A6E5C' }}
+          >
+            {files.length} document{files.length !== 1 ? 's' : ''} &middot;{' '}
+            {formatFileSize(totalSize)} total
+          </p>
         </div>
       )}
 
       {/* Error */}
       {error && (
-        <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgba(220,38,38,0.05)', border: '1px solid rgba(220,38,38,0.2)' }}>
-          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#b91c1c' }}>{error}</p>
+        <div
+          style={{
+            padding: '12px 16px',
+            marginTop: 20,
+            borderLeft: '2px solid rgba(192,128,112,0.5)',
+            background: 'rgba(192,128,112,0.05)',
+          }}
+        >
+          <p
+            className="press-marginalia"
+            style={{ fontSize: 15, color: '#C08070' }}
+          >
+            — {error}
+          </p>
         </div>
       )}
 
       {/* Privacy notice */}
-      <div className="p-3 glass-card rounded-lg" style={{ border: '1px solid rgba(255,255,255,0.4)' }}>
-        <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#5C5347' }}>
-          Your documents are processed securely and never stored. They are read once to extract
-          answers, then immediately discarded. Only the extracted answers are saved as a draft
-          for your review.
-        </p>
-      </div>
-
-      {/* Process button */}
-      <button
-        onClick={handleProcess}
-        disabled={files.length === 0 || processing}
-        className="w-full px-6 py-4 rounded-full text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-        style={{ fontFamily: 'var(--font-parent-body)', fontWeight: 500, backgroundColor: '#7C9082' }}
+      <p
+        className="press-marginalia"
+        style={{
+          fontSize: 14,
+          marginTop: 24,
+          textAlign: 'center',
+          maxWidth: 460,
+          marginLeft: 'auto',
+          marginRight: 'auto',
+          color: '#7A6E5C',
+          lineHeight: 1.6,
+        }}
       >
-        {processing ? 'Processing...' : 'Extract answers from documents'}
-      </button>
+        Your documents are read once to extract answers and then
+        immediately discarded. Only the extracted answers are kept,
+        and only as a draft for your review.
+      </p>
+
+      {/* Process action — italic link, not a filled button */}
+      <div style={{ textAlign: 'center', marginTop: 32 }}>
+        <button
+          onClick={handleProcess}
+          disabled={files.length === 0 || processing}
+          className="press-link"
+          style={{
+            background: 'transparent',
+            cursor:
+              files.length === 0 || processing ? 'not-allowed' : 'pointer',
+            opacity: files.length === 0 || processing ? 0.4 : 1,
+            fontSize: 20,
+          }}
+        >
+          {processing ? 'Reading the documents…' : 'Extract answers'}
+          {!processing && <span className="arrow">⟶</span>}
+        </button>
+      </div>
     </div>
   );
 }

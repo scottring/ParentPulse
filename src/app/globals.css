@@ -10,12 +10,12 @@
   --parent-bg: #FAF8F5;
   --parent-card: #FFFFFF;
   --parent-text: #3A3530;
-  --parent-text-light: #7C7468;
+  --parent-text-light: #5F564B;
   --parent-text-warm: #3A3530;
   --parent-text-mid: #5C5347;
-  --parent-text-body: #6B6560;
-  --parent-text-secondary: #7C7468;
-  --parent-text-muted: #8A8078;
+  --parent-text-body: #4A4238;
+  --parent-text-secondary: #5F564B;
+  --parent-text-muted: #6B6254;
   --parent-border: #E8E3DC;
 
   /* Child Theme - Playful Joy */
@@ -69,6 +69,8 @@ body {
   margin: 0;
   padding: 0;
   font-family: var(--font-parent-body);
+  font-size: 16px;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: var(--parent-bg);
@@ -573,7 +575,7 @@ html {
 .one-thing-body {
   font-family: var(--font-parent-body);
   font-size: 14px;
-  color: #7C7468;
+  color: #5F564B;
   line-height: 1.6;
   margin-top: 8px;
 }
@@ -641,7 +643,7 @@ html {
 }
 
 .timeline-dot-above { border-color: #8B9B8B; }
-.timeline-dot-below { border-color: #9B9488; }
+.timeline-dot-below { border-color: #746856; }
 
 .timeline-stem {
   width: 1px;
@@ -661,7 +663,7 @@ html {
 .timeline-entry-date {
   font-family: var(--font-parent-body);
   font-size: 10px;
-  color: #9B9488;
+  color: #746856;
 }
 
 /* ===== What's New ===== */
@@ -692,7 +694,7 @@ html {
 .whats-new-date {
   font-family: var(--font-parent-body);
   font-size: 12px;
-  color: #9B9488;
+  color: #746856;
   margin-top: 1px;
 }
 
@@ -741,4 +743,594 @@ html {
   .relish-container { padding: 0 16px; }
   .timeline-track { padding: 20px 16px; }
   .timeline-line { left: 16px; right: 16px; }
+}
+
+/* ================================================================
+   THE ANTIQUARIAN PRESS
+   Typographic conventions from fine private-press book printing.
+   Used across Workbook, Family Manual, and Reports.
+   ================================================================ */
+
+/* The page as a physical object — a warm shadow beneath it, a subtle
+   inward dip at the gutter, deckled outer edges. */
+.press-volume {
+  position: relative;
+  background: #F7F5F0;
+  border: 1px solid #E3DED3;
+  border-radius: 3px;
+  box-shadow:
+    0 1px 0 rgba(60, 48, 28, 0.03),
+    0 2px 6px rgba(60, 48, 28, 0.05),
+    0 12px 44px rgba(60, 48, 28, 0.09),
+    0 36px 80px rgba(60, 48, 28, 0.08);
+}
+
+/* Gutter dip — the subtle darkening where pages meet the spine */
+.press-gutter {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 48px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(90, 70, 40, 0.025) 40%,
+    rgba(90, 70, 40, 0.055) 50%,
+    rgba(90, 70, 40, 0.025) 60%,
+    transparent 100%
+  );
+}
+.press-gutter::before {
+  content: '';
+  position: absolute;
+  top: 8%;
+  bottom: 8%;
+  left: 50%;
+  width: 1px;
+  background: rgba(90, 70, 40, 0.12);
+  transform: translateX(-50%);
+}
+
+/* Running header — small caps at the top of a spread */
+.press-running-header {
+  font-family: var(--font-parent-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #5F564B;
+  text-align: center;
+  padding: 22px 0 8px;
+}
+.press-running-header .sep {
+  display: inline-block;
+  margin: 0 10px;
+  color: #746856;
+}
+
+/* Folio — the page number in the corner of each page */
+.press-folio {
+  font-family: var(--font-parent-display);
+  font-size: 15px;
+  font-weight: 500;
+  font-style: italic;
+  color: #6B6254;
+  letter-spacing: 0.02em;
+}
+
+/* Chapter-style section label — "I. In Progress" */
+.press-chapter-label {
+  font-family: var(--font-parent-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #5F564B;
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* Display headings — italic Cormorant at the spec sizes */
+.press-display-lg {
+  font-family: var(--font-parent-display);
+  font-size: clamp(40px, 5.4vw, 56px);
+  font-weight: 300;
+  font-style: italic;
+  color: #3A3530;
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+}
+.press-display-md {
+  font-family: var(--font-parent-display);
+  font-size: clamp(26px, 3.2vw, 32px);
+  font-weight: 400;
+  font-style: italic;
+  color: #3A3530;
+  line-height: 1.15;
+  letter-spacing: -0.005em;
+}
+.press-display-sm {
+  font-family: var(--font-parent-display);
+  font-size: 21px;
+  font-weight: 400;
+  font-style: italic;
+  color: #3A3530;
+  line-height: 1.25;
+}
+
+/* Editorial body — Cormorant at body weight, justified */
+.press-body {
+  font-family: var(--font-parent-display);
+  font-size: 19px;
+  font-weight: 400;
+  color: #4A4038;
+  line-height: 1.55;
+  letter-spacing: 0.002em;
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
+}
+.press-body-italic {
+  font-family: var(--font-parent-display);
+  font-size: 19px;
+  font-weight: 400;
+  font-style: italic;
+  color: #4A4238;
+  line-height: 1.6;
+}
+
+/* Small caps for names and proper nouns */
+.press-sc {
+  font-variant: small-caps;
+  font-feature-settings: "smcp", "c2sc";
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  color: #3A3530;
+}
+
+/* Drop cap — large initial letter that drops 3 lines into body */
+.press-drop-cap::first-letter {
+  font-family: var(--font-parent-display);
+  font-size: 5.8em;
+  font-weight: 400;
+  font-style: italic;
+  float: left;
+  line-height: 0.88;
+  padding: 6px 10px 0 0;
+  color: #3A3530;
+}
+
+/* Typographic rules — thin hairline, double rule, asterism */
+.press-rule {
+  border: 0;
+  height: 1px;
+  background: #CEC6B8;
+  margin: 18px 0;
+  width: 100%;
+}
+.press-rule-short {
+  border: 0;
+  height: 1px;
+  background: #CEC6B8;
+  margin: 12px 0;
+  width: 48px;
+}
+.press-rule-double {
+  border: 0;
+  height: 4px;
+  border-top: 1px solid #CEC6B8;
+  border-bottom: 1px solid #CEC6B8;
+  margin: 20px 0;
+}
+.press-asterism {
+  text-align: center;
+  font-family: var(--font-parent-display);
+  font-size: 18px;
+  color: #7C6F5D;
+  letter-spacing: 0.5em;
+  padding: 10px 0 6px;
+}
+.press-asterism::before { content: '⁂'; }
+
+/* Fleuron — decorative ornament at end of chapter */
+.press-fleuron {
+  display: block;
+  text-align: center;
+  font-family: var(--font-parent-display);
+  font-size: 17px;
+  color: #8C8070;
+  padding: 4px 0 2px;
+  letter-spacing: 0.4em;
+}
+
+/* Chapter entry — used in "In Progress" list on workbook left page */
+.press-chapter-entry {
+  padding: 22px 0 18px;
+}
+.press-chapter-entry:first-child {
+  padding-top: 4px;
+}
+.press-chapter-roman {
+  font-family: var(--font-parent-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #5F564B;
+  display: block;
+  margin-bottom: 6px;
+}
+.press-chapter-title {
+  font-family: var(--font-parent-display);
+  font-size: 22px;
+  font-weight: 400;
+  font-style: italic;
+  color: #3A3530;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+}
+.press-chapter-sub {
+  font-family: var(--font-parent-body);
+  font-size: 14px;
+  color: #5F564B;
+  margin-top: 3px;
+  font-style: italic;
+}
+.press-chapter-meta {
+  font-family: var(--font-parent-body);
+  font-size: 14px;
+  color: #5F564B;
+  margin-top: 10px;
+  line-height: 1.6;
+}
+
+/* Volume entry — used in "The Volumes" list on family manual right page */
+.press-volume-entry {
+  display: grid;
+  grid-template-columns: 64px 1fr 14px;
+  gap: 18px;
+  padding: 18px 0 16px;
+  border-bottom: 1px solid rgba(200, 190, 172, 0.4);
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease;
+}
+.press-volume-entry:last-child { border-bottom: 0; }
+.press-volume-entry:hover { background: rgba(250, 245, 235, 0.5); }
+
+.press-volume-number {
+  font-family: var(--font-parent-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #5F564B;
+  padding-top: 8px;
+}
+.press-volume-title {
+  font-family: var(--font-parent-display);
+  font-size: 24px;
+  font-weight: 400;
+  font-style: italic;
+  color: #3A3530;
+  line-height: 1.1;
+  letter-spacing: -0.005em;
+}
+.press-volume-sub {
+  font-family: var(--font-parent-body);
+  font-size: 14px;
+  color: #5F564B;
+  margin-top: 5px;
+  font-style: italic;
+}
+.press-volume-stat {
+  font-family: var(--font-parent-body);
+  font-size: 13px;
+  color: #5F564B;
+  margin-top: 4px;
+  letter-spacing: 0.01em;
+}
+.press-volume-health {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 14px;
+}
+
+/* Archive entry — used in Reports index */
+.press-archive-year {
+  font-family: var(--font-parent-body);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #3A3530;
+  padding-top: 28px;
+  padding-bottom: 4px;
+}
+.press-archive-month {
+  font-family: var(--font-parent-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #5F564B;
+  padding: 12px 0 4px 24px;
+}
+.press-archive-entry {
+  display: flex;
+  align-items: baseline;
+  padding: 10px 0 10px 40px;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.15s ease;
+}
+.press-archive-entry:hover { opacity: 0.65; }
+.press-archive-num {
+  font-family: var(--font-parent-body);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: #5F564B;
+  width: 40px;
+  flex-shrink: 0;
+}
+.press-archive-title {
+  font-family: var(--font-parent-display);
+  font-size: 20px;
+  font-style: italic;
+  color: #3A3530;
+  flex: 1;
+  line-height: 1.35;
+}
+.press-archive-dots {
+  flex: 1;
+  min-width: 20px;
+  height: 1px;
+  background-image: radial-gradient(circle, #CEC6B8 1px, transparent 1px);
+  background-size: 5px 2px;
+  background-repeat: repeat-x;
+  background-position: bottom;
+  margin: 0 12px 4px;
+  opacity: 0.6;
+}
+.press-archive-date {
+  font-family: var(--font-parent-body);
+  font-size: 13px;
+  font-style: italic;
+  color: #5F564B;
+  width: 88px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* The primary action — an italic link with an arrow, NOT a button */
+.press-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--font-parent-display);
+  font-size: 22px;
+  font-style: italic;
+  font-weight: 400;
+  color: #2D5F5D;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(45, 95, 93, 0.35);
+  padding-bottom: 2px;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+.press-link:hover {
+  color: #1F4A48;
+  border-bottom-color: #2D5F5D;
+}
+.press-link .arrow {
+  font-size: 0.85em;
+  transform: translateY(-1px);
+  transition: transform 0.2s ease;
+}
+.press-link:hover .arrow { transform: translate(2px, -1px); }
+
+/* Secondary action — simpler, italic, no border */
+.press-link-sm {
+  font-family: var(--font-parent-display);
+  font-size: 16px;
+  font-style: italic;
+  color: #4A4238;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(74, 66, 56, 0.35);
+  padding-bottom: 1px;
+  transition: all 0.2s ease;
+}
+.press-link-sm:hover {
+  color: #2D5F5D;
+  border-bottom-color: #2D5F5D;
+}
+
+/* Meta line — small caps metadata below the featured practice */
+.press-meta-line {
+  font-family: var(--font-parent-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #4A4238;
+}
+.press-meta-line .dot {
+  display: inline-block;
+  margin: 0 12px;
+  color: #7C6F5D;
+}
+
+/* Marginalia — small italic note in the margin */
+.press-marginalia {
+  font-family: var(--font-parent-display);
+  font-size: 15px;
+  font-style: italic;
+  color: #5F564B;
+  line-height: 1.55;
+}
+
+/* Asymmetric margins for pages — gutter (inside) tighter, outside looser */
+.press-page-left {
+  padding: 44px 36px 40px 56px;  /* less padding on inside (right), more on outside (left) */
+}
+.press-page-right {
+  padding: 44px 56px 40px 36px;
+  background: #F2F0EB;
+  border-left: 1px solid rgba(200, 190, 172, 0.5);
+}
+
+/* Also-this-week inline list on the workbook */
+.press-also-entry {
+  display: block;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(200, 190, 172, 0.35);
+  text-decoration: none;
+  color: inherit;
+  transition: padding 0.2s ease;
+}
+.press-also-entry:last-child { border-bottom: 0; }
+.press-also-entry:hover { padding-left: 6px; }
+.press-also-title {
+  font-family: var(--font-parent-display);
+  font-size: 18px;
+  font-style: italic;
+  color: #3A3530;
+  line-height: 1.3;
+}
+.press-also-meta {
+  font-family: var(--font-parent-body);
+  font-size: 13px;
+  color: #5F564B;
+  margin-top: 4px;
+  letter-spacing: 0.01em;
+}
+
+/* The bottom running band on the workbook spread */
+.press-count-band {
+  border-top: 1px solid rgba(200, 190, 172, 0.6);
+  padding: 22px 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-parent-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #4A4238;
+  background: #F2F0EB;
+  border-radius: 0 0 3px 3px;
+}
+.press-count-band .dot {
+  display: inline-block;
+  margin: 0 14px;
+  color: #7C6F5D;
+}
+
+/* Empty state styling — quiet, poetic */
+.press-empty {
+  padding: 80px 40px 90px;
+  text-align: center;
+}
+.press-empty-title {
+  font-family: var(--font-parent-display);
+  font-size: 34px;
+  font-weight: 300;
+  font-style: italic;
+  color: #5C5347;
+  line-height: 1.2;
+  margin-bottom: 18px;
+}
+.press-empty-body {
+  font-family: var(--font-parent-display);
+  font-size: 17px;
+  font-style: italic;
+  color: #6B6254;
+  line-height: 1.55;
+  max-width: 380px;
+  margin: 0 auto 28px;
+}
+
+/* Reports: the single-column binder layout */
+.press-binder {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.press-binder-head {
+  text-align: center;
+  padding: 56px 0 36px;
+}
+.press-binder-title {
+  font-family: var(--font-parent-display);
+  font-size: clamp(44px, 6vw, 62px);
+  font-weight: 300;
+  font-style: italic;
+  color: #3A3530;
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+}
+.press-binder-sub {
+  font-family: var(--font-parent-display);
+  font-size: 17px;
+  font-style: italic;
+  color: #5F564B;
+  margin-top: 14px;
+  letter-spacing: 0.005em;
+}
+.press-binder-action {
+  text-align: center;
+  padding: 8px 0 46px;
+}
+.press-binder-archive {
+  border-top: 1px solid rgba(200, 190, 172, 0.6);
+  border-bottom: 1px solid rgba(200, 190, 172, 0.6);
+  padding: 10px 0 40px;
+  background: #F7F5F0;
+}
+
+/* Loading state — not a spinner, a quiet italic line */
+.press-loading {
+  min-height: calc(100vh - 60px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-parent-display);
+  font-size: 19px;
+  font-style: italic;
+  color: #746856;
+}
+
+/* Mobile rules for the press system */
+@media (max-width: 768px) {
+  .press-page-left,
+  .press-page-right {
+    padding: 32px 24px 28px;
+  }
+  .press-page-right {
+    border-left: 0;
+    border-top: 1px solid rgba(200, 190, 172, 0.5);
+  }
+  .press-gutter { display: none; }
+  .press-count-band {
+    padding: 18px 24px;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 9px;
+  }
+  .press-count-band .dot { display: none; }
+  .press-volume-entry {
+    grid-template-columns: 50px 1fr 12px;
+    gap: 12px;
+  }
+  .press-archive-entry {
+    padding-left: 16px;
+  }
+  .press-archive-dots { margin: 0 6px 4px; }
+  .press-archive-date { width: 64px; font-size: 11px; }
+  .press-binder-title { font-size: 42px; }
 }

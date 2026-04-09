@@ -12,7 +12,7 @@ interface Props {
 }
 
 function freshnessColor(status: FreshnessStatus): string {
-  return status === 'fresh' ? '#16a34a' : status === 'aging' ? '#d97706' : '#9ca3af';
+  return status === 'fresh' ? '#16a34a' : status === 'aging' ? '#d97706' : '#5F564B';
 }
 
 /**
@@ -69,8 +69,8 @@ export function SpouseCard({ person, manual, assessments }: Props) {
               <span
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '11px',
-                  color: '#7C7468',
+                  fontSize: '15px',
+                  color: '#5F564B',
                 }}
               >
                 Partner
@@ -95,8 +95,8 @@ export function SpouseCard({ person, manual, assessments }: Props) {
                 className="block"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '10px',
-                  color: '#7C7468',
+                  fontSize: '12px',
+                  color: '#5F564B',
                 }}
               >
                 {connectionLabel}
@@ -111,18 +111,18 @@ export function SpouseCard({ person, manual, assessments }: Props) {
         {/* Freshness */}
         <span
           className="flex items-center gap-1"
-          style={{ fontFamily: 'var(--font-parent-body)', fontSize: '11px' }}
+          style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px' }}
         >
           <span
             className="w-1.5 h-1.5 rounded-full"
             style={{ background: freshnessColor(freshness) }}
           />
-          <span style={{ color: '#7C7468' }}>{freshLabel}</span>
+          <span style={{ color: '#5F564B' }}>{freshLabel}</span>
         </span>
 
         {/* Alignment */}
         {alignmentPercent !== null && (
-          <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '11px', color: '#7C7468' }}>
+          <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#5F564B' }}>
             {alignmentPercent}% aligned
           </span>
         )}

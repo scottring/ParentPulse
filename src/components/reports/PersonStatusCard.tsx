@@ -17,7 +17,7 @@ const TREND_DISPLAY: Record<string, { symbol: string; color: string; label: stri
   improving: { symbol: '\u2197', color: '#16a34a', label: 'Improving' },
   stable: { symbol: '\u2192', color: '#d97706', label: 'Stable' },
   declining: { symbol: '\u2198', color: '#dc2626', label: 'Declining' },
-  insufficient_data: { symbol: '\u00B7', color: '#9ca3af', label: 'Insufficient data' },
+  insufficient_data: { symbol: '\u00B7', color: '#5F564B', label: 'Insufficient data' },
 };
 
 export function PersonStatusCard({ person, manual, assessments, periodMs }: Props) {
@@ -62,12 +62,12 @@ export function PersonStatusCard({ person, manual, assessments, periodMs }: Prop
             <h4 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '15px', fontWeight: 500, color: '#3A3530' }}>
               {person.name}
             </h4>
-            <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '11px', color: '#9ca3af' }}>
+            <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#5F564B' }}>
               {personAssessments.length} dimensions tracked
             </span>
           </div>
         </div>
-        <span style={{ color: '#9ca3af', fontSize: '14px', transition: 'transform 0.2s', transform: expanded ? 'rotate(180deg)' : 'none' }}>
+        <span style={{ color: '#5F564B', fontSize: '14px', transition: 'transform 0.2s', transform: expanded ? 'rotate(180deg)' : 'none' }}>
           &#9662;
         </span>
       </button>
@@ -94,7 +94,7 @@ export function PersonStatusCard({ person, manual, assessments, periodMs }: Prop
                     </span>
                     <div className="flex items-center gap-2">
                       {baselineScore !== undefined && (
-                        <span className="text-[10px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#9ca3af' }}>
+                        <span className="text-[10px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
                           from {baselineScore.toFixed(1)}
                         </span>
                       )}
@@ -104,7 +104,7 @@ export function PersonStatusCard({ person, manual, assessments, periodMs }: Prop
                       >
                         {a.currentScore.toFixed(1)}
                       </span>
-                      <span style={{ color: t.color, fontSize: '12px' }}>{t.symbol}</span>
+                      <span style={{ color: t.color, fontSize: '14px' }}>{t.symbol}</span>
                     </div>
                   </div>
                 );
@@ -123,7 +123,7 @@ export function PersonStatusCard({ person, manual, assessments, periodMs }: Prop
               </span>
               <div className="mt-1 space-y-1">
                 {recentGaps.slice(0, 3).map((g) => (
-                  <p key={g.id} className="text-[11px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C7468' }}>
+                  <p key={g.id} className="text-[11px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
                     {g.topic}: {g.synthesis}
                   </p>
                 ))}

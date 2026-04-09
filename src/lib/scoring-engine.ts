@@ -127,7 +127,7 @@ export function computeOverallHealth(
  * Map a 1.0-5.0 score to a CSS color on the red-amber-green spectrum.
  */
 export function scoreToColor(score: number): string {
-  if (score <= 0) return '#6b7280'; // gray for no data
+  if (score <= 0) return '#4A4238'; // gray for no data
   if (score < 2.0) return '#dc2626'; // red-600
   if (score < 3.0) return '#ea580c'; // orange-600
   if (score < 3.5) return '#d97706'; // amber-600

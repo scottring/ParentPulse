@@ -68,7 +68,7 @@ export default function JourneyTimeline({ steps, compact = false }: JourneyTimel
                       ? '#15803d'
                       : step.status === 'in-progress'
                       ? '#5C5347'
-                      : '#8A8078',
+                      : '#6B6254',
                   }}
                 >
                   {step.label}
@@ -76,7 +76,7 @@ export default function JourneyTimeline({ steps, compact = false }: JourneyTimel
                 {step.contributorName && step.status !== 'not-started' && (
                   <span
                     className="text-xs"
-                    style={{ fontFamily: 'var(--font-parent-body)', color: '#8A8078' }}
+                    style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
                   >
                     ({step.contributorName})
                   </span>
@@ -90,8 +90,8 @@ export default function JourneyTimeline({ steps, compact = false }: JourneyTimel
                     color: step.status === 'complete'
                       ? 'rgba(22,163,74,0.7)'
                       : step.status === 'in-progress'
-                      ? '#7C7468'
-                      : '#8A8078',
+                      ? '#5F564B'
+                      : '#6B6254',
                   }}
                 >
                   {step.description}

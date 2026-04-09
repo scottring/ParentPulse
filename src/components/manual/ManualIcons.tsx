@@ -95,8 +95,8 @@ export const ManualIcons = {
     const color = colors[level - 1];
     return (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <rect x="9" y="3" width="6" height="14" rx="3" stroke="#7C7468" strokeWidth="2" fill="white"/>
-        <circle cx="12" cy="19" r="3" fill={color} stroke="#7C7468" strokeWidth="2"/>
+        <rect x="9" y="3" width="6" height="14" rx="3" stroke="#5F564B" strokeWidth="2" fill="white"/>
+        <circle cx="12" cy="19" r="3" fill={color} stroke="#5F564B" strokeWidth="2"/>
         <rect x="10" y="6" width="4" height={12 - (level * 2)} fill={color} rx="2"/>
       </svg>
     );
@@ -267,7 +267,7 @@ export function WarningLabel({ type, title, description, severity = 'high' }: Wa
         <div
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '10px',
+            fontSize: '12px',
             fontWeight: 600,
             color: colors.text,
             marginBottom: '4px',
@@ -309,7 +309,7 @@ export function SpecificationTable({ specs }: SpecTableProps) {
           color: 'white',
           padding: '12px 16px',
           fontFamily: 'var(--font-parent-body)',
-          fontSize: '10px',
+          fontSize: '12px',
           fontWeight: 600,
           textTransform: 'uppercase',
           letterSpacing: '0.12em',
@@ -333,10 +333,10 @@ export function SpecificationTable({ specs }: SpecTableProps) {
               background: index % 2 === 0 ? 'white' : 'rgba(255,255,255,0.3)'
             }}
           >
-            <div style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 600, color: '#5C5347' }}>
+            <div style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 600, color: '#5C5347' }}>
               {spec.label}
             </div>
-            <div style={{ fontFamily: 'var(--font-parent-body)', fontSize: '13px', color: '#3A3530', fontWeight: 500 }}>
+            <div style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#3A3530', fontWeight: 500 }}>
               {spec.value}
             </div>
           </div>

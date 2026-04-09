@@ -51,7 +51,7 @@ export default function JourneyPath({ currentStage }: JourneyPathProps) {
                     ? display.color
                     : isCompleted
                       ? 'rgba(22,163,74,0.5)'
-                      : '#A3A3A3',
+                      : '#5F564B',
                 }}
               >
                 {display.label}

@@ -286,7 +286,7 @@ export default function ThreeRingDiagram({ health, onZoneClick }: ThreeRingDiagr
               x={cx} y={cy + 46}
               textAnchor="middle"
               dominantBaseline="central"
-              fill="#6B6B6B"
+              fill="#4A4238"
               fontSize="8"
               fontFamily="monospace"
             >
