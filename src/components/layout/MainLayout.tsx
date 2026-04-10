@@ -2,6 +2,7 @@
 
 import Navigation from './Navigation';
 import SideNav from './SideNav';
+import BudgetAlertBanner from './BudgetAlertBanner';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -17,6 +18,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <SideNav />
 
       <main className="pt-[64px]">
+        <BudgetAlertBanner />
         {children}
       </main>
     </div>

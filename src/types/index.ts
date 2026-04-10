@@ -1,4 +1,5 @@
 import { Timestamp } from 'firebase/firestore';
+import type { BudgetConfig } from './ai-usage';
 
 // ==================== User & Family Types ====================
 
@@ -27,6 +28,7 @@ export interface Family {
   members: string[];
   pendingInvites: PendingInvite[];
   createdAt: Timestamp;
+  aiBudget?: BudgetConfig;
 }
 
 export interface PendingInvite {

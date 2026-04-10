@@ -27,6 +27,79 @@ function getGoogleAI() {
   return genAI; // Returns null if API key not set
 }
 
+// ================================================================
+// AI USAGE TRACKING
+// Every Anthropic call should be logged via this helper so the cost
+// tracker in Settings can show per-family spend. Non-blocking; never
+// throws (a failed log should not break the actual AI call).
+// ================================================================
+
+// Rates in USD per 1M tokens. Keep in sync with src/types/ai-usage.ts.
+const AI_RATES = {
+  "claude-sonnet-4-20250514":   {input: 3.00, output: 15.00, cacheWrite: 3.75, cacheRead: 0.30, family: "sonnet"},
+  "claude-sonnet-4-5-20250929": {input: 3.00, output: 15.00, cacheWrite: 3.75, cacheRead: 0.30, family: "sonnet"},
+  "claude-sonnet-4-6":          {input: 3.00, output: 15.00, cacheWrite: 3.75, cacheRead: 0.30, family: "sonnet"},
+  "claude-3-haiku-20240307":    {input: 0.25, output: 1.25, cacheWrite: 0.30, cacheRead: 0.03, family: "haiku"},
+  "claude-haiku-4-5-20251001":  {input: 1.00, output: 5.00, cacheWrite: 1.25, cacheRead: 0.10, family: "haiku"},
+  "claude-opus-4-20250514":     {input: 15.00, output: 75.00, cacheWrite: 18.75, cacheRead: 1.50, family: "opus"},
+  "claude-opus-4-6":            {input: 15.00, output: 75.00, cacheWrite: 18.75, cacheRead: 1.50, family: "opus"},
+};
+
+function computeCost(model, usage) {
+  const rate = AI_RATES[model] || AI_RATES["claude-sonnet-4-20250514"];
+  const input = (usage?.input_tokens || 0) * rate.input / 1_000_000;
+  const output = (usage?.output_tokens || 0) * rate.output / 1_000_000;
+  const cacheWrite = (usage?.cache_creation_input_tokens || 0) * rate.cacheWrite / 1_000_000;
+  const cacheRead = (usage?.cache_read_input_tokens || 0) * rate.cacheRead / 1_000_000;
+  return input + output + cacheWrite + cacheRead;
+}
+
+/**
+ * Record a single AI call to ai_usage_events. Fire-and-forget safe —
+ * errors are logged but never propagated.
+ *
+ * @param {object} db Firestore admin instance
+ * @param {object} ctx Context for the call:
+ *   - familyId (required)
+ *   - userId (required, use 'system' for scheduled jobs)
+ *   - functionName (required, e.g. 'askManual')
+ *   - subOperation (optional, e.g. 'intent_classifier')
+ *   - model (required)
+ *   - usage (required: the Anthropic response.usage object)
+ *   - personId (optional)
+ *   - sessionId (optional)
+ */
+async function logAIUsage(db, ctx) {
+  const logger = require("firebase-functions/logger");
+  try {
+    const rate = AI_RATES[ctx.model];
+    const family = rate?.family || "other";
+    const cost = computeCost(ctx.model, ctx.usage);
+
+    const doc = {
+      familyId: ctx.familyId,
+      userId: ctx.userId || "system",
+      function: ctx.functionName,
+      model: ctx.model,
+      modelFamily: family,
+      inputTokens: ctx.usage?.input_tokens || 0,
+      outputTokens: ctx.usage?.output_tokens || 0,
+      cacheCreationTokens: ctx.usage?.cache_creation_input_tokens || 0,
+      cacheReadTokens: ctx.usage?.cache_read_input_tokens || 0,
+      estimatedCostUsd: cost,
+      timestamp: admin.firestore.Timestamp.now(),
+    };
+    if (ctx.subOperation) doc.subOperation = ctx.subOperation;
+    if (ctx.personId) doc.personId = ctx.personId;
+    if (ctx.sessionId) doc.sessionId = ctx.sessionId;
+
+    await db.collection("ai_usage_events").add(doc);
+  } catch (err) {
+    // Never break the actual AI call — just log the failure.
+    logger.warn("logAIUsage failed (non-critical):", err.message);
+  }
+}
+
 /**
  * Check if an email has a pending invite in any family.
  * Called during registration to match invited users to their family.
@@ -867,7 +940,11 @@ exports.chatWithCoach = onCall(
         });
 
         // Call Claude with context
-        const response = await generateChatResponse(messages, context);
+        const response = await generateChatResponse(messages, context, {
+          familyId,
+          userId: request.auth.uid,
+          personId,
+        });
 
         // Add assistant response to messages
         messages.push({
@@ -1073,7 +1150,7 @@ async function retrieveChatContext(familyId, userMessage, personId = null, userI
 /**
  * Generate chat response using Claude with context
  */
-async function generateChatResponse(messages, context) {
+async function generateChatResponse(messages, context, usageCtx = null) {
   const logger = require("firebase-functions/logger");
 
   // Build system message with context
@@ -1083,13 +1160,26 @@ async function generateChatResponse(messages, context) {
 
   try {
     const anthropicClient = getAnthropic();
+    const model = "claude-3-haiku-20240307";
     const response = await anthropicClient.messages.create({
-      model: "claude-3-haiku-20240307",
+      model,
       max_tokens: 1500,
       temperature: 0.7,
       system: systemMessage,
       messages: messages,
     });
+
+    // Log usage if we have the context
+    if (usageCtx && usageCtx.familyId) {
+      logAIUsage(admin.firestore(), {
+        familyId: usageCtx.familyId,
+        userId: usageCtx.userId || "system",
+        functionName: "chatWithCoach",
+        model,
+        usage: response.usage,
+        personId: usageCtx.personId,
+      }).catch(() => {});
+    }
 
     return response.content[0].text;
   } catch (error) {
@@ -7375,30 +7465,43 @@ exports.askManual = onCall(
       try {
         const client = getAnthropic();
 
-        // Detect intent: entry (log), question (ask), or activity_request
-        // (user wants practices/workbook items created)
+        // Detect intent: entry (log), question (ask), activity_request
+        // (user wants practices created), or story_request (user wants
+        // a kid-facing illustrated story written).
         const entryDetectionResponse = await client.messages.create({
           model: "claude-haiku-4-5-20251001",
           max_tokens: 200,
           messages: [{
             role: "user",
-            content: `Classify this message as one of: "entry", "question", or "activity_request".
+            content: `Classify this message as one of: "entry", "question", "activity_request", or "story_request".
 
 An "entry" is when someone is logging an observation, event, agreement, or note about a person (e.g., "Today Iris was upset that...", "What I agreed to: ...", "Noticed that Ella...", "We decided to...").
 
 A "question" is when someone is asking for information or advice (e.g., "What does Iris need when...", "How should I handle...", "Why does Ella...").
 
-An "activity_request" is when someone is explicitly asking the system to CREATE practices, reflections, workbook items, or activities in their workbook (e.g., "Give me activities to work on this", "Create a workbook for this", "I need reflections and practices for...", "Set up some exercises for...", "What should I practice this week?").
+An "activity_request" is when someone is explicitly asking the system to CREATE practices, reflections, workbook items, or activities in their workbook FOR THEMSELVES OR ANOTHER ADULT to do (e.g., "Give me activities to work on this", "Create a workbook for this", "I need reflections and practices for...", "Set up some exercises for...", "What should I practice this week?").
+
+A "story_request" is when someone is explicitly asking the system to WRITE A STORY for a child — something they can read aloud with the child to help them work through a feeling or lesson (e.g., "Write him a story about this", "Can you make a story for her", "Tell Kaleb a story about transitions", "I want to read him something about this", "Make an illustrated story", "Write a fable for her").
 
 Message: "${question}"
 
-Respond with ONLY a JSON object: {"type": "entry" | "question" | "activity_request", "entryType": "observation" | "agreement" | "event" | "note"}
-If it's a question or activity_request, use entryType "note".`,
+Respond with ONLY a JSON object: {"type": "entry" | "question" | "activity_request" | "story_request", "entryType": "observation" | "agreement" | "event" | "note"}
+If it's a question, activity_request, or story_request, use entryType "note".`,
           }],
         });
 
+        // Log the intent classifier call
+        logAIUsage(db, {
+          familyId, userId: request.auth.uid,
+          functionName: "askManual", subOperation: "intent_classifier",
+          model: "claude-haiku-4-5-20251001",
+          usage: entryDetectionResponse.usage,
+          personId, sessionId: null,
+        }).catch(() => {});
+
         let isEntry = false;
         let isActivityRequest = false;
+        let isStoryRequest = false;
         let entryType = "note";
         try {
           const classJson = entryDetectionResponse.content[0].text;
@@ -7407,6 +7510,7 @@ If it's a question or activity_request, use entryType "note".`,
               classMatch ? classMatch[0] : classJson);
           isEntry = classification.type === "entry";
           isActivityRequest = classification.type === "activity_request";
+          isStoryRequest = classification.type === "story_request";
           entryType = classification.entryType || "note";
         } catch (e) {
           // Default to question if classification fails
@@ -7437,6 +7541,8 @@ If it's a question or activity_request, use entryType "note".`,
           entryAwareSystemPrompt += `\n\n=== IMPORTANT ===\nThe user just logged a new entry/observation. Acknowledge what they've shared, confirm it's been noted in the manual, and optionally suggest a brief follow-up insight or question based on what you know about ${personName}. Be warm and brief.`;
         } else if (isActivityRequest) {
           entryAwareSystemPrompt += `\n\n=== IMPORTANT ===\nThe user is asking you to create workbook activities or practices. Do NOT ask clarifying questions about format or learning style. Instead: (1) briefly name the underlying issue in 1-2 sentences, (2) tell them you're adding 3-6 concrete practices to their workbook right now. The system will generate the actual activities from this conversation in the background — your job is just to acknowledge and frame. Be warm, decisive, and under 5 sentences. Never ask "what format would you like" or similar. Never punt.`;
+        } else if (isStoryRequest) {
+          entryAwareSystemPrompt += `\n\n=== IMPORTANT ===\nThe user is asking you to write a short illustrated story for ${personName} — something they can read aloud together. Do NOT ask clarifying questions about tone, format, or what the lesson should be. Instead: (1) briefly name the feeling or situation you heard in 1-2 sentences, (2) tell them you're writing a short story for ${personName} and it will be in their workbook in a moment, (3) mention that they can read it together and capture ${personName}'s reaction afterward. The system will generate the actual story from this conversation in the background — your job is just to acknowledge warmly and frame the intention. Under 5 sentences. Never punt.`;
         }
 
         const response = await client.messages.create({
@@ -7447,6 +7553,14 @@ If it's a question or activity_request, use entryType "note".`,
           messages,
         });
 
+        // Log the main response call
+        logAIUsage(db, {
+          familyId, userId: request.auth.uid,
+          functionName: "askManual", subOperation: "main_response",
+          model: "claude-sonnet-4-20250514",
+          usage: response.usage, personId,
+        }).catch(() => {});
+
         const answer = response.content[0].text;
 
         // Extract insights and update manual in background
@@ -7455,6 +7569,7 @@ If it's a question or activity_request, use entryType "note".`,
               client, db, manualId, personName,
               question, manual, request.auth.uid,
               [...conversationHistory, {role: "user", content: question}],
+              familyId, personId,
           );
         } catch (insightErr) {
           logger.warn("Insight extraction failed (non-critical):", insightErr);
@@ -7477,6 +7592,25 @@ If it's a question or activity_request, use entryType "note".`,
               },
           ).catch((err) => {
             logger.warn("Activity generation failed (non-critical):", err);
+          });
+        }
+
+        // If this was a story request, generate an illustrated story in the
+        // background. Same fire-and-forget pattern.
+        if (isStoryRequest) {
+          generateKidStoryFromChatContext(
+              client, db, {
+                personId, personName, manualId, familyId,
+                userId: request.auth.uid,
+                manual,
+                conversationHistory: [
+                  ...conversationHistory,
+                  {role: "user", content: question},
+                  {role: "assistant", content: answer},
+                ],
+              },
+          ).catch((err) => {
+            logger.warn("Story generation failed (non-critical):", err);
           });
         }
 
@@ -7576,6 +7710,7 @@ If it's a question or activity_request, use entryType "note".`,
           answer,
           insightsApplied: true,
           activitiesBeingGenerated: isActivityRequest,
+          storyBeingGenerated: isStoryRequest,
         };
       } catch (err) {
         logger.error("askManual error:", err);
@@ -7845,7 +7980,7 @@ The worst thing you can do is stretch thin data into confident-sounding analysis
  */
 async function extractAndApplyInsights(
     client, db, manualId, personName, question, manual, userId,
-    conversationHistory = [],
+    conversationHistory = [], familyId = null, personId = null,
 ) {
   const logger = require("firebase-functions/logger");
 
@@ -7912,6 +8047,16 @@ Return ONLY valid JSON.`;
     temperature: 0.3,
     messages: [{role: "user", content: extractionPrompt}],
   });
+
+  // Log usage (non-blocking)
+  if (familyId) {
+    logAIUsage(db, {
+      familyId, userId,
+      functionName: "askManual", subOperation: "insight_extraction",
+      model: "claude-sonnet-4-20250514",
+      usage: extractionResponse.usage, personId,
+    }).catch(() => {});
+  }
 
   const extractionText = extractionResponse.content[0].text;
   let insights;
@@ -8188,6 +8333,17 @@ Return ONLY valid JSON.`;
     messages: [{role: "user", content: synthPrompt}],
   });
 
+  // Log usage (non-blocking)
+  logAIUsage(db, {
+    familyId: sessionData.familyId,
+    userId: sessionData.userId || "system",
+    functionName: "synthesizeClosedSession",
+    model: "claude-sonnet-4-20250514",
+    usage: response.usage,
+    personId: sessionData.personId,
+    sessionId,
+  }).catch(() => {});
+
   const text = response.content[0].text;
   let synthesis;
   try {
@@ -8403,6 +8559,14 @@ Return ONLY valid JSON.`;
     messages: [{role: "user", content: prompt}],
   });
 
+  // Log usage (non-blocking)
+  logAIUsage(db, {
+    familyId, userId,
+    functionName: "generateActivitiesFromChatContext",
+    model: "claude-sonnet-4-20250514",
+    usage: response.usage, personId, sessionId: sourceSessionId,
+  }).catch(() => {});
+
   const text = response.content[0].text;
   let parsed;
   try {
@@ -8472,6 +8636,205 @@ Return ONLY valid JSON.`;
         `Generated ${createdCount} activities from chat session ${sourceSessionId || "?"} for ${personName}`,
     );
   }
+}
+
+/**
+ * Generate a short illustrated story for a child, grounded in a parent's
+ * conversation with the manual. The story is saved as a GrowthItem with
+ * type='illustrated_story', assigned to the parent (so it appears in their
+ * workbook), with targetPersonIds pointing to the child.
+ *
+ * The parent will read it aloud with the child and capture the reaction.
+ *
+ * Same guardrail as every other chat-derived extractor: only the USER's
+ * words (the parent's messages) are mined for context, never the AI's.
+ */
+async function generateKidStoryFromChatContext(client, db, ctx) {
+  const logger = require("firebase-functions/logger");
+  const {
+    personId, personName, manualId, familyId, userId, manual,
+    conversationHistory,
+  } = ctx;
+
+  // Only the user's own words — AI responses are derivative
+  const userMessages = conversationHistory
+      .filter((m) => m.role === "user")
+      .map((m) => m.content);
+
+  if (userMessages.length === 0) {
+    logger.info("No user messages, skipping story generation");
+    return;
+  }
+
+  // Look up the requesting parent (assignee)
+  const userDoc = await db.collection("users").doc(userId).get();
+  const userName = userDoc.exists ?
+    (userDoc.data().name || userDoc.data().displayName || "you") : "you";
+
+  // Look up the child's details for age/interests tuning
+  const personDoc = await db.collection("people").doc(personId).get();
+  let childAge = null;
+  let childInterests = [];
+  if (personDoc.exists) {
+    const person = personDoc.data();
+    if (person.dateOfBirth?.toDate) {
+      const dob = person.dateOfBirth.toDate();
+      const ageMs = Date.now() - dob.getTime();
+      childAge = Math.floor(ageMs / (365.25 * 24 * 60 * 60 * 1000));
+    }
+  }
+  // Interests come from the manual's coreInfo
+  if (manual.coreInfo?.interests) {
+    childInterests = Array.isArray(manual.coreInfo.interests) ?
+      manual.coreInfo.interests.slice(0, 5) : [];
+  }
+  if (manual.coreInfo?.strengths) {
+    const strengths = Array.isArray(manual.coreInfo.strengths) ?
+      manual.coreInfo.strengths.slice(0, 5) : [];
+    childInterests = [...childInterests, ...strengths];
+  }
+
+  // Active session ID for lineage
+  const activeSessionSnap = await db.collection("manual_chat_sessions")
+      .where("personId", "==", personId)
+      .where("userId", "==", userId)
+      .where("active", "==", true)
+      .orderBy("updatedAt", "desc")
+      .limit(1)
+      .get();
+  const sourceSessionId = activeSessionSnap.empty ?
+    null : activeSessionSnap.docs[0].id;
+
+  // Tune tone by age bracket
+  const ageBracket = childAge === null ? "child" :
+    childAge <= 6 ? "young child" :
+    childAge <= 9 ? "child" :
+    childAge <= 12 ? "older child" :
+    "young adolescent";
+
+  const characterGuidance = childAge === null || childAge <= 9 ?
+    "Use animal characters in a fable-like setting (a forest, a meadow, a small village of creatures). This gives the child distance from themselves to hold the lesson more gently." :
+    "You may use human characters or animal characters. For older children, slightly more complex emotional language is OK, but keep it warm and never preachy.";
+
+  const lengthGuidance = childAge === null || childAge <= 6 ?
+    "Keep it very short: 5-6 short paragraphs, no more than 120 words total." :
+    childAge <= 9 ?
+    "Keep it short: 6-8 short paragraphs, no more than 200 words total." :
+    "Keep it short but more substantive: 7-10 paragraphs, no more than 320 words total.";
+
+  const prompt = `Write a short, warm, illustrated-book-style story for a child named ${personName}, based on a parent's conversation with the child's operating manual.
+
+The parent said these things during the conversation:
+${userMessages.map((m, i) => `${i + 1}. "${m}"`).join("\n\n")}
+
+About ${personName}:
+- Age: ${childAge !== null ? `${childAge} years old` : "unknown"} (a ${ageBracket})
+- Interests, strengths, or themes that matter to them: ${childInterests.length > 0 ? childInterests.join(", ") : "unknown — keep it universal"}
+
+Things known to work well with ${personName}: ${(manual.whatWorks || []).slice(0, 3).map((s) => s.description).join("; ") || "unknown"}
+Triggers or things that don't work: ${(manual.whatDoesntWork || []).slice(0, 3).map((s) => s.description).join("; ") || "unknown"}
+
+Your task:
+1. Identify the underlying lesson or emotional truth from the parent's messages — the thing they want ${personName} to hear or feel safer about.
+2. Write a short story that embeds this lesson in a narrative. Never name the lesson explicitly; let the story do the work.
+3. ${characterGuidance}
+4. ${lengthGuidance}
+5. The story should feel like it belongs in a vintage children's anthology — Arnold Lobel, Tove Jansson, Margaret Wise Brown, Kevin Henkes. Warm, observant, a little wise, never preachy.
+6. End with a gentle closing line that echoes the lesson without stating it.
+7. Give the story a short evocative title (3-6 words).
+
+Absolute rules:
+- Do not name ${personName} in the story. The whole point is that ${personName} can choose to see themselves in the character.
+- Do not lecture. Do not moralize. Do not include an explanation of the lesson.
+- Do not reference specific family members by name.
+- The story should be readable aloud by a parent in 2-3 minutes.
+
+Return JSON:
+{
+  "title": "...",
+  "openingLine": "the first sentence of the first paragraph, used for drop cap emphasis",
+  "paragraphs": ["paragraph 1", "paragraph 2", "..."],
+  "lessonSummary": "a one-line internal note: what lesson is embedded (for future re-generation, not shown to reader)",
+  "ageTarget": ${childAge !== null ? childAge : 8}
+}
+
+Return ONLY valid JSON.`;
+
+  const response = await client.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 2000,
+    temperature: 0.75,
+    messages: [{role: "user", content: prompt}],
+  });
+
+  // Log usage (non-blocking)
+  logAIUsage(db, {
+    familyId, userId,
+    functionName: "generateKidStoryFromChatContext",
+    model: "claude-sonnet-4-20250514",
+    usage: response.usage, personId, sessionId: sourceSessionId,
+  }).catch(() => {});
+
+  const text = response.content[0].text;
+  let story;
+  try {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    story = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+  } catch (e) {
+    logger.warn("Failed to parse story generation:", text);
+    return;
+  }
+
+  if (!story.title || !story.paragraphs || !Array.isArray(story.paragraphs)) {
+    logger.warn("Generated story missing required fields");
+    return;
+  }
+
+  // Write the story as a GrowthItem
+  const now = admin.firestore.Timestamp.now();
+  const expiresAt = admin.firestore.Timestamp.fromMillis(
+      Date.now() + 14 * 24 * 60 * 60 * 1000, // 2 weeks
+  );
+
+  const item = {
+    familyId,
+    type: "illustrated_story",
+    title: story.title,
+    body: story.paragraphs.join("\n\n"), // fallback for consumers that use body
+    emoji: "📖",
+    targetPersonIds: [personId],
+    targetPersonNames: [personName],
+    assignedToUserId: userId,
+    assignedToUserName: userName,
+    sourceManualId: manualId,
+    sourceChatSessionId: sourceSessionId,
+    sourceInsightType: "gap",
+    relationalLevel: "family",
+    speed: "intentional",
+    scheduledDate: now,
+    expiresAt,
+    estimatedMinutes: 5,
+    status: "active",
+    statusUpdatedAt: now,
+    createdAt: now,
+    generatedBy: "ai",
+    batchId: `story-${sourceSessionId || Date.now()}`,
+    // The story itself
+    storyContent: {
+      title: story.title,
+      paragraphs: story.paragraphs,
+      openingLine: story.openingLine || story.paragraphs[0] || "",
+      lessonSummary: story.lessonSummary || "",
+      ageTarget: typeof story.ageTarget === "number" ? story.ageTarget :
+        (childAge !== null ? childAge : 8),
+    },
+  };
+
+  const ref = db.collection("growth_items").doc();
+  await ref.set({...item, growthItemId: ref.id});
+  logger.info(
+      `Generated story "${story.title}" for ${personName} from session ${sourceSessionId || "?"}`,
+  );
 }
 
 /**

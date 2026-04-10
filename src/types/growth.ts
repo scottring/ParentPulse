@@ -108,10 +108,52 @@ export interface GrowthItem {
   dimensionId?: DimensionId;
   isAssessmentItem?: boolean;      // True for pre/post assessment questions
 
+  // Story content — present when type === 'illustrated_story'
+  // A short, age-appropriate narrative for a parent to read aloud with a kid.
+  storyContent?: StoryContent;
+
+  // Kid reaction — captured after a parent reads a story with a child.
+  // Present when a story has been completed.
+  kidReaction?: KidReaction;
+
+  // Lineage: if this item was drawn from a manual-chat conversation
+  sourceChatSessionId?: string;
+
   // Metadata
   createdAt: Timestamp;
   generatedBy: 'ai' | 'system';
   batchId?: string;                 // Links items generated together
+}
+
+// ==================== Story Content ====================
+
+/**
+ * The body of an illustrated story. Plain text paragraphs, with a drop-cap
+ * opening line rendered as the first paragraph's initial letter. No images —
+ * the illustration in Relish is typographic (drop caps, ornaments, fleurons).
+ */
+export interface StoryContent {
+  title: string;
+  paragraphs: string[];        // 5-10 short paragraphs
+  openingLine?: string;         // first line, used for drop cap emphasis
+  lessonSummary?: string;       // internal one-liner: what lesson is embedded
+  ageTarget?: number;            // e.g. 8 — used to tune tone on re-generation
+  characterNotes?: string;       // optional: who's in it, for re-generation
+}
+
+// ==================== Kid Reaction ====================
+
+/**
+ * Captured after a parent reads a story with a child. The emoji rating is the
+ * primary signal; the comment is optional. Both are saved back to the kid's
+ * manual as a progress note.
+ */
+export interface KidReaction {
+  rating: 1 | 2 | 3 | 4 | 5;   // 1 = confused/disliked, 5 = loved it
+  emoji: string;                 // which emoji was tapped, for display later
+  comment?: string;              // what the kid said (captured by the parent)
+  reactedAt: Timestamp;
+  capturedBy: string;            // userId of the parent who captured it
 }
 
 // ==================== Firestore Collection ====================

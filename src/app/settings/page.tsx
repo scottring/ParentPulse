@@ -12,6 +12,7 @@ import { DomainWeights, DEFAULT_DOMAIN_WEIGHTS } from '@/types/ring-scores';
 import { scoreToColor } from '@/lib/scoring-engine';
 import { EngagementMode } from '@/types/growth';
 import { ENGAGEMENT_PRESETS } from '@/types/user-preferences';
+import AIUsageSection from '@/components/settings/AIUsageSection';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -502,6 +503,9 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+        {/* AI Usage & Cost */}
+        <AIUsageSection />
 
         {/* Family Section */}
         <div className="mb-8 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>

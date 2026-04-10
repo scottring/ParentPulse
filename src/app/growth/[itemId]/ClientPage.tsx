@@ -3,7 +3,17 @@
 import { useEffect, useState, useCallback, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { doc, getDoc } from 'firebase/firestore';
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  Timestamp,
+  collection,
+  query,
+  where,
+  getDocs,
+  arrayUnion,
+} from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { useGrowthFeed } from '@/hooks/useGrowthFeed';
 import { usePerson } from '@/hooks/usePerson';
@@ -16,7 +26,7 @@ import type { GrowthItem, GrowthItemType, FeedbackReaction, ImpactRating } from 
 // Types
 // ================================================================
 type Step = 'brief' | 'doing' | 'reflect' | 'complete';
-type PerformanceMode = 'writing' | 'timer' | 'steps' | 'default';
+type PerformanceMode = 'writing' | 'timer' | 'steps' | 'story' | 'default';
 
 // ================================================================
 // Helpers
@@ -58,6 +68,8 @@ function getPerformanceMode(type: GrowthItemType): PerformanceMode {
     case 'partner_exercise':
     case 'repair_ritual':
       return 'steps';
+    case 'illustrated_story':
+      return 'story';
     default:
       return 'default';
   }
@@ -112,6 +124,11 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
   const [myNote, setMyNote] = useState('');
   const [partnerNote, setPartnerNote] = useState('');
 
+  // Story-specific reaction state
+  const [storyRating, setStoryRating] = useState<1 | 2 | 3 | 4 | 5 | null>(null);
+  const [storyEmoji, setStoryEmoji] = useState<string>('');
+  const [storyComment, setStoryComment] = useState('');
+
   useEffect(() => {
     if (!authLoading && !user) { router.push('/login'); return; }
     if (!itemId) return;
@@ -152,6 +169,70 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
       setSubmitting(false);
     }
   }, [item, myNote, partnerNote, submitFeedback, submitting, user?.userId, isMultiPerson, otherPerson?.userId]);
+
+  // Handler for story reactions — saves the kid's reaction on the item,
+  // marks the item complete, and writes a progress note to the kid's manual
+  // so the reaction becomes raw material for the next synthesis.
+  const handleStoryReaction = useCallback(async () => {
+    if (!item || submitting || !user?.userId || storyRating === null) return;
+    setSubmitting(true);
+    try {
+      const now = Timestamp.now();
+      const kidPersonId = item.targetPersonIds?.[0];
+      const kidName = item.targetPersonNames?.[0] || 'them';
+      const storyContent = (item as unknown as { storyContent?: { title?: string } }).storyContent;
+      const storyTitle = storyContent?.title || item.title;
+
+      // 1. Update the growth item with kidReaction and mark complete
+      await updateDoc(doc(firestore, 'growth_items', item.growthItemId), {
+        kidReaction: {
+          rating: storyRating,
+          emoji: storyEmoji,
+          comment: storyComment.trim() || null,
+          reactedAt: now,
+          capturedBy: user.userId,
+        },
+        status: 'completed',
+        statusUpdatedAt: now,
+      });
+
+      // 2. Write a progress note to the kid's manual
+      if (kidPersonId) {
+        const category: 'improvement' | 'insight' | 'concern' =
+          storyRating >= 4 ? 'improvement'
+            : storyRating <= 2 ? 'concern'
+            : 'insight';
+
+        const noteBody = storyComment.trim()
+          ? `Read "${storyTitle}" with ${kidName}. Reaction: ${storyEmoji}. Said: "${storyComment.trim()}"`
+          : `Read "${storyTitle}" with ${kidName}. Reaction: ${storyEmoji}.`;
+
+        const manualQuery = query(
+          collection(firestore, 'person_manuals'),
+          where('personId', '==', kidPersonId),
+        );
+        const manualSnap = await getDocs(manualQuery);
+        if (!manualSnap.empty) {
+          await updateDoc(manualSnap.docs[0].ref, {
+            progressNotes: arrayUnion({
+              id: `story-${item.growthItemId}-${Date.now()}`,
+              date: now,
+              note: noteBody,
+              category,
+              addedBy: user.userId,
+            }),
+            updatedAt: now,
+          });
+        }
+      }
+
+      setStep('complete');
+    } catch (err) {
+      console.error('Failed to save story reaction:', err);
+    } finally {
+      setSubmitting(false);
+    }
+  }, [item, submitting, user?.userId, storyRating, storyEmoji, storyComment]);
 
   if (authLoading || loading) {
     return (
@@ -239,6 +320,13 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
             submitting={submitting}
             onRate={(impact) => handleComplete('tried_it', impact)}
             onSkipRating={() => handleComplete('loved_it', 3)}
+            storyRating={storyRating}
+            setStoryRating={setStoryRating}
+            storyEmoji={storyEmoji}
+            setStoryEmoji={setStoryEmoji}
+            storyComment={storyComment}
+            setStoryComment={setStoryComment}
+            onSaveStoryReaction={handleStoryReaction}
           />
         )}
 
@@ -345,13 +433,24 @@ function BriefView({
 
       <div className="press-asterism" aria-hidden="true" style={{ margin: '22px 0 20px' }} />
 
-      {/* The briefing body */}
+      {/* The briefing body — special handling for stories */}
       <div style={{ padding: '0 20px 32px' }}>
-        <p className="press-body" style={{ textAlign: 'center', maxWidth: 560, margin: '0 auto' }}>
-          {item.body.length > 280
-            ? item.body.slice(0, 280).trim() + '…'
-            : item.body}
-        </p>
+        {item.type === 'illustrated_story' ? (
+          <p
+            className="press-body-italic"
+            style={{ textAlign: 'center', maxWidth: 520, margin: '0 auto', fontSize: 19 }}
+          >
+            A short story to read aloud with {about || 'them'} — five
+            minutes, together. When you&rsquo;re done, you&rsquo;ll be
+            asked how it landed.
+          </p>
+        ) : (
+          <p className="press-body" style={{ textAlign: 'center', maxWidth: 560, margin: '0 auto' }}>
+            {item.body.length > 280
+              ? item.body.slice(0, 280).trim() + '…'
+              : item.body}
+          </p>
+        )}
       </div>
 
       <hr className="press-rule" style={{ width: '60%', margin: '0 auto 32px' }} />
@@ -367,7 +466,7 @@ function BriefView({
             fontSize: 24,
           }}
         >
-          Begin this practice
+          {item.type === 'illustrated_story' ? 'Open the story' : 'Begin this practice'}
           <span className="arrow">⟶</span>
         </button>
       </div>
@@ -437,6 +536,9 @@ function DoingView({
   }
   if (mode === 'steps') {
     return <StepsPerformance item={item} onDone={onDone} onBack={onBack} />;
+  }
+  if (mode === 'story') {
+    return <StoryPerformance item={item} onDone={onDone} onBack={onBack} />;
   }
   return <DefaultPerformance item={item} onDone={onDone} onBack={onBack} />;
 }
@@ -898,6 +1000,160 @@ function StepsPerformance({
 }
 
 // ================================================================
+// STORY PERFORMANCE — the reading surface for illustrated stories
+// A parent opens this, reads the story aloud with their child, and then
+// moves to the reflect phase to capture the child's reaction.
+// ================================================================
+function StoryPerformance({
+  item,
+  onDone,
+  onBack,
+}: {
+  item: GrowthItem;
+  onDone: () => void;
+  onBack: () => void;
+}) {
+  const storyContent = (item as unknown as { storyContent?: {
+    title: string;
+    paragraphs: string[];
+    openingLine?: string;
+  } }).storyContent;
+  const childName = item.targetPersonNames?.[0] || 'them';
+
+  // Fallback: if for some reason storyContent isn't populated, split the
+  // item.body on blank lines so we still render something.
+  const title = storyContent?.title || item.title;
+  const paragraphs: string[] = storyContent?.paragraphs && storyContent.paragraphs.length > 0
+    ? storyContent.paragraphs
+    : item.body.split(/\n\s*\n/).filter((p) => p.trim());
+
+  return (
+    <div className="press-binder" style={{ maxWidth: 640 }}>
+
+      {/* Running header — "a story for [childName]" */}
+      <div className="press-running-header" style={{ paddingTop: 28 }}>
+        <span>A story</span>
+        <span className="sep">·</span>
+        <span>for {childName}</span>
+      </div>
+
+      {/* Back link */}
+      <div style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 18 }}>
+        <button
+          onClick={onBack}
+          className="press-link-sm"
+          style={{ background: 'transparent', cursor: 'pointer' }}
+        >
+          ⟵ Back to the briefing
+        </button>
+      </div>
+
+      {/* Opening ornament */}
+      <div
+        style={{
+          textAlign: 'center',
+          fontFamily: 'var(--font-parent-display)',
+          fontSize: 22,
+          color: '#8C8070',
+          letterSpacing: '0.4em',
+          marginBottom: 18,
+        }}
+        aria-hidden="true"
+      >
+        ❦ · ❦ · ❦
+      </div>
+
+      {/* Title */}
+      <h1
+        style={{
+          fontFamily: 'var(--font-parent-display)',
+          fontSize: 'clamp(36px, 5vw, 52px)',
+          fontWeight: 300,
+          fontStyle: 'italic',
+          color: '#3A3530',
+          lineHeight: 1.05,
+          letterSpacing: '-0.02em',
+          textAlign: 'center',
+          padding: '0 24px',
+          marginBottom: 12,
+        }}
+      >
+        {title}
+      </h1>
+
+      {/* A small label */}
+      <p
+        className="press-marginalia"
+        style={{
+          textAlign: 'center',
+          fontSize: 14,
+          color: '#7A6E5C',
+          marginBottom: 8,
+        }}
+      >
+        — read aloud, together —
+      </p>
+
+      {/* Asterism break before the story body */}
+      <div className="press-asterism" aria-hidden="true" style={{ margin: '22px 0 28px' }} />
+
+      {/* The story body — editorial Cormorant italic with drop cap on first para */}
+      <div style={{ padding: '0 32px 32px' }}>
+        {paragraphs.map((para, i) => (
+          <p
+            key={i}
+            className={i === 0 ? 'press-drop-cap' : ''}
+            style={{
+              fontFamily: 'var(--font-parent-display)',
+              fontSize: 21,
+              fontWeight: 400,
+              fontStyle: 'italic',
+              color: '#3A3530',
+              lineHeight: 1.55,
+              letterSpacing: '0.002em',
+              marginBottom: 18,
+              textAlign: i === 0 ? 'left' : 'justify',
+              hyphens: 'auto',
+            }}
+          >
+            {para}
+          </p>
+        ))}
+      </div>
+
+      {/* Closing ornament */}
+      <div className="press-fleuron" style={{ fontSize: 20, marginTop: 8 }}>
+        ❦
+      </div>
+      <p
+        className="press-marginalia"
+        style={{ textAlign: 'center', fontSize: 15, marginTop: 4, fontStyle: 'italic' }}
+      >
+        — the end —
+      </p>
+
+      <hr className="press-rule" style={{ margin: '36px 56px 24px', width: 'auto' }} />
+
+      {/* Move on to the reaction capture */}
+      <div style={{ textAlign: 'center', padding: '0 20px 40px' }}>
+        <button
+          onClick={onDone}
+          className="press-link"
+          style={{
+            background: 'transparent',
+            cursor: 'pointer',
+            fontSize: 20,
+          }}
+        >
+          How did {childName} take it?
+          <span className="arrow">⟶</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ================================================================
 // DEFAULT PERFORMANCE — instruction held large with a done button
 // ================================================================
 function DefaultPerformance({
@@ -967,6 +1223,205 @@ function DefaultPerformance({
 }
 
 // ================================================================
+// STORY REACTION VIEW — captures the kid's emoji + comment after a story
+// ================================================================
+const STORY_EMOJI_SCALE: Array<{
+  rating: 1 | 2 | 3 | 4 | 5;
+  emoji: string;
+  label: string;
+}> = [
+  { rating: 1, emoji: '😕', label: 'confused' },
+  { rating: 2, emoji: '😐', label: 'meh' },
+  { rating: 3, emoji: '🙂', label: 'okay' },
+  { rating: 4, emoji: '😄', label: 'loved it' },
+  { rating: 5, emoji: '🤔', label: 'made them think' },
+];
+
+function StoryReactionView({
+  item,
+  storyRating,
+  setStoryRating,
+  storyEmoji,
+  setStoryEmoji,
+  storyComment,
+  setStoryComment,
+  submitting,
+  onSave,
+}: {
+  item: GrowthItem;
+  storyRating: 1 | 2 | 3 | 4 | 5 | null;
+  setStoryRating: (r: 1 | 2 | 3 | 4 | 5) => void;
+  storyEmoji: string;
+  setStoryEmoji: (e: string) => void;
+  storyComment: string;
+  setStoryComment: (c: string) => void;
+  submitting: boolean;
+  onSave: () => void;
+}) {
+  const childName = item.targetPersonNames?.[0] || 'them';
+
+  const handleSelect = (rating: 1 | 2 | 3 | 4 | 5, emoji: string) => {
+    setStoryRating(rating);
+    setStoryEmoji(emoji);
+  };
+
+  return (
+    <div className="press-binder" style={{ maxWidth: 640 }}>
+
+      {/* Running header */}
+      <div className="press-running-header" style={{ paddingTop: 28 }}>
+        <span>After the story</span>
+        <span className="sep">·</span>
+        <span>for {childName}</span>
+      </div>
+
+      {/* Title */}
+      <div style={{ textAlign: 'center', paddingTop: 20, paddingBottom: 8 }}>
+        <span className="press-chapter-label">What stayed with {childName}?</span>
+      </div>
+      <h2
+        className="press-display-md"
+        style={{
+          textAlign: 'center',
+          marginTop: 12,
+          marginBottom: 8,
+          fontSize: 'clamp(28px, 4vw, 36px)',
+        }}
+      >
+        How did it land?
+      </h2>
+      <p
+        className="press-marginalia"
+        style={{
+          textAlign: 'center',
+          fontSize: 14,
+          marginBottom: 24,
+          maxWidth: 380,
+          marginLeft: 'auto',
+          marginRight: 'auto',
+        }}
+      >
+        Ask {childName} how the story felt. Tap the face that fits
+        best, together.
+      </p>
+
+      <hr className="press-rule-short" style={{ margin: '0 auto 32px' }} />
+
+      {/* Emoji scale */}
+      <div
+        className="flex items-end justify-center"
+        style={{ gap: 14, padding: '0 20px 28px', flexWrap: 'wrap' }}
+      >
+        {STORY_EMOJI_SCALE.map(({ rating, emoji, label }) => {
+          const isSelected = storyRating === rating;
+          return (
+            <button
+              key={rating}
+              onClick={() => handleSelect(rating, emoji)}
+              className="flex flex-col items-center transition-all"
+              style={{
+                background: 'transparent',
+                border: 0,
+                padding: 12,
+                cursor: 'pointer',
+                opacity: storyRating === null || isSelected ? 1 : 0.4,
+                transform: isSelected ? 'translateY(-6px) scale(1.15)' : 'none',
+                transition: 'all 0.25s ease',
+              }}
+              aria-label={label}
+            >
+              <span
+                style={{
+                  fontSize: isSelected ? 56 : 46,
+                  filter: isSelected ? 'none' : 'grayscale(0.25)',
+                  transition: 'all 0.25s ease',
+                  lineHeight: 1,
+                }}
+              >
+                {emoji}
+              </span>
+              <span
+                className="press-marginalia"
+                style={{
+                  marginTop: 8,
+                  fontSize: 12,
+                  color: isSelected ? '#2D5F5D' : '#746856',
+                  fontStyle: 'italic',
+                  transition: 'color 0.25s ease',
+                }}
+              >
+                {label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Optional comment */}
+      <div style={{ padding: '24px 56px 12px' }}>
+        <span className="press-chapter-label" style={{ display: 'block' }}>
+          What did {childName} say?
+        </span>
+        <p
+          className="press-marginalia"
+          style={{ fontSize: 13, marginBottom: 10, marginTop: 4 }}
+        >
+          Optional. A word, a sentence, a question they asked — whatever
+          stayed with them.
+        </p>
+        <textarea
+          value={storyComment}
+          onChange={(e) => setStoryComment(e.target.value)}
+          placeholder={`Anything ${childName} said about the story…`}
+          rows={3}
+          className="w-full focus:outline-none"
+          style={{
+            fontFamily: 'var(--font-parent-display)',
+            fontSize: 18,
+            fontStyle: 'italic',
+            color: '#3A3530',
+            background: 'transparent',
+            border: 0,
+            borderBottom: '1px solid rgba(200, 190, 172, 0.6)',
+            padding: '10px 2px 12px',
+            resize: 'none',
+            lineHeight: 1.55,
+          }}
+        />
+      </div>
+
+      <hr className="press-rule" style={{ margin: '24px 56px 20px', width: 'auto' }} />
+
+      {/* Save action */}
+      <div style={{ textAlign: 'center', padding: '16px 20px 28px' }}>
+        <button
+          onClick={onSave}
+          disabled={submitting || storyRating === null}
+          className="press-link"
+          style={{
+            background: 'transparent',
+            cursor: submitting || storyRating === null ? 'not-allowed' : 'pointer',
+            opacity: submitting || storyRating === null ? 0.4 : 1,
+            fontSize: 20,
+          }}
+        >
+          {submitting ? 'Saving…' : 'Keep this reaction'}
+          {!submitting && <span className="arrow">⟶</span>}
+        </button>
+        <p
+          className="press-marginalia"
+          style={{ fontSize: 12, marginTop: 10, color: '#7A6E5C' }}
+        >
+          {childName}&rsquo;s reaction becomes part of their volume.
+        </p>
+      </div>
+
+      <div className="press-fleuron">❦</div>
+    </div>
+  );
+}
+
+// ================================================================
 // REFLECT VIEW — the rating step
 // ================================================================
 function ReflectView({
@@ -982,6 +1437,13 @@ function ReflectView({
   submitting,
   onRate,
   onSkipRating,
+  storyRating,
+  setStoryRating,
+  storyEmoji,
+  setStoryEmoji,
+  storyComment,
+  setStoryComment,
+  onSaveStoryReaction,
 }: {
   item: GrowthItem;
   myName: string;
@@ -995,7 +1457,31 @@ function ReflectView({
   submitting: boolean;
   onRate: (impact: ImpactRating) => void;
   onSkipRating: () => void;
+  storyRating: 1 | 2 | 3 | 4 | 5 | null;
+  setStoryRating: (r: 1 | 2 | 3 | 4 | 5) => void;
+  storyEmoji: string;
+  setStoryEmoji: (e: string) => void;
+  storyComment: string;
+  setStoryComment: (c: string) => void;
+  onSaveStoryReaction: () => void;
 }) {
+  // Story mode branches to a completely different reaction UI
+  if (performanceMode === 'story') {
+    return (
+      <StoryReactionView
+        item={item}
+        storyRating={storyRating}
+        setStoryRating={setStoryRating}
+        storyEmoji={storyEmoji}
+        setStoryEmoji={setStoryEmoji}
+        storyComment={storyComment}
+        setStoryComment={setStoryComment}
+        submitting={submitting}
+        onSave={onSaveStoryReaction}
+      />
+    );
+  }
+
   // For writing mode the note was already captured during the doing phase,
   // so we only show the reflection textarea for non-writing modes.
   const showReflectionField = performanceMode !== 'writing';

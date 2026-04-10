@@ -79,6 +79,13 @@ service cloud.firestore {
       }
     }
 
+    // AI usage events — read by parents in the family, written only by
+    // the Admin SDK (cloud functions). Never writable from the client.
+    match /ai_usage_events/{eventId} {
+      allow read: if isParent() && belongsToFamily(resource.data.familyId);
+      allow write: if false;
+    }
+
     // Journal entries collection
     match /journal_entries/{entryId} {
       // Private entries: only the author can read
