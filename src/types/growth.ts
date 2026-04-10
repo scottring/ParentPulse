@@ -99,6 +99,12 @@ export interface GrowthItem {
   feedback?: GrowthFeedback;                              // Legacy single-user feedback
   feedbackByUser?: Record<string, GrowthFeedback>;        // Per-user feedback (keyed by userId)
 
+  // In-progress drafts — written during the practice's "doing" phase,
+  // before the user has committed via submitFeedback. Keyed by userId
+  // so multi-person items can track drafts separately. Cleared when
+  // the user completes the practice.
+  drafts?: Record<string, { note: string; updatedAt: Timestamp }>;
+
   // Arc linkage (present when item belongs to a Growth Arc)
   arcId?: string;
   arcPhase?: ArcPhase;

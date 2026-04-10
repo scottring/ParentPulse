@@ -47,7 +47,7 @@ const BOOK_REGIONS: Record<string, BookRegion> = {
     height: '36%',
     labelLeft: '47%',
     labelTop: '14%',
-    href: '/workbook',
+    href: '/journal',
     label: 'The Journal',
   },
   folio: {

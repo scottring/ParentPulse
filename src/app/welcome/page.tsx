@@ -9,7 +9,7 @@ export default function WelcomePage() {
   useEffect(() => {
     // Brief pause so the "opening the library" moment is visible,
     // then drop the new reader straight into the workbook.
-    const t = setTimeout(() => router.replace('/workbook'), 1200);
+    const t = setTimeout(() => router.replace('/journal'), 1200);
     return () => clearTimeout(t);
   }, [router]);
 

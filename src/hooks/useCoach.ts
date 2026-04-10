@@ -42,7 +42,7 @@ interface UseCoachReturn {
   context: ChatContext | null;
 
   // Actions
-  sendMessage: (message: string, personId?: string) => Promise<void>;
+  sendMessage: (message: string, personIds?: string[]) => Promise<void>;
   clearConversation: () => void;
 
   // Suggestions
@@ -57,7 +57,7 @@ export function useCoach(): UseCoachReturn {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [context, setContext] = useState<ChatContext | null>(null);
 
-  const sendMessage = async (message: string, personId?: string): Promise<void> => {
+  const sendMessage = async (message: string, personIds?: string[]): Promise<void> => {
     if (!user) {
       setError('You must be logged in to use the coach');
       return;
@@ -80,14 +80,19 @@ export function useCoach(): UseCoachReturn {
 
     try {
       const chatWithCoach = httpsCallable<
-        { message: string; conversationId?: string; personId?: string },
+        { message: string; conversationId?: string; personId?: string; personIds?: string[] },
         { success: boolean; conversationId: string; response: string; context: ChatContext; error?: string }
       >(functions, 'chatWithCoach');
 
+      const effectiveIds = (personIds || []).filter(Boolean);
       const result = await chatWithCoach({
         message,
         conversationId: conversationId || undefined,
-        personId
+        // Pass array for multi-person context (new) AND keep legacy
+        // personId for back-compat with any server that hasn't been
+        // redeployed yet.
+        personIds: effectiveIds.length > 0 ? effectiveIds : undefined,
+        personId: effectiveIds[0] || undefined,
       });
 
       if (result.data.success) {

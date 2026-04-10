@@ -106,7 +106,7 @@ export function computeOneThing(params: {
       type: 'time_sensitive',
       title: 'Today\u2019s practice',
       description: item.title || item.body?.slice(0, 80) || 'A growth activity is waiting for you.',
-      actionRoute: '/workbook',
+      actionRoute: '/journal',
       actionLabel: 'Do it now',
       priority: 1,
     });
@@ -189,7 +189,7 @@ export function computeOneThing(params: {
       type: 'growth_step',
       title: item.title || 'Today\u2019s growth practice',
       description: item.body?.slice(0, 100) || 'A new activity is ready for you.',
-      actionRoute: '/workbook',
+      actionRoute: '/journal',
       actionLabel: 'Start',
       personName: person?.name,
       personId: person?.personId,
@@ -201,7 +201,7 @@ export function computeOneThing(params: {
       type: 'growth_step',
       title: `Continue: ${arc.title}`,
       description: `Week ${arc.currentWeek} of ${arc.durationWeeks} \u2014 ${arc.levelTitle}`,
-      actionRoute: '/workbook',
+      actionRoute: '/journal',
       actionLabel: 'Open workbook',
       priority: 5,
     });

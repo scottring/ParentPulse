@@ -881,10 +881,16 @@ exports.chatWithCoach = onCall(
         throw new Error("Authentication required");
       }
 
-      const {message, conversationId, personId} = request.data;
+      const {message, conversationId, personId, personIds} = request.data;
       if (!message) {
         throw new Error("Message is required");
       }
+
+      // Normalize person targeting: prefer new `personIds` array,
+      // fall back to legacy `personId` string.
+      const effectivePersonIds = Array.isArray(personIds) && personIds.length > 0 ?
+        personIds :
+        (personId ? [personId] : []);
 
       // Get user data
       const userDoc = await admin.firestore()
@@ -898,11 +904,12 @@ exports.chatWithCoach = onCall(
       }
 
       const familyId = userData.familyId;
-      logger.info(`Chat request from user ${request.auth.uid}, family ${familyId}${personId ? `, person ${personId}` : ""}`);
+      logger.info(`Chat request from user ${request.auth.uid}, family ${familyId}${effectivePersonIds.length > 0 ? `, people [${effectivePersonIds.join(", ")}]` : ""}`);
 
       try {
-        // Retrieve relevant context from the user's data (includes manual if personId provided)
-        const context = await retrieveChatContext(familyId, message, personId, request.auth.uid);
+        // Retrieve relevant context — loads all tagged manuals so
+        // the chat can ground in multiple people at once.
+        const context = await retrieveChatContext(familyId, message, effectivePersonIds, request.auth.uid);
 
         // Get or create conversation
         let conversation = null;
@@ -943,7 +950,8 @@ exports.chatWithCoach = onCall(
         const response = await generateChatResponse(messages, context, {
           familyId,
           userId: request.auth.uid,
-          personId,
+          personId: effectivePersonIds[0] || null,
+          personIds: effectivePersonIds,
         });
 
         // Add assistant response to messages
@@ -969,7 +977,7 @@ exports.chatWithCoach = onCall(
             journalEntriesFound: context.journalEntries.length,
             knowledgeItemsFound: context.knowledgeItems.length,
             actionsFound: context.actions.length,
-            manualsFound: context.personManual ? 1 : 0,
+            manualsFound: context.personManuals ? context.personManuals.length : (context.personManual ? 1 : 0),
             workbooksFound: context.workbooks ? context.workbooks.length : 0,
           },
         };
@@ -983,8 +991,17 @@ exports.chatWithCoach = onCall(
 /**
  * Retrieve relevant context for chat based on user's message
  */
-async function retrieveChatContext(familyId, userMessage, personId = null, userId = null) {
+async function retrieveChatContext(familyId, userMessage, personIdOrIds = null, userId = null) {
   const logger = require("firebase-functions/logger");
+
+  // Normalize personId input — accepts a single ID, an array of IDs,
+  // or null. Loading multiple manuals lets the user ground a chat in
+  // several people at once (e.g. "what do I do when Kaleb and Ella
+  // fight" needs both kids' manuals).
+  const personIds = Array.isArray(personIdOrIds) ?
+    personIdOrIds.filter(Boolean) :
+    (personIdOrIds ? [personIdOrIds] : []);
+  const primaryPersonId = personIds[0] || null;
 
   // Get recent journal entries (last 30 days)
   const thirtyDaysAgo = new Date();
@@ -1052,48 +1069,67 @@ async function retrieveChatContext(familyId, userMessage, personId = null, userI
     };
   });
 
-  // Get person manual if personId provided
-  let personManual = null;
-  let personName = null;
-  if (personId) {
-    // Get person data
+  // Load manuals for all tagged people. The chat is "grounded in"
+  // every manual the user tagged, so the model can reason across
+  // siblings (e.g. conflict between Kaleb and Ella needs both).
+  const personManuals = [];
+  for (const pid of personIds) {
     const personDoc = await admin.firestore()
         .collection("people")
-        .doc(personId)
+        .doc(pid)
+        .get();
+    if (!personDoc.exists) continue;
+    const pName = personDoc.data().name;
+
+    const manualSnapshot = await admin.firestore()
+        .collection("person_manuals")
+        .where("personId", "==", pid)
+        .where("familyId", "==", familyId)
+        .limit(1)
         .get();
 
-    if (personDoc.exists) {
-      personName = personDoc.data().name;
-
-      // Get person's manual
-      const manualSnapshot = await admin.firestore()
-          .collection("person_manuals")
-          .where("personId", "==", personId)
-          .where("familyId", "==", familyId)
-          .limit(1)
-          .get();
-
-      if (!manualSnapshot.empty) {
-        const manualData = manualSnapshot.docs[0].data();
-        personManual = {
-          personName: personName,
-          triggers: manualData.triggers || [],
-          whatWorks: manualData.whatWorks || [],
-          whatDoesntWork: manualData.whatDoesntWork || [],
-          boundaries: manualData.boundaries || [],
-          patterns: manualData.emergingPatterns || [],
-          coreInfo: manualData.coreInfo || {},
-        };
-      }
+    if (manualSnapshot.empty) {
+      personManuals.push({
+        personId: pid,
+        personName: pName,
+        triggers: [],
+        whatWorks: [],
+        whatDoesntWork: [],
+        boundaries: [],
+        patterns: [],
+        coreInfo: {},
+      });
+      continue;
     }
+
+    const manualData = manualSnapshot.docs[0].data();
+    personManuals.push({
+      personId: pid,
+      personName: pName,
+      triggers: manualData.triggers || [],
+      whatWorks: manualData.whatWorks || [],
+      whatDoesntWork: manualData.whatDoesntWork || [],
+      boundaries: manualData.boundaries || [],
+      patterns: manualData.emergingPatterns || [],
+      coreInfo: manualData.coreInfo || {},
+    });
   }
 
-  // Get weekly workbooks if personId provided
+  // Back-compat: a few call sites downstream still read `personManual`
+  // (singular). Expose the first loaded manual under the old name so
+  // they keep working while we migrate.
+  const personManual = personManuals[0] || null;
+  const personName = personManual ? personManual.personName : null;
+
+  // Get weekly workbooks — loaded for the PRIMARY tagged person only
+  // (loading workbooks for every tagged person is unnecessary volume
+  // for the system prompt; the primary person's workbooks are the
+  // strongest signal of what practices are in flight).
   let workbooks = [];
-  if (personId) {
+  if (primaryPersonId) {
     const workbooksSnapshot = await admin.firestore()
         .collection("weekly_workbooks")
-        .where("personId", "==", personId)
+        .where("personId", "==", primaryPersonId)
         .where("familyId", "==", familyId)
         .orderBy("startDate", "desc")
         .limit(3)
@@ -1135,13 +1171,17 @@ async function retrieveChatContext(familyId, userMessage, personId = null, userI
     };
   }).filter((conv) => conv.messageCount > 2); // Only include conversations with substance
 
-  logger.info(`Context: ${journalEntries.length} journals, ${knowledgeItems.length} knowledge items, ${actions.length} actions${personManual ? `, 1 manual for ${personName}` : ""}${workbooks.length > 0 ? `, ${workbooks.length} workbooks` : ""}${pastConversations.length > 0 ? `, ${pastConversations.length} past conversations` : ""}`);
+  const manualSummary = personManuals.length > 0 ?
+    `, ${personManuals.length} manual${personManuals.length === 1 ? "" : "s"} for ${personManuals.map((m) => m.personName).join(" & ")}` :
+    "";
+  logger.info(`Context: ${journalEntries.length} journals, ${knowledgeItems.length} knowledge items, ${actions.length} actions${manualSummary}${workbooks.length > 0 ? `, ${workbooks.length} workbooks` : ""}${pastConversations.length > 0 ? `, ${pastConversations.length} past conversations` : ""}`);
 
   return {
     journalEntries,
     knowledgeItems,
     actions,
-    personManual,
+    personManual,      // back-compat: first manual
+    personManuals,     // new: array of all tagged manuals
     workbooks,
     pastConversations,
   };
@@ -1251,60 +1291,72 @@ Available Context:
     systemMessage += "\n";
   }
 
-  // Add person manual if available
-  if (context.personManual) {
-    systemMessage += `## ${context.personManual.personName}'s Operating Manual:\n`;
+  // Add person manual(s) if available — supports multiple tagged
+  // people so the model can reason across siblings.
+  const manualList = (context.personManuals && context.personManuals.length > 0) ?
+    context.personManuals :
+    (context.personManual ? [context.personManual] : []);
 
-    if (context.personManual.triggers.length > 0) {
-      systemMessage += `\n### Triggers (${context.personManual.triggers.length}):\n`;
-      context.personManual.triggers.slice(0, 5).forEach((trigger, i) => {
-        systemMessage += `${i + 1}. ${trigger.description} (${trigger.severity})\n`;
-        systemMessage += `   Context: ${trigger.context}\n`;
-        systemMessage += `   Response: ${trigger.typicalResponse}\n`;
-        if (trigger.deescalationStrategy) {
-          systemMessage += `   What helps: ${trigger.deescalationStrategy}\n`;
+  if (manualList.length > 0) {
+    if (manualList.length > 1) {
+      systemMessage += `## ${manualList.length} Operating Manuals are grounding this conversation: ${manualList.map((m) => m.personName).join(" and ")}.\n\n`;
+      systemMessage += `When answering, draw on whichever manual(s) are relevant to the question. If the question involves multiple people, reason across their manuals together.\n\n`;
+    }
+
+    for (const manual of manualList) {
+      systemMessage += `## ${manual.personName}'s Operating Manual:\n`;
+
+      if (manual.triggers && manual.triggers.length > 0) {
+        systemMessage += `\n### Triggers (${manual.triggers.length}):\n`;
+        manual.triggers.slice(0, 5).forEach((trigger, i) => {
+          systemMessage += `${i + 1}. ${trigger.description} (${trigger.severity})\n`;
+          systemMessage += `   Context: ${trigger.context}\n`;
+          systemMessage += `   Response: ${trigger.typicalResponse}\n`;
+          if (trigger.deescalationStrategy) {
+            systemMessage += `   What helps: ${trigger.deescalationStrategy}\n`;
+          }
+        });
+      }
+
+      if (manual.whatWorks && manual.whatWorks.length > 0) {
+        systemMessage += `\n### What Works (${manual.whatWorks.length}):\n`;
+        manual.whatWorks.slice(0, 5).forEach((strategy, i) => {
+          systemMessage += `${i + 1}. ${strategy.description} (effectiveness: ${strategy.effectiveness || "N/A"}/5)\n`;
+          systemMessage += `   Context: ${strategy.context}\n`;
+        });
+      }
+
+      if (manual.whatDoesntWork && manual.whatDoesntWork.length > 0) {
+        systemMessage += `\n### What Doesn't Work (${manual.whatDoesntWork.length}):\n`;
+        manual.whatDoesntWork.slice(0, 3).forEach((strategy, i) => {
+          systemMessage += `${i + 1}. ${strategy.description}\n`;
+        });
+      }
+
+      if (manual.boundaries && manual.boundaries.length > 0) {
+        systemMessage += `\n### Boundaries (${manual.boundaries.length}):\n`;
+        manual.boundaries.slice(0, 5).forEach((boundary, i) => {
+          systemMessage += `${i + 1}. [${boundary.category}] ${boundary.description}\n`;
+          if (boundary.context) {
+            systemMessage += `   Context: ${boundary.context}\n`;
+          }
+        });
+      }
+
+      if (manual.coreInfo && Object.keys(manual.coreInfo).length > 0) {
+        systemMessage += `\n### Core Info:\n`;
+        if (manual.coreInfo.interests) {
+          systemMessage += `Interests: ${manual.coreInfo.interests.join(", ")}\n`;
         }
-      });
-    }
-
-    if (context.personManual.whatWorks.length > 0) {
-      systemMessage += `\n### What Works (${context.personManual.whatWorks.length}):\n`;
-      context.personManual.whatWorks.slice(0, 5).forEach((strategy, i) => {
-        systemMessage += `${i + 1}. ${strategy.description} (effectiveness: ${strategy.effectiveness || "N/A"}/5)\n`;
-        systemMessage += `   Context: ${strategy.context}\n`;
-      });
-    }
-
-    if (context.personManual.whatDoesntWork.length > 0) {
-      systemMessage += `\n### What Doesn't Work (${context.personManual.whatDoesntWork.length}):\n`;
-      context.personManual.whatDoesntWork.slice(0, 3).forEach((strategy, i) => {
-        systemMessage += `${i + 1}. ${strategy.description}\n`;
-      });
-    }
-
-    if (context.personManual.boundaries.length > 0) {
-      systemMessage += `\n### Boundaries (${context.personManual.boundaries.length}):\n`;
-      context.personManual.boundaries.slice(0, 5).forEach((boundary, i) => {
-        systemMessage += `${i + 1}. [${boundary.category}] ${boundary.description}\n`;
-        if (boundary.context) {
-          systemMessage += `   Context: ${boundary.context}\n`;
+        if (manual.coreInfo.strengths) {
+          systemMessage += `Strengths: ${manual.coreInfo.strengths.join(", ")}\n`;
         }
-      });
+        if (manual.coreInfo.sensoryNeeds) {
+          systemMessage += `Sensory Needs: ${manual.coreInfo.sensoryNeeds.join(", ")}\n`;
+        }
+      }
+      systemMessage += "\n";
     }
-
-    if (context.personManual.coreInfo && Object.keys(context.personManual.coreInfo).length > 0) {
-      systemMessage += `\n### Core Info:\n`;
-      if (context.personManual.coreInfo.interests) {
-        systemMessage += `Interests: ${context.personManual.coreInfo.interests.join(", ")}\n`;
-      }
-      if (context.personManual.coreInfo.strengths) {
-        systemMessage += `Strengths: ${context.personManual.coreInfo.strengths.join(", ")}\n`;
-      }
-      if (context.personManual.coreInfo.sensoryNeeds) {
-        systemMessage += `Sensory Needs: ${context.personManual.coreInfo.sensoryNeeds.join(", ")}\n`;
-      }
-    }
-    systemMessage += "\n";
   }
 
   // Add workbooks if available
@@ -7202,15 +7254,20 @@ exports.refreshStaleData = onSchedule(
         if (staleAssessments.length === 0 &&
             lowConfidence.length === 0) continue;
 
-        // Get a family user to assign items to
+        // Get every parent in the family. Scheduled refresh items
+        // are duplicated across all parents so one spouse never
+        // silently "owns" the check-in prompts while the other
+        // never sees them. (See audit 2026-04-10.)
         const usersSnap = await db.collection("users")
             .where("familyId", "==", familyId)
             .where("role", "==", "parent")
             .get();
 
         if (usersSnap.empty) continue;
-        const assignee = usersSnap.docs[0].data();
-        const assigneeId = usersSnap.docs[0].id;
+        const parents = usersSnap.docs.map((d) => ({
+          userId: d.id,
+          name: d.data().name || d.data().displayName || "Parent",
+        }));
 
         const batch = db.batch();
         let itemCount = 0;
@@ -7238,44 +7295,48 @@ exports.refreshStaleData = onSchedule(
           const expiresAt = new Date(schedDate);
           expiresAt.setDate(expiresAt.getDate() + 3);
 
-          const ref = db.collection("growth_items").doc();
-          const refreshItem = {
-            growthItemId: ref.id,
-            familyId,
-            type: "reflection_prompt",
-            title: `Quick check: ${dimDef.name}`,
-            body: assessment.confidence === "low" ?
-              `We'd love to know more about this area. ` +
-              `How would you rate "${dimDef.name}" in your ` +
-              `relationship right now?` :
-              `It's been a while since we checked in on ` +
-              `"${dimDef.name}." How are things in this area?`,
-            emoji: "📊",
-            targetPersonIds: assessment.participantIds || [],
-            targetPersonNames: assessment.participantNames || [],
-            assignedToUserId: assigneeId,
-            assignedToUserName: assignee.name || "Parent",
-            sourceInsightId: null,
-            sourceInsightType: null,
-            sourceManualId: null,
-            sourceGapSeverity: null,
-            relationalLevel: assessment.domain === "couple" ?
-              "couple" : "family",
-            speed: "ambient",
-            scheduledDate:
-              admin.firestore.Timestamp.fromDate(schedDate),
-            expiresAt:
-              admin.firestore.Timestamp.fromDate(expiresAt),
-            estimatedMinutes: 1,
-            status: "active",
-            createdAt: now,
-            generatedBy: "system",
-            dimensionId: assessment.dimensionId,
-            isAssessmentItem: true,
-          };
+          // One item per parent — both people in the family see
+          // the refresh in their feed.
+          for (const parent of parents) {
+            const ref = db.collection("growth_items").doc();
+            const refreshItem = {
+              growthItemId: ref.id,
+              familyId,
+              type: "reflection_prompt",
+              title: `Quick check: ${dimDef.name}`,
+              body: assessment.confidence === "low" ?
+                `We'd love to know more about this area. ` +
+                `How would you rate "${dimDef.name}" in your ` +
+                `relationship right now?` :
+                `It's been a while since we checked in on ` +
+                `"${dimDef.name}." How are things in this area?`,
+              emoji: "📊",
+              targetPersonIds: assessment.participantIds || [],
+              targetPersonNames: assessment.participantNames || [],
+              assignedToUserId: parent.userId,
+              assignedToUserName: parent.name,
+              sourceInsightId: null,
+              sourceInsightType: null,
+              sourceManualId: null,
+              sourceGapSeverity: null,
+              relationalLevel: assessment.domain === "couple" ?
+                "couple" : "family",
+              speed: "ambient",
+              scheduledDate:
+                admin.firestore.Timestamp.fromDate(schedDate),
+              expiresAt:
+                admin.firestore.Timestamp.fromDate(expiresAt),
+              estimatedMinutes: 1,
+              status: "active",
+              createdAt: now,
+              generatedBy: "system",
+              dimensionId: assessment.dimensionId,
+              isAssessmentItem: true,
+            };
 
-          batch.set(ref, refreshItem);
-          itemCount++;
+            batch.set(ref, refreshItem);
+            itemCount++;
+          }
         }
 
         // Also check for manuals flagged for re-synthesis
@@ -8523,7 +8584,16 @@ ${personName}'s manual (what we know works and doesn't work):
 - What doesn't work: ${manualSummary.whatDoesntWork.join("; ") || "none yet"}
 - Patterns: ${manualSummary.emergingPatterns.join("; ") || "none yet"}
 
-The requesting user is: ${userName}${partner ? `. Their partner is ${partner.name}.` : ""}
+The user who had this conversation is: ${userName}${partner ? `. Their partner is ${partner.name}.` : ""}
+
+ASSIGNMENT RULE (important):
+${userName} is the parent who just had this conversation and is processing the insight from it. They are the one wrestling with the issue, noticing the pattern, ready to act.
+
+Therefore: ALL activities default to ${userName}, because they are the one who just learned something and wants to apply it. This includes reflections, journaling, micro-activities, gratitude practices, solo deep-dives, and conversation guides — all of these go to ${userName}.
+
+${partner ? `The ONLY exception is "partner_exercise" — an activity that ${userName} and ${partner.name} do together as a couple. These explicitly require both people and should be marked "assignTo": "couple" (NOT "partner" — the activity is shared, not handed off).` : ""}
+
+Do NOT generate activities FOR ${partner ? partner.name : "a partner"} that ${userName} would never see. ${userName} is asking for help here; activities are for ${userName} to do.
 
 Generate 3-6 concrete workbook activities that address the underlying issue raised in the conversation. Each activity must be:
 - Specific and actionable (not vague advice)
@@ -8531,9 +8601,7 @@ Generate 3-6 concrete workbook activities that address the underlying issue rais
 - Short body text (2-4 sentences max, imperative voice)
 - Realistic in time estimate (minutes, not hours)
 
-Mix types: include at least one reflection_prompt, one micro_activity, and if a partner exists, one partner_exercise.
-
-${partner ? `Some activities should be assigned to ${userName} and some to ${partner.name}, based on who the activity is for.` : `All activities are for ${userName}.`}
+Mix types: include at least one reflection_prompt and one micro_activity. ${partner ? `If appropriate, include one partner_exercise for ${userName} and ${partner.name} to do together.` : ""}
 
 Return JSON:
 {
@@ -8544,7 +8612,7 @@ Return JSON:
       "body": "2-4 sentence instruction. Be specific.",
       "emoji": "◎" | "✦" | "◆" | "▲" | "♡",
       "estimatedMinutes": 2 | 3 | 5 | 10 | 15,
-      "assignTo": "user" | "partner",
+      "assignTo": "user" | "couple",
       "relationalLevel": "individual" | "couple"
     }
   ]
@@ -8595,10 +8663,25 @@ Return ONLY valid JSON.`;
   for (const act of parsed.activities) {
     if (!act.title || !act.body) continue;
 
-    const assigneeUserId = (act.assignTo === "partner" && partner) ?
-      partner.userId : userId;
-    const assigneeName = (act.assignTo === "partner" && partner) ?
-      partner.name : userName;
+    // ASSIGNMENT ROOT RULE (2026-04-10 fix): the chat author always
+    // gets the practice. This is non-negotiable at the code level so
+    // a confused or disobedient AI can't misroute a practice meant
+    // for the reflecting user to a partner who has no context for
+    // why it exists.
+    //
+    // The one exception is a genuine couple exercise: if the AI says
+    // the activity is relational ("couple") AND the type is
+    // partner_exercise, we mark it relationalLevel: 'couple' but
+    // STILL assign it to the chat author — the chat author owns the
+    // entry and can loop the partner in. We never hand an entry
+    // directly to the partner, because the partner didn't have the
+    // conversation.
+    const assigneeUserId = userId;
+    const assigneeName = userName;
+    const isCoupleExercise =
+      act.type === "partner_exercise" ||
+      act.assignTo === "couple" ||
+      act.relationalLevel === "couple";
 
     const item = {
       familyId,
@@ -8613,7 +8696,7 @@ Return ONLY valid JSON.`;
       sourceManualId: manualId,
       sourceChatSessionId: sourceSessionId,
       sourceInsightType: "gap",
-      relationalLevel: act.relationalLevel || "individual",
+      relationalLevel: isCoupleExercise ? "couple" : "individual",
       speed: "intentional",
       scheduledDate: now,
       expiresAt,

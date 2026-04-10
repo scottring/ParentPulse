@@ -191,14 +191,14 @@ export default function WorkbookPersonPage() {
 
       <div className="pt-[60px]">
         <div className="relish-container" style={{ maxWidth: 720 }}>
-          {/* Back to workbook */}
+          {/* Back to Journal */}
           <div className="pt-4 pb-6">
             <Link
-              href="/workbook"
+              href="/journal"
               className="inline-flex items-center gap-1 text-[18px] hover:opacity-70"
               style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
             >
-              &larr; Back to Workbook
+              &larr; Back to Journal
             </Link>
           </div>
 

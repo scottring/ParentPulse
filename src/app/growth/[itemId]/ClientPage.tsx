@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef, use } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -89,7 +89,12 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
   const { itemId } = use(params);
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { submitFeedback } = useGrowthFeed();
+  const {
+    submitFeedback,
+    activeItems,
+    completedItems,
+    arcGroups,
+  } = useGrowthFeed();
   const { people } = usePerson();
 
   const [item, setItem] = useState<GrowthItem | null>(null);
@@ -146,6 +151,58 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
     };
   }, [itemId, user, authLoading, router]);
 
+  // Hydrate myNote from an existing draft (or previously-submitted
+  // feedback note) the first time item becomes available. This lets
+  // users who navigated away and came back see their in-progress
+  // text again, and users revisiting a completed practice see what
+  // they wrote.
+  const draftHydratedRef = useRef(false);
+  useEffect(() => {
+    if (!item || !user?.userId || draftHydratedRef.current) return;
+    const draft = item.drafts?.[user.userId]?.note;
+    const submittedNote = item.feedbackByUser?.[user.userId]?.note || item.feedback?.note;
+    const hydrated = draft || submittedNote || '';
+    if (hydrated) {
+      setMyNote(hydrated);
+    }
+    draftHydratedRef.current = true;
+  }, [item, user?.userId]);
+
+  // Autosave drafts — debounced Firestore write as the user types in
+  // the "doing" phase. Only saves during the doing step, only if the
+  // note has meaningful content, and only if the draft is actually
+  // different from what's already persisted. Prevents the data-loss
+  // bug where typed reflections were discarded on navigation.
+  useEffect(() => {
+    if (!item || !user?.userId) return;
+    if (step !== 'doing') return;
+    // Skip the initial hydration pass — don't write the value we
+    // just read back.
+    if (!draftHydratedRef.current) return;
+    const existing = item.drafts?.[user.userId]?.note || '';
+    if (myNote === existing) return;
+
+    const itemId = item.growthItemId;
+    const userId = user.userId;
+    const t = setTimeout(() => {
+      if (myNote.trim().length === 0) {
+        // Empty draft — clear it from Firestore so stale text doesn't linger.
+        updateDoc(doc(firestore, 'growth_items', itemId), {
+          [`drafts.${userId}`]: null,
+        }).catch((err) => console.warn('Failed to clear draft:', err));
+        return;
+      }
+      updateDoc(doc(firestore, 'growth_items', itemId), {
+        [`drafts.${userId}`]: {
+          note: myNote,
+          updatedAt: Timestamp.now(),
+        },
+      }).catch((err) => console.warn('Failed to save draft:', err));
+    }, 800);
+
+    return () => clearTimeout(t);
+  }, [myNote, item, user?.userId, step]);
+
   const myName = user?.name?.split(' ')[0] || 'You';
   const otherParticipants = item ? (item.targetPersonNames || [])
     .filter((name) => name !== myName)
@@ -157,6 +214,43 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
   const isMultiPerson = (item?.targetPersonNames?.length || 0) >= 2;
   const otherPerson = otherParticipants[0] || null;
 
+  // Detect whether the user has already started this practice — has
+  // an autosaved draft with meaningful content. Drives the CTA text
+  // ("Continue this practice" vs. "Begin this practice").
+  const hasDraft = Boolean(
+    user?.userId && item?.drafts?.[user.userId]?.note?.trim(),
+  );
+
+  // Compute prev/next navigation targets. For arc items, walk the
+  // arc's items in sequence order. For standalone items, walk the
+  // week's active + kept list in arrival order.
+  const { prev: prevItem, next: nextItem } = useMemo(() => {
+    if (!item) return { prev: null as GrowthItem | null, next: null as GrowthItem | null };
+    if (item.arcId) {
+      const group = arcGroups.find((g) => g.arc.arcId === item.arcId);
+      if (!group) return { prev: null, next: null };
+      const allArcItems = [...group.activeItems, ...group.completedItems].sort(
+        (a, b) => (a.arcSequence || 0) - (b.arcSequence || 0),
+      );
+      const idx = allArcItems.findIndex(
+        (i) => i.growthItemId === item.growthItemId,
+      );
+      if (idx === -1) return { prev: null, next: null };
+      return {
+        prev: allArcItems[idx - 1] || null,
+        next: allArcItems[idx + 1] || null,
+      };
+    }
+    // Standalone — walk through active + kept this week, in feed order
+    const all = [...activeItems, ...(completedItems || [])];
+    const idx = all.findIndex((i) => i.growthItemId === item.growthItemId);
+    if (idx === -1) return { prev: null, next: null };
+    return {
+      prev: all[idx - 1] || null,
+      next: all[idx + 1] || null,
+    };
+  }, [item, activeItems, completedItems, arcGroups]);
+
   const handleComplete = useCallback(async (reaction: FeedbackReaction, impact?: ImpactRating) => {
     if (!item || submitting || !user?.userId) return;
     setSubmitting(true);
@@ -166,6 +260,36 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
       if (isMultiPerson && otherPerson?.userId && partnerNote.trim()) {
         await submitFeedback(item.growthItemId, reaction, impact, partnerNote, otherPerson.userId);
       }
+
+      // Clear the draft now that the note has been committed to
+      // feedback, AND update our local item state so the CompleteView
+      // can echo the reflection back to the user without waiting for
+      // a Firestore round-trip.
+      const now = Timestamp.now();
+      const nextDrafts = { ...(item.drafts || {}) };
+      delete nextDrafts[user.userId];
+      await updateDoc(doc(firestore, 'growth_items', item.growthItemId), {
+        [`drafts.${user.userId}`]: null,
+      }).catch(() => {});
+
+      const newFeedback = {
+        reaction,
+        respondedAt: now,
+        ...(impact && { impactRating: impact }),
+        ...(myNote && { note: myNote }),
+      };
+      setItem({
+        ...item,
+        status: reaction === 'not_now' ? 'active' : 'completed',
+        statusUpdatedAt: now,
+        feedback: newFeedback,
+        feedbackByUser: {
+          ...(item.feedbackByUser || {}),
+          [user.userId]: newFeedback,
+        },
+        drafts: nextDrafts,
+      } as GrowthItem);
+
       setStep('complete');
     } catch (err) {
       console.error('Failed to submit feedback:', err);
@@ -261,7 +385,7 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
               <p className="press-empty-title">This page is missing from the volume.</p>
               <p className="press-empty-body">The practice may have been removed or expired.</p>
               <button
-                onClick={() => router.push('/workbook')}
+                onClick={() => router.push('/journal')}
                 className="press-link"
                 style={{ background: 'transparent', cursor: 'pointer' }}
               >
@@ -280,7 +404,7 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
 
   // If already done when the user lands, skip straight to the complete view
   if (isAlreadyDone && step === 'brief') {
-    return <CompleteView item={item} isAlreadyDone onReturn={() => router.push('/workbook')} />;
+    return <CompleteView item={item} isAlreadyDone onReturn={() => router.push('/journal')} />;
   }
 
   return (
@@ -296,6 +420,9 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
             onAlreadyDid={() => setStep('reflect')}
             onDefer={() => handleComplete('not_now')}
             submitting={submitting}
+            hasDraft={hasDraft}
+            prevItem={prevItem}
+            nextItem={nextItem}
           />
         )}
 
@@ -339,7 +466,7 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
             item={item}
             isAlreadyDone={false}
             selectedReaction={selectedReaction}
-            onReturn={() => router.push('/workbook')}
+            onReturn={() => router.push('/journal')}
           />
         )}
       </div>
@@ -356,12 +483,18 @@ function BriefView({
   onAlreadyDid,
   onDefer,
   submitting,
+  hasDraft,
+  prevItem,
+  nextItem,
 }: {
   item: GrowthItem;
   onBegin: () => void;
   onAlreadyDid: () => void;
   onDefer: () => void;
   submitting: boolean;
+  hasDraft: boolean;
+  prevItem: GrowthItem | null;
+  nextItem: GrowthItem | null;
 }) {
   const typeDef = EXERCISE_TYPES[item.type];
   const minutes = item.estimatedMinutes || 0;
@@ -377,31 +510,156 @@ function BriefView({
   );
   const router = useRouter();
 
+  // Matches the TOC entry language: ◆ for practices (things to do),
+  // ❦ for stories and readings (things to read).
+  const isReading = item.type === 'illustrated_story' || item.type === 'progress_snapshot';
+  const kindGlyph = isReading ? '❦' : '◆';
+  const glyphColor = isReading ? '#B88E5A' : '#5C8064';
+
   return (
     <div className="press-binder" style={{ maxWidth: 952 }}>
 
       {/* Running header */}
       <div className="press-running-header" style={{ paddingTop: 28 }}>
-        <span>The Workbook</span>
+        <span>The Journal</span>
         <span className="sep">·</span>
-        <span>A practice</span>
+        <span>{isReading ? 'A reading' : 'A practice'}</span>
       </div>
 
       {/* Back link */}
-      <div style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 18 }}>
+      <div style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 4 }}>
         <button
-          onClick={() => router.push('/workbook')}
+          onClick={() => router.push('/journal')}
           className="press-link-sm"
           style={{ background: 'transparent', cursor: 'pointer' }}
         >
-          ⟵ Return to the workbook
+          ⟵ Return to the Journal
         </button>
       </div>
 
-      {/* Title */}
+      {/* Prev / next sibling navigation — walks through the arc's
+          items in sequence, or through the week's feed for stand-
+          alones. Only shows if at least one neighbor exists. */}
+      {(prevItem || nextItem) && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 24,
+            padding: '6px 32px 18px',
+            maxWidth: 860,
+            margin: '0 auto',
+          }}
+        >
+          {prevItem ? (
+            <button
+              onClick={() => router.push(`/growth/${prevItem.growthItemId}`)}
+              className="press-link-sm"
+              style={{
+                background: 'transparent',
+                cursor: 'pointer',
+                fontSize: 12,
+                textAlign: 'left',
+                maxWidth: 300,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                flex: '1 1 auto',
+              }}
+              title={prevItem.title}
+              aria-label={`Previous practice: ${prevItem.title}`}
+            >
+              <span style={{ marginRight: 6 }}>⟵</span>
+              <em
+                style={{
+                  fontStyle: 'italic',
+                  fontFamily: 'var(--font-parent-display)',
+                  fontSize: 14,
+                  color: '#5F564B',
+                }}
+              >
+                {prevItem.title}
+              </em>
+            </button>
+          ) : (
+            <span style={{ flex: '1 1 auto' }} />
+          )}
+
+          <span
+            aria-hidden="true"
+            style={{
+              color: '#B2A487',
+              fontFamily: 'var(--font-parent-display)',
+              fontSize: 14,
+              flexShrink: 0,
+            }}
+          >
+            ·
+          </span>
+
+          {nextItem ? (
+            <button
+              onClick={() => router.push(`/growth/${nextItem.growthItemId}`)}
+              className="press-link-sm"
+              style={{
+                background: 'transparent',
+                cursor: 'pointer',
+                fontSize: 12,
+                textAlign: 'right',
+                maxWidth: 300,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                flex: '1 1 auto',
+              }}
+              title={nextItem.title}
+              aria-label={`Next practice: ${nextItem.title}`}
+            >
+              <em
+                style={{
+                  fontStyle: 'italic',
+                  fontFamily: 'var(--font-parent-display)',
+                  fontSize: 14,
+                  color: '#5F564B',
+                }}
+              >
+                {nextItem.title}
+              </em>
+              <span style={{ marginLeft: 6 }}>⟶</span>
+            </button>
+          ) : (
+            <span style={{ flex: '1 1 auto' }} />
+          )}
+        </div>
+      )}
+
+      {/* Activity-type header — ◆ glyph + type + duration, in the
+          same small-caps treatment as the Journal TOC entries, so
+          the user sees the same visual language they clicked on */}
       <div style={{ textAlign: 'center', paddingBottom: 6 }}>
-        <span className="press-chapter-label" style={{ display: 'block', textAlign: 'center' }}>
-          {exerciseLabel}
+        <span
+          className="press-chapter-label"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'baseline',
+            gap: 10,
+          }}
+        >
+          <span
+            aria-hidden="true"
+            style={{
+              color: glyphColor,
+              fontSize: isReading ? 17 : 14,
+              lineHeight: 1,
+              transform: 'translateY(1px)',
+            }}
+          >
+            {kindGlyph}
+          </span>
+          <span>
+            {exerciseLabel} · {minutes} {isReading ? 'min read' : 'min'}
+          </span>
         </span>
       </div>
       <h1 className="press-binder-title" style={{ textAlign: 'center', fontSize: 'clamp(36px, 5vw, 48px)' }}>
@@ -457,20 +715,62 @@ function BriefView({
         )}
       </div>
 
-      <hr className="press-rule" style={{ width: '60%', margin: '0 auto 32px' }} />
+      {/* Primary action — given weight with flanking rules and
+          a fleuron, so it reads as "an act to undertake" rather
+          than a "read more" link. */}
+      <div style={{ textAlign: 'center', padding: '8px 20px 12px' }}>
+        <div
+          aria-hidden="true"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 18,
+            marginBottom: 22,
+          }}
+        >
+          <span
+            style={{
+              flex: '0 1 120px',
+              height: 1,
+              background: 'rgba(200, 190, 172, 0.6)',
+            }}
+          />
+          <span
+            style={{
+              fontFamily: 'var(--font-parent-display)',
+              fontSize: 20,
+              color: '#8A7B5F',
+              lineHeight: 1,
+            }}
+          >
+            ❦
+          </span>
+          <span
+            style={{
+              flex: '0 1 120px',
+              height: 1,
+              background: 'rgba(200, 190, 172, 0.6)',
+            }}
+          />
+        </div>
 
-      {/* Primary action — begin */}
-      <div style={{ textAlign: 'center', padding: '0 20px' }}>
         <button
           onClick={onBegin}
           className="press-link"
           style={{
             background: 'transparent',
             cursor: 'pointer',
-            fontSize: 22,
+            fontSize: 28,
+            borderBottomWidth: 2,
+            paddingBottom: 4,
           }}
         >
-          {item.type === 'illustrated_story' ? 'Open the story' : 'Begin this practice'}
+          {item.type === 'illustrated_story'
+            ? 'Open the story'
+            : hasDraft
+              ? 'Continue this practice'
+              : 'Begin this practice'}
           <span className="arrow">⟶</span>
         </button>
       </div>
@@ -1663,6 +1963,11 @@ function ReflectionFieldPress({
 
 // ================================================================
 // COMPLETE VIEW — the final page
+//
+// The ceremonial close of a practice. Echoes the user's own
+// reflection text back to them as a pull quote, so their work
+// doesn't vanish into the void. The antiquarian-press version of
+// signing a ledger entry.
 // ================================================================
 function CompleteView({
   item,
@@ -1675,56 +1980,168 @@ function CompleteView({
   selectedReaction?: FeedbackReaction | null;
   onReturn: () => void;
 }) {
-  void item;
+  const { user } = useAuth();
+
+  // Pull the reflection text — prefer the per-user entry, fall back
+  // to the legacy single feedback field.
+  const reflection =
+    (user?.userId && item.feedbackByUser?.[user.userId]?.note) ||
+    item.feedback?.note ||
+    '';
+
+  const reflection_ts =
+    (user?.userId && item.feedbackByUser?.[user.userId]?.respondedAt?.toDate?.()) ||
+    item.feedback?.respondedAt?.toDate?.() ||
+    null;
+
+  const keptOn = reflection_ts
+    ? reflection_ts.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+      })
+    : null;
+
+  const isSetAside = selectedReaction === 'not_now';
+  const headerLabel = isSetAside ? 'Set aside' : isAlreadyDone ? 'Already kept' : 'Kept';
+  const headerTitle = isSetAside
+    ? 'Gently tucked away'
+    : isAlreadyDone
+      ? 'This practice is behind you'
+      : 'Well done';
+
   return (
-    <div className="press-binder" style={{ maxWidth: 952 }}>
+    <div className="press-binder" style={{ maxWidth: 860 }}>
       <div className="press-running-header" style={{ paddingTop: 28 }}>
-        <span>The Workbook</span>
+        <span>The Journal</span>
         <span className="sep">·</span>
         <span>Kept</span>
       </div>
 
-      <div style={{ padding: '60px 20px 30px', textAlign: 'center' }}>
-        <span className="press-chapter-label" style={{ display: 'block', textAlign: 'center' }}>
-          {selectedReaction === 'not_now' ? 'Set aside' : isAlreadyDone ? 'Already kept' : 'Kept'}
+      <div style={{ padding: '48px 56px 36px', textAlign: 'center' }}>
+        {/* Small chapter label */}
+        <span
+          className="press-chapter-label"
+          style={{ display: 'block', textAlign: 'center' }}
+        >
+          {headerLabel}
         </span>
+
+        {/* Ceremonial title */}
         <h2
           className="press-display-lg"
-          style={{ marginTop: 16, fontSize: 'clamp(36px, 5vw, 48px)' }}
+          style={{
+            marginTop: 14,
+            fontSize: 'clamp(34px, 4.2vw, 46px)',
+            letterSpacing: '-0.01em',
+          }}
         >
-          {selectedReaction === 'not_now'
-            ? 'Gently tucked away'
-            : isAlreadyDone
-              ? 'This practice is behind you'
-              : 'Well done'}
+          {headerTitle}
         </h2>
+
+        {/* The title of the practice, dimmed, so the user
+            remembers exactly what they just closed */}
         <p
           className="press-body-italic"
           style={{
             textAlign: 'center',
-            marginTop: 20,
-            maxWidth: 420,
+            marginTop: 14,
+            marginBottom: 8,
+            maxWidth: 540,
             marginLeft: 'auto',
             marginRight: 'auto',
+            fontSize: 17,
+            color: '#8A7B5F',
           }}
         >
-          {selectedReaction === 'not_now'
-            ? 'The workbook will bring it back in a few days.'
-            : 'Small keepings accumulate. Come back tomorrow for the next page.'}
+          &ldquo;{item.title}&rdquo;
         </p>
 
-        <div className="press-asterism" aria-hidden="true" style={{ margin: '32px 0 24px' }} />
+        <div
+          className="press-asterism"
+          aria-hidden="true"
+          style={{ margin: '28px 0 28px' }}
+        />
+
+        {/* The reflection — shown as a pull quote. This is the
+            user's own words echoed back, not a generic message. */}
+        {!isSetAside && reflection ? (
+          <figure
+            style={{
+              margin: '0 auto 32px',
+              maxWidth: 600,
+              padding: '4px 32px',
+              borderLeft: '2px solid rgba(200, 190, 172, 0.7)',
+              borderRight: '2px solid rgba(200, 190, 172, 0.7)',
+              textAlign: 'left',
+            }}
+          >
+            <blockquote
+              style={{
+                fontFamily: 'var(--font-parent-display)',
+                fontStyle: 'italic',
+                fontSize: 19,
+                lineHeight: 1.55,
+                color: '#3A3530',
+                margin: 0,
+                whiteSpace: 'pre-wrap',
+              }}
+            >
+              {reflection}
+            </blockquote>
+            {keptOn && (
+              <figcaption
+                style={{
+                  marginTop: 18,
+                  textAlign: 'right',
+                  fontFamily: 'var(--font-parent-body)',
+                  fontSize: 10,
+                  fontWeight: 600,
+                  letterSpacing: '0.22em',
+                  textTransform: 'uppercase',
+                  color: '#8A7B5F',
+                }}
+              >
+                — Kept {keptOn}
+              </figcaption>
+            )}
+          </figure>
+        ) : (
+          <p
+            className="press-body-italic"
+            style={{
+              textAlign: 'center',
+              maxWidth: 440,
+              marginLeft: 'auto',
+              marginRight: 'auto',
+              color: '#6B6254',
+            }}
+          >
+            {isSetAside
+              ? 'The Journal will bring it back in a few days.'
+              : 'Small keepings accumulate. Come back tomorrow for the next page.'}
+          </p>
+        )}
+
+        <hr
+          className="press-rule"
+          style={{ width: '40%', margin: '32px auto 28px' }}
+        />
 
         <button
           onClick={onReturn}
           className="press-link"
-          style={{ background: 'transparent', cursor: 'pointer' }}
+          style={{
+            background: 'transparent',
+            cursor: 'pointer',
+            fontSize: 20,
+          }}
         >
-          Return to the workbook
+          Return to the Journal
           <span className="arrow">⟶</span>
         </button>
 
-        <div className="press-fleuron mt-12">❦</div>
+        <div className="press-fleuron mt-10">❦</div>
       </div>
     </div>
   );

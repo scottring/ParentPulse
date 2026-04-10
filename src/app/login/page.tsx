@@ -23,7 +23,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user && !authLoading) {
-      router.push('/workbook');
+      router.push('/journal');
     }
   }, [user, authLoading, router]);
 

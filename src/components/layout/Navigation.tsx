@@ -8,7 +8,8 @@ import { usePathname } from 'next/navigation';
 import CaptureSheet from '@/components/capture/CaptureSheet';
 
 const navLinks = [
-  { label: 'workbook', href: '/workbook', matchPrefixes: ['/workbook', '/dashboard', '/checkin', '/deepen'] },
+  { label: 'home', href: '/', matchPrefixes: ['/'], exact: true },
+  { label: 'journal', href: '/journal', matchPrefixes: ['/journal', '/workbook', '/dashboard', '/checkin', '/deepen'] },
   { label: 'family manual', href: '/family-manual', matchPrefixes: ['/family-manual', '/people'] },
   { label: 'reports', href: '/reports', matchPrefixes: ['/reports'] },
 ];
@@ -61,7 +62,7 @@ export default function Navigation() {
       <div className="h-full px-4 sm:px-6 flex items-center justify-between mx-auto" style={{ maxWidth: 1440 }}>
         {/* Wordmark — italic Cormorant, like a book's half-title */}
         <Link
-          href="/workbook"
+          href="/"
           className="hover:opacity-80 transition-opacity"
           style={{
             fontFamily: 'var(--font-parent-display)',
@@ -80,9 +81,11 @@ export default function Navigation() {
         {/* Desktop nav links — italic Cormorant, like chapter entries */}
         <div className="hidden sm:flex items-center" style={{ gap: 32 }}>
           {navLinks.map((link) => {
-            const isActive = link.matchPrefixes.some(
-              (p) => pathname === p || pathname.startsWith(p + '/')
-            );
+            const isActive = link.exact
+              ? pathname === link.href
+              : link.matchPrefixes.some(
+                  (p) => pathname === p || pathname.startsWith(p + '/'),
+                );
             return (
               <Link
                 key={link.href}

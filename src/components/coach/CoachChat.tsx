@@ -31,7 +31,7 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
 
     const message = input.trim();
     setInput('');
-    await sendMessage(message, personId);
+    await sendMessage(message, personId ? [personId] : undefined);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

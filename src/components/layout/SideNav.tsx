@@ -19,7 +19,7 @@ interface NavItem {
 const mobileItems: NavItem[] = [
   { label: 'Home', href: '/dashboard', icon: HomeIcon, matchPrefixes: ['/dashboard'] },
   { label: 'Family Manual', href: '/family-manual', icon: BookOpenIcon, matchPrefixes: ['/family-manual', '/people'] },
-  { label: 'Growth', href: '/workbook', icon: ArrowPathIcon, matchPrefixes: ['/workbook', '/checkin', '/deepen'] },
+  { label: 'Growth', href: '/journal', icon: ArrowPathIcon, matchPrefixes: ['/journal', '/checkin', '/deepen'] },
   { label: 'Reports', href: '/reports', icon: ClipboardDocumentListIcon, matchPrefixes: ['/reports'] },
 ];
 

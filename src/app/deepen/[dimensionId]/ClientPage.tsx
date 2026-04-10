@@ -424,7 +424,7 @@ export default function DeepenPage() {
               <div className="mt-6 flex flex-col items-center gap-3">
                 {workbookChapter ? (
                   <Link
-                    href="/workbook"
+                    href="/journal"
                     className="inline-flex items-center px-6 py-2.5 rounded-full text-[18px] font-medium text-white hover:opacity-90"
                     style={{
                       fontFamily: 'var(--font-parent-body)',

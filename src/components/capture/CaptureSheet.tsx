@@ -92,21 +92,18 @@ export default function CaptureSheet() {
   const handleAskAboutThis = async () => {
     if (!text.trim()) return;
 
-    // Transition to chat mode and send the initial message
-    const primaryPerson = selectedPeople[0] || undefined;
+    // Transition to chat mode and send the initial message with
+    // ALL tagged people as context, not just the first one.
     const initialText = text.trim();
-
     setState('chatting');
-    // Send to coach with optional person context
-    await sendChatMessage(initialText, primaryPerson);
+    await sendChatMessage(initialText, selectedPeople);
   };
 
   const handleChatSend = async () => {
     if (!chatInput.trim() || chatLoading) return;
-    const primaryPerson = selectedPeople[0] || undefined;
     const message = chatInput.trim();
     setChatInput('');
-    await sendChatMessage(message, primaryPerson);
+    await sendChatMessage(message, selectedPeople);
   };
 
   const handleChatKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -217,11 +214,12 @@ export default function CaptureSheet() {
               resetAll();
               setState('closed');
             }}
-            personName={
-              selectedPeople.length > 0
-                ? people.find((p) => p.personId === selectedPeople[0])?.name
-                : undefined
-            }
+            personNames={selectedPeople
+              .map(
+                (id) =>
+                  people.find((p) => p.personId === id)?.name || '',
+              )
+              .filter(Boolean)}
           />
         )}
       </div>
@@ -267,23 +265,26 @@ function ComposingView({
   saving,
 }: ComposingViewProps) {
   return (
-    <div className="px-5 pb-6 pt-2 overflow-y-auto">
+    <div className="px-6 pb-6 pt-3 overflow-y-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-5">
         <h2
           style={{
             fontFamily: 'var(--font-parent-display)',
-            fontSize: 18,
+            fontStyle: 'italic',
+            fontSize: 24,
             fontWeight: 400,
             color: '#3A3530',
+            letterSpacing: '-0.005em',
           }}
         >
           What&apos;s on your mind?
         </h2>
         <button
           onClick={onClose}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5"
-          style={{ fontSize: 17, color: '#5F564B' }}
+          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5"
+          style={{ fontSize: 22, color: '#5F564B' }}
+          aria-label="Close"
         >
           &times;
         </button>
@@ -295,17 +296,17 @@ function ComposingView({
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={3}
-        className="w-full resize-none rounded-2xl px-4 py-3 mb-4"
+        className="w-full resize-none rounded-2xl px-5 py-4 mb-5"
         style={{
           fontFamily: 'var(--font-parent-body)',
-          fontSize: 14,
+          fontSize: 17,
           lineHeight: 1.6,
           color: '#3A3530',
           background: 'rgba(0,0,0,0.03)',
-          border: '1px solid rgba(0,0,0,0.06)',
+          border: '1px solid rgba(0,0,0,0.08)',
           outline: 'none',
         }}
-        placeholder="A moment, a thought, a question..."
+        placeholder="A moment, a thought, a question&hellip;"
       />
 
       {/* Category pills */}
@@ -320,7 +321,7 @@ function ComposingView({
                 className="px-3 py-1.5 rounded-full transition-all"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: selected ? 500 : 400,
                   background: selected
                     ? 'color-mix(in srgb, #7C9082 12%, white)'
@@ -409,25 +410,25 @@ function ComposingView({
           <button
             onClick={onSaveNote}
             disabled={!canSubmit}
-            className="py-3 rounded-full transition-all hover:opacity-90 disabled:opacity-30"
+            className="py-3.5 rounded-full transition-all hover:opacity-90 disabled:opacity-30"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: 14,
+              fontSize: 16,
               fontWeight: 500,
               background: 'rgba(0,0,0,0.04)',
               color: '#3A3530',
               border: '1px solid rgba(0,0,0,0.08)',
             }}
           >
-            {saving ? 'Saving...' : 'Save note'}
+            {saving ? 'Saving…' : 'Save note'}
           </button>
           <button
             onClick={onAskAboutThis}
             disabled={!canSubmit}
-            className="py-3 rounded-full transition-all hover:opacity-90 disabled:opacity-30"
+            className="py-3.5 rounded-full transition-all hover:opacity-90 disabled:opacity-30"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: 14,
+              fontSize: 16,
               fontWeight: 500,
               background: '#7C9082',
               color: 'white',
@@ -437,18 +438,18 @@ function ComposingView({
           </button>
         </div>
         <p
-          className="mt-2 text-center"
+          className="mt-3 text-center"
           style={{
             fontFamily: 'var(--font-parent-body)',
             fontSize: 13,
-            color: '#746856',
+            color: '#8A7B5F',
             fontStyle: 'italic',
           }}
         >
           {selectedPeople.length > 0
-            ? `Ask will use ${
-                selectedPeople.length === 1 ? 'context from' : 'joint context'
-              } the tagged manual${selectedPeople.length > 1 ? 's' : ''}`
+            ? selectedPeople.length === 1
+              ? `Ask will ground the conversation in 1 tagged manual`
+              : `Ask will ground the conversation in ${selectedPeople.length} tagged manuals`
             : 'Ask gets general coaching context'}
         </p>
       </div>
@@ -468,7 +469,18 @@ interface ChattingViewProps {
   onSend: () => void;
   onKey: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onClose: () => void;
-  personName?: string;
+  personNames: string[];
+}
+
+// Format a list of names as natural prose.
+// ['Kaleb'] → 'Kaleb'
+// ['Kaleb', 'Ella'] → 'Kaleb & Ella'
+// ['Kaleb', 'Ella', 'Iris'] → 'Kaleb, Ella & Iris'
+function joinNames(names: string[]): string {
+  if (names.length === 0) return '';
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} & ${names[1]}`;
+  return `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`;
 }
 
 function ChattingView({
@@ -481,43 +493,96 @@ function ChattingView({
   onSend,
   onKey,
   onClose,
-  personName,
+  personNames,
 }: ChattingViewProps) {
+  const nameList = joinNames(personNames);
+  const hasPeople = personNames.length > 0;
+  const multiPerson = personNames.length > 1;
+  const headerTitle = hasPeople ? `About ${nameList}` : 'A conversation with the Companion';
+  const headerSub = hasPeople
+    ? multiPerson
+      ? `Grounded in ${personNames.length} manuals — ${nameList}`
+      : `Grounded in ${nameList}'s manual`
+    : 'General coaching context';
+
   return (
     <>
       {/* Header */}
       <div
-        className="flex items-center justify-between px-5 py-3 shrink-0"
-        style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}
+        className="flex items-center justify-between px-6 py-4 shrink-0"
+        style={{ borderBottom: '1px solid rgba(0,0,0,0.08)' }}
       >
-        <div>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <h2
             style={{
               fontFamily: 'var(--font-parent-display)',
-              fontSize: 16,
-              fontWeight: 500,
+              fontStyle: 'italic',
+              fontSize: 24,
+              fontWeight: 400,
               color: '#3A3530',
+              margin: 0,
+              lineHeight: 1.15,
+              letterSpacing: '-0.005em',
             }}
           >
-            {personName ? `About ${personName}` : 'Companion'}
+            {headerTitle}
           </h2>
           <p
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: 13,
-              color: '#746856',
-              marginTop: 1,
+              fontSize: 12,
+              fontWeight: 600,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: '#8A7B5F',
+              marginTop: 6,
+              marginBottom: 0,
             }}
           >
-            {personName
-              ? `Grounded in ${personName}'s manual`
-              : 'General coaching context'}
+            {headerSub}
           </p>
+          {/* Saved-automatically indicator */}
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              marginTop: 10,
+              padding: '4px 10px',
+              borderRadius: 999,
+              background: 'rgba(124, 144, 130, 0.12)',
+              border: '1px solid rgba(124, 144, 130, 0.22)',
+            }}
+          >
+            <span
+              aria-hidden="true"
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: '#7C9082',
+                flexShrink: 0,
+              }}
+            />
+            <span
+              style={{
+                fontFamily: 'var(--font-parent-body)',
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: '#5C7566',
+              }}
+            >
+              This conversation is being saved
+            </span>
+          </div>
         </div>
         <button
           onClick={onClose}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5"
-          style={{ fontSize: 17, color: '#5F564B' }}
+          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 shrink-0"
+          style={{ fontSize: 22, color: '#5F564B', marginLeft: 12 }}
+          aria-label="Close conversation"
         >
           &times;
         </button>
@@ -526,10 +591,10 @@ function ChattingView({
       {/* Messages */}
       <div
         ref={chatScrollRef}
-        className="flex-1 overflow-y-auto px-5 py-4"
+        className="flex-1 overflow-y-auto px-6 py-5"
         style={{ minHeight: 0 }}
       >
-        <div className="space-y-4">
+        <div className="space-y-5">
           {messages.map((msg, i) => (
             <div
               key={i}
@@ -542,20 +607,20 @@ function ChattingView({
               <div
                 style={{
                   maxWidth: '85%',
-                  padding: '10px 14px',
-                  borderRadius: 16,
+                  padding: '14px 18px',
+                  borderRadius: 18,
                   background:
                     msg.role === 'user'
-                      ? 'color-mix(in srgb, #7C9082 14%, white)'
-                      : 'rgba(0,0,0,0.03)',
+                      ? 'color-mix(in srgb, #7C9082 16%, white)'
+                      : 'rgba(245, 240, 230, 0.6)',
                   border: `1px solid ${
                     msg.role === 'user'
-                      ? 'rgba(124,144,130,0.25)'
-                      : 'rgba(0,0,0,0.05)'
+                      ? 'rgba(124,144,130,0.28)'
+                      : 'rgba(200, 190, 172, 0.5)'
                   }`,
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: 13,
-                  lineHeight: 1.55,
+                  fontSize: 17,
+                  lineHeight: 1.58,
                   color: '#3A3530',
                   whiteSpace: 'pre-wrap',
                 }}
@@ -568,53 +633,53 @@ function ChattingView({
             <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
               <div
                 style={{
-                  padding: '10px 14px',
-                  borderRadius: 16,
-                  background: 'rgba(0,0,0,0.03)',
-                  border: '1px solid rgba(0,0,0,0.05)',
-                  fontFamily: 'var(--font-parent-body)',
-                  fontSize: 13,
-                  color: '#746856',
+                  padding: '14px 18px',
+                  borderRadius: 18,
+                  background: 'rgba(245, 240, 230, 0.6)',
+                  border: '1px solid rgba(200, 190, 172, 0.5)',
+                  fontFamily: 'var(--font-parent-display)',
                   fontStyle: 'italic',
+                  fontSize: 17,
+                  color: '#8A7B5F',
                 }}
               >
-                thinking…
+                thinking&hellip;
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Input */}
+      {/* Input — with a secondary hint about what's happening */}
       <div
-        className="px-5 py-3 shrink-0"
-        style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}
+        className="px-6 pt-3 pb-4 shrink-0"
+        style={{ borderTop: '1px solid rgba(0,0,0,0.08)' }}
       >
-        <div className="flex gap-2">
+        <div className="flex gap-3 items-end">
           <input
             ref={chatInputRef}
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
             onKeyDown={onKey}
-            placeholder="Reply..."
+            placeholder="Reply&hellip;"
             disabled={loading}
-            className="flex-1 rounded-full px-4 py-2.5"
+            className="flex-1 rounded-full px-5 py-3"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: 13,
+              fontSize: 16,
               color: '#3A3530',
               background: 'rgba(0,0,0,0.03)',
-              border: '1px solid rgba(0,0,0,0.08)',
+              border: '1px solid rgba(0,0,0,0.1)',
               outline: 'none',
             }}
           />
           <button
             onClick={onSend}
             disabled={!chatInput.trim() || loading}
-            className="px-5 rounded-full transition-all hover:opacity-90 disabled:opacity-30"
+            className="px-6 py-3 rounded-full transition-all hover:opacity-90 disabled:opacity-30"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: 14,
+              fontSize: 16,
               fontWeight: 500,
               background: '#7C9082',
               color: 'white',
@@ -623,6 +688,19 @@ function ChattingView({
             Send
           </button>
         </div>
+        <p
+          className="text-center"
+          style={{
+            fontFamily: 'var(--font-parent-body)',
+            fontSize: 11,
+            fontStyle: 'italic',
+            color: '#8A7B5F',
+            marginTop: 10,
+            marginBottom: 0,
+          }}
+        >
+          Closing this conversation will synthesize it into your Journal.
+        </p>
       </div>
     </>
   );

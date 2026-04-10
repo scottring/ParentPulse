@@ -11,7 +11,7 @@ export default function DashboardRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/workbook');
+    router.replace('/journal');
   }, [router]);
 
   return null;

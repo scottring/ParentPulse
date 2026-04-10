@@ -143,7 +143,7 @@ export function RelationshipCard({
           >
             <span style={{ fontWeight: 500, color: 'var(--parent-text)' }}>Working on:</span>{' '}
             <Link
-              href="/workbook"
+              href="/journal"
               className="hover:opacity-70"
               style={{ color: 'var(--parent-primary)' }}
             >
@@ -156,7 +156,7 @@ export function RelationshipCard({
         <div className="flex items-center gap-4 mt-4 pt-3" style={{ borderTop: '1px solid rgba(0,0,0,0.04)' }}>
           {[
             { href: `/people/${person.personId}/manual${demoQ ? `?${demoQ.slice(1)}` : ''}`, label: 'Manual' },
-            { href: '/workbook', label: 'Workbook' },
+            { href: '/journal', label: 'Workbook' },
           ].map((link) => (
             <Link
               key={link.label}

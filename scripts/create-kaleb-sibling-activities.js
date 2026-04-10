@@ -142,13 +142,17 @@ async function main() {
       relationalLevel: 'couple',
     },
     {
+      // This is Iris's reflection — she's the one who had the
+      // conversation about Kaleb feeling unloved, so she gets the
+      // solo deep-dive. Assigning by conversation ownership, not
+      // topical heuristic.
       ...baseFields,
       type: 'solo_deep_dive',
       title: `What does ${kalebName} need to hear about being valued?`,
       body: `His manual shows he thrives on competence, achievement, and agency — but struggles with self-worth. Write down 3 specific things you value about him that have nothing to do with Ella. Tell him one this week.`,
       emoji: '✦',
-      assignedToUserId: scott.userId,
-      assignedToUserName: scott.name,
+      assignedToUserId: iris.userId,
+      assignedToUserName: iris.name,
       estimatedMinutes: 10,
       depthTier: 'deep',
     },
