@@ -31,29 +31,6 @@ type PerformanceMode = 'writing' | 'timer' | 'steps' | 'story' | 'default';
 // ================================================================
 // Helpers
 // ================================================================
-function toRoman(n: number): string {
-  if (n < 1) return '';
-  const map: Array<[number, string]> = [
-    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
-    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
-    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
-  ];
-  let result = '';
-  let num = n;
-  for (const [value, numeral] of map) {
-    while (num >= value) {
-      result += numeral;
-      num -= value;
-    }
-  }
-  return result;
-}
-
-function romanMinutes(n: number): string {
-  if (n <= 20) return toRoman(n).toUpperCase();
-  return String(n);
-}
-
 function getPerformanceMode(type: GrowthItemType): PerformanceMode {
   switch (type) {
     case 'journaling':
@@ -130,16 +107,43 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
   const [storyComment, setStoryComment] = useState('');
 
   useEffect(() => {
-    if (!authLoading && !user) { router.push('/login'); return; }
+    // Wait for Firebase auth to finish hydrating before querying Firestore,
+    // otherwise the getDoc goes out unauthenticated and the security rules
+    // deny it — surfacing as a crash on the page.
+    if (authLoading) return;
+    if (!user) { router.push('/login'); return; }
     if (!itemId) return;
 
+    let cancelled = false;
     (async () => {
-      const snap = await getDoc(doc(firestore, 'growth_items', itemId));
-      if (snap.exists()) {
-        setItem({ ...snap.data(), growthItemId: snap.id } as GrowthItem);
+      try {
+        const snap = await getDoc(doc(firestore, 'growth_items', itemId));
+        if (cancelled) return;
+        if (snap.exists()) {
+          setItem({ ...snap.data(), growthItemId: snap.id } as GrowthItem);
+        } else {
+          // Item was deleted or expired. Leave item null — the "not
+          // found" UI below will render.
+          console.warn(`growth_item ${itemId} not found`);
+        }
+      } catch (err) {
+        // Firestore returns permission-denied for non-existent docs
+        // when the rule depends on resource.data. Treat that as "not
+        // found" rather than an error the user should worry about.
+        const code = (err as { code?: string } | null)?.code;
+        if (code === 'permission-denied') {
+          console.warn(`growth_item ${itemId} not accessible (likely deleted)`);
+        } else {
+          console.error('Failed to load growth item:', err);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setLoading(false);
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [itemId, user, authLoading, router]);
 
   const myName = user?.name?.split(' ')[0] || 'You';
@@ -409,7 +413,7 @@ function BriefView({
         className="press-meta-line"
         style={{ textAlign: 'center', marginTop: 18, marginBottom: 10 }}
       >
-        {romanMinutes(minutes)} minutes
+        {minutes} minutes
         {about && (
           <>
             <span className="dot">·</span>
@@ -642,7 +646,7 @@ function WritingPerformance({
         <p className="press-marginalia" style={{ fontSize: 13 }}>
           {wordCount > 0 ? (
             <>
-              {toRoman(wordCount).toLowerCase()} words &middot; {elapsedMinutes === 0 ? 'just begun' : `${toRoman(elapsedMinutes).toLowerCase()} min in`}
+              {wordCount} words &middot; {elapsedMinutes === 0 ? 'just begun' : `${elapsedMinutes} min in`}
             </>
           ) : (
             'blank page'
@@ -710,7 +714,7 @@ function TimerPerformance({
       ? `${seconds} second${seconds !== 1 ? 's' : ''} remain`
       : minutes === 1 && seconds === 0
         ? 'one minute remains'
-        : `${toRoman(minutes).toLowerCase()}${seconds > 0 ? ` ${String(seconds).padStart(2, '0')}` : ''} min remain`;
+        : `${minutes}${seconds > 0 ? `:${String(seconds).padStart(2, '0')}` : ''} min remain`;
 
   return (
     <div className="press-binder" style={{ maxWidth: 952 }}>
@@ -915,7 +919,7 @@ function StepsPerformance({
       {/* Step label */}
       <div style={{ textAlign: 'center', paddingBottom: 12 }}>
         <span className="press-chapter-label">
-          Prompt {toRoman(current + 1)} of {toRoman(steps.length)}
+          Prompt {current + 1} of {steps.length}
         </span>
       </div>
 
@@ -1570,7 +1574,7 @@ function ReflectView({
               className="press-chapter-label"
               style={{ marginBottom: 6 }}
             >
-              {toRoman(value)}.
+              {value}.
             </span>
             <div
               className="press-display-sm"

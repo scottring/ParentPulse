@@ -28,9 +28,9 @@ function pickTodayFocus(items: GrowthItem[]): GrowthItem | null {
 }
 
 // ================================================================
-// Roman numeral helper
+// Roman numeral helper — kept only for the volume year on the masthead
 // ================================================================
-function toRoman(n: number): string {
+function yearToRoman(n: number): string {
   if (n < 1) return '';
   const map: Array<[number, string]> = [
     [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
@@ -45,7 +45,7 @@ function toRoman(n: number): string {
       num -= value;
     }
   }
-  return result.toLowerCase();
+  return result;
 }
 
 // ================================================================
@@ -58,21 +58,23 @@ const PHASE_LABELS: Record<string, string> = {
 };
 
 // ================================================================
-// Date formatting — "Tuesday, April VIII"
+// Date formatting — "Tuesday, April 10"
 // ================================================================
 function formatPressDate(d: Date): string {
   const weekday = d.toLocaleDateString('en-US', { weekday: 'long' });
   const month = d.toLocaleDateString('en-US', { month: 'long' });
-  const day = toRoman(d.getDate()).toUpperCase();
-  return `${weekday}, ${month} ${day}`;
+  return `${weekday}, ${month} ${d.getDate()}`;
 }
 
-function formatVolumeNumber(d: Date): string {
-  // Week of year as volume
+function formatVolumeYear(d: Date): string {
+  return yearToRoman(d.getFullYear());
+}
+
+function formatIssueNumber(d: Date): number {
+  // Week of year as issue
   const start = new Date(d.getFullYear(), 0, 1);
   const diff = (d.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
-  const week = Math.ceil((diff + start.getDay() + 1) / 7);
-  return toRoman(week).toUpperCase();
+  return Math.ceil((diff + start.getDay() + 1) / 7);
 }
 
 // ================================================================
@@ -134,7 +136,9 @@ export default function WorkbookPage() {
               </h1>
               <div className="press-masthead-fleuron" aria-hidden="true">❦</div>
               <p className="press-masthead-meta">
-                <span>Volume {formatVolumeNumber(today)}</span>
+                <span>Volume {formatVolumeYear(today)}</span>
+                <span className="sep">·</span>
+                <span>Issue {formatIssueNumber(today)}</span>
                 <span className="sep">·</span>
                 <span>{formatPressDate(today)}</span>
               </p>
@@ -228,7 +232,7 @@ function LeftPage({
         </div>
       )}
 
-      {/* Folio — left page gets lowercase roman */}
+      {/* Folio — page number in the corner */}
       <div
         style={{
           position: 'absolute',
@@ -238,7 +242,7 @@ function LeftPage({
         }}
         className="press-folio"
       >
-        ix
+        9
       </div>
     </div>
   );
@@ -269,7 +273,7 @@ function ChapterEntry({
   isLast: boolean;
 }) {
   const phase = PHASE_LABELS[arc.currentPhase] || arc.currentPhase;
-  const weekLabel = `Week ${toRoman(arc.currentWeek)} of ${toRoman(arc.durationWeeks)}`;
+  const weekLabel = `Week ${arc.currentWeek} of ${arc.durationWeeks}`;
   const completed = arc.completedItemCount || 0;
   const total = arc.totalItemCount || 0;
   const remaining = Math.max(total - completed, 0);
@@ -293,7 +297,7 @@ function ChapterEntry({
       className="press-chapter-entry block hover:opacity-85 transition-opacity"
       style={{ textDecoration: 'none', color: 'inherit' }}
     >
-      <span className="press-chapter-roman">Chapter {toRoman(index).toUpperCase()}</span>
+      <span className="press-chapter-roman">Chapter {index}</span>
       <h3 className="press-chapter-title">{arc.title}</h3>
       {participants && (
         <p className="press-chapter-sub">
@@ -346,7 +350,7 @@ function RightPage({
         }}
         className="press-folio"
       >
-        x
+        10
       </div>
     </div>
   );
@@ -397,7 +401,7 @@ function TodaysPractice({ item }: { item: GrowthItem }) {
 
       {/* Meta line in small caps */}
       <p className="press-meta-line">
-        {romanMinutes(minutes)} minutes
+        {minutes} minutes
         {about && (
           <>
             <span className="dot">·</span>
@@ -449,7 +453,7 @@ function AlsoThisWeek({ items }: { items: GrowthItem[] }) {
                     {' '}· about <span className="press-sc" style={{ fontSize: 13 }}>{about}</span>
                   </>
                 )}
-                {' '}· {romanMinutes(item.estimatedMinutes || 0)} min
+                {' '}· {item.estimatedMinutes || 0} min
               </p>
             </Link>
           );
@@ -495,12 +499,6 @@ function CountBand({
 // ================================================================
 // Small helpers
 // ================================================================
-function romanMinutes(n: number): string {
-  // For the display: use roman for small, arabic for larger
-  if (n <= 20) return toRoman(n).toUpperCase();
-  return String(n);
-}
-
 function spellNumber(n: number): string {
   const names = [
     'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',

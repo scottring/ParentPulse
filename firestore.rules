@@ -593,14 +593,21 @@ service cloud.firestore {
 
     // Growth items collection (AI-generated micro-activities, reflections, assessments)
     match /growth_items/{itemId} {
-      allow read: if belongsToFamily(resource.data.familyId);
+      // resource == null handles getDoc on non-existent items:
+      // without this, Firestore reports "permission denied" instead
+      // of letting the client see !snap.exists().
+      allow read: if isSignedIn() && (
+        resource == null || belongsToFamily(resource.data.familyId)
+      );
       allow update: if belongsToFamily(resource.data.familyId);
       // Cloud Functions create via admin SDK
     }
 
     // Growth arcs (structured multi-week learning courses)
     match /growth_arcs/{arcId} {
-      allow read: if belongsToFamily(resource.data.familyId);
+      allow read: if isSignedIn() && (
+        resource == null || belongsToFamily(resource.data.familyId)
+      );
       allow update: if belongsToFamily(resource.data.familyId);
       // Cloud Functions create via admin SDK
     }

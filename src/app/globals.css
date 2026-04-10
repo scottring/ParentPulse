@@ -753,13 +753,18 @@ html {
 /* ===== Mobile ===== */
 
 @media (max-width: 768px) {
-  .spread-container { grid-template-columns: 1fr; }
+  .spread-container,
+  .spread-container.spread-1-2 { grid-template-columns: 1fr; }
   .spread-divider { display: none; }
   .spread-page { padding: 24px 20px; }
   .spread-page-right { border-radius: 0; }
-  .relish-container { padding: 0 16px; }
+  .relish-container { padding: 0 14px; }
   .timeline-track { padding: 20px 16px; }
   .timeline-line { left: 16px; right: 16px; }
+  /* On mobile, dial the rem base back down — 22px is great on desktop
+     but too dominant on a phone viewport. 18px gives Tailwind text-*
+     and inline rems a comfortable tablet/phone read. */
+  html { font-size: 18px; }
 }
 
 /* ================================================================

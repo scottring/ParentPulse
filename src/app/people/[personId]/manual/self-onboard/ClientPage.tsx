@@ -612,7 +612,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
                 onMouseLeave={(e) => { e.currentTarget.style.paddingLeft = '0'; }}
               >
                 <div className="flex items-baseline gap-4">
-                  <span className="press-chapter-label" style={{ width: 30, flexShrink: 0 }}>I.</span>
+                  <span className="press-chapter-label" style={{ width: 30, flexShrink: 0 }}>1.</span>
                   <div className="flex-1">
                     <h3
                       style={{
@@ -654,7 +654,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
                 onMouseLeave={(e) => { e.currentTarget.style.paddingLeft = '0'; }}
               >
                 <div className="flex items-baseline gap-4">
-                  <span className="press-chapter-label" style={{ width: 30, flexShrink: 0 }}>II.</span>
+                  <span className="press-chapter-label" style={{ width: 30, flexShrink: 0 }}>2.</span>
                   <div className="flex-1">
                     <h3
                       style={{

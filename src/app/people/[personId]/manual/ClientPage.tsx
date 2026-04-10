@@ -13,27 +13,6 @@ import { isKidObserverEligible, computeAge } from '@/utils/age';
 import Navigation from '@/components/layout/Navigation';
 import SideNav from '@/components/layout/SideNav';
 
-// ================================================================
-// Roman numeral helper
-// ================================================================
-function toRoman(n: number): string {
-  if (n < 1) return '';
-  const map: Array<[number, string]> = [
-    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
-    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
-    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
-  ];
-  let result = '';
-  let num = n;
-  for (const [value, numeral] of map) {
-    while (num >= value) {
-      result += numeral;
-      num -= value;
-    }
-  }
-  return result;
-}
-
 function spellCount(n: number): string {
   const names = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
   return n >= 0 && n <= 10 ? names[n] : String(n);
@@ -145,8 +124,8 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
   // Relationship label
   const relationshipLabel =
     person.relationshipType === 'self' ? 'Self'
-      : person.relationshipType === 'spouse' ? `Partner${age !== null ? ` · age ${toRoman(age).toLowerCase()}` : ''}`
-      : person.relationshipType === 'child' && age !== null ? `Child · age ${toRoman(age).toLowerCase()}`
+      : person.relationshipType === 'spouse' ? `Partner${age !== null ? ` · age ${age}` : ''}`
+      : person.relationshipType === 'child' && age !== null ? `Child · age ${age}`
       : person.relationshipType === 'elderly_parent' ? 'Parent'
       : person.relationshipType === 'sibling' ? 'Sibling'
       : person.relationshipType === 'friend' ? 'Friend'
@@ -349,7 +328,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                   }}
                   className="press-folio"
                 >
-                  i
+                  1
                 </div>
               </div>
 
@@ -357,7 +336,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
               <div className="press-page-right" style={{ minHeight: 620 }}>
 
                 {/* Chapter: What works */}
-                <span className="press-chapter-label">Chapter I</span>
+                <span className="press-chapter-label">Chapter 1</span>
                 <h2 className="press-display-md mt-1 mb-4">What works</h2>
 
                 {topStrategies.length > 0 ? (
@@ -391,7 +370,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
 
                 {/* Chapter: Handle with care */}
                 <div className="press-fleuron mt-10 mb-6">❦</div>
-                <span className="press-chapter-label">Chapter II</span>
+                <span className="press-chapter-label">Chapter 2</span>
                 <h2 className="press-display-md mt-1 mb-4">Handle with care</h2>
 
                 {topTriggers.length > 0 ? (
@@ -434,7 +413,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                 {patterns.length > 0 && (
                   <>
                     <div className="press-fleuron mt-10 mb-6">❦</div>
-                    <span className="press-chapter-label">Chapter III</span>
+                    <span className="press-chapter-label">Chapter 3</span>
                     <h2 className="press-display-md mt-1 mb-4">Patterns observed</h2>
                     <div>
                       {patterns.map((p, i) => (
@@ -470,7 +449,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                   }}
                   className="press-folio"
                 >
-                  ii
+                  2
                 </div>
               </div>
             </div>

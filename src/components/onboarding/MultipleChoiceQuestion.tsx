@@ -9,22 +9,6 @@ interface MultipleChoiceQuestionProps {
   onChange: (value: string) => void;
 }
 
-function toRoman(n: number): string {
-  if (n < 1) return '0';
-  const map: Array<[number, string]> = [
-    [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i'],
-  ];
-  let result = '';
-  let num = n;
-  for (const [value, numeral] of map) {
-    while (num >= value) {
-      result += numeral;
-      num -= value;
-    }
-  }
-  return result;
-}
-
 export function MultipleChoiceQuestion({
   options,
   value,
@@ -61,7 +45,7 @@ export function MultipleChoiceQuestion({
             autoFocus={option.value === options[0].value}
           >
             <div className="flex items-baseline" style={{ gap: 16 }}>
-              {/* Roman numeral marker */}
+              {/* Number marker */}
               <span
                 className="press-chapter-label"
                 style={{
@@ -70,7 +54,7 @@ export function MultipleChoiceQuestion({
                   color: isSelected ? '#2D5F5D' : '#6B6254',
                 }}
               >
-                {toRoman(i + 1)}.
+                {i + 1}.
               </span>
 
               {/* Label + description */}

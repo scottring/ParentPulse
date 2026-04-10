@@ -221,7 +221,7 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
           <div className="press-running-header" style={{ paddingTop: 28 }}>
             <span>Begin a new volume</span>
             <span className="sep">·</span>
-            <span>Chapter I: the relationship</span>
+            <span>Chapter 1: the relationship</span>
           </div>
 
           {/* Back link */}

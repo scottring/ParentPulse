@@ -37,12 +37,11 @@ function toRoman(n: number): string {
 function spellDays(n: number): string {
   if (n === 0) return 'today';
   if (n === 1) return 'yesterday';
-  return `${toRoman(n).toLowerCase()} days ago`;
+  return `${n} days ago`;
 }
 
 function spellCount(n: number): string {
-  // Use lowercase roman for small counts (entries)
-  return toRoman(n).toLowerCase();
+  return String(n);
 }
 
 // Health descriptors — editorial prose, not clinical
@@ -292,7 +291,7 @@ export default function FamilyManualPage() {
                   }}
                   className="press-folio"
                 >
-                  iii
+                  3
                 </div>
               </div>
 
@@ -373,7 +372,7 @@ export default function FamilyManualPage() {
                   }}
                   className="press-folio"
                 >
-                  iv
+                  4
                 </div>
               </div>
             </div>
@@ -454,7 +453,7 @@ function insightDash(type: 'gap' | 'stale' | 'strength'): string {
 function getRelationshipLabel(person: Person): string {
   const type = person.relationshipType;
   if (!type) return 'Of the family';
-  const ageStr = person.age ? ` (age ${toRoman(person.age).toLowerCase()})` : '';
+  const ageStr = person.age ? ` (age ${person.age})` : '';
   switch (type) {
     case 'self': return 'Self';
     case 'spouse': return `Partner${ageStr}`;

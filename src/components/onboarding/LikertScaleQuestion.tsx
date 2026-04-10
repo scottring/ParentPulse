@@ -9,22 +9,6 @@ interface LikertScaleQuestionProps {
   onChange: (value: number) => void;
 }
 
-function toRoman(n: number): string {
-  if (n < 1) return '0';
-  const map: Array<[number, string]> = [
-    [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i'],
-  ];
-  let result = '';
-  let num = n;
-  for (const [value, numeral] of map) {
-    while (num >= value) {
-      result += numeral;
-      num -= value;
-    }
-  }
-  return result;
-}
-
 export function LikertScaleQuestion({ scale, value, onChange }: LikertScaleQuestionProps) {
   const [hoveredValue, setHoveredValue] = useState<number | null>(null);
 
@@ -79,7 +63,7 @@ export function LikertScaleQuestion({ scale, value, onChange }: LikertScaleQuest
               autoFocus={point === scale.min}
             >
               <div className="flex flex-col items-center" style={{ gap: 10 }}>
-                {/* Roman numeral */}
+                {/* Number */}
                 <span
                   style={{
                     fontFamily: 'var(--font-parent-display)',
@@ -95,7 +79,7 @@ export function LikertScaleQuestion({ scale, value, onChange }: LikertScaleQuest
                     transition: 'color 0.18s ease',
                   }}
                 >
-                  {scale.type === 'numeric' ? point : toRoman(point)}
+                  {point}
                 </span>
                 {/* Label if present */}
                 {label && (

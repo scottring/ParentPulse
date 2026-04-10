@@ -12,27 +12,6 @@ import { computeAge } from '@/utils/age';
 import { Timestamp } from 'firebase/firestore';
 
 // ================================================================
-// Roman numeral helper
-// ================================================================
-function toRoman(n: number): string {
-  if (n < 1) return '';
-  const map: Array<[number, string]> = [
-    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
-    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
-    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
-  ];
-  let result = '';
-  let num = n;
-  for (const [value, numeral] of map) {
-    while (num >= value) {
-      result += numeral;
-      num -= value;
-    }
-  }
-  return result;
-}
-
-// ================================================================
 // Relationship options — editorial phrasing
 // ================================================================
 const RELATIONSHIP_OPTIONS: Array<{ type: RelationshipType; label: string; sub: string }> = [
@@ -45,7 +24,7 @@ const RELATIONSHIP_OPTIONS: Array<{ type: RelationshipType; label: string; sub: 
 
 function relationshipLabel(person: Person): string {
   const age = person.dateOfBirth ? computeAge(person.dateOfBirth) : null;
-  const ageStr = age !== null ? ` · age ${toRoman(age).toLowerCase()}` : '';
+  const ageStr = age !== null ? ` · age ${age}` : '';
   switch (person.relationshipType) {
     case 'self': return 'Self';
     case 'spouse': return `Partner${ageStr}`;
@@ -284,7 +263,7 @@ function PersonRow({
         className="press-chapter-label"
         style={{ width: 40, flexShrink: 0, color: '#6B6254' }}
       >
-        {toRoman(index)}.
+        {index}.
       </span>
 
       {/* Name + meta — the main content */}

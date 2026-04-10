@@ -6,27 +6,6 @@ import SideNav from '@/components/layout/SideNav';
 
 export type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error';
 
-// ================================================================
-// Roman numeral helper
-// ================================================================
-function toRoman(n: number): string {
-  if (n < 1) return '';
-  const map: Array<[number, string]> = [
-    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
-    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
-    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
-  ];
-  let result = '';
-  let num = n;
-  for (const [value, numeral] of map) {
-    while (num >= value) {
-      result += numeral;
-      num -= value;
-    }
-  }
-  return result;
-}
-
 export interface AssessmentShellProps {
   // Context
   phase?: string;
@@ -189,7 +168,7 @@ export default function AssessmentShell({
             <span>{flowTitle}</span>
             <span className="sep">·</span>
             <span>
-              Section {toRoman(currentSection + 1).toLowerCase()} of {toRoman(totalSections).toLowerCase()}
+              Section {currentSection + 1} of {totalSections}
             </span>
           </div>
 
@@ -229,7 +208,7 @@ export default function AssessmentShell({
           <div style={{ padding: '0 56px 12px', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
             <div>
               <span className="press-chapter-label">
-                Chapter {toRoman(currentSection + 1).toUpperCase()}
+                Chapter {currentSection + 1}
               </span>
               <h2
                 className="press-display-md mt-1"

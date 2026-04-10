@@ -9,22 +9,6 @@ interface FrequencyQuestionProps {
   onChange: (value: number) => void;
 }
 
-function toRoman(n: number): string {
-  if (n < 1) return '0';
-  const map: Array<[number, string]> = [
-    [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i'],
-  ];
-  let result = '';
-  let num = n;
-  for (const [value, numeral] of map) {
-    while (num >= value) {
-      result += numeral;
-      num -= value;
-    }
-  }
-  return result;
-}
-
 export function FrequencyQuestion({ scale, value, onChange }: FrequencyQuestionProps) {
   const [hoveredValue, setHoveredValue] = useState<number | null>(null);
 
@@ -80,7 +64,7 @@ export function FrequencyQuestion({ scale, value, onChange }: FrequencyQuestionP
               autoFocus={point === scale.min}
             >
               <div className="flex items-baseline" style={{ gap: 16 }}>
-                {/* Roman numeral marker */}
+                {/* Number marker */}
                 <span
                   className="press-chapter-label"
                   style={{
@@ -89,7 +73,7 @@ export function FrequencyQuestion({ scale, value, onChange }: FrequencyQuestionP
                     color: isSelected ? '#2D5F5D' : '#6B6254',
                   }}
                 >
-                  {toRoman(point - scale.min + 1)}.
+                  {point - scale.min + 1}.
                 </span>
 
                 {/* Label */}

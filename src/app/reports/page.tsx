@@ -15,27 +15,6 @@ import { functions } from '@/lib/firebase';
 import { TherapistReportPreview, TherapistReportData } from '@/components/reports/TherapistReportPreview';
 
 // ================================================================
-// Roman numeral helpers
-// ================================================================
-function toRoman(n: number): string {
-  if (n < 1) return '';
-  const map: Array<[number, string]> = [
-    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
-    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
-    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
-  ];
-  let result = '';
-  let num = n;
-  for (const [value, numeral] of map) {
-    while (num >= value) {
-      result += numeral;
-      num -= value;
-    }
-  }
-  return result;
-}
-
-// ================================================================
 // Synthetic archive builder — assembles past "reports" from what
 // we have in Firestore so the index isn't empty. When the real
 // generateTherapistReport cloud function gains a history endpoint,
@@ -256,7 +235,7 @@ export default function ReportsPage() {
                   {archiveByYear.map(({ year, months }) => (
                     <div key={year}>
                       <div className="press-archive-year">
-                        {toRoman(year)}
+                        {year}
                       </div>
                       {months.map(([monthName, entries]) => (
                         <div key={monthName}>
@@ -268,7 +247,7 @@ export default function ReportsPage() {
                               className="press-archive-entry"
                             >
                               <span className="press-archive-num">
-                                {toRoman(entry.number)}.
+                                {entry.number}.
                               </span>
                               <span className="press-archive-title">
                                 {entry.title}
