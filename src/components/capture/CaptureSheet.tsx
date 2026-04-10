@@ -24,6 +24,7 @@ export default function CaptureSheet() {
     loading: chatLoading,
     sendMessage: sendChatMessage,
     clearConversation: clearChat,
+    excludeMessage: excludeChatMessage,
   } = useCoach();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -92,11 +93,29 @@ export default function CaptureSheet() {
   const handleAskAboutThis = async () => {
     if (!text.trim()) return;
 
-    // Transition to chat mode and send the initial message with
-    // ALL tagged people as context, not just the first one.
+    // Preserve the initial thought as a journal entry BEFORE starting
+    // the chat. The compose box reads like a journal entry — the user
+    // shouldn't have to choose between journaling it and asking about
+    // it. They get both: the entry lands in their journal using
+    // whatever category / people / privacy they already selected, and
+    // the chat opens grounded in those same people.
     const initialText = text.trim();
+    const initialCategory = category;
+    const initialPeople = [...selectedPeople];
+    const initialPrivate = isPrivate;
+
+    // Fire-and-forget the journal save so the chat opens immediately.
+    // If the save fails we surface it via the hook's own error state,
+    // but we don't block the conversation.
+    void createEntry({
+      text: initialText,
+      category: initialCategory,
+      personMentions: initialPeople,
+      isPrivate: initialPrivate,
+    });
+
     setState('chatting');
-    await sendChatMessage(initialText, selectedPeople);
+    await sendChatMessage(initialText, initialPeople);
   };
 
   const handleChatSend = async () => {
@@ -210,6 +229,7 @@ export default function CaptureSheet() {
             setChatInput={setChatInput}
             onSend={handleChatSend}
             onKey={handleChatKey}
+            onExcludeMessage={excludeChatMessage}
             onClose={() => {
               resetAll();
               setState('closed');
@@ -468,6 +488,7 @@ interface ChattingViewProps {
   setChatInput: (v: string) => void;
   onSend: () => void;
   onKey: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onExcludeMessage: (index: number) => Promise<void>;
   onClose: () => void;
   personNames: string[];
 }
@@ -492,6 +513,7 @@ function ChattingView({
   setChatInput,
   onSend,
   onKey,
+  onExcludeMessage,
   onClose,
   personNames,
 }: ChattingViewProps) {
@@ -595,40 +617,98 @@ function ChattingView({
         style={{ minHeight: 0 }}
       >
         <div className="space-y-5">
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              style={{
-                display: 'flex',
-                justifyContent:
-                  msg.role === 'user' ? 'flex-end' : 'flex-start',
-              }}
-            >
+          {messages.map((msg, i) => {
+            const isUser = msg.role === 'user';
+            const isExcluded = msg.excluded === true;
+            return (
               <div
+                key={i}
+                className="group"
                 style={{
-                  maxWidth: '85%',
-                  padding: '14px 18px',
-                  borderRadius: 18,
-                  background:
-                    msg.role === 'user'
-                      ? 'color-mix(in srgb, #7C9082 16%, white)'
-                      : 'rgba(245, 240, 230, 0.6)',
-                  border: `1px solid ${
-                    msg.role === 'user'
-                      ? 'rgba(124,144,130,0.28)'
-                      : 'rgba(200, 190, 172, 0.5)'
-                  }`,
-                  fontFamily: 'var(--font-parent-body)',
-                  fontSize: 17,
-                  lineHeight: 1.58,
-                  color: '#3A3530',
-                  whiteSpace: 'pre-wrap',
+                  display: 'flex',
+                  justifyContent: isUser ? 'flex-end' : 'flex-start',
                 }}
               >
-                {msg.content}
+                <div
+                  style={{
+                    position: 'relative',
+                    maxWidth: '85%',
+                    padding: '14px 18px',
+                    borderRadius: 18,
+                    background: isUser
+                      ? 'color-mix(in srgb, #7C9082 16%, white)'
+                      : 'rgba(245, 240, 230, 0.6)',
+                    border: `1px solid ${
+                      isUser
+                        ? 'rgba(124,144,130,0.28)'
+                        : 'rgba(200, 190, 172, 0.5)'
+                    }`,
+                    fontFamily: 'var(--font-parent-body)',
+                    fontSize: 17,
+                    lineHeight: 1.58,
+                    color: isExcluded ? '#A89E8F' : '#3A3530',
+                    whiteSpace: 'pre-wrap',
+                    opacity: isExcluded ? 0.55 : 1,
+                    fontStyle: isExcluded ? 'italic' : 'normal',
+                    textDecoration: isExcluded ? 'line-through' : 'none',
+                    transition: 'opacity 150ms ease, color 150ms ease',
+                  }}
+                >
+                  {msg.content}
+                  {isExcluded && (
+                    <div
+                      style={{
+                        marginTop: 8,
+                        fontFamily: 'var(--font-parent-body)',
+                        fontSize: 12,
+                        fontStyle: 'italic',
+                        color: '#8A7B5F',
+                        textDecoration: 'none',
+                        letterSpacing: '0.02em',
+                      }}
+                    >
+                      Removed from future coaching context.
+                    </div>
+                  )}
+                  {/* Delete button — assistant messages only, not already excluded */}
+                  {!isUser && !isExcluded && (
+                    <button
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            "Remove this response so it doesn't affect future conversations?",
+                          )
+                        ) {
+                          void onExcludeMessage(i);
+                        }
+                      }}
+                      className="opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                      aria-label="Remove this response"
+                      title="Remove — won't be used in future coaching"
+                      style={{
+                        position: 'absolute',
+                        top: 6,
+                        right: 6,
+                        width: 24,
+                        height: 24,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '50%',
+                        background: 'rgba(255, 255, 255, 0.85)',
+                        border: '1px solid rgba(0,0,0,0.08)',
+                        color: '#8A7B5F',
+                        fontSize: 13,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      &times;
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {loading && (
             <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
               <div

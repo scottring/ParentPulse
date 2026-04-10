@@ -16,6 +16,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp?: number;
+  excluded?: boolean;
 }
 
 export interface ChatContext {
@@ -44,6 +45,7 @@ interface UseCoachReturn {
   // Actions
   sendMessage: (message: string, personIds?: string[]) => Promise<void>;
   clearConversation: () => void;
+  excludeMessage: (messageIndex: number) => Promise<void>;
 
   // Suggestions
   extractSuggestions: (assistantMessage: string) => CoachSuggestion[];
@@ -126,6 +128,38 @@ export function useCoach(): UseCoachReturn {
     setError(null);
   };
 
+  // Mark an AI response as low-quality so it won't be fed back into
+  // future coaching context. The message is soft-deleted server-side;
+  // locally we mark it excluded so the UI can grey it out or hide it.
+  const excludeMessage = async (messageIndex: number): Promise<void> => {
+    if (!user || !conversationId) return;
+    if (messageIndex < 0 || messageIndex >= messages.length) return;
+
+    // Optimistic UI: flag the message locally first
+    setMessages((prev) =>
+      prev.map((m, i) => (i === messageIndex ? { ...m, excluded: true } : m)),
+    );
+
+    try {
+      const call = httpsCallable<
+        { conversationId: string; messageIndex: number },
+        { success: boolean }
+      >(functions, 'excludeChatMessage');
+      await call({ conversationId, messageIndex });
+    } catch (err) {
+      console.error('Error excluding message:', err);
+      // Roll back the optimistic update
+      setMessages((prev) =>
+        prev.map((m, i) =>
+          i === messageIndex ? { ...m, excluded: false } : m,
+        ),
+      );
+      setError(
+        err instanceof Error ? err.message : 'Failed to remove message',
+      );
+    }
+  };
+
   // Extract actionable suggestions from assistant response
   const extractSuggestions = (assistantMessage: string): CoachSuggestion[] => {
     const suggestions: CoachSuggestion[] = [];
@@ -177,6 +211,7 @@ export function useCoach(): UseCoachReturn {
     context,
     sendMessage,
     clearConversation,
-    extractSuggestions
+    excludeMessage,
+    extractSuggestions,
   };
 }

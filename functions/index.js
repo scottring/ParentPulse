@@ -939,31 +939,36 @@ exports.chatWithCoach = onCall(
           };
         }
 
-        // Build chat messages for Claude
-        const messages = [...conversation.messages];
-        messages.push({
-          role: "user",
-          content: message,
-        });
+        // Build messages for Claude — filter out any the user marked
+        // as excluded so bad responses don't pollute the current turn.
+        // We keep the excluded entries in Firestore (the user can still
+        // see them in history), we just don't feed them to the model.
+        const newUserMessage = {role: "user", content: message};
+        const messagesForClaude = [
+          ...conversation.messages.filter((m) => !m.excluded),
+          newUserMessage,
+        ];
 
         // Call Claude with context
-        const response = await generateChatResponse(messages, context, {
+        const response = await generateChatResponse(messagesForClaude, context, {
           familyId,
           userId: request.auth.uid,
           personId: effectivePersonIds[0] || null,
           personIds: effectivePersonIds,
         });
 
-        // Add assistant response to messages
-        messages.push({
-          role: "assistant",
-          content: response,
-        });
+        const newAssistantMessage = {role: "assistant", content: response};
 
-        // Save conversation
+        // Persist: append both new messages to the full history
+        // (preserving any excluded entries already stored).
+        const storedMessages = [
+          ...conversation.messages,
+          newUserMessage,
+          newAssistantMessage,
+        ];
         await conversationRef.set({
           ...conversation,
-          messages,
+          messages: storedMessages,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
@@ -987,6 +992,57 @@ exports.chatWithCoach = onCall(
       }
     }
 );
+
+/**
+ * Mark a chat message as excluded so it no longer feeds into future
+ * coaching context. Soft delete — the message stays in Firestore so
+ * the user can still see it in history, but `excluded: true` causes
+ * it to be stripped from both (a) the current turn's message array
+ * sent to Claude and (b) the pastConversations context loaded for
+ * any future conversation. Used to prevent low-quality AI responses
+ * from polluting downstream data quality.
+ */
+exports.excludeChatMessage = onCall(async (request) => {
+  const logger = require("firebase-functions/logger");
+
+  if (!request.auth) {
+    throw new Error("Authentication required");
+  }
+
+  const {conversationId, messageIndex} = request.data || {};
+  if (!conversationId || typeof messageIndex !== "number") {
+    throw new Error("conversationId and messageIndex are required");
+  }
+
+  const ref = admin.firestore()
+      .collection("chat_conversations")
+      .doc(conversationId);
+  const doc = await ref.get();
+  if (!doc.exists) {
+    throw new Error("Conversation not found");
+  }
+
+  const data = doc.data();
+  if (data.userId !== request.auth.uid) {
+    throw new Error("Not authorized to modify this conversation");
+  }
+
+  const messages = [...(data.messages || [])];
+  if (messageIndex < 0 || messageIndex >= messages.length) {
+    throw new Error("Invalid message index");
+  }
+
+  messages[messageIndex] = {...messages[messageIndex], excluded: true};
+  await ref.update({
+    messages,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  logger.info(
+      `Excluded message ${messageIndex} in conversation ${conversationId}`,
+  );
+  return {success: true};
+});
 
 /**
  * Retrieve relevant context for chat based on user's message
@@ -1156,7 +1212,10 @@ async function retrieveChatContext(familyId, userMessage, personIdOrIds = null, 
 
   const pastConversations = conversationsSnapshot.docs.map((doc) => {
     const data = doc.data();
-    const messages = data.messages || [];
+    // Strip any messages the user flagged as excluded — those are
+    // responses the user rated as low-quality and should not seed
+    // future coaching context.
+    const messages = (data.messages || []).filter((m) => !m.excluded);
     // Extract last 4-6 messages for context (focus on assistant responses)
     const recentMessages = messages.slice(-6);
     return {
@@ -1165,9 +1224,9 @@ async function retrieveChatContext(familyId, userMessage, personIdOrIds = null, 
       messageCount: messages.length,
       recentMessages: recentMessages.map((msg) => ({
         role: msg.role,
-        content: msg.content
+        content: msg.content,
       })),
-      personId: data.personId || null
+      personId: data.personId || null,
     };
   }).filter((conv) => conv.messageCount > 2); // Only include conversations with substance
 
@@ -1188,6 +1247,55 @@ async function retrieveChatContext(familyId, userMessage, personIdOrIds = null, 
 }
 
 /**
+ * Pick the chat model based on how much the quality of this specific reply
+ * matters. Defaults to Haiku 4.5 for speed/cost; escalates to Sonnet 4.5
+ * when the situation is emotionally charged, multi-person, or a deep
+ * ongoing conversation where a shallow reply would feel off.
+ *
+ * Heuristics are deliberately conservative — better to pay for Sonnet
+ * on a borderline case than to answer a real moment with a stock reply.
+ */
+function pickChatModel(userMessage, priorMessages, context) {
+  const HAIKU = "claude-haiku-4-5-20251001";
+  const SONNET = "claude-sonnet-4-5-20250929";
+
+  const msg = (userMessage || "").toLowerCase();
+  const priorCount = (priorMessages || []).length;
+  const manualsGrounded = ((context && context.personManuals) || []).length;
+
+  // Emotional / high-stakes language — always use Sonnet
+  const HIGH_STAKES = [
+    "crisis", "meltdown", "panic", "scared", "terrified", "worried",
+    "hate", "can't stand", "can't take", "exhausted", "burnt out",
+    "depressed", "depression", "anxiety", "anxious", "trauma", "abuse",
+    "divorce", "separation", "self-harm", "suicide", "hopeless",
+    "giving up", "breaking point", "violent", "hitting", "rage",
+    "furious", "resent", "falling apart", "at my wit",
+  ];
+  if (HIGH_STAKES.some((w) => msg.includes(w))) {
+    return {model: SONNET, reason: "high-stakes language"};
+  }
+
+  // Deep ongoing conversation (4+ prior messages = 2+ back-and-forth turns)
+  if (priorCount >= 4) {
+    return {model: SONNET, reason: "deep conversation"};
+  }
+
+  // Multi-person reasoning (e.g. sibling conflict, couple dynamic)
+  if (manualsGrounded >= 2) {
+    return {model: SONNET, reason: "multi-manual reasoning"};
+  }
+
+  // Long, substantive prompts — someone who wrote 300+ characters is
+  // doing real thinking and deserves a real reply, not a fast one.
+  if ((userMessage || "").length >= 300) {
+    return {model: SONNET, reason: "substantive prompt"};
+  }
+
+  return {model: HAIKU, reason: "default"};
+}
+
+/**
  * Generate chat response using Claude with context
  */
 async function generateChatResponse(messages, context, usageCtx = null) {
@@ -1196,11 +1304,17 @@ async function generateChatResponse(messages, context, usageCtx = null) {
   // Build system message with context
   const systemMessage = buildChatSystemMessage(context);
 
-  logger.info("Calling Claude for chat response");
+  // Route to Sonnet 4.5 for high-leverage situations, Haiku 4.5 otherwise.
+  const lastUserMessage = messages[messages.length - 1];
+  const {model, reason} = pickChatModel(
+      lastUserMessage ? lastUserMessage.content : "",
+      messages.slice(0, -1),
+      context,
+  );
+  logger.info(`Chat model: ${model} (${reason})`);
 
   try {
     const anthropicClient = getAnthropic();
-    const model = "claude-3-haiku-20240307";
     const response = await anthropicClient.messages.create({
       model,
       max_tokens: 1500,
@@ -1232,16 +1346,33 @@ async function generateChatResponse(messages, context, usageCtx = null) {
  * Build system message with relevant context
  */
 function buildChatSystemMessage(context) {
-  let systemMessage = `You are a thoughtful companion who has read this person's journal, their family's operating manuals, and their saved resources. You help them think through what's happening in their relationships — not by prescribing solutions, but by connecting dots and asking good questions.
+  let systemMessage = `You are a thoughtful companion who has read this person's journal, their family's operating manuals, and their saved resources. Your job is to help them *understand* what's happening — not to hand out scripts or generic parenting advice. You're a friend with good judgment, not a therapist, a life coach, or a chatbot.
 
-Your approach:
-- Help people understand what's happening, not just what to do about it
-- Reference specific entries, manual data, or saved resources when you have them — but only when they're genuinely relevant, not to perform thoroughness
-- When the data is thin or you'd be stretching to make a connection, say so. Ask a clarifying question instead of fabricating insight
-- Be conversational, warm, and concise — talk like a thoughtful friend, not a therapist
-- If someone shares something new, acknowledge it. If they ask something you can't answer well from the available data, be honest and help them explore what they're really getting at
+=== HOW TO RESPOND ===
 
-Available Context:
+1. **Sit with the feeling first.** If the user sounds frustrated, tired, worried, or stuck, name that in one honest sentence before anything else. "That sounds exhausting." "No wonder you're tired of it." Never skip past the emotional weight of what they said to jump straight to strategies. Skipping the feeling is the #1 thing that makes you sound like a bot.
+
+2. **Ask one real question before giving advice.** A journal conversation is a thinking space, not a Q&A machine. Your first reply should almost always include a single, specific question — something that helps them notice a pattern, see their own role, articulate what's underneath the surface complaint, or tell you what they've already tried. Wait for their answer before pivoting to suggestions. If you find yourself listing "things to try" in your first reply, you're doing it wrong.
+
+3. **Be specific when citing the manual.** Name which manual and which section. "In Kaleb's triggers you noted X." "Ella's 'what works' section mentions Y." Vague references like "the manual's guidance on collaborative approaches" sound hollow — they're the tell of an AI paraphrasing generically. Specificity is the whole point of being grounded.
+
+4. **Have a point of view.** Don't stack hedges. "Could be playing a role," "may feel like," "might possibly be" — pick one hedge per reply at most, and only when you genuinely don't know. If the data supports a claim, state it plainly. Confident grounded observations beat cautious generic ones.
+
+5. **When data is thin, say so out loud.** "I don't see much in the manual that speaks directly to this — tell me more about what happened?" is better than stretching a thin observation into manual-flavored advice. Never dress up generic parenting knowledge as if it came from the manual.
+
+6. **Keep it short.** Target 80–150 words. Two short paragraphs max. Brevity shows confidence in what you know. If you're writing four paragraphs of advice, you're lecturing, not listening.
+
+7. **No AI tells.** Banned phrases and patterns:
+   - Never start with "I see.", "I understand.", "That's a great question.", "It sounds like..."
+   - Never end with "Let me know if you have any other questions!", "I hope this helps!", "Does that make sense?"
+   - No bold section headers in replies. No numbered lists of strategies unless the user explicitly asks for a list.
+   - No sandwich structure (acknowledge → five paragraphs of advice → wrap-up sentence). It reads as AI customer service.
+
+8. **Protect dignity, name positive intent.** Every person mentioned is whole, not a problem to solve. When behavior has underlying intent (connection, regulation, play, autonomy), name the intent first before any "what to do" framing. Kids who "provoke" are usually seeking connection or stimulation — say that out loud.
+
+9. **Don't mine your own past responses.** The "Past Coaching Conversations" section below contains things YOU said previously. Use them only to stay consistent and remember context the user shared — never treat them as established facts or "insights from the manual."
+
+=== AVAILABLE CONTEXT ===
 
 `;
 
