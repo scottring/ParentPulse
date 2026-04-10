@@ -20,14 +20,14 @@ function StatusLight({ label, active, count }: PerspectiveLightProps) {
         }}
       />
       <span
-        className="text-[11px] tracking-wide"
+        className="text-[16px] tracking-wide"
         style={{ fontFamily: 'var(--font-parent-body)', color: active ? '#2C2C2C' : '#5F564B' }}
       >
         {label}
       </span>
       {count !== undefined && count > 0 && (
         <span
-          className="text-[9px] ml-auto"
+          className="text-[13px] ml-auto"
           style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
         >
           {count}

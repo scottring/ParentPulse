@@ -44,14 +44,14 @@ export default function EventInjectionModal({
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <h3
-            className="text-[11px] font-bold tracking-widest"
+            className="text-[16px] font-bold tracking-widest"
             style={{ fontFamily: 'var(--font-parent-body)', color: '#2C2C2C' }}
           >
             🚨 SOMETHING HAPPENED
           </h3>
           <button
             onClick={onClose}
-            className="text-[11px] px-2 py-0.5 rounded"
+            className="text-[16px] px-2 py-0.5 rounded"
             style={{ fontFamily: 'var(--font-parent-body)', color: '#4A4238' }}
           >
             ✕
@@ -59,7 +59,7 @@ export default function EventInjectionModal({
         </div>
 
         <p
-          className="text-[11px] mb-3"
+          className="text-[16px] mb-3"
           style={{ fontFamily: 'var(--font-parent-body)', color: '#4A4238' }}
         >
           Tell us what happened. The AI will map it to your dimensions and decide whether to adjust your growth trajectory.
@@ -71,7 +71,7 @@ export default function EventInjectionModal({
           onChange={(e) => setText(e.target.value)}
           placeholder="We just had a fight about..."
           rows={4}
-          className="w-full rounded p-3 text-[12px] resize-none focus:outline-none"
+          className="w-full rounded p-3 text-[17px] resize-none focus:outline-none"
           style={{
             fontFamily: 'var(--font-parent-body)',
             background: '#FAF8F5',
@@ -85,7 +85,7 @@ export default function EventInjectionModal({
         <div className="flex justify-end gap-2 mt-3">
           <button
             onClick={onClose}
-            className="text-[11px] px-4 py-2 rounded"
+            className="text-[16px] px-4 py-2 rounded"
             style={{
               fontFamily: 'var(--font-parent-body)',
               color: '#4A4238',
@@ -97,7 +97,7 @@ export default function EventInjectionModal({
           <button
             onClick={handleSubmit}
             disabled={!text.trim() || loading}
-            className="text-[11px] font-bold px-4 py-2 rounded transition-all disabled:opacity-30"
+            className="text-[16px] font-bold px-4 py-2 rounded transition-all disabled:opacity-30"
             style={{
               fontFamily: 'var(--font-parent-body)',
               background: 'rgba(124,144,130,0.1)',

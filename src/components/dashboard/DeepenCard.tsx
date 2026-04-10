@@ -27,7 +27,7 @@ export function DeepenCard({ need, onStart, onDismiss }: DeepenCardProps) {
       <h3
         style={{
           fontFamily: 'var(--font-parent-display)',
-          fontSize: '16px',
+          fontSize: '22px',
           fontWeight: 500,
           color: 'var(--parent-text)',
           lineHeight: 1.35,
@@ -41,7 +41,7 @@ export function DeepenCard({ need, onStart, onDismiss }: DeepenCardProps) {
         className="mt-1"
         style={{
           fontFamily: 'var(--font-parent-body)',
-          fontSize: '12.5px',
+          fontSize: '17px',
           color: 'var(--parent-text-light)',
         }}
       >
@@ -52,7 +52,7 @@ export function DeepenCard({ need, onStart, onDismiss }: DeepenCardProps) {
       <div className="flex items-center gap-3 mt-4">
         <button
           onClick={onStart}
-          className="inline-flex items-center px-5 py-2 rounded-full text-[12.5px] font-medium text-white hover:opacity-90 transition-opacity"
+          className="inline-flex items-center px-5 py-2 rounded-full text-[17px] font-medium text-white hover:opacity-90 transition-opacity"
           style={{
             fontFamily: 'var(--font-parent-body)',
             background: 'var(--aura-assess)',
@@ -62,7 +62,7 @@ export function DeepenCard({ need, onStart, onDismiss }: DeepenCardProps) {
         </button>
         <button
           onClick={onDismiss}
-          className="text-[12px] hover:opacity-70 transition-opacity"
+          className="text-[17px] hover:opacity-70 transition-opacity"
           style={{
             fontFamily: 'var(--font-parent-body)',
             fontWeight: 500,

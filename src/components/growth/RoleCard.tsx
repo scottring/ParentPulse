@@ -83,7 +83,7 @@ export default function RoleCard({ role, onFeedback }: RoleCardProps) {
                 {avgScore.toFixed(1)}
               </div>
               <div
-                className="text-[9px]"
+                className="text-[13px]"
                 style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
               >
                 overall
@@ -116,7 +116,7 @@ export default function RoleCard({ role, onFeedback }: RoleCardProps) {
         <div className="pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.4)' }}>
           <Link
             href={`/people/${otherPerson.personId}/manual`}
-            className="text-[10px] hover:opacity-70 transition-colors"
+            className="text-[14px] hover:opacity-70 transition-colors"
             style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
           >
             View {otherPerson.name}&apos;s Manual &rarr;
@@ -137,7 +137,7 @@ export default function RoleCard({ role, onFeedback }: RoleCardProps) {
           <div className="flex items-center gap-2 mb-1">
             <span className="text-sm">{activeArc.emoji}</span>
             <span
-              className="text-[11px] font-medium"
+              className="text-[16px] font-medium"
               style={{ fontFamily: 'var(--font-parent-body)', color: '#3A3530' }}
             >
               {activeArc.title}
@@ -147,7 +147,7 @@ export default function RoleCard({ role, onFeedback }: RoleCardProps) {
           {/* Outcome statement */}
           {activeArc.outcomeStatement && (
             <p
-              className="text-[11px] mb-2 pl-6 italic"
+              className="text-[16px] mb-2 pl-6 italic"
               style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}
             >
               &ldquo;{activeArc.outcomeStatement}&rdquo;
@@ -156,19 +156,19 @@ export default function RoleCard({ role, onFeedback }: RoleCardProps) {
 
           <div className="flex items-center gap-3 mb-2 pl-6">
             <span
-              className="text-[10px]"
+              className="text-[14px]"
               style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
             >
               Week {activeArc.currentWeek}/{activeArc.durationWeeks}
             </span>
             <span
-              className="text-[10px] capitalize"
+              className="text-[14px] capitalize"
               style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
             >
               {activeArc.currentPhase}
             </span>
             <span
-              className="text-[10px]"
+              className="text-[14px]"
               style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
             >
               {activeArc.completedItemCount}/{activeArc.totalItemCount}
@@ -188,7 +188,7 @@ export default function RoleCard({ role, onFeedback }: RoleCardProps) {
 
           {activeArc.researchBasis && (
             <p
-              className="text-[9px] mt-1.5 pl-6"
+              className="text-[13px] mt-1.5 pl-6"
               style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
             >
               {activeArc.researchBasis}
@@ -209,7 +209,7 @@ export default function RoleCard({ role, onFeedback }: RoleCardProps) {
           ))}
           {todayItems.length > 2 && (
             <p
-              className="text-[10px] text-center"
+              className="text-[14px] text-center"
               style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
             >
               +{todayItems.length - 2} more
@@ -225,7 +225,7 @@ export default function RoleCard({ role, onFeedback }: RoleCardProps) {
           style={{ borderTop: '1px solid rgba(255,255,255,0.4)' }}
         >
           <p
-            className="text-[10px]"
+            className="text-[14px]"
             style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
           >
             No active arc &middot; weakest: {

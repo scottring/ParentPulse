@@ -92,7 +92,7 @@ export default function ReflectionForm({
               <h2
                 style={{
                   fontFamily: 'var(--font-parent-display)',
-                  fontSize: '20px',
+                  fontSize: '28px',
                   fontWeight: 500,
                   color: 'var(--parent-text)',
                 }}
@@ -103,7 +103,7 @@ export default function ReflectionForm({
                 className="mt-1"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '15px',
+                  fontSize: '21px',
                   color: 'var(--parent-text-light)',
                   fontStyle: 'italic',
                 }}
@@ -116,7 +116,7 @@ export default function ReflectionForm({
               className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5"
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: '18px',
+                fontSize: '25px',
                 color: 'var(--parent-text-light)',
               }}
             >
@@ -144,9 +144,9 @@ export default function ReflectionForm({
                       minWidth: 72,
                     }}
                   >
-                    <span style={{ fontSize: '24px' }}>{opt.emoji}</span>
+                    <span style={{ fontSize: '33px' }}>{opt.emoji}</span>
                     <span
-                      className="text-[10px] font-medium"
+                      className="text-[14px] font-medium"
                       style={{
                         fontFamily: 'var(--font-parent-body)',
                         color: selected ? 'var(--parent-primary)' : 'var(--parent-text-light)',
@@ -167,7 +167,7 @@ export default function ReflectionForm({
                 className="block mb-1.5"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '15px',
+                  fontSize: '21px',
                   fontWeight: 500,
                   color: 'var(--parent-text)',
                 }}
@@ -198,7 +198,7 @@ export default function ReflectionForm({
               className="block mb-1.5"
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: '15px',
+                fontSize: '21px',
                 fontWeight: 500,
                 color: 'var(--parent-text)',
               }}
@@ -234,7 +234,7 @@ export default function ReflectionForm({
                 className="mb-3"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '12px',
+                  fontSize: '17px',
                   fontWeight: 600,
                   letterSpacing: '0.12em',
                   textTransform: 'uppercase',
@@ -261,7 +261,7 @@ export default function ReflectionForm({
                   >
                     <div className="flex-1">
                       <p
-                        className="text-[12.5px] leading-relaxed"
+                        className="text-[17px] leading-relaxed"
                         style={{
                           fontFamily: 'var(--font-parent-body)',
                           color: 'var(--parent-text)',
@@ -270,7 +270,7 @@ export default function ReflectionForm({
                         {entry.content}
                       </p>
                       <span
-                        className="text-[10px] mt-0.5 block"
+                        className="text-[14px] mt-0.5 block"
                         style={{
                           fontFamily: 'var(--font-parent-body)',
                           color: 'var(--parent-text-light)',
@@ -283,7 +283,7 @@ export default function ReflectionForm({
                     <div className="flex gap-1 shrink-0">
                       <button
                         onClick={() => handleAcceptEntry(entry.id)}
-                        className="px-2.5 py-1 rounded-full text-[10px] font-medium hover:opacity-80"
+                        className="px-2.5 py-1 rounded-full text-[14px] font-medium hover:opacity-80"
                         style={{
                           fontFamily: 'var(--font-parent-body)',
                           background: entry.accepted
@@ -297,7 +297,7 @@ export default function ReflectionForm({
                       {!entry.accepted && (
                         <button
                           onClick={() => handleDismissEntry(entry.id)}
-                          className="px-2.5 py-1 rounded-full text-[10px] font-medium hover:opacity-80"
+                          className="px-2.5 py-1 rounded-full text-[14px] font-medium hover:opacity-80"
                           style={{
                             fontFamily: 'var(--font-parent-body)',
                             background: 'transparent',
@@ -318,7 +318,7 @@ export default function ReflectionForm({
           <button
             onClick={handleSubmit}
             disabled={!rating || submitting}
-            className="w-full py-3 rounded-full text-[14px] font-medium text-white hover:opacity-90 disabled:opacity-40"
+            className="w-full py-3 rounded-full text-[19px] font-medium text-white hover:opacity-90 disabled:opacity-40"
             style={{
               fontFamily: 'var(--font-parent-body)',
               background: 'var(--parent-primary)',

@@ -67,7 +67,7 @@ export function RelationshipCard({
           <h2
             style={{
               fontFamily: 'var(--font-parent-display)',
-              fontSize: '20px',
+              fontSize: '28px',
               fontWeight: 500,
               color: 'var(--parent-text)',
               letterSpacing: '-0.01em',
@@ -76,7 +76,7 @@ export function RelationshipCard({
             {person.name}
           </h2>
           {avgScore > 0 && (
-            <span style={{ fontSize: '20px', lineHeight: 1 }}>
+            <span style={{ fontSize: '28px', lineHeight: 1 }}>
               {climateIcon(avgScore)}
             </span>
           )}
@@ -88,7 +88,7 @@ export function RelationshipCard({
             className="mt-1"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: '14px',
+              fontSize: '19px',
               fontWeight: 400,
               fontStyle: 'italic',
               color: 'var(--parent-text)',
@@ -105,7 +105,7 @@ export function RelationshipCard({
               <p
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '12.5px',
+                  fontSize: '17px',
                   color: 'var(--parent-text-light)',
                   lineHeight: 1.5,
                 }}
@@ -118,7 +118,7 @@ export function RelationshipCard({
               <p
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '12.5px',
+                  fontSize: '17px',
                   color: 'var(--parent-text-light)',
                   lineHeight: 1.5,
                 }}
@@ -136,7 +136,7 @@ export function RelationshipCard({
             className="mt-3"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: '12.5px',
+              fontSize: '17px',
               color: 'var(--parent-text-light)',
               lineHeight: 1.5,
             }}
@@ -161,7 +161,7 @@ export function RelationshipCard({
             <Link
               key={link.label}
               href={link.href}
-              className="text-[10px] tracking-wide uppercase hover:opacity-70"
+              className="text-[14px] tracking-wide uppercase hover:opacity-70"
               style={{
                 fontFamily: 'var(--font-parent-body)',
                 fontWeight: 600,

@@ -156,11 +156,11 @@ export default function SettingsPage() {
 
   return (
     <MainLayout>
-      <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="relative mx-auto px-4 sm:px-6 py-6" style={{ maxWidth: 1440 }}>
         {/* Page Header */}
-        <header className="mb-12">
+        <header className="mb-6">
           <div
-            className="relative rounded-2xl p-8"
+            className="relative rounded-2xl p-5"
             style={{
               background: 'rgba(255,255,255,0.45)',
               backdropFilter: 'blur(12px)',
@@ -178,7 +178,7 @@ export default function SettingsPage() {
                   className="mb-2"
                   style={{
                     fontFamily: 'var(--font-parent-display)',
-                    fontSize: '32px',
+                    fontSize: '44px',
                     fontWeight: 400,
                     color: '#3A3530',
                   }}
@@ -186,7 +186,7 @@ export default function SettingsPage() {
                   Settings
                 </h1>
 
-                <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5F564B' }}>
+                <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: '#5F564B' }}>
                   Configure your preferences
                 </p>
               </div>

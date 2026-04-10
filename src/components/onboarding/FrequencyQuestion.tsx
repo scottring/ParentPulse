@@ -96,7 +96,7 @@ export function FrequencyQuestion({ scale, value, onChange }: FrequencyQuestionP
                 <span
                   style={{
                     fontFamily: 'var(--font-parent-display)',
-                    fontSize: 22,
+                    fontSize: 20,
                     fontStyle: 'italic',
                     color: isSelected ? '#3A3530' : '#5C5347',
                     fontWeight: isSelected ? 500 : 400,
@@ -114,7 +114,7 @@ export function FrequencyQuestion({ scale, value, onChange }: FrequencyQuestionP
                       fontFamily: 'var(--font-parent-display)',
                       fontStyle: 'italic',
                       color: '#2D5F5D',
-                      fontSize: 18,
+                      fontSize: 17,
                     }}
                   >
                     ✓

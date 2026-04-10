@@ -54,7 +54,7 @@ export function FamilyStatusRow({ people, dark }: Props) {
                 <span
                   style={{
                     fontFamily: 'var(--font-parent-display)',
-                    fontSize: '16px',
+                    fontSize: '22px',
                     fontWeight: 500,
                     color: statusColor,
                   }}
@@ -69,7 +69,7 @@ export function FamilyStatusRow({ people, dark }: Props) {
                   className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center"
                   style={{
                     background: '#7C9082',
-                    fontSize: '9px',
+                    fontSize: '13px',
                     fontWeight: 700,
                     color: 'white',
                     fontFamily: 'var(--font-parent-body)',
@@ -85,7 +85,7 @@ export function FamilyStatusRow({ people, dark }: Props) {
               className="max-w-[56px] truncate text-center"
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: '12px',
+                fontSize: '17px',
                 fontWeight: 500,
                 color: textColor,
               }}

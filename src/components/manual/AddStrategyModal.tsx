@@ -73,7 +73,7 @@ export function AddStrategyModal({ isOpen, onClose, onSave, personName, type }: 
       >
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="flex items-center gap-2" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '24px', fontWeight: 400, color: '#3A3530' }}>
+            <h2 className="flex items-center gap-2" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '33px', fontWeight: 400, color: '#3A3530' }}>
               <span className="text-3xl">{emoji}</span>
               <span>Add Strategy - {title}</span>
             </h2>
@@ -147,7 +147,7 @@ export function AddStrategyModal({ isOpen, onClose, onSave, personName, type }: 
                       <span
                         key={star}
                         className={star <= effectiveness ? 'text-yellow-500' : 'text-gray-300'}
-                        style={{ fontSize: '24px' }}
+                        style={{ fontSize: '33px' }}
                       >
                         ★
                       </span>
@@ -183,7 +183,7 @@ export function AddStrategyModal({ isOpen, onClose, onSave, personName, type }: 
                 onClick={onClose}
                 disabled={saving}
                 className="px-6 py-3 rounded-full transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ border: '1px solid rgba(255,255,255,0.4)', color: '#5C5347', fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500 }}
+                style={{ border: '1px solid rgba(255,255,255,0.4)', color: '#5C5347', fontFamily: 'var(--font-parent-body)', fontSize: '19px', fontWeight: 500 }}
               >
                 Cancel
               </button>
@@ -191,7 +191,7 @@ export function AddStrategyModal({ isOpen, onClose, onSave, personName, type }: 
                 type="submit"
                 disabled={saving}
                 className="px-8 py-3 rounded-full text-white transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: '#7C9082', fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500 }}
+                style={{ backgroundColor: '#7C9082', fontFamily: 'var(--font-parent-body)', fontSize: '19px', fontWeight: 500 }}
               >
                 {saving ? 'Saving...' : 'Add Strategy'}
               </button>

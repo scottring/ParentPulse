@@ -540,13 +540,13 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
               <span className="press-chapter-label" style={{ display: 'block', textAlign: 'center' }}>
                 Kept
               </span>
-              <h2 className="press-empty-title mt-4" style={{ fontSize: 34 }}>
+              <h2 className="press-empty-title mt-4" style={{ fontSize: 31 }}>
                 Your perspective is saved.
               </h2>
               <p className="press-empty-body">
                 Returning to your volume&hellip;
               </p>
-              <div className="press-fleuron" style={{ fontSize: 18 }}>❦</div>
+              <div className="press-fleuron" style={{ fontSize: 17 }}>❦</div>
             </div>
           </div>
         </div>
@@ -617,7 +617,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
                     <h3
                       style={{
                         fontFamily: 'var(--font-parent-display)',
-                        fontSize: 22,
+                        fontSize: 20,
                         fontStyle: 'italic',
                         fontWeight: 500,
                         color: '#3A3530',
@@ -627,16 +627,16 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
                     >
                       {hasExistingAnswers ? 'Add more from your documents' : 'Upload your own documents'}
                     </h3>
-                    <p className="press-marginalia mt-2" style={{ fontSize: 14, lineHeight: 1.5 }}>
+                    <p className="press-marginalia mt-2" style={{ fontSize: 13, lineHeight: 1.5 }}>
                       {hasExistingAnswers
                         ? 'Bring therapy notes, journal entries, or letters. The system reads them and fills in what\'s missing — your answers stay as they are.'
                         : 'Bring therapy notes, journal entries, or letters. The system reads them and drafts answers for you to review before keeping.'}
                     </p>
-                    <p className="press-marginalia mt-1" style={{ fontSize: 14, color: '#7A6E5C' }}>
+                    <p className="press-marginalia mt-1" style={{ fontSize: 13, color: '#7A6E5C' }}>
                       PDF, text, or images · read in passing, never stored
                     </p>
                   </div>
-                  <span style={{ color: '#6B6254', fontSize: 16 }}>⟶</span>
+                  <span style={{ color: '#6B6254', fontSize: 15 }}>⟶</span>
                 </div>
               </button>
 
@@ -659,7 +659,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
                     <h3
                       style={{
                         fontFamily: 'var(--font-parent-display)',
-                        fontSize: 22,
+                        fontSize: 20,
                         fontStyle: 'italic',
                         fontWeight: 500,
                         color: '#3A3530',
@@ -669,16 +669,16 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
                     >
                       {hasExistingAnswers ? 'Continue answering by hand' : 'Answer by hand, at your own pace'}
                     </h3>
-                    <p className="press-marginalia mt-2" style={{ fontSize: 14, lineHeight: 1.5 }}>
+                    <p className="press-marginalia mt-2" style={{ fontSize: 13, lineHeight: 1.5 }}>
                       {hasExistingAnswers
                         ? 'Pick up where you left off. Each answer is saved the moment you keep it.'
                         : 'A handful of questions, thought through at your own pace. Autosaved as you go.'}
                     </p>
-                    <p className="press-marginalia mt-1" style={{ fontSize: 14, color: '#7A6E5C' }}>
+                    <p className="press-marginalia mt-1" style={{ fontSize: 13, color: '#7A6E5C' }}>
                       sixteen questions · about ten minutes
                     </p>
                   </div>
-                  <span style={{ color: '#2D5F5D', fontSize: 16 }}>⟶</span>
+                  <span style={{ color: '#2D5F5D', fontSize: 15 }}>⟶</span>
                 </div>
               </button>
             </div>
@@ -732,7 +732,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
                 <p
                   className="press-marginalia"
                   style={{
-                    fontSize: 14,
+                    fontSize: 13,
                     color: '#C08070',
                     padding: '14px 18px',
                     borderLeft: '2px solid rgba(192,128,112,0.5)',
@@ -767,17 +767,17 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
               <span className="press-chapter-label" style={{ display: 'block', textAlign: 'center' }}>
                 Reading
               </span>
-              <h2 className="press-empty-title mt-4" style={{ fontSize: 34 }}>
+              <h2 className="press-empty-title mt-4" style={{ fontSize: 31 }}>
                 Reading your documents
               </h2>
               <p className="press-empty-body" style={{ fontStyle: 'italic' }}>
                 {PROCESSING_MESSAGES[processingMessageIndex]}
               </p>
-              <p className="press-marginalia" style={{ fontSize: 14, color: '#7A6E5C', maxWidth: 320, margin: '20px auto 0' }}>
+              <p className="press-marginalia" style={{ fontSize: 13, color: '#7A6E5C', maxWidth: 320, margin: '20px auto 0' }}>
                 Read in passing and discarded immediately after. This
                 may take up to a minute.
               </p>
-              <div className="press-fleuron mt-10" style={{ fontSize: 18 }}>❦</div>
+              <div className="press-fleuron mt-10" style={{ fontSize: 17 }}>❦</div>
             </div>
           </div>
         </div>
@@ -789,7 +789,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   // MODE: CONFLICTS (conflict resolution)
   // ==============================================
   if (mode === 'conflicts') {
-    const conflictBtnStyle = { fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500 } as const;
+    const conflictBtnStyle = { fontFamily: 'var(--font-parent-body)', fontSize: '19px', fontWeight: 500 } as const;
     return (
       <div className="relish-page">
         <div className="pt-[64px] pb-24">
@@ -822,7 +822,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
 
               return (
                 <div key={key} className="glass-card-strong p-6" style={{ border: '1px solid rgba(255,255,255,0.4)' }}>
-                  <h3 style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 600, color: '#3A3530', marginBottom: '16px' }}>
+                  <h3 style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', fontWeight: 600, color: '#3A3530', marginBottom: '16px' }}>
                     {conflict.questionText}
                   </h3>
 
@@ -831,7 +831,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
                       <div style={{ ...conflictBtnStyle, color: '#5F564B', marginBottom: '8px' }}>
                         YOUR CURRENT ANSWER
                       </div>
-                      <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5C5347' }}>
+                      <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: '#5C5347' }}>
                         {conflict.manualAnswer}
                       </p>
                     </div>
@@ -839,7 +839,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
                       <div style={{ ...conflictBtnStyle, color: '#7C9082', marginBottom: '8px' }}>
                         EXTRACTED FROM DOCUMENTS
                       </div>
-                      <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5C5347' }}>
+                      <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: '#5C5347' }}>
                         {conflict.aiAnswer}
                       </p>
                     </div>
@@ -937,7 +937,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
                       }
                       rows={4}
                       className="w-full px-4 py-3 rounded-lg focus:outline-none transition-colors"
-                      style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.4)', resize: 'vertical' }}
+                      style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.4)', resize: 'vertical' }}
                     />
                   )}
 
@@ -1008,8 +1008,8 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
         background: 'rgba(124,144,130,0.05)',
       }}
     >
-      <p className="press-marginalia" style={{ fontSize: 14 }}>
-        <span className="press-sc" style={{ fontSize: 14 }}>DEMO</span> &nbsp;
+      <p className="press-marginalia" style={{ fontSize: 13 }}>
+        <span className="press-sc" style={{ fontSize: 13 }}>DEMO</span> &nbsp;
         Answering as{' '}
         <strong style={{ color: '#3A3530', fontStyle: 'normal', fontWeight: 500 }}>{user.name}</strong>
         {' '}· about{' '}
@@ -1049,7 +1049,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
               background: 'transparent',
               border: 0,
               cursor: 'pointer',
-              fontSize: 14,
+              fontSize: 13,
               color: '#7A6E5C',
             }}
           >
@@ -1065,7 +1065,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
           background: 'transparent',
           cursor: isSubmitting ? 'wait' : 'pointer',
           opacity: isSubmitting ? 0.5 : 1,
-          fontSize: 19,
+          fontSize: 17,
         }}
       >
         {isSubmitting
@@ -1087,7 +1087,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
         background: 'rgba(124,144,130,0.05)',
       }}
     >
-      <p className="press-marginalia" style={{ fontSize: 15 }}>
+      <p className="press-marginalia" style={{ fontSize: 14 }}>
         — this answer was drafted from your documents. Review and revise as you wish.
       </p>
     </div>
@@ -1134,7 +1134,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
         {currentQuestion.helperText && (
           <p
             className="press-body-italic"
-            style={{ fontSize: 15, marginBottom: 28, color: '#5F564B' }}
+            style={{ fontSize: 14, marginBottom: 28, color: '#5F564B' }}
           >
             {currentQuestion.helperText}
           </p>
@@ -1175,7 +1175,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
               )}
             </button>
             {currentVisibility === 'private' && (
-              <p className="mt-1 ml-6" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#6B6254' }}>
+              <p className="mt-1 ml-6" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: '#6B6254' }}>
                 This answer won't appear in your manual or be shared with anyone.
               </p>
             )}

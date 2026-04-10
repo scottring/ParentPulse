@@ -52,7 +52,7 @@ export default function ActionCard({
             <button
               onClick={onGenerate}
               disabled={generating}
-              className="text-[11px] font-bold px-4 py-2 rounded transition-all disabled:opacity-30"
+              className="text-[16px] font-bold px-4 py-2 rounded transition-all disabled:opacity-30"
               style={{
                 fontFamily: 'var(--font-parent-body)',
                 color: '#7C9082',
@@ -64,7 +64,7 @@ export default function ActionCard({
             </button>
           ) : (
             <span
-              className="text-[11px]"
+              className="text-[16px]"
               style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
             >
               ALL CLEAR — NO ACTIONS RIGHT NOW
@@ -86,7 +86,7 @@ export default function ActionCard({
         {domainStage && (
           <div className="flex items-center gap-1.5 mb-2">
             <span
-              className="text-[8px] font-bold tracking-widest px-1.5 py-0.5 rounded"
+              className="text-[11px] font-bold tracking-widest px-1.5 py-0.5 rounded"
               style={{
                 fontFamily: 'var(--font-parent-body)',
                 color: '#4A4238',
@@ -97,7 +97,7 @@ export default function ActionCard({
               {DOMAIN_LABELS[domainStage.domain] || domainStage.domain.toUpperCase()}
             </span>
             <span
-              className="text-[8px] tracking-widest"
+              className="text-[11px] tracking-widest"
               style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
             >
               {STAGE_LABELS[domainStage.stage]}
@@ -119,7 +119,7 @@ export default function ActionCard({
                   key={depth}
                   onClick={() => onSwapDepth(primaryItem.growthItemId, depth)}
                   disabled={!hasAlt}
-                  className="text-[9px] font-bold px-2.5 py-1 rounded transition-all disabled:opacity-20"
+                  className="text-[13px] font-bold px-2.5 py-1 rounded transition-all disabled:opacity-20"
                   style={{
                     fontFamily: 'var(--font-parent-body)',
                     color: isActive ? '#FFFFFF' : info.color,
@@ -139,27 +139,27 @@ export default function ActionCard({
           <span className="text-lg">{primaryItem.emoji}</span>
           <div className="flex-1 min-w-0">
             <h4
-              className="text-[12px] font-bold leading-tight"
+              className="text-[17px] font-bold leading-tight"
               style={{ fontFamily: 'var(--font-parent-body)', color: '#2C2C2C' }}
             >
               {primaryItem.title}
             </h4>
             <div className="flex items-center gap-2 mt-0.5">
               <span
-                className="text-[9px] tracking-wider"
+                className="text-[13px] tracking-wider"
                 style={{ fontFamily: 'var(--font-parent-body)', color: '#4A4238' }}
               >
                 {primaryItem.speed === 'ambient' ? '⚡ TODAY' : '📋 THIS WEEK'}
               </span>
               <span
-                className="text-[9px]"
+                className="text-[13px]"
                 style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
               >
                 {primaryItem.estimatedMinutes}m
               </span>
               {exerciseType && (
                 <span
-                  className="text-[8px] tracking-wider px-1.5 py-0.5 rounded"
+                  className="text-[11px] tracking-wider px-1.5 py-0.5 rounded"
                   style={{
                     fontFamily: 'var(--font-parent-body)',
                     color: '#5F564B',
@@ -175,7 +175,7 @@ export default function ActionCard({
 
         {/* Body */}
         <p
-          className="text-[11px] leading-relaxed mt-1"
+          className="text-[16px] leading-relaxed mt-1"
           style={{ fontFamily: 'var(--font-parent-body)', color: '#4A4238' }}
         >
           {primaryItem.body}
@@ -209,7 +209,7 @@ export default function ActionCard({
         {remainingItems.length > 0 && (
           <button
             onClick={() => setExpanded(!expanded)}
-            className="w-full mt-3 pt-2 text-[9px] tracking-wider transition-colors"
+            className="w-full mt-3 pt-2 text-[13px] tracking-wider transition-colors"
             style={{
               fontFamily: 'var(--font-parent-body)',
               color: '#5F564B',
@@ -233,21 +233,21 @@ export default function ActionCard({
               <span className="text-sm">{item.emoji}</span>
               <div className="flex-1 min-w-0">
                 <h4
-                  className="text-[11px] font-bold leading-tight"
+                  className="text-[16px] font-bold leading-tight"
                   style={{ fontFamily: 'var(--font-parent-body)', color: '#2C2C2C' }}
                 >
                   {item.title}
                 </h4>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span
-                    className="text-[8px]"
+                    className="text-[11px]"
                     style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
                   >
                     {item.estimatedMinutes}m
                   </span>
                   {EXERCISE_TYPES[item.type] && (
                     <span
-                      className="text-[8px] tracking-wider"
+                      className="text-[11px] tracking-wider"
                       style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
                     >
                       {EXERCISE_TYPES[item.type].label.toUpperCase()}
@@ -257,7 +257,7 @@ export default function ActionCard({
               </div>
             </div>
             <p
-              className="text-[10px] leading-relaxed mt-1"
+              className="text-[14px] leading-relaxed mt-1"
               style={{ fontFamily: 'var(--font-parent-body)', color: '#9A9A9A' }}
             >
               {item.body}

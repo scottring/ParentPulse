@@ -58,14 +58,14 @@ export default function Navigation() {
         borderBottom: '1px solid rgba(120, 100, 70, 0.12)',
       }}
     >
-      <div className="h-full px-6 sm:px-10 flex items-center justify-between mx-auto" style={{ maxWidth: 1200 }}>
+      <div className="h-full px-4 sm:px-6 flex items-center justify-between mx-auto" style={{ maxWidth: 1440 }}>
         {/* Wordmark — italic Cormorant, like a book's half-title */}
         <Link
           href="/workbook"
           className="hover:opacity-80 transition-opacity"
           style={{
             fontFamily: 'var(--font-parent-display)',
-            fontSize: 26,
+            fontSize: 24,
             fontWeight: 300,
             fontStyle: 'italic',
             color: '#3A3530',
@@ -89,7 +89,7 @@ export default function Navigation() {
                 href={link.href}
                 style={{
                   fontFamily: 'var(--font-parent-display)',
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: 400,
                   fontStyle: 'italic',
                   letterSpacing: '0.005em',
@@ -123,7 +123,7 @@ export default function Navigation() {
             <span
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: 15,
+                fontSize: 14,
                 fontWeight: 600,
                 letterSpacing: '0.12em',
                 textTransform: 'uppercase',
@@ -150,7 +150,7 @@ export default function Navigation() {
                 className="block px-4 py-2 transition-colors hover:bg-black/5"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: 14,
+                  fontSize: 13,
                   color: '#5C5347',
                   textDecoration: 'none',
                 }}
@@ -163,7 +163,7 @@ export default function Navigation() {
                 className="block w-full text-left px-4 py-2 transition-colors hover:bg-black/5"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: 14,
+                  fontSize: 13,
                   color: '#6B6254',
                 }}
               >

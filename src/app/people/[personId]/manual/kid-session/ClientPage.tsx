@@ -229,7 +229,7 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
         <div className="pt-[64px] pb-24">
           <div className="press-binder" style={{ maxWidth: 540 }}>
             <div className="press-empty" style={{ padding: '80px 20px' }}>
-              <div style={{ fontSize: 52, marginBottom: 20 }}>🎉</div>
+              <div style={{ fontSize: 48, marginBottom: 20 }}>🎉</div>
               <span
                 className="press-chapter-label"
                 style={{ display: 'block', textAlign: 'center' }}
@@ -238,14 +238,14 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
               </span>
               <h2
                 className="press-empty-title mt-4"
-                style={{ fontSize: 34 }}
+                style={{ fontSize: 31 }}
               >
                 Great work, {person.name}.
               </h2>
               <p className="press-empty-body">
                 Your answers have been saved. Thank you for sharing.
               </p>
-              <div className="press-fleuron" style={{ fontSize: 18 }}>
+              <div className="press-fleuron" style={{ fontSize: 17 }}>
                 ❦
               </div>
             </div>
@@ -268,7 +268,7 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
             </div>
 
             <div style={{ padding: '40px 40px 20px', textAlign: 'center' }}>
-              <div style={{ fontSize: 44, marginBottom: 18 }}>📖</div>
+              <div style={{ fontSize: 40, marginBottom: 18 }}>📖</div>
               <span className="press-chapter-label">For the grown-up</span>
               <h1
                 className="press-binder-title mt-2"
@@ -287,7 +287,7 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
             <div style={{ padding: '0 40px' }}>
               <p
                 className="press-body-italic"
-                style={{ fontSize: 17, textAlign: 'center', color: '#5C5347' }}
+                style={{ fontSize: 16, textAlign: 'center', color: '#5C5347' }}
               >
                 Sit with {person.name} and let them answer in their
                 own words. Read the questions aloud if they need it.
@@ -298,7 +298,7 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
               <p
                 className="press-marginalia"
                 style={{
-                  fontSize: 15,
+                  fontSize: 14,
                   textAlign: 'center',
                   marginTop: 20,
                   color: '#746856',
@@ -321,7 +321,7 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
                 style={{
                   background: 'transparent',
                   cursor: 'pointer',
-                  fontSize: 22,
+                  fontSize: 20,
                 }}
               >
                 Begin the session
@@ -354,8 +354,8 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
         background: 'rgba(124,144,130,0.05)',
       }}
     >
-      <p className="press-marginalia" style={{ fontSize: 14 }}>
-        <span className="press-sc" style={{ fontSize: 14 }}>DEMO</span> &nbsp;
+      <p className="press-marginalia" style={{ fontSize: 13 }}>
+        <span className="press-sc" style={{ fontSize: 13 }}>DEMO</span> &nbsp;
         Grown-up{' '}
         <strong
           style={{ color: '#3A3530', fontStyle: 'normal', fontWeight: 500 }}

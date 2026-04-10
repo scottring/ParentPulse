@@ -218,19 +218,23 @@ export default function FamilyManualPage() {
       <SideNav />
 
       <div className="pt-[64px] pb-24">
-        <div className="relish-container" style={{ maxWidth: 1120 }}>
+        <div className="relish-container">
 
           {/* The volume */}
           <div className="press-volume mt-8 relative overflow-hidden">
 
-            {/* Running header */}
-            <div className="press-running-header">
-              <span>The Family Manual</span>
-              <span className="sep">·</span>
-              <span>A shared work</span>
-              <span className="sep">·</span>
-              <span>Kept by {(user.name || 'You').split(' ')[0]}</span>
-            </div>
+            {/* Masthead — the nameplate that anchors the volume */}
+            <header className="press-masthead">
+              <div className="press-masthead-rule" aria-hidden="true" />
+              <h1 className="press-masthead-title">The Family Manual</h1>
+              <div className="press-masthead-fleuron" aria-hidden="true">❦</div>
+              <p className="press-masthead-meta">
+                <span>A Shared Work</span>
+                <span className="sep">·</span>
+                <span>Kept by {(user.name || 'You').split(' ')[0]}</span>
+              </p>
+              <div className="press-masthead-rule" aria-hidden="true" />
+            </header>
 
             {/* The two-page spread */}
             <div className="spread-container relative">
@@ -268,7 +272,7 @@ export default function FamilyManualPage() {
                         >
                           <p
                             className="press-body-italic"
-                            style={{ fontSize: 15, margin: 0 }}
+                            style={{ fontSize: 14, margin: 0 }}
                           >
                             {insightDash(insight.type)} {insight.text}
                           </p>
@@ -392,7 +396,7 @@ export default function FamilyManualPage() {
                       key={entry.id}
                       href={entry.route || '#'}
                       className="press-marginalia hover:opacity-70 transition-opacity"
-                      style={{ textDecoration: 'none', fontSize: 15 }}
+                      style={{ textDecoration: 'none', fontSize: 14 }}
                     >
                       <em>{entry.text}</em>
                       {entry.date && (
@@ -427,7 +431,7 @@ export default function FamilyManualPage() {
             </button>
             <p
               className="press-marginalia mt-2"
-              style={{ fontSize: 15, color: '#7A6E5C' }}
+              style={{ fontSize: 14, color: '#7A6E5C' }}
             >
               Ask the AI to re-read every perspective and refresh each
               volume&rsquo;s synthesized overview.

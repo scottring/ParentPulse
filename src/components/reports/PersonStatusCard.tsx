@@ -54,20 +54,20 @@ export function PersonStatusCard({ person, manual, assessments, periodMs }: Prop
             className="w-9 h-9 rounded-full flex items-center justify-center"
             style={{ background: 'rgba(124,144,130,0.08)', border: '1.5px solid rgba(124,144,130,0.2)' }}
           >
-            <span style={{ fontFamily: 'var(--font-parent-display)', fontSize: '14px', color: '#3A3530' }}>
+            <span style={{ fontFamily: 'var(--font-parent-display)', fontSize: '19px', color: '#3A3530' }}>
               {person.name.charAt(0).toUpperCase()}
             </span>
           </div>
           <div>
-            <h4 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '15px', fontWeight: 500, color: '#3A3530' }}>
+            <h4 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '21px', fontWeight: 500, color: '#3A3530' }}>
               {person.name}
             </h4>
-            <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#5F564B' }}>
+            <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '21px', color: '#5F564B' }}>
               {personAssessments.length} dimensions tracked
             </span>
           </div>
         </div>
-        <span style={{ color: '#5F564B', fontSize: '14px', transition: 'transform 0.2s', transform: expanded ? 'rotate(180deg)' : 'none' }}>
+        <span style={{ color: '#5F564B', fontSize: '19px', transition: 'transform 0.2s', transform: expanded ? 'rotate(180deg)' : 'none' }}>
           &#9662;
         </span>
       </button>
@@ -87,24 +87,24 @@ export function PersonStatusCard({ person, manual, assessments, periodMs }: Prop
                 return (
                   <div key={a.assessmentId} className="flex items-center justify-between">
                     <span
-                      className="text-[12px] capitalize"
+                      className="text-[17px] capitalize"
                       style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}
                     >
                       {a.dimensionId.replace(/_/g, ' ')}
                     </span>
                     <div className="flex items-center gap-2">
                       {baselineScore !== undefined && (
-                        <span className="text-[10px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
+                        <span className="text-[14px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
                           from {baselineScore.toFixed(1)}
                         </span>
                       )}
                       <span
-                        className="text-[12px] font-medium"
+                        className="text-[17px] font-medium"
                         style={{ fontFamily: 'var(--font-parent-body)', color: '#3A3530' }}
                       >
                         {a.currentScore.toFixed(1)}
                       </span>
-                      <span style={{ color: t.color, fontSize: '14px' }}>{t.symbol}</span>
+                      <span style={{ color: t.color, fontSize: '19px' }}>{t.symbol}</span>
                     </div>
                   </div>
                 );
@@ -116,14 +116,14 @@ export function PersonStatusCard({ person, manual, assessments, periodMs }: Prop
           {recentGaps.length > 0 && (
             <div className="pt-2">
               <span
-                className="text-[10px] font-medium uppercase tracking-wider"
+                className="text-[14px] font-medium uppercase tracking-wider"
                 style={{ fontFamily: 'var(--font-parent-body)', color: '#d97706' }}
               >
                 Notable gaps
               </span>
               <div className="mt-1 space-y-1">
                 {recentGaps.slice(0, 3).map((g) => (
-                  <p key={g.id} className="text-[11px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
+                  <p key={g.id} className="text-[16px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
                     {g.topic}: {g.synthesis}
                   </p>
                 ))}
@@ -134,7 +134,7 @@ export function PersonStatusCard({ person, manual, assessments, periodMs }: Prop
           {/* Link to portrait */}
           <Link
             href={`/people/${person.personId}/portrait`}
-            className="inline-block text-[11px] mt-2 hover:underline"
+            className="inline-block text-[16px] mt-2 hover:underline"
             style={{ fontFamily: 'var(--font-parent-body)', color: '#7C9082' }}
           >
             View full portrait &rarr;

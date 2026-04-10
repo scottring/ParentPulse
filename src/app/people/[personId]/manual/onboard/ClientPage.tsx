@@ -300,13 +300,13 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
               <span className="press-chapter-label" style={{ display: 'block', textAlign: 'center' }}>
                 Saved
               </span>
-              <h2 className="press-empty-title mt-4" style={{ fontSize: 34 }}>
+              <h2 className="press-empty-title mt-4" style={{ fontSize: 31 }}>
                 Your observations are kept.
               </h2>
               <p className="press-empty-body">
                 Returning to {person.name}&rsquo;s volume&hellip;
               </p>
-              <div className="press-fleuron" style={{ fontSize: 18 }}>❦</div>
+              <div className="press-fleuron" style={{ fontSize: 17 }}>❦</div>
             </div>
           </div>
         </div>
@@ -334,8 +334,8 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
         background: 'rgba(124,144,130,0.05)',
       }}
     >
-      <p className="press-marginalia" style={{ fontSize: 14 }}>
-        <span className="press-sc" style={{ fontSize: 14 }}>DEMO</span> &nbsp;
+      <p className="press-marginalia" style={{ fontSize: 13 }}>
+        <span className="press-sc" style={{ fontSize: 13 }}>DEMO</span> &nbsp;
         <strong style={{ color: '#3A3530', fontStyle: 'normal', fontWeight: 500 }}>{user?.name}</strong>
         {' '}sharing observations about{' '}
         <strong style={{ color: '#2D5F5D', fontStyle: 'normal', fontWeight: 500 }}>{person.name}</strong>
@@ -374,7 +374,7 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
               background: 'transparent',
               border: 0,
               cursor: 'pointer',
-              fontSize: 14,
+              fontSize: 13,
               color: '#7A6E5C',
             }}
           >
@@ -390,7 +390,7 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
           background: 'transparent',
           cursor: isSubmitting ? 'wait' : 'pointer',
           opacity: isSubmitting ? 0.5 : 1,
-          fontSize: 19,
+          fontSize: 17,
         }}
       >
         {isSubmitting
@@ -442,7 +442,7 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
         {displayHelper && (
           <p
             className="press-body-italic"
-            style={{ fontSize: 15, marginBottom: 28, color: '#5F564B' }}
+            style={{ fontSize: 14, marginBottom: 28, color: '#5F564B' }}
           >
             {displayHelper}
           </p>

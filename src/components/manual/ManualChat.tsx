@@ -67,7 +67,7 @@ export function ManualChat({ personId, personName, manual }: ManualChatProps) {
                 className="block text-left w-full py-2.5"
                 style={{
                   fontFamily: 'var(--font-parent-display)',
-                  fontSize: 17,
+                  fontSize: 16,
                   fontStyle: 'italic',
                   color: '#5C5347',
                   background: 'transparent',
@@ -145,7 +145,7 @@ export function ManualChat({ personId, personName, manual }: ManualChatProps) {
               <p
                 className="press-body-italic"
                 style={{
-                  fontSize: 17,
+                  fontSize: 16,
                   color: '#746856',
                 }}
               >
@@ -158,7 +158,7 @@ export function ManualChat({ personId, personName, manual }: ManualChatProps) {
             <div style={{ paddingTop: 14 }}>
               <p
                 className="press-marginalia"
-                style={{ fontSize: 15, color: '#C08070' }}
+                style={{ fontSize: 14, color: '#C08070' }}
               >
                 — {error}
               </p>
@@ -177,7 +177,7 @@ export function ManualChat({ personId, personName, manual }: ManualChatProps) {
         >
           <span
             className="press-marginalia"
-            style={{ fontSize: 15, color: '#7C9082', flexShrink: 0 }}
+            style={{ fontSize: 14, color: '#7C9082', flexShrink: 0 }}
           >
             →
           </span>
@@ -192,7 +192,7 @@ export function ManualChat({ personId, personName, manual }: ManualChatProps) {
             className="flex-1 focus:outline-none resize-none disabled:opacity-50"
             style={{
               fontFamily: 'var(--font-parent-display)',
-              fontSize: 18,
+              fontSize: 17,
               fontStyle: 'italic',
               color: '#3A3530',
               background: 'transparent',
@@ -228,7 +228,7 @@ export function ManualChat({ personId, personName, manual }: ManualChatProps) {
                 background: 'transparent',
                 border: 0,
                 cursor: 'pointer',
-                fontSize: 14,
+                fontSize: 13,
                 color: '#7A6E5C',
               }}
             >

@@ -62,7 +62,7 @@ export function AddBoundaryModal({ isOpen, onClose, onSave, personName }: AddBou
       >
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="flex items-center gap-2" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '24px', fontWeight: 400, color: '#3A3530' }}>
+            <h2 className="flex items-center gap-2" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '33px', fontWeight: 400, color: '#3A3530' }}>
               <span className="text-3xl">🛡️</span>
               <span>Add Boundary</span>
             </h2>
@@ -181,7 +181,7 @@ export function AddBoundaryModal({ isOpen, onClose, onSave, personName }: AddBou
                 onClick={onClose}
                 disabled={saving}
                 className="px-6 py-3 rounded-full transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ border: '1px solid rgba(255,255,255,0.4)', color: '#5C5347', fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500 }}
+                style={{ border: '1px solid rgba(255,255,255,0.4)', color: '#5C5347', fontFamily: 'var(--font-parent-body)', fontSize: '19px', fontWeight: 500 }}
               >
                 Cancel
               </button>
@@ -189,7 +189,7 @@ export function AddBoundaryModal({ isOpen, onClose, onSave, personName }: AddBou
                 type="submit"
                 disabled={saving}
                 className="px-8 py-3 rounded-full text-white transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: '#7C9082', fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500 }}
+                style={{ backgroundColor: '#7C9082', fontFamily: 'var(--font-parent-body)', fontSize: '19px', fontWeight: 500 }}
               >
                 {saving ? 'Saving...' : 'Add Boundary'}
               </button>

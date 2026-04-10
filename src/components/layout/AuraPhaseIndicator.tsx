@@ -49,7 +49,7 @@ export default function AuraPhaseIndicator({ phase, compact = false }: AuraPhase
         <span
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: 600,
             letterSpacing: '0.1em',
             textTransform: 'uppercase',

@@ -249,7 +249,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                   </div>
                 )}
                 {inviteSent && (
-                  <p className="press-body-italic mt-5 mb-6" style={{ fontSize: 15 }}>
+                  <p className="press-body-italic mt-5 mb-6" style={{ fontSize: 14 }}>
                     An invitation has been sent to <span className="press-sc">{inviteEmail}</span>.
                   </p>
                 )}
@@ -257,13 +257,13 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                 {/* Overview */}
                 {synth?.overview ? (
                   <div className="mt-6">
-                    <p className="press-body press-drop-cap" style={{ fontSize: 18 }}>
+                    <p className="press-body press-drop-cap" style={{ fontSize: 17 }}>
                       {synth.overview}
                     </p>
                   </div>
                 ) : (
                   <div className="mt-6">
-                    <p className="press-body-italic" style={{ fontSize: 17 }}>
+                    <p className="press-body-italic" style={{ fontSize: 16 }}>
                       No overview yet. The synthesis gathers as
                       perspectives are added to this volume.
                     </p>
@@ -277,7 +277,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                     <span className="press-chapter-label">In their nature</span>
                     <p
                       className="press-body-italic mt-2"
-                      style={{ fontSize: 18, lineHeight: 1.55 }}
+                      style={{ fontSize: 17, lineHeight: 1.55 }}
                     >
                       {strengths.slice(0, -1).map((s, i) => (
                         <span key={i}>{s.toLowerCase()}, </span>
@@ -295,7 +295,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                     <span className="press-chapter-label">Where perspectives differ</span>
                     <h3
                       className="press-display-sm mt-2"
-                      style={{ fontSize: 21, marginBottom: 10 }}
+                      style={{ fontSize: 19, marginBottom: 10 }}
                     >
                       {topGap.topic}
                     </h3>
@@ -303,7 +303,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                       <blockquote
                         className="press-body-italic"
                         style={{
-                          fontSize: 15,
+                          fontSize: 14,
                           marginBottom: 10,
                           paddingLeft: 18,
                           borderLeft: '1px solid rgba(124,144,130,0.5)',
@@ -311,7 +311,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                       >
                         <span
                           className="press-chapter-label"
-                          style={{ fontSize: 9, display: 'block', marginBottom: 3 }}
+                          style={{ fontSize: 8, display: 'block', marginBottom: 3 }}
                         >
                           In their own words
                         </span>
@@ -322,14 +322,14 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                       <blockquote
                         className="press-body-italic"
                         style={{
-                          fontSize: 15,
+                          fontSize: 14,
                           paddingLeft: 18,
                           borderLeft: '1px solid rgba(196,162,101,0.5)',
                         }}
                       >
                         <span
                           className="press-chapter-label"
-                          style={{ fontSize: 9, display: 'block', marginBottom: 3 }}
+                          style={{ fontSize: 8, display: 'block', marginBottom: 3 }}
                         >
                           From the outside
                         </span>
@@ -375,7 +375,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                       >
                         <p
                           className="press-body"
-                          style={{ fontSize: 17, textAlign: 'left' }}
+                          style={{ fontSize: 16, textAlign: 'left' }}
                         >
                           {s.description}
                         </p>
@@ -383,7 +383,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                     ))}
                   </div>
                 ) : (
-                  <p className="press-body-italic" style={{ fontSize: 15 }}>
+                  <p className="press-body-italic" style={{ fontSize: 14 }}>
                     Not yet written. This chapter fills itself as you
                     and others contribute observations.
                   </p>
@@ -409,14 +409,14 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                       >
                         <p
                           className="press-body"
-                          style={{ fontSize: 17, textAlign: 'left', marginBottom: 6 }}
+                          style={{ fontSize: 16, textAlign: 'left', marginBottom: 6 }}
                         >
                           {t.description}
                         </p>
                         {t.deescalationStrategy && (
                           <p
                             className="press-marginalia"
-                            style={{ fontSize: 14 }}
+                            style={{ fontSize: 13 }}
                           >
                             <em>{t.deescalationStrategy}</em>
                           </p>
@@ -425,7 +425,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                     ))}
                   </div>
                 ) : (
-                  <p className="press-body-italic" style={{ fontSize: 15 }}>
+                  <p className="press-body-italic" style={{ fontSize: 14 }}>
                     Not yet written.
                   </p>
                 )}
@@ -450,7 +450,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                         >
                           <p
                             className="press-body"
-                            style={{ fontSize: 17, textAlign: 'left' }}
+                            style={{ fontSize: 16, textAlign: 'left' }}
                           >
                             {p.description}
                           </p>
@@ -489,7 +489,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                   <span className="press-chapter-label">A question</span>
                   <h3
                     className="press-display-sm mt-2 mb-4"
-                    style={{ fontSize: 22 }}
+                    style={{ fontSize: 20 }}
                   >
                     Ask this manual anything
                   </h3>
@@ -499,7 +499,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                     style={{
                       background: 'transparent',
                       cursor: 'pointer',
-                      fontSize: 18,
+                      fontSize: 17,
                     }}
                   >
                     Open the conversation
@@ -507,7 +507,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                   </button>
                   <p
                     className="press-marginalia mt-4"
-                    style={{ fontSize: 14, textAlign: 'center' }}
+                    style={{ fontSize: 13, textAlign: 'center' }}
                   >
                     A companion grounded in everything above. Your own
                     words feed back into the volume.
@@ -581,7 +581,7 @@ function DropdownMenu({
     display: 'block',
     padding: '12px 20px',
     fontFamily: 'var(--font-parent-display)',
-    fontSize: 15,
+    fontSize: 14,
     fontStyle: 'italic',
     color: '#3A3530',
     textDecoration: 'none',
@@ -694,7 +694,7 @@ function InviteForm({
         borderBottom: '1px solid rgba(200,190,172,0.5)',
       }}
     >
-      <p className="press-body-italic mb-3" style={{ fontSize: 15 }}>
+      <p className="press-body-italic mb-3" style={{ fontSize: 14 }}>
         Invite {person.name} to add their own perspective.
       </p>
       <div className="flex gap-2 items-baseline">
@@ -706,7 +706,7 @@ function InviteForm({
           className="flex-1 focus:outline-none"
           style={{
             fontFamily: 'var(--font-parent-display)',
-            fontSize: 16,
+            fontSize: 15,
             fontStyle: 'italic',
             color: '#3A3530',
             background: 'transparent',
@@ -738,7 +738,7 @@ function InviteForm({
       {inviteError && (
         <p
           className="press-marginalia mt-2"
-          style={{ color: '#C08070', fontSize: 14 }}
+          style={{ color: '#C08070', fontSize: 13 }}
         >
           {inviteError}
         </p>

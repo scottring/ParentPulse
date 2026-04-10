@@ -102,7 +102,7 @@ export default function RelationshipNavigator({ familyName, members, onNavigate 
 
         .family-title {
           font-family: var(--font-heading);
-          font-size: 24px;
+          font-size: 33px;
           font-weight: 700;
           color: #1e3a32;
           margin-bottom: 4px;
@@ -112,7 +112,7 @@ export default function RelationshipNavigator({ familyName, members, onNavigate 
         }
 
         .family-subtitle {
-          font-size: 13px;
+          font-size: 18px;
           color: #78716c;
           font-style: italic;
         }
@@ -142,7 +142,7 @@ export default function RelationshipNavigator({ familyName, members, onNavigate 
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 14px;
+          font-size: 19px;
           font-weight: 600;
           color: #57534e;
           text-transform: uppercase;
@@ -150,11 +150,11 @@ export default function RelationshipNavigator({ familyName, members, onNavigate 
         }
 
         .section-icon {
-          font-size: 18px;
+          font-size: 25px;
         }
 
         .section-count {
-          font-size: 11px;
+          font-size: 16px;
           background: #e7e5e4;
           color: #57534e;
           padding: 2px 8px;
@@ -163,7 +163,7 @@ export default function RelationshipNavigator({ familyName, members, onNavigate 
         }
 
         .expand-icon {
-          font-size: 12px;
+          font-size: 17px;
           color: #a8a29e;
           transition: transform 0.2s ease;
         }
@@ -234,7 +234,7 @@ export default function RelationshipNavigator({ familyName, members, onNavigate 
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 16px;
+          font-size: 22px;
           flex-shrink: 0;
           position: relative;
         }
@@ -270,7 +270,7 @@ export default function RelationshipNavigator({ familyName, members, onNavigate 
         }
 
         .member-name {
-          font-size: 15px;
+          font-size: 21px;
           font-weight: 600;
           color: #292524;
           white-space: nowrap;
@@ -279,7 +279,7 @@ export default function RelationshipNavigator({ familyName, members, onNavigate 
         }
 
         .member-type {
-          font-size: 12px;
+          font-size: 17px;
           color: #78716c;
           text-transform: capitalize;
         }
@@ -305,7 +305,7 @@ export default function RelationshipNavigator({ familyName, members, onNavigate 
         }
 
         .family-level-icon {
-          font-size: 24px;
+          font-size: 33px;
         }
 
         .family-level-text {
@@ -313,13 +313,13 @@ export default function RelationshipNavigator({ familyName, members, onNavigate 
         }
 
         .family-level-title {
-          font-size: 15px;
+          font-size: 21px;
           font-weight: 700;
           margin-bottom: 2px;
         }
 
         .family-level-subtitle {
-          font-size: 12px;
+          font-size: 17px;
           opacity: 0.9;
         }
 
@@ -340,7 +340,7 @@ export default function RelationshipNavigator({ familyName, members, onNavigate 
           border: 2px dashed #d6d3d1;
           border-radius: 8px;
           color: #78716c;
-          font-size: 14px;
+          font-size: 19px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s ease;

@@ -29,13 +29,13 @@ export default function ArcHeader({ arc, progress }: ArcHeaderProps) {
       {/* Top badge row */}
       <div className="flex items-center gap-2 mb-3">
         <span
-          className="text-[10px] font-medium px-2.5 py-0.5 rounded-full text-white"
+          className="text-[14px] font-medium px-2.5 py-0.5 rounded-full text-white"
           style={{ fontFamily: 'var(--font-parent-body)', background: '#3A3530' }}
         >
           Growth Arc
         </span>
         <span
-          className="text-[10px]"
+          className="text-[14px]"
           style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
         >
           Level {arc.level} &middot; {arc.levelTitle}
@@ -70,7 +70,7 @@ export default function ArcHeader({ arc, progress }: ArcHeaderProps) {
       {/* Research basis */}
       {arc.researchBasis && (
         <p
-          className="text-[10px] mb-3 pl-9"
+          className="text-[14px] mb-3 pl-9"
           style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
         >
           {arc.researchBasis}
@@ -81,13 +81,13 @@ export default function ArcHeader({ arc, progress }: ArcHeaderProps) {
       <div className="pl-9">
         <div className="flex items-center justify-between mb-1">
           <span
-            className="text-[10px]"
+            className="text-[14px]"
             style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
           >
             Week {arc.currentWeek} of {arc.durationWeeks} &middot; {phaseLabel} Phase
           </span>
           <span
-            className="text-[10px]"
+            className="text-[14px]"
             style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
           >
             {arc.completedItemCount}/{arc.totalItemCount}
@@ -107,7 +107,7 @@ export default function ArcHeader({ arc, progress }: ArcHeaderProps) {
       {/* Participants */}
       <div className="pl-9 mt-3">
         <span
-          className="text-[10px]"
+          className="text-[14px]"
           style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
         >
           {arc.participantNames.join(' & ')} &middot; {arc.dimensionName}

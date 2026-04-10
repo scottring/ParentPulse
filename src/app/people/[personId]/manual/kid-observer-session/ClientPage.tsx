@@ -309,21 +309,21 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
         <div className="pt-[64px] pb-24">
           <div className="press-binder" style={{ maxWidth: 540 }}>
             <div className="press-empty" style={{ padding: '80px 20px' }}>
-              <div style={{ fontSize: 52, marginBottom: 20 }}>🎉</div>
+              <div style={{ fontSize: 48, marginBottom: 20 }}>🎉</div>
               <span
                 className="press-chapter-label"
                 style={{ display: 'block', textAlign: 'center' }}
               >
                 Kept
               </span>
-              <h2 className="press-empty-title mt-4" style={{ fontSize: 32 }}>
+              <h2 className="press-empty-title mt-4" style={{ fontSize: 29 }}>
                 Great work, {observerPerson.name}.
               </h2>
               <p className="press-empty-body">
                 Thank you for telling us about {subject.name}. Your
                 answers have been saved.
               </p>
-              <div className="press-fleuron" style={{ fontSize: 18 }}>❦</div>
+              <div className="press-fleuron" style={{ fontSize: 17 }}>❦</div>
             </div>
           </div>
         </div>
@@ -344,7 +344,7 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
             </div>
 
             <div style={{ padding: '40px 40px 20px', textAlign: 'center' }}>
-              <div style={{ fontSize: 44, marginBottom: 18 }}>💬</div>
+              <div style={{ fontSize: 40, marginBottom: 18 }}>💬</div>
               <span className="press-chapter-label">For the grown-up</span>
               <h1
                 className="press-binder-title mt-2"
@@ -366,7 +366,7 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
             <div style={{ padding: '0 40px' }}>
               <p
                 className="press-body-italic"
-                style={{ fontSize: 17, textAlign: 'center', color: '#5C5347' }}
+                style={{ fontSize: 16, textAlign: 'center', color: '#5C5347' }}
               >
                 {isRevising
                   ? `The old answers will be kept in history as ${observerPerson.name} makes changes. Read the questions aloud if needed.`
@@ -375,7 +375,7 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
               <p
                 className="press-marginalia"
                 style={{
-                  fontSize: 15,
+                  fontSize: 14,
                   textAlign: 'center',
                   marginTop: 20,
                   color: '#746856',
@@ -398,7 +398,7 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
                 style={{
                   background: 'transparent',
                   cursor: 'pointer',
-                  fontSize: 22,
+                  fontSize: 20,
                 }}
               >
                 Begin the session
@@ -476,7 +476,7 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
         </div>
         <span
           className="press-marginalia"
-          style={{ fontSize: 14 }}
+          style={{ fontSize: 13 }}
         >
           {currentQuestionNumber} of {totalQuestions}
         </span>

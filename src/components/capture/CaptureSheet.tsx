@@ -273,7 +273,7 @@ function ComposingView({
         <h2
           style={{
             fontFamily: 'var(--font-parent-display)',
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: 400,
             color: '#3A3530',
           }}
@@ -283,7 +283,7 @@ function ComposingView({
         <button
           onClick={onClose}
           className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5"
-          style={{ fontSize: 18, color: '#5F564B' }}
+          style={{ fontSize: 17, color: '#5F564B' }}
         >
           &times;
         </button>
@@ -298,7 +298,7 @@ function ComposingView({
         className="w-full resize-none rounded-2xl px-4 py-3 mb-4"
         style={{
           fontFamily: 'var(--font-parent-body)',
-          fontSize: 15,
+          fontSize: 14,
           lineHeight: 1.6,
           color: '#3A3530',
           background: 'rgba(0,0,0,0.03)',
@@ -320,7 +320,7 @@ function ComposingView({
                 className="px-3 py-1.5 rounded-full transition-all"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: selected ? 500 : 400,
                   background: selected
                     ? 'color-mix(in srgb, #7C9082 12%, white)'
@@ -346,7 +346,7 @@ function ComposingView({
             className="mb-2"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: 600,
               letterSpacing: '0.12em',
               textTransform: 'uppercase',
@@ -365,7 +365,7 @@ function ComposingView({
                   className="px-3 py-1.5 rounded-full transition-all"
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: selected ? 500 : 400,
                     background: selected
                       ? 'color-mix(in srgb, #7C9082 12%, white)'
@@ -391,11 +391,11 @@ function ComposingView({
           className="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-black/5 transition-colors"
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: 15,
+            fontSize: 14,
             color: isPrivate ? '#7C9082' : '#6B6254',
           }}
         >
-          <span style={{ fontSize: 15 }}>{isPrivate ? '🔒' : '👁'}</span>
+          <span style={{ fontSize: 14 }}>{isPrivate ? '🔒' : '👁'}</span>
           {isPrivate ? 'Private' : 'Family visible'}
         </button>
       </div>
@@ -412,7 +412,7 @@ function ComposingView({
             className="py-3 rounded-full transition-all hover:opacity-90 disabled:opacity-30"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: 500,
               background: 'rgba(0,0,0,0.04)',
               color: '#3A3530',
@@ -427,7 +427,7 @@ function ComposingView({
             className="py-3 rounded-full transition-all hover:opacity-90 disabled:opacity-30"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: 500,
               background: '#7C9082',
               color: 'white',
@@ -440,7 +440,7 @@ function ComposingView({
           className="mt-2 text-center"
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: 14,
+            fontSize: 13,
             color: '#746856',
             fontStyle: 'italic',
           }}
@@ -494,7 +494,7 @@ function ChattingView({
           <h2
             style={{
               fontFamily: 'var(--font-parent-display)',
-              fontSize: 17,
+              fontSize: 16,
               fontWeight: 500,
               color: '#3A3530',
             }}
@@ -504,7 +504,7 @@ function ChattingView({
           <p
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: 14,
+              fontSize: 13,
               color: '#746856',
               marginTop: 1,
             }}
@@ -517,7 +517,7 @@ function ChattingView({
         <button
           onClick={onClose}
           className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5"
-          style={{ fontSize: 18, color: '#5F564B' }}
+          style={{ fontSize: 17, color: '#5F564B' }}
         >
           &times;
         </button>
@@ -554,7 +554,7 @@ function ChattingView({
                       : 'rgba(0,0,0,0.05)'
                   }`,
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: 14,
+                  fontSize: 13,
                   lineHeight: 1.55,
                   color: '#3A3530',
                   whiteSpace: 'pre-wrap',
@@ -573,7 +573,7 @@ function ChattingView({
                   background: 'rgba(0,0,0,0.03)',
                   border: '1px solid rgba(0,0,0,0.05)',
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: 14,
+                  fontSize: 13,
                   color: '#746856',
                   fontStyle: 'italic',
                 }}
@@ -601,7 +601,7 @@ function ChattingView({
             className="flex-1 rounded-full px-4 py-2.5"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: 14,
+              fontSize: 13,
               color: '#3A3530',
               background: 'rgba(0,0,0,0.03)',
               border: '1px solid rgba(0,0,0,0.08)',
@@ -614,7 +614,7 @@ function ChattingView({
             className="px-5 rounded-full transition-all hover:opacity-90 disabled:opacity-30"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: 500,
               background: '#7C9082',
               color: 'white',

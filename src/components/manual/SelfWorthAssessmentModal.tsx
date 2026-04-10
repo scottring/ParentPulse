@@ -204,13 +204,13 @@ export function SelfWorthAssessmentModal({
         {/* Header */}
         <div className="flex items-start justify-between mb-8">
           <div>
-            <div className="inline-block px-3 py-1 rounded-full text-white mb-4" style={{ backgroundColor: '#7C9082', fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>
+            <div className="inline-block px-3 py-1 rounded-full text-white mb-4" style={{ backgroundColor: '#7C9082', fontFamily: 'var(--font-parent-body)', fontSize: '17px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>
               Self-worth portrait (RSES)
             </div>
-            <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '28px', fontWeight: 400, color: '#3A3530' }}>
+            <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '39px', fontWeight: 400, color: '#3A3530' }}>
               Self-Worth Portrait for {personName}
             </h2>
-            <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5C5347' }} className="mt-2">
+            <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: '#5C5347' }} className="mt-2">
               Question {currentQuestionIndex + 1} of {SELF_WORTH_QUESTIONS.length}
             </p>
           </div>
@@ -240,16 +240,16 @@ export function SelfWorthAssessmentModal({
         {/* Question */}
         <div className="mb-8">
           <div className="glass-card p-8 rounded-2xl">
-            <div className="inline-block px-3 py-1 rounded-full text-white mb-4" style={{ backgroundColor: '#7C9082', fontFamily: 'var(--font-parent-body)', fontSize: '12px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>
+            <div className="inline-block px-3 py-1 rounded-full text-white mb-4" style={{ backgroundColor: '#7C9082', fontFamily: 'var(--font-parent-body)', fontSize: '17px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>
               {currentQuestion.domain}
             </div>
-            <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '24px', fontWeight: 400, color: '#3A3530' }} className="mb-6">
+            <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '33px', fontWeight: 400, color: '#3A3530' }} className="mb-6">
               {currentQuestion.question.replace('{{personName}}', personName)}
             </h3>
 
             {/* Likert Scale */}
             <div className="space-y-3">
-              <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5C5347' }} className="mb-4">
+              <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: '#5C5347' }} className="mb-4">
                 How much do you agree with this statement?
               </p>
               <div className="grid grid-cols-1 gap-3">
@@ -265,7 +265,7 @@ export function SelfWorthAssessmentModal({
                     className="p-4 text-left rounded-2xl transition-all"
                     style={{
                       fontFamily: 'var(--font-parent-body)',
-                      fontSize: '14px',
+                      fontSize: '19px',
                       fontWeight: 500,
                       ...(currentAnswer?.primary === option.value
                         ? { backgroundColor: '#7C9082', color: 'white', border: '1px solid #7C9082' }
@@ -281,7 +281,7 @@ export function SelfWorthAssessmentModal({
             {/* Optional Qualitative Comment */}
             {currentAnswer?.primary && (
               <div className="mt-6 pt-6" style={{ borderTop: '1px solid rgba(255,255,255,0.4)' }}>
-                <label style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5C5347' }} className="block mb-2">
+                <label style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: '#5C5347' }} className="block mb-2">
                   Optional: Add any additional context or notes
                 </label>
                 <textarea
@@ -289,7 +289,7 @@ export function SelfWorthAssessmentModal({
                   onChange={(e) => handleQualitativeChange(e.target.value)}
                   placeholder="e.g., This varies depending on..."
                   className="w-full px-4 py-3 rounded-xl focus:outline-none"
-                  style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#3A3530', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.5)' }}
+                  style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: '#3A3530', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.5)' }}
                   rows={3}
                 />
               </div>
@@ -300,7 +300,7 @@ export function SelfWorthAssessmentModal({
         {/* Error Message */}
         {error && (
           <div className="mb-6 p-4 rounded-2xl" style={{ background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)' }}>
-            <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#dc2626' }}>{error}</p>
+            <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: '#dc2626' }}>{error}</p>
           </div>
         )}
 
@@ -310,7 +310,7 @@ export function SelfWorthAssessmentModal({
             onClick={handlePrevious}
             disabled={currentQuestionIndex === 0 || saving}
             className="px-6 py-3 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500, color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)' }}
+            style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', fontWeight: 500, color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)' }}
           >
             Previous
           </button>
@@ -321,7 +321,7 @@ export function SelfWorthAssessmentModal({
                 onClick={handleNext}
                 disabled={!currentAnswer?.primary || saving}
                 className="px-6 py-3 rounded-full text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg"
-                style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500, backgroundColor: '#7C9082' }}
+                style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', fontWeight: 500, backgroundColor: '#7C9082' }}
               >
                 Next
               </button>
@@ -330,7 +330,7 @@ export function SelfWorthAssessmentModal({
                 onClick={handleSubmit}
                 disabled={!allQuestionsAnswered || saving}
                 className="px-8 py-3 rounded-full text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg"
-                style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500, backgroundColor: '#7C9082' }}
+                style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', fontWeight: 500, backgroundColor: '#7C9082' }}
               >
                 {generating ? 'Generating insights...' : saving ? 'Saving...' : 'Complete assessment'}
               </button>

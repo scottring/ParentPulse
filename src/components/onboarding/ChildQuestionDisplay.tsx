@@ -67,7 +67,7 @@ export default function ChildQuestionDisplay({
             className="w-full focus:outline-none"
             style={{
               fontFamily: 'var(--font-parent-display)',
-              fontSize: 22,
+              fontSize: 20,
               fontStyle: 'italic',
               color: '#3A3530',
               background: 'transparent',
@@ -115,7 +115,7 @@ export default function ChildQuestionDisplay({
             {question.scaleLabels && (
               <div
                 className="flex justify-between press-marginalia"
-                style={{ fontSize: 15, marginTop: 14, padding: '0 12px' }}
+                style={{ fontSize: 14, marginTop: 14, padding: '0 12px' }}
               >
                 <em>{question.scaleLabels.min}</em>
                 <em>{question.scaleLabels.max}</em>
@@ -154,7 +154,7 @@ export default function ChildQuestionDisplay({
                     {option.emoji && (
                       <span
                         style={{
-                          fontSize: 32,
+                          fontSize: 29,
                           opacity: isSelected ? 1 : 0.7,
                           transition: 'opacity 0.2s ease',
                         }}
@@ -165,7 +165,7 @@ export default function ChildQuestionDisplay({
                     <span
                       style={{
                         fontFamily: 'var(--font-parent-display)',
-                        fontSize: 19,
+                        fontSize: 17,
                         fontStyle: 'italic',
                         fontWeight: isSelected ? 500 : 400,
                         color: isSelected ? '#3A3530' : '#5C5347',
@@ -181,7 +181,7 @@ export default function ChildQuestionDisplay({
                           fontFamily: 'var(--font-parent-display)',
                           fontStyle: 'italic',
                           color: '#2D5F5D',
-                          fontSize: 18,
+                          fontSize: 17,
                         }}
                       >
                         ✓
@@ -230,7 +230,7 @@ export default function ChildQuestionDisplay({
                   <div className="flex items-baseline" style={{ gap: 12 }}>
                     <span
                       style={{
-                        fontSize: 20,
+                        fontSize: 18,
                         opacity: isSelected ? 1 : 0.55,
                         width: 26,
                         flexShrink: 0,
@@ -242,7 +242,7 @@ export default function ChildQuestionDisplay({
                     <span
                       style={{
                         fontFamily: 'var(--font-parent-display)',
-                        fontSize: 18,
+                        fontSize: 17,
                         fontStyle: 'italic',
                         fontWeight: isSelected ? 500 : 400,
                         color: isSelected ? '#3A3530' : '#5C5347',
@@ -265,7 +265,7 @@ export default function ChildQuestionDisplay({
           <div>
             <p
               className="press-body-italic"
-              style={{ fontSize: 15, marginBottom: 14 }}
+              style={{ fontSize: 14, marginBottom: 14 }}
             >
               Drawing isn&rsquo;t here yet. For now, tell us what
               you&rsquo;d draw:
@@ -278,7 +278,7 @@ export default function ChildQuestionDisplay({
               className="w-full focus:outline-none"
               style={{
                 fontFamily: 'var(--font-parent-display)',
-                fontSize: 20,
+                fontSize: 18,
                 fontStyle: 'italic',
                 color: '#3A3530',
                 background: 'transparent',
@@ -300,14 +300,14 @@ export default function ChildQuestionDisplay({
     <div>
       {/* Section header */}
       <div className="flex items-baseline" style={{ gap: 14, marginBottom: 28 }}>
-        <span style={{ fontSize: 32 }}>{sectionEmoji}</span>
+        <span style={{ fontSize: 29 }}>{sectionEmoji}</span>
         <div>
           <span className="press-chapter-label" style={{ display: 'block' }}>
             A section
           </span>
           <p
             className="press-body-italic"
-            style={{ fontSize: 16, marginTop: 2, color: '#5C5347' }}
+            style={{ fontSize: 15, marginTop: 2, color: '#5C5347' }}
           >
             {sectionDescription}
           </p>
@@ -317,7 +317,7 @@ export default function ChildQuestionDisplay({
       {/* The question itself */}
       <div style={{ marginBottom: 24 }}>
         {question.emoji && (
-          <div style={{ fontSize: 44, marginBottom: 12 }}>{question.emoji}</div>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>{question.emoji}</div>
         )}
         <h2
           style={{
@@ -342,7 +342,7 @@ export default function ChildQuestionDisplay({
         {question.helpText && (
           <p
             className="press-body-italic mt-3"
-            style={{ fontSize: 16, color: '#5F564B' }}
+            style={{ fontSize: 15, color: '#5F564B' }}
           >
             {replacePlaceholder(question.helpText)}
           </p>
@@ -367,7 +367,7 @@ export default function ChildQuestionDisplay({
               style={{
                 background: 'transparent',
                 cursor: 'pointer',
-                fontSize: 14,
+                fontSize: 13,
               }}
             >
               Fill for demo ⟶
@@ -415,7 +415,7 @@ export default function ChildQuestionDisplay({
               cursor:
                 question.required && !localValue ? 'not-allowed' : 'pointer',
               opacity: question.required && !localValue ? 0.4 : 1,
-              fontSize: 20,
+              fontSize: 18,
             }}
           >
             Next
@@ -428,7 +428,7 @@ export default function ChildQuestionDisplay({
       <p
         className="press-marginalia"
         style={{
-          fontSize: 15,
+          fontSize: 14,
           textAlign: 'center',
           marginTop: 32,
           color: '#746856',

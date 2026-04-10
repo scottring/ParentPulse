@@ -127,13 +127,13 @@ export default function OnboardingWizard({
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="max-w-3xl w-full text-center">
-          <h1 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '42px', fontWeight: 600, color: '#3A3530', marginBottom: '24px' }}>
+          <h1 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '58px', fontWeight: 600, color: '#3A3530', marginBottom: '24px' }}>
             Let's Create {child.name}'s Manual
           </h1>
-          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '20px', color: '#5C5347', marginBottom: '32px' }}>
+          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '28px', color: '#5C5347', marginBottom: '32px' }}>
             We'll ask you about 30 questions to understand {child.name} better. This will take about 10-15 minutes.
           </p>
-          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '18px', color: '#5F564B', marginBottom: '48px' }}>
+          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '25px', color: '#5F564B', marginBottom: '48px' }}>
             Your answers will help us create a personalized manual with strategies that work for your family.
           </p>
           <div className="flex gap-4 justify-center">
@@ -168,10 +168,10 @@ export default function OnboardingWizard({
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="max-w-2xl w-full text-center">
           <div className="animate-spin rounded-full h-16 w-16 mx-auto mb-8" style={{ border: '4px solid #7C9082', borderTopColor: 'transparent' }}></div>
-          <h1 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '32px', fontWeight: 600, color: '#3A3530', marginBottom: '16px' }}>
+          <h1 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '44px', fontWeight: 600, color: '#3A3530', marginBottom: '16px' }}>
             Creating {child.name}'s Manual...
           </h1>
-          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '18px', color: '#5C5347' }}>
+          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '25px', color: '#5C5347' }}>
             Our AI is analyzing your answers and generating personalized strategies. This will take about 30-60 seconds.
           </p>
         </div>
@@ -187,10 +187,10 @@ export default function OnboardingWizard({
         <div className="glass-card" style={{ border: '1px solid rgba(255,255,255,0.4)', borderRadius: 0 }}>
           <div className="max-w-4xl mx-auto px-4 py-4">
             <div className="flex items-center justify-between mb-2">
-              <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500, color: '#5C5347' }}>
+              <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', fontWeight: 500, color: '#5C5347' }}>
                 Section {currentSectionIndex + 1} of {questions.length}: {replacePlaceholder(currentSection.title)}
               </span>
-              <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500, color: '#5C5347' }}>
+              <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', fontWeight: 500, color: '#5C5347' }}>
                 {answeredQuestions} / {totalQuestions} answered
               </span>
             </div>
@@ -222,7 +222,7 @@ export default function OnboardingWizard({
 
         {/* Navigation hints */}
         <div className="glass-card py-3" style={{ border: '1px solid rgba(255,255,255,0.4)', borderRadius: 0 }}>
-          <div className="max-w-4xl mx-auto px-4 text-center" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5F564B' }}>
+          <div className="max-w-4xl mx-auto px-4 text-center" style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: '#5F564B' }}>
             Press <kbd className="px-2 py-1 rounded" style={{ background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.4)' }}>Enter</kbd> to continue
             {!currentQuestion.required && (
               <> or <kbd className="px-2 py-1 rounded" style={{ background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.4)' }}>Tab</kbd> then <kbd className="px-2 py-1 rounded" style={{ background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.4)' }}>Enter</kbd> to skip</>

@@ -135,7 +135,7 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
             {/* Age context for kids */}
             {isChildType && personAge !== null && (
               <div style={{ textAlign: 'center', padding: '0 40px 20px' }}>
-                <p className="press-marginalia" style={{ fontSize: 14 }}>
+                <p className="press-marginalia" style={{ fontSize: 13 }}>
                   {person.name} is {personAge} years old
                   {kidObserverOk && ' — old enough for their own sessions and for observing other members of the family'}
                   {!kidObserverOk && kidSessionOk && ' — old enough for a kid-friendly session with gentle prompts'}
@@ -195,7 +195,7 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
 
             <p
               className="press-marginalia mt-6"
-              style={{ textAlign: 'center', fontSize: 15, color: '#7A6E5C' }}
+              style={{ textAlign: 'center', fontSize: 14, color: '#7A6E5C' }}
             >
               A volume is a living document. Pages can always be
               added, revised, or contributed to by others.
@@ -278,7 +278,7 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
                     <h3
                       style={{
                         fontFamily: 'var(--font-parent-display)',
-                        fontSize: 22,
+                        fontSize: 20,
                         fontStyle: 'italic',
                         color: effectiveType === option.type ? '#3A3530' : '#5C5347',
                         fontWeight: effectiveType === option.type ? 500 : 400,
@@ -290,7 +290,7 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
                     </h3>
                     <p
                       className="press-marginalia mt-1"
-                      style={{ fontSize: 15 }}
+                      style={{ fontSize: 14 }}
                     >
                       {option.description}
                     </p>
@@ -301,7 +301,7 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
                         fontFamily: 'var(--font-parent-display)',
                         fontStyle: 'italic',
                         color: '#7C9082',
-                        fontSize: 18,
+                        fontSize: 17,
                         flexShrink: 0,
                       }}
                     >
@@ -416,7 +416,7 @@ function WizardAction({
           </h3>
           <p
             className="press-marginalia mt-2"
-            style={{ fontSize: 14, lineHeight: 1.5 }}
+            style={{ fontSize: 13, lineHeight: 1.5 }}
           >
             {body}
           </p>
@@ -424,7 +424,7 @@ function WizardAction({
         <span
           style={{
             fontFamily: 'var(--font-parent-display)',
-            fontSize: 16,
+            fontSize: 15,
             color: primary ? '#2D5F5D' : '#6B6254',
             flexShrink: 0,
           }}

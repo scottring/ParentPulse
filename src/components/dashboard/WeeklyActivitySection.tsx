@@ -50,7 +50,7 @@ export function WeeklyActivitySection({ textColor, textSecondary, textTertiary }
         <span
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '12px',
+            fontSize: '17px',
             fontWeight: 600,
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
@@ -62,7 +62,7 @@ export function WeeklyActivitySection({ textColor, textSecondary, textTertiary }
         <span
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '15px',
+            fontSize: '21px',
             color: textTertiary,
           }}
         >
@@ -72,14 +72,14 @@ export function WeeklyActivitySection({ textColor, textSecondary, textTertiary }
 
       {total === 0 ? (
         <div className="glass-card p-6 text-center">
-          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: textSecondary }} className="mb-3">
+          <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: textSecondary }} className="mb-3">
             No activities scheduled this week.
           </p>
           <button
             onClick={handleGenerate}
             disabled={generating}
             className="px-5 py-2 rounded-full text-white disabled:opacity-50 transition-all hover:shadow-lg"
-            style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500, backgroundColor: '#7C9082' }}
+            style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', fontWeight: 500, backgroundColor: '#7C9082' }}
           >
             {generating ? 'Generating...' : 'Generate this week\'s activities'}
           </button>
@@ -88,7 +88,7 @@ export function WeeklyActivitySection({ textColor, textSecondary, textTertiary }
         <div className="glass-card overflow-hidden">
           {/* Summary bar */}
           <div className="px-5 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.3)' }}>
-            <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: textColor }}>
+            <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '21px', color: textColor }}>
               {totalCompleted} of {total} done
             </span>
             {/* Progress dots */}
@@ -114,10 +114,10 @@ export function WeeklyActivitySection({ textColor, textSecondary, textTertiary }
                   className="w-full px-5 py-3 flex items-center justify-between hover:bg-white/10 transition-all"
                 >
                   <div className="flex items-center gap-3">
-                    <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500, color: textColor }}>
+                    <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', fontWeight: 500, color: textColor }}>
                       {data.personName}
                     </span>
-                    <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: textTertiary }}>
+                    <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: textTertiary }}>
                       {data.completed.length}/{personTotal}
                     </span>
                   </div>
@@ -133,8 +133,8 @@ export function WeeklyActivitySection({ textColor, textSecondary, textTertiary }
                   <div className="px-5 pb-4 space-y-2">
                     {data.completed.map((item) => (
                       <div key={item.growthItemId} className="flex items-start gap-2.5">
-                        <span style={{ color: '#7C9082', fontSize: '14px', marginTop: '1px' }}>&#10003;</span>
-                        <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: textSecondary, textDecoration: 'line-through', opacity: 0.6 }}>
+                        <span style={{ color: '#7C9082', fontSize: '19px', marginTop: '1px' }}>&#10003;</span>
+                        <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '21px', color: textSecondary, textDecoration: 'line-through', opacity: 0.6 }}>
                           {item.emoji} {item.title}
                         </span>
                       </div>
@@ -145,8 +145,8 @@ export function WeeklyActivitySection({ textColor, textSecondary, textTertiary }
                         href={`/growth/${item.growthItemId}`}
                         className="flex items-start gap-2.5 group hover:opacity-80 transition-opacity"
                       >
-                        <span style={{ color: textTertiary, fontSize: '14px', marginTop: '1px' }}>&#9675;</span>
-                        <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: textColor }}>
+                        <span style={{ color: textTertiary, fontSize: '19px', marginTop: '1px' }}>&#9675;</span>
+                        <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '21px', color: textColor }}>
                           {item.emoji} {item.title}
                         </span>
                       </Link>

@@ -25,14 +25,14 @@ function InsightCard({ insight, variant }: { insight: SynthesizedInsight; varian
     >
       <div className="flex items-center gap-2 mb-2">
         <span
-          className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+          className="text-[14px] px-1.5 py-0.5 rounded-full font-medium"
           style={{ background: `${style.border}`, color: style.color }}
         >
           {style.label}
         </span>
         {insight.gapSeverity === 'significant_gap' && (
           <span
-            className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+            className="text-[14px] px-1.5 py-0.5 rounded-full font-medium"
             style={{ background: 'rgba(220,38,38,0.1)', color: '#991b1b' }}
           >
             Significant
@@ -42,7 +42,7 @@ function InsightCard({ insight, variant }: { insight: SynthesizedInsight; varian
       <h4
         style={{
           fontFamily: 'var(--font-parent-body)',
-          fontSize: '15px',
+          fontSize: '21px',
           fontWeight: 600,
           color: '#3A3530',
           marginBottom: '4px',
@@ -53,7 +53,7 @@ function InsightCard({ insight, variant }: { insight: SynthesizedInsight; varian
       <p
         style={{
           fontFamily: 'var(--font-parent-body)',
-          fontSize: '14px',
+          fontSize: '19px',
           color: '#5C5347',
           lineHeight: 1.6,
         }}
@@ -63,12 +63,12 @@ function InsightCard({ insight, variant }: { insight: SynthesizedInsight; varian
       {(insight.selfPerspective || insight.observerPerspective) && (
         <div className="mt-3 space-y-1.5">
           {insight.selfPerspective && (
-            <div className="text-[11px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
+            <div className="text-[16px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
               <span className="font-medium">Self:</span> {insight.selfPerspective}
             </div>
           )}
           {insight.observerPerspective && (
-            <div className="text-[11px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
+            <div className="text-[16px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
               <span className="font-medium">Observer:</span> {insight.observerPerspective}
             </div>
           )}
@@ -123,13 +123,13 @@ export function SynthesisCards({ alignments, gaps, blindSpots, crossReferences }
               <div>
                 <Link
                   href={`/people/${cr.relatedPersonId}/manual`}
-                  className="text-[12px] font-medium hover:underline"
+                  className="text-[17px] font-medium hover:underline"
                   style={{ fontFamily: 'var(--font-parent-body)', color: '#2D5F5D' }}
                 >
                   {cr.relatedPersonName}
                 </Link>
                 <p
-                  className="mt-0.5 text-[12px]"
+                  className="mt-0.5 text-[17px]"
                   style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347', lineHeight: 1.5 }}
                 >
                   {cr.insight}
@@ -150,20 +150,20 @@ function Section({ title, subtitle, count, children }: { title: string; subtitle
         <h3
           style={{
             fontFamily: 'var(--font-parent-display)',
-            fontSize: '16px',
+            fontSize: '22px',
             fontWeight: 500,
             color: '#3A3530',
           }}
         >
           {title}
         </h3>
-        <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#5F564B' }}>
+        <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '21px', color: '#5F564B' }}>
           {count}
         </span>
       </div>
       <p
         className="mb-3"
-        style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5F564B' }}
+        style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: '#5F564B' }}
       >
         {subtitle}
       </p>

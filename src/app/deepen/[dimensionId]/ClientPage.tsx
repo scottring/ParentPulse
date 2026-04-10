@@ -164,7 +164,7 @@ export default function DeepenPage() {
             </h2>
             <Link
               href="/dashboard"
-              className="inline-flex items-center mt-4 px-6 py-2.5 rounded-full text-[13px] font-medium text-white hover:opacity-90"
+              className="inline-flex items-center mt-4 px-6 py-2.5 rounded-full text-[18px] font-medium text-white hover:opacity-90"
               style={{
                 fontFamily: 'var(--font-parent-body)',
                 background: 'var(--parent-primary)',
@@ -219,7 +219,7 @@ export default function DeepenPage() {
                   className="block mb-1"
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '12px',
+                    fontSize: '17px',
                     fontWeight: 600,
                     letterSpacing: '0.12em',
                     textTransform: 'uppercase',
@@ -258,7 +258,7 @@ export default function DeepenPage() {
                         className="mb-4"
                         style={{
                           fontFamily: 'var(--font-parent-body)',
-                          fontSize: '14px',
+                          fontSize: '19px',
                           color: 'var(--parent-text)',
                           lineHeight: 1.55,
                         }}
@@ -272,7 +272,7 @@ export default function DeepenPage() {
                             onClick={() =>
                               handleAnswer(prompt.promptId, opt.value)
                             }
-                            className="px-4 py-2 rounded-full text-[12.5px] font-medium transition-all"
+                            className="px-4 py-2 rounded-full text-[17px] font-medium transition-all"
                             style={{
                               fontFamily: 'var(--font-parent-body)',
                               background:
@@ -308,7 +308,7 @@ export default function DeepenPage() {
                   <p
                     style={{
                       fontFamily: 'var(--font-parent-body)',
-                      fontSize: '14px',
+                      fontSize: '19px',
                       color: 'var(--parent-text-light)',
                       lineHeight: 1.6,
                     }}
@@ -318,7 +318,7 @@ export default function DeepenPage() {
                   </p>
                   <Link
                     href="/dashboard"
-                    className="inline-flex items-center mt-4 px-6 py-2.5 rounded-full text-[13px] font-medium text-white hover:opacity-90"
+                    className="inline-flex items-center mt-4 px-6 py-2.5 rounded-full text-[18px] font-medium text-white hover:opacity-90"
                     style={{
                       fontFamily: 'var(--font-parent-body)',
                       background: 'var(--parent-primary)',
@@ -335,7 +335,7 @@ export default function DeepenPage() {
                   <button
                     onClick={handleComplete}
                     disabled={!allAnswered}
-                    className="inline-flex items-center px-6 py-2.5 rounded-full text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-40 transition-opacity"
+                    className="inline-flex items-center px-6 py-2.5 rounded-full text-[18px] font-medium text-white hover:opacity-90 disabled:opacity-40 transition-opacity"
                     style={{
                       fontFamily: 'var(--font-parent-body)',
                       background: 'var(--aura-assess)',
@@ -368,7 +368,7 @@ export default function DeepenPage() {
                   <p
                     style={{
                       fontFamily: 'var(--font-parent-body)',
-                      fontSize: '14px',
+                      fontSize: '19px',
                       color: 'var(--parent-text)',
                       lineHeight: 1.6,
                     }}
@@ -390,7 +390,7 @@ export default function DeepenPage() {
                     className="mt-2"
                     style={{
                       fontFamily: 'var(--font-parent-body)',
-                      fontSize: '14px',
+                      fontSize: '19px',
                       color: 'var(--parent-text)',
                       lineHeight: 1.6,
                     }}
@@ -409,7 +409,7 @@ export default function DeepenPage() {
                   <p
                     style={{
                       fontFamily: 'var(--font-parent-body)',
-                      fontSize: '14px',
+                      fontSize: '19px',
                       color: 'var(--parent-text-light)',
                       lineHeight: 1.6,
                     }}
@@ -425,7 +425,7 @@ export default function DeepenPage() {
                 {workbookChapter ? (
                   <Link
                     href="/workbook"
-                    className="inline-flex items-center px-6 py-2.5 rounded-full text-[13px] font-medium text-white hover:opacity-90"
+                    className="inline-flex items-center px-6 py-2.5 rounded-full text-[18px] font-medium text-white hover:opacity-90"
                     style={{
                       fontFamily: 'var(--font-parent-body)',
                       background: 'var(--aura-respond)',
@@ -436,7 +436,7 @@ export default function DeepenPage() {
                 ) : (
                   <Link
                     href="/dashboard"
-                    className="inline-flex items-center px-6 py-2.5 rounded-full text-[13px] font-medium text-white hover:opacity-90"
+                    className="inline-flex items-center px-6 py-2.5 rounded-full text-[18px] font-medium text-white hover:opacity-90"
                     style={{
                       fontFamily: 'var(--font-parent-body)',
                       background: 'var(--parent-primary)',
@@ -447,7 +447,7 @@ export default function DeepenPage() {
                 )}
                 <Link
                   href="/dashboard"
-                  className="text-[12px] hover:opacity-70 transition-opacity"
+                  className="text-[17px] hover:opacity-70 transition-opacity"
                   style={{
                     fontFamily: 'var(--font-parent-body)',
                     fontWeight: 500,

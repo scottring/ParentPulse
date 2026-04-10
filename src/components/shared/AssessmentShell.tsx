@@ -155,7 +155,7 @@ export default function AssessmentShell({
               <h1 className="press-binder-title" style={{ fontSize: 'clamp(34px, 5vw, 42px)' }}>
                 {sectionName}
               </h1>
-              <p className="press-binder-sub" style={{ fontSize: 15 }}>
+              <p className="press-binder-sub" style={{ fontSize: 14 }}>
                 {sectionDescription.replace(/\{\{personName\}\}/g, personName)}
               </p>
             </div>
@@ -233,7 +233,7 @@ export default function AssessmentShell({
               </span>
               <h2
                 className="press-display-md mt-1"
-                style={{ fontSize: 28 }}
+                style={{ fontSize: 26 }}
               >
                 {sectionName}
               </h2>
@@ -241,14 +241,14 @@ export default function AssessmentShell({
             <div style={{ textAlign: 'right' }}>
               <div
                 className="press-marginalia"
-                style={{ fontSize: 14 }}
+                style={{ fontSize: 13 }}
               >
                 {answeredQuestions} of {totalQuestions} kept
               </div>
               {saveStatus && (
                 <div
                   className="press-marginalia mt-1"
-                  style={{ fontSize: 15, color: saveStatusColor(saveStatus) }}
+                  style={{ fontSize: 14, color: saveStatusColor(saveStatus) }}
                 >
                   — {saveStatusLabel(saveStatus)}
                 </div>
@@ -256,7 +256,7 @@ export default function AssessmentShell({
               {remainingQuestions > 0 && (
                 <div
                   className="press-marginalia mt-1"
-                  style={{ fontSize: 15 }}
+                  style={{ fontSize: 14 }}
                 >
                   {estimateTimeRemaining(remainingQuestions)} left
                 </div>
@@ -266,7 +266,7 @@ export default function AssessmentShell({
 
           {/* Section description */}
           <div style={{ padding: '0 56px' }}>
-            <p className="press-body-italic" style={{ fontSize: 15 }}>
+            <p className="press-body-italic" style={{ fontSize: 14 }}>
               {sectionDescription.replace(/\{\{personName\}\}/g, personName)}
             </p>
           </div>
@@ -284,7 +284,7 @@ export default function AssessmentShell({
               <div
                 className="press-marginalia"
                 style={{
-                  fontSize: 15,
+                  fontSize: 14,
                   fontStyle: 'italic',
                   padding: '14px 18px',
                   borderLeft: '2px solid rgba(124,144,130,0.45)',

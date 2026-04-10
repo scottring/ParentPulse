@@ -89,7 +89,7 @@ export function GrowthArcCard({ arc, todayItem, onReact }: GrowthArcCardProps) {
         {arc.phases.map((phase) => (
           <span
             key={phase.phase}
-            className="text-[10px]"
+            className="text-[14px]"
             style={{
               fontFamily: 'var(--font-parent-body)',
               color: arc.currentPhase === phase.phase ? 'var(--parent-text)' : 'var(--parent-text-light)',

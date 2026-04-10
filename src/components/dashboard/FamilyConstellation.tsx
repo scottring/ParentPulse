@@ -93,7 +93,7 @@ function FamilyTreeNode({ person, isFirst }: { person: PersonCompleteness; isFir
         {/* Status badge */}
         {person.status === 'stale' && (
           <div
-            className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px]"
+            className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[11px]"
             style={{
               background: '#D97706',
               color: 'white',
@@ -106,7 +106,7 @@ function FamilyTreeNode({ person, isFirst }: { person: PersonCompleteness; isFir
         )}
         {person.status === 'empty' && (
           <div
-            className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px]"
+            className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[11px]"
             style={{
               background: '#B8A898',
               color: 'white',
@@ -121,7 +121,7 @@ function FamilyTreeNode({ person, isFirst }: { person: PersonCompleteness; isFir
 
       {/* Name */}
       <span
-        className="storybook-body text-[11px] font-medium group-hover:opacity-70 transition-opacity"
+        className="storybook-body text-[16px] font-medium group-hover:opacity-70 transition-opacity"
         style={{ color: '#5C5347' }}
       >
         {person.name.split(' ')[0]}
@@ -144,7 +144,7 @@ function ParchmentInsight({ text, route }: { text: string; route?: string }) {
         }}
       />
       <p
-        className="storybook-body text-[12.5px] leading-relaxed"
+        className="storybook-body text-[17px] leading-relaxed"
         style={{ color: '#5C5347' }}
       >
         {text}

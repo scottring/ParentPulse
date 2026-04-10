@@ -25,7 +25,7 @@ export function QualitativeComment({
           background: 'transparent',
           cursor: 'pointer',
           textAlign: 'left',
-          fontSize: 14,
+          fontSize: 13,
         }}
       >
         — add a specific example or note ⟶
@@ -50,7 +50,7 @@ export function QualitativeComment({
             background: 'transparent',
             border: 0,
             cursor: 'pointer',
-            fontSize: 15,
+            fontSize: 14,
             color: '#7A6E5C',
           }}
         >
@@ -65,7 +65,7 @@ export function QualitativeComment({
         className="w-full focus:outline-none"
         style={{
           fontFamily: 'var(--font-parent-display)',
-          fontSize: 17,
+          fontSize: 16,
           fontStyle: 'italic',
           color: '#3A3530',
           background: 'transparent',

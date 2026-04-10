@@ -44,7 +44,7 @@ export default function JourneyPath({ currentStage }: JourneyPathProps) {
                 {isCompleted ? '\u2713' : display.emoji}
               </div>
               <span
-                className="text-[7px] font-medium tracking-widest mt-1.5"
+                className="text-[10px] font-medium tracking-widest mt-1.5"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
                   color: isCurrent

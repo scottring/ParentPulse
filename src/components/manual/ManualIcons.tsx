@@ -267,7 +267,7 @@ export function WarningLabel({ type, title, description, severity = 'high' }: Wa
         <div
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '12px',
+            fontSize: '17px',
             fontWeight: 600,
             color: colors.text,
             marginBottom: '4px',
@@ -277,7 +277,7 @@ export function WarningLabel({ type, title, description, severity = 'high' }: Wa
         >
           {title}
         </div>
-        <div style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: colors.text, lineHeight: '1.5' }}>
+        <div style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: colors.text, lineHeight: '1.5' }}>
           {description}
         </div>
       </div>
@@ -309,7 +309,7 @@ export function SpecificationTable({ specs }: SpecTableProps) {
           color: 'white',
           padding: '12px 16px',
           fontFamily: 'var(--font-parent-body)',
-          fontSize: '12px',
+          fontSize: '17px',
           fontWeight: 600,
           textTransform: 'uppercase',
           letterSpacing: '0.12em',
@@ -333,10 +333,10 @@ export function SpecificationTable({ specs }: SpecTableProps) {
               background: index % 2 === 0 ? 'white' : 'rgba(255,255,255,0.3)'
             }}
           >
-            <div style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 600, color: '#5C5347' }}>
+            <div style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', fontWeight: 600, color: '#5C5347' }}>
               {spec.label}
             </div>
-            <div style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#3A3530', fontWeight: 500 }}>
+            <div style={{ fontFamily: 'var(--font-parent-body)', fontSize: '21px', color: '#3A3530', fontWeight: 500 }}>
               {spec.value}
             </div>
           </div>

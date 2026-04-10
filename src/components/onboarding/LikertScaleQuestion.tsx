@@ -84,7 +84,7 @@ export function LikertScaleQuestion({ scale, value, onChange }: LikertScaleQuest
                   style={{
                     fontFamily: 'var(--font-parent-display)',
                     fontStyle: 'italic',
-                    fontSize: 26,
+                    fontSize: 24,
                     fontWeight: 300,
                     lineHeight: 1,
                     color: isSelected
@@ -103,7 +103,7 @@ export function LikertScaleQuestion({ scale, value, onChange }: LikertScaleQuest
                     className="text-center"
                     style={{
                       fontFamily: 'var(--font-parent-body)',
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: 600,
                       letterSpacing: '0.14em',
                       textTransform: 'uppercase',
@@ -128,7 +128,7 @@ export function LikertScaleQuestion({ scale, value, onChange }: LikertScaleQuest
       {/* Mobile-only min/max labels */}
       <div
         className="flex sm:hidden justify-between press-marginalia"
-        style={{ fontSize: 15, marginTop: 6 }}
+        style={{ fontSize: 14, marginTop: 6 }}
       >
         <span>{scale.minLabel}</span>
         <span>{scale.maxLabel}</span>
@@ -139,7 +139,7 @@ export function LikertScaleQuestion({ scale, value, onChange }: LikertScaleQuest
         <p
           className="press-body-italic"
           style={{
-            fontSize: 15,
+            fontSize: 14,
             textAlign: 'center',
             color: '#5C5347',
             marginTop: 4,

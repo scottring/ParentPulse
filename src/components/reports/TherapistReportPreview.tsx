@@ -82,21 +82,21 @@ export function TherapistReportPreview({ report, onClose }: Props) {
       >
         {/* Header */}
         <div className="sticky top-0 px-6 py-4 flex items-center justify-between" style={{ background: '#FAF8F5', borderBottom: '1px solid rgba(138,128,120,0.1)' }}>
-          <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '18px', fontWeight: 500, color: '#3A3530' }}>
+          <h2 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '25px', fontWeight: 500, color: '#3A3530' }}>
             Therapist Report
           </h2>
-          <button onClick={onClose} className="text-[20px]" style={{ color: '#5F564B' }}>&times;</button>
+          <button onClick={onClose} className="text-[28px]" style={{ color: '#5F564B' }}>&times;</button>
         </div>
 
         <div className="px-6 py-5 space-y-6">
           {/* Period */}
-          <div className="text-[12px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
+          <div className="text-[17px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
             Period: {report.period} &middot; Generated: {report.generatedAt}
           </div>
 
           {/* Family Overview */}
           <ReportSection title="Family Overview">
-            <p className="text-[13px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347', lineHeight: 1.7 }}>
+            <p className="text-[18px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347', lineHeight: 1.7 }}>
               {report.familyOverview}
             </p>
           </ReportSection>
@@ -139,7 +139,7 @@ export function TherapistReportPreview({ report, onClose }: Props) {
 
           {/* Raw Data */}
           <ReportSection title="Raw Data Summary">
-            <p className="text-[12px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B', lineHeight: 1.6 }}>
+            <p className="text-[17px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B', lineHeight: 1.6 }}>
               {report.rawDataSummary}
             </p>
           </ReportSection>
@@ -152,14 +152,14 @@ export function TherapistReportPreview({ report, onClose }: Props) {
         >
           <button
             onClick={handleCopy}
-            className="flex-1 text-[12px] font-medium py-2.5 rounded-full text-white transition-all hover:opacity-90"
+            className="flex-1 text-[17px] font-medium py-2.5 rounded-full text-white transition-all hover:opacity-90"
             style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082' }}
           >
             Copy to clipboard
           </button>
           <button
             onClick={handlePrint}
-            className="text-[12px] font-medium px-5 py-2.5 rounded-full transition-all hover:opacity-80"
+            className="text-[17px] font-medium px-5 py-2.5 rounded-full transition-all hover:opacity-80"
             style={{
               fontFamily: 'var(--font-parent-body)',
               color: '#5C5347',
@@ -180,7 +180,7 @@ function ReportSection({ title, children }: { title: string; children: React.Rea
       <h3
         style={{
           fontFamily: 'var(--font-parent-body)',
-          fontSize: '15px',
+          fontSize: '21px',
           fontWeight: 600,
           letterSpacing: '0.08em',
           textTransform: 'uppercase',
@@ -207,7 +207,7 @@ function RedactableLine({ text, redactKey, isRedacted, onToggle }: {
       onClick={() => onToggle(redactKey)}
     >
       <span
-        className="w-4 h-4 rounded border flex-shrink-0 mt-0.5 flex items-center justify-center text-[10px]"
+        className="w-4 h-4 rounded border flex-shrink-0 mt-0.5 flex items-center justify-center text-[14px]"
         style={{
           borderColor: isRedacted ? '#dc2626' : 'rgba(138,128,120,0.2)',
           background: isRedacted ? 'rgba(220,38,38,0.06)' : 'transparent',
@@ -217,7 +217,7 @@ function RedactableLine({ text, redactKey, isRedacted, onToggle }: {
         {isRedacted ? '\u2715' : '\u2713'}
       </span>
       <p
-        className="text-[13px] flex-1"
+        className="text-[18px] flex-1"
         style={{
           fontFamily: 'var(--font-parent-body)',
           color: isRedacted ? '#d1d5db' : '#5C5347',

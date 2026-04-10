@@ -74,7 +74,7 @@ export default function LoginPage() {
             className="hover:opacity-80 transition-opacity"
             style={{
               fontFamily: 'var(--font-parent-display)',
-              fontSize: 26,
+              fontSize: 24,
               fontWeight: 300,
               fontStyle: 'italic',
               color: '#3A3530',
@@ -90,14 +90,14 @@ export default function LoginPage() {
             <button
               onClick={() => setShowSignIn(true)}
               className="press-link-sm"
-              style={{ background: 'transparent', cursor: 'pointer', fontSize: 16 }}
+              style={{ background: 'transparent', cursor: 'pointer', fontSize: 15 }}
             >
               Sign in
             </button>
             <Link
               href="/register"
               className="press-link"
-              style={{ fontSize: 16, borderBottomWidth: 1 }}
+              style={{ fontSize: 15, borderBottomWidth: 1 }}
             >
               Begin a volume
               <span className="arrow">⟶</span>
@@ -187,7 +187,7 @@ export default function LoginPage() {
                   <Link
                     href="/register"
                     className="press-link"
-                    style={{ fontSize: 22 }}
+                    style={{ fontSize: 20 }}
                   >
                     Begin a volume
                     <span className="arrow">⟶</span>
@@ -195,7 +195,7 @@ export default function LoginPage() {
                   <button
                     onClick={() => setShowSignIn(true)}
                     className="press-link-sm"
-                    style={{ background: 'transparent', cursor: 'pointer', fontSize: 15 }}
+                    style={{ background: 'transparent', cursor: 'pointer', fontSize: 14 }}
                   >
                     or sign in
                   </button>
@@ -230,7 +230,7 @@ export default function LoginPage() {
             </h2>
             <p
               className="press-marginalia mt-3"
-              style={{ fontSize: 14, maxWidth: 520, margin: '12px auto 0' }}
+              style={{ fontSize: 13, maxWidth: 520, margin: '12px auto 0' }}
             >
               You carry one reading of a person. They carry another.
               Everyone who loves them carries a third. Relish does
@@ -267,7 +267,7 @@ export default function LoginPage() {
             </h2>
             <p
               className="press-marginalia mt-3"
-              style={{ fontSize: 14, maxWidth: 540, margin: '12px auto 0' }}
+              style={{ fontSize: 13, maxWidth: 540, margin: '12px auto 0' }}
             >
               The whole app is three pages. Learn them once and you
               know your way around.
@@ -338,7 +338,7 @@ export default function LoginPage() {
             <br />
             of itself.&rdquo;
           </blockquote>
-          <p className="press-marginalia" style={{ fontSize: 15 }}>
+          <p className="press-marginalia" style={{ fontSize: 14 }}>
             — the promise
           </p>
 
@@ -359,16 +359,16 @@ export default function LoginPage() {
           <Link
             href="/register"
             className="press-link"
-            style={{ fontSize: 28 }}
+            style={{ fontSize: 26 }}
           >
             Begin your first volume
             <span className="arrow">⟶</span>
           </Link>
-          <p className="press-marginalia mt-4" style={{ fontSize: 15 }}>
+          <p className="press-marginalia mt-4" style={{ fontSize: 14 }}>
             No credit card. Bring one person, or a whole family.
           </p>
 
-          <div className="press-fleuron" style={{ marginTop: 56, fontSize: 22 }}>❦</div>
+          <div className="press-fleuron" style={{ marginTop: 56, fontSize: 20 }}>❦</div>
         </section>
 
         {/* ============ FOOTER ============ */}
@@ -381,7 +381,7 @@ export default function LoginPage() {
         >
           <p
             className="press-marginalia"
-            style={{ fontSize: 14, color: '#7A6E5C', lineHeight: 1.7 }}
+            style={{ fontSize: 13, color: '#7A6E5C', lineHeight: 1.7 }}
           >
             <em>Relish</em> &middot; a library for the people you love
             <br />
@@ -459,7 +459,7 @@ function FamilyFrontispiece() {
           right: 0,
           textAlign: 'center',
           fontFamily: 'var(--font-parent-body)',
-          fontSize: 9,
+          fontSize: 8,
           letterSpacing: '0.28em',
           textTransform: 'uppercase',
           color: '#7A6E5C',
@@ -810,7 +810,7 @@ function WorkbookMock() {
         <div
           style={{
             fontFamily: 'var(--font-parent-display)',
-            fontSize: 15,
+            fontSize: 14,
             fontStyle: 'italic',
             color: '#3A3530',
             marginBottom: 6,
@@ -840,7 +840,7 @@ function WorkbookMock() {
             <div
               style={{
                 fontFamily: 'var(--font-parent-display)',
-                fontSize: 8,
+                fontSize: 7,
                 fontStyle: 'italic',
                 color: '#3A3530',
                 lineHeight: 1.2,
@@ -878,7 +878,7 @@ function WorkbookMock() {
         <div
           style={{
             fontFamily: 'var(--font-parent-display)',
-            fontSize: 15,
+            fontSize: 14,
             fontStyle: 'italic',
             fontWeight: 300,
             color: '#3A3530',
@@ -894,7 +894,7 @@ function WorkbookMock() {
         <div
           style={{
             fontFamily: 'var(--font-parent-display)',
-            fontSize: 6.5,
+            fontSize: 6,
             color: '#5C5347',
             lineHeight: 1.45,
             marginBottom: 10,
@@ -906,7 +906,7 @@ function WorkbookMock() {
         <div
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: 4.5,
+            fontSize: 4,
             fontWeight: 600,
             letterSpacing: '0.16em',
             textTransform: 'uppercase',
@@ -919,7 +919,7 @@ function WorkbookMock() {
         <div
           style={{
             fontFamily: 'var(--font-parent-display)',
-            fontSize: 7,
+            fontSize: 6,
             fontStyle: 'italic',
             color: '#2D5F5D',
             borderBottom: '0.5px solid rgba(45,95,93,0.4)',
@@ -1012,7 +1012,7 @@ function FamilyManualMock() {
         <div
           style={{
             fontFamily: 'var(--font-parent-display)',
-            fontSize: 14,
+            fontSize: 13,
             fontStyle: 'italic',
             color: '#3A3530',
             marginBottom: 6,
@@ -1062,7 +1062,7 @@ function FamilyManualMock() {
         <div
           style={{
             fontFamily: 'var(--font-parent-display)',
-            fontSize: 14,
+            fontSize: 13,
             fontStyle: 'italic',
             color: '#3A3530',
             marginBottom: 6,
@@ -1103,7 +1103,7 @@ function FamilyManualMock() {
               <div
                 style={{
                   fontFamily: 'var(--font-parent-display)',
-                  fontSize: 7,
+                  fontSize: 6,
                   fontStyle: 'italic',
                   color: '#3A3530',
                   lineHeight: 1.1,
@@ -1172,7 +1172,7 @@ function ReportsMock() {
         <div
           style={{
             fontFamily: 'var(--font-parent-display)',
-            fontSize: 16,
+            fontSize: 15,
             fontStyle: 'italic',
             fontWeight: 300,
             color: '#3A3530',
@@ -1207,7 +1207,7 @@ function ReportsMock() {
         <div
           style={{
             fontFamily: 'var(--font-parent-display)',
-            fontSize: 6.5,
+            fontSize: 6,
             fontStyle: 'italic',
             color: '#2D5F5D',
             borderBottom: '0.5px solid rgba(45,95,93,0.4)',
@@ -1224,7 +1224,7 @@ function ReportsMock() {
         <div
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: 4.5,
+            fontSize: 4,
             fontWeight: 600,
             letterSpacing: '0.2em',
             textTransform: 'uppercase',
@@ -1276,7 +1276,7 @@ function ReportsMock() {
             <div
               style={{
                 fontFamily: 'var(--font-parent-display)',
-                fontSize: 7,
+                fontSize: 6,
                 fontStyle: 'italic',
                 color: '#3A3530',
                 flex: 'none',
@@ -1334,13 +1334,13 @@ function Room({
       </span>
       <h3
         className="press-display-sm mt-2"
-        style={{ fontSize: 22 }}
+        style={{ fontSize: 20 }}
       >
         {label}
       </h3>
       <p
         className="press-marginalia mt-3"
-        style={{ fontSize: 15, lineHeight: 1.55, maxWidth: 280, margin: '10px auto 0' }}
+        style={{ fontSize: 14, lineHeight: 1.55, maxWidth: 280, margin: '10px auto 0' }}
       >
         {description}
       </p>
@@ -1368,7 +1368,7 @@ function OrnamentDivider({ style }: { style?: React.CSSProperties }) {
       <span
         style={{
           fontFamily: 'var(--font-parent-display)',
-          fontSize: 18,
+          fontSize: 17,
           color: '#7C6F5D',
           letterSpacing: '0.2em',
         }}
@@ -1421,7 +1421,7 @@ function SignInDialog({
             <span className="press-chapter-label">Welcome back</span>
             <h2
               className="press-display-md mt-2"
-              style={{ fontSize: 32 }}
+              style={{ fontSize: 29 }}
             >
               Sign in
             </h2>
@@ -1440,7 +1440,7 @@ function SignInDialog({
             >
               <p
                 className="press-marginalia"
-                style={{ fontSize: 15, color: '#C08070' }}
+                style={{ fontSize: 14, color: '#C08070' }}
               >
                 — {error}
               </p>
@@ -1464,7 +1464,7 @@ function SignInDialog({
                 className="w-full focus:outline-none mt-2"
                 style={{
                   fontFamily: 'var(--font-parent-display)',
-                  fontSize: 20,
+                  fontSize: 18,
                   fontStyle: 'italic',
                   color: '#3A3530',
                   background: 'transparent',
@@ -1490,7 +1490,7 @@ function SignInDialog({
                 className="w-full focus:outline-none mt-2"
                 style={{
                   fontFamily: 'var(--font-parent-display)',
-                  fontSize: 20,
+                  fontSize: 18,
                   fontStyle: 'italic',
                   color: '#3A3530',
                   background: 'transparent',
@@ -1537,12 +1537,12 @@ function SignInDialog({
           </form>
 
           <div style={{ textAlign: 'center', marginTop: 32 }}>
-            <p className="press-marginalia" style={{ fontSize: 15 }}>
+            <p className="press-marginalia" style={{ fontSize: 14 }}>
               New here?{' '}
               <Link
                 href="/register"
                 className="press-link-sm"
-                style={{ fontSize: 15 }}
+                style={{ fontSize: 14 }}
               >
                 Begin a volume ⟶
               </Link>

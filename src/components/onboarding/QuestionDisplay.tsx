@@ -197,7 +197,7 @@ export default function QuestionDisplay({
       </p>
 
       {/* Question text */}
-      <h2 className="mb-8" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '32px', fontWeight: 600, color: '#3A3530' }}>
+      <h2 className="mb-8" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '44px', fontWeight: 600, color: '#3A3530' }}>
         {replacePlaceholder(question.text)}
         {question.required && <span className="ml-2" style={{ color: '#c87a6a' }}>*</span>}
       </h2>
@@ -222,7 +222,7 @@ export default function QuestionDisplay({
           className="px-6 py-3 rounded-full font-medium transition-colors"
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '14px',
+            fontSize: '19px',
             fontWeight: 500,
             backgroundColor: canGoBack ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)',
             color: canGoBack ? '#5C5347' : '#6B6254',
@@ -238,7 +238,7 @@ export default function QuestionDisplay({
             <button
               onClick={handleSkipClick}
               className="px-6 py-3 rounded-full font-medium transition-colors"
-              style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 500, color: '#5C5347', background: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.4)' }}
+              style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', fontWeight: 500, color: '#5C5347', background: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.4)' }}
             >
               Skip
             </button>
@@ -249,7 +249,7 @@ export default function QuestionDisplay({
             className="px-8 py-3 rounded-full font-medium transition-colors"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: '14px',
+              fontSize: '19px',
               fontWeight: 500,
               backgroundColor: (question.required && !localValue) ? 'rgba(124,144,130,0.3)' : '#7C9082',
               color: 'white',

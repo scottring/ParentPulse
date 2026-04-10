@@ -108,7 +108,7 @@ export default function WorkbookChapterCard({
               <h3
                 style={{
                   fontFamily: 'var(--font-parent-display)',
-                  fontSize: '18px',
+                  fontSize: '25px',
                   fontWeight: 500,
                   color: 'var(--parent-text)',
                   letterSpacing: '-0.01em',
@@ -119,7 +119,7 @@ export default function WorkbookChapterCard({
               <span
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '14px',
+                  fontSize: '19px',
                   color: 'var(--parent-text-light)',
                 }}
               >
@@ -138,7 +138,7 @@ export default function WorkbookChapterCard({
               <span
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '12px',
+                  fontSize: '17px',
                   fontWeight: 600,
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase' as const,
@@ -155,7 +155,7 @@ export default function WorkbookChapterCard({
             <span
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: '14px',
+                fontSize: '19px',
                 color: 'var(--parent-text-light)',
               }}
             >
@@ -164,7 +164,7 @@ export default function WorkbookChapterCard({
             <span
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: '14px',
+                fontSize: '19px',
                 color: 'var(--parent-text-light)',
               }}
             >
@@ -173,7 +173,7 @@ export default function WorkbookChapterCard({
             <span
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: '14px',
+                fontSize: '19px',
                 fontWeight: 500,
                 color: scoreColor,
               }}
@@ -190,7 +190,7 @@ export default function WorkbookChapterCard({
                 className="block mb-2"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '12px',
+                  fontSize: '17px',
                   fontWeight: 600,
                   letterSpacing: '0.12em',
                   textTransform: 'uppercase',
@@ -212,7 +212,7 @@ export default function WorkbookChapterCard({
                 <h4
                   style={{
                     fontFamily: 'var(--font-parent-display)',
-                    fontSize: '16px',
+                    fontSize: '22px',
                     fontWeight: 400,
                     fontStyle: 'italic',
                     color: 'var(--parent-text)',
@@ -225,7 +225,7 @@ export default function WorkbookChapterCard({
                   className="mt-2"
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '12.5px',
+                    fontSize: '17px',
                     color: 'var(--parent-text-light)',
                     lineHeight: 1.55,
                   }}
@@ -239,7 +239,7 @@ export default function WorkbookChapterCard({
                   className="mt-2"
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '15px',
+                    fontSize: '21px',
                     color: 'var(--parent-text-light)',
                   }}
                 >
@@ -254,7 +254,7 @@ export default function WorkbookChapterCard({
             {!isPaused ? (
               <button
                 onClick={() => setShowReflection(true)}
-                className="inline-flex items-center px-5 py-2 rounded-full text-[13px] font-medium text-white hover:opacity-90"
+                className="inline-flex items-center px-5 py-2 rounded-full text-[18px] font-medium text-white hover:opacity-90"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
                   background: 'var(--parent-primary)',
@@ -266,7 +266,7 @@ export default function WorkbookChapterCard({
             ) : (
               <button
                 onClick={() => onResume(chapter.chapterId)}
-                className="inline-flex items-center px-5 py-2 rounded-full text-[13px] font-medium text-white hover:opacity-90"
+                className="inline-flex items-center px-5 py-2 rounded-full text-[18px] font-medium text-white hover:opacity-90"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
                   background: 'var(--parent-primary)',
@@ -280,7 +280,7 @@ export default function WorkbookChapterCard({
             {!isPaused && (
               <button
                 onClick={() => onPause(chapter.chapterId)}
-                className="text-[11px] hover:opacity-70"
+                className="text-[16px] hover:opacity-70"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
                   fontWeight: 500,
@@ -314,7 +314,7 @@ export default function WorkbookChapterCard({
                 className="ml-1.5"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '12px',
+                  fontSize: '17px',
                   color: 'var(--parent-text-light)',
                 }}
               >

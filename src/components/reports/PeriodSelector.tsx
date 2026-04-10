@@ -20,7 +20,7 @@ export function PeriodSelector({ value, onChange }: Props) {
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}
-          className="text-[12px] px-3 py-1.5 rounded-full transition-all"
+          className="text-[17px] px-3 py-1.5 rounded-full transition-all"
           style={{
             fontFamily: 'var(--font-parent-body)',
             fontWeight: value === opt.value ? 600 : 400,

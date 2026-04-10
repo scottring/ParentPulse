@@ -110,7 +110,7 @@ export function QuestionRenderer({
               className="w-full focus:outline-none"
               style={{
                 fontFamily: 'var(--font-parent-display)',
-                fontSize: 21,
+                fontSize: 19,
                 fontStyle: 'italic',
                 color: '#3A3530',
                 background: 'transparent',
@@ -132,7 +132,7 @@ export function QuestionRenderer({
                   if (demo !== undefined) onChange(demo);
                 }}
                 className="press-link-sm absolute top-0 right-0"
-                style={{ background: 'transparent', cursor: 'pointer', fontSize: 14 }}
+                style={{ background: 'transparent', cursor: 'pointer', fontSize: 13 }}
               >
                 Fill ⟶
               </button>
@@ -160,7 +160,7 @@ export function QuestionRenderer({
               if (demo !== undefined) onChange(demo);
             }}
             className="press-link-sm"
-            style={{ background: 'transparent', cursor: 'pointer', fontSize: 14 }}
+            style={{ background: 'transparent', cursor: 'pointer', fontSize: 13 }}
           >
             Fill for demo ⟶
           </button>
@@ -182,11 +182,11 @@ export function QuestionRenderer({
       {questionType === 'text' && (
         <p
           className="press-marginalia"
-          style={{ fontSize: 15, marginTop: 14, textAlign: 'right', color: '#7A6E5C' }}
+          style={{ fontSize: 14, marginTop: 14, textAlign: 'right', color: '#7A6E5C' }}
         >
-          press <span className="press-sc" style={{ fontSize: 14 }}>⌘</span>
+          press <span className="press-sc" style={{ fontSize: 13 }}>⌘</span>
           {' '}+{' '}
-          <span className="press-sc" style={{ fontSize: 14 }}>enter</span>
+          <span className="press-sc" style={{ fontSize: 13 }}>enter</span>
           {' '}to continue
         </p>
       )}

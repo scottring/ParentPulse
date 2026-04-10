@@ -48,7 +48,7 @@ export default function Home() {
         <p
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '15px',
+            fontSize: '21px',
             color: '#6B6254',
           }}
         >

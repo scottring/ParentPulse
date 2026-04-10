@@ -152,11 +152,11 @@ export function DocumentUploader({ onProcess, processing }: DocumentUploaderProp
         </span>
         <p
           className="press-body-italic"
-          style={{ fontSize: 17, marginTop: 10, marginBottom: 8 }}
+          style={{ fontSize: 16, marginTop: 10, marginBottom: 8 }}
         >
           Bring therapy notes, journal entries, or letters.
         </p>
-        <p className="press-marginalia" style={{ fontSize: 15 }}>
+        <p className="press-marginalia" style={{ fontSize: 14 }}>
           PDF, TXT, PNG, JPG, or WEBP &middot; up to five files &middot;
           three MB each &middot; seven MB total
         </p>
@@ -188,7 +188,7 @@ export function DocumentUploader({ onProcess, processing }: DocumentUploaderProp
                     style={{
                       fontFamily: 'var(--font-parent-display)',
                       fontStyle: 'italic',
-                      fontSize: 16,
+                      fontSize: 15,
                       color: '#3A3530',
                       flex: 1,
                       minWidth: 0,
@@ -198,7 +198,7 @@ export function DocumentUploader({ onProcess, processing }: DocumentUploaderProp
                   </span>
                 </div>
                 <div className="flex items-baseline gap-4 shrink-0">
-                  <span className="press-marginalia" style={{ fontSize: 15 }}>
+                  <span className="press-marginalia" style={{ fontSize: 14 }}>
                     {formatFileSize(f.size)}
                   </span>
                   <button
@@ -208,7 +208,7 @@ export function DocumentUploader({ onProcess, processing }: DocumentUploaderProp
                     style={{
                       background: 'transparent',
                       cursor: processing ? 'not-allowed' : 'pointer',
-                      fontSize: 14,
+                      fontSize: 13,
                     }}
                   >
                     remove
@@ -219,7 +219,7 @@ export function DocumentUploader({ onProcess, processing }: DocumentUploaderProp
           </div>
           <p
             className="press-marginalia"
-            style={{ fontSize: 15, textAlign: 'right', marginTop: 8, color: '#7A6E5C' }}
+            style={{ fontSize: 14, textAlign: 'right', marginTop: 8, color: '#7A6E5C' }}
           >
             {files.length} document{files.length !== 1 ? 's' : ''} &middot;{' '}
             {formatFileSize(totalSize)} total
@@ -239,7 +239,7 @@ export function DocumentUploader({ onProcess, processing }: DocumentUploaderProp
         >
           <p
             className="press-marginalia"
-            style={{ fontSize: 15, color: '#C08070' }}
+            style={{ fontSize: 14, color: '#C08070' }}
           >
             — {error}
           </p>
@@ -250,7 +250,7 @@ export function DocumentUploader({ onProcess, processing }: DocumentUploaderProp
       <p
         className="press-marginalia"
         style={{
-          fontSize: 14,
+          fontSize: 13,
           marginTop: 24,
           textAlign: 'center',
           maxWidth: 460,
@@ -276,7 +276,7 @@ export function DocumentUploader({ onProcess, processing }: DocumentUploaderProp
             cursor:
               files.length === 0 || processing ? 'not-allowed' : 'pointer',
             opacity: files.length === 0 || processing ? 0.4 : 1,
-            fontSize: 20,
+            fontSize: 18,
           }}
         >
           {processing ? 'Reading the documents…' : 'Extract answers'}

@@ -63,7 +63,7 @@ export default function StageCard({
           <span className="text-2xl">{display.emoji}</span>
           <div>
             <h3
-              className="text-[13px] font-medium tracking-wider"
+              className="text-[18px] font-medium tracking-wider"
               style={{
                 fontFamily: 'var(--font-parent-display)',
                 color: isCompleted ? 'rgba(22,163,74,0.7)' : '#3A3530',
@@ -72,7 +72,7 @@ export default function StageCard({
               {isCompleted && '\u2713 '}{display.label}
             </h3>
             <p
-              className="text-[10px] mt-0.5"
+              className="text-[14px] mt-0.5"
               style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
             >
               {display.description}
@@ -81,7 +81,7 @@ export default function StageCard({
         </div>
         {isCurrent && (
           <span
-            className="text-[8px] font-medium tracking-widest px-2 py-1 rounded-full"
+            className="text-[11px] font-medium tracking-widest px-2 py-1 rounded-full"
             style={{
               fontFamily: 'var(--font-parent-body)',
               color: display.color,
@@ -96,7 +96,7 @@ export default function StageCard({
 
       {/* Philosophy quote */}
       <p
-        className="text-[10px] italic mb-4"
+        className="text-[14px] italic mb-4"
         style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
       >
         &ldquo;{display.philosophy}&rdquo;
@@ -115,7 +115,7 @@ export default function StageCard({
             return (
               <div key={dp.domain} className="flex items-center gap-3">
                 <span
-                  className="text-[9px] font-medium tracking-wider w-14"
+                  className="text-[13px] font-medium tracking-wider w-14"
                   style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
                 >
                   {DOMAIN_LABELS[dp.domain]}
@@ -135,7 +135,7 @@ export default function StageCard({
                   />
                 </div>
                 <span
-                  className="text-[8px] w-8 text-right"
+                  className="text-[11px] w-8 text-right"
                   style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
                 >
                   {Math.round(domainProgress * 100)}%
@@ -165,7 +165,7 @@ export default function StageCard({
               }}
             >
               <span
-                className="text-[10px]"
+                className="text-[14px]"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
                   color: step.complete
@@ -179,7 +179,7 @@ export default function StageCard({
               {!step.complete && step.action && (
                 <a
                   href={step.action.href}
-                  className="text-[8px] font-medium px-2 py-1 rounded-full transition-all hover:scale-105"
+                  className="text-[11px] font-medium px-2 py-1 rounded-full transition-all hover:scale-105"
                   style={{
                     fontFamily: 'var(--font-parent-body)',
                     color: '#7C9082',
@@ -199,7 +199,7 @@ export default function StageCard({
       {isCurrent && domainProgressions.length > 0 && (
         <div className="mt-3 pt-3" style={{ borderTop: '1px solid #E8E3DC' }}>
           <span
-            className="text-[8px] font-medium tracking-widest block mb-1.5"
+            className="text-[11px] font-medium tracking-widest block mb-1.5"
             style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
           >
             TO ADVANCE
@@ -212,7 +212,7 @@ export default function StageCard({
             .map((req, i) => (
               <p
                 key={i}
-                className="text-[9px] mt-0.5"
+                className="text-[13px] mt-0.5"
                 style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
               >
                 &bull; {req}
@@ -225,7 +225,7 @@ export default function StageCard({
       {isLocked && (
         <div className="text-center py-2">
           <span
-            className="text-[9px]"
+            className="text-[13px]"
             style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
           >
             Complete {stageOrder[stageIndex - 1]?.toUpperCase()} to unlock

@@ -217,7 +217,7 @@ export default function CheckInPage() {
               <p
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '14px',
+                  fontSize: '19px',
                   color: 'var(--parent-text-light)',
                   lineHeight: 1.6,
                 }}
@@ -226,7 +226,7 @@ export default function CheckInPage() {
               </p>
               <Link
                 href="/dashboard"
-                className="inline-flex items-center mt-4 px-6 py-2.5 rounded-full text-[13px] font-medium text-white hover:opacity-90"
+                className="inline-flex items-center mt-4 px-6 py-2.5 rounded-full text-[18px] font-medium text-white hover:opacity-90"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
                   background: 'var(--parent-primary)',
@@ -317,7 +317,7 @@ function AssessStep({
           className="block mb-1"
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '12px',
+            fontSize: '17px',
             fontWeight: 600,
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
@@ -342,7 +342,7 @@ function AssessStep({
           className="mt-1"
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '15px',
+            fontSize: '21px',
             color: 'var(--parent-text-light)',
           }}
         >
@@ -363,7 +363,7 @@ function AssessStep({
                 className="mb-4"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '14px',
+                  fontSize: '19px',
                   color: 'var(--parent-text)',
                   lineHeight: 1.55,
                 }}
@@ -375,7 +375,7 @@ function AssessStep({
                   <button
                     key={opt.value}
                     onClick={() => onAnswer(prompt.promptId, opt.value)}
-                    className="px-4 py-2 rounded-full text-[12.5px] font-medium transition-all"
+                    className="px-4 py-2 rounded-full text-[17px] font-medium transition-all"
                     style={{
                       fontFamily: 'var(--font-parent-body)',
                       background:
@@ -406,7 +406,7 @@ function AssessStep({
           <p
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: '15px',
+              fontSize: '21px',
               color: 'var(--parent-text-light)',
             }}
           >
@@ -420,7 +420,7 @@ function AssessStep({
         <button
           onClick={onNext}
           disabled={!allAnswered && checkIn.prompts.length > 0}
-          className="inline-flex items-center px-6 py-2.5 rounded-full text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-40 transition-opacity"
+          className="inline-flex items-center px-6 py-2.5 rounded-full text-[18px] font-medium text-white hover:opacity-90 disabled:opacity-40 transition-opacity"
           style={{
             fontFamily: 'var(--font-parent-body)',
             background: 'var(--aura-assess)',
@@ -451,7 +451,7 @@ function UnderstandStep({
           className="block mb-1"
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '12px',
+            fontSize: '17px',
             fontWeight: 600,
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
@@ -498,7 +498,7 @@ function UnderstandStep({
                   <h3
                     style={{
                       fontFamily: 'var(--font-parent-display)',
-                      fontSize: '16px',
+                      fontSize: '22px',
                       fontWeight: 500,
                       color: 'var(--parent-text)',
                     }}
@@ -508,7 +508,7 @@ function UnderstandStep({
                   <span
                     style={{
                       fontFamily: 'var(--font-parent-body)',
-                      fontSize: '14px',
+                      fontSize: '19px',
                       color: 'var(--parent-text-light)',
                     }}
                   >
@@ -517,7 +517,7 @@ function UnderstandStep({
                 </div>
                 <span
                   style={{
-                    fontSize: '20px',
+                    fontSize: '28px',
                     color: trend.color,
                   }}
                 >
@@ -530,7 +530,7 @@ function UnderstandStep({
                 <span
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '15px',
+                    fontSize: '21px',
                     color: 'var(--parent-text-light)',
                   }}
                 >
@@ -539,7 +539,7 @@ function UnderstandStep({
                 <span
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '15px',
+                    fontSize: '21px',
                     color: 'var(--parent-text-light)',
                   }}
                 >
@@ -548,7 +548,7 @@ function UnderstandStep({
                 <span
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '15px',
+                    fontSize: '21px',
                     fontWeight: 600,
                     color: trend.color,
                   }}
@@ -562,7 +562,7 @@ function UnderstandStep({
                 className="mt-2"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '12.5px',
+                  fontSize: '17px',
                   color: 'var(--parent-text-light)',
                   fontStyle: 'italic',
                   lineHeight: 1.5,
@@ -582,7 +582,7 @@ function UnderstandStep({
       <div className="mt-6 flex justify-end">
         <button
           onClick={onNext}
-          className="inline-flex items-center px-6 py-2.5 rounded-full text-[13px] font-medium text-white hover:opacity-90"
+          className="inline-flex items-center px-6 py-2.5 rounded-full text-[18px] font-medium text-white hover:opacity-90"
           style={{
             fontFamily: 'var(--font-parent-body)',
             background: 'var(--aura-understand)',
@@ -611,7 +611,7 @@ function RespondStep({
           className="block mb-1"
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '12px',
+            fontSize: '17px',
             fontWeight: 600,
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
@@ -661,7 +661,7 @@ function RespondStep({
               <h3
                 style={{
                   fontFamily: 'var(--font-parent-display)',
-                  fontSize: '16px',
+                  fontSize: '22px',
                   fontWeight: 500,
                   color: 'var(--parent-text)',
                 }}
@@ -672,7 +672,7 @@ function RespondStep({
                 className="block mb-3"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '14px',
+                  fontSize: '19px',
                   color: 'var(--parent-text-light)',
                 }}
               >
@@ -690,7 +690,7 @@ function RespondStep({
                   <p
                     style={{
                       fontFamily: 'var(--font-parent-body)',
-                      fontSize: '15px',
+                      fontSize: '21px',
                       color: 'var(--parent-text-light)',
                       fontStyle: 'italic',
                       marginBottom: '6px',
@@ -701,7 +701,7 @@ function RespondStep({
                   <h4
                     style={{
                       fontFamily: 'var(--font-parent-body)',
-                      fontSize: '14px',
+                      fontSize: '19px',
                       fontWeight: 500,
                       color: 'var(--parent-text)',
                     }}
@@ -712,7 +712,7 @@ function RespondStep({
                     className="mt-1"
                     style={{
                       fontFamily: 'var(--font-parent-body)',
-                      fontSize: '12.5px',
+                      fontSize: '17px',
                       color: 'var(--parent-text-light)',
                       lineHeight: 1.5,
                     }}
@@ -723,7 +723,7 @@ function RespondStep({
                     className="mt-2"
                     style={{
                       fontFamily: 'var(--font-parent-body)',
-                      fontSize: '12.5px',
+                      fontSize: '17px',
                       color: 'var(--parent-text-light)',
                       lineHeight: 1.5,
                     }}
@@ -744,7 +744,7 @@ function RespondStep({
                   <p
                     style={{
                       fontFamily: 'var(--font-parent-body)',
-                      fontSize: '15px',
+                      fontSize: '21px',
                       color: 'var(--aura-respond)',
                       fontWeight: 500,
                       marginBottom: '6px',
@@ -755,7 +755,7 @@ function RespondStep({
                   <h4
                     style={{
                       fontFamily: 'var(--font-parent-body)',
-                      fontSize: '14px',
+                      fontSize: '19px',
                       fontWeight: 500,
                       color: 'var(--parent-text)',
                     }}
@@ -766,7 +766,7 @@ function RespondStep({
                     className="mt-1"
                     style={{
                       fontFamily: 'var(--font-parent-body)',
-                      fontSize: '12.5px',
+                      fontSize: '17px',
                       color: 'var(--parent-text-light)',
                       lineHeight: 1.5,
                     }}
@@ -782,7 +782,7 @@ function RespondStep({
                 <p
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '15px',
+                    fontSize: '21px',
                     color: 'var(--parent-text-light)',
                     fontStyle: 'italic',
                   }}
@@ -798,7 +798,7 @@ function RespondStep({
       <div className="mt-6 flex justify-between items-center">
         <Link
           href="/workbook"
-          className="text-[12px] hover:opacity-70"
+          className="text-[17px] hover:opacity-70"
           style={{
             fontFamily: 'var(--font-parent-body)',
             fontWeight: 500,
@@ -809,7 +809,7 @@ function RespondStep({
         </Link>
         <button
           onClick={onNext}
-          className="inline-flex items-center px-6 py-2.5 rounded-full text-[13px] font-medium text-white hover:opacity-90"
+          className="inline-flex items-center px-6 py-2.5 rounded-full text-[18px] font-medium text-white hover:opacity-90"
           style={{
             fontFamily: 'var(--font-parent-body)',
             background: 'var(--aura-respond)',
@@ -861,7 +861,7 @@ function AssimilateStep({
           className="block mb-1"
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '12px',
+            fontSize: '17px',
             fontWeight: 600,
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
@@ -893,7 +893,7 @@ function AssimilateStep({
         <p
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: '14px',
+            fontSize: '19px',
             color: 'var(--parent-text)',
             lineHeight: 1.65,
           }}
@@ -934,7 +934,7 @@ function AssimilateStep({
             <span
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: '14px',
+                fontSize: '19px',
                 color: 'var(--parent-text-light)',
               }}
             >
@@ -957,7 +957,7 @@ function AssimilateStep({
           <p
             style={{
               fontFamily: 'var(--font-parent-display)',
-              fontSize: '18px',
+              fontSize: '25px',
               fontWeight: 400,
               fontStyle: 'italic',
               color: '#16a34a',
@@ -980,7 +980,7 @@ function AssimilateStep({
           <p
             style={{
               fontFamily: 'var(--font-parent-display)',
-              fontSize: '18px',
+              fontSize: '25px',
               fontWeight: 400,
               fontStyle: 'italic',
               color: '#BA7517',
@@ -995,7 +995,7 @@ function AssimilateStep({
       <div className="mt-8 flex flex-col items-center gap-3">
         <Link
           href="/workbook"
-          className="inline-flex items-center px-6 py-2.5 rounded-full text-[13px] font-medium text-white hover:opacity-90"
+          className="inline-flex items-center px-6 py-2.5 rounded-full text-[18px] font-medium text-white hover:opacity-90"
           style={{
             fontFamily: 'var(--font-parent-body)',
             background: 'var(--aura-assimilate)',
@@ -1005,7 +1005,7 @@ function AssimilateStep({
         </Link>
         <Link
           href="/dashboard"
-          className="text-[12px] hover:opacity-70"
+          className="text-[17px] hover:opacity-70"
           style={{
             fontFamily: 'var(--font-parent-body)',
             fontWeight: 500,

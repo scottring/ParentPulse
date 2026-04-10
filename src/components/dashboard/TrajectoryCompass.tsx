@@ -77,7 +77,7 @@ export default function TrajectoryCompass({ trend, primaryDimension }: Trajector
 
         {/* Label */}
         <span
-          className="text-[10px] font-bold tracking-widest"
+          className="text-[14px] font-bold tracking-widest"
           style={{ fontFamily: 'var(--font-parent-body)', color: config.color }}
         >
           {config.label}
@@ -86,7 +86,7 @@ export default function TrajectoryCompass({ trend, primaryDimension }: Trajector
         {/* Current focus dimension */}
         {primaryDimension && (
           <span
-            className="text-[9px] mt-1 text-center"
+            className="text-[13px] mt-1 text-center"
             style={{ fontFamily: 'var(--font-parent-body)', color: '#4A4238' }}
           >
             {primaryDimension}

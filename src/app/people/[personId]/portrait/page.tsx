@@ -57,7 +57,7 @@ export default function PortraitPage() {
             </p>
             <Link
               href="/people"
-              className="text-[13px] text-[#7C9082] hover:underline"
+              className="text-[18px] text-[#7C9082] hover:underline"
               style={{ fontFamily: 'var(--font-parent-body)' }}
             >
               Back to People
@@ -115,7 +115,7 @@ export default function PortraitPage() {
               className="mt-5"
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: '14px',
+                fontSize: '19px',
                 color: '#5C5347',
                 lineHeight: 1.7,
                 fontStyle: 'italic',
@@ -131,7 +131,7 @@ export default function PortraitPage() {
               <button
                 key={tab.key}
                 onClick={() => setActiveSection(tab.key)}
-                className="text-[12px] px-4 py-2.5 transition-all relative"
+                className="text-[17px] px-4 py-2.5 transition-all relative"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
                   fontWeight: activeSection === tab.key ? 600 : 400,
@@ -164,7 +164,7 @@ export default function PortraitPage() {
               className="rounded-xl p-8 text-center"
               style={{ background: 'rgba(0,0,0,0.02)', border: '1px dashed rgba(138,128,120,0.2)' }}
             >
-              <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#5F564B' }}>
+              <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '21px', color: '#5F564B' }}>
                 No synthesis yet. Add more perspectives to generate insights.
               </p>
             </div>
@@ -181,7 +181,7 @@ export default function PortraitPage() {
                   className="rounded-xl p-8 text-center"
                   style={{ background: 'rgba(0,0,0,0.02)', border: '1px dashed rgba(138,128,120,0.2)' }}
                 >
-                  <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#5F564B' }}>
+                  <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '21px', color: '#5F564B' }}>
                     No role sections yet.
                   </p>
                 </div>
@@ -194,7 +194,7 @@ export default function PortraitPage() {
                   <h4
                     style={{
                       fontFamily: 'var(--font-parent-display)',
-                      fontSize: '15px',
+                      fontSize: '21px',
                       fontWeight: 500,
                       color: '#3A3530',
                     }}
@@ -203,7 +203,7 @@ export default function PortraitPage() {
                   </h4>
                   {role.roleOverview && (
                     <p
-                      className="mt-2 text-[12px]"
+                      className="mt-2 text-[17px]"
                       style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347', lineHeight: 1.6 }}
                     >
                       {role.roleOverview}
@@ -216,7 +216,7 @@ export default function PortraitPage() {
                       {role.strengths.map((s, i) => (
                         <span
                           key={i}
-                          className="text-[10px] px-2 py-0.5 rounded-full"
+                          className="text-[14px] px-2 py-0.5 rounded-full"
                           style={{ background: 'rgba(22,163,74,0.06)', color: '#166534', fontFamily: 'var(--font-parent-body)' }}
                         >
                           {s}
@@ -231,7 +231,7 @@ export default function PortraitPage() {
                       {role.challenges.map((c, i) => (
                         <span
                           key={i}
-                          className="text-[10px] px-2 py-0.5 rounded-full"
+                          className="text-[14px] px-2 py-0.5 rounded-full"
                           style={{ background: 'rgba(217,119,6,0.06)', color: '#92400e', fontFamily: 'var(--font-parent-body)' }}
                         >
                           {c}
@@ -241,7 +241,7 @@ export default function PortraitPage() {
                   )}
 
                   {/* Triggers count + strategies count */}
-                  <div className="mt-3 flex gap-4 text-[11px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
+                  <div className="mt-3 flex gap-4 text-[16px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
                     {role.triggers.length > 0 && <span>{role.triggers.length} triggers</span>}
                     {role.whatWorks.length > 0 && <span>{role.whatWorks.length} strategies</span>}
                     {role.emergingPatterns.length > 0 && <span>{role.emergingPatterns.length} patterns</span>}
@@ -259,12 +259,12 @@ export default function PortraitPage() {
                 style={{ background: 'rgba(124,58,237,0.03)', border: '1px solid rgba(124,58,237,0.1)' }}
               >
                 <div className="flex items-center gap-2 mb-3">
-                  <span style={{ fontSize: '16px' }}>{'\uD83D\uDD12'}</span>
-                  <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '16px', fontWeight: 500, color: '#3A3530' }}>
+                  <span style={{ fontSize: '22px' }}>{'\uD83D\uDD12'}</span>
+                  <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '22px', fontWeight: 500, color: '#3A3530' }}>
                     Private to you
                   </h3>
                 </div>
-                <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5F564B', lineHeight: 1.6 }}>
+                <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: '#5F564B', lineHeight: 1.6 }}>
                   This section is only visible to you. It includes private journal entries, private contribution answers, and therapy notes.
                   The AI uses this data to improve <em>your</em> manual only — it never appears in shared views or other family members&apos; data.
                 </p>
@@ -273,10 +273,10 @@ export default function PortraitPage() {
               {/* Private contribution answers */}
               {privateAnswerCount > 0 && (
                 <div className="glass-card rounded-xl p-4">
-                  <h4 style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', fontWeight: 600, color: '#3A3530', marginBottom: '4px' }}>
+                  <h4 style={{ fontFamily: 'var(--font-parent-body)', fontSize: '21px', fontWeight: 600, color: '#3A3530', marginBottom: '4px' }}>
                     Private answers
                   </h4>
-                  <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', color: '#5F564B' }}>
+                  <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: '#5F564B' }}>
                     {privateAnswerCount} answer{privateAnswerCount !== 1 ? 's' : ''} marked as private across your contributions.
                     These feed your self-synthesis but aren&apos;t visible to other family members.
                   </p>
@@ -288,7 +288,7 @@ export default function PortraitPage() {
                 <div>
                   <h4
                     className="mb-2"
-                    style={{ fontFamily: 'var(--font-parent-body)', fontSize: '14px', fontWeight: 600, color: '#3A3530' }}
+                    style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', fontWeight: 600, color: '#3A3530' }}
                   >
                     Your notes ({privateNotes.length})
                   </h4>
@@ -297,16 +297,16 @@ export default function PortraitPage() {
                       <div key={n.id} className="rounded-lg p-3" style={{ background: 'rgba(124,58,237,0.03)' }}>
                         <div className="flex items-center gap-2 mb-1">
                           <span
-                            className="text-[10px] px-1.5 py-0.5 rounded-full font-medium capitalize"
+                            className="text-[14px] px-1.5 py-0.5 rounded-full font-medium capitalize"
                             style={{ fontFamily: 'var(--font-parent-body)', background: 'rgba(124,58,237,0.06)', color: '#5b21b6' }}
                           >
                             {n.category}
                           </span>
-                          <span className="text-[10px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
+                          <span className="text-[14px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
                             {n.date?.toDate?.()?.toLocaleDateString?.() ?? ''}
                           </span>
                         </div>
-                        <p className="text-[12px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347', lineHeight: 1.5 }}>
+                        <p className="text-[17px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347', lineHeight: 1.5 }}>
                           {n.note}
                         </p>
                       </div>
@@ -320,7 +320,7 @@ export default function PortraitPage() {
                   className="rounded-xl p-8 text-center"
                   style={{ background: 'rgba(0,0,0,0.02)', border: '1px dashed rgba(138,128,120,0.2)' }}
                 >
-                  <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#5F564B' }}>
+                  <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '21px', color: '#5F564B' }}>
                     No private notes yet. Mark journal entries or contribution answers as private and they&apos;ll appear here.
                   </p>
                 </div>
@@ -341,7 +341,7 @@ export default function PortraitPage() {
                   <h3
                     style={{
                       fontFamily: 'var(--font-parent-display)',
-                      fontSize: '16px',
+                      fontSize: '22px',
                       fontWeight: 500,
                       color: '#3A3530',
                       marginBottom: '8px',
@@ -357,7 +357,7 @@ export default function PortraitPage() {
                         style={{ background: 'rgba(0,0,0,0.02)' }}
                       >
                         <span
-                          className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 mt-0.5 font-medium"
+                          className="text-[14px] px-1.5 py-0.5 rounded-full flex-shrink-0 mt-0.5 font-medium"
                           style={{
                             background: p.confidence === 'validated' ? 'rgba(22,163,74,0.08)' : p.confidence === 'consistent' ? 'rgba(217,119,6,0.08)' : 'rgba(156,163,175,0.1)',
                             color: p.confidence === 'validated' ? '#166534' : p.confidence === 'consistent' ? '#92400e' : '#4A4238',
@@ -366,10 +366,10 @@ export default function PortraitPage() {
                           {p.confidence}
                         </span>
                         <div>
-                          <span className="text-[12px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#3A3530' }}>
+                          <span className="text-[17px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#3A3530' }}>
                             {p.description}
                           </span>
-                          <span className="block text-[10px] mt-0.5" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
+                          <span className="block text-[14px] mt-0.5" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
                             {p.frequency}
                           </span>
                         </div>
@@ -384,7 +384,7 @@ export default function PortraitPage() {
                   <h3
                     style={{
                       fontFamily: 'var(--font-parent-display)',
-                      fontSize: '16px',
+                      fontSize: '22px',
                       fontWeight: 500,
                       color: '#3A3530',
                       marginBottom: '8px',
@@ -397,7 +397,7 @@ export default function PortraitPage() {
                       <div key={n.id} className="rounded-lg p-3" style={{ background: 'rgba(0,0,0,0.02)' }}>
                         <div className="flex items-center gap-2 mb-1">
                           <span
-                            className="text-[10px] px-1.5 py-0.5 rounded-full font-medium capitalize"
+                            className="text-[14px] px-1.5 py-0.5 rounded-full font-medium capitalize"
                             style={{
                               fontFamily: 'var(--font-parent-body)',
                               background: n.category === 'improvement' ? 'rgba(22,163,74,0.06)' : n.category === 'concern' ? 'rgba(220,38,38,0.06)' : 'rgba(124,144,130,0.06)',
@@ -406,11 +406,11 @@ export default function PortraitPage() {
                           >
                             {n.category}
                           </span>
-                          <span className="text-[10px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
+                          <span className="text-[14px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
                             {n.date?.toDate?.()?.toLocaleDateString?.() ?? ''}
                           </span>
                         </div>
-                        <p className="text-[12px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347', lineHeight: 1.5 }}>
+                        <p className="text-[17px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347', lineHeight: 1.5 }}>
                           {n.note}
                         </p>
                       </div>
@@ -425,7 +425,7 @@ export default function PortraitPage() {
           <div className="mt-8 flex items-center gap-4">
             <Link
               href={`/people/${personId}/manual`}
-              className="text-[12px] px-4 py-2 rounded-full transition-all hover:opacity-80"
+              className="text-[17px] px-4 py-2 rounded-full transition-all hover:opacity-80"
               style={{
                 fontFamily: 'var(--font-parent-body)',
                 fontWeight: 500,
@@ -437,7 +437,7 @@ export default function PortraitPage() {
             </Link>
             <Link
               href="/people"
-              className="text-[12px] hover:underline"
+              className="text-[17px] hover:underline"
               style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
             >
               Back to People

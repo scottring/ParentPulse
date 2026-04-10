@@ -265,7 +265,7 @@
   border-radius: 8px;
   font-family: var(--font-body);
   font-weight: 600;
-  font-size: 16px;
+  font-size: 22px;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -290,7 +290,7 @@
   gap: 6px;
   padding: 6px 12px;
   border-radius: 20px;
-  font-size: 14px;
+  font-size: 19px;
   font-weight: 600;
   background: linear-gradient(
     135deg,
@@ -303,7 +303,7 @@
 
 .relationship-badge::before {
   content: var(--relationship-icon);
-  font-size: 16px;
+  font-size: 22px;
 }
 
 /* ==================== Animations ==================== */

@@ -53,13 +53,13 @@ export function SpouseCard({ person, manual, assessments }: Props) {
               className="w-10 h-10 rounded-full flex items-center justify-center"
               style={{ background: 'rgba(124,144,130,0.12)', border: '2px solid #7C9082' }}
             >
-              <span style={{ fontSize: '18px' }}>💑</span>
+              <span style={{ fontSize: '25px' }}>💑</span>
             </div>
             <div>
               <h3
                 style={{
                   fontFamily: 'var(--font-parent-display)',
-                  fontSize: '17px',
+                  fontSize: '24px',
                   fontWeight: 500,
                   color: '#3A3530',
                 }}
@@ -69,7 +69,7 @@ export function SpouseCard({ person, manual, assessments }: Props) {
               <span
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '15px',
+                  fontSize: '21px',
                   color: '#5F564B',
                 }}
               >
@@ -84,7 +84,7 @@ export function SpouseCard({ person, manual, assessments }: Props) {
               <span
                 style={{
                   fontFamily: 'var(--font-parent-display)',
-                  fontSize: '22px',
+                  fontSize: '30px',
                   fontWeight: 400,
                   color: '#3A3530',
                 }}
@@ -95,7 +95,7 @@ export function SpouseCard({ person, manual, assessments }: Props) {
                 className="block"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '12px',
+                  fontSize: '17px',
                   color: '#5F564B',
                 }}
               >
@@ -111,7 +111,7 @@ export function SpouseCard({ person, manual, assessments }: Props) {
         {/* Freshness */}
         <span
           className="flex items-center gap-1"
-          style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px' }}
+          style={{ fontFamily: 'var(--font-parent-body)', fontSize: '21px' }}
         >
           <span
             className="w-1.5 h-1.5 rounded-full"
@@ -122,7 +122,7 @@ export function SpouseCard({ person, manual, assessments }: Props) {
 
         {/* Alignment */}
         {alignmentPercent !== null && (
-          <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#5F564B' }}>
+          <span style={{ fontFamily: 'var(--font-parent-body)', fontSize: '21px', color: '#5F564B' }}>
             {alignmentPercent}% aligned
           </span>
         )}
@@ -134,7 +134,7 @@ export function SpouseCard({ person, manual, assessments }: Props) {
           {significantGaps.slice(0, 3).map((gap) => (
             <span
               key={gap.id}
-              className="text-[10px] px-2 py-0.5 rounded-full"
+              className="text-[14px] px-2 py-0.5 rounded-full"
               style={{
                 fontFamily: 'var(--font-parent-body)',
                 background: 'rgba(217,119,6,0.08)',
@@ -155,7 +155,7 @@ export function SpouseCard({ person, manual, assessments }: Props) {
       >
         <Link
           href={hasManual ? `/people/${person.personId}/manual/onboard` : `/people/${person.personId}/create-manual`}
-          className="flex-1 text-[12px] font-medium py-2 rounded-full text-center text-white transition-all hover:opacity-90"
+          className="flex-1 text-[17px] font-medium py-2 rounded-full text-center text-white transition-all hover:opacity-90"
           style={{ fontFamily: 'var(--font-parent-body)', background: '#7C9082' }}
         >
           {hasManual ? 'Update perspective' : 'Set up manual'} &rarr;
@@ -163,7 +163,7 @@ export function SpouseCard({ person, manual, assessments }: Props) {
         {hasManual && (
           <Link
             href={`/people/${person.personId}/portrait`}
-            className="text-[12px] font-medium px-4 py-2 rounded-full text-center transition-all hover:opacity-80"
+            className="text-[17px] font-medium px-4 py-2 rounded-full text-center transition-all hover:opacity-80"
             style={{
               fontFamily: 'var(--font-parent-body)',
               color: '#5C5347',

@@ -374,7 +374,7 @@ function BriefView({
   const router = useRouter();
 
   return (
-    <div className="press-binder" style={{ maxWidth: 680 }}>
+    <div className="press-binder" style={{ maxWidth: 952 }}>
 
       {/* Running header */}
       <div className="press-running-header" style={{ paddingTop: 28 }}>
@@ -425,7 +425,7 @@ function BriefView({
       {fromChat && (
         <p
           className="press-marginalia"
-          style={{ textAlign: 'center', fontSize: 14, marginBottom: 8 }}
+          style={{ textAlign: 'center', fontSize: 13, marginBottom: 8 }}
         >
           drawn from a conversation with the manual
         </p>
@@ -438,7 +438,7 @@ function BriefView({
         {item.type === 'illustrated_story' ? (
           <p
             className="press-body-italic"
-            style={{ textAlign: 'center', maxWidth: 520, margin: '0 auto', fontSize: 19 }}
+            style={{ textAlign: 'center', maxWidth: 520, margin: '0 auto', fontSize: 17 }}
           >
             A short story to read aloud with {about || 'them'} — five
             minutes, together. When you&rsquo;re done, you&rsquo;ll be
@@ -463,7 +463,7 @@ function BriefView({
           style={{
             background: 'transparent',
             cursor: 'pointer',
-            fontSize: 24,
+            fontSize: 22,
           }}
         >
           {item.type === 'illustrated_story' ? 'Open the story' : 'Begin this practice'}
@@ -496,7 +496,7 @@ function BriefView({
             background: 'transparent',
             border: 0,
             cursor: submitting ? 'wait' : 'pointer',
-            fontSize: 14,
+            fontSize: 13,
             color: '#7A6E5C',
             opacity: submitting ? 0.5 : 1,
           }}
@@ -576,7 +576,7 @@ function WritingPerformance({
   const elapsedMinutes = Math.floor(elapsed / 60);
 
   return (
-    <div className="press-binder" style={{ maxWidth: 720 }}>
+    <div className="press-binder" style={{ maxWidth: 1008 }}>
 
       {/* Running header */}
       <div className="press-running-header" style={{ paddingTop: 28 }}>
@@ -601,7 +601,7 @@ function WritingPerformance({
         <span className="press-chapter-label">The prompt</span>
         <p
           className="press-body-italic mt-2"
-          style={{ fontSize: 17, color: '#5C5347', lineHeight: 1.55 }}
+          style={{ fontSize: 16, color: '#5C5347', lineHeight: 1.55 }}
         >
           {item.body}
         </p>
@@ -620,7 +620,7 @@ function WritingPerformance({
           className="w-full focus:outline-none"
           style={{
             fontFamily: 'var(--font-parent-display)',
-            fontSize: 21,
+            fontSize: 19,
             fontStyle: 'italic',
             color: '#3A3530',
             background: 'transparent',
@@ -639,7 +639,7 @@ function WritingPerformance({
         className="flex items-baseline justify-between"
         style={{ padding: '0 56px 20px' }}
       >
-        <p className="press-marginalia" style={{ fontSize: 14 }}>
+        <p className="press-marginalia" style={{ fontSize: 13 }}>
           {wordCount > 0 ? (
             <>
               {toRoman(wordCount).toLowerCase()} words &middot; {elapsedMinutes === 0 ? 'just begun' : `${toRoman(elapsedMinutes).toLowerCase()} min in`}
@@ -648,7 +648,7 @@ function WritingPerformance({
             'blank page'
           )}
         </p>
-        <p className="press-marginalia" style={{ fontSize: 15, color: '#7A6E5C' }}>
+        <p className="press-marginalia" style={{ fontSize: 14, color: '#7A6E5C' }}>
           autosaved as you go
         </p>
       </div>
@@ -663,7 +663,7 @@ function WritingPerformance({
           style={{
             background: 'transparent',
             cursor: 'pointer',
-            fontSize: 20,
+            fontSize: 18,
             opacity: wordCount === 0 ? 0.5 : 1,
           }}
         >
@@ -713,7 +713,7 @@ function TimerPerformance({
         : `${toRoman(minutes).toLowerCase()}${seconds > 0 ? ` ${String(seconds).padStart(2, '0')}` : ''} min remain`;
 
   return (
-    <div className="press-binder" style={{ maxWidth: 680 }}>
+    <div className="press-binder" style={{ maxWidth: 952 }}>
 
       {/* Running header */}
       <div className="press-running-header" style={{ paddingTop: 28 }}>
@@ -745,7 +745,7 @@ function TimerPerformance({
         <span className="press-chapter-label">What to do</span>
         <p
           className="press-body-italic mt-2"
-          style={{ fontSize: 17, color: '#3A3530', lineHeight: 1.55 }}
+          style={{ fontSize: 16, color: '#3A3530', lineHeight: 1.55 }}
         >
           {item.body}
         </p>
@@ -813,7 +813,7 @@ function TimerPerformance({
             style={{
               background: 'transparent',
               cursor: 'pointer',
-              fontSize: 20,
+              fontSize: 18,
             }}
           >
             {remaining === totalSeconds ? 'Begin the timer' : 'Resume'}
@@ -874,7 +874,7 @@ function StepsPerformance({
   const isFirst = current === 0;
 
   return (
-    <div className="press-binder" style={{ maxWidth: 680 }}>
+    <div className="press-binder" style={{ maxWidth: 952 }}>
 
       {/* Running header */}
       <div className="press-running-header" style={{ paddingTop: 28 }}>
@@ -972,7 +972,7 @@ function StepsPerformance({
             style={{
               background: 'transparent',
               cursor: 'pointer',
-              fontSize: 20,
+              fontSize: 18,
             }}
           >
             Next prompt
@@ -985,7 +985,7 @@ function StepsPerformance({
             style={{
               background: 'transparent',
               cursor: 'pointer',
-              fontSize: 20,
+              fontSize: 18,
             }}
           >
             We&rsquo;ve completed this
@@ -1028,7 +1028,7 @@ function StoryPerformance({
     : item.body.split(/\n\s*\n/).filter((p) => p.trim());
 
   return (
-    <div className="press-binder" style={{ maxWidth: 640 }}>
+    <div className="press-binder" style={{ maxWidth: 896 }}>
 
       {/* Running header — "a story for [childName]" */}
       <div className="press-running-header" style={{ paddingTop: 28 }}>
@@ -1053,7 +1053,7 @@ function StoryPerformance({
         style={{
           textAlign: 'center',
           fontFamily: 'var(--font-parent-display)',
-          fontSize: 22,
+          fontSize: 20,
           color: '#8C8070',
           letterSpacing: '0.4em',
           marginBottom: 18,
@@ -1086,7 +1086,7 @@ function StoryPerformance({
         className="press-marginalia"
         style={{
           textAlign: 'center',
-          fontSize: 14,
+          fontSize: 13,
           color: '#7A6E5C',
           marginBottom: 8,
         }}
@@ -1105,7 +1105,7 @@ function StoryPerformance({
             className={i === 0 ? 'press-drop-cap' : ''}
             style={{
               fontFamily: 'var(--font-parent-display)',
-              fontSize: 21,
+              fontSize: 19,
               fontWeight: 400,
               fontStyle: 'italic',
               color: '#3A3530',
@@ -1122,12 +1122,12 @@ function StoryPerformance({
       </div>
 
       {/* Closing ornament */}
-      <div className="press-fleuron" style={{ fontSize: 20, marginTop: 8 }}>
+      <div className="press-fleuron" style={{ fontSize: 18, marginTop: 8 }}>
         ❦
       </div>
       <p
         className="press-marginalia"
-        style={{ textAlign: 'center', fontSize: 15, marginTop: 4, fontStyle: 'italic' }}
+        style={{ textAlign: 'center', fontSize: 14, marginTop: 4, fontStyle: 'italic' }}
       >
         — the end —
       </p>
@@ -1142,7 +1142,7 @@ function StoryPerformance({
           style={{
             background: 'transparent',
             cursor: 'pointer',
-            fontSize: 20,
+            fontSize: 18,
           }}
         >
           How did {childName} take it?
@@ -1166,7 +1166,7 @@ function DefaultPerformance({
   onBack: () => void;
 }) {
   return (
-    <div className="press-binder" style={{ maxWidth: 680 }}>
+    <div className="press-binder" style={{ maxWidth: 952 }}>
 
       <div className="press-running-header" style={{ paddingTop: 28 }}>
         <span>In the practice</span>
@@ -1194,7 +1194,7 @@ function DefaultPerformance({
         </span>
         <p
           className="press-body press-drop-cap"
-          style={{ fontSize: 20 }}
+          style={{ fontSize: 18 }}
         >
           {item.body}
         </p>
@@ -1209,7 +1209,7 @@ function DefaultPerformance({
           style={{
             background: 'transparent',
             cursor: 'pointer',
-            fontSize: 20,
+            fontSize: 18,
           }}
         >
           I&rsquo;ve done this
@@ -1266,7 +1266,7 @@ function StoryReactionView({
   };
 
   return (
-    <div className="press-binder" style={{ maxWidth: 640 }}>
+    <div className="press-binder" style={{ maxWidth: 896 }}>
 
       {/* Running header */}
       <div className="press-running-header" style={{ paddingTop: 28 }}>
@@ -1294,7 +1294,7 @@ function StoryReactionView({
         className="press-marginalia"
         style={{
           textAlign: 'center',
-          fontSize: 14,
+          fontSize: 13,
           marginBottom: 24,
           maxWidth: 380,
           marginLeft: 'auto',
@@ -1344,7 +1344,7 @@ function StoryReactionView({
                 className="press-marginalia"
                 style={{
                   marginTop: 8,
-                  fontSize: 12,
+                  fontSize: 11,
                   color: isSelected ? '#2D5F5D' : '#746856',
                   fontStyle: 'italic',
                   transition: 'color 0.25s ease',
@@ -1364,7 +1364,7 @@ function StoryReactionView({
         </span>
         <p
           className="press-marginalia"
-          style={{ fontSize: 13, marginBottom: 10, marginTop: 4 }}
+          style={{ fontSize: 12, marginBottom: 10, marginTop: 4 }}
         >
           Optional. A word, a sentence, a question they asked — whatever
           stayed with them.
@@ -1377,7 +1377,7 @@ function StoryReactionView({
           className="w-full focus:outline-none"
           style={{
             fontFamily: 'var(--font-parent-display)',
-            fontSize: 18,
+            fontSize: 17,
             fontStyle: 'italic',
             color: '#3A3530',
             background: 'transparent',
@@ -1402,7 +1402,7 @@ function StoryReactionView({
             background: 'transparent',
             cursor: submitting || storyRating === null ? 'not-allowed' : 'pointer',
             opacity: submitting || storyRating === null ? 0.4 : 1,
-            fontSize: 20,
+            fontSize: 18,
           }}
         >
           {submitting ? 'Saving…' : 'Keep this reaction'}
@@ -1410,7 +1410,7 @@ function StoryReactionView({
         </button>
         <p
           className="press-marginalia"
-          style={{ fontSize: 12, marginTop: 10, color: '#7A6E5C' }}
+          style={{ fontSize: 11, marginTop: 10, color: '#7A6E5C' }}
         >
           {childName}&rsquo;s reaction becomes part of their volume.
         </p>
@@ -1487,7 +1487,7 @@ function ReflectView({
   const showReflectionField = performanceMode !== 'writing';
 
   return (
-    <div className="press-binder" style={{ maxWidth: 680 }}>
+    <div className="press-binder" style={{ maxWidth: 952 }}>
 
       {/* Running header */}
       <div className="press-running-header" style={{ paddingTop: 28 }}>
@@ -1508,7 +1508,7 @@ function ReflectView({
       </h2>
       <p
         className="press-marginalia"
-        style={{ textAlign: 'center', fontSize: 14, marginBottom: 28 }}
+        style={{ textAlign: 'center', fontSize: 13, marginBottom: 28 }}
       >
         A single word on how much it moved for {isMultiPerson ? 'you both' : 'you'}.
       </p>
@@ -1574,13 +1574,13 @@ function ReflectView({
             </span>
             <div
               className="press-display-sm"
-              style={{ fontStyle: 'italic', fontSize: 22 }}
+              style={{ fontStyle: 'italic', fontSize: 20 }}
             >
               {label}
             </div>
             <p
               className="press-marginalia"
-              style={{ marginTop: 4, fontSize: 15 }}
+              style={{ marginTop: 4, fontSize: 14 }}
             >
               {description}
             </p>
@@ -1630,7 +1630,7 @@ function ReflectionFieldPress({
       )}
       <p
         className="press-marginalia"
-        style={{ marginBottom: 10, fontSize: 15 }}
+        style={{ marginBottom: 10, fontSize: 14 }}
       >
         {name ? `What did ${name} notice?` : 'What did you notice?'}
       </p>
@@ -1642,7 +1642,7 @@ function ReflectionFieldPress({
         className="w-full focus:outline-none"
         style={{
           fontFamily: 'var(--font-parent-display)',
-          fontSize: 17,
+          fontSize: 16,
           fontStyle: 'italic',
           color: '#3A3530',
           background: 'transparent',
@@ -1673,7 +1673,7 @@ function CompleteView({
 }) {
   void item;
   return (
-    <div className="press-binder" style={{ maxWidth: 680 }}>
+    <div className="press-binder" style={{ maxWidth: 952 }}>
       <div className="press-running-header" style={{ paddingTop: 28 }}>
         <span>The Workbook</span>
         <span className="sep">·</span>

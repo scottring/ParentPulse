@@ -18,7 +18,7 @@ export function RelationshipContentReview({ content, participantNames }: Relatio
       {/* Relationship Overview */}
       {content.relationshipOverview && (
         <div className="glass-card rounded-2xl p-6">
-          <h3 className="mb-4" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '19px', fontWeight: 400, color: '#3A3530' }}>
+          <h3 className="mb-4" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '27px', fontWeight: 400, color: '#3A3530' }}>
             💕 Relationship Overview
           </h3>
           <div className="prose max-w-none" style={{ color: '#5C5347' }}>
@@ -32,13 +32,13 @@ export function RelationshipContentReview({ content, participantNames }: Relatio
       {/* Shared Goals */}
       {content.sharedGoals && content.sharedGoals.length > 0 && (
         <div className="glass-card rounded-2xl p-6">
-          <h3 className="mb-4" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '19px', fontWeight: 400, color: '#3A3530' }}>
+          <h3 className="mb-4" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '27px', fontWeight: 400, color: '#3A3530' }}>
             🚀 Shared Goals
           </h3>
           <div className="space-y-4">
             {content.sharedGoals.map((goal, idx) => (
               <div key={idx} className="border-l-4 pl-4" style={{ borderColor: '#7C9082' }}>
-                <h4 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '17px', fontWeight: 400, color: '#3A3530' }}>
+                <h4 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '24px', fontWeight: 400, color: '#3A3530' }}>
                   {goal.title}
                 </h4>
                 <p className="text-sm mt-1" style={{ color: '#5C5347' }}>
@@ -64,13 +64,13 @@ export function RelationshipContentReview({ content, participantNames }: Relatio
       {/* Rituals */}
       {content.rituals && content.rituals.length > 0 && (
         <div className="glass-card rounded-2xl p-6">
-          <h3 className="mb-4" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '19px', fontWeight: 400, color: '#3A3530' }}>
+          <h3 className="mb-4" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '27px', fontWeight: 400, color: '#3A3530' }}>
             ✨ Rituals & Connection
           </h3>
           <div className="space-y-4">
             {content.rituals.map((ritual, idx) => (
               <div key={idx} className="border-l-4 pl-4" style={{ borderColor: '#7C9082' }}>
-                <h4 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '17px', fontWeight: 400, color: '#3A3530' }}>
+                <h4 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '24px', fontWeight: 400, color: '#3A3530' }}>
                   {ritual.title}
                 </h4>
                 <p className="text-sm mt-1" style={{ color: '#5C5347' }}>
@@ -94,13 +94,13 @@ export function RelationshipContentReview({ content, participantNames }: Relatio
       {/* Traditions */}
       {content.traditions && content.traditions.length > 0 && (
         <div className="glass-card rounded-2xl p-6">
-          <h3 className="mb-4" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '19px', fontWeight: 400, color: '#3A3530' }}>
+          <h3 className="mb-4" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '27px', fontWeight: 400, color: '#3A3530' }}>
             🎉 Traditions
           </h3>
           <div className="space-y-4">
             {content.traditions.map((tradition, idx) => (
               <div key={idx} className="border-l-4 pl-4" style={{ borderColor: '#7C9082' }}>
-                <h4 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '17px', fontWeight: 400, color: '#3A3530' }}>
+                <h4 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '24px', fontWeight: 400, color: '#3A3530' }}>
                   {tradition.title}
                 </h4>
                 <p className="text-sm mt-1" style={{ color: '#5C5347' }}>
@@ -122,14 +122,14 @@ export function RelationshipContentReview({ content, participantNames }: Relatio
       {/* Conflict Patterns */}
       {content.conflictPatterns && content.conflictPatterns.length > 0 && (
         <div className="glass-card rounded-2xl p-6">
-          <h3 className="mb-4" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '19px', fontWeight: 400, color: '#3A3530' }}>
+          <h3 className="mb-4" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '27px', fontWeight: 400, color: '#3A3530' }}>
             ⚡ Conflict Patterns
           </h3>
           <div className="space-y-4">
             {content.conflictPatterns.map((pattern, idx) => (
               <div key={idx} className="border-l-4 pl-4" style={{ borderColor: '#7C9082' }}>
                 <div className="flex items-start justify-between">
-                  <h4 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '17px', fontWeight: 400, color: '#3A3530' }}>
+                  <h4 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '24px', fontWeight: 400, color: '#3A3530' }}>
                     {pattern.pattern}
                   </h4>
                   <span className={`text-xs px-2 py-1 rounded ${
@@ -182,14 +182,14 @@ export function RelationshipContentReview({ content, participantNames }: Relatio
       {/* Connection Strategies */}
       {content.connectionStrategies && content.connectionStrategies.length > 0 && (
         <div className="glass-card rounded-2xl p-6">
-          <h3 className="mb-4" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '19px', fontWeight: 400, color: '#3A3530' }}>
+          <h3 className="mb-4" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '27px', fontWeight: 400, color: '#3A3530' }}>
             💞 Connection Strategies
           </h3>
           <div className="space-y-4">
             {content.connectionStrategies.map((strategy, idx) => (
               <div key={idx} className="border-l-4 pl-4" style={{ borderColor: '#7C9082' }}>
                 <div className="flex items-start justify-between">
-                  <h4 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '17px', fontWeight: 400, color: '#3A3530' }}>
+                  <h4 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '24px', fontWeight: 400, color: '#3A3530' }}>
                     {strategy.strategy}
                   </h4>
                   <div className="flex items-center gap-1">
@@ -217,14 +217,14 @@ export function RelationshipContentReview({ content, participantNames }: Relatio
       {/* Important Milestones */}
       {content.importantMilestones && content.importantMilestones.length > 0 && (
         <div className="glass-card rounded-2xl p-6">
-          <h3 className="mb-4" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '19px', fontWeight: 400, color: '#3A3530' }}>
+          <h3 className="mb-4" style={{ fontFamily: 'var(--font-parent-display)', fontSize: '27px', fontWeight: 400, color: '#3A3530' }}>
             🏆 Important Milestones
           </h3>
           <div className="space-y-4">
             {content.importantMilestones.map((milestone, idx) => (
               <div key={idx} className="border-l-4 pl-4" style={{ borderColor: '#7C9082' }}>
                 <div className="flex items-start justify-between">
-                  <h4 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '17px', fontWeight: 400, color: '#3A3530' }}>
+                  <h4 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '24px', fontWeight: 400, color: '#3A3530' }}>
                     {milestone.title}
                   </h4>
                   <span className="text-sm opacity-75" style={{ color: '#5C5347' }}>

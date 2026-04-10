@@ -469,7 +469,7 @@ function ContributorRow({ contributor }: { contributor: ContributorInfo }) {
             className="px-1.5 py-0.5 text-xs rounded-full"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: '12px',
+              fontSize: '17px',
               background: contributor.perspectiveType === 'self'
                 ? 'rgba(59,130,246,0.08)'
                 : 'rgba(0,0,0,0.04)',

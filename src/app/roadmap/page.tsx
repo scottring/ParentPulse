@@ -134,7 +134,7 @@ export default function RoadmapPage() {
           <h1
             style={{
               fontFamily: 'var(--font-parent-display)',
-              fontSize: '32px',
+              fontSize: '44px',
               fontWeight: 400,
               color: '#3A3530',
             }}
@@ -145,7 +145,7 @@ export default function RoadmapPage() {
             className="mt-1"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: '14px',
+              fontSize: '19px',
               color: '#5F564B',
             }}
           >
@@ -166,7 +166,7 @@ export default function RoadmapPage() {
             className="mt-2"
             style={{
               fontFamily: 'var(--font-parent-display)',
-              fontSize: '18px',
+              fontSize: '25px',
               fontWeight: 400,
               color: '#3A3530',
             }}
@@ -177,7 +177,7 @@ export default function RoadmapPage() {
             className="mt-1"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: '14px',
+              fontSize: '19px',
               color: '#6B6254',
             }}
           >
@@ -219,7 +219,7 @@ export default function RoadmapPage() {
               className="mb-3"
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: '12px',
+                fontSize: '17px',
                 fontWeight: 700,
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
@@ -248,7 +248,7 @@ export default function RoadmapPage() {
                           className="block"
                           style={{
                             fontFamily: 'var(--font-parent-body)',
-                            fontSize: '12px',
+                            fontSize: '17px',
                             fontWeight: 700,
                             letterSpacing: '0.08em',
                             color: '#3A3530',
@@ -259,7 +259,7 @@ export default function RoadmapPage() {
                         <span
                           style={{
                             fontFamily: 'var(--font-parent-body)',
-                            fontSize: '12px',
+                            fontSize: '17px',
                             letterSpacing: '0.05em',
                             color: display.color,
                           }}
@@ -288,7 +288,7 @@ export default function RoadmapPage() {
                       <span
                         style={{
                           fontFamily: 'var(--font-parent-body)',
-                          fontSize: '12px',
+                          fontSize: '17px',
                           color: '#6B6254',
                         }}
                       >
@@ -297,7 +297,7 @@ export default function RoadmapPage() {
                       <span
                         style={{
                           fontFamily: 'var(--font-parent-body)',
-                          fontSize: '12px',
+                          fontSize: '17px',
                           color: '#6B6254',
                         }}
                       >
@@ -313,7 +313,7 @@ export default function RoadmapPage() {
                           className="mt-0.5"
                           style={{
                             fontFamily: 'var(--font-parent-body)',
-                            fontSize: '12px',
+                            fontSize: '17px',
                             color: '#6B6254',
                           }}
                         >

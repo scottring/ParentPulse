@@ -23,7 +23,7 @@ export function PerspectivePanel({ contributions }: Props) {
           border: '1px dashed rgba(138,128,120,0.2)',
         }}
       >
-        <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#5F564B' }}>
+        <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '21px', color: '#5F564B' }}>
           No contributions yet. Invite someone to share their perspective.
         </p>
       </div>
@@ -40,7 +40,7 @@ export function PerspectivePanel({ contributions }: Props) {
           <button
             key={c.contributionId}
             onClick={() => setActiveTab(i)}
-            className="text-[12px] px-3 py-1.5 rounded-full whitespace-nowrap transition-all"
+            className="text-[17px] px-3 py-1.5 rounded-full whitespace-nowrap transition-all"
             style={{
               fontFamily: 'var(--font-parent-body)',
               fontWeight: i === activeTab ? 600 : 400,
@@ -58,7 +58,7 @@ export function PerspectivePanel({ contributions }: Props) {
       {current && (
         <div className="space-y-3">
           {/* Meta */}
-          <div className="flex items-center gap-3 text-[11px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
+          <div className="flex items-center gap-3 text-[16px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>
             <span>{current.perspectiveType === 'self' ? 'Self-perspective' : `Observer (${current.relationshipToSubject})`}</span>
             <span>{current.updatedAt?.toDate?.()?.toLocaleDateString?.() ?? ''}</span>
           </div>
@@ -70,7 +70,7 @@ export function PerspectivePanel({ contributions }: Props) {
                 className="mb-2"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '14px',
+                  fontSize: '19px',
                   fontWeight: 600,
                   color: '#3A3530',
                   textTransform: 'capitalize',
@@ -83,13 +83,13 @@ export function PerspectivePanel({ contributions }: Props) {
                   ? Object.entries(sectionAnswers as Record<string, unknown>).map(([qKey, answer]) => (
                       <div key={qKey}>
                         <span
-                          className="text-[10px] font-medium"
+                          className="text-[14px] font-medium"
                           style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
                         >
                           {qKey.replace(/_/g, ' ')}
                         </span>
                         <p
-                          className="text-[12px] mt-0.5"
+                          className="text-[17px] mt-0.5"
                           style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347', lineHeight: 1.5 }}
                         >
                           {typeof answer === 'string' ? answer
@@ -100,7 +100,7 @@ export function PerspectivePanel({ contributions }: Props) {
                       </div>
                     ))
                   : (
-                    <p className="text-[12px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}>
+                    <p className="text-[17px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}>
                       {String(sectionAnswers)}
                     </p>
                   )}

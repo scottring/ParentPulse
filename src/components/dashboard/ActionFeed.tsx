@@ -28,7 +28,7 @@ export function ActionFeed({ items, onDismiss, maxItems = 5, dark }: Props) {
       <div
         className="glass-card rounded-xl p-5 text-center"
       >
-        <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: textSecondary }}>
+        <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: '21px', color: textSecondary }}>
           You&apos;re all caught up. Nothing needs attention right now.
         </p>
       </div>
@@ -45,7 +45,7 @@ export function ActionFeed({ items, onDismiss, maxItems = 5, dark }: Props) {
         className="block mb-1"
         style={{
           fontFamily: 'var(--font-parent-body)',
-          fontSize: '12px',
+          fontSize: '17px',
           fontWeight: 600,
           letterSpacing: '0.12em',
           textTransform: 'uppercase',
@@ -69,7 +69,7 @@ export function ActionFeed({ items, onDismiss, maxItems = 5, dark }: Props) {
                 <h4
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '15px',
+                    fontSize: '21px',
                     fontWeight: 600,
                     color: textColor,
                   }}
@@ -80,7 +80,7 @@ export function ActionFeed({ items, onDismiss, maxItems = 5, dark }: Props) {
                   className="mt-0.5"
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '14px',
+                    fontSize: '19px',
                     color: textSecondary,
                     lineHeight: 1.5,
                   }}
@@ -90,14 +90,14 @@ export function ActionFeed({ items, onDismiss, maxItems = 5, dark }: Props) {
                 <div className="flex items-center gap-3 mt-2">
                   <Link
                     href={item.actionRoute}
-                    className="text-[11px] font-medium px-3 py-1 rounded-full text-white hover:opacity-90 transition-opacity"
+                    className="text-[16px] font-medium px-3 py-1 rounded-full text-white hover:opacity-90 transition-opacity"
                     style={{ background: '#7C9082', fontFamily: 'var(--font-parent-body)' }}
                   >
                     Go &rarr;
                   </Link>
                   <button
                     onClick={() => onDismiss(item.id)}
-                    className="text-[11px] hover:opacity-70 transition-opacity"
+                    className="text-[16px] hover:opacity-70 transition-opacity"
                     style={{ color: textSecondary, fontFamily: 'var(--font-parent-body)' }}
                   >
                     Dismiss
@@ -112,7 +112,7 @@ export function ActionFeed({ items, onDismiss, maxItems = 5, dark }: Props) {
       {items.length > maxItems && (
         <p
           className="text-center pt-1"
-          style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: textSecondary }}
+          style={{ fontFamily: 'var(--font-parent-body)', fontSize: '21px', color: textSecondary }}
         >
           +{items.length - maxItems} more
         </p>

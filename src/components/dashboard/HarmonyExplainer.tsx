@@ -167,7 +167,7 @@ export default function HarmonyExplainer({ onClose, diagramRef }: HarmonyExplain
             </div>
             <button
               onClick={onClose}
-              className="text-[10px] tracking-wider"
+              className="text-[14px] tracking-wider"
               style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
             >
               SKIP
@@ -175,7 +175,7 @@ export default function HarmonyExplainer({ onClose, diagramRef }: HarmonyExplain
           </div>
 
           {/* Ring label */}
-          <span className="text-[9px] font-bold tracking-widest" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C9082' }}>
+          <span className="text-[13px] font-bold tracking-widest" style={{ fontFamily: 'var(--font-parent-body)', color: '#7C9082' }}>
             {current.ringLabel}
           </span>
 
@@ -185,7 +185,7 @@ export default function HarmonyExplainer({ onClose, diagramRef }: HarmonyExplain
           </h3>
 
           {/* Description */}
-          <p className="text-[12px] leading-relaxed" style={{ fontFamily: 'var(--font-parent-body)', color: '#4A4238' }}>
+          <p className="text-[17px] leading-relaxed" style={{ fontFamily: 'var(--font-parent-body)', color: '#4A4238' }}>
             {current.description}
           </p>
 
@@ -198,13 +198,13 @@ export default function HarmonyExplainer({ onClose, diagramRef }: HarmonyExplain
                   className={`rounded-lg px-3 py-2 ${current.details!.length === 3 && current.details![0].label.length < 10 ? 'flex-1 text-center' : 'flex items-center gap-3'}`}
                   style={{ background: '#FAF8F5', border: '1px solid #E8E3DC' }}
                 >
-                  <span className="text-[11px] font-bold" style={{ fontFamily: 'var(--font-parent-body)', color: '#2C2C2C', minWidth: current.details!.length === 3 && current.details![0].label.length < 10 ? undefined : '100px' }}>
+                  <span className="text-[16px] font-bold" style={{ fontFamily: 'var(--font-parent-body)', color: '#2C2C2C', minWidth: current.details!.length === 3 && current.details![0].label.length < 10 ? undefined : '100px' }}>
                     {d.label}
                   </span>
                   {current.details!.length === 3 && current.details![0].label.length < 10 ? (
-                    <span className="text-[9px] block mt-0.5" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>{d.desc}</span>
+                    <span className="text-[13px] block mt-0.5" style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}>{d.desc}</span>
                   ) : (
-                    <span className="text-[10px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#4A4238' }}>{d.desc}</span>
+                    <span className="text-[14px]" style={{ fontFamily: 'var(--font-parent-body)', color: '#4A4238' }}>{d.desc}</span>
                   )}
                 </div>
               ))}
@@ -216,14 +216,14 @@ export default function HarmonyExplainer({ onClose, diagramRef }: HarmonyExplain
             <button
               onClick={handlePrev}
               disabled={step === 0}
-              className="text-[11px] font-bold px-4 py-2 rounded transition-all disabled:opacity-0"
+              className="text-[16px] font-bold px-4 py-2 rounded transition-all disabled:opacity-0"
               style={{ fontFamily: 'var(--font-parent-body)', color: '#4A4238', border: '1px solid #E8E3DC' }}
             >
               &larr; BACK
             </button>
             <button
               onClick={handleNext}
-              className="text-[11px] font-bold px-5 py-2 rounded transition-all hover:scale-105"
+              className="text-[16px] font-bold px-5 py-2 rounded transition-all hover:scale-105"
               style={{ fontFamily: 'var(--font-parent-body)', background: '#2C2C2C', color: '#FFFFFF' }}
             >
               {step < STEPS.length - 1 ? 'NEXT \u2192' : 'GOT IT'}

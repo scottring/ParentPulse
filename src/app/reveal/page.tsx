@@ -163,7 +163,7 @@ export default function RevealPage() {
               className="mt-3"
               style={{
                 fontFamily: 'var(--font-parent-body)',
-                fontSize: '14px',
+                fontSize: '19px',
                 color: 'var(--parent-text-light)',
                 lineHeight: 1.6,
               }}
@@ -172,7 +172,7 @@ export default function RevealPage() {
             </p>
             <Link
               href={`/dashboard${demoQ}`}
-              className="inline-flex items-center mt-5 px-6 py-2.5 rounded-full text-[13px] font-medium text-white hover:opacity-90"
+              className="inline-flex items-center mt-5 px-6 py-2.5 rounded-full text-[18px] font-medium text-white hover:opacity-90"
               style={{ fontFamily: 'var(--font-parent-body)', background: 'var(--parent-primary)' }}
             >
               Back to dashboard
@@ -239,7 +239,7 @@ export default function RevealPage() {
                     <h3
                       style={{
                         fontFamily: 'var(--font-parent-body)',
-                        fontSize: '15px',
+                        fontSize: '21px',
                         fontWeight: 600,
                         letterSpacing: '0.06em',
                         textTransform: 'uppercase',
@@ -301,7 +301,7 @@ export default function RevealPage() {
                   className="block mb-1"
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '12px',
+                    fontSize: '17px',
                     fontWeight: 600,
                     letterSpacing: '0.12em',
                     textTransform: 'uppercase',
@@ -313,7 +313,7 @@ export default function RevealPage() {
                 <p
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '14px',
+                    fontSize: '19px',
                     color: textSecondary,
                     lineHeight: 1.6,
                   }}
@@ -328,7 +328,7 @@ export default function RevealPage() {
                   className="block mb-1"
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '12px',
+                    fontSize: '17px',
                     fontWeight: 600,
                     letterSpacing: '0.12em',
                     textTransform: 'uppercase',
@@ -340,7 +340,7 @@ export default function RevealPage() {
                 <p
                   style={{
                     fontFamily: 'var(--font-parent-body)',
-                    fontSize: '14px',
+                    fontSize: '19px',
                     color: textSecondary,
                     lineHeight: 1.6,
                   }}
@@ -397,14 +397,14 @@ export default function RevealPage() {
             <div className="flex flex-col items-center gap-3">
               <Link
                 href={`/workbook${demoQ}`}
-                className="inline-flex items-center px-6 py-2.5 rounded-full text-[13px] font-medium text-white hover:opacity-90"
+                className="inline-flex items-center px-6 py-2.5 rounded-full text-[18px] font-medium text-white hover:opacity-90"
                 style={{ fontFamily: 'var(--font-parent-body)', background: 'var(--parent-primary)', letterSpacing: '0.01em' }}
               >
                 Start working on something &rarr;
               </Link>
               <Link
                 href={`/dashboard${demoQ}`}
-                className="text-[12px] hover:opacity-70"
+                className="text-[17px] hover:opacity-70"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
                   fontWeight: 500,

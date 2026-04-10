@@ -220,7 +220,7 @@ function MemberRowComponent({ member, onReactToItem }: { member: MemberRow; onRe
           {states.map((s) => (
             <div key={s.label} className="flex items-center gap-1.5">
               <span
-                className="text-[10px]"
+                className="text-[14px]"
                 style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
               >
                 {s.label}
@@ -260,7 +260,7 @@ function MemberRowComponent({ member, onReactToItem }: { member: MemberRow; onRe
                 {action.label}
               </span>
               {action.subtitle && (
-                <span className="text-[10px]" style={{ color: '#5F564B' }}>
+                <span className="text-[14px]" style={{ color: '#5F564B' }}>
                   {action.subtitle}
                 </span>
               )}

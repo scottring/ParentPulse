@@ -85,7 +85,7 @@ export function FamilyCompletenessRing({ completeness, dark }: Props) {
           <span
             style={{
               fontFamily: 'var(--font-parent-display)',
-              fontSize: '24px',
+              fontSize: '33px',
               fontWeight: 400,
               color: textColor,
               lineHeight: 1,
@@ -96,7 +96,7 @@ export function FamilyCompletenessRing({ completeness, dark }: Props) {
           <span
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: '9px',
+              fontSize: '13px',
               fontWeight: 500,
               color: textSecondary,
               letterSpacing: '0.08em',
@@ -122,7 +122,7 @@ export function FamilyCompletenessRing({ completeness, dark }: Props) {
               <span
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '14px',
+                  fontSize: '19px',
                   color: textSecondary,
                 }}
               >
@@ -131,7 +131,7 @@ export function FamilyCompletenessRing({ completeness, dark }: Props) {
               <span
                 style={{
                   fontFamily: 'var(--font-parent-body)',
-                  fontSize: '14px',
+                  fontSize: '19px',
                   fontWeight: 600,
                   color: textColor,
                 }}

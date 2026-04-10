@@ -114,7 +114,7 @@ export default function GrowthCard({ item, onFeedback }: GrowthCardProps) {
   // Relational level badge
   const levelBadge = item.relationalLevel && item.relationalLevel !== 'individual' ? (
     <span
-      className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+      className="text-[14px] font-medium px-2 py-0.5 rounded-full"
       style={{
         fontFamily: 'var(--font-parent-body)',
         background: item.relationalLevel === 'couple'
@@ -146,14 +146,14 @@ export default function GrowthCard({ item, onFeedback }: GrowthCardProps) {
           <div className="flex items-center gap-2 mb-1">
             {levelBadge}
             <span
-              className="text-[10px]"
+              className="text-[14px]"
               style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
             >
               {item.speed === 'ambient' ? 'Today' : 'This week'}
             </span>
             {item.estimatedMinutes && (
               <span
-                className="text-[10px]"
+                className="text-[14px]"
                 style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
               >
                 ~{item.estimatedMinutes} min
@@ -185,7 +185,7 @@ export default function GrowthCard({ item, onFeedback }: GrowthCardProps) {
       {item.targetPersonNames.length > 0 && (
         <div className="pl-9 mb-4">
           <span
-            className="text-[10px]"
+            className="text-[14px]"
             style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
           >
             About: {item.targetPersonNames.join(' & ')}
@@ -220,7 +220,7 @@ export default function GrowthCard({ item, onFeedback }: GrowthCardProps) {
       {feedbackState === 'reacted' && isPositive && (
         <div className="pl-9">
           <p
-            className="text-[10px] mb-2"
+            className="text-[14px] mb-2"
             style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
           >
             How much impact?

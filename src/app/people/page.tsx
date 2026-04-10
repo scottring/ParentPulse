@@ -214,10 +214,10 @@ export default function PeoplePage() {
           {/* Empty state */}
           {sortedPeople.length === 0 && (
             <div className="press-empty" style={{ padding: '40px 20px 60px' }}>
-              <p className="press-empty-title" style={{ fontSize: 26 }}>
+              <p className="press-empty-title" style={{ fontSize: 24 }}>
                 The index is empty.
               </p>
-              <p className="press-empty-body" style={{ fontSize: 15 }}>
+              <p className="press-empty-body" style={{ fontSize: 14 }}>
                 Begin by adding the first person you want to
                 understand more fully.
               </p>
@@ -225,7 +225,7 @@ export default function PeoplePage() {
           )}
 
           {/* Fleuron */}
-          <div className="press-fleuron mt-6" style={{ fontSize: 17 }}>
+          <div className="press-fleuron mt-6" style={{ fontSize: 16 }}>
             ❦
           </div>
         </div>
@@ -300,7 +300,7 @@ function PersonRow({
         <h3
           className="press-display-sm"
           style={{
-            fontSize: 22,
+            fontSize: 20,
             lineHeight: 1.2,
             margin: 0,
           }}
@@ -309,7 +309,7 @@ function PersonRow({
         </h3>
         <p
           className="press-marginalia mt-1"
-          style={{ fontSize: 15 }}
+          style={{ fontSize: 14 }}
         >
           {label}
           {!hasManual && (
@@ -340,7 +340,7 @@ function PersonRow({
             background: 'transparent',
             border: 0,
             cursor: 'pointer',
-            fontSize: 15,
+            fontSize: 14,
             color: '#7A6E5C',
             marginLeft: 8,
             flexShrink: 0,
@@ -399,11 +399,11 @@ function AddPersonDialog({
             <span className="press-chapter-label">Begin</span>
             <h2
               className="press-display-md mt-2"
-              style={{ fontSize: 32 }}
+              style={{ fontSize: 29 }}
             >
               A new volume
             </h2>
-            <p className="press-marginalia mt-2" style={{ fontSize: 14 }}>
+            <p className="press-marginalia mt-2" style={{ fontSize: 13 }}>
               Someone you&rsquo;d like to understand more fully.
             </p>
           </div>
@@ -422,7 +422,7 @@ function AddPersonDialog({
               className="w-full focus:outline-none mt-2"
               style={{
                 fontFamily: 'var(--font-parent-display)',
-                fontSize: 24,
+                fontSize: 22,
                 fontStyle: 'italic',
                 color: '#3A3530',
                 background: 'transparent',
@@ -456,7 +456,7 @@ function AddPersonDialog({
                     <span
                       style={{
                         fontFamily: 'var(--font-parent-display)',
-                        fontSize: 20,
+                        fontSize: 18,
                         fontStyle: 'italic',
                         color: addType === opt.type ? '#3A3530' : '#6B6254',
                         fontWeight: addType === opt.type ? 500 : 400,
@@ -466,7 +466,7 @@ function AddPersonDialog({
                     </span>
                     <span
                       className="press-marginalia"
-                      style={{ fontSize: 14 }}
+                      style={{ fontSize: 13 }}
                     >
                       {opt.sub}
                     </span>
@@ -477,7 +477,7 @@ function AddPersonDialog({
                           fontFamily: 'var(--font-parent-display)',
                           fontStyle: 'italic',
                           color: '#7C9082',
-                          fontSize: 16,
+                          fontSize: 15,
                         }}
                       >
                         ✓
@@ -501,7 +501,7 @@ function AddPersonDialog({
               className="w-full focus:outline-none mt-2"
               style={{
                 fontFamily: 'var(--font-parent-display)',
-                fontSize: 17,
+                fontSize: 16,
                 fontStyle: 'italic',
                 color: addDob ? '#3A3530' : '#746856',
                 background: 'transparent',
@@ -591,13 +591,13 @@ function DeleteDialog({
           <span className="press-chapter-label">Confirm</span>
           <h2
             className="press-display-md mt-2"
-            style={{ fontSize: 26 }}
+            style={{ fontSize: 24 }}
           >
             Archive {person.name}&rsquo;s volume?
           </h2>
           <p
             className="press-body-italic mt-4"
-            style={{ fontSize: 15, maxWidth: 340, margin: '16px auto 0' }}
+            style={{ fontSize: 14, maxWidth: 340, margin: '16px auto 0' }}
           >
             The volume will be set aside. Its contents remain in the
             archive and can be restored later.

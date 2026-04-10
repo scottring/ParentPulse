@@ -77,7 +77,7 @@ export function ChildCard({ person, manual, assessments }: Props) {
               className="w-10 h-10 rounded-full flex items-center justify-center"
               style={{ background: 'rgba(212,165,116,0.12)', border: '2px solid #D4A574' }}
             >
-              <span style={{ fontSize: '16px' }}>
+              <span style={{ fontSize: '22px' }}>
                 {person.name.charAt(0).toUpperCase()}
               </span>
             </div>
@@ -85,7 +85,7 @@ export function ChildCard({ person, manual, assessments }: Props) {
               <h3
                 style={{
                   fontFamily: 'var(--font-parent-display)',
-                  fontSize: '17px',
+                  fontSize: '24px',
                   fontWeight: 500,
                   color: '#3A3530',
                 }}
@@ -97,7 +97,7 @@ export function ChildCard({ person, manual, assessments }: Props) {
                   <span
                     style={{
                       fontFamily: 'var(--font-parent-body)',
-                      fontSize: '15px',
+                      fontSize: '21px',
                       color: '#5F564B',
                     }}
                   >
@@ -106,7 +106,7 @@ export function ChildCard({ person, manual, assessments }: Props) {
                 )}
                 {ageGroup && (
                   <span
-                    className="text-[10px] px-1.5 py-0.5 rounded-full"
+                    className="text-[14px] px-1.5 py-0.5 rounded-full"
                     style={{
                       fontFamily: 'var(--font-parent-body)',
                       background: 'rgba(212,165,116,0.1)',
@@ -127,12 +127,12 @@ export function ChildCard({ person, manual, assessments }: Props) {
       <div className="px-5 py-2">
         <div className="flex items-center justify-between mb-1">
           <span
-            style={{ fontFamily: 'var(--font-parent-body)', fontSize: '12px', color: '#5F564B', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}
+            style={{ fontFamily: 'var(--font-parent-body)', fontSize: '17px', color: '#5F564B', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}
           >
             Visibility
           </span>
           <span
-            style={{ fontFamily: 'var(--font-parent-body)', fontSize: '15px', color: '#3A3530', fontWeight: 600 }}
+            style={{ fontFamily: 'var(--font-parent-body)', fontSize: '21px', color: '#3A3530', fontWeight: 600 }}
           >
             {visibilityScore}%
           </span>
@@ -154,7 +154,7 @@ export function ChildCard({ person, manual, assessments }: Props) {
           {patterns.map((p) => (
             <div key={p.id} className="flex items-center gap-2">
               <span
-                className="text-[10px] px-1.5 py-0.5 rounded-full"
+                className="text-[14px] px-1.5 py-0.5 rounded-full"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
                   fontWeight: 500,
@@ -165,7 +165,7 @@ export function ChildCard({ person, manual, assessments }: Props) {
                 {p.confidence}
               </span>
               <span
-                className="text-[11px] truncate"
+                className="text-[16px] truncate"
                 style={{ fontFamily: 'var(--font-parent-body)', color: '#5C5347' }}
               >
                 {p.description}
@@ -183,7 +183,7 @@ export function ChildCard({ person, manual, assessments }: Props) {
             return (
               <span
                 key={d.name}
-                className="text-[10px] flex items-center gap-0.5"
+                className="text-[14px] flex items-center gap-0.5"
                 style={{ fontFamily: 'var(--font-parent-body)', color: '#5F564B' }}
               >
                 <span style={{ color: t.color }}>{t.symbol}</span>
@@ -201,7 +201,7 @@ export function ChildCard({ person, manual, assessments }: Props) {
             className="line-clamp-2"
             style={{
               fontFamily: 'var(--font-parent-body)',
-              fontSize: '15px',
+              fontSize: '21px',
               color: '#5F564B',
               lineHeight: 1.5,
               fontStyle: 'italic',
@@ -219,7 +219,7 @@ export function ChildCard({ person, manual, assessments }: Props) {
       >
         <Link
           href={hasManual ? `/people/${person.personId}/manual/kid-session` : `/people/${person.personId}/create-manual`}
-          className="flex-1 text-[12px] font-medium py-2 rounded-full text-center text-white transition-all hover:opacity-90"
+          className="flex-1 text-[17px] font-medium py-2 rounded-full text-center text-white transition-all hover:opacity-90"
           style={{ fontFamily: 'var(--font-parent-body)', background: '#D4A574' }}
         >
           {hasManual ? 'Update' : 'Set up manual'} &rarr;
@@ -227,7 +227,7 @@ export function ChildCard({ person, manual, assessments }: Props) {
         {hasManual && (
           <Link
             href={`/people/${person.personId}/portrait`}
-            className="text-[12px] font-medium px-4 py-2 rounded-full text-center transition-all hover:opacity-80"
+            className="text-[17px] font-medium px-4 py-2 rounded-full text-center transition-all hover:opacity-80"
             style={{
               fontFamily: 'var(--font-parent-body)',
               color: '#5C5347',

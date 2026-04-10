@@ -56,7 +56,7 @@ export default function DimensionBars({ assessments, activeArcDimensionId }: Dim
             {/* Dimension name */}
             <div className="w-32 flex-shrink-0">
               <span
-                className="text-[11px] leading-tight"
+                className="text-[16px] leading-tight"
                 style={{
                   fontFamily: 'var(--font-parent-body)',
                   fontWeight: isActiveArc ? 600 : 400,
@@ -81,7 +81,7 @@ export default function DimensionBars({ assessments, activeArcDimensionId }: Dim
             {/* Score */}
             <div className="w-10 text-right flex-shrink-0">
               <span
-                className="text-[11px] font-medium"
+                className="text-[16px] font-medium"
                 style={{ fontFamily: 'var(--font-parent-body)', color: scoreTextColor(score) }}
               >
                 {score.toFixed(1)}{conf}
@@ -91,7 +91,7 @@ export default function DimensionBars({ assessments, activeArcDimensionId }: Dim
             {/* Active arc indicator */}
             {isActiveArc && (
               <div className="w-4 flex-shrink-0">
-                <span className="text-[10px]" title="Active Growth Arc">&#9654;</span>
+                <span className="text-[14px]" title="Active Growth Arc">&#9654;</span>
               </div>
             )}
           </div>

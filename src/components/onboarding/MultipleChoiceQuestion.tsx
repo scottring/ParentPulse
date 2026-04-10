@@ -78,7 +78,7 @@ export function MultipleChoiceQuestion({
                 <h3
                   style={{
                     fontFamily: 'var(--font-parent-display)',
-                    fontSize: 22,
+                    fontSize: 20,
                     fontStyle: 'italic',
                     color: isSelected ? '#3A3530' : '#5C5347',
                     fontWeight: isSelected ? 500 : 400,
@@ -91,7 +91,7 @@ export function MultipleChoiceQuestion({
                 {option.description && (
                   <p
                     className="press-marginalia mt-1"
-                    style={{ fontSize: 15, lineHeight: 1.5 }}
+                    style={{ fontSize: 14, lineHeight: 1.5 }}
                   >
                     {option.description}
                   </p>
@@ -105,7 +105,7 @@ export function MultipleChoiceQuestion({
                     fontFamily: 'var(--font-parent-display)',
                     fontStyle: 'italic',
                     color: '#2D5F5D',
-                    fontSize: 18,
+                    fontSize: 17,
                     flexShrink: 0,
                   }}
                 >

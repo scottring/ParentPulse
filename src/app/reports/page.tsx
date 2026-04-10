@@ -232,7 +232,7 @@ export default function ReportsPage() {
             {daysSinceLast !== null && (
               <p
                 className="press-marginalia mt-4"
-                style={{ fontSize: 14, textAlign: 'center' }}
+                style={{ fontSize: 13, textAlign: 'center' }}
               >
                 last composed {daysSinceLast === 0 ? 'today' : `${daysSinceLast} days ago`}
               </p>
@@ -289,14 +289,14 @@ export default function ReportsPage() {
           </div>
 
           {/* Fleuron at bottom */}
-          <div className="press-fleuron mt-10" style={{ fontSize: 19 }}>
+          <div className="press-fleuron mt-10" style={{ fontSize: 17 }}>
             ❦
           </div>
 
           {/* Colophon — a tiny note at the very bottom */}
           <p
             className="press-marginalia text-center mt-6"
-            style={{ fontSize: 15, color: '#7A6E5C' }}
+            style={{ fontSize: 14, color: '#7A6E5C' }}
           >
             Reports are generated on demand. Private entries and
             perspectives marked confidential are never included.
@@ -318,14 +318,14 @@ export default function ReportsPage() {
 function EmptyArchive() {
   return (
     <div className="press-empty" style={{ padding: '56px 40px' }}>
-      <p className="press-empty-title" style={{ fontSize: 26 }}>
+      <p className="press-empty-title" style={{ fontSize: 24 }}>
         The archive is empty.
       </p>
-      <p className="press-empty-body" style={{ fontSize: 15 }}>
+      <p className="press-empty-body" style={{ fontSize: 14 }}>
         Past reports and summaries will gather here after your first
         synthesis or therapist report is composed.
       </p>
-      <div className="press-fleuron" style={{ fontSize: 16 }}>❦</div>
+      <div className="press-fleuron" style={{ fontSize: 15 }}>❦</div>
     </div>
   );
 }

@@ -121,26 +121,32 @@ export default function WorkbookPage() {
       <SideNav />
 
       <div className="pt-[64px] pb-24">
-        <div className="relish-container" style={{ maxWidth: 1120 }}>
+        <div className="relish-container">
 
           {/* The volume — the book as an object */}
           <div className="press-volume mt-8 relative overflow-hidden">
 
-            {/* Running header across the top of the spread */}
-            <div className="press-running-header">
-              <span>{firstName}&rsquo;s Workbook</span>
-              <span className="sep">·</span>
-              <span>Volume {formatVolumeNumber(today)}</span>
-              <span className="sep">·</span>
-              <span>{formatPressDate(today)}</span>
-            </div>
+            {/* Masthead — the nameplate that anchors the volume */}
+            <header className="press-masthead">
+              <div className="press-masthead-rule" aria-hidden="true" />
+              <h1 className="press-masthead-title">
+                {firstName}&rsquo;s Workbook
+              </h1>
+              <div className="press-masthead-fleuron" aria-hidden="true">❦</div>
+              <p className="press-masthead-meta">
+                <span>Volume {formatVolumeNumber(today)}</span>
+                <span className="sep">·</span>
+                <span>{formatPressDate(today)}</span>
+              </p>
+              <div className="press-masthead-rule" aria-hidden="true" />
+            </header>
 
             {!hasContent ? (
               <EmptyWorkbook />
             ) : (
               <>
-                {/* The two-page spread */}
-                <div className="spread-container relative">
+                {/* The two-page spread — 1/3 left chapters, 2/3 right focus */}
+                <div className="spread-container spread-1-2 relative">
                   {/* Gutter — the subtle dip where pages meet the spine */}
                   <div className="press-gutter" aria-hidden="true" />
 
@@ -241,7 +247,7 @@ function LeftPage({
 function NoChapters() {
   return (
     <div className="py-4">
-      <p className="press-body-italic" style={{ fontSize: 15 }}>
+      <p className="press-body-italic" style={{ fontSize: 14 }}>
         No chapters yet. They begin when you start a growth arc with
         someone — a multi-week practice focused on one dimension of
         your relationship.
@@ -437,10 +443,10 @@ function AlsoThisWeek({ items }: { items: GrowthItem[] }) {
             >
               <p className="press-also-title">{item.title}</p>
               <p className="press-also-meta">
-                for <span className="press-sc" style={{ fontSize: 14 }}>{forWhom}</span>
+                for <span className="press-sc" style={{ fontSize: 13 }}>{forWhom}</span>
                 {about && (
                   <>
-                    {' '}· about <span className="press-sc" style={{ fontSize: 14 }}>{about}</span>
+                    {' '}· about <span className="press-sc" style={{ fontSize: 13 }}>{about}</span>
                   </>
                 )}
                 {' '}· {romanMinutes(item.estimatedMinutes || 0)} min

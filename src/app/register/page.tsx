@@ -94,7 +94,7 @@ export default function RegisterPage() {
             className="hover:opacity-80 transition-opacity"
             style={{
               fontFamily: 'var(--font-parent-display)',
-              fontSize: 26,
+              fontSize: 24,
               fontWeight: 300,
               fontStyle: 'italic',
               color: '#3A3530',
@@ -110,7 +110,7 @@ export default function RegisterPage() {
             <Link
               href="/login"
               className="press-link-sm"
-              style={{ fontSize: 16 }}
+              style={{ fontSize: 15 }}
             >
               Sign in
             </Link>
@@ -118,7 +118,7 @@ export default function RegisterPage() {
               onClick={scrollToForm}
               className="press-link"
               style={{
-                fontSize: 16,
+                fontSize: 15,
                 borderBottomWidth: 1,
                 background: 'transparent',
                 cursor: 'pointer',
@@ -207,7 +207,7 @@ export default function RegisterPage() {
                   style={{
                     background: 'transparent',
                     cursor: 'pointer',
-                    fontSize: 22,
+                    fontSize: 20,
                   }}
                 >
                   Begin your volume
@@ -216,7 +216,7 @@ export default function RegisterPage() {
                 <Link
                   href="/login"
                   className="press-link-sm"
-                  style={{ fontSize: 15 }}
+                  style={{ fontSize: 14 }}
                 >
                   or sign in instead
                 </Link>
@@ -250,7 +250,7 @@ export default function RegisterPage() {
             </h2>
             <p
               className="press-marginalia mt-3"
-              style={{ fontSize: 14, maxWidth: 540, margin: '12px auto 0' }}
+              style={{ fontSize: 13, maxWidth: 540, margin: '12px auto 0' }}
             >
               A volume begins alone and fills out over time, one
               perspective at a time.
@@ -327,7 +327,7 @@ export default function RegisterPage() {
             <br />
             in their own right.&rdquo;
           </blockquote>
-          <p className="press-marginalia" style={{ fontSize: 15 }}>
+          <p className="press-marginalia" style={{ fontSize: 14 }}>
             — a quiet ambition
           </p>
 
@@ -365,7 +365,7 @@ export default function RegisterPage() {
                 >
                   Begin your volume
                 </h2>
-                <p className="press-marginalia mt-3" style={{ fontSize: 14 }}>
+                <p className="press-marginalia mt-3" style={{ fontSize: 13 }}>
                   No credit card. Keep anything you write. Delete it anytime.
                 </p>
               </div>
@@ -381,8 +381,8 @@ export default function RegisterPage() {
                     background: 'rgba(124,144,130,0.05)',
                   }}
                 >
-                  <p className="press-marginalia" style={{ fontSize: 15 }}>
-                    <span className="press-sc" style={{ fontSize: 14 }}>DEMO</span>
+                  <p className="press-marginalia" style={{ fontSize: 14 }}>
+                    <span className="press-sc" style={{ fontSize: 13 }}>DEMO</span>
                     {' '}— fill buttons will appear on every question to speed the walkthrough.
                   </p>
                 </div>
@@ -399,7 +399,7 @@ export default function RegisterPage() {
                 >
                   <p
                     className="press-marginalia"
-                    style={{ fontSize: 15, color: '#C08070' }}
+                    style={{ fontSize: 14, color: '#C08070' }}
                   >
                     — {error || authError}
                   </p>
@@ -487,7 +487,7 @@ export default function RegisterPage() {
                       background: 'transparent',
                       cursor: loading ? 'wait' : 'pointer',
                       opacity: loading ? 0.5 : 1,
-                      fontSize: 22,
+                      fontSize: 20,
                     }}
                   >
                     {loading ? 'Opening the volume…' : 'Open the volume'}
@@ -511,7 +511,7 @@ export default function RegisterPage() {
         >
           <p
             className="press-marginalia"
-            style={{ fontSize: 14, color: '#7A6E5C', lineHeight: 1.7 }}
+            style={{ fontSize: 13, color: '#7A6E5C', lineHeight: 1.7 }}
           >
             <em>Relish</em> &middot; a library for the people you love
             <br />
@@ -582,7 +582,7 @@ function PressField({
         className="w-full focus:outline-none mt-2"
         style={{
           fontFamily: 'var(--font-parent-display)',
-          fontSize: 20,
+          fontSize: 18,
           fontStyle: 'italic',
           color: '#3A3530',
           background: 'transparent',
@@ -615,7 +615,7 @@ function OrnamentDivider({ style }: { style?: React.CSSProperties }) {
       <span
         style={{
           fontFamily: 'var(--font-parent-display)',
-          fontSize: 18,
+          fontSize: 17,
           color: '#7C6F5D',
           letterSpacing: '0.2em',
         }}
@@ -648,7 +648,7 @@ function Stage({
       <div style={{ marginBottom: 20 }}>{illustration}</div>
       <div
         className="press-marginalia"
-        style={{ fontSize: 15, color: '#7A6E5C', marginBottom: 10 }}
+        style={{ fontSize: 14, color: '#7A6E5C', marginBottom: 10 }}
       >
         {figure}
       </div>
@@ -657,13 +657,13 @@ function Stage({
       </span>
       <h3
         className="press-display-sm mt-2"
-        style={{ fontSize: 24 }}
+        style={{ fontSize: 22 }}
       >
         {title}
       </h3>
       <p
         className="press-marginalia mt-3"
-        style={{ fontSize: 15, lineHeight: 1.6, margin: '12px auto 0' }}
+        style={{ fontSize: 14, lineHeight: 1.6, margin: '12px auto 0' }}
       >
         {description}
       </p>
@@ -684,7 +684,7 @@ function StageDivider() {
         justifyContent: 'center',
         color: '#CEC6B8',
         fontFamily: 'var(--font-parent-display)',
-        fontSize: 22,
+        fontSize: 20,
         letterSpacing: '0.2em',
         alignSelf: 'center',
         marginTop: 40,

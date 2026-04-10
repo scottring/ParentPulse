@@ -110,7 +110,7 @@ export default function BudgetAlertBanner() {
       role="status"
       aria-live="polite"
     >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center gap-3">
+      <div className="mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-3" style={{ maxWidth: 1440 }}>
         <span
           className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold flex-shrink-0"
           style={{ background: palette.icon, color: 'white' }}

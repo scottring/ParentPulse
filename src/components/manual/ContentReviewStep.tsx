@@ -15,7 +15,7 @@ export function ContentReviewStep({ content, personName }: ContentReviewStepProp
         <div className="glass-card rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-2xl">👤</span>
-            <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '19px', fontWeight: 400, color: '#3A3530' }}>
+            <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '27px', fontWeight: 400, color: '#3A3530' }}>
               Role Overview
             </h3>
           </div>
@@ -30,7 +30,7 @@ export function ContentReviewStep({ content, personName }: ContentReviewStepProp
         <div className="glass-card rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-2xl">ℹ️</span>
-            <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '19px', fontWeight: 400, color: '#3A3530' }}>
+            <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '27px', fontWeight: 400, color: '#3A3530' }}>
               Overview
             </h3>
           </div>
@@ -80,7 +80,7 @@ export function ContentReviewStep({ content, personName }: ContentReviewStepProp
         <div className="glass-card rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-2xl">⚡</span>
-            <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '19px', fontWeight: 400, color: '#3A3530' }}>
+            <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '27px', fontWeight: 400, color: '#3A3530' }}>
               Triggers & Patterns ({content.triggers.length})
             </h3>
           </div>
@@ -123,7 +123,7 @@ export function ContentReviewStep({ content, personName }: ContentReviewStepProp
         <div className="glass-card rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-2xl">✨</span>
-            <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '19px', fontWeight: 400, color: '#3A3530' }}>
+            <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '27px', fontWeight: 400, color: '#3A3530' }}>
               What Works ({content.whatWorks.length})
             </h3>
           </div>
@@ -163,7 +163,7 @@ export function ContentReviewStep({ content, personName }: ContentReviewStepProp
         <div className="glass-card rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-2xl">🚫</span>
-            <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '19px', fontWeight: 400, color: '#3A3530' }}>
+            <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '27px', fontWeight: 400, color: '#3A3530' }}>
               What Doesn't Work ({content.whatDoesntWork.length})
             </h3>
           </div>
@@ -192,7 +192,7 @@ export function ContentReviewStep({ content, personName }: ContentReviewStepProp
         <div className="glass-card rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-2xl">🛡️</span>
-            <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '19px', fontWeight: 400, color: '#3A3530' }}>
+            <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '27px', fontWeight: 400, color: '#3A3530' }}>
               Boundaries & Limits ({content.boundaries.length})
             </h3>
           </div>
@@ -231,7 +231,7 @@ export function ContentReviewStep({ content, personName }: ContentReviewStepProp
         <div className="glass-card rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-2xl">💪</span>
-            <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '19px', fontWeight: 400, color: '#3A3530' }}>
+            <h3 style={{ fontFamily: 'var(--font-parent-display)', fontSize: '27px', fontWeight: 400, color: '#3A3530' }}>
               Strengths & Challenges
             </h3>
           </div>

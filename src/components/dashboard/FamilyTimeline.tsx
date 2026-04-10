@@ -66,7 +66,7 @@ export function FamilyTimeline({
   if (completedContribs.length === 0 && manuals.length === 0) {
     return (
       <div className="text-center py-4">
-        <p className="storybook-body text-[12px] italic" style={{ color: 'rgba(140, 110, 70, 0.4)' }}>
+        <p className="storybook-body text-[17px] italic" style={{ color: 'rgba(140, 110, 70, 0.4)' }}>
           Your family&apos;s story begins here.
         </p>
       </div>
@@ -77,7 +77,7 @@ export function FamilyTimeline({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="storybook-label">This Week</span>
-        <span className="storybook-body text-[11px]" style={{ color: '#8B7B6B' }}>
+        <span className="storybook-body text-[16px]" style={{ color: '#8B7B6B' }}>
           {weekLabel}
         </span>
       </div>
@@ -93,7 +93,7 @@ export function FamilyTimeline({
               <path d="M5,20 Q5,15 12,14 Q19,15 19,20" fill="#8B7B6B" opacity="0.2" />
             </svg>
           </div>
-          <span className="storybook-body text-[12px]" style={{ color: '#5C5347' }}>
+          <span className="storybook-body text-[17px]" style={{ color: '#5C5347' }}>
             Relish
           </span>
           <div className="flex-1">
@@ -105,17 +105,17 @@ export function FamilyTimeline({
         {personActivity.map((pa) => (
           <div key={pa.personId} className="flex items-center gap-3">
             <div className="timeline-avatar">
-              <span className="text-[10px] font-medium" style={{ color: '#8B7B6B' }}>
+              <span className="text-[14px] font-medium" style={{ color: '#8B7B6B' }}>
                 {pa.name.charAt(0)}
               </span>
             </div>
-            <span className="storybook-body text-[12px] w-24 truncate" style={{ color: '#5C5347' }}>
+            <span className="storybook-body text-[17px] w-24 truncate" style={{ color: '#5C5347' }}>
               {pa.name}
             </span>
             <div className="flex-1">
               <TimelineBar value={Math.min(pa.total / 4, 1)} />
             </div>
-            <span className="storybook-body text-[10px] tabular-nums" style={{ color: '#8B7B6B' }}>
+            <span className="storybook-body text-[14px] tabular-nums" style={{ color: '#8B7B6B' }}>
               {pa.total}/{pa.total + 2}
             </span>
           </div>
