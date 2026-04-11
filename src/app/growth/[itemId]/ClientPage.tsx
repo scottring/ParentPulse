@@ -520,14 +520,14 @@ function BriefView({
     <div className="press-binder" style={{ maxWidth: 952 }}>
 
       {/* Running header */}
-      <div className="press-running-header" style={{ paddingTop: 28 }}>
+      <div className="press-running-header" style={{ paddingTop: 32 }}>
         <span>The Journal</span>
         <span className="sep">·</span>
         <span>{isReading ? 'A reading' : 'A practice'}</span>
       </div>
 
       {/* Back link */}
-      <div style={{ textAlign: 'center', paddingTop: 14, paddingBottom: 4 }}>
+      <div style={{ textAlign: 'center', paddingTop: 22, paddingBottom: 14 }}>
         <button
           onClick={() => router.push('/journal')}
           className="press-link-sm"
@@ -547,7 +547,7 @@ function BriefView({
             alignItems: 'center',
             justifyContent: 'center',
             gap: 24,
-            padding: '6px 32px 18px',
+            padding: '10px 32px 32px',
             maxWidth: 860,
             margin: '0 auto',
           }}
@@ -637,7 +637,7 @@ function BriefView({
       {/* Activity-type header — ◆ glyph + type + duration, in the
           same small-caps treatment as the Journal TOC entries, so
           the user sees the same visual language they clicked on */}
-      <div style={{ textAlign: 'center', paddingBottom: 6 }}>
+      <div style={{ textAlign: 'center', paddingTop: 8, paddingBottom: 18 }}>
         <span
           className="press-chapter-label"
           style={{
@@ -662,14 +662,21 @@ function BriefView({
           </span>
         </span>
       </div>
-      <h1 className="press-binder-title" style={{ textAlign: 'center', fontSize: 'clamp(36px, 5vw, 48px)' }}>
+      <h1
+        className="press-binder-title"
+        style={{
+          textAlign: 'center',
+          fontSize: 'clamp(36px, 5vw, 48px)',
+          marginTop: 4,
+        }}
+      >
         {item.title}
       </h1>
 
       {/* Meta line */}
       <p
         className="press-meta-line"
-        style={{ textAlign: 'center', marginTop: 18, marginBottom: 10 }}
+        style={{ textAlign: 'center', marginTop: 28, marginBottom: 12 }}
       >
         {minutes} minutes
         {about && (
@@ -687,13 +694,13 @@ function BriefView({
       {fromChat && (
         <p
           className="press-marginalia"
-          style={{ textAlign: 'center', fontSize: 13, marginBottom: 8 }}
+          style={{ textAlign: 'center', fontSize: 13, marginTop: 6, marginBottom: 10 }}
         >
           drawn from a conversation with the manual
         </p>
       )}
 
-      <div className="press-asterism" aria-hidden="true" style={{ margin: '22px 0 20px' }} />
+      <div className="press-asterism" aria-hidden="true" style={{ margin: '36px 0 32px' }} />
 
       {/* The briefing body — special handling for stories */}
       <div style={{ padding: '0 20px 32px' }}>
