@@ -52,16 +52,23 @@ export default function ChildQuestionDisplay({
   const replacePlaceholder = (text: string) =>
     text.replace(/\{\{childName\}\}/g, childName);
 
-  // Kid-friendly palette + type. Larger sans-serif, generous touch
-  // targets, no italic display face. Typeform-style: one big question,
-  // big options, lots of breathing room. Selected state is *unmistakable*
-  // — solid filled background with white text, not just a tint.
-  const KID_FONT = 'var(--font-parent-body)'; // DM Sans
-  const KID_INK = '#2A2520';
-  const KID_INK_SOFT = '#5C5347';
-  const KID_ACCENT = '#2D5F5D';
-  const KID_ACCENT_HOVER_BG = 'rgba(45, 95, 93, 0.10)';
-  const KID_BORDER = 'rgba(0, 0, 0, 0.12)';
+  // Kid-friendly palette + type, tuned to sit on the warm library
+  // parchment without clashing. The question itself uses the display
+  // serif (like the rest of the app), while options stay in DM Sans
+  // for readability. Selected state is unmistakable — solid sage fill
+  // with white text. Cards are warm cream, borders are ivory, shadows
+  // are amber. The childlike spirit comes from big emoji, generous
+  // touch targets, and the playful pill CTA — not from cold palette.
+  const KID_FONT = 'var(--font-parent-body)';       // DM Sans — options, helper text, buttons
+  const KID_DISPLAY = 'var(--font-parent-display)'; // Cormorant Garamond — question, encouragement
+  const KID_INK = '#3A3530';                        // warm near-black, matches press-*
+  const KID_INK_SOFT = '#5C5347';                   // warm mid
+  const KID_ACCENT = '#7C9082';                     // sage — the one accent from the spec
+  const KID_ACCENT_HOVER_BG = 'rgba(124, 144, 130, 0.10)';
+  const KID_BORDER = 'rgba(200, 190, 172, 0.6)';    // ivory, matches other cards
+  const KID_CARD_BG = '#FDFBF6';                    // warm cream, not white
+  const KID_SHADOW = '0 4px 16px rgba(124, 100, 77, 0.14)';
+  const KID_SHADOW_HOVER = '0 6px 20px rgba(124, 100, 77, 0.18)';
 
   // ================================================================
   // Render the right kind of input
@@ -81,7 +88,7 @@ export default function ChildQuestionDisplay({
               fontSize: 26,
               fontWeight: 400,
               color: KID_INK,
-              background: '#FFFFFF',
+              background: KID_CARD_BG,
               border: `2px solid ${KID_BORDER}`,
               borderRadius: 18,
               padding: '20px 22px',
@@ -107,7 +114,7 @@ export default function ChildQuestionDisplay({
                     onClick={() => setLocalValue(value)}
                     className="transition-all"
                     style={{
-                      background: isSelected ? KID_ACCENT : '#FFFFFF',
+                      background: isSelected ? KID_ACCENT : KID_CARD_BG,
                       border: `2px solid ${
                         isSelected ? KID_ACCENT : KID_BORDER
                       }`,
@@ -119,11 +126,9 @@ export default function ChildQuestionDisplay({
                       justifyContent: 'center',
                       fontSize: isSelected ? 60 : 52,
                       cursor: 'pointer',
-                      opacity: isSelected ? 1 : 0.7,
+                      opacity: isSelected ? 1 : 0.85,
                       transform: isSelected ? 'translateY(-4px)' : 'none',
-                      boxShadow: isSelected
-                        ? '0 6px 18px rgba(45, 95, 93, 0.32)'
-                        : 'none',
+                      boxShadow: isSelected ? KID_SHADOW_HOVER : 'none',
                       transition: 'all 0.2s ease',
                     }}
                   >
@@ -168,15 +173,13 @@ export default function ChildQuestionDisplay({
                   onClick={() => setLocalValue(option.value)}
                   className="text-left transition-all"
                   style={{
-                    background: isSelected ? KID_ACCENT : '#FFFFFF',
+                    background: isSelected ? KID_ACCENT : KID_CARD_BG,
                     border: `2px solid ${isSelected ? KID_ACCENT : KID_BORDER}`,
                     borderRadius: 18,
                     padding: '20px 22px',
                     cursor: 'pointer',
                     minHeight: 76,
-                    boxShadow: isSelected
-                      ? '0 4px 16px rgba(45, 95, 93, 0.28)'
-                      : 'none',
+                    boxShadow: isSelected ? KID_SHADOW : 'none',
                     transform: isSelected ? 'translateY(-1px)' : 'none',
                     transition:
                       'background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
@@ -188,7 +191,7 @@ export default function ChildQuestionDisplay({
                   }}
                   onMouseLeave={(e) => {
                     if (!isSelected) {
-                      e.currentTarget.style.background = '#FFFFFF';
+                      e.currentTarget.style.background = KID_CARD_BG;
                     }
                   }}
                 >
@@ -263,15 +266,13 @@ export default function ChildQuestionDisplay({
                   }}
                   className="text-left transition-all"
                   style={{
-                    background: isSelected ? KID_ACCENT : '#FFFFFF',
+                    background: isSelected ? KID_ACCENT : KID_CARD_BG,
                     border: `2px solid ${isSelected ? KID_ACCENT : KID_BORDER}`,
                     borderRadius: 16,
                     padding: '18px 20px',
                     cursor: 'pointer',
                     minHeight: 68,
-                    boxShadow: isSelected
-                      ? '0 4px 14px rgba(45, 95, 93, 0.24)'
-                      : 'none',
+                    boxShadow: isSelected ? KID_SHADOW : 'none',
                     transform: isSelected ? 'translateY(-1px)' : 'none',
                     transition:
                       'background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
@@ -283,7 +284,7 @@ export default function ChildQuestionDisplay({
                   }}
                   onMouseLeave={(e) => {
                     if (!isSelected) {
-                      e.currentTarget.style.background = '#FFFFFF';
+                      e.currentTarget.style.background = KID_CARD_BG;
                     }
                   }}
                 >
@@ -359,7 +360,7 @@ export default function ChildQuestionDisplay({
                 fontFamily: KID_FONT,
                 fontSize: 24,
                 color: KID_INK,
-                background: '#FFFFFF',
+                background: KID_CARD_BG,
                 border: `2px solid ${KID_BORDER}`,
                 borderRadius: 18,
                 padding: '18px 20px',
@@ -376,47 +377,36 @@ export default function ChildQuestionDisplay({
 
   return (
     <div style={{ fontFamily: KID_FONT }}>
-      {/* Section header — small uppercase tag, no chapter label */}
-      <div
-        className="flex items-center"
-        style={{ gap: 14, marginBottom: 36 }}
-      >
-        <span style={{ fontSize: 32, lineHeight: 1 }}>{sectionEmoji}</span>
-        <div>
-          <p
-            style={{
-              fontFamily: KID_FONT,
-              fontSize: 13,
-              fontWeight: 700,
-              letterSpacing: '0.14em',
-              textTransform: 'uppercase',
-              color: KID_ACCENT,
-              margin: 0,
-            }}
-          >
-            {sectionDescription}
-          </p>
-        </div>
-      </div>
-
-      {/* The question itself — big, sans-serif, prominent */}
+      {/* The question itself — big, serif italic, prominent. The
+          question emoji (e.g. 🪄) sits inline as a dropcap-style
+          marker at the start of the line, so the page reads as a
+          single editorial sentence instead of a stacked tag column. */}
       <div style={{ marginBottom: 36 }}>
-        {question.emoji && (
-          <div style={{ fontSize: 56, marginBottom: 18, lineHeight: 1 }}>
-            {question.emoji}
-          </div>
-        )}
         <h2
           style={{
-            fontFamily: KID_FONT,
-            fontSize: 'clamp(30px, 4.2vw, 44px)',
-            fontWeight: 600,
+            fontFamily: KID_DISPLAY,
+            fontSize: 'clamp(32px, 4.5vw, 46px)',
+            fontStyle: 'italic',
+            fontWeight: 400,
             color: KID_INK,
-            lineHeight: 1.2,
-            letterSpacing: '-0.015em',
+            lineHeight: 1.15,
+            letterSpacing: '-0.02em',
             margin: 0,
           }}
         >
+          {question.emoji && (
+            <span
+              aria-hidden="true"
+              style={{
+                fontStyle: 'normal',
+                fontSize: '0.9em',
+                marginRight: 14,
+                verticalAlign: '-0.05em',
+              }}
+            >
+              {question.emoji}
+            </span>
+          )}
           {replacePlaceholder(question.text)}
           {question.required && (
             <span
@@ -531,23 +521,19 @@ export default function ChildQuestionDisplay({
               cursor:
                 question.required && !localValue ? 'not-allowed' : 'pointer',
               boxShadow:
-                question.required && !localValue
-                  ? 'none'
-                  : '0 4px 14px rgba(45, 95, 93, 0.25)',
+                question.required && !localValue ? 'none' : KID_SHADOW,
               transition: 'transform 0.15s ease, box-shadow 0.15s ease',
             }}
             onMouseEnter={(e) => {
               if (!(question.required && !localValue)) {
                 e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow =
-                  '0 6px 18px rgba(45, 95, 93, 0.32)';
+                e.currentTarget.style.boxShadow = KID_SHADOW_HOVER;
               }
             }}
             onMouseLeave={(e) => {
               if (!(question.required && !localValue)) {
                 e.currentTarget.style.transform = 'none';
-                e.currentTarget.style.boxShadow =
-                  '0 4px 14px rgba(45, 95, 93, 0.25)';
+                e.currentTarget.style.boxShadow = KID_SHADOW;
               }
             }}
           >
@@ -559,9 +545,10 @@ export default function ChildQuestionDisplay({
       {/* Cheerful encouragement */}
       <p
         style={{
-          fontFamily: KID_FONT,
-          fontSize: 15,
-          fontWeight: 500,
+          fontFamily: KID_DISPLAY,
+          fontSize: 17,
+          fontStyle: 'italic',
+          fontWeight: 300,
           textAlign: 'center',
           marginTop: 40,
           color: KID_INK_SOFT,

@@ -227,8 +227,9 @@ describe('manual-initialization utilities', () => {
 });
 
 describe('RelationshipType enum coverage', () => {
-  it('should cover all 7 relationship types', () => {
+  it('should cover all 8 relationship types', () => {
     const allRelationshipTypes: RelationshipType[] = [
+      'self',
       'child',
       'spouse',
       'elderly_parent',
@@ -238,7 +239,7 @@ describe('RelationshipType enum coverage', () => {
       'other'
     ];
 
-    expect(allRelationshipTypes.length).toBe(7);
+    expect(allRelationshipTypes.length).toBe(8);
 
     // Verify each is valid
     allRelationshipTypes.forEach(type => {
@@ -248,8 +249,10 @@ describe('RelationshipType enum coverage', () => {
 });
 
 describe('RoleType mapping expectations', () => {
-  // These are the expected mappings based on the code
+  // These are the expected mappings based on the code. 'self' falls
+  // through to 'other' via the default branch in relationshipToRoleType.
   const expectedMappings: Record<RelationshipType, RoleType> = {
+    'self': 'other',
     'child': 'parent', // I am parenting this child
     'spouse': 'spouse',
     'elderly_parent': 'caregiver',

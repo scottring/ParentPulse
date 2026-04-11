@@ -39,10 +39,37 @@ import {
 } from '@/types/person-manual';
 
 /**
+ * Pick the most-recently-updated draft from a list (by `updatedAt.toMillis()`).
+ * Missing timestamps sort as epoch zero. Does not mutate the input.
+ *
+ * Exported so the sort behavior is unit-testable without standing up
+ * the Firestore emulator or the React hook. Regression guard for the
+ * "kid-session answers don't restore" bug: when multiple drafts match
+ * a query, the app must always resume from the freshest one.
+ */
+export function pickLatestDraft(
+  drafts: Contribution[],
+): Contribution | null {
+  if (drafts.length === 0) return null;
+  return [...drafts].sort((a, b) => {
+    const at = a.updatedAt?.toMillis?.() ?? 0;
+    const bt = b.updatedAt?.toMillis?.() ?? 0;
+    return bt - at;
+  })[0];
+}
+
+/**
  * Strip answers marked 'private' from a contribution when the viewer is not the contributor.
  * The contributor themselves always sees their own private answers.
+ *
+ * Exported so the privacy filter is unit-testable independently of the
+ * React hook. This is the single source of truth for "what can another
+ * family member see of my contribution".
  */
-function filterPrivateAnswers(contribution: Contribution, viewerUserId: string): Contribution {
+export function filterPrivateAnswers(
+  contribution: Contribution,
+  viewerUserId: string,
+): Contribution {
   // Contributor sees everything
   if (contribution.contributorId === viewerUserId) return contribution;
 
@@ -325,20 +352,15 @@ export function useContribution(manualId?: string, additionalManualIds?: string[
       const snapshot = await getDocs(q);
       if (snapshot.empty) return null;
 
-      // Sort client-side by updatedAt desc and return the most recent.
-      // Firestore returns list results in an undefined order without an
-      // orderBy, which historically caused the app to restore whichever
-      // old draft came back first rather than the latest one — leaving
-      // fresh answers invisible on resume.
-      const drafts = snapshot.docs
-        .map((d) => ({ ...d.data(), contributionId: d.id }) as Contribution)
-        .sort((a, b) => {
-          const at = a.updatedAt?.toMillis?.() ?? 0;
-          const bt = b.updatedAt?.toMillis?.() ?? 0;
-          return bt - at;
-        });
-
-      return drafts[0];
+      // Sort client-side and return the most recent. Firestore returns
+      // list results in an undefined order without an orderBy, which
+      // historically caused the app to restore whichever old draft
+      // came back first rather than the latest one — leaving fresh
+      // answers invisible on resume. See `pickLatestDraft` above.
+      const drafts = snapshot.docs.map(
+        (d) => ({ ...d.data(), contributionId: d.id }) as Contribution,
+      );
+      return pickLatestDraft(drafts);
     },
     [user]
   );

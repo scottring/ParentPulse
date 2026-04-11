@@ -154,6 +154,7 @@ export function getManualSectionsPreview(relationshipType: RelationshipType = 'o
  */
 export function isValidRelationshipType(type: string): type is RelationshipType {
   const validTypes: RelationshipType[] = [
+    'self',
     'child',
     'spouse',
     'elderly_parent',

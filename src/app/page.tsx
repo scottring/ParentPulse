@@ -320,15 +320,15 @@ export default function HomePage() {
         }
         .home-subwordmark {
           font-family: var(--font-parent-body);
-          font-size: 11px;
+          font-size: 13px;
           font-weight: 600;
           letter-spacing: 0.22em;
           text-transform: uppercase;
           color: #c8b894;
           margin: 12px 0 0;
           text-shadow: 0 1px 10px rgba(0, 0, 0, 0.85);
-          max-width: 300px;
           line-height: 1.5;
+          white-space: nowrap;
         }
 
         /* ─── Auth area — upper-right corner ────────── */
@@ -428,8 +428,11 @@ export default function HomePage() {
             font-size: 36px;
           }
           .home-subwordmark {
-            font-size: 9px;
+            font-size: 11px;
             margin-top: 8px;
+            /* On mobile, let it wrap rather than push off-screen. */
+            white-space: normal;
+            max-width: 260px;
           }
           .home-auth {
             top: 26px;
@@ -463,7 +466,7 @@ export default function HomePage() {
             font-size: 30px;
           }
           .home-subwordmark {
-            font-size: 8px;
+            font-size: 10px;
             max-width: 180px;
           }
           .home-auth-name {

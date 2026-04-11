@@ -135,18 +135,19 @@ export default function AssessmentShell({
               </button>
             </div>
 
-            {/* Title — sans-serif, matches the kid question style */}
+            {/* Title — Cormorant italic so the page stays part of the
+                library. Description stays in DM Sans for readability. */}
             <div
               className="press-binder-head"
               style={{ paddingBottom: 20 }}
             >
               <h1
                 style={{
-                  fontFamily: 'var(--font-parent-body)',
+                  fontFamily: 'var(--font-parent-display)',
                   fontSize: 'clamp(36px, 5vw, 48px)',
-                  fontStyle: 'normal',
-                  fontWeight: 700,
-                  color: '#2A2520',
+                  fontStyle: 'italic',
+                  fontWeight: 400,
+                  color: '#3A3530',
                   lineHeight: 1.1,
                   letterSpacing: '-0.02em',
                   margin: 0,
