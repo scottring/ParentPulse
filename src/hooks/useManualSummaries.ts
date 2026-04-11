@@ -372,27 +372,41 @@ export function useManualSummaries(): {
 
     async function fetchAll() {
       try {
-        // Fetch manuals, contributions, and people in parallel
-        const [manualsSnap, contributionsSnap, peopleSnap] = await Promise.all([
-          getDocs(
-            query(
-              collection(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS),
-              where('familyId', '==', user!.familyId)
-            )
-          ),
-          getDocs(
-            query(
-              collection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS),
-              where('familyId', '==', user!.familyId)
-            )
-          ),
-          getDocs(
-            query(
-              collection(firestore, PERSON_MANUAL_COLLECTIONS.PEOPLE),
-              where('familyId', '==', user!.familyId)
-            )
-          ),
-        ]);
+        // Contributions need to be loaded as two aligned queries and
+        // merged, because Firestore rules allow reading a contribution
+        // only if EITHER (a) you're the contributor or (b) status is
+        // 'complete' and you're in the family. A single query filtered
+        // only by familyId fails list-query security once other family
+        // members have drafts in the collection.
+        const [manualsSnap, ownContribSnap, completeContribSnap, peopleSnap] =
+          await Promise.all([
+            getDocs(
+              query(
+                collection(firestore, PERSON_MANUAL_COLLECTIONS.PERSON_MANUALS),
+                where('familyId', '==', user!.familyId)
+              )
+            ),
+            getDocs(
+              query(
+                collection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS),
+                where('familyId', '==', user!.familyId),
+                where('contributorId', '==', user!.userId)
+              )
+            ),
+            getDocs(
+              query(
+                collection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS),
+                where('familyId', '==', user!.familyId),
+                where('status', '==', 'complete')
+              )
+            ),
+            getDocs(
+              query(
+                collection(firestore, PERSON_MANUAL_COLLECTIONS.PEOPLE),
+                where('familyId', '==', user!.familyId)
+              )
+            ),
+          ]);
 
         if (cancelled) return;
 
@@ -401,10 +415,15 @@ export function useManualSummaries(): {
           manualId: d.id,
         })) as PersonManual[];
 
-        const contributions = contributionsSnap.docs.map((d) => ({
-          ...d.data(),
-          contributionId: d.id,
-        })) as Contribution[];
+        // Merge own + complete contributions, deduping by contributionId
+        const contribMap = new Map<string, Contribution>();
+        for (const d of ownContribSnap.docs) {
+          contribMap.set(d.id, { ...d.data(), contributionId: d.id } as Contribution);
+        }
+        for (const d of completeContribSnap.docs) {
+          contribMap.set(d.id, { ...d.data(), contributionId: d.id } as Contribution);
+        }
+        const contributions = Array.from(contribMap.values());
 
         const people = peopleSnap.docs.map((d) => ({
           ...d.data(),

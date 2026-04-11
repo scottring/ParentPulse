@@ -67,8 +67,16 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
     if (!manual || !user || draftLoaded) return;
 
     (async () => {
-      // First check for an in-progress draft
-      const draft = await findDraft(manual.manualId, 'observer');
+      // First check for an in-progress draft. Scope to the person's
+      // relationship type so we don't accidentally match a
+      // kid-observer-session draft (which uses the same perspectiveType
+      // 'observer' but `relationshipToSubject='child-observer'`) on the
+      // same manual.
+      const draft = await findDraft(
+        manual.manualId,
+        'observer',
+        person?.relationshipType || 'other',
+      );
       if (draft) {
         setDraftId(draft.contributionId);
         if (draft.answers) setAnswers(draft.answers);
@@ -106,7 +114,7 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
       }
       setDraftLoaded(true);
     })();
-  }, [manual, user, draftLoaded, findDraft]);
+  }, [manual, user, person, draftLoaded, findDraft]);
 
   const currentSection = sections[currentSectionIndex];
   const currentQuestion = currentSection?.questions[currentQuestionIndex];

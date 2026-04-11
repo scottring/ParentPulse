@@ -95,12 +95,31 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   visibilityRef.current = answerVisibility;
   aiFieldsRef.current = aiGeneratedFields;
 
+  // Route guard: this page is for adults filling out their OWN
+  // self-perspective. Children belong on /kid-session — even if their
+  // DOB isn't recorded, since `relationshipType === 'child'` is
+  // enough to know they don't belong here. Anyone else who explicitly
+  // can't self-contribute gets bounced back to the manual view.
+  useEffect(() => {
+    if (personLoading || !person) return;
+    if (person.relationshipType === 'child') {
+      router.replace(`/people/${personId}/manual/kid-session`);
+      return;
+    }
+    if (person.canSelfContribute === false) {
+      router.replace(`/people/${personId}/manual`);
+    }
+  }, [person, personLoading, personId, router]);
+
   // Load existing draft from Firestore on mount
   useEffect(() => {
     if (!manual || !user || draftLoaded) return;
 
     (async () => {
-      const draft = await findDraft(manual.manualId, 'self');
+      // Scope to relationshipToSubject='self' so we don't accidentally
+      // match a child-session draft (same perspectiveType, different
+      // relationshipToSubject) living on the same manual.
+      const draft = await findDraft(manual.manualId, 'self', 'self');
       if (draft) {
         setDraftId(draft.contributionId);
         if (draft.answers) setAnswers(draft.answers);

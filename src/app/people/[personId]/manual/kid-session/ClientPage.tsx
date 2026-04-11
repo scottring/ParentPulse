@@ -12,6 +12,7 @@ import ChildQuestionDisplay from '@/components/onboarding/ChildQuestionDisplay';
 import { getDemoAnswer } from '@/config/demo-answers';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
+import { isKidSessionEligible } from '@/utils/age';
 
 export function KidSessionPage({ params }: { params: Promise<{ personId: string }> }) {
   const { personId } = use(params);
@@ -38,14 +39,38 @@ export function KidSessionPage({ params }: { params: Promise<{ personId: string 
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Route guard: only block when we have positive evidence the person
+  // is the wrong audience for kid-session. Missing dateOfBirth is
+  // common — many child records were created before DOB was tracked —
+  // and must NOT trigger a redirect, otherwise the link from the
+  // manual page bounces straight back here in a loop.
+  useEffect(() => {
+    if (personLoading || !person) return;
+    // Adults are blocked outright.
+    if (person.relationshipType && person.relationshipType !== 'child') {
+      router.replace(`/people/${personId}/manual`);
+      return;
+    }
+    // Children with a *known* DOB outside the 6–17 band are blocked.
+    // Children without a DOB are allowed through.
+    if (person.dateOfBirth && !isKidSessionEligible(person.dateOfBirth)) {
+      router.replace(`/people/${personId}/manual`);
+    }
+  }, [person, personLoading, personId, router]);
+
   // Load existing draft
   useEffect(() => {
     if (!manual || !user || draftLoaded) return;
 
     (async () => {
-      // Check for draft first, then completed contribution
-      const draft = await findDraft(manual.manualId, 'self');
-      if (draft && draft.relationshipToSubject === 'child-session') {
+      // Scope the draft lookup to child-session so we don't cross-match
+      // a self-onboard draft (perspectiveType=self, relationshipToSubject=self)
+      // that may exist on the same manual. Previously the page called
+      // findDraft without the third argument, which returned any self
+      // draft at random, so valid child-session progress was silently
+      // dropped on resume.
+      const draft = await findDraft(manual.manualId, 'self', 'child-session');
+      if (draft) {
         setDraftId(draft.contributionId);
         if (draft.answers) setAnswers(draft.answers);
         if (draft.draftProgress) {

@@ -76,20 +76,86 @@ export function useDashboard(): DashboardData {
   const familyId = user?.familyId;
   const userId = user?.userId;
 
-  // Listen to all contributions in the family
+  // Listen to contributions in the family.
+  //
+  // Firestore rules allow reading a contribution if EITHER:
+  //   (a) you are the contributor (own drafts + own completes), OR
+  //   (b) it is `status == 'complete'` and in your family.
+  //
+  // A single list query filtered only by familyId can't satisfy list
+  // security once other family members have drafts, so Firestore
+  // silently rejects the subscription and the dashboard sees an
+  // empty contributions array. We split into two aligned queries
+  // and merge them client-side.
   useEffect(() => {
-    if (!familyId) { setContribLoading(false); return; }
-    const q = query(
-      collection(firestore, 'contributions'),
+    if (!familyId || !userId) { setContribLoading(false); return; }
+
+    const colRef = collection(firestore, 'contributions');
+    const ownQuery = query(
+      colRef,
       where('familyId', '==', familyId),
+      where('contributorId', '==', userId),
     );
-    return onSnapshot(q, (snap) => {
-      const docs: Contribution[] = [];
-      snap.forEach((d) => docs.push({ ...d.data(), contributionId: d.id } as Contribution));
-      setContributions(docs);
-      setContribLoading(false);
-    }, (err) => { setError(err.message); setContribLoading(false); });
-  }, [familyId]);
+    const completeQuery = query(
+      colRef,
+      where('familyId', '==', familyId),
+      where('status', '==', 'complete'),
+    );
+
+    const ownDocs = new Map<string, Contribution>();
+    const completeDocs = new Map<string, Contribution>();
+    let ownLoaded = false;
+    let completeLoaded = false;
+
+    const emit = () => {
+      const merged = new Map<string, Contribution>();
+      for (const [id, c] of ownDocs) merged.set(id, c);
+      for (const [id, c] of completeDocs) merged.set(id, c);
+      setContributions(Array.from(merged.values()));
+      if (ownLoaded && completeLoaded) setContribLoading(false);
+    };
+
+    const unsubOwn = onSnapshot(
+      ownQuery,
+      (snap) => {
+        ownDocs.clear();
+        snap.forEach((d) =>
+          ownDocs.set(d.id, { ...d.data(), contributionId: d.id } as Contribution),
+        );
+        ownLoaded = true;
+        emit();
+      },
+      (err) => {
+        console.error('Error listening to own contributions:', err);
+        setError(err.message);
+        ownLoaded = true;
+        emit();
+      },
+    );
+
+    const unsubComplete = onSnapshot(
+      completeQuery,
+      (snap) => {
+        completeDocs.clear();
+        snap.forEach((d) =>
+          completeDocs.set(d.id, { ...d.data(), contributionId: d.id } as Contribution),
+        );
+        completeLoaded = true;
+        emit();
+      },
+      (err) => {
+        console.error('Error listening to completed contributions:', err);
+        setError(err.message);
+        completeLoaded = true;
+        emit();
+      },
+    );
+
+    return () => {
+      unsubOwn();
+      unsubComplete();
+    };
+  }, [familyId, userId]);
 
   // Listen to all person manuals in the family (for synthesis overviews)
   useEffect(() => {

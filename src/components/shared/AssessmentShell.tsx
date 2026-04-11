@@ -109,7 +109,13 @@ export default function AssessmentShell({
         <SideNav />
 
         <div className="pt-[64px] pb-24">
-          <div className="press-binder" style={{ maxWidth: 560 }}>
+          {/* Wide, low-padding container — Typeform-style.
+              Override .press-binder's CSS horizontal padding so the
+              question + options can stretch nearly edge-to-edge. */}
+          <div
+            className="press-binder"
+            style={{ maxWidth: 860, padding: '0 16px' }}
+          >
 
             {/* Running header */}
             <div className="press-running-header" style={{ paddingTop: 28 }}>
@@ -129,19 +135,43 @@ export default function AssessmentShell({
               </button>
             </div>
 
-            {/* Title */}
-            <div className="press-binder-head" style={{ paddingBottom: 20 }}>
-              <h1 className="press-binder-title" style={{ fontSize: 'clamp(34px, 5vw, 42px)' }}>
+            {/* Title — sans-serif, matches the kid question style */}
+            <div
+              className="press-binder-head"
+              style={{ paddingBottom: 20 }}
+            >
+              <h1
+                style={{
+                  fontFamily: 'var(--font-parent-body)',
+                  fontSize: 'clamp(36px, 5vw, 48px)',
+                  fontStyle: 'normal',
+                  fontWeight: 700,
+                  color: '#2A2520',
+                  lineHeight: 1.1,
+                  letterSpacing: '-0.02em',
+                  margin: 0,
+                }}
+              >
                 {sectionName}
               </h1>
-              <p className="press-binder-sub" style={{ fontSize: 14 }}>
+              <p
+                style={{
+                  fontFamily: 'var(--font-parent-body)',
+                  fontSize: 18,
+                  fontStyle: 'normal',
+                  fontWeight: 500,
+                  color: '#5C5347',
+                  marginTop: 12,
+                  letterSpacing: 0,
+                }}
+              >
                 {sectionDescription.replace(/\{\{personName\}\}/g, personName)}
               </p>
             </div>
 
             {demoBannerSlot}
 
-            <div style={{ padding: '24px 32px 40px' }}>
+            <div style={{ padding: '24px 0 40px' }}>
               {children}
             </div>
           </div>

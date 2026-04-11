@@ -121,7 +121,24 @@ export function useContribution(manualId?: string, additionalManualIds?: string[
   const allManualIds = [manualId, ...(additionalManualIds || [])].filter(Boolean) as string[];
   const manualIdsKey = allManualIds.sort().join(',');
 
-  // Listen to all contributions (draft + complete) for the manual(s)
+  // Listen to contributions (draft + complete) for the manual(s).
+  //
+  // Firestore rules allow reading a contribution if EITHER:
+  //   (a) you are the contributor (own drafts + own completes), OR
+  //   (b) it is `status == 'complete'` and in your family.
+  //
+  // A single query that filters only by manualId + familyId can't
+  // satisfy list-query security (Firestore requires the query
+  // constraints to provably match a read rule for every possible
+  // returned doc). Once other family members started creating
+  // contributions, the single listener started failing with
+  // "Missing or insufficient permissions". We fix that by running
+  // two aligned queries and merging the results client-side:
+  //
+  //   own: manualId + familyId + contributorId == me  (matches rule a)
+  //   complete: manualId + familyId + status == complete  (matches rule b)
+  //
+  // Docs that match both show up in both queries — we dedupe by id.
   useEffect(() => {
     if (!user || allManualIds.length === 0) {
       setContributions([]);
@@ -129,38 +146,92 @@ export function useContribution(manualId?: string, additionalManualIds?: string[
       return;
     }
 
-    const q = allManualIds.length === 1
-      ? query(
-          collection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS),
-          where('manualId', '==', allManualIds[0]),
-          where('familyId', '==', user.familyId)
-        )
-      : query(
-          collection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS),
-          where('manualId', 'in', allManualIds),
-          where('familyId', '==', user.familyId)
-        );
+    const colRef = collection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS);
+    const manualConstraint =
+      allManualIds.length === 1
+        ? where('manualId', '==', allManualIds[0])
+        : where('manualId', 'in', allManualIds);
+    const familyConstraint = where('familyId', '==', user.familyId);
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const docs = snapshot.docs.map((d) => ({
-          ...d.data(),
-          contributionId: d.id,
-        })) as Contribution[];
-        // Strip private answers from other people's contributions
-        const filtered = docs.map((c) => filterPrivateAnswers(c, user.userId));
-        setContributions(filtered);
+    const ownQuery = query(
+      colRef,
+      manualConstraint,
+      familyConstraint,
+      where('contributorId', '==', user.userId)
+    );
+
+    const completeQuery = query(
+      colRef,
+      manualConstraint,
+      familyConstraint,
+      where('status', '==', 'complete')
+    );
+
+    // Merged view — each snapshot replaces only its own slice.
+    const ownDocs = new Map<string, Contribution>();
+    const completeDocs = new Map<string, Contribution>();
+    let ownLoaded = false;
+    let completeLoaded = false;
+
+    const emit = () => {
+      const merged = new Map<string, Contribution>();
+      for (const [id, c] of ownDocs) merged.set(id, c);
+      for (const [id, c] of completeDocs) merged.set(id, c);
+      const filtered = Array.from(merged.values()).map((c) =>
+        filterPrivateAnswers(c, user.userId)
+      );
+      setContributions(filtered);
+      if (ownLoaded && completeLoaded) {
         setLoading(false);
+      }
+    };
+
+    const unsubOwn = onSnapshot(
+      ownQuery,
+      (snapshot) => {
+        ownDocs.clear();
+        for (const d of snapshot.docs) {
+          ownDocs.set(d.id, {
+            ...(d.data() as Contribution),
+            contributionId: d.id,
+          });
+        }
+        ownLoaded = true;
+        emit();
       },
       (err) => {
-        console.error('Error listening to contributions:', err);
+        console.error('Error listening to own contributions:', err);
         setError(err.message);
-        setLoading(false);
+        ownLoaded = true;
+        emit();
       }
     );
 
-    return unsubscribe;
+    const unsubComplete = onSnapshot(
+      completeQuery,
+      (snapshot) => {
+        completeDocs.clear();
+        for (const d of snapshot.docs) {
+          completeDocs.set(d.id, {
+            ...(d.data() as Contribution),
+            contributionId: d.id,
+          });
+        }
+        completeLoaded = true;
+        emit();
+      },
+      (err) => {
+        console.error('Error listening to completed contributions:', err);
+        setError(err.message);
+        completeLoaded = true;
+        emit();
+      }
+    );
+
+    return () => {
+      unsubOwn();
+      unsubComplete();
+    };
   }, [user, manualIdsKey]);
 
   const createContribution = useCallback(
@@ -254,8 +325,20 @@ export function useContribution(manualId?: string, additionalManualIds?: string[
       const snapshot = await getDocs(q);
       if (snapshot.empty) return null;
 
-      const docSnap = snapshot.docs[0];
-      return { ...docSnap.data(), contributionId: docSnap.id } as Contribution;
+      // Sort client-side by updatedAt desc and return the most recent.
+      // Firestore returns list results in an undefined order without an
+      // orderBy, which historically caused the app to restore whichever
+      // old draft came back first rather than the latest one — leaving
+      // fresh answers invisible on resume.
+      const drafts = snapshot.docs
+        .map((d) => ({ ...d.data(), contributionId: d.id }) as Contribution)
+        .sort((a, b) => {
+          const at = a.updatedAt?.toMillis?.() ?? 0;
+          const bt = b.updatedAt?.toMillis?.() ?? 0;
+          return bt - at;
+        });
+
+      return drafts[0];
     },
     [user]
   );
