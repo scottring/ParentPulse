@@ -596,21 +596,67 @@ function EntryCard({
         )}
       </header>
 
+      {entry.title && <h3 className="entry-title">{entry.title}</h3>}
+
       <div className="entry-body">
         {entry.text.split(/\n{2,}/).map((para, i) => (
           <p key={i}>{para}</p>
         ))}
       </div>
 
-      {about && (
-        <p className="entry-about">
-          about <span className="press-sc">{about}</span>
-        </p>
-      )}
+      <div className="entry-bottom">
+        {about && (
+          <p className="entry-about">
+            about <span className="press-sc">{about}</span>
+          </p>
+        )}
+        <Link href={`/journal/${entry.entryId}`} className="entry-open">
+          Open<span className="arrow">⟶</span>
+        </Link>
+      </div>
 
       <style jsx>{`
         .entry {
           scroll-margin-top: 84px;
+        }
+        .entry-title {
+          font-family: var(--font-parent-display);
+          font-style: italic;
+          font-weight: 400;
+          font-size: 26px;
+          line-height: 1.15;
+          letter-spacing: -0.008em;
+          color: #3a3530;
+          margin: 0 0 14px;
+        }
+        .entry-bottom {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+          gap: 16px;
+          margin-top: 16px;
+        }
+        :global(.entry-open) {
+          font-family: var(--font-parent-body);
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          color: #8a7b5f;
+          text-decoration: none;
+          transition: color 0.2s ease;
+          flex-shrink: 0;
+        }
+        :global(.entry-open:hover) {
+          color: #3a3530;
+        }
+        :global(.entry-open .arrow) {
+          display: inline-block;
+          margin-left: 6px;
+          transition: transform 0.25s ease;
+        }
+        :global(.entry-open:hover .arrow) {
+          transform: translateX(3px);
         }
         .entry-eyebrow {
           display: flex;
@@ -662,7 +708,7 @@ function EntryCard({
         }
 
         .entry-about {
-          margin: 16px 0 0;
+          margin: 0;
           font-family: var(--font-parent-body);
           font-size: 10px;
           font-weight: 600;

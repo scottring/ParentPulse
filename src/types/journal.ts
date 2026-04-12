@@ -15,6 +15,9 @@ export interface JournalEntry {
 
   // Content
   text: string;
+  // Optional title above the body on the detail page. Editable in
+  // Phase B; AI-filled on save when blank in a later phase.
+  title?: string;
   category: JournalCategory;
   tags: string[];
 
@@ -52,6 +55,17 @@ export interface JournalEntry {
   // Timestamps
   createdAt: Timestamp;
   updatedAt?: Timestamp;
+}
+
+// Shape accepted by updateEntry. Every field is optional — callers
+// patch only what changed. Sharing updates recompute visibleToUserIds
+// internally so writers never touch the denormalized field directly.
+export interface UpdateEntryInput {
+  text?: string;
+  title?: string;
+  category?: JournalCategory;
+  personMentions?: string[];
+  sharedWithUserIds?: string[];
 }
 
 export const JOURNAL_CATEGORIES: { value: JournalCategory; label: string; emoji: string }[] = [
