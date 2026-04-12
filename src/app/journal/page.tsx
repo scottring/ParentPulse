@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useJournalEntries } from '@/hooks/useJournalEntries';
+import { useJournalEcho } from '@/hooks/useJournalEcho';
 import { usePerson } from '@/hooks/usePerson';
 import Navigation from '@/components/layout/Navigation';
 import SideNav from '@/components/layout/SideNav';
@@ -12,6 +13,7 @@ import SideNav from '@/components/layout/SideNav';
 import Volume from '@/components/magazine/Volume';
 import Masthead from '@/components/magazine/Masthead';
 import PrimaryRow from '@/components/magazine/PrimaryRow';
+import FeaturedHero from '@/components/magazine/FeaturedHero';
 import SideColumn from '@/components/magazine/SideColumn';
 import Section from '@/components/magazine/Section';
 import BackIssues from '@/components/magazine/BackIssues';
@@ -118,6 +120,7 @@ export default function JournalPage() {
   const router = useRouter();
   const { entries, loading: entriesLoading } = useJournalEntries();
   const { people } = usePerson();
+  const { echo } = useJournalEcho(entries);
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login');
@@ -171,7 +174,13 @@ export default function JournalPage() {
             masthead={<Masthead title={`${firstName}'s Journal`} />}
           >
             <PrimaryRow
-              featured={<EmptyCapture hasEntries={hasEntries} />}
+              featured={
+                echo ? (
+                  <EchoHero echo={echo} />
+                ) : (
+                  <EmptyCapture hasEntries={hasEntries} />
+                )
+              }
               aside={
                 hasEntries ? (
                   <SideColumn eyebrow="Recently" title="Entries">
@@ -270,8 +279,58 @@ export default function JournalPage() {
 }
 
 // ================================================================
-// Featured slot — capture invitation. Always rendered in the
-// featured column (until Phase C brings the AI echo hero).
+// Featured slot — AI echo hero. Shows a pull-quote from a
+// semantically similar older journal entry. The echo creates a
+// feeling of the journal having memory — "you wrote something
+// like this before."
+// ================================================================
+function EchoHero({ echo }: { echo: import('@/hooks/useJournalEcho').EchoMatch }) {
+  const cat = CATEGORY_META[echo.category];
+  const createdDate = echo.createdAt?._seconds
+    ? new Date(echo.createdAt._seconds * 1000)
+    : null;
+  const dateLabel = createdDate
+    ? createdDate.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year:
+          createdDate.getFullYear() === new Date().getFullYear()
+            ? undefined
+            : 'numeric',
+      })
+    : '';
+
+  // Use summary as the body if available, otherwise truncate the text
+  const body = echo.summary || echo.text.slice(0, 200) + (echo.text.length > 200 ? '…' : '');
+  const title = echo.title || 'A familiar thread';
+
+  return (
+    <FeaturedHero
+      eyebrow="An echo from your journal"
+      kindLabel={cat?.label ?? 'Entry'}
+      glyph={cat?.emoji ?? '✦'}
+      glyphColor="#5C8064"
+      title={title}
+      body={body}
+      meta={
+        <>
+          {dateLabel}
+          {echo.themes.length > 0 && (
+            <>
+              <span style={{ display: 'inline-block', margin: '0 8px', color: '#a8997d' }}>·</span>
+              {echo.themes.slice(0, 2).join(' · ')}
+            </>
+          )}
+        </>
+      }
+      ctaHref={`/journal/${echo.entryId}`}
+      ctaLabel="Revisit this entry"
+    />
+  );
+}
+
+// ================================================================
+// Featured slot — capture invitation. Fallback when no echo exists.
 // ================================================================
 function EmptyCapture({ hasEntries }: { hasEntries: boolean }) {
   const handleClick = () => {
@@ -626,9 +685,16 @@ function EntryCard({
             about <span className="press-sc">{about}</span>
           </p>
         )}
-        <Link href={`/journal/${entry.entryId}`} className="entry-open">
-          Open<span className="arrow">⟶</span>
-        </Link>
+        <div className="entry-bottom-right">
+          {entry.hasChatThread && (
+            <span className="entry-chat-indicator" title="Has AI conversation">
+              💬
+            </span>
+          )}
+          <Link href={`/journal/${entry.entryId}`} className="entry-open">
+            Open<span className="arrow">⟶</span>
+          </Link>
+        </div>
       </div>
 
       <style jsx>{`
@@ -675,6 +741,16 @@ function EntryCard({
           align-items: baseline;
           gap: 16px;
           margin-top: 16px;
+        }
+        .entry-bottom-right {
+          display: flex;
+          align-items: baseline;
+          gap: 12px;
+          flex-shrink: 0;
+        }
+        .entry-chat-indicator {
+          font-size: 12px;
+          opacity: 0.5;
         }
         :global(.entry-open) {
           font-family: var(--font-parent-body);

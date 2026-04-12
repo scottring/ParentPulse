@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useJournal } from '@/hooks/useJournal';
 import { usePerson } from '@/hooks/usePerson';
-import { useCoach } from '@/hooks/useCoach';
+import { useEntryChat } from '@/hooks/useEntryChat';
 import { JOURNAL_CATEGORIES, type JournalCategory } from '@/types/journal';
 
 interface ShareCandidate {
@@ -24,6 +24,7 @@ export default function CaptureSheet() {
   const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
   const [sharedWith, setSharedWith] = useState<string[]>([]);
   const [chatInput, setChatInput] = useState('');
+  const [savedEntryId, setSavedEntryId] = useState<string | null>(null);
 
   // Preserved after save so the "Ask about this" step can use them
   const savedTextRef = useRef('');
@@ -32,11 +33,10 @@ export default function CaptureSheet() {
   const { createEntry, saving } = useJournal();
   const { people } = usePerson();
   const {
-    messages: chatMessages,
+    turns: chatTurns,
     loading: chatLoading,
-    sendMessage: sendChatMessage,
-    clearConversation: clearChat,
-  } = useCoach();
+    sendMessage: sendEntryChat,
+  } = useEntryChat(savedEntryId);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
@@ -71,7 +71,7 @@ export default function CaptureSheet() {
     if (state === 'chatting' && chatScrollRef.current) {
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
     }
-  }, [chatMessages, state]);
+  }, [chatTurns, state]);
 
   const resetAll = () => {
     setText('');
@@ -79,7 +79,7 @@ export default function CaptureSheet() {
     setSelectedPeople([]);
     setSharedWith([]);
     setChatInput('');
-    clearChat();
+    setSavedEntryId(null);
   };
 
   const handleClose = () => {
@@ -110,30 +110,38 @@ export default function CaptureSheet() {
       savedTextRef.current = text.trim();
       savedPeopleRef.current = [...selectedPeople];
 
-      await createEntry({
+      const entryId = await createEntry({
         text,
         category,
         personMentions: selectedPeople,
         sharedWithUserIds: sharedWith,
       });
 
+      setSavedEntryId(entryId);
       setState('saved');
     } catch {
       // error surfaced via hook
     }
   };
 
-  // Step 2 (optional): Ask the AI about what was just saved
+  // Step 2 (optional): Ask the AI about what was just saved.
+  // The first message seeds the per-entry chat thread. When the
+  // user later opens the entry detail page, the thread is there.
   const handleAskAboutThis = async () => {
     setState('chatting');
-    await sendChatMessage(savedTextRef.current, savedPeopleRef.current);
+    // Send an opening prompt — the Cloud Function prepends the entry
+    // text automatically on the first message.
+    await sendEntryChat(
+      "What do you notice about what I wrote?",
+      savedPeopleRef.current,
+    );
   };
 
   const handleChatSend = async () => {
     if (!chatInput.trim() || chatLoading) return;
     const msg = chatInput.trim();
     setChatInput('');
-    await sendChatMessage(msg, savedPeopleRef.current);
+    await sendEntryChat(msg, savedPeopleRef.current);
   };
 
   const sheetOpen = state !== 'closed';
@@ -372,11 +380,12 @@ export default function CaptureSheet() {
 
             <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-6 py-5" style={{ minHeight: 0 }}>
               <div className="space-y-4">
-                {chatMessages.map((msg, i) => {
-                  if ((msg.role as string) === 'system') return null;
-                  const isUser = msg.role === 'user';
+                {chatTurns
+                  .filter((t) => !t.excluded)
+                  .map((turn) => {
+                  const isUser = turn.role === 'user';
                   return (
-                    <div key={i} style={{
+                    <div key={turn.turnId} style={{
                       display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start',
                     }}>
                       <div style={{
@@ -386,7 +395,7 @@ export default function CaptureSheet() {
                         fontFamily: 'var(--font-parent-body)', fontSize: 16, lineHeight: 1.55,
                         color: '#3A3530', whiteSpace: 'pre-wrap',
                       }}>
-                        {msg.content}
+                        {turn.content}
                       </div>
                     </div>
                   );

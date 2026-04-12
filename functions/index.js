@@ -31,6 +31,35 @@ function getGoogleAI() {
 }
 
 // ================================================================
+// EMBEDDING GENERATION
+// Uses OpenAI text-embedding-3-small (1536 dimensions) for vector
+// search. Returns a plain number[] suitable for FieldValue.vector().
+// Returns null on failure so callers can skip the embedding gracefully.
+// ================================================================
+let openAIClient;
+function getOpenAI() {
+  if (!openAIClient) {
+    const OpenAI = require("openai");
+    openAIClient = new OpenAI({apiKey: process.env.OPENAI_API_KEY});
+  }
+  return openAIClient;
+}
+
+async function generateEmbedding(text) {
+  const logger = require("firebase-functions/logger");
+  try {
+    const response = await getOpenAI().embeddings.create({
+      model: "text-embedding-3-small",
+      input: text.slice(0, 8000), // Cap input to ~2k tokens
+    });
+    return response.data?.[0]?.embedding || null;
+  } catch (err) {
+    logger.warn(`generateEmbedding: failed — ${err.message}`);
+    return null;
+  }
+}
+
+// ================================================================
 // AI USAGE TRACKING
 // Every Anthropic call should be logged via this helper so the cost
 // tracker in Settings can show per-family spend. Non-blocking; never
@@ -828,6 +857,169 @@ exports.chatWithCoach = onCall(
         throw error;
       }
     }
+);
+
+// ================================================================
+// chatWithEntry — per-entry AI chat with persistent subcollection
+//
+// Each journal entry gets its own chat thread stored as
+// journal_entries/{entryId}/chat/{turnId}. Turns alternate between
+// user and assistant. The full thread is loaded on each call to
+// build context, and the new turn pair is written as individual
+// docs so the client can subscribe via onSnapshot.
+//
+// Reuses the same RAG context + model routing as chatWithCoach.
+// ================================================================
+exports.chatWithEntry = onCall(
+    {
+      region: "us-central1",
+      memory: "512MiB",
+      timeoutSeconds: 60,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const {entryId, message, personIds} = request.data;
+      if (!entryId || !message) {
+        throw new Error("entryId and message are required");
+      }
+
+      const db = admin.firestore();
+
+      // Verify user can access this entry
+      const entryDoc = await db
+          .collection("journal_entries")
+          .doc(entryId)
+          .get();
+      if (!entryDoc.exists) {
+        throw new Error("Entry not found");
+      }
+      const entryData = entryDoc.data();
+
+      // Get user data
+      const userDoc = await db
+          .collection("users")
+          .doc(request.auth.uid)
+          .get();
+      const userData = userDoc.data();
+      if (!userData || userData.role !== "parent") {
+        throw new Error("Only parents can use the AI coach");
+      }
+      const familyId = userData.familyId;
+      if (entryData.familyId !== familyId) {
+        throw new Error("Access denied");
+      }
+
+      // Normalize personIds — use entry's personMentions as fallback
+      const effectivePersonIds = Array.isArray(personIds) && personIds.length > 0
+        ? personIds
+        : (entryData.personMentions || []);
+
+      logger.info(
+          `chatWithEntry: entry ${entryId}, user ${request.auth.uid}, ` +
+          `people [${effectivePersonIds.join(", ")}]`,
+      );
+
+      // Load existing chat thread (ordered by timestamp)
+      const chatSnap = await db
+          .collection("journal_entries")
+          .doc(entryId)
+          .collection("chat")
+          .orderBy("createdAt", "asc")
+          .get();
+
+      const priorMessages = [];
+      chatSnap.forEach((doc) => {
+        const d = doc.data();
+        if (!d.excluded) {
+          priorMessages.push({role: d.role, content: d.content});
+        }
+      });
+
+      // Build messages for Claude.
+      // If this is the first message in the thread, prepend the entry
+      // text as a system-level user message so the AI has full context.
+      const isFirstMessage = priorMessages.length === 0;
+      const messagesForClaude = [];
+
+      if (isFirstMessage) {
+        // Synthetic context: tell the AI what the user wrote
+        messagesForClaude.push({
+          role: "user",
+          content: `Here's a journal entry I just wrote:\n\n"${entryData.text.trim()}"\n\n${message}`,
+        });
+      } else {
+        messagesForClaude.push(...priorMessages);
+        messagesForClaude.push({role: "user", content: message});
+      }
+
+      // Retrieve RAG context
+      const context = await retrieveChatContext(
+          familyId, message, effectivePersonIds, request.auth.uid,
+      );
+
+      // Generate response via shared helper
+      const response = await generateChatResponse(
+          messagesForClaude, context, {
+            familyId,
+            userId: request.auth.uid,
+            personId: effectivePersonIds[0] || null,
+            personIds: effectivePersonIds,
+          },
+      );
+
+      // Write both turns to the subcollection
+      const chatCol = db
+          .collection("journal_entries")
+          .doc(entryId)
+          .collection("chat");
+
+      const now = admin.firestore.Timestamp.now();
+      const batch = db.batch();
+
+      const userTurnRef = chatCol.doc();
+      batch.set(userTurnRef, {
+        role: "user",
+        content: isFirstMessage
+          ? message // Store the clean user message, not the synthetic one
+          : message,
+        authorId: request.auth.uid,
+        createdAt: now,
+      });
+
+      const aiTurnRef = chatCol.doc();
+      batch.set(aiTurnRef, {
+        role: "assistant",
+        content: response,
+        createdAt: admin.firestore.Timestamp.fromMillis(
+            now.toMillis() + 1,
+        ), // +1ms to guarantee ordering
+      });
+
+      // Also mark the entry as having a chat thread (for UI indicators)
+      batch.update(entryDoc.ref, {
+        hasChatThread: true,
+        chatUpdatedAt: now,
+      });
+
+      await batch.commit();
+
+      logger.info(
+          `chatWithEntry: responded to entry ${entryId}, ` +
+          `thread now has ${priorMessages.length + 2} turns`,
+      );
+
+      return {
+        success: true,
+        response,
+        turnId: aiTurnRef.id,
+      };
+    },
 );
 
 /**
@@ -9114,7 +9306,7 @@ exports.enrichJournalEntry = onDocumentCreated(
       region: "us-central1",
       memory: "256MiB",
       timeoutSeconds: 60,
-      secrets: ["ANTHROPIC_API_KEY"],
+      secrets: ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"],
     },
     async (event) => {
       const logger = require("firebase-functions/logger");
@@ -9250,7 +9442,12 @@ Return only the JSON object, no other text.`;
         : "";
 
       // ----------------------------------------------------------
-      // 5. Write back (admin SDK — bypasses security rules)
+      // 5. Generate embedding for vector search
+      // ----------------------------------------------------------
+      const embedding = await generateEmbedding(entryText);
+
+      // ----------------------------------------------------------
+      // 6. Write back (admin SDK — bypasses security rules)
       // ----------------------------------------------------------
       const updateFields = {
         enrichment: {
@@ -9262,6 +9459,11 @@ Return only the JSON object, no other text.`;
           model,
         },
       };
+
+      if (embedding) {
+        updateFields.embedding =
+            admin.firestore.FieldValue.vector(embedding);
+      }
 
       // Auto-title: if the entry has no title, fill it from the AI.
       // Entries with a user-set title are untouched.
@@ -9278,7 +9480,8 @@ Return only the JSON object, no other text.`;
       logger.info(
           `enrichJournalEntry: enriched ${snap.id} — ` +
           `${aiPeople.length} people, ${aiDimensions.length} dimensions, ` +
-          `${themes.length} themes`,
+          `${themes.length} themes` +
+          (embedding ? `, embedding ✓` : ``),
       );
 
       // ----------------------------------------------------------
@@ -9333,6 +9536,361 @@ Return only the JSON object, no other text.`;
             );
           }
         }
+      }
+    },
+);
+
+// ================================================================
+// reEnrichJournalEntry — onDocumentUpdated trigger
+//
+// Fires when a journal entry is updated (e.g. edit-in-place on the
+// detail page). Re-runs the same enrichment pipeline as
+// enrichJournalEntry, but only when the body text actually changed.
+// This prevents infinite loops (since enrichment itself writes back
+// to the doc) and avoids wasting AI calls on metadata-only updates
+// (sharing changes, category changes, etc.).
+// ================================================================
+exports.reEnrichJournalEntry = onDocumentUpdated(
+    {
+      document: "journal_entries/{entryId}",
+      region: "us-central1",
+      memory: "256MiB",
+      timeoutSeconds: 60,
+      secrets: ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"],
+    },
+    async (event) => {
+      const logger = require("firebase-functions/logger");
+      const before = event.data.before.data();
+      const after = event.data.after.data();
+
+      if (!before || !after) return;
+
+      // ---- Guard: only re-enrich when body text changed ----
+      const oldText = (before.text || "").trim();
+      const newText = (after.text || "").trim();
+      if (oldText === newText) return;
+
+      // Don't re-enrich very short entries.
+      if (newText.length < 10) return;
+
+      const db = admin.firestore();
+      const familyId = after.familyId;
+      if (!familyId) return;
+
+      logger.info(
+          `reEnrichJournalEntry: text changed for ${event.params.entryId}, ` +
+          `re-enriching (${oldText.length} → ${newText.length} chars)`,
+      );
+
+      // Reuse the same enrichment logic as enrichJournalEntry.
+      // Fetch family people for context.
+      const peopleSnap = await db
+          .collection("people")
+          .where("familyId", "==", familyId)
+          .get();
+
+      const people = [];
+      peopleSnap.forEach((doc) => {
+        const p = doc.data();
+        if (p.archived === true) return;
+        people.push({
+          personId: doc.id,
+          name: p.name,
+          relationship: p.relationshipType || "other",
+        });
+      });
+
+      const peopleList = people.length > 0
+        ? people
+            .map((p) => `- ${p.name} (${p.relationship}, id: ${p.personId})`)
+            .join("\n")
+        : "(no people registered yet)";
+
+      const dimensionList = ENRICHMENT_DIMENSIONS
+          .map((d) => `- ${d.id}: ${d.name} [${d.domain}]`)
+          .join("\n");
+
+      const entryCategory = after.category || "moment";
+
+      const prompt = `You are an AI assistant for a family relationship app called Relish. A user just edited a journal entry. Your job is to extract structured metadata from it so the app can connect this entry to the right people and relationship dimensions.
+
+FAMILY MEMBERS:
+${peopleList}
+
+RELATIONSHIP DIMENSIONS (20 research-backed dimensions across couple, parent-child, and self domains):
+${dimensionList}
+
+JOURNAL ENTRY (category: ${entryCategory}):
+"""
+${newText}
+"""
+
+Extract the following as JSON. Be conservative — only include people and dimensions you are confident the entry meaningfully touches. If the entry is too vague or generic to extract anything, return empty arrays.
+
+{
+  "summary": "1-2 sentence essence of what this entry is about (not a paraphrase — a higher-level takeaway)",
+  "title": "3-6 word title for this entry",
+  "people": ["personId1", "personId2"],
+  "dimensions": ["dimension_id_1", "dimension_id_2"],
+  "themes": ["short theme phrase 1", "short theme phrase 2"]
+}
+
+Rules:
+- "people": only include personIds from the FAMILY MEMBERS list above. Match by name, pronoun, role ("my wife", "the kids", etc.). Include the author if the entry is self-reflective.
+- "dimensions": only use IDs from the DIMENSIONS list above. An entry might touch 0-3 dimensions. Don't stretch — if the connection is weak, omit it.
+- "themes": 1-4 free-text tags (2-5 words each) capturing patterns or topics. These are NOT from a fixed list. Examples: "bedtime resistance", "sibling fairness", "feeling unheard", "gratitude for partner". Make them specific to the entry, not generic.
+- "summary": one sentence, occasionally two. Written as if for a family member reading a digest. Warm but not saccharine.
+- "title": a short evocative title (3-6 words) that captures the heart of the entry. Like a chapter heading, not a headline. Examples: "Bedtime reset", "A quiet evening together", "The screen time standoff". Never generic ("Journal entry" or "Today's thoughts").
+
+Return only the JSON object, no other text.`;
+
+      const model = "claude-sonnet-4-20250514";
+      let response;
+      try {
+        response = await getAnthropic().messages.create({
+          model,
+          max_tokens: 600,
+          messages: [{role: "user", content: prompt}],
+        });
+      } catch (err) {
+        logger.error(
+            `reEnrichJournalEntry: Claude call failed for ` +
+            `${event.params.entryId}: ${err.message}`,
+        );
+        return;
+      }
+
+      const responseText = response.content?.[0]?.text || "";
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        logger.warn(
+            `reEnrichJournalEntry: no JSON in response for ` +
+            event.params.entryId,
+        );
+        return;
+      }
+
+      let enrichment;
+      try {
+        enrichment = JSON.parse(jsonMatch[0]);
+      } catch (err) {
+        logger.warn(
+            `reEnrichJournalEntry: JSON parse failed for ` +
+            `${event.params.entryId}: ${err.message}`,
+        );
+        return;
+      }
+
+      const validPersonIds = new Set(people.map((p) => p.personId));
+      const aiPeople = (enrichment.people || [])
+          .filter((id) => validPersonIds.has(id));
+
+      const validDimensionIds =
+          new Set(ENRICHMENT_DIMENSIONS.map((d) => d.id));
+      const aiDimensions = (enrichment.dimensions || [])
+          .filter((id) => validDimensionIds.has(id));
+
+      const themes = (enrichment.themes || [])
+          .filter((t) => typeof t === "string" && t.trim().length > 0)
+          .slice(0, 6);
+
+      const summary = typeof enrichment.summary === "string"
+        ? enrichment.summary.trim().slice(0, 500)
+        : "";
+
+      // Generate embedding for vector search
+      const embedding = await generateEmbedding(newText);
+
+      const updateFields = {
+        enrichment: {
+          summary,
+          aiPeople,
+          aiDimensions,
+          themes,
+          enrichedAt: admin.firestore.Timestamp.now(),
+          model,
+        },
+      };
+
+      if (embedding) {
+        updateFields.embedding = admin.firestore.FieldValue.vector(embedding);
+      }
+
+      // Re-title only if the entry still has no user-set title.
+      // If the user set a title manually, respect it.
+      const existingTitle = after.title;
+      const aiTitle = typeof enrichment.title === "string"
+        ? enrichment.title.trim().slice(0, 100)
+        : "";
+      if ((!existingTitle || existingTitle.trim() === "") && aiTitle) {
+        updateFields.title = aiTitle;
+      }
+
+      await event.data.after.ref.update(updateFields);
+
+      logger.info(
+          `reEnrichJournalEntry: re-enriched ${event.params.entryId} — ` +
+          `${aiPeople.length} people, ${aiDimensions.length} dimensions, ` +
+          `${themes.length} themes` +
+          (embedding ? `, embedding ✓` : ``),
+      );
+
+      await logAIUsage(db, {
+        familyId,
+        userId: after.authorId || "system",
+        functionName: "reEnrichJournalEntry",
+        model,
+        usage: response.usage,
+      });
+
+      // Schedule debounced re-synthesis for mentioned people
+      if (aiPeople.length > 0) {
+        const DEBOUNCE_MS = 30 * 60 * 1000;
+        const scheduledFor = admin.firestore.Timestamp.fromMillis(
+            Date.now() + DEBOUNCE_MS,
+        );
+        for (const personId of aiPeople) {
+          try {
+            const manualSnap = await db.collection("person_manuals")
+                .where("personId", "==", personId)
+                .where("familyId", "==", familyId)
+                .limit(1)
+                .get();
+            if (!manualSnap.empty) {
+              await manualSnap.docs[0].ref.update({
+                journalSynthesisScheduledFor: scheduledFor,
+              });
+            }
+          } catch (schedErr) {
+            logger.warn(
+                `reEnrichJournalEntry: failed to schedule synthesis ` +
+                `for person ${personId}: ${schedErr.message}`,
+            );
+          }
+        }
+      }
+    },
+);
+
+// ================================================================
+// findSimilarEntries — callable function for AI echo
+//
+// Given a journal entry ID, generates an embedding from its text
+// (or uses the stored one) and performs Firestore native vector
+// search to find semantically similar older entries. Returns the
+// top match with enough data for the featured hero slot.
+//
+// Called client-side from the useJournalEcho hook on the /journal
+// page to populate the "featured echo" hero.
+// ================================================================
+exports.findSimilarEntries = onCall(
+    {
+      region: "us-central1",
+      memory: "256MiB",
+      timeoutSeconds: 30,
+      secrets: ["OPENAI_API_KEY"],
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const {entryId, familyId, limit: maxResults = 3} = request.data;
+      if (!entryId || !familyId) {
+        throw new Error("entryId and familyId are required");
+      }
+
+      const db = admin.firestore();
+
+      // Fetch the source entry
+      const sourceDoc = await db
+          .collection("journal_entries")
+          .doc(entryId)
+          .get();
+
+      if (!sourceDoc.exists) {
+        return {matches: []};
+      }
+
+      const sourceData = sourceDoc.data();
+
+      // Security: verify caller belongs to this family
+      if (sourceData.familyId !== familyId) {
+        throw new Error("Access denied");
+      }
+
+      // Get or generate embedding
+      let queryVector = sourceData.embedding;
+
+      if (!queryVector) {
+        // Entry hasn't been embedded yet — generate on the fly
+        const text = (sourceData.text || "").trim();
+        if (text.length < 10) return {matches: []};
+
+        const embedding = await generateEmbedding(text);
+        if (!embedding) return {matches: []};
+        queryVector = embedding;
+      } else {
+        // Firestore stores FieldValue.vector() as a special type;
+        // the admin SDK returns it as { _values: number[] } or
+        // a VectorValue. Extract the raw array.
+        if (queryVector.toArray) {
+          queryVector = queryVector.toArray();
+        } else if (queryVector._values) {
+          queryVector = queryVector._values;
+        }
+      }
+
+      // Firestore native vector search (findNearest)
+      const {FieldValue} = require("firebase-admin/firestore");
+
+      try {
+        const vectorQuery = db
+            .collection("journal_entries")
+            .where("familyId", "==", familyId)
+            .findNearest("embedding", FieldValue.vector(queryVector), {
+              limit: maxResults + 1, // +1 because source will be in results
+              distanceMeasure: "COSINE",
+            });
+
+        const snap = await vectorQuery.get();
+
+        const matches = [];
+        snap.forEach((doc) => {
+          if (doc.id === entryId) return; // Skip the source entry
+          const d = doc.data();
+
+          // Only surface entries at least 1 day old for the "echo" effect
+          const createdAt = d.createdAt?.toMillis?.() || 0;
+          const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+          if (createdAt > oneDayAgo) return;
+
+          matches.push({
+            entryId: doc.id,
+            text: (d.text || "").slice(0, 300),
+            title: d.title || null,
+            category: d.category || "moment",
+            summary: d.enrichment?.summary || null,
+            themes: d.enrichment?.themes || [],
+            createdAt: d.createdAt,
+            authorId: d.authorId,
+          });
+        });
+
+        logger.info(
+            `findSimilarEntries: found ${matches.length} matches ` +
+            `for entry ${entryId}`,
+        );
+
+        return {matches: matches.slice(0, maxResults)};
+      } catch (err) {
+        // Vector index may not be deployed yet — graceful fallback
+        logger.warn(
+            `findSimilarEntries: vector search failed — ${err.message}`,
+        );
+        return {matches: []};
       }
     },
 );

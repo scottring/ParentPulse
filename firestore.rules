@@ -144,6 +144,21 @@ service cloud.firestore {
       allow delete: if isParent() &&
                        belongsToFamily(resource.data.familyId) &&
                        resource.data.authorId == request.auth.uid;
+
+      // Per-entry chat subcollection. Turns are written by the
+      // chatWithEntry Cloud Function (admin SDK), so no client
+      // write rules are needed. Reads allowed for anyone who can
+      // see the parent entry (checked via visibleToUserIds on the
+      // parent doc — Firestore rules can read ancestor docs via
+      // get()).
+      match /chat/{turnId} {
+        allow read: if isParent() && (
+          // Check the parent entry's visibility
+          request.auth.uid in get(/databases/$(database)/documents/journal_entries/$(entryId)).data.visibleToUserIds
+        );
+        // Writes happen via admin SDK in Cloud Functions only.
+        allow write: if false;
+      }
     }
 
     // Child check-ins collection

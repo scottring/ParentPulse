@@ -1,93 +1,18 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
+
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useFamily } from '@/hooks/useFamily';
 import MainLayout from '@/components/layout/MainLayout';
-import { doc, updateDoc } from 'firebase/firestore';
-import { firestore } from '@/lib/firebase';
-import { DomainWeights, DEFAULT_DOMAIN_WEIGHTS } from '@/types/ring-scores';
-import { scoreToColor } from '@/lib/scoring-engine';
-import { EngagementMode } from '@/types/growth';
-import { ENGAGEMENT_PRESETS } from '@/types/user-preferences';
 import AIUsageSection from '@/components/settings/AIUsageSection';
 
 export default function SettingsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { family, inviteParent, removeInvite } = useFamily();
-
-  const [notifications, setNotifications] = useState(true);
-  const [dailyReminder, setDailyReminder] = useState(true);
-  const [weeklyInsights, setWeeklyInsights] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  // Engagement mode state
-  const [engagementMode, setEngagementMode] = useState<EngagementMode>(
-    (user as any)?.growthPreferences?.engagementMode || 'moderate',
-  );
-  const [engagementSaving, setEngagementSaving] = useState(false);
-
-  // Domain weight state
-  const [weights, setWeights] = useState<DomainWeights>(DEFAULT_DOMAIN_WEIGHTS);
-  const [weightsSaving, setWeightsSaving] = useState(false);
-
-  const handleWeightChange = useCallback((domain: keyof DomainWeights, value: number) => {
-    setWeights((prev) => {
-      const otherDomains = (Object.keys(prev) as (keyof DomainWeights)[])
-        .filter((d) => d !== domain);
-      const remaining = 1 - value;
-      const otherTotal = otherDomains.reduce((sum, d) => sum + prev[d], 0);
-
-      const next = { ...prev, [domain]: value };
-      if (otherTotal > 0) {
-        for (const d of otherDomains) {
-          next[d] = (prev[d] / otherTotal) * remaining;
-        }
-      } else {
-        for (const d of otherDomains) {
-          next[d] = remaining / otherDomains.length;
-        }
-      }
-      return next;
-    });
-  }, []);
-
-  const handleSaveWeights = useCallback(async () => {
-    if (!user) return;
-    setWeightsSaving(true);
-    try {
-      await updateDoc(doc(firestore, 'users', user.userId), {
-        'settings.domainWeights': weights,
-      });
-    } catch (err) {
-      console.error('Failed to save weights:', err);
-    } finally {
-      setWeightsSaving(false);
-    }
-  }, [user, weights]);
-
-  const handleResetWeights = useCallback(() => {
-    setWeights(DEFAULT_DOMAIN_WEIGHTS);
-  }, []);
-
-  const handleSaveEngagement = useCallback(async (mode: EngagementMode) => {
-    if (!user) return;
-    setEngagementMode(mode);
-    setEngagementSaving(true);
-    try {
-      await updateDoc(doc(firestore, 'users', user.userId), {
-        'growthPreferences.engagementMode': mode,
-        'growthPreferences.dailyItemTarget': ENGAGEMENT_PRESETS[mode].dailyItemTarget,
-      });
-    } catch (err) {
-      console.error('Failed to save engagement mode:', err);
-    } finally {
-      setEngagementSaving(false);
-    }
-  }, [user]);
 
   // Invitation state
   const [showInviteForm, setShowInviteForm] = useState(false);
@@ -103,13 +28,6 @@ export default function SettingsPage() {
       router.push('/dashboard');
     }
   }, [user, authLoading, router]);
-
-  const handleSave = async () => {
-    setSaving(true);
-    // TODO: Implement settings save to Firestore
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSaving(false);
-  };
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -257,249 +175,6 @@ export default function SettingsPage() {
               >
                 Change
               </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Notifications Section */}
-        <div className="mb-8 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-          <h2 className="parent-heading text-xl mb-4" style={{ color: 'var(--parent-text)' }}>
-            Notifications
-          </h2>
-          <div className="parent-card p-6 space-y-4">
-            <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: 'var(--parent-border)' }}>
-              <div>
-                <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
-                  All Notifications
-                </div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Enable or disable all notifications
-                </div>
-              </div>
-              <ToggleSwitch
-                enabled={notifications}
-                onChange={setNotifications}
-              />
-            </div>
-
-            <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: 'var(--parent-border)' }}>
-              <div>
-                <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
-                  Daily Journal Reminder
-                </div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Reminder to write in your journal each day
-                </div>
-              </div>
-              <ToggleSwitch
-                enabled={dailyReminder && notifications}
-                onChange={setDailyReminder}
-                disabled={!notifications}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
-                  Weekly Insights Email
-                </div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Receive weekly AI-generated insights via email
-                </div>
-              </div>
-              <ToggleSwitch
-                enabled={weeklyInsights && notifications}
-                onChange={setWeeklyInsights}
-                disabled={!notifications}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Preferences Section */}
-        <div className="mb-8 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-          <h2 className="parent-heading text-xl mb-4" style={{ color: 'var(--parent-text)' }}>
-            Preferences
-          </h2>
-          <div className="parent-card p-6 space-y-4">
-            <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: 'var(--parent-border)' }}>
-              <div>
-                <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
-                  Theme
-                </div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Parent theme (soft earth tones)
-                </div>
-              </div>
-              <button
-                className="text-sm font-medium px-4 py-2 rounded-lg transition-all hover:shadow-md"
-                style={{
-                  backgroundColor: 'var(--parent-accent)',
-                  color: 'white'
-                }}
-              >
-                Active
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: 'var(--parent-border)' }}>
-              <div>
-                <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
-                  Daily Actions Generation
-                </div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  AI generates actions at 9 PM daily
-                </div>
-              </div>
-              <ToggleSwitch enabled={true} onChange={() => {}} />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
-                  Timezone
-                </div>
-                <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                  Pacific Time (US & Canada)
-                </div>
-              </div>
-              <button
-                className="text-sm font-medium px-4 py-2 rounded-lg transition-all hover:shadow-md"
-                style={{
-                  border: '1px solid var(--parent-border)',
-                  color: 'var(--parent-text)'
-                }}
-              >
-                Change
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Relationship Health Weights */}
-        <div className="mb-8 animate-fade-in-up" style={{ animationDelay: '0.25s' }}>
-          <h2 className="parent-heading text-xl mb-4" style={{ color: 'var(--parent-text)' }}>
-            Health Score Weights
-          </h2>
-          <div className="parent-card p-6 space-y-6">
-            <p className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-              Adjust how much each domain contributes to your overall health score.
-              The three weights must total 100%.
-            </p>
-
-            {([
-              { key: 'self' as const, label: 'Self', desc: 'Personal wellbeing & emotional regulation' },
-              { key: 'couple' as const, label: 'Spouse', desc: 'Marriage/partnership health' },
-              { key: 'parent_child' as const, label: 'Parent', desc: 'Parenting relationship health' },
-            ]).map(({ key, label, desc }) => (
-              <div key={key} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold text-sm" style={{ color: 'var(--parent-text)' }}>
-                      {label}
-                    </div>
-                    <div className="text-xs" style={{ color: 'var(--parent-text-light)' }}>
-                      {desc}
-                    </div>
-                  </div>
-                  <span className="text-sm font-bold" style={{ color: 'var(--parent-text)' }}>
-                    {Math.round(weights[key] * 100)}%
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={1}
-                  value={Math.round(weights[key] * 100)}
-                  onChange={(e) => handleWeightChange(key, Number(e.target.value) / 100)}
-                  className="w-full h-2 rounded-lg appearance-none cursor-pointer"
-                  style={{
-                    background: `linear-gradient(to right, var(--parent-accent) ${Math.round(weights[key] * 100)}%, #e0e0e0 ${Math.round(weights[key] * 100)}%)`,
-                  }}
-                />
-              </div>
-            ))}
-
-            <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: 'var(--parent-border)' }}>
-              <button
-                onClick={handleResetWeights}
-                className="text-sm font-medium px-4 py-2 rounded-lg transition-all hover:shadow-md"
-                style={{
-                  border: '1px solid var(--parent-border)',
-                  color: 'var(--parent-text-light)',
-                }}
-              >
-                Reset to Equal (33/33/33)
-              </button>
-              <button
-                onClick={handleSaveWeights}
-                disabled={weightsSaving}
-                className="text-sm font-medium px-4 py-2 rounded-lg text-white transition-all hover:shadow-md disabled:opacity-50"
-                style={{ backgroundColor: 'var(--parent-accent)' }}
-              >
-                {weightsSaving ? 'Saving...' : 'Save Weights'}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Growth Engagement Mode */}
-        <div className="mb-8 animate-fade-in-up" style={{ animationDelay: '0.27s' }}>
-          <h2 className="parent-heading text-xl mb-4" style={{ color: 'var(--parent-text)' }}>
-            Growth Engagement
-          </h2>
-          <div className="parent-card p-6">
-            <p className="text-sm mb-4" style={{ color: 'var(--parent-text-light)' }}>
-              Choose how much growth work you want each day. You can always adjust
-              the depth of individual activities from the dashboard.
-            </p>
-
-            <div className="space-y-3">
-              {(['light', 'moderate', 'deep'] as EngagementMode[]).map((mode) => {
-                const preset = ENGAGEMENT_PRESETS[mode];
-                const isActive = engagementMode === mode;
-
-                return (
-                  <button
-                    key={mode}
-                    onClick={() => handleSaveEngagement(mode)}
-                    disabled={engagementSaving}
-                    className="w-full text-left p-4 rounded-lg transition-all"
-                    style={{
-                      background: isActive ? 'var(--parent-accent)' + '15' : 'transparent',
-                      border: `2px solid ${isActive ? 'var(--parent-accent)' : 'var(--parent-border)'}`,
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div
-                          className="font-semibold text-sm"
-                          style={{ color: isActive ? 'var(--parent-accent)' : 'var(--parent-text)' }}
-                        >
-                          {preset.label}
-                        </div>
-                        <div className="text-xs mt-0.5" style={{ color: 'var(--parent-text-light)' }}>
-                          {preset.description}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xs font-bold" style={{ color: 'var(--parent-text-light)' }}>
-                          ~{preset.minutesPerDay} min/day
-                        </div>
-                        {isActive && (
-                          <span
-                            className="text-xs font-bold"
-                            style={{ color: 'var(--parent-accent)' }}
-                          >
-                            ACTIVE
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
             </div>
           </div>
         </div>
@@ -702,43 +377,8 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Save Button */}
-        <div className="flex justify-end animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-8 py-3 rounded-lg font-semibold text-white transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: 'var(--parent-accent)' }}
-          >
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
-        </div>
       </div>
     </MainLayout>
   );
 }
 
-interface ToggleSwitchProps {
-  enabled: boolean;
-  onChange: (enabled: boolean) => void;
-  disabled?: boolean;
-}
-
-function ToggleSwitch({ enabled, onChange, disabled = false }: ToggleSwitchProps) {
-  return (
-    <button
-      onClick={() => !disabled && onChange(!enabled)}
-      disabled={disabled}
-      className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      style={{
-        backgroundColor: enabled ? 'var(--parent-accent)' : '#E0E0E0'
-      }}
-    >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-          enabled ? 'translate-x-6' : 'translate-x-1'
-        }`}
-      />
-    </button>
-  );
-}

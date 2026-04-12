@@ -13,7 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useJournalEntry } from '@/hooks/useJournalEntry';
 import { useJournal } from '@/hooks/useJournal';
 import { usePerson } from '@/hooks/usePerson';
-import { useCoach } from '@/hooks/useCoach';
+import { useEntryChat } from '@/hooks/useEntryChat';
 import Navigation from '@/components/layout/Navigation';
 import SideNav from '@/components/layout/SideNav';
 import { JOURNAL_CATEGORIES, type JournalEntry } from '@/types/journal';
@@ -122,11 +122,11 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
   const { updateEntry } = useJournal();
   const { people } = usePerson();
   const {
-    messages: chatMessages,
+    turns: chatTurns,
     loading: chatLoading,
-    sendMessage: sendChatMessage,
-    clearConversation: clearChat,
-  } = useCoach();
+    sendMessage: sendEntryChat,
+    ready: chatReady,
+  } = useEntryChat(entry.entryId);
 
   // Initial values come from the entry prop; React won't rerun these
   // initializers until the component is remounted (via `key` on the
@@ -139,6 +139,12 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [chatInput, setChatInput] = useState('');
+
+  // Auto-open the chat panel if the entry already has a thread
+  const hasExistingThread = chatReady && chatTurns.length > 0;
+  useEffect(() => {
+    if (hasExistingThread) setShowChat(true);
+  }, [hasExistingThread]);
   const [saveStatus, setSaveStatus] = useState<
     'idle' | 'saving' | 'saved' | 'error'
   >('idle');
@@ -245,7 +251,7 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
     if (showChat && chatScrollRef.current) {
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
     }
-  }, [chatMessages, showChat]);
+  }, [chatTurns, showChat]);
 
   // Click-outside for the share menu.
   useEffect(() => {
@@ -377,20 +383,16 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
             </div>
           )}
 
-          {/* AI conversation — opens inline below the body. Grounded
-              in the entry text + tagged people's manuals. */}
+          {/* AI conversation — persistent per-entry thread stored in
+              journal_entries/{entryId}/chat subcollection. Opens inline
+              below the body. Auto-opens if the entry already has a
+              thread from a previous visit or from the CaptureSheet. */}
           <div className="entry-chat-section">
             {!showChat ? (
               <button
                 type="button"
                 onClick={() => {
                   setShowChat(true);
-                  // Pre-grind: send the entry text as the opening
-                  // message so the AI has context immediately.
-                  void sendChatMessage(
-                    entry.text,
-                    entry.personMentions || [],
-                  );
                   setTimeout(
                     () => chatInputRef.current?.focus(),
                     200,
@@ -409,34 +411,37 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
                   </span>
                   <button
                     type="button"
-                    onClick={() => {
-                      setShowChat(false);
-                      clearChat();
-                    }}
+                    onClick={() => setShowChat(false)}
                     className="chat-close"
-                    aria-label="Close conversation"
+                    aria-label="Collapse conversation"
                   >
-                    &times;
+                    {chatTurns.length > 0 ? '▾' : '×'}
                   </button>
                 </div>
                 <div className="chat-messages" ref={chatScrollRef}>
-                  {chatMessages
-                    .filter((m) => (m.role as string) !== 'system')
-                    .map((msg, i) => (
+                  {chatTurns
+                    .filter((t) => !t.excluded)
+                    .map((turn) => (
                       <div
-                        key={i}
+                        key={turn.turnId}
                         className={`chat-msg ${
-                          msg.role === 'user'
+                          turn.role === 'user'
                             ? 'chat-msg--user'
                             : 'chat-msg--ai'
                         }`}
                       >
-                        {msg.content}
+                        {turn.content}
                       </div>
                     ))}
                   {chatLoading && (
                     <div className="chat-msg chat-msg--ai chat-msg--loading">
                       thinking&hellip;
+                    </div>
+                  )}
+                  {chatTurns.length === 0 && !chatLoading && (
+                    <div className="chat-empty">
+                      Ask a question about this entry and the AI will respond
+                      grounded in your family&apos;s manuals.
                     </div>
                   )}
                 </div>
@@ -451,7 +456,7 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
                         if (!chatInput.trim() || chatLoading) return;
                         const msg = chatInput.trim();
                         setChatInput('');
-                        void sendChatMessage(
+                        void sendEntryChat(
                           msg,
                           entry.personMentions || [],
                         );
@@ -467,7 +472,7 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
                       if (!chatInput.trim() || chatLoading) return;
                       const msg = chatInput.trim();
                       setChatInput('');
-                      void sendChatMessage(
+                      void sendEntryChat(
                         msg,
                         entry.personMentions || [],
                       );
@@ -868,6 +873,15 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
           font-family: var(--font-parent-display);
           font-style: italic;
           color: #8a7b5f;
+        }
+        .chat-empty {
+          font-family: var(--font-parent-display);
+          font-style: italic;
+          font-size: 15px;
+          line-height: 1.5;
+          color: #a8997d;
+          text-align: center;
+          padding: 20px 16px;
         }
         .chat-input-row {
           display: flex;

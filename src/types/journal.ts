@@ -52,11 +52,10 @@ export interface JournalEntry {
     timeOfDay?: string;     // auto-set from client
   };
 
-  // AI enrichment — written by Cloud Function `enrichJournalEntry`,
-  // never by the client. Contains structured metadata extracted from
-  // the entry text: summary, referenced people, touched dimensions,
-  // and emergent themes. Absent until the Cloud Function fires (which
-  // happens on entry creation; edits don't re-enrich in Phase C.1).
+  // AI enrichment — written by Cloud Functions `enrichJournalEntry`
+  // (on create) and `reEnrichJournalEntry` (on text edit). Contains
+  // structured metadata extracted from the entry text: summary,
+  // referenced people, touched dimensions, and emergent themes.
   enrichment?: {
     summary: string;
     aiPeople: string[];       // personIds extracted by AI
@@ -70,6 +69,12 @@ export interface JournalEntry {
   // Workbook activity from this entry. Links journal → workbook.
   activitySpawnedAt?: Timestamp;
   activitySpawnedItemId?: string;
+
+  // Per-entry chat thread — set by chatWithEntry Cloud Function when
+  // the first message is sent. Used by the UI to show a chat indicator
+  // on entry cards and auto-open the thread on the detail page.
+  hasChatThread?: boolean;
+  chatUpdatedAt?: Timestamp;
 
   // Timestamps
   createdAt: Timestamp;
