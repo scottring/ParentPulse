@@ -508,6 +508,7 @@ function BriefView({
   const fromChat = Boolean(
     (item as unknown as { sourceChatSessionId?: string }).sourceChatSessionId,
   );
+  const fromJournal = Boolean(item.spawnedFromEntryIds?.length);
   const router = useRouter();
 
   // Matches the TOC entry language: ◆ for practices (things to do),
@@ -697,6 +698,14 @@ function BriefView({
           style={{ textAlign: 'center', fontSize: 13, marginTop: 6, marginBottom: 10 }}
         >
           drawn from a conversation with the manual
+        </p>
+      )}
+      {fromJournal && (
+        <p
+          className="press-marginalia"
+          style={{ textAlign: 'center', fontSize: 13, marginTop: 6, marginBottom: 10 }}
+        >
+          from your journal
         </p>
       )}
 

@@ -16,7 +16,7 @@ import { usePerson } from '@/hooks/usePerson';
 import { useEntryChat } from '@/hooks/useEntryChat';
 import Navigation from '@/components/layout/Navigation';
 import SideNav from '@/components/layout/SideNav';
-import { JOURNAL_CATEGORIES, type JournalEntry } from '@/types/journal';
+import { JOURNAL_CATEGORIES, type JournalCategory, type JournalEntry } from '@/types/journal';
 import { getDimension, type DimensionId } from '@/config/relationship-dimensions';
 
 // ================================================================
@@ -26,9 +26,8 @@ import { getDimension, type DimensionId } from '@/config/relationship-dimensions
 // entry. Body and title are edited in place with auto-save on blur
 // and on a 10-second heartbeat. Privacy is editable via a padlock
 // panel that reuses the per-person sharing model. Category and
-// personMentions are display-only in Phase B; personMentions editing
-// and AI-filled titles come later. See
-// memory/project_journal_first_architecture.md.
+// personMentions are editable via inline pickers, saving immediately
+// on change (discrete actions, like sharing).
 // ================================================================
 
 const CATEGORY_META = Object.fromEntries(
@@ -133,9 +132,13 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
   // parent). Any divergence after mount is local.
   const [title, setTitle] = useState<string>(entry.title ?? '');
   const [body, setBody] = useState<string>(entry.text ?? '');
+  const [category, setCategory] = useState(entry.category);
+  const [mentions, setMentions] = useState<string[]>(entry.personMentions ?? []);
   const [sharedWith, setSharedWith] = useState<string[]>(
     entry.sharedWithUserIds ?? [],
   );
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [showPeoplePicker, setShowPeoplePicker] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [chatInput, setChatInput] = useState('');
@@ -266,7 +269,57 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, [showShareMenu]);
 
-  const cat = CATEGORY_META[entry.category];
+  // Category change — immediate save (discrete action).
+  const changeCategory = async (value: JournalCategory) => {
+    if (!isMine) return;
+    const prev = category;
+    setCategory(value);
+    setShowCategoryPicker(false);
+    setSaveStatus('saving');
+    try {
+      await updateEntry(entry.entryId, { category: value });
+      setSaveStatus('saved');
+    } catch {
+      setCategory(prev);
+      setSaveStatus('error');
+    }
+  };
+
+  // Person mention toggle — immediate save (discrete action).
+  const toggleMention = async (personId: string) => {
+    if (!isMine) return;
+    const next = mentions.includes(personId)
+      ? mentions.filter((id) => id !== personId)
+      : [...mentions, personId];
+    const prev = mentions;
+    setMentions(next);
+    setSaveStatus('saving');
+    try {
+      await updateEntry(entry.entryId, { personMentions: next });
+      setSaveStatus('saved');
+    } catch {
+      setMentions(prev);
+      setSaveStatus('error');
+    }
+  };
+
+  // Click-outside for pickers.
+  useEffect(() => {
+    if (!showCategoryPicker && !showPeoplePicker) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (showCategoryPicker && !target?.closest('.category-picker-wrap')) {
+        setShowCategoryPicker(false);
+      }
+      if (showPeoplePicker && !target?.closest('.people-picker-wrap')) {
+        setShowPeoplePicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showCategoryPicker, showPeoplePicker]);
+
+  const cat = CATEGORY_META[category];
   const createdDate = entry.createdAt?.toDate?.();
   const dateLine = createdDate
     ? createdDate.toLocaleDateString('en-US', {
@@ -284,7 +337,7 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
         .toLowerCase()
     : '';
 
-  const aboutNames = entry.personMentions
+  const aboutNames = mentions
     .map((id) => people.find((p) => p.personId === id)?.name)
     .filter(Boolean) as string[];
 
@@ -311,25 +364,104 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
         <article className="entry-paper relish-panel">
           <header className="entry-meta-row">
             <div className="entry-subject">
-              {cat && (
-                <span className="entry-category">
-                  <span
-                    className="entry-category-glyph"
-                    aria-hidden="true"
-                  >
-                    {cat.emoji}
+              {/* Category — clickable to open picker */}
+              <span className="category-picker-wrap" style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  className="entry-category"
+                  onClick={() => isMine && setShowCategoryPicker((v) => !v)}
+                  disabled={!isMine}
+                  style={{ cursor: isMine ? 'pointer' : 'default' }}
+                >
+                  <span className="entry-category-glyph" aria-hidden="true">
+                    {cat?.emoji}
                   </span>
-                  {cat.label}
-                </span>
-              )}
-              {aboutNames.length > 0 && (
-                <span className="entry-about-pill">
-                  about{' '}
-                  <span className="press-sc">
-                    {aboutNames.join(' & ')}
-                  </span>
-                </span>
-              )}
+                  {cat?.label}
+                  {isMine && (
+                    <span className="picker-caret" aria-hidden="true">
+                      {showCategoryPicker ? '▴' : '▾'}
+                    </span>
+                  )}
+                </button>
+                {showCategoryPicker && (
+                  <div className="inline-picker category-picker" role="listbox">
+                    {JOURNAL_CATEGORIES.map((c) => (
+                      <button
+                        key={c.value}
+                        type="button"
+                        role="option"
+                        aria-selected={c.value === category}
+                        className={`picker-option${c.value === category ? ' selected' : ''}`}
+                        onClick={() => void changeCategory(c.value)}
+                      >
+                        <span className="picker-option-glyph">{c.emoji}</span>
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </span>
+
+              {/* Person mentions — clickable pill to toggle picker */}
+              <span className="people-picker-wrap" style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  className={`entry-about-pill${aboutNames.length === 0 ? ' empty' : ''}`}
+                  onClick={() => isMine && setShowPeoplePicker((v) => !v)}
+                  disabled={!isMine}
+                  style={{ cursor: isMine ? 'pointer' : 'default' }}
+                >
+                  {aboutNames.length > 0 ? (
+                    <>about <span className="press-sc">{aboutNames.join(' & ')}</span></>
+                  ) : (
+                    isMine ? '+ tag someone' : ''
+                  )}
+                  {isMine && aboutNames.length > 0 && (
+                    <span className="picker-caret" aria-hidden="true">
+                      {showPeoplePicker ? '▴' : '▾'}
+                    </span>
+                  )}
+                </button>
+                {showPeoplePicker && (
+                  <div className="inline-picker people-picker" role="listbox">
+                    {people.length > 1 && (() => {
+                      const allIds = people.map((p) => p.personId);
+                      const allSelected = allIds.every((id) => mentions.includes(id));
+                      return (
+                        <button
+                          type="button"
+                          className={`picker-option${allSelected ? ' selected' : ''}`}
+                          onClick={() => {
+                            const next = allSelected ? [] : allIds;
+                            setMentions(next);
+                            void updateEntry(entry.entryId, { personMentions: next });
+                          }}
+                        >
+                          Whole family
+                        </button>
+                      );
+                    })()}
+                    {people.map((p) => {
+                      const selected = mentions.includes(p.personId);
+                      return (
+                        <button
+                          key={p.personId}
+                          type="button"
+                          role="option"
+                          aria-selected={selected}
+                          className={`picker-option${selected ? ' selected' : ''}`}
+                          onClick={() => void toggleMention(p.personId)}
+                        >
+                          {p.name}
+                        </button>
+                      );
+                    })}
+                    {people.length === 0 && (
+                      <p className="picker-empty">No family members yet</p>
+                    )}
+                  </div>
+                )}
+              </span>
             </div>
             <div className="entry-date">
               <div>{dateLine}</div>
@@ -358,6 +490,29 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
             rows={10}
             aria-label="Entry body"
           />
+
+          {/* Media attachments */}
+          {entry.media && entry.media.length > 0 && (
+            <div className="entry-media-grid">
+              {entry.media.filter((m) => m.type === 'image').map((m, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={i}
+                  src={m.url}
+                  alt={m.filename || 'Photo'}
+                  className="entry-media-img"
+                />
+              ))}
+              {entry.media.filter((m) => m.type === 'audio').map((m, i) => (
+                <div key={`audio-${i}`} className="entry-media-audio-block">
+                  <audio controls src={m.url} style={{ width: '100%' }} />
+                  {m.transcription && (
+                    <p className="entry-media-transcription">{m.transcription}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* AI enrichment markers — quiet read-only display of what
               the Cloud Function extracted. Only render once the
@@ -516,6 +671,27 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
                 <div className="privacy-menu" role="dialog">
                   <p className="privacy-menu-label">Share with</p>
                   <div className="privacy-menu-pills">
+                    {shareCandidates.length > 1 && (() => {
+                      const allIds = shareCandidates.map((c) => c.userId);
+                      const allShared = allIds.every((id) => sharedWith.includes(id));
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = allShared ? [] : allIds;
+                            setSharedWith(next);
+                            void updateEntry(
+                              entry.entryId,
+                              { sharedWithUserIds: next },
+                              entry.authorId,
+                            );
+                          }}
+                          className={`privacy-pill${allShared ? ' selected' : ''}`}
+                        >
+                          Everyone
+                        </button>
+                      );
+                    })()}
                     {shareCandidates.map((c) => {
                       const selected = sharedWith.includes(c.userId);
                       return (
@@ -603,6 +779,18 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
           align-items: baseline;
           gap: 6px;
           color: #5a4f3b;
+          background: transparent;
+          border: none;
+          padding: 0;
+          font-family: inherit;
+          font-size: inherit;
+          font-weight: inherit;
+          letter-spacing: inherit;
+          text-transform: inherit;
+          transition: opacity 0.2s ease;
+        }
+        .entry-category:not(:disabled):hover {
+          opacity: 0.7;
         }
         .entry-category-glyph {
           color: #5c8064;
@@ -619,9 +807,72 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
           font-weight: 400;
           font-style: italic;
           font-family: var(--font-parent-display);
+          background: transparent;
+          cursor: pointer;
+          transition: opacity 0.2s ease;
+        }
+        .entry-about-pill:not(:disabled):hover {
+          opacity: 0.7;
+        }
+        .entry-about-pill.empty {
+          border-style: dashed;
+          color: #a8997d;
         }
         .entry-about-pill :global(.press-sc) {
           font-style: normal;
+        }
+
+        .picker-caret {
+          font-size: 8px;
+          opacity: 0.6;
+          margin-left: 4px;
+        }
+        .inline-picker {
+          position: absolute;
+          top: calc(100% + 8px);
+          left: 0;
+          min-width: 180px;
+          padding: 8px 6px;
+          background: #fdfbf6;
+          border: 1px solid rgba(200, 190, 172, 0.55);
+          border-radius: 6px;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+          z-index: 20;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px;
+        }
+        .picker-option {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 5px 12px;
+          border-radius: 999px;
+          font-family: var(--font-parent-body);
+          font-size: 12px;
+          background: rgba(0, 0, 0, 0.03);
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          color: #5f564b;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+        .picker-option.selected {
+          background: color-mix(in srgb, #7c9082 12%, white);
+          border-color: rgba(124, 144, 130, 0.3);
+          color: #5c7566;
+          font-weight: 500;
+        }
+        .picker-option-glyph {
+          font-size: 11px;
+          color: #5c8064;
+        }
+        .picker-empty {
+          font-family: var(--font-parent-display);
+          font-style: italic;
+          font-size: 13px;
+          color: #a8997d;
+          margin: 4px 8px;
         }
 
         .entry-date {
@@ -655,6 +906,31 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
           padding: 0;
           margin-bottom: 24px;
         }
+        .entry-media-grid {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          margin-bottom: 24px;
+        }
+        :global(.entry-media-img) {
+          max-width: 100%;
+          max-height: 400px;
+          object-fit: contain;
+          border-radius: 6px;
+          border: 1px solid rgba(200, 190, 172, 0.35);
+        }
+        .entry-media-audio-block {
+          width: 100%;
+        }
+        .entry-media-transcription {
+          font-family: var(--font-parent-display);
+          font-style: italic;
+          font-size: 15px;
+          color: #6b6254;
+          margin: 8px 0 0;
+          line-height: 1.5;
+        }
+
         .entry-title::placeholder {
           color: #b2a487;
           font-style: italic;

@@ -18,6 +18,7 @@ export default function KeptEntry({ item }: KeptEntryProps) {
     : '';
   const forWhom = item.assignedToUserName?.split(' ')[0] || 'you';
   const about = item.targetPersonNames?.join(' & ');
+  const fromJournal = Boolean(item.spawnedFromEntryIds?.length);
   const reading = isReading(item);
   const fleuronColor = reading ? '#B88E5A' : '#5C8064';
 
@@ -42,6 +43,12 @@ export default function KeptEntry({ item }: KeptEntryProps) {
           )}
           <span className="sep">·</span>
           for <span className="press-sc">{forWhom}</span>
+          {fromJournal && (
+            <>
+              <span className="sep">·</span>
+              from your journal
+            </>
+          )}
         </p>
       </div>
 

@@ -8,10 +8,26 @@ export type JournalCategory =
   | 'question'      // Something you're wondering about
   | 'gratitude';    // Something you're thankful for
 
+export interface JournalMedia {
+  url: string;
+  type: 'image' | 'audio' | 'link';
+  filename?: string;
+  mimeType?: string;
+  // For links — the original URL before any processing.
+  originalUrl?: string;
+  // For audio — transcription produced by Cloud Function.
+  transcription?: string;
+  // Storage path for Firebase Storage files (used for deletion).
+  storagePath?: string;
+}
+
 export interface JournalEntry {
   entryId: string;
   familyId: string;
   authorId: string;
+
+  // Media attachments — photos, voice notes, links.
+  media?: JournalMedia[];
 
   // Content
   text: string;
@@ -39,6 +55,13 @@ export interface JournalEntry {
   // per-person sharing existed. Not written by new entries. Used only
   // as a fallback during migration.
   isPrivate?: boolean;
+
+  // Subject type — who is "speaking" in this entry.
+  // 'self' = the logged-in author writing for themselves (default).
+  // 'child_proxy' = a parent writing on behalf of a child in a
+  // supervised session. The child's personId is in subjectPersonId.
+  subjectType?: 'self' | 'child_proxy';
+  subjectPersonId?: string; // personId of the child when child_proxy
 
   // Person tagging (which family members this relates to — note these
   // are Person IDs, not userIds; Persons may or may not have linked
@@ -90,6 +113,7 @@ export interface UpdateEntryInput {
   category?: JournalCategory;
   personMentions?: string[];
   sharedWithUserIds?: string[];
+  media?: JournalMedia[];
 }
 
 export const JOURNAL_CATEGORIES: { value: JournalCategory; label: string; emoji: string }[] = [

@@ -26,6 +26,7 @@ export default function FeaturedFocus({
   const fromChat = Boolean(
     (item as unknown as { sourceChatSessionId?: string }).sourceChatSessionId,
   );
+  const fromJournal = Boolean(item.spawnedFromEntryIds?.length);
 
   const bodyExcerpt =
     item.body && item.body.length > 340
@@ -45,6 +46,12 @@ export default function FeaturedFocus({
         <>
           <span className="sep">·</span>
           drawn from a conversation
+        </>
+      )}
+      {fromJournal && (
+        <>
+          <span className="sep">·</span>
+          from your journal
         </>
       )}
     </>

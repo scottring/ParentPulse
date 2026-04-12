@@ -5,7 +5,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useJournal } from '@/hooks/useJournal';
 import { usePerson } from '@/hooks/usePerson';
 import { useEntryChat } from '@/hooks/useEntryChat';
-import { JOURNAL_CATEGORIES, type JournalCategory } from '@/types/journal';
+import { JOURNAL_CATEGORIES, type JournalCategory, type JournalMedia } from '@/types/journal';
+import { uploadEntryMedia } from '@/lib/upload-media';
 
 interface ShareCandidate {
   userId: string;
@@ -25,12 +26,21 @@ export default function CaptureSheet() {
   const [sharedWith, setSharedWith] = useState<string[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [savedEntryId, setSavedEntryId] = useState<string | null>(null);
+  // Child-supervised mode — when set, the parent is writing on behalf
+  // of this child. The entry saves with subjectType='child_proxy'.
+  const [writingFor, setWritingFor] = useState<{ personId: string; name: string } | null>(null);
+  // Media attachments — staged files before upload. Uploaded on save.
+  const [stagedFiles, setStagedFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  // Which toolbar picker row is expanded (only one at a time).
+  const [openPicker, setOpenPicker] = useState<'category' | 'about' | 'writingAs' | 'privacy' | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Preserved after save so the "Ask about this" step can use them
   const savedTextRef = useRef('');
   const savedPeopleRef = useRef<string[]>([]);
 
-  const { createEntry, saving } = useJournal();
+  const { createEntry, updateEntry, saving } = useJournal();
   const { people } = usePerson();
   const {
     turns: chatTurns,
@@ -64,7 +74,23 @@ export default function CaptureSheet() {
   useEffect(() => {
     const handler = () => setState('composing');
     window.addEventListener('relish:open-capture', handler);
-    return () => window.removeEventListener('relish:open-capture', handler);
+
+    // Child-mode capture: dispatch 'relish:open-capture-for' with
+    // detail: { personId, name } to open the sheet in child-proxy mode.
+    const childHandler = (e: Event) => {
+      const detail = (e as CustomEvent<{ personId: string; name: string }>).detail;
+      if (detail?.personId && detail?.name) {
+        setWritingFor(detail);
+        setSelectedPeople([detail.personId]);
+        setState('composing');
+      }
+    };
+    window.addEventListener('relish:open-capture-for', childHandler);
+
+    return () => {
+      window.removeEventListener('relish:open-capture', handler);
+      window.removeEventListener('relish:open-capture-for', childHandler);
+    };
   }, []);
 
   useEffect(() => {
@@ -80,6 +106,10 @@ export default function CaptureSheet() {
     setSharedWith([]);
     setChatInput('');
     setSavedEntryId(null);
+    setWritingFor(null);
+    setStagedFiles([]);
+    setUploadProgress(null);
+    setOpenPicker(null);
   };
 
   const handleClose = () => {
@@ -103,7 +133,7 @@ export default function CaptureSheet() {
     );
   };
 
-  // Step 1: Save → transition to confirmation state
+  // Step 1: Save → upload media → transition to confirmation state
   const handleSave = async () => {
     if (!text.trim() || saving) return;
     try {
@@ -115,12 +145,37 @@ export default function CaptureSheet() {
         category,
         personMentions: selectedPeople,
         sharedWithUserIds: sharedWith,
+        ...(writingFor ? {
+          subjectType: 'child_proxy' as const,
+          subjectPersonId: writingFor.personId,
+        } : {}),
       });
+
+      // Upload staged files to Firebase Storage and patch the entry
+      if (stagedFiles.length > 0 && user?.familyId) {
+        setUploadProgress(0);
+        const mediaItems: JournalMedia[] = [];
+        for (let i = 0; i < stagedFiles.length; i++) {
+          const item = await uploadEntryMedia({
+            familyId: user.familyId,
+            entryId,
+            file: stagedFiles[i],
+            onProgress: (pct) => {
+              setUploadProgress(
+                Math.round(((i * 100 + pct) / stagedFiles.length)),
+              );
+            },
+          });
+          mediaItems.push(item);
+        }
+        await updateEntry(entryId, { media: mediaItems });
+        setUploadProgress(null);
+      }
 
       setSavedEntryId(entryId);
       setState('saved');
     } catch {
-      // error surfaced via hook
+      setUploadProgress(null);
     }
   };
 
@@ -203,126 +258,240 @@ export default function CaptureSheet() {
         </div>
 
         {/* ─── COMPOSING ─── */}
-        {state === 'composing' && (
-          <div className="px-6 pb-6 pt-3 overflow-y-auto">
-            <div className="flex items-center justify-between mb-5">
-              <h2 style={{
-                fontFamily: 'var(--font-parent-display)',
-                fontStyle: 'italic', fontSize: 24, fontWeight: 400, color: '#3A3530',
-              }}>
-                What&apos;s on your mind?
-              </h2>
-              <button onClick={handleClose}
-                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5"
-                style={{ fontSize: 22, color: '#5F564B' }} aria-label="Close">&times;</button>
-            </div>
+        {state === 'composing' && (() => {
+          const catMeta = JOURNAL_CATEGORIES.find((c) => c.value === category);
+          const aboutLabel = selectedPeople.length === 0
+            ? 'About'
+            : selectedPeople.length === people.length && people.length > 1
+              ? 'Family'
+              : people.filter((p) => selectedPeople.includes(p.personId)).map((p) => p.name.split(' ')[0]).join(', ');
+          const privacyLabel = sharedWith.length === 0 ? 'Private' : 'Shared';
+          const hasChildren = people.filter((p) => !p.linkedUserId).length > 0;
 
-            <textarea ref={textareaRef} value={text}
-              onChange={(e) => setText(e.target.value)} rows={3}
-              className="w-full resize-none rounded-2xl px-5 py-4 mb-5"
-              style={{
-                fontFamily: 'var(--font-parent-body)', fontSize: 17, lineHeight: 1.6,
-                color: '#3A3530', background: 'rgba(0,0,0,0.03)',
-                border: '1px solid rgba(0,0,0,0.08)', outline: 'none',
-              }}
-              placeholder="A moment, a thought, a question&hellip;" />
+          const chipStyle = (active: boolean) => ({
+            fontFamily: 'var(--font-parent-body)' as const,
+            fontSize: 13,
+            fontWeight: active ? 600 : 400,
+            padding: '5px 12px',
+            borderRadius: 999,
+            background: active ? 'rgba(124,144,130,0.12)' : 'transparent',
+            border: 'none',
+            color: active ? '#3A3530' : '#6B6254',
+            cursor: 'pointer' as const,
+            transition: 'all 0.15s ease',
+            whiteSpace: 'nowrap' as const,
+          });
 
-            <div className="mb-4">
-              <div className="flex flex-wrap gap-2">
-                {JOURNAL_CATEGORIES.map((cat) => {
-                  const selected = category === cat.value;
-                  return (
-                    <button key={cat.value} onClick={() => setCategory(cat.value)}
-                      className="px-3 py-1.5 rounded-full transition-all"
-                      style={{
-                        fontFamily: 'var(--font-parent-body)', fontSize: 14,
-                        fontWeight: selected ? 500 : 400,
-                        background: selected ? 'color-mix(in srgb, #7C9082 12%, white)' : 'rgba(0,0,0,0.03)',
-                        border: `1px solid ${selected ? 'rgba(124,144,130,0.3)' : 'rgba(0,0,0,0.06)'}`,
-                        color: selected ? '#5C7566' : '#5F564B',
-                      }}>
-                      <span style={{ marginRight: 4 }}>{cat.emoji}</span>{cat.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+          const pickerPillStyle = (selected: boolean) => ({
+            fontFamily: 'var(--font-parent-body)' as const,
+            fontSize: 13,
+            fontWeight: selected ? 500 : 400,
+            padding: '5px 14px',
+            borderRadius: 999,
+            background: selected ? '#7C9082' : 'rgba(0,0,0,0.04)',
+            border: `1px solid ${selected ? '#7C9082' : 'rgba(0,0,0,0.06)'}`,
+            color: selected ? 'white' : '#5F564B',
+            cursor: 'pointer' as const,
+            transition: 'all 0.15s ease',
+          });
 
-            {people.length > 0 && (
-              <div className="mb-4">
-                <p className="mb-2" style={{
-                  fontFamily: 'var(--font-parent-body)', fontSize: 13, fontWeight: 600,
-                  letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6B6254',
-                }}>About</p>
-                <div className="flex flex-wrap gap-2">
-                  {people.map((person) => {
-                    const selected = selectedPeople.includes(person.personId);
-                    return (
-                      <button key={person.personId} onClick={() => togglePerson(person.personId)}
-                        className="px-3 py-1.5 rounded-full transition-all"
-                        style={{
-                          fontFamily: 'var(--font-parent-body)', fontSize: 13,
-                          fontWeight: selected ? 500 : 400,
-                          background: selected ? 'color-mix(in srgb, #7C9082 12%, white)' : 'rgba(0,0,0,0.03)',
-                          border: `1px solid ${selected ? 'rgba(124,144,130,0.3)' : 'rgba(0,0,0,0.06)'}`,
-                          color: selected ? '#5C7566' : '#5F564B',
-                        }}>
-                        {person.name}
-                      </button>
-                    );
-                  })}
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+              {/* Header: title + Save */}
+              <div className="flex items-center justify-between px-6 pt-2 pb-3 shrink-0">
+                <div className="flex items-center gap-3">
+                  <h2 style={{
+                    fontFamily: 'var(--font-parent-display)',
+                    fontStyle: 'italic', fontSize: 22, fontWeight: 400, color: '#3A3530', margin: 0,
+                  }}>
+                    {writingFor ? `${writingFor.name}'s entry` : 'New entry'}
+                  </h2>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button onClick={handleSave} disabled={!text.trim() || saving}
+                    className="transition-all hover:opacity-90 disabled:opacity-30"
+                    style={{
+                      fontFamily: 'var(--font-parent-body)', fontSize: 14, fontWeight: 600,
+                      color: '#7C9082', background: 'transparent', border: 'none',
+                      cursor: 'pointer', padding: '4px 8px',
+                    }}>
+                    {uploadProgress !== null ? `${uploadProgress}%` : saving ? 'Saving…' : 'Save'}
+                  </button>
+                  <button onClick={handleClose}
+                    className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5"
+                    style={{ fontSize: 20, color: '#5F564B', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                    aria-label="Close">&times;</button>
                 </div>
               </div>
-            )}
 
-            <div className="mb-4">
-              <p className="mb-2 flex items-center gap-2" style={{
-                fontFamily: 'var(--font-parent-body)', fontSize: 13, fontWeight: 600,
-                letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6B6254',
-              }}>
-                <span aria-hidden="true" style={{ fontSize: 13 }}>
-                  {sharedWith.length === 0 ? '🔒' : '✦'}
-                </span>
-                {sharedWith.length === 0 ? 'Private to you' : 'Shared with'}
-              </p>
-              {shareCandidates.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {shareCandidates.map((c) => {
-                    const selected = sharedWith.includes(c.userId);
-                    return (
-                      <button key={c.userId} onClick={() => toggleShareWith(c.userId)}
-                        className="px-3 py-1.5 rounded-full transition-all"
-                        style={{
-                          fontFamily: 'var(--font-parent-body)', fontSize: 13,
-                          fontWeight: selected ? 500 : 400,
-                          background: selected ? 'color-mix(in srgb, #7C9082 12%, white)' : 'rgba(0,0,0,0.03)',
-                          border: `1px solid ${selected ? 'rgba(124,144,130,0.3)' : 'rgba(0,0,0,0.06)'}`,
-                          color: selected ? '#5C7566' : '#5F564B',
-                        }}>
-                        {c.name}
+              {/* Textarea — fills available space */}
+              <div className="flex-1 px-6 overflow-y-auto" style={{ minHeight: 0 }}>
+                <textarea ref={textareaRef} value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  className="w-full h-full resize-none"
+                  style={{
+                    fontFamily: 'var(--font-parent-body)', fontSize: 17, lineHeight: 1.6,
+                    color: '#3A3530', background: 'transparent',
+                    border: 'none', outline: 'none', minHeight: 160,
+                  }}
+                  placeholder="A moment, a thought, a question…"
+                  onClick={() => setOpenPicker(null)} />
+
+                {/* Staged media thumbnails */}
+                {stagedFiles.length > 0 && (
+                  <div className="flex gap-2 pb-3 overflow-x-auto">
+                    {stagedFiles.map((file, i) => (
+                      <div key={i} className="relative shrink-0" style={{ width: 56, height: 56 }}>
+                        {file.type.startsWith('image/') ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={URL.createObjectURL(file)} alt={file.name}
+                            className="rounded-lg object-cover" style={{ width: 56, height: 56 }} />
+                        ) : (
+                          <div className="rounded-lg flex items-center justify-center"
+                            style={{ width: 56, height: 56, background: 'rgba(0,0,0,0.05)', fontSize: 20 }}>
+                            🎵
+                          </div>
+                        )}
+                        <button type="button"
+                          onClick={() => setStagedFiles((prev) => prev.filter((_, j) => j !== i))}
+                          className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
+                          style={{ background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 10, lineHeight: 1 }}
+                          aria-label={`Remove ${file.name}`}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Picker row — slides up above toolbar when a chip is tapped */}
+              {openPicker && (
+                <div className="shrink-0 px-6 py-2 overflow-x-auto"
+                  style={{ borderTop: '1px solid rgba(0,0,0,0.06)', background: '#FAF8F5' }}>
+                  <div className="flex flex-wrap gap-2">
+
+                    {openPicker === 'category' && JOURNAL_CATEGORIES.map((c) => (
+                      <button key={c.value} onClick={() => { setCategory(c.value); setOpenPicker(null); }}
+                        style={pickerPillStyle(c.value === category)}>
+                        <span style={{ marginRight: 4 }}>{c.emoji}</span>{c.label}
                       </button>
-                    );
-                  })}
+                    ))}
+
+                    {openPicker === 'about' && (
+                      <>
+                        {people.length > 1 && (() => {
+                          const allIds = people.map((p) => p.personId);
+                          const allSelected = allIds.every((id) => selectedPeople.includes(id));
+                          return (
+                            <button onClick={() => setSelectedPeople(allSelected ? [] : allIds)}
+                              style={pickerPillStyle(allSelected)}>
+                              Whole family
+                            </button>
+                          );
+                        })()}
+                        {people.map((p) => (
+                          <button key={p.personId} onClick={() => togglePerson(p.personId)}
+                            style={pickerPillStyle(selectedPeople.includes(p.personId))}>
+                            {p.name}
+                          </button>
+                        ))}
+                      </>
+                    )}
+
+                    {openPicker === 'writingAs' && (
+                      <>
+                        <button onClick={() => { setWritingFor(null); setOpenPicker(null); }}
+                          style={pickerPillStyle(!writingFor)}>
+                          Yourself
+                        </button>
+                        {people.filter((p) => !p.linkedUserId).map((child) => {
+                          const active = writingFor?.personId === child.personId;
+                          return (
+                            <button key={child.personId} onClick={() => {
+                              if (active) { setWritingFor(null); }
+                              else {
+                                setWritingFor({ personId: child.personId, name: child.name });
+                                if (!selectedPeople.includes(child.personId)) {
+                                  setSelectedPeople((prev) => [...prev, child.personId]);
+                                }
+                              }
+                              setOpenPicker(null);
+                            }}
+                              style={{
+                                ...pickerPillStyle(active),
+                                ...(active ? { background: '#B88E5A', borderColor: '#B88E5A' } : {}),
+                              }}>
+                              {child.name}
+                            </button>
+                          );
+                        })}
+                      </>
+                    )}
+
+                    {openPicker === 'privacy' && (
+                      <>
+                        {shareCandidates.length > 1 && (() => {
+                          const allIds = shareCandidates.map((c) => c.userId);
+                          const allShared = allIds.every((id) => sharedWith.includes(id));
+                          return (
+                            <button onClick={() => setSharedWith(allShared ? [] : allIds)}
+                              style={pickerPillStyle(allShared)}>
+                              Everyone
+                            </button>
+                          );
+                        })()}
+                        {shareCandidates.map((c) => (
+                          <button key={c.userId} onClick={() => toggleShareWith(c.userId)}
+                            style={pickerPillStyle(sharedWith.includes(c.userId))}>
+                            {c.name}
+                          </button>
+                        ))}
+                        {shareCandidates.length === 0 && (
+                          <span style={{ fontFamily: 'var(--font-parent-display)', fontStyle: 'italic', fontSize: 13, color: '#8A7B5F' }}>
+                            No one else has an account yet
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <p className="italic" style={{
-                  fontFamily: 'var(--font-parent-body)', fontSize: 13, color: '#8A7B5F',
-                }}>No one else in the family has an account yet — this entry stays with you.</p>
               )}
-            </div>
 
-            <div className="pt-4" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
-              <button onClick={handleSave} disabled={!text.trim() || saving}
-                className="w-full py-3.5 rounded-full transition-all hover:opacity-90 disabled:opacity-30"
-                style={{
-                  fontFamily: 'var(--font-parent-body)', fontSize: 16, fontWeight: 500,
-                  background: '#7C9082', color: 'white',
-                }}>
-                {saving ? 'Saving…' : 'Save'}
-              </button>
+              {/* Compact toolbar */}
+              <div className="shrink-0 flex items-center gap-1 px-4 py-2"
+                style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                <input ref={fileInputRef} type="file" accept="image/*,audio/*" multiple className="hidden"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    setStagedFiles((prev) => [...prev, ...files].slice(0, 5));
+                    e.target.value = '';
+                  }} />
+                <button type="button" onClick={() => fileInputRef.current?.click()}
+                  style={{ ...chipStyle(stagedFiles.length > 0), fontSize: 17, padding: '5px 8px' }}
+                  aria-label="Add photo">
+                  📷{stagedFiles.length > 0 ? ` ${stagedFiles.length}` : ''}
+                </button>
+                <button type="button" onClick={() => setOpenPicker(openPicker === 'category' ? null : 'category')}
+                  style={chipStyle(openPicker === 'category')}>
+                  {catMeta?.emoji} {catMeta?.label || 'Category'}
+                </button>
+                <button type="button" onClick={() => setOpenPicker(openPicker === 'about' ? null : 'about')}
+                  style={chipStyle(openPicker === 'about' || selectedPeople.length > 0)}>
+                  {aboutLabel}
+                </button>
+                {hasChildren && (
+                  <button type="button" onClick={() => setOpenPicker(openPicker === 'writingAs' ? null : 'writingAs')}
+                    style={chipStyle(openPicker === 'writingAs' || !!writingFor)}>
+                    {writingFor ? writingFor.name : 'As'}
+                  </button>
+                )}
+                <button type="button" onClick={() => setOpenPicker(openPicker === 'privacy' ? null : 'privacy')}
+                  style={chipStyle(openPicker === 'privacy' || sharedWith.length > 0)}>
+                  {sharedWith.length === 0 ? '🔒' : '✦'} {privacyLabel}
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ─── SAVED: confirmation + optional follow-up ─── */}
         {state === 'saved' && (

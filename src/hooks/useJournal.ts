@@ -22,6 +22,9 @@ interface CreateEntryInput {
   // User IDs (other than the author) who can read this entry. Empty
   // or omitted = private to author.
   sharedWithUserIds?: string[];
+  // Child-supervised entry — parent writes on behalf of a child.
+  subjectType?: 'self' | 'child_proxy';
+  subjectPersonId?: string; // personId of the child
 }
 
 interface UseJournalReturn {
@@ -77,11 +80,17 @@ export function useJournal(): UseJournalReturn {
         visibleToUserIds,
         sharedWithUserIds,
         personMentions: input.personMentions ?? [],
+        subjectType: input.subjectType ?? 'self',
         context: {
           timeOfDay,
         },
         createdAt: Timestamp.now(),
       };
+
+      // Child proxy — record which child is "speaking"
+      if (input.subjectType === 'child_proxy' && input.subjectPersonId) {
+        docData.subjectPersonId = input.subjectPersonId;
+      }
 
       // Set legacy childId if exactly one person is mentioned
       // (used by daily analysis cloud function)
@@ -126,6 +135,9 @@ export function useJournal(): UseJournalReturn {
         if (patch.category !== undefined) updates.category = patch.category;
         if (patch.personMentions !== undefined) {
           updates.personMentions = patch.personMentions;
+        }
+        if (patch.media !== undefined) {
+          updates.media = patch.media;
         }
         if (patch.sharedWithUserIds !== undefined) {
           if (!authorId) {

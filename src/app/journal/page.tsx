@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -12,10 +12,7 @@ import SideNav from '@/components/layout/SideNav';
 
 import Volume from '@/components/magazine/Volume';
 import Masthead from '@/components/magazine/Masthead';
-import PrimaryRow from '@/components/magazine/PrimaryRow';
 import FeaturedHero from '@/components/magazine/FeaturedHero';
-import SideColumn from '@/components/magazine/SideColumn';
-import Section from '@/components/magazine/Section';
 import BackIssues from '@/components/magazine/BackIssues';
 
 import { JOURNAL_CATEGORIES, type JournalEntry } from '@/types/journal';
@@ -106,19 +103,13 @@ function formatTime(d: Date): string {
     .toLowerCase();
 }
 
-function snippet(text: string, max = 140): string {
-  const trimmed = text.trim().replace(/\s+/g, ' ');
-  if (trimmed.length <= max) return trimmed;
-  return trimmed.slice(0, max).trim() + '…';
-}
-
 // ================================================================
 // Page component
 // ================================================================
 export default function JournalPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { entries, loading: entriesLoading } = useJournalEntries();
+  const { entries, loading: entriesLoading, loadMore, loadingMore, hasMore } = useJournalEntries();
   const { people } = usePerson();
   const { echo } = useJournalEcho(entries);
 
@@ -142,9 +133,16 @@ export default function JournalPage() {
     return map;
   }, [people]);
 
-  const dayGroups = useMemo(() => groupByDay(entries), [entries]);
+  const [filter, setFilter] = useState<'all' | 'mine' | 'shared'>('all');
 
-  const recent = useMemo(() => entries.slice(0, 6), [entries]);
+  const filteredEntries = useMemo(() => {
+    if (!user) return entries;
+    if (filter === 'mine') return entries.filter((e) => e.authorId === user.userId);
+    if (filter === 'shared') return entries.filter((e) => e.authorId !== user.userId);
+    return entries;
+  }, [entries, filter, user]);
+
+  const dayGroups = useMemo(() => groupByDay(filteredEntries), [filteredEntries]);
 
   if (authLoading || entriesLoading) {
     return (
@@ -173,34 +171,40 @@ export default function JournalPage() {
           <Volume
             masthead={<Masthead title={`${firstName}'s Journal`} />}
           >
-            <PrimaryRow
-              featured={
-                echo ? (
-                  <EchoHero echo={echo} />
-                ) : (
-                  <EmptyCapture hasEntries={hasEntries} />
-                )
-              }
-              aside={
-                hasEntries ? (
-                  <SideColumn eyebrow="Recently" title="Entries">
-                    {recent.map((entry) => (
-                      <RecentSpine
-                        key={entry.entryId}
-                        entry={entry}
-                        personNameById={personNameById}
-                        userNameById={userNameById}
-                        currentUserId={user.userId}
-                      />
-                    ))}
-                  </SideColumn>
-                ) : undefined
-              }
-            />
+            {!hasEntries && <EmptyCapture />}
 
             {hasEntries && (
-              <Section eyebrow="The stream" title="Day by day">
+              <div className="journal-single-col">
+
+                {echo && <EchoHero echo={echo} />}
+
+                <CaptureButton />
+
+                <div className="journal-filter-row">
+                  {(['all', 'mine', 'shared'] as const).map((f) => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setFilter(f)}
+                      className={`journal-filter-btn${filter === f ? ' active' : ''}`}
+                    >
+                      {f === 'all' ? 'All entries' : f === 'mine' ? 'Mine' : 'Shared with me'}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="journal-stream">
+                  {dayGroups.length === 0 && (
+                    <p style={{
+                      fontFamily: 'var(--font-parent-display)',
+                      fontStyle: 'italic', fontSize: 17, color: '#8a7b5f',
+                      textAlign: 'center', padding: '32px 0',
+                    }}>
+                      {filter === 'shared'
+                        ? 'No entries have been shared with you yet.'
+                        : 'No entries match this filter.'}
+                    </p>
+                  )}
                   {dayGroups.map((group) => (
                     <div key={group.key} className="journal-day">
                       <div className="journal-day-header">
@@ -222,6 +226,19 @@ export default function JournalPage() {
                   ))}
                 </div>
 
+                {hasMore && (
+                  <div className="load-more-row">
+                    <button
+                      type="button"
+                      className="load-more-btn"
+                      onClick={loadMore}
+                      disabled={loadingMore}
+                    >
+                      {loadingMore ? 'Loading…' : 'Older entries'}
+                    </button>
+                  </div>
+                )}
+
                 <style jsx>{`
                   .journal-stream {
                     display: flex;
@@ -233,6 +250,35 @@ export default function JournalPage() {
                     display: flex;
                     flex-direction: column;
                     gap: 24px;
+                  }
+                  .journal-filter-row {
+                    display: flex;
+                    gap: 8px;
+                    margin-bottom: 32px;
+                    padding-bottom: 24px;
+                    border-bottom: 1px solid rgba(200, 190, 172, 0.35);
+                  }
+                  .journal-filter-btn {
+                    font-family: var(--font-parent-body);
+                    font-size: 12px;
+                    font-weight: 500;
+                    letter-spacing: 0.08em;
+                    padding: 6px 16px;
+                    border-radius: 999px;
+                    background: rgba(0, 0, 0, 0.03);
+                    border: 1px solid rgba(0, 0, 0, 0.06);
+                    color: #5f564b;
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                  }
+                  .journal-filter-btn:hover {
+                    background: rgba(0, 0, 0, 0.06);
+                  }
+                  .journal-filter-btn.active {
+                    background: color-mix(in srgb, #7c9082 12%, white);
+                    border-color: rgba(124, 144, 130, 0.3);
+                    color: #5c7566;
+                    font-weight: 600;
                   }
                   .journal-day-header {
                     display: flex;
@@ -258,6 +304,31 @@ export default function JournalPage() {
                     flex-direction: column;
                     gap: 36px;
                   }
+                  .load-more-row {
+                    display: flex;
+                    justify-content: center;
+                    padding-top: 12px;
+                  }
+                  .load-more-btn {
+                    font-family: var(--font-parent-display);
+                    font-style: italic;
+                    font-size: 15px;
+                    color: #7c6e54;
+                    background: transparent;
+                    border: 1px solid rgba(200, 190, 172, 0.45);
+                    border-radius: 999px;
+                    padding: 8px 28px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                  }
+                  .load-more-btn:hover:not(:disabled) {
+                    background: rgba(200, 190, 172, 0.12);
+                    color: #3a3530;
+                  }
+                  .load-more-btn:disabled {
+                    opacity: 0.5;
+                    cursor: default;
+                  }
                   @media (max-width: 720px) {
                     .journal-stream {
                       gap: 36px;
@@ -266,8 +337,12 @@ export default function JournalPage() {
                       gap: 28px;
                     }
                   }
+                  .journal-single-col {
+                    max-width: 760px;
+                    margin: 0 auto;
+                  }
                 `}</style>
-              </Section>
+              </div>
             )}
 
             <BackIssues line="Entries bind themselves by the month." />
@@ -332,39 +407,92 @@ function EchoHero({ echo }: { echo: import('@/hooks/useJournalEcho').EchoMatch }
 // ================================================================
 // Featured slot — capture invitation. Fallback when no echo exists.
 // ================================================================
-function EmptyCapture({ hasEntries }: { hasEntries: boolean }) {
-  const handleClick = () => {
-    window.dispatchEvent(new Event('relish:open-capture'));
-  };
+// Compact tactile button for starting a new entry — sits inline above
+// the stream when the user has entries but no AI echo filling the hero.
+function CaptureButton() {
+  return (
+    <div className="capture-compact">
+      <button
+        type="button"
+        onClick={() => window.dispatchEvent(new Event('relish:open-capture'))}
+        className="capture-btn"
+      >
+        <span className="capture-btn-glyph" aria-hidden="true">✦</span>
+        <span className="capture-btn-label">Begin an entry</span>
+      </button>
 
-  const heading = hasEntries
-    ? 'What&rsquo;s on your mind today?'
-    : 'These pages are still waiting.';
+      <style jsx>{`
+        .capture-compact {
+          margin-bottom: 36px;
+          max-width: 760px;
+        }
+        .capture-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 14px;
+          width: 100%;
+          padding: 22px 32px;
+          background: rgba(92, 128, 100, 0.04);
+          border: 1.5px solid rgba(92, 128, 100, 0.2);
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          user-select: none;
+        }
+        .capture-btn:hover {
+          background: rgba(92, 128, 100, 0.08);
+          border-color: rgba(92, 128, 100, 0.35);
+        }
+        .capture-btn:active {
+          transform: scale(0.985);
+          background: rgba(92, 128, 100, 0.12);
+        }
+        .capture-btn-glyph {
+          font-size: 16px;
+          color: #5c8064;
+        }
+        .capture-btn-label {
+          font-family: var(--font-parent-display);
+          font-style: italic;
+          font-size: 20px;
+          color: #3a3530;
+          letter-spacing: -0.008em;
+        }
+        @media (max-width: 720px) {
+          .capture-btn {
+            padding: 18px 20px;
+          }
+          .capture-btn-label {
+            font-size: 18px;
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
 
-  const body = hasEntries
-    ? 'Another moment, a question, a small thing you noticed — the Journal takes them all in the order they come.'
-    : 'Capture a thought and it lands here, in the order it happened. Private by default; share when you&rsquo;re ready.';
-
+// First-time onboarding pitch — only shown when there are zero entries.
+function EmptyCapture() {
   return (
     <div className="empty-capture">
-      <span className="empty-capture-eyebrow">Today in the Journal</span>
+      <span className="empty-capture-eyebrow">The Journal</span>
       <div className="empty-capture-ornament" aria-hidden="true">
         ❦
       </div>
-      <h2
-        className="empty-capture-title"
-        dangerouslySetInnerHTML={{ __html: heading }}
-      />
-      <p
-        className="empty-capture-body"
-        dangerouslySetInnerHTML={{ __html: body }}
-      />
+      <h2 className="empty-capture-title">
+        These pages are still waiting.
+      </h2>
+      <p className="empty-capture-body">
+        Capture a thought and it lands here, in the order it happened.
+        Private by default; share when you&rsquo;re ready.
+      </p>
       <button
         type="button"
-        onClick={handleClick}
+        onClick={() => window.dispatchEvent(new Event('relish:open-capture'))}
         className="press-link empty-capture-cta"
       >
-        Begin an entry <span className="arrow">⟶</span>
+        Begin your first entry <span className="arrow">⟶</span>
       </button>
 
       <style jsx>{`
@@ -433,18 +561,6 @@ function EmptyCapture({ hasEntries }: { hasEntries: boolean }) {
   );
 }
 
-// ================================================================
-// Recent spine — side column entry pointing to the full entry in
-// the stream below. Since Phase A has no entry detail page, the
-// link is an in-page anchor.
-// ================================================================
-interface SpineProps {
-  entry: JournalEntry;
-  personNameById: Map<string, string>;
-  userNameById: Map<string, string>;
-  currentUserId: string;
-}
-
 // Privacy descriptor for the compact meta line. Distinguishes between:
 //   - mine + nobody shared = "Private"
 //   - mine + shared with someone = "Shared with X"
@@ -479,127 +595,6 @@ function describePrivacy(
   };
 }
 
-function RecentSpine({
-  entry,
-  personNameById,
-  userNameById,
-  currentUserId,
-}: SpineProps) {
-  const cat = CATEGORY_META[entry.category];
-  const d = entry.createdAt?.toDate?.();
-  const timeLabel = d ? formatTime(d) : '';
-  const isMine = entry.authorId === currentUserId;
-  const about = entry.personMentions
-    .map((id) => personNameById.get(id))
-    .filter(Boolean)
-    .join(' & ');
-  const privacy = describePrivacy(entry, currentUserId, userNameById);
-
-  return (
-    <Link href={`#entry-${entry.entryId}`} className="spine">
-      <div className="spine-kind">
-        <span className="spine-glyph" aria-hidden="true">
-          {cat?.emoji ?? '✦'}
-        </span>
-        <span className="spine-kind-label">
-          {cat?.label ?? 'Entry'}
-          {timeLabel && (
-            <>
-              <span className="sep">·</span>
-              {timeLabel}
-            </>
-          )}
-        </span>
-      </div>
-      <p className="spine-snippet">{snippet(entry.text, 110)}</p>
-      <p className="spine-meta">
-        {isMine ? 'You' : privacy.label}
-        {about && (
-          <>
-            <span className="sep">·</span>
-            about <span className="press-sc">{about}</span>
-          </>
-        )}
-        {isMine && (
-          <>
-            <span className="sep">·</span>
-            {privacy.label.toLowerCase()}
-          </>
-        )}
-      </p>
-
-      <style jsx>{`
-        :global(.spine) {
-          display: block;
-          padding: 18px 0;
-          text-decoration: none;
-          color: inherit;
-          border-bottom: 1px solid rgba(200, 190, 172, 0.38);
-          transition: opacity 0.2s ease;
-        }
-        :global(.spine:last-child) {
-          border-bottom: 0;
-        }
-        :global(.spine:hover) {
-          opacity: 0.78;
-        }
-        :global(.spine-kind) {
-          display: flex;
-          align-items: baseline;
-          gap: 8px;
-          margin-bottom: 6px;
-        }
-        :global(.spine-glyph) {
-          font-size: 13px;
-          line-height: 1;
-          color: #5c8064;
-        }
-        :global(.spine-kind-label) {
-          font-family: var(--font-parent-body);
-          font-size: 10px;
-          font-weight: 600;
-          letter-spacing: 0.22em;
-          text-transform: uppercase;
-          color: #8a7b5f;
-        }
-        :global(.spine-kind-label .sep) {
-          display: inline-block;
-          margin: 0 6px;
-          color: #b2a487;
-        }
-        :global(.spine-snippet) {
-          font-family: var(--font-parent-display);
-          font-style: italic;
-          font-size: 17px;
-          line-height: 1.35;
-          color: #3a3530;
-          margin: 0 0 8px;
-          letter-spacing: -0.004em;
-          display: -webkit-box;
-          -webkit-line-clamp: 3;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-        :global(.spine-meta) {
-          font-family: var(--font-parent-body);
-          font-size: 10px;
-          font-weight: 600;
-          letter-spacing: 0.18em;
-          text-transform: uppercase;
-          color: #7c6e54;
-          margin: 0;
-          line-height: 1.55;
-        }
-        :global(.spine-meta .sep) {
-          display: inline-block;
-          margin: 0 7px;
-          color: #a8997d;
-        }
-      `}</style>
-    </Link>
-  );
-}
-
 // ================================================================
 // Entry card — full rendering in the stream. No truncation, the
 // entry is the whole point. Cream paper background, Cormorant body,
@@ -628,6 +623,8 @@ function EntryCard({
     .join(' & ');
   const privacy = describePrivacy(entry, currentUserId, userNameById);
   const privacyGlyph = privacy.kind === 'private' ? '🔒' : '✦';
+  const isChildProxy = entry.subjectType === 'child_proxy' && entry.subjectPersonId;
+  const childName = isChildProxy ? personNameById.get(entry.subjectPersonId!) : null;
 
   return (
     <article id={`entry-${entry.entryId}`} className="entry">
@@ -645,7 +642,7 @@ function EntryCard({
           </>
         )}
         <span className="sep">·</span>
-        <span>{isMine ? 'You' : privacy.label}</span>
+        <span>{childName ? `${childName}\u2019s entry` : isMine ? 'You' : privacy.label}</span>
         {isMine && (
           <>
             <span className="sep">·</span>
@@ -663,6 +660,27 @@ function EntryCard({
           <p key={i}>{para}</p>
         ))}
       </div>
+
+      {/* Media thumbnails */}
+      {entry.media && entry.media.length > 0 && (
+        <div className="entry-media">
+          {entry.media.filter((m) => m.type === 'image').map((m, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={i}
+              src={m.url}
+              alt={m.filename || 'Photo'}
+              className="entry-media-thumb"
+            />
+          ))}
+          {entry.media.filter((m) => m.type === 'audio').map((m, i) => (
+            <div key={`audio-${i}`} className="entry-media-audio">
+              <span>🎵</span>
+              <span>{m.filename || 'Voice note'}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Enrichment tags — compact inline display in the stream */}
       {entry.enrichment && (entry.enrichment.aiDimensions.length > 0 || entry.enrichment.themes.length > 0) && (
@@ -719,6 +737,31 @@ function EntryCard({
           letter-spacing: -0.008em;
           color: #3a3530;
           margin: 0 0 14px;
+        }
+        .entry-media {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 16px;
+        }
+        :global(.entry-media-thumb) {
+          width: 120px;
+          height: 90px;
+          object-fit: cover;
+          border-radius: 6px;
+          border: 1px solid rgba(200, 190, 172, 0.4);
+        }
+        .entry-media-audio {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 14px;
+          border-radius: 6px;
+          background: rgba(0, 0, 0, 0.03);
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          font-family: var(--font-parent-body);
+          font-size: 12px;
+          color: #5f564b;
         }
         .entry-enrichment {
           display: flex;

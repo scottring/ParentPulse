@@ -16,6 +16,7 @@ export default function ReadingCard({ item }: ReadingCardProps) {
   const minutes = item.estimatedMinutes || 0;
   const forWhom = item.assignedToUserName?.split(' ')[0] || 'you';
   const about = item.targetPersonNames?.join(' & ');
+  const fromJournal = Boolean(item.spawnedFromEntryIds?.length);
 
   const bodyExcerpt =
     item.body && item.body.length > 140
@@ -46,6 +47,12 @@ export default function ReadingCard({ item }: ReadingCardProps) {
         ) : (
           <>
             for <span className="press-sc">{forWhom}</span>
+          </>
+        )}
+        {fromJournal && (
+          <>
+            <span className="sep">·</span>
+            from your journal
           </>
         )}
       </p>
@@ -119,6 +126,11 @@ export default function ReadingCard({ item }: ReadingCardProps) {
           text-transform: uppercase;
           color: #8a6f42;
           margin: 0;
+        }
+        :global(.reading-card-meta .sep) {
+          display: inline-block;
+          margin: 0 6px;
+          color: #b8a67a;
         }
       `}</style>
     </Link>
