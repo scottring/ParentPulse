@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { useJournal } from '@/hooks/useJournal';
 import { usePerson } from '@/hooks/usePerson';
 import { useCoach, type ChatMessage } from '@/hooks/useCoach';
@@ -8,12 +9,21 @@ import { JOURNAL_CATEGORIES, type JournalCategory } from '@/types/journal';
 
 type SheetState = 'closed' | 'composing' | 'chatting';
 
+// A family member with a user account — someone an entry can be
+// explicitly shared with. Derived from Persons whose `linkedUserId`
+// is set, excluding the current user (you always see your own entries).
+interface ShareCandidate {
+  userId: string;
+  name: string;
+}
+
 export default function CaptureSheet() {
+  const { user } = useAuth();
   const [state, setState] = useState<SheetState>('closed');
   const [text, setText] = useState('');
   const [category, setCategory] = useState<JournalCategory>('moment');
   const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
-  const [isPrivate, setIsPrivate] = useState(false);
+  const [sharedWith, setSharedWith] = useState<string[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
   const [chatInput, setChatInput] = useState('');
 
@@ -26,6 +36,20 @@ export default function CaptureSheet() {
     clearConversation: clearChat,
     excludeMessage: excludeChatMessage,
   } = useCoach();
+
+  // Family members with accounts — the set an entry can be shared with.
+  // Excludes the current user since authors always see their own entries.
+  const shareCandidates = useMemo<ShareCandidate[]>(() => {
+    return people
+      .filter(
+        (p) =>
+          Boolean(p.linkedUserId) && p.linkedUserId !== user?.userId,
+      )
+      .map((p) => ({
+        userId: p.linkedUserId as string,
+        name: p.name,
+      }));
+  }, [people, user?.userId]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
@@ -43,6 +67,15 @@ export default function CaptureSheet() {
     }
   }, [state]);
 
+  // Allow decoupled UI (e.g. the empty-state CTA on the Journal page)
+  // to open the sheet without having to share a context. Dispatch
+  // window.dispatchEvent(new Event('relish:open-capture')) from anywhere.
+  useEffect(() => {
+    const handler = () => setState('composing');
+    window.addEventListener('relish:open-capture', handler);
+    return () => window.removeEventListener('relish:open-capture', handler);
+  }, []);
+
   // Auto-scroll chat to bottom when new messages arrive
   useEffect(() => {
     if (state === 'chatting' && chatScrollRef.current) {
@@ -54,9 +87,17 @@ export default function CaptureSheet() {
     setText('');
     setCategory('moment');
     setSelectedPeople([]);
-    setIsPrivate(false);
+    setSharedWith([]);
     setChatInput('');
     clearChat();
+  };
+
+  const toggleShareWith = (userId: string) => {
+    setSharedWith((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId],
+    );
   };
 
   const handleOpen = () => setState('composing');
@@ -78,7 +119,7 @@ export default function CaptureSheet() {
         text,
         category,
         personMentions: selectedPeople,
-        isPrivate,
+        sharedWithUserIds: sharedWith,
       });
 
       resetAll();
@@ -97,12 +138,12 @@ export default function CaptureSheet() {
     // the chat. The compose box reads like a journal entry — the user
     // shouldn't have to choose between journaling it and asking about
     // it. They get both: the entry lands in their journal using
-    // whatever category / people / privacy they already selected, and
-    // the chat opens grounded in those same people.
+    // whatever category / people / share settings they already
+    // selected, and the chat opens grounded in those same people.
     const initialText = text.trim();
     const initialCategory = category;
     const initialPeople = [...selectedPeople];
-    const initialPrivate = isPrivate;
+    const initialShared = [...sharedWith];
 
     // Fire-and-forget the journal save so the chat opens immediately.
     // If the save fails we surface it via the hook's own error state,
@@ -111,7 +152,7 @@ export default function CaptureSheet() {
       text: initialText,
       category: initialCategory,
       personMentions: initialPeople,
-      isPrivate: initialPrivate,
+      sharedWithUserIds: initialShared,
     });
 
     setState('chatting');
@@ -209,8 +250,9 @@ export default function CaptureSheet() {
             people={people}
             selectedPeople={selectedPeople}
             togglePerson={togglePerson}
-            isPrivate={isPrivate}
-            setIsPrivate={setIsPrivate}
+            shareCandidates={shareCandidates}
+            sharedWith={sharedWith}
+            toggleShareWith={toggleShareWith}
             onClose={handleClose}
             onSaveNote={handleSaveNote}
             onAskAboutThis={handleAskAboutThis}
@@ -258,8 +300,9 @@ interface ComposingViewProps {
   people: Array<{ personId: string; name: string }>;
   selectedPeople: string[];
   togglePerson: (id: string) => void;
-  isPrivate: boolean;
-  setIsPrivate: (v: boolean) => void;
+  shareCandidates: ShareCandidate[];
+  sharedWith: string[];
+  toggleShareWith: (userId: string) => void;
   onClose: () => void;
   onSaveNote: () => void;
   onAskAboutThis: () => void;
@@ -276,8 +319,9 @@ function ComposingView({
   people,
   selectedPeople,
   togglePerson,
-  isPrivate,
-  setIsPrivate,
+  shareCandidates,
+  sharedWith,
+  toggleShareWith,
   onClose,
   onSaveNote,
   onAskAboutThis,
@@ -405,20 +449,64 @@ function ComposingView({
         </div>
       )}
 
-      {/* Privacy toggle */}
-      <div className="flex items-center justify-between pt-2 mb-4">
-        <button
-          onClick={() => setIsPrivate(!isPrivate)}
-          className="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-black/5 transition-colors"
+      {/* Share with — per-person sharing. Empty = private to you. */}
+      <div className="mb-4">
+        <p
+          className="mb-2 flex items-center gap-2"
           style={{
             fontFamily: 'var(--font-parent-body)',
-            fontSize: 14,
-            color: isPrivate ? '#7C9082' : '#6B6254',
+            fontSize: 13,
+            fontWeight: 600,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: '#6B6254',
           }}
         >
-          <span style={{ fontSize: 14 }}>{isPrivate ? '🔒' : '👁'}</span>
-          {isPrivate ? 'Private' : 'Family visible'}
-        </button>
+          <span aria-hidden="true" style={{ fontSize: 13 }}>
+            {sharedWith.length === 0 ? '🔒' : '✦'}
+          </span>
+          {sharedWith.length === 0 ? 'Private to you' : 'Shared with'}
+        </p>
+        {shareCandidates.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {shareCandidates.map((candidate) => {
+              const selected = sharedWith.includes(candidate.userId);
+              return (
+                <button
+                  key={candidate.userId}
+                  onClick={() => toggleShareWith(candidate.userId)}
+                  className="px-3 py-1.5 rounded-full transition-all"
+                  style={{
+                    fontFamily: 'var(--font-parent-body)',
+                    fontSize: 13,
+                    fontWeight: selected ? 500 : 400,
+                    background: selected
+                      ? 'color-mix(in srgb, #7C9082 12%, white)'
+                      : 'rgba(0,0,0,0.03)',
+                    border: `1px solid ${
+                      selected ? 'rgba(124,144,130,0.3)' : 'rgba(0,0,0,0.06)'
+                    }`,
+                    color: selected ? '#5C7566' : '#5F564B',
+                  }}
+                >
+                  {candidate.name}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <p
+            className="italic"
+            style={{
+              fontFamily: 'var(--font-parent-body)',
+              fontSize: 13,
+              color: '#8A7B5F',
+            }}
+          >
+            No one else in the family has an account yet — this entry
+            stays with you.
+          </p>
+        )}
       </div>
 
       {/* Two action buttons */}

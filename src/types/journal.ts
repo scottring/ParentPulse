@@ -18,10 +18,28 @@ export interface JournalEntry {
   category: JournalCategory;
   tags: string[];
 
-  // Privacy
-  isPrivate: boolean;
+  // Privacy — per-person sharing model.
+  //
+  // `visibleToUserIds` is the denormalized read list. It always
+  // contains the author plus every userId in `sharedWithUserIds`.
+  // Firestore security rules and queries use this field via
+  // `array-contains` — the rules cannot do OR-of-fields, and queries
+  // cannot post-filter, so this denormalization is load-bearing.
+  //
+  // `sharedWithUserIds` is the source of truth for who the author
+  // explicitly shared the entry with (author excluded). Used by UI
+  // to render "Shared with Iris" vs "Private".
+  visibleToUserIds: string[];
+  sharedWithUserIds: string[];
 
-  // Person tagging (which family members this relates to)
+  // Legacy binary flag — still present on entries written before
+  // per-person sharing existed. Not written by new entries. Used only
+  // as a fallback during migration.
+  isPrivate?: boolean;
+
+  // Person tagging (which family members this relates to — note these
+  // are Person IDs, not userIds; Persons may or may not have linked
+  // user accounts).
   personMentions: string[]; // personIds
   childId?: string;         // Legacy field used by daily analysis
 

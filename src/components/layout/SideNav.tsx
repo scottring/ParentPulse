@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   HomeIcon,
   BookOpenIcon,
+  PencilSquareIcon,
   ArrowPathIcon,
   ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
@@ -17,9 +18,10 @@ interface NavItem {
 }
 
 const mobileItems: NavItem[] = [
-  { label: 'Home', href: '/dashboard', icon: HomeIcon, matchPrefixes: ['/dashboard'] },
-  { label: 'Family Manual', href: '/family-manual', icon: BookOpenIcon, matchPrefixes: ['/family-manual', '/people'] },
-  { label: 'Growth', href: '/journal', icon: ArrowPathIcon, matchPrefixes: ['/journal', '/checkin', '/deepen'] },
+  { label: 'Home', href: '/', icon: HomeIcon, matchPrefixes: ['/'] },
+  { label: 'Manual', href: '/family-manual', icon: BookOpenIcon, matchPrefixes: ['/family-manual', '/people'] },
+  { label: 'Journal', href: '/journal', icon: PencilSquareIcon, matchPrefixes: ['/journal'] },
+  { label: 'Workbook', href: '/workbook', icon: ArrowPathIcon, matchPrefixes: ['/workbook', '/checkin', '/deepen', '/growth', '/dashboard'] },
   { label: 'Reports', href: '/reports', icon: ClipboardDocumentListIcon, matchPrefixes: ['/reports'] },
 ];
 

@@ -14,7 +14,9 @@ interface CreateEntryInput {
   text: string;
   category: JournalCategory;
   personMentions?: string[];
-  isPrivate?: boolean;
+  // User IDs (other than the author) who can read this entry. Empty
+  // or omitted = private to author.
+  sharedWithUserIds?: string[];
 }
 
 interface UseJournalReturn {
@@ -43,13 +45,23 @@ export function useJournal(): UseJournalReturn {
         hour < 17 ? 'afternoon' :
         hour < 21 ? 'evening' : 'night';
 
+      const sharedWithUserIds = input.sharedWithUserIds ?? [];
+      // Denormalized visibility list — author plus everyone they
+      // explicitly shared with. Firestore rules and queries both read
+      // this field via `array-contains`, so it must always include the
+      // author so they can read their own entries.
+      const visibleToUserIds = Array.from(
+        new Set([user.userId, ...sharedWithUserIds]),
+      );
+
       const docData: Record<string, unknown> = {
         familyId: user.familyId,
         authorId: user.userId,
         text: input.text.trim(),
         category: input.category,
         tags: [],
-        isPrivate: input.isPrivate ?? false,
+        visibleToUserIds,
+        sharedWithUserIds,
         personMentions: input.personMentions ?? [],
         context: {
           timeOfDay,

@@ -87,23 +87,60 @@ service cloud.firestore {
     }
 
     // Journal entries collection
+    //
+    // Visibility model (per-person sharing):
+    //
+    //   An entry is readable by its author plus any userId explicitly
+    //   listed in `visibleToUserIds`. That field is denormalized on
+    //   write (author + sharedWithUserIds) so both queries and rules
+    //   can enforce visibility without post-filtering. Queries use
+    //   `array-contains` on this field; see
+    //   src/hooks/useJournalEntries.ts.
+    //
+    // Legacy fallback:
+    //
+    //   Entries written before the per-person sharing model exist
+    //   without `visibleToUserIds`. They carry the old `isPrivate`
+    //   boolean instead. Those entries fall through to the legacy
+    //   branch until they're backfilled by the client-side migration
+    //   (src/lib/migrations/journal-visibility.ts). The legacy branch
+    //   intentionally mirrors the old rule so no existing data loses
+    //   visibility during the transition window.
     match /journal_entries/{entryId} {
-      // Private entries: only the author can read
-      // Non-private entries: any parent in the family can read
-      allow read: if isParent() && (
-        resource.data.authorId == request.auth.uid ||
-        (belongsToFamily(resource.data.familyId) && resource.data.isPrivate != true)
+      allow read: if isParent() && belongsToFamily(resource.data.familyId) && (
+        // New model: entry explicitly lists this user as a reader.
+        ('visibleToUserIds' in resource.data &&
+          request.auth.uid in resource.data.visibleToUserIds) ||
+        // Legacy fallback for entries that predate visibleToUserIds.
+        (!('visibleToUserIds' in resource.data) && (
+          resource.data.authorId == request.auth.uid ||
+          resource.data.get('isPrivate', false) != true
+        ))
       );
 
-      // Parents can create entries in their family
-      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+      // New entries must include visibleToUserIds and the author must
+      // be listed in it (otherwise they couldn't read their own
+      // entry). Legacy entries were written under the old rule and
+      // are still valid.
+      allow create: if isParent() &&
+                       belongsToFamily(request.resource.data.familyId) &&
+                       request.resource.data.authorId == request.auth.uid &&
+                       request.resource.data.visibleToUserIds is list &&
+                       request.auth.uid in request.resource.data.visibleToUserIds;
 
-      // Parents can update their own entries
+      // Parents can update their own entries. Updates may adjust
+      // `sharedWithUserIds` / `visibleToUserIds` to reshare or unshare.
+      // The author must always remain in `visibleToUserIds` so they
+      // keep access to their own entry — enforce only when the field
+      // is present on the write (legacy updates from the migration
+      // shim may set the field for the first time).
       allow update: if isParent() &&
                        belongsToFamily(resource.data.familyId) &&
-                       resource.data.authorId == request.auth.uid;
+                       resource.data.authorId == request.auth.uid &&
+                       (!('visibleToUserIds' in request.resource.data) ||
+                        request.auth.uid in request.resource.data.visibleToUserIds);
 
-      // Parents can delete their own entries
+      // Parents can delete their own entries.
       allow delete: if isParent() &&
                        belongsToFamily(resource.data.familyId) &&
                        resource.data.authorId == request.auth.uid;

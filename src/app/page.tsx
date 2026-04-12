@@ -50,15 +50,15 @@ const BOOK_REGIONS: Record<string, BookRegion> = {
     href: '/journal',
     label: 'The Journal',
   },
-  folio: {
+  workbook: {
     left: '66%',
     top: '42%',
     width: '30%',
     height: '35%',
     labelLeft: '81%',
     labelTop: '14%',
-    href: '/reports',
-    label: 'Reports',
+    href: '/workbook',
+    label: 'The Workbook',
   },
 };
 

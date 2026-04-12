@@ -9,8 +9,9 @@ import CaptureSheet from '@/components/capture/CaptureSheet';
 
 const navLinks = [
   { label: 'home', href: '/', matchPrefixes: ['/'], exact: true },
-  { label: 'journal', href: '/journal', matchPrefixes: ['/journal', '/workbook', '/dashboard', '/checkin', '/deepen'] },
   { label: 'family manual', href: '/family-manual', matchPrefixes: ['/family-manual', '/people'] },
+  { label: 'journal', href: '/journal', matchPrefixes: ['/journal'] },
+  { label: 'workbook', href: '/workbook', matchPrefixes: ['/workbook', '/checkin', '/deepen', '/growth', '/dashboard'] },
   { label: 'reports', href: '/reports', matchPrefixes: ['/reports'] },
 ];
 
