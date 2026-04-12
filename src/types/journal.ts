@@ -66,6 +66,11 @@ export interface JournalEntry {
     model: string;
   };
 
+  // Activity provenance — set when the auto-synthesis spawns a
+  // Workbook activity from this entry. Links journal → workbook.
+  activitySpawnedAt?: Timestamp;
+  activitySpawnedItemId?: string;
+
   // Timestamps
   createdAt: Timestamp;
   updatedAt?: Timestamp;

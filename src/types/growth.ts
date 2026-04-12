@@ -125,9 +125,15 @@ export interface GrowthItem {
   // Lineage: if this item was drawn from a manual-chat conversation
   sourceChatSessionId?: string;
 
+  // Journal provenance — present when this item was spawned from a
+  // journal entry by the C.5 auto-seeding pipeline. Links
+  // workbook → journal.
+  spawnedFromEntryIds?: string[];
+  spawnedBy?: 'user_request' | 'auto';
+
   // Metadata
   createdAt: Timestamp;
-  generatedBy: 'ai' | 'system';
+  generatedBy: 'ai' | 'system' | 'journal_seed';
   batchId?: string;                 // Links items generated together
 }
 

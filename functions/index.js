@@ -9666,5 +9666,258 @@ exports.autoSynthesizeManuals = onSchedule(
           `autoSynthesizeManuals: done — ${synthesized} synthesized, ` +
           `${failed} failed`,
       );
+
+      // ---------------------------------------------------------------
+      // C.5: After synthesis settles, check if any recent journal
+      // entries warrant a Workbook activity. Pick the most
+      // dimension-rich un-spawned entry from the last 7 days and
+      // generate ONE targeted practice from it. Max 1 activity per
+      // auto-synthesis cycle to avoid overwhelming the Workbook.
+      // ---------------------------------------------------------------
+      try {
+        await spawnActivityFromRecentJournal(db);
+      } catch (spawnErr) {
+        logger.warn(
+            "autoSynthesizeManuals: journal activity spawn failed " +
+            "(non-critical):", spawnErr.message,
+        );
+      }
     },
 );
+
+// ================================================================
+// spawnActivityFromRecentJournal — picks the most dimension-rich
+// un-spawned journal entry from the last 7 days and generates one
+// targeted Workbook practice from it. Called at the end of
+// autoSynthesizeManuals so it runs on the same debounced cadence
+// as manual synthesis.
+// ================================================================
+async function spawnActivityFromRecentJournal(db) {
+  const logger = require("firebase-functions/logger");
+
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  // Query recent entries across all families (the scheduler is global).
+  // In practice, with one family pre-launch this is fine. At scale,
+  // this should be scoped per-family via the synthesis trigger.
+  const recentSnap = await db.collection("journal_entries")
+      .where("createdAt", ">=",
+          admin.firestore.Timestamp.fromDate(sevenDaysAgo))
+      .orderBy("createdAt", "desc")
+      .limit(50)
+      .get();
+
+  if (recentSnap.empty) return;
+
+  // Find the best candidate: has enrichment with dimensions, hasn't
+  // already spawned an activity.
+  let bestEntry = null;
+  let bestScore = 0;
+
+  for (const docSnap of recentSnap.docs) {
+    const data = docSnap.data();
+    if (data.activitySpawnedAt) continue; // Already spawned
+    const dims = data.enrichment?.aiDimensions || [];
+    const themes = data.enrichment?.themes || [];
+    if (dims.length === 0) continue; // No dimensions = no actionable practice
+    const score = dims.length * 2 + themes.length;
+    if (score > bestScore) {
+      bestScore = score;
+      bestEntry = {id: docSnap.id, ref: docSnap.ref, data};
+    }
+  }
+
+  if (!bestEntry) {
+    logger.info("spawnActivityFromRecentJournal: no qualifying entries");
+    return;
+  }
+
+  const entry = bestEntry.data;
+  const familyId = entry.familyId;
+  const authorId = entry.authorId;
+
+  // Fetch author info for assignedTo fields
+  const authorDoc = await db.collection("users").doc(authorId).get();
+  const authorName = authorDoc.exists ?
+    (authorDoc.data().displayName || authorDoc.data().name || "Parent") :
+    "Parent";
+
+  // Fetch family people for names
+  const peopleSnap = await db.collection("people")
+      .where("familyId", "==", familyId)
+      .get();
+  const people = {};
+  peopleSnap.forEach((doc) => {
+    people[doc.id] = doc.data();
+  });
+
+  // Check recent growth items to avoid repeating dimensions
+  const recentItemsSnap = await db.collection("growth_items")
+      .where("familyId", "==", familyId)
+      .where("createdAt", ">=",
+          admin.firestore.Timestamp.fromDate(sevenDaysAgo))
+      .get();
+
+  const recentDimensions = new Set();
+  recentItemsSnap.forEach((doc) => {
+    const item = doc.data();
+    if (item.dimensionId) recentDimensions.add(item.dimensionId);
+  });
+
+  // Filter to dimensions not recently addressed
+  const freshDimensions = (entry.enrichment?.aiDimensions || [])
+      .filter((d) => !recentDimensions.has(d));
+
+  if (freshDimensions.length === 0) {
+    logger.info(
+        "spawnActivityFromRecentJournal: all dimensions recently " +
+        "addressed, skipping",
+    );
+    return;
+  }
+
+  // Build targeted prompt
+  const entryText = entry.enrichment?.summary || entry.text || "";
+  const dims = freshDimensions
+      .map((id) => {
+        const dim = ENRICHMENT_DIMENSIONS.find((d) => d.id === id);
+        return dim ? `${dim.name} (${dim.id})` : id;
+      })
+      .join(", ");
+  const themes = (entry.enrichment?.themes || []).join(", ");
+  const mentionedPeople = (entry.enrichment?.aiPeople || [])
+      .map((id) => people[id]?.name)
+      .filter(Boolean);
+
+  const prompt = `You are generating ONE targeted growth activity for a family app called Relish. A user just wrote a journal entry that touches specific relationship dimensions. Generate a practice that directly addresses what came up.
+
+JOURNAL ENTRY CONTEXT:
+"""
+${entryText}
+"""
+
+DIMENSIONS TOUCHED: ${dims}
+THEMES: ${themes || "none specified"}
+PEOPLE INVOLVED: ${mentionedPeople.join(", ") || "general/self"}
+
+FAMILY MEMBERS:
+${Object.values(people).map((p) => `- ${p.name} (${p.relationshipType || "other"})`).join("\n")}
+
+Generate exactly ONE activity as JSON:
+{
+  "type": "micro_activity" or "reflection_prompt" or "conversation_guide" or "partner_exercise" or "repair_ritual" or "gratitude_practice",
+  "title": "Short title (under 60 chars)",
+  "body": "2-3 sentences of warm, specific instruction. Name names. Be concrete about what to do.",
+  "emoji": "Single emoji",
+  "targetPersonNames": ["Name(s) this involves"],
+  "relationalLevel": "individual" or "couple" or "family",
+  "speed": "ambient" or "intentional",
+  "estimatedMinutes": 2-15,
+  "dimensionId": "${freshDimensions[0]}"
+}
+
+Rules:
+- This should feel like a natural response to what the user wrote — not homework
+- Use actual names from the family
+- Keep it achievable — one small thing, not a project
+- Tone: warm, practical, never clinical
+- Return ONLY valid JSON`;
+
+  let response;
+  try {
+    response = await getAnthropic().messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 400,
+      messages: [{role: "user", content: prompt}],
+    });
+  } catch (err) {
+    logger.error(
+        "spawnActivityFromRecentJournal: Claude call failed:",
+        err.message,
+    );
+    return;
+  }
+
+  const responseText = response.content?.[0]?.text || "";
+  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    logger.warn(
+        "spawnActivityFromRecentJournal: no JSON in response",
+    );
+    return;
+  }
+
+  let item;
+  try {
+    item = JSON.parse(jsonMatch[0]);
+  } catch (err) {
+    logger.warn(
+        "spawnActivityFromRecentJournal: JSON parse failed:",
+        err.message,
+    );
+    return;
+  }
+
+  // Resolve person names to IDs
+  const targetPersonIds = (item.targetPersonNames || []).map((name) => {
+    const match = Object.entries(people).find(
+        ([, p]) => p.name.toLowerCase() === name.toLowerCase(),
+    );
+    return match ? match[0] : null;
+  }).filter(Boolean);
+
+  // Schedule for tomorrow morning
+  const scheduleDate = new Date();
+  scheduleDate.setDate(scheduleDate.getDate() + 1);
+  scheduleDate.setHours(9, 0, 0, 0);
+  const expiresAt = new Date(scheduleDate);
+  expiresAt.setDate(expiresAt.getDate() + 3);
+
+  const ref = db.collection("growth_items").doc();
+  const growthItem = {
+    growthItemId: ref.id,
+    familyId,
+    type: item.type || "micro_activity",
+    title: item.title || "",
+    body: item.body || "",
+    emoji: item.emoji || "✨",
+    targetPersonIds,
+    targetPersonNames: item.targetPersonNames || [],
+    assignedToUserId: authorId,
+    assignedToUserName: authorName,
+    relationalLevel: item.relationalLevel || "individual",
+    speed: item.speed || "ambient",
+    scheduledDate: admin.firestore.Timestamp.fromDate(scheduleDate),
+    expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
+    estimatedMinutes: item.estimatedMinutes || 5,
+    status: "active",
+    depthTier: "moderate",
+    dimensionId: item.dimensionId || freshDimensions[0] || null,
+    createdAt: admin.firestore.Timestamp.now(),
+    generatedBy: "journal_seed",
+    spawnedFromEntryIds: [bestEntry.id],
+  };
+
+  await ref.set(growthItem);
+
+  // Mark the source entry so it isn't re-seeded next cycle
+  await bestEntry.ref.update({
+    activitySpawnedAt: admin.firestore.Timestamp.now(),
+    activitySpawnedItemId: ref.id,
+  });
+
+  logger.info(
+      `spawnActivityFromRecentJournal: spawned "${item.title}" ` +
+      `from entry ${bestEntry.id} → growth_item ${ref.id}`,
+  );
+
+  // Log AI usage
+  await logAIUsage(db, {
+    familyId,
+    userId: authorId,
+    functionName: "spawnActivityFromRecentJournal",
+    model: "claude-sonnet-4-20250514",
+    usage: response.usage,
+  });
+}

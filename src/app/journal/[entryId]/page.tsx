@@ -345,6 +345,20 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
             />
           )}
 
+          {/* Provenance: this entry spawned a Workbook activity */}
+          {entry.activitySpawnedItemId && (
+            <div className="entry-provenance">
+              <Link
+                href={`/growth/${entry.activitySpawnedItemId}`}
+                className="provenance-link"
+              >
+                <span className="provenance-glyph" aria-hidden="true">◆</span>
+                This led to a practice in the Workbook
+                <span className="arrow">⟶</span>
+              </Link>
+            </div>
+          )}
+
           <footer className="entry-footer">
             <div className="privacy-control">
               <button
@@ -638,6 +652,39 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
           color: #a8997d;
           font-style: italic;
           min-height: 14px;
+        }
+
+        .entry-provenance {
+          margin-top: 16px;
+          padding-top: 16px;
+          border-top: 1px dashed rgba(200, 190, 172, 0.3);
+        }
+        :global(.provenance-link) {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-family: var(--font-parent-body);
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.14em;
+          color: #5c8064;
+          text-decoration: none;
+          transition: color 0.2s ease;
+        }
+        :global(.provenance-link:hover) {
+          color: #3a3530;
+        }
+        :global(.provenance-link .arrow) {
+          display: inline-block;
+          margin-left: 2px;
+          transition: transform 0.25s ease;
+        }
+        :global(.provenance-link:hover .arrow) {
+          transform: translateX(3px);
+        }
+        .provenance-glyph {
+          font-size: 10px;
+          color: #5c8064;
         }
 
         @media (max-width: 720px) {
