@@ -148,203 +148,259 @@ exports.checkPendingInvite = onCall(
  * Reads all completed contributions for a manual, pairs self vs observer
  * answers by topic, and generates synthesized insights highlighting
  * alignments, gaps, and blind spots.
+ *
+ * The synthesis core lives in `performManualSynthesis` so it can be
+ * called by both the user-triggered `onCall` handler and the
+ * `autoSynthesizeManuals` scheduled function (C.4 auto-trigger).
  */
-exports.synthesizeManualContent = onCall(
-    {
-      region: "us-central1",
-      memory: "512MiB",
-      timeoutSeconds: 120,
-      secrets: ["ANTHROPIC_API_KEY"],
-    },
-    async (request) => {
-      // Verify authentication
-      if (!request.auth) {
-        throw new Error("Authentication required");
-      }
 
-      const {manualId} = request.data;
-      if (!manualId) {
-        throw new Error("manualId is required");
-      }
+// ----------------------------------------------------------------
+// Synthesis core — shared by onCall + scheduled auto-synthesis
+// ----------------------------------------------------------------
+async function performManualSynthesis(db, manualId) {
+  const logger = require("firebase-functions/logger");
 
-      const db = admin.firestore();
+  // Fetch the manual
+  const manualDoc = await db
+      .collection("person_manuals")
+      .doc(manualId)
+      .get();
+  if (!manualDoc.exists) {
+    throw new Error("Manual not found");
+  }
+  const manual = manualDoc.data();
 
-      // Fetch the manual
-      const manualDoc = await db
-          .collection("person_manuals")
-          .doc(manualId)
-          .get();
-      if (!manualDoc.exists) {
-        throw new Error("Manual not found");
-      }
-      const manual = manualDoc.data();
+  // Fetch all completed contributions for this manual
+  const contribSnap = await db
+      .collection("contributions")
+      .where("manualId", "==", manualId)
+      .where("status", "==", "complete")
+      .get();
 
-      // Verify user belongs to this family
-      const userDoc = await db
-          .collection("users")
-          .doc(request.auth.uid)
-          .get();
-      if (!userDoc.exists ||
-          userDoc.data().familyId !== manual.familyId) {
-        throw new Error("Access denied");
-      }
+  // Organize contributions by perspective type
+  const selfContribs = [];
+  const observerContribs = [];
 
-      // Fetch all completed contributions for this manual
-      const contribSnap = await db
-          .collection("contributions")
-          .where("manualId", "==", manualId)
-          .where("status", "==", "complete")
-          .get();
+  contribSnap.forEach((doc) => {
+    const data = doc.data();
+    if (data.perspectiveType === "self") {
+      selfContribs.push(data);
+    } else {
+      observerContribs.push(data);
+    }
+  });
 
-      if (contribSnap.empty) {
-        throw new Error("No completed contributions to synthesize");
-      }
+  // Build the prompt
+  const personName = manual.personName || "this person";
+  const personId = manual.personId;
+  let prompt = `You are analyzing a collaborative "operating manual" for ${personName}. `;
+  prompt += `Multiple people have shared their perspectives about ${personName}, `;
+  prompt += `and the family has been writing journal entries that reference ${personName}. `;
+  prompt += `Your job is to synthesize these perspectives, highlighting:\n`;
+  prompt += `1. ALIGNMENTS — where perspectives agree\n`;
+  prompt += `2. GAPS — where perspectives diverge (this is the most valuable part)\n`;
+  prompt += `3. BLIND SPOTS — things only one side sees\n\n`;
 
-      // Organize contributions by perspective type
-      const selfContribs = [];
-      const observerContribs = [];
+  // Helper: check if an answer is marked private
+  const isPrivate = (contrib, section, qId) => {
+    return contrib.answerVisibility &&
+      contrib.answerVisibility[section] &&
+      contrib.answerVisibility[section][qId] === "private";
+  };
 
-      contribSnap.forEach((doc) => {
-        const data = doc.data();
-        if (data.perspectiveType === "self") {
-          selfContribs.push(data);
-        } else {
-          observerContribs.push(data);
+  // Helper: extract answer text, filtering out private answers
+  const getAnswerText = (contrib, section, qId, answer) => {
+    if (isPrivate(contrib, section, qId)) return null;
+    const text = typeof answer === "string" ?
+      answer :
+      (answer && answer.primary) ?
+        String(answer.primary) :
+        JSON.stringify(answer);
+    return (text && text.trim()) ? text.trim() : null;
+  };
+
+  if (selfContribs.length > 0) {
+    prompt += `=== ${personName.toUpperCase()}'S OWN PERSPECTIVE ===\n`;
+    for (const contrib of selfContribs) {
+      for (const [section, answers] of Object.entries(contrib.answers)) {
+        if (typeof answers !== "object" || answers === null) continue;
+        const visibleAnswers = [];
+        for (const [qId, answer] of Object.entries(answers)) {
+          const text = getAnswerText(contrib, section, qId, answer);
+          if (text) visibleAnswers.push(text);
         }
+        if (visibleAnswers.length > 0) {
+          prompt += `\n[${section.toUpperCase()}]\n`;
+          for (const text of visibleAnswers) {
+            prompt += `- ${text}\n`;
+          }
+        }
+      }
+    }
+    prompt += "\n";
+  }
+
+  if (observerContribs.length > 0) {
+    for (const contrib of observerContribs) {
+      const observerName = contrib.contributorName || "An observer";
+      const relationship = contrib.relationshipToSubject || "observer";
+      prompt += `=== ${observerName.toUpperCase()}'S PERSPECTIVE `;
+      prompt += `(${relationship}) ===\n`;
+      for (const [section, answers] of Object.entries(contrib.answers)) {
+        if (typeof answers !== "object" || answers === null) continue;
+        const visibleAnswers = [];
+        for (const [qId, answer] of Object.entries(answers)) {
+          const text = getAnswerText(contrib, section, qId, answer);
+          if (text) visibleAnswers.push(text);
+        }
+        if (visibleAnswers.length > 0) {
+          prompt += `\n[${section.toUpperCase()}]\n`;
+          for (const text of visibleAnswers) {
+            prompt += `- ${text}\n`;
+          }
+        }
+      }
+      prompt += "\n";
+    }
+  }
+
+  // Inject recent growth activity feedback into synthesis context
+  try {
+    const growthItemsSnap = await db.collection("growth_items")
+        .where("sourceManualId", "==", manualId)
+        .where("status", "==", "completed")
+        .get();
+
+    const growthSignals = [];
+    growthItemsSnap.forEach((doc) => {
+      const item = doc.data();
+      if (item.feedback) {
+        const impact = item.feedback.impactRating ?
+          ` (impact: ${["slight", "noticeable", "breakthrough"][item.feedback.impactRating - 1]})` : "";
+        growthSignals.push(
+            `- "${item.title}" → ${item.feedback.reaction}${impact}` +
+            (item.feedback.note ? ` — "${item.feedback.note}"` : ""),
+        );
+      }
+    });
+
+    if (growthSignals.length > 0) {
+      prompt += `\n=== RECENT GROWTH ACTIVITY ===\n`;
+      prompt += `The following activities were tried based on ` +
+        `previous synthesis. Use this evidence of change to ` +
+        `adjust gap severities — if activities addressing a gap ` +
+        `got positive feedback, that gap may have improved.\n`;
+      prompt += growthSignals.slice(0, 10).join("\n");
+      prompt += "\n";
+    }
+  } catch (growthErr) {
+    // Non-critical — continue without growth data
+  }
+
+  // Include manual entries (conversational logs)
+  try {
+    const entriesSnap = await db.collection("manual_entries")
+        .where("personId", "==", personId)
+        .where("familyId", "==", manual.familyId)
+        .orderBy("createdAt", "desc")
+        .limit(20)
+        .get();
+
+    if (!entriesSnap.empty) {
+      prompt += `\n=== CONVERSATIONAL ENTRIES (logged by user) ===\n`;
+      entriesSnap.forEach((doc) => {
+        const e = doc.data();
+        const dateStr = e.createdAt ?
+          new Date(e.createdAt._seconds * 1000)
+              .toLocaleDateString() : "recent";
+        prompt += `- [${dateStr}] (${e.entryType || "note"}) ` +
+          `${e.content}\n`;
       });
+      prompt += "\n";
+    }
+  } catch (entriesErr) {
+    // Non-critical
+  }
 
-      // Build the prompt
-      const personName = manual.personName || "this person";
-      let prompt = `You are analyzing a collaborative "operating manual" for ${personName}. `;
-      prompt += `Multiple people have shared their perspectives about ${personName}. `;
-      prompt += `Your job is to synthesize these perspectives, highlighting:\n`;
-      prompt += `1. ALIGNMENTS — where perspectives agree\n`;
-      prompt += `2. GAPS — where perspectives diverge (this is the most valuable part)\n`;
-      prompt += `3. BLIND SPOTS — things only one side sees\n\n`;
+  // ---------------------------------------------------------------
+  // C.4: Include journal entries that mention this person.
+  //
+  // These are the user's day-to-day observations, reflections, wins,
+  // and challenges — captured chronologically and enriched by AI with
+  // people/dimension/theme tags. They represent the freshest signal
+  // about the person and should carry significant weight in synthesis.
+  //
+  // Privacy note: journal entries may be private. The synthesis
+  // prompt instructs Claude to abstract patterns, never quote
+  // verbatim. The output (synthesized overview, alignments, gaps)
+  // is shared across the family manual, so raw text must not leak.
+  // ---------------------------------------------------------------
+  try {
+    const journalSnap = await db.collection("journal_entries")
+        .where("familyId", "==", manual.familyId)
+        .orderBy("createdAt", "desc")
+        .limit(100)
+        .get();
 
-      // Helper: check if an answer is marked private
-      const isPrivate = (contrib, section, qId) => {
-        return contrib.answerVisibility &&
-          contrib.answerVisibility[section] &&
-          contrib.answerVisibility[section][qId] === "private";
-      };
-
-      // Helper: extract answer text, filtering out private answers
-      const getAnswerText = (contrib, section, qId, answer) => {
-        if (isPrivate(contrib, section, qId)) return null;
-        const text = typeof answer === "string" ?
-          answer :
-          (answer && answer.primary) ?
-            String(answer.primary) :
-            JSON.stringify(answer);
-        return (text && text.trim()) ? text.trim() : null;
-      };
-
-      if (selfContribs.length > 0) {
-        prompt += `=== ${personName.toUpperCase()}'S OWN PERSPECTIVE ===\n`;
-        for (const contrib of selfContribs) {
-          for (const [section, answers] of Object.entries(contrib.answers)) {
-            if (typeof answers !== "object" || answers === null) continue;
-            const visibleAnswers = [];
-            for (const [qId, answer] of Object.entries(answers)) {
-              const text = getAnswerText(contrib, section, qId, answer);
-              if (text) visibleAnswers.push(text);
-            }
-            if (visibleAnswers.length > 0) {
-              prompt += `\n[${section.toUpperCase()}]\n`;
-              for (const text of visibleAnswers) {
-                prompt += `- ${text}\n`;
-              }
-            }
-          }
-        }
-        prompt += "\n";
+    const journalLines = [];
+    journalSnap.forEach((doc) => {
+      const e = doc.data();
+      const aiPeople = e.enrichment?.aiPeople || [];
+      const userMentions = e.personMentions || [];
+      if (!aiPeople.includes(personId) &&
+          !userMentions.includes(personId)) {
+        return; // Not about this person
       }
-
-      if (observerContribs.length > 0) {
-        for (const contrib of observerContribs) {
-          const observerName = contrib.contributorName || "An observer";
-          const relationship = contrib.relationshipToSubject || "observer";
-          prompt += `=== ${observerName.toUpperCase()}'S PERSPECTIVE `;
-          prompt += `(${relationship}) ===\n`;
-          for (const [section, answers] of Object.entries(contrib.answers)) {
-            if (typeof answers !== "object" || answers === null) continue;
-            const visibleAnswers = [];
-            for (const [qId, answer] of Object.entries(answers)) {
-              const text = getAnswerText(contrib, section, qId, answer);
-              if (text) visibleAnswers.push(text);
-            }
-            if (visibleAnswers.length > 0) {
-              prompt += `\n[${section.toUpperCase()}]\n`;
-              for (const text of visibleAnswers) {
-                prompt += `- ${text}\n`;
-              }
-            }
-          }
-          prompt += "\n";
-        }
+      const dateStr = e.createdAt ?
+        new Date(e.createdAt._seconds * 1000)
+            .toLocaleDateString() : "recent";
+      const category = e.category || "entry";
+      // Prefer AI summary (shorter, structured) over raw text
+      const body = e.enrichment?.summary ||
+        (e.text && e.text.length > 200 ?
+          e.text.slice(0, 200).trim() + "..." :
+          e.text || "(empty)");
+      let line = `- [${dateStr}] (${category}) ${body}`;
+      // Append themes and dimensions if available
+      const themes = e.enrichment?.themes || [];
+      const dims = e.enrichment?.aiDimensions || [];
+      if (themes.length > 0 || dims.length > 0) {
+        const tags = [...dims, ...themes].join(", ");
+        line += ` [tags: ${tags}]`;
       }
+      journalLines.push(line);
+    });
 
-      // Inject recent growth activity feedback into synthesis context
-      try {
-        const growthItemsSnap = await db.collection("growth_items")
-            .where("sourceManualId", "==", manualId)
-            .where("status", "==", "completed")
-            .get();
+    if (journalLines.length > 0) {
+      prompt += `\n=== JOURNAL ENTRIES ABOUT ${personName.toUpperCase()} ===\n`;
+      prompt += `The following are recent journal entries that mention ` +
+        `${personName}. They capture moments, reflections, wins, and ` +
+        `challenges as they happened. Use them to identify evolving ` +
+        `patterns and adjust your synthesis accordingly.\n`;
+      prompt += `IMPORTANT: These entries may be private. Never quote ` +
+        `them verbatim. Abstract the patterns you see — the ` +
+        `synthesized output is shared with the whole family.\n\n`;
+      // Cap at 20 most recent entries about this person
+      prompt += journalLines.slice(0, 20).join("\n");
+      prompt += "\n";
+    }
+  } catch (journalErr) {
+    logger.warn("performManualSynthesis: journal entries fetch failed " +
+      "(non-critical):", journalErr.message);
+  }
 
-        const growthSignals = [];
-        growthItemsSnap.forEach((doc) => {
-          const item = doc.data();
-          if (item.feedback) {
-            const impact = item.feedback.impactRating ?
-              ` (impact: ${["slight", "noticeable", "breakthrough"][item.feedback.impactRating - 1]})` : "";
-            growthSignals.push(
-                `- "${item.title}" → ${item.feedback.reaction}${impact}` +
-                (item.feedback.note ? ` — "${item.feedback.note}"` : ""),
-            );
-          }
-        });
+  // Check we have SOMETHING to synthesize (contributions OR journal)
+  const hasContribs = selfContribs.length > 0 || observerContribs.length > 0;
+  if (!hasContribs) {
+    // No onboarding contributions — only journal entries. That's OK
+    // for auto-synthesis, but the prompt should note it.
+    prompt += `\nNote: There are no structured onboarding contributions ` +
+      `for ${personName} yet — only journal entries and activity data. ` +
+      `Synthesize what you can from the available evidence, but note ` +
+      `the limited data in your overview.\n`;
+  }
 
-        if (growthSignals.length > 0) {
-          prompt += `\n=== RECENT GROWTH ACTIVITY ===\n`;
-          prompt += `The following activities were tried based on ` +
-            `previous synthesis. Use this evidence of change to ` +
-            `adjust gap severities — if activities addressing a gap ` +
-            `got positive feedback, that gap may have improved.\n`;
-          prompt += growthSignals.slice(0, 10).join("\n");
-          prompt += "\n";
-        }
-      } catch (growthErr) {
-        // Non-critical — continue without growth data
-      }
-
-      // Include manual entries (conversational logs)
-      try {
-        const personId = manual.personId;
-        const entriesSnap = await db.collection("manual_entries")
-            .where("personId", "==", personId)
-            .where("familyId", "==", manual.familyId)
-            .orderBy("createdAt", "desc")
-            .limit(20)
-            .get();
-
-        if (!entriesSnap.empty) {
-          prompt += `\n=== CONVERSATIONAL ENTRIES (logged by user) ===\n`;
-          entriesSnap.forEach((doc) => {
-            const e = doc.data();
-            const dateStr = e.createdAt ?
-              new Date(e.createdAt._seconds * 1000)
-                  .toLocaleDateString() : "recent";
-            prompt += `- [${dateStr}] (${e.entryType || "note"}) ` +
-              `${e.content}\n`;
-          });
-          prompt += "\n";
-        }
-      } catch (entriesErr) {
-        // Non-critical
-      }
-
-      prompt += `\nBased on these perspectives, provide a JSON response with this structure:
+  prompt += `\nBased on these perspectives, provide a JSON response with this structure:
 {
   "overview": "A 2-3 sentence narrative overview of ${personName} that weaves together all perspectives",
   "alignments": [
@@ -387,63 +443,112 @@ Important:
 - Generate 2-5 items per category (alignments, gaps, blind spots)
 - If there's only one perspective type, still generate insights but note that the other perspective is missing
 - DATA PROVENANCE: Questionnaire answers and user-logged entries are primary evidence — trust them fully. Items tagged "ai-chat" or "identifiedBy: ai" are AI-inferred and should be treated as hypotheses, not facts. Do not build confident synthesis on top of AI-inferred data alone. If the only evidence for a pattern is AI-derived, note it as tentative.
+- Journal entries are observational evidence — they carry the same weight as questionnaire answers. If journal entries reveal an evolving pattern that contradicts an older questionnaire answer, note the evolution.
 - If the total amount of human-sourced data is thin (e.g., sparse questionnaire answers, few entries), say so in the overview. Do not inflate thin data into rich-sounding narrative. A shorter, honest synthesis is better than a confident-sounding one built on speculation.
 - Return ONLY valid JSON, no markdown or extra text`;
 
-      try {
-        const client = getAnthropic();
-        const response = await client.messages.create({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 2000,
-          messages: [
-            {
-              role: "user",
-              content: prompt,
-            },
-          ],
-        });
+  const client = getAnthropic();
+  const response = await client.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 2000,
+    messages: [
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+  });
 
-        const content = response.content[0].text;
+  const content = response.content[0].text;
 
-        // Parse JSON from response (handle potential markdown wrapping)
-        let parsed;
-        try {
-          const jsonMatch = content.match(/\{[\s\S]*\}/);
-          parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content);
-        } catch (parseErr) {
-          console.error("Failed to parse synthesis response:", content);
-          throw new Error("Failed to parse AI response");
-        }
+  // Parse JSON from response (handle potential markdown wrapping)
+  let parsed;
+  try {
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content);
+  } catch (parseErr) {
+    logger.error("Failed to parse synthesis response:", content);
+    throw new Error("Failed to parse AI response");
+  }
 
-        // Add IDs if missing
-        const addIds = (items) =>
-          (items || []).map((item, i) => ({
-            ...item,
-            id: item.id || `item-${i}-${Date.now()}`,
-          }));
+  // Add IDs if missing
+  const addIds = (items) =>
+    (items || []).map((item, i) => ({
+      ...item,
+      id: item.id || `item-${i}-${Date.now()}`,
+    }));
 
-        const synthesizedContent = {
-          overview: parsed.overview || "",
-          alignments: addIds(parsed.alignments),
-          gaps: addIds(parsed.gaps),
-          blindSpots: addIds(parsed.blindSpots),
-          lastSynthesizedAt: admin.firestore.Timestamp.now(),
-        };
+  const synthesizedContent = {
+    overview: parsed.overview || "",
+    alignments: addIds(parsed.alignments),
+    gaps: addIds(parsed.gaps),
+    blindSpots: addIds(parsed.blindSpots),
+    lastSynthesizedAt: admin.firestore.Timestamp.now(),
+  };
 
-        // Save to manual
-        await db
-            .collection("person_manuals")
-            .doc(manualId)
-            .update({
-              synthesizedContent,
-              updatedAt: admin.firestore.Timestamp.now(),
-            });
+  // Save to manual
+  await db
+      .collection("person_manuals")
+      .doc(manualId)
+      .update({
+        synthesizedContent,
+        updatedAt: admin.firestore.Timestamp.now(),
+        lastJournalSynthesizedAt: admin.firestore.Timestamp.now(),
+      });
 
-        return {success: true, synthesizedContent};
-      } catch (err) {
-        console.error("Synthesis error:", err);
-        throw new Error(`Synthesis failed: ${err.message}`);
+  // Log AI usage
+  await logAIUsage(db, {
+    familyId: manual.familyId,
+    userId: "system",
+    functionName: "synthesizeManualContent",
+    model: "claude-sonnet-4-20250514",
+    usage: response.usage,
+    personId,
+  });
+
+  return {success: true, synthesizedContent};
+}
+
+// ----------------------------------------------------------------
+// User-triggered synthesis (existing onCall interface unchanged)
+// ----------------------------------------------------------------
+exports.synthesizeManualContent = onCall(
+    {
+      region: "us-central1",
+      memory: "512MiB",
+      timeoutSeconds: 120,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new Error("Authentication required");
       }
+
+      const {manualId} = request.data;
+      if (!manualId) {
+        throw new Error("manualId is required");
+      }
+
+      const db = admin.firestore();
+
+      // Verify user belongs to the manual's family
+      const manualDoc = await db
+          .collection("person_manuals")
+          .doc(manualId)
+          .get();
+      if (!manualDoc.exists) {
+        throw new Error("Manual not found");
+      }
+      const userDoc = await db
+          .collection("users")
+          .doc(request.auth.uid)
+          .get();
+      if (!userDoc.exists ||
+          userDoc.data().familyId !== manualDoc.data().familyId) {
+        throw new Error("Access denied");
+      }
+
+      return performManualSynthesis(db, manualId);
     },
 );
 
@@ -9443,5 +9548,123 @@ Return only the JSON object, no other text.`;
         model,
         usage: response.usage,
       });
+
+      // ----------------------------------------------------------
+      // 7. Schedule debounced re-synthesis for mentioned people's
+      //    manuals. Sets `journalSynthesisScheduledFor` to now + 30
+      //    min. If another entry comes in before then and mentions
+      //    the same person, this field is overwritten (reset), so
+      //    synthesis only fires once the burst of journaling settles.
+      //    The `autoSynthesizeManuals` scheduled function picks up
+      //    manuals whose timestamp has passed.
+      // ----------------------------------------------------------
+      if (aiPeople.length > 0) {
+        const DEBOUNCE_MS = 30 * 60 * 1000; // 30 minutes
+        const scheduledFor = admin.firestore.Timestamp.fromMillis(
+            Date.now() + DEBOUNCE_MS,
+        );
+
+        for (const personId of aiPeople) {
+          try {
+            const manualSnap = await db.collection("person_manuals")
+                .where("personId", "==", personId)
+                .where("familyId", "==", familyId)
+                .limit(1)
+                .get();
+
+            if (!manualSnap.empty) {
+              await manualSnap.docs[0].ref.update({
+                journalSynthesisScheduledFor: scheduledFor,
+              });
+              logger.info(
+                  `enrichJournalEntry: scheduled synthesis for ` +
+                  `manual ${manualSnap.docs[0].id} (person ${personId}) ` +
+                  `at ${scheduledFor.toDate().toISOString()}`,
+              );
+            }
+          } catch (schedErr) {
+            // Non-critical — manual may not exist yet
+            logger.warn(
+                `enrichJournalEntry: failed to schedule synthesis ` +
+                `for person ${personId}: ${schedErr.message}`,
+            );
+          }
+        }
+      }
+    },
+);
+
+// ================================================================
+// autoSynthesizeManuals — scheduled function (every 5 minutes)
+//
+// Picks up person_manuals whose `journalSynthesisScheduledFor`
+// timestamp has passed (meaning a journal entry mentioned this
+// person ≥30 minutes ago and no newer entry has reset the timer).
+// Runs the full synthesis for each qualifying manual, including
+// the new journal-entries context added in C.4.
+//
+// Sequential processing — one manual at a time — to avoid hitting
+// Claude rate limits if multiple people are mentioned in a burst.
+// ================================================================
+exports.autoSynthesizeManuals = onSchedule(
+    {
+      schedule: "every 5 minutes",
+      region: "us-central1",
+      memory: "512MiB",
+      timeoutSeconds: 300,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async () => {
+      const logger = require("firebase-functions/logger");
+      const db = admin.firestore();
+      const now = admin.firestore.Timestamp.now();
+
+      // Find manuals whose scheduled synthesis time has passed.
+      const pendingSnap = await db.collection("person_manuals")
+          .where("journalSynthesisScheduledFor", "<=", now)
+          .get();
+
+      if (pendingSnap.empty) {
+        return; // Nothing to do — common case.
+      }
+
+      logger.info(
+          `autoSynthesizeManuals: ${pendingSnap.size} manual(s) pending`,
+      );
+
+      let synthesized = 0;
+      let failed = 0;
+
+      for (const manualDoc of pendingSnap.docs) {
+        try {
+          await performManualSynthesis(db, manualDoc.id);
+
+          // Clear the trigger field so we don't re-synthesize next
+          // cycle. `lastJournalSynthesizedAt` is already set inside
+          // performManualSynthesis.
+          await manualDoc.ref.update({
+            journalSynthesisScheduledFor:
+              admin.firestore.FieldValue.delete(),
+          });
+
+          synthesized++;
+          logger.info(
+              `autoSynthesizeManuals: synthesized manual ` +
+              `${manualDoc.id} (person: ${manualDoc.data().personId})`,
+          );
+        } catch (err) {
+          failed++;
+          logger.error(
+              `autoSynthesizeManuals: failed for manual ` +
+              `${manualDoc.id}: ${err.message}`,
+          );
+          // Don't clear the trigger — retry next cycle.
+        }
+      }
+
+      logger.info(
+          `autoSynthesizeManuals: done — ${synthesized} synthesized, ` +
+          `${failed} failed`,
+      );
     },
 );
