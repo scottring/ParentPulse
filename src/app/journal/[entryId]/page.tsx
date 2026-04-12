@@ -393,6 +393,12 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
                 type="button"
                 onClick={() => {
                   setShowChat(true);
+                  // Send the entry text as the opening message so
+                  // the AI responds immediately with context.
+                  void sendEntryChat(
+                    "What do you notice about what I wrote?",
+                    entry.personMentions || [],
+                  );
                   setTimeout(
                     () => chatInputRef.current?.focus(),
                     200,

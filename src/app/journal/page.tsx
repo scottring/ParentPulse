@@ -679,6 +679,15 @@ function EntryCard({
         </div>
       )}
 
+      {/* Provenance: this entry spawned a Workbook practice */}
+      {entry.activitySpawnedItemId && (
+        <Link href={`/growth/${entry.activitySpawnedItemId}`} className="entry-provenance-link">
+          <span className="entry-provenance-glyph" aria-hidden="true">◆</span>
+          Led to a practice in the Workbook
+          <span className="arrow">⟶</span>
+        </Link>
+      )}
+
       <div className="entry-bottom">
         {about && (
           <p className="entry-about">
@@ -734,6 +743,39 @@ function EntryCard({
           background: rgba(184, 142, 90, 0.05);
           border: 1px solid rgba(184, 142, 90, 0.18);
           color: #8a6f42;
+        }
+        :global(.entry-provenance-link) {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          margin-top: 14px;
+          padding: 6px 14px;
+          border-radius: 999px;
+          background: rgba(92, 128, 100, 0.06);
+          border: 1px solid rgba(92, 128, 100, 0.15);
+          font-family: var(--font-parent-body);
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: 0.14em;
+          color: #5c7566;
+          text-decoration: none;
+          transition: all 0.2s ease;
+        }
+        :global(.entry-provenance-link:hover) {
+          background: rgba(92, 128, 100, 0.1);
+          border-color: rgba(92, 128, 100, 0.25);
+          color: #3a3530;
+        }
+        :global(.entry-provenance-link .arrow) {
+          display: inline-block;
+          margin-left: 2px;
+          transition: transform 0.25s ease;
+        }
+        :global(.entry-provenance-link:hover .arrow) {
+          transform: translateX(3px);
+        }
+        .entry-provenance-glyph {
+          font-size: 9px;
         }
         .entry-bottom {
           display: flex;
