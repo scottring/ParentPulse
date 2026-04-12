@@ -1,6 +1,9 @@
 const {onSchedule} = require("firebase-functions/v2/scheduler");
 const {onCall} = require("firebase-functions/v2/https");
-const {onDocumentUpdated} = require("firebase-functions/v2/firestore");
+const {
+  onDocumentUpdated,
+  onDocumentCreated,
+} = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 const Anthropic = require("@anthropic-ai/sdk");
 const {GoogleGenerativeAI} = require("@google/generative-ai");
@@ -9224,5 +9227,221 @@ exports.cleanupStaleDrafts = onCall(
 
       logger.info(`Cleanup complete: ${abandoned} stale drafts abandoned`);
       return {success: true, draftsAbandoned: abandoned};
+    },
+);
+
+// ================================================================
+// enrichJournalEntry — Firestore onCreate trigger
+//
+// Fires when a new journal_entries doc is created. Calls Claude to
+// extract structured metadata (summary, people, dimensions, themes)
+// and writes the result back to the entry as an `enrichment` object.
+//
+// Uses admin SDK for the write-back, so Firestore rules don't
+// constrain the enrichment fields — only the user's own text/title
+// fields are gated by the client-write rule.
+//
+// Design choices:
+//   - onCreate only (not onUpdate) in C.1. Re-enrichment on text
+//     edits is deferred. The enrichment reflects the original capture.
+//   - Fires on every create, including entries that come from the
+//     "Ask about this" path. Those entries are short initial thoughts
+//     with a chat continuation; enrichment still adds value.
+//   - If the Claude call fails (timeout, rate limit, parse error),
+//     the entry stays unenriched. No retry in C.1 — the entry is
+//     still readable, just without AI metadata.
+// ================================================================
+const ENRICHMENT_DIMENSIONS = [
+  {id: "love_maps", name: "Love Maps", domain: "couple"},
+  {id: "fondness_admiration", name: "Fondness & Admiration", domain: "couple"},
+  {id: "turning_toward", name: "Turning Toward", domain: "couple"},
+  {id: "conflict_style", name: "Conflict Style", domain: "couple"},
+  {id: "emotional_accessibility", name: "Emotional Accessibility", domain: "couple"},
+  {id: "emotional_responsiveness", name: "Emotional Responsiveness", domain: "couple"},
+  {id: "attachment_security", name: "Attachment Security", domain: "couple"},
+  {id: "shared_meaning", name: "Shared Meaning", domain: "couple"},
+  {id: "practical_partnership", name: "Practical Partnership", domain: "couple"},
+  {id: "negative_cycles", name: "Negative Cycles", domain: "couple"},
+  {id: "warmth_responsiveness", name: "Warmth & Responsiveness", domain: "parent_child"},
+  {id: "structure_consistency", name: "Structure & Consistency", domain: "parent_child"},
+  {id: "autonomy_support", name: "Autonomy Support", domain: "parent_child"},
+  {id: "repair_after_rupture", name: "Repair After Rupture", domain: "parent_child"},
+  {id: "mindsight", name: "Mindsight", domain: "parent_child"},
+  {id: "emotional_regulation", name: "Emotional Regulation", domain: "self"},
+  {id: "self_care_burnout", name: "Self-Care & Burnout", domain: "self"},
+  {id: "personal_growth", name: "Personal Growth", domain: "self"},
+  {id: "stress_management", name: "Stress Management", domain: "self"},
+  {id: "self_awareness", name: "Self-Awareness", domain: "self"},
+];
+
+exports.enrichJournalEntry = onDocumentCreated(
+    {
+      document: "journal_entries/{entryId}",
+      region: "us-central1",
+      memory: "256MiB",
+      timeoutSeconds: 60,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (event) => {
+      const logger = require("firebase-functions/logger");
+      const snap = event.data;
+      if (!snap) return;
+      const data = snap.data();
+      if (!data || !data.text || data.text.trim().length < 10) {
+        // Too short to meaningfully enrich.
+        return;
+      }
+
+      const db = admin.firestore();
+      const familyId = data.familyId;
+      if (!familyId) return;
+
+      // ----------------------------------------------------------
+      // 1. Fetch family's people for context
+      // ----------------------------------------------------------
+      const peopleSnap = await db
+          .collection("people")
+          .where("familyId", "==", familyId)
+          .get();
+
+      const people = [];
+      peopleSnap.forEach((doc) => {
+        const p = doc.data();
+        if (p.archived === true) return; // Skip soft-deleted people
+        people.push({
+          personId: doc.id,
+          name: p.name,
+          relationship: p.relationshipType || "other",
+        });
+      });
+
+      const peopleList = people.length > 0
+        ? people
+            .map((p) => `- ${p.name} (${p.relationship}, id: ${p.personId})`)
+            .join("\n")
+        : "(no people registered yet)";
+
+      const dimensionList = ENRICHMENT_DIMENSIONS
+          .map((d) => `- ${d.id}: ${d.name} [${d.domain}]`)
+          .join("\n");
+
+      // ----------------------------------------------------------
+      // 2. Build the prompt
+      // ----------------------------------------------------------
+      const entryCategory = data.category || "moment";
+      const entryText = data.text.trim();
+
+      const prompt = `You are an AI assistant for a family relationship app called Relish. A user just wrote a journal entry. Your job is to extract structured metadata from it so the app can connect this entry to the right people and relationship dimensions.
+
+FAMILY MEMBERS:
+${peopleList}
+
+RELATIONSHIP DIMENSIONS (20 research-backed dimensions across couple, parent-child, and self domains):
+${dimensionList}
+
+JOURNAL ENTRY (category: ${entryCategory}):
+"""
+${entryText}
+"""
+
+Extract the following as JSON. Be conservative — only include people and dimensions you are confident the entry meaningfully touches. If the entry is too vague or generic to extract anything, return empty arrays.
+
+{
+  "summary": "1-2 sentence essence of what this entry is about (not a paraphrase — a higher-level takeaway)",
+  "people": ["personId1", "personId2"],
+  "dimensions": ["dimension_id_1", "dimension_id_2"],
+  "themes": ["short theme phrase 1", "short theme phrase 2"]
+}
+
+Rules:
+- "people": only include personIds from the FAMILY MEMBERS list above. Match by name, pronoun, role ("my wife", "the kids", etc.). Include the author if the entry is self-reflective.
+- "dimensions": only use IDs from the DIMENSIONS list above. An entry might touch 0-3 dimensions. Don't stretch — if the connection is weak, omit it.
+- "themes": 1-4 free-text tags (2-5 words each) capturing patterns or topics. These are NOT from a fixed list. Examples: "bedtime resistance", "sibling fairness", "feeling unheard", "gratitude for partner". Make them specific to the entry, not generic.
+- "summary": one sentence, occasionally two. Written as if for a family member reading a digest. Warm but not saccharine.
+
+Return only the JSON object, no other text.`;
+
+      // ----------------------------------------------------------
+      // 3. Call Claude
+      // ----------------------------------------------------------
+      const model = "claude-sonnet-4-20250514";
+      let response;
+      try {
+        response = await getAnthropic().messages.create({
+          model,
+          max_tokens: 600,
+          messages: [{role: "user", content: prompt}],
+        });
+      } catch (err) {
+        logger.error(`enrichJournalEntry: Claude call failed for ${snap.id}:`, err.message);
+        return; // Entry stays unenriched; no retry in C.1.
+      }
+
+      // ----------------------------------------------------------
+      // 4. Parse response
+      // ----------------------------------------------------------
+      const responseText = response.content?.[0]?.text || "";
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        logger.warn(`enrichJournalEntry: no JSON in response for ${snap.id}`);
+        return;
+      }
+
+      let enrichment;
+      try {
+        enrichment = JSON.parse(jsonMatch[0]);
+      } catch (err) {
+        logger.warn(`enrichJournalEntry: JSON parse failed for ${snap.id}:`, err.message);
+        return;
+      }
+
+      // Validate personIds against the family's people list.
+      const validPersonIds = new Set(people.map((p) => p.personId));
+      const aiPeople = (enrichment.people || [])
+          .filter((id) => validPersonIds.has(id));
+
+      // Validate dimensionIds against the known list.
+      const validDimensionIds = new Set(ENRICHMENT_DIMENSIONS.map((d) => d.id));
+      const aiDimensions = (enrichment.dimensions || [])
+          .filter((id) => validDimensionIds.has(id));
+
+      const themes = (enrichment.themes || [])
+          .filter((t) => typeof t === "string" && t.trim().length > 0)
+          .slice(0, 6);
+
+      const summary = typeof enrichment.summary === "string"
+        ? enrichment.summary.trim().slice(0, 500)
+        : "";
+
+      // ----------------------------------------------------------
+      // 5. Write back (admin SDK — bypasses security rules)
+      // ----------------------------------------------------------
+      await snap.ref.update({
+        enrichment: {
+          summary,
+          aiPeople,
+          aiDimensions,
+          themes,
+          enrichedAt: admin.firestore.Timestamp.now(),
+          model,
+        },
+      });
+
+      logger.info(
+          `enrichJournalEntry: enriched ${snap.id} — ` +
+          `${aiPeople.length} people, ${aiDimensions.length} dimensions, ` +
+          `${themes.length} themes`,
+      );
+
+      // ----------------------------------------------------------
+      // 6. Log AI usage
+      // ----------------------------------------------------------
+      await logAIUsage(db, {
+        familyId,
+        userId: data.authorId || "system",
+        functionName: "enrichJournalEntry",
+        model,
+        usage: response.usage,
+      });
     },
 );

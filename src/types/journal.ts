@@ -52,6 +52,20 @@ export interface JournalEntry {
     timeOfDay?: string;     // auto-set from client
   };
 
+  // AI enrichment — written by Cloud Function `enrichJournalEntry`,
+  // never by the client. Contains structured metadata extracted from
+  // the entry text: summary, referenced people, touched dimensions,
+  // and emergent themes. Absent until the Cloud Function fires (which
+  // happens on entry creation; edits don't re-enrich in Phase C.1).
+  enrichment?: {
+    summary: string;
+    aiPeople: string[];       // personIds extracted by AI
+    aiDimensions: string[];   // dimensionIds from the 20-dimension framework
+    themes: string[];         // free-text theme tags (2-5 words each)
+    enrichedAt: Timestamp;
+    model: string;
+  };
+
   // Timestamps
   createdAt: Timestamp;
   updatedAt?: Timestamp;

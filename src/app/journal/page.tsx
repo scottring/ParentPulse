@@ -17,6 +17,7 @@ import Section from '@/components/magazine/Section';
 import BackIssues from '@/components/magazine/BackIssues';
 
 import { JOURNAL_CATEGORIES, type JournalEntry } from '@/types/journal';
+import { getDimension, type DimensionId } from '@/config/relationship-dimensions';
 
 // ================================================================
 // THE JOURNAL — diary surface.
@@ -604,6 +605,21 @@ function EntryCard({
         ))}
       </div>
 
+      {/* Enrichment tags — compact inline display in the stream */}
+      {entry.enrichment && (entry.enrichment.aiDimensions.length > 0 || entry.enrichment.themes.length > 0) && (
+        <div className="entry-enrichment">
+          {entry.enrichment.aiDimensions.map((id) => {
+            const dim = getDimension(id as DimensionId);
+            return dim ? (
+              <span key={id} className="entry-etag entry-etag--dim">{dim.name}</span>
+            ) : null;
+          })}
+          {entry.enrichment.themes.map((t) => (
+            <span key={t} className="entry-etag entry-etag--theme">{t}</span>
+          ))}
+        </div>
+      )}
+
       <div className="entry-bottom">
         {about && (
           <p className="entry-about">
@@ -628,6 +644,30 @@ function EntryCard({
           letter-spacing: -0.008em;
           color: #3a3530;
           margin: 0 0 14px;
+        }
+        .entry-enrichment {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 5px;
+          margin-top: 14px;
+        }
+        .entry-etag {
+          padding: 2px 8px;
+          border-radius: 999px;
+          font-family: var(--font-parent-body);
+          font-size: 9px;
+          font-weight: 500;
+          letter-spacing: 0.08em;
+        }
+        .entry-etag--dim {
+          background: rgba(92, 128, 100, 0.07);
+          border: 1px solid rgba(92, 128, 100, 0.18);
+          color: #5c7566;
+        }
+        .entry-etag--theme {
+          background: rgba(184, 142, 90, 0.05);
+          border: 1px solid rgba(184, 142, 90, 0.18);
+          color: #8a6f42;
         }
         .entry-bottom {
           display: flex;

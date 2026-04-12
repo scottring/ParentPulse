@@ -125,7 +125,7 @@ export default function CaptureSheet() {
       resetAll();
       setState('closed');
       setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 2000);
+      setTimeout(() => setShowSuccess(false), 3000);
     } catch {
       // error surfaced via hook
     }
@@ -185,10 +185,10 @@ export default function CaptureSheet() {
         style={{
           bottom: 24,
           right: 24,
-          width: showSuccess ? 52 : 48,
-          height: showSuccess ? 52 : 48,
+          width: 48,
+          height: 48,
           borderRadius: '50%',
-          background: showSuccess ? '#7C9082' : 'rgba(58, 53, 48, 0.85)',
+          background: 'rgba(58, 53, 48, 0.85)',
           backdropFilter: 'blur(12px)',
           boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
           border: '1px solid rgba(255,255,255,0.1)',
@@ -196,12 +196,44 @@ export default function CaptureSheet() {
           alignItems: 'center',
           justifyContent: 'center',
           color: 'white',
-          fontSize: showSuccess ? 20 : 18,
+          fontSize: 18,
         }}
-        aria-label={showSuccess ? 'Saved' : 'Capture a thought'}
+        aria-label="Capture a thought"
       >
-        {showSuccess ? '✓' : '✎'}
+        ✎
       </button>
+
+      {/* Save confirmation toast */}
+      <div
+        className="fixed z-[60] left-1/2 transition-all duration-500 ease-out"
+        style={{
+          bottom: showSuccess ? 32 : -60,
+          transform: 'translateX(-50%)',
+          opacity: showSuccess ? 1 : 0,
+          pointerEvents: 'none',
+        }}
+      >
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 22px',
+            borderRadius: 999,
+            background: 'rgba(58, 53, 48, 0.92)',
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
+            color: '#f5ecd8',
+            fontFamily: 'var(--font-parent-display)',
+            fontStyle: 'italic',
+            fontSize: 15,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <span style={{ color: '#7C9082', fontSize: 16 }}>✓</span>
+          Saved to the Journal
+        </div>
+      </div>
 
       {/* Backdrop */}
       {sheetOpen && (

@@ -16,6 +16,7 @@ import { usePerson } from '@/hooks/usePerson';
 import Navigation from '@/components/layout/Navigation';
 import SideNav from '@/components/layout/SideNav';
 import { JOURNAL_CATEGORIES, type JournalEntry } from '@/types/journal';
+import { getDimension, type DimensionId } from '@/config/relationship-dimensions';
 
 // ================================================================
 // JOURNAL ENTRY DETAIL — Phase B
@@ -334,6 +335,16 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
             aria-label="Entry body"
           />
 
+          {/* AI enrichment markers — quiet read-only display of what
+              the Cloud Function extracted. Only render once the
+              enrichment object exists on the doc. */}
+          {entry.enrichment && (
+            <EnrichmentMarkers
+              enrichment={entry.enrichment}
+              people={people}
+            />
+          )}
+
           <footer className="entry-footer">
             <div className="privacy-control">
               <button
@@ -646,6 +657,132 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
           .entry-date {
             text-align: left;
           }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ================================================================
+// EnrichmentMarkers — quiet read-only display of what the AI
+// extracted from the entry. Renders as a dim sidebar-feeling section
+// between the body and the footer. Not editable by the user — these
+// are write-once from the Cloud Function.
+// ================================================================
+interface EnrichmentMarkersProps {
+  enrichment: NonNullable<JournalEntry['enrichment']>;
+  people: Array<{ personId: string; name: string }>;
+}
+
+function EnrichmentMarkers({ enrichment, people }: EnrichmentMarkersProps) {
+  const aiPeopleNames = enrichment.aiPeople
+    .map((id) => people.find((p) => p.personId === id)?.name)
+    .filter(Boolean) as string[];
+
+  const dimensionNames = enrichment.aiDimensions
+    .map((id) => getDimension(id as DimensionId)?.name)
+    .filter(Boolean) as string[];
+
+  const hasContent =
+    enrichment.summary ||
+    aiPeopleNames.length > 0 ||
+    dimensionNames.length > 0 ||
+    enrichment.themes.length > 0;
+
+  if (!hasContent) return null;
+
+  return (
+    <div className="enrichment">
+      <div className="enrichment-label">
+        <span className="enrichment-label-glyph" aria-hidden="true">
+          ◎
+        </span>
+        What I noticed
+      </div>
+
+      {enrichment.summary && (
+        <p className="enrichment-summary">{enrichment.summary}</p>
+      )}
+
+      <div className="enrichment-tags">
+        {dimensionNames.map((name) => (
+          <span key={name} className="enrichment-tag enrichment-tag--dimension">
+            {name}
+          </span>
+        ))}
+        {enrichment.themes.map((theme) => (
+          <span key={theme} className="enrichment-tag enrichment-tag--theme">
+            {theme}
+          </span>
+        ))}
+        {aiPeopleNames.map((name) => (
+          <span key={name} className="enrichment-tag enrichment-tag--person">
+            {name}
+          </span>
+        ))}
+      </div>
+
+      <style jsx>{`
+        .enrichment {
+          margin-top: 36px;
+          padding-top: 20px;
+          border-top: 1px dashed rgba(200, 190, 172, 0.4);
+        }
+        .enrichment-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-family: var(--font-parent-body);
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: 0.24em;
+          text-transform: uppercase;
+          color: #a8997d;
+          margin-bottom: 12px;
+        }
+        .enrichment-label-glyph {
+          font-size: 14px;
+          color: #b2a487;
+        }
+        .enrichment-summary {
+          font-family: var(--font-parent-display);
+          font-style: italic;
+          font-size: 15px;
+          line-height: 1.5;
+          color: #7c6e54;
+          margin: 0 0 14px;
+          max-width: 600px;
+        }
+        .enrichment-tags {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+        .enrichment-tag {
+          padding: 3px 10px;
+          border-radius: 999px;
+          font-family: var(--font-parent-body);
+          font-size: 10px;
+          font-weight: 500;
+          letter-spacing: 0.08em;
+        }
+        .enrichment-tag--dimension {
+          background: rgba(92, 128, 100, 0.08);
+          border: 1px solid rgba(92, 128, 100, 0.2);
+          color: #5c7566;
+        }
+        .enrichment-tag--theme {
+          background: rgba(184, 142, 90, 0.06);
+          border: 1px solid rgba(184, 142, 90, 0.2);
+          color: #8a6f42;
+        }
+        .enrichment-tag--person {
+          background: rgba(58, 53, 48, 0.04);
+          border: 1px solid rgba(58, 53, 48, 0.12);
+          color: #5a4f3b;
+          font-variant: small-caps;
+          font-feature-settings: 'smcp', 'c2sc';
+          letter-spacing: 0.1em;
         }
       `}</style>
     </div>
