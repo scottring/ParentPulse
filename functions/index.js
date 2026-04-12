@@ -557,6 +557,13 @@ exports.synthesizeManualContent = onCall(
  * Processes each manual sequentially so later manuals can reference
  * earlier syntheses. Order: children → spouse → self.
  */
+// ----------------------------------------------------------------
+// synthesizeFamilyManuals — human-triggered re-synthesis of all
+// manuals in the family. Calls the shared performManualSynthesis
+// helper for each manual, so journal entries, growth activity, and
+// manual entries are all included automatically. Sequential
+// processing to avoid Claude rate limits.
+// ----------------------------------------------------------------
 exports.synthesizeFamilyManuals = onCall(
     {
       region: "us-central1",
@@ -580,315 +587,37 @@ exports.synthesizeFamilyManuals = onCall(
       const familyId = userDoc.data().familyId;
       if (!familyId) throw new Error("No family found");
 
-      // Fetch all people, manuals, contributions, and manual entries
-      const [peopleSnap, manualsSnap, contribSnap, entriesSnap] =
-        await Promise.all([
-          db.collection("people")
-              .where("familyId", "==", familyId).get(),
-          db.collection("person_manuals")
-              .where("familyId", "==", familyId).get(),
-          db.collection("contributions")
-              .where("familyId", "==", familyId)
-              .where("status", "==", "complete").get(),
-          db.collection("manual_entries")
-              .where("familyId", "==", familyId)
-              .orderBy("createdAt", "desc").get(),
-        ]);
+      // Fetch all manuals for this family
+      const manualsSnap = await db.collection("person_manuals")
+          .where("familyId", "==", familyId).get();
 
-      const people = {};
-      peopleSnap.forEach((doc) => {
-        people[doc.id] = doc.data();
-      });
+      if (manualsSnap.empty) {
+        return {success: false, message: "No manuals found"};
+      }
 
-      const manuals = [];
-      manualsSnap.forEach((doc) => {
-        manuals.push({id: doc.id, ...doc.data()});
-      });
-
-      // Group contributions by manualId
-      const contribsByManual = {};
-      contribSnap.forEach((doc) => {
-        const data = doc.data();
-        if (!contribsByManual[data.manualId]) {
-          contribsByManual[data.manualId] = [];
-        }
-        contribsByManual[data.manualId].push(data);
-      });
-
-      // Group manual entries by personId
-      const entriesByPerson = {};
-      entriesSnap.forEach((doc) => {
-        const data = doc.data();
-        if (!entriesByPerson[data.personId]) {
-          entriesByPerson[data.personId] = [];
-        }
-        entriesByPerson[data.personId].push(data);
-      });
-
-      // Sort manuals: children first, then spouse, then self
-      const typeOrder = {child: 0, spouse: 1, self: 2};
-      manuals.sort((a, b) => {
-        const aOrder = typeOrder[a.relationshipType] ?? 1;
-        const bOrder = typeOrder[b.relationshipType] ?? 1;
-        return aOrder - bOrder;
-      });
-
-      const familySynthesisId = `family-${Date.now()}`;
-      const accumulatedSyntheses = []; // store completed syntheses
       const results = [];
 
-      // Helper functions (same as synthesizeManualContent)
-      const isPrivate = (contrib, section, qId) => {
-        return contrib.answerVisibility &&
-          contrib.answerVisibility[section] &&
-          contrib.answerVisibility[section][qId] === "private";
-      };
-      const getAnswerText = (contrib, section, qId, answer) => {
-        if (isPrivate(contrib, section, qId)) return null;
-        const text = typeof answer === "string" ?
-          answer :
-          (answer && answer.primary) ?
-            String(answer.primary) : JSON.stringify(answer);
-        return (text && text.trim()) ? text.trim() : null;
-      };
-
-      const buildContribText = (contribs, label) => {
-        let text = "";
-        for (const contrib of contribs) {
-          const cName = contrib.contributorName || label;
-          const rel = contrib.relationshipToSubject || "observer";
-          text += `=== ${cName.toUpperCase()}'S PERSPECTIVE (${rel}) ===\n`;
-          for (const [section, answers] of Object.entries(
-              contrib.answers || {})) {
-            if (typeof answers !== "object" || answers === null) continue;
-            const visible = [];
-            for (const [qId, answer] of Object.entries(answers)) {
-              const t = getAnswerText(contrib, section, qId, answer);
-              if (t) visible.push(t);
-            }
-            if (visible.length > 0) {
-              text += `[${section.toUpperCase()}]\n`;
-              for (const v of visible) text += `- ${v}\n`;
-            }
-          }
-          text += "\n";
-        }
-        return text;
-      };
-
-      for (const manual of manuals) {
-        const personName = manual.personName || "this person";
-        const personId = manual.personId;
-        const contribs = contribsByManual[manual.id] || [];
-
-        if (contribs.length === 0) {
-          logger.info(
-              `Skipping ${personName} — no completed contributions`);
-          continue;
-        }
-
-        const selfContribs = contribs.filter(
-            (c) => c.perspectiveType === "self");
-        const observerContribs = contribs.filter(
-            (c) => c.perspectiveType === "observer");
-        const entries = (entriesByPerson[personId] || []).slice(0, 20);
-
-        // Build prompt
-        let prompt = `You are analyzing a collaborative "operating manual" ` +
-          `for ${personName} as part of a FAMILY-WIDE synthesis. `;
-        prompt += `Multiple people have shared their perspectives. ` +
-          `Your job is to synthesize these perspectives AND ` +
-          `cross-reference with other family members' insights.\n\n`;
-
-        // This person's contributions
-        if (selfContribs.length > 0) {
-          prompt += `=== ${personName.toUpperCase()}'S OWN PERSPECTIVE ===\n`;
-          prompt += buildContribText(selfContribs, personName);
-        }
-        if (observerContribs.length > 0) {
-          prompt += buildContribText(observerContribs, "Observer");
-        }
-
-        // Manual entries (conversational logs)
-        if (entries.length > 0) {
-          prompt += `=== RECENT CONVERSATIONAL ENTRIES ===\n`;
-          for (const entry of entries) {
-            const dateStr = entry.createdAt ?
-              new Date(entry.createdAt._seconds * 1000)
-                  .toLocaleDateString() : "recent";
-            prompt += `- [${dateStr}] ${entry.content}\n`;
-          }
-          prompt += "\n";
-        }
-
-        // Family context: other members' contribution highlights
-        prompt += `=== OTHER FAMILY MEMBERS' CONTEXT ===\n`;
-        for (const otherManual of manuals) {
-          if (otherManual.id === manual.id) continue;
-          const otherName = otherManual.personName || "family member";
-          const otherContribs = contribsByManual[otherManual.id] || [];
-          if (otherContribs.length === 0) continue;
-
-          prompt += `\n--- ${otherName} ` +
-            `(${otherManual.relationshipType || "family"}) ---\n`;
-          // Include a summary of their contributions (abbreviated)
-          for (const contrib of otherContribs.slice(0, 2)) {
-            for (const [section, answers] of Object.entries(
-                contrib.answers || {})) {
-              if (typeof answers !== "object" || answers === null) continue;
-              const visible = [];
-              for (const [qId, answer] of Object.entries(answers)) {
-                const t = getAnswerText(contrib, section, qId, answer);
-                if (t) visible.push(t);
-              }
-              if (visible.length > 0) {
-                prompt += `[${section}]: ${visible.slice(0, 3).join("; ")}\n`;
-              }
-            }
-          }
-        }
-        prompt += "\n";
-
-        // Previously synthesized family members
-        if (accumulatedSyntheses.length > 0) {
-          prompt += `=== ALREADY-SYNTHESIZED FAMILY MEMBERS ===\n`;
-          for (const prev of accumulatedSyntheses) {
-            prompt += `\n--- ${prev.personName} (synthesized) ---\n`;
-            prompt += `Overview: ${prev.overview}\n`;
-            if (prev.crossReferences?.length) {
-              for (const cr of prev.crossReferences) {
-                prompt += `Cross-ref: ${cr.insight} ` +
-                  `(→ ${cr.relatedPersonName}, ${cr.connectionType})\n`;
-              }
-            }
-          }
-          prompt += "\n";
-        }
-
-        prompt += `Based on all perspectives AND the family context, ` +
-          `provide a JSON response:
-{
-  "overview": "2-3 sentence narrative overview of ${personName}",
-  "alignments": [
-    {
-      "id": "unique-id",
-      "topic": "Topic name",
-      "selfPerspective": "What they said (or null)",
-      "observerPerspective": "What observers said",
-      "synthesis": "1-2 sentence synthesis",
-      "gapSeverity": "aligned"
-    }
-  ],
-  "gaps": [
-    {
-      "id": "unique-id",
-      "topic": "Topic name",
-      "selfPerspective": "What they said",
-      "observerPerspective": "What observers said",
-      "synthesis": "How perspectives differ",
-      "gapSeverity": "minor_gap" or "significant_gap"
-    }
-  ],
-  "blindSpots": [
-    {
-      "id": "unique-id",
-      "topic": "Topic name",
-      "selfPerspective": "...",
-      "observerPerspective": "...",
-      "synthesis": "Why this matters",
-      "gapSeverity": "minor_gap" or "significant_gap"
-    }
-  ],
-  "crossReferences": [
-    {
-      "relatedPersonName": "Name of the other family member",
-      "relatedPersonId": "their-person-id",
-      "insight": "How ${personName}'s pattern connects to/affects this person",
-      "connectionType": "complementary|tension|shared_pattern|impact"
-    }
-  ]
-}
-
-Important:
-- For crossReferences, name SPECIFIC other family members and describe how ${personName}'s patterns intersect with theirs
-- connectionType meanings: complementary=their traits work well together, tension=their patterns create friction, shared_pattern=they share this trait, impact=one directly affects the other
-- Use these person IDs for relatedPersonId: ${manuals.filter((m) => m.id !== manual.id).map((m) => `${m.personName}="${m.personId}"`).join(", ")}
-- Generate 2-5 items per category, 1-4 cross-references
-- Be warm and constructive, not clinical
-- Return ONLY valid JSON`;
-
+      // Synthesize each manual sequentially using the shared helper
+      // (which includes journal entries, growth activity, manual
+      // entries — everything the auto-trigger sees).
+      for (const manualDoc of manualsSnap.docs) {
+        const personName = manualDoc.data().personName || manualDoc.id;
         try {
-          const client = getAnthropic();
-          const response = await client.messages.create({
-            model: "claude-sonnet-4-20250514",
-            max_tokens: 3000,
-            messages: [{role: "user", content: prompt}],
-          });
-
-          const content = response.content[0].text;
-          let parsed;
-          try {
-            const jsonMatch = content.match(/\{[\s\S]*\}/);
-            parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content);
-          } catch (parseErr) {
-            logger.error(
-                `Failed to parse synthesis for ${personName}:`, content);
-            continue;
-          }
-
-          const addIds = (items) =>
-            (items || []).map((item, i) => ({
-              ...item,
-              id: item.id || `item-${i}-${Date.now()}`,
-            }));
-
-          const synthesizedContent = {
-            overview: parsed.overview || "",
-            alignments: addIds(parsed.alignments),
-            gaps: addIds(parsed.gaps),
-            blindSpots: addIds(parsed.blindSpots),
-            crossReferences: (parsed.crossReferences || []).map((cr) => ({
-              relatedPersonName: cr.relatedPersonName || "",
-              relatedPersonId: cr.relatedPersonId || "",
-              insight: cr.insight || "",
-              connectionType: cr.connectionType || "shared_pattern",
-            })),
-            lastSynthesizedAt: admin.firestore.Timestamp.now(),
-            familySynthesisId,
-            familySynthesizedAt: admin.firestore.Timestamp.now(),
-          };
-
-          // Save progressively
-          await db.collection("person_manuals").doc(manual.id).update({
-            synthesizedContent,
-            updatedAt: admin.firestore.Timestamp.now(),
-          });
-
-          // Accumulate for next iteration
-          accumulatedSyntheses.push({
-            personName,
-            personId,
-            overview: synthesizedContent.overview,
-            crossReferences: synthesizedContent.crossReferences,
-          });
-
+          await performManualSynthesis(db, manualDoc.id);
           results.push({personName, success: true});
-          logger.info(`Synthesized ${personName} with ` +
-            `${synthesizedContent.crossReferences.length} cross-refs`);
+          logger.info(`synthesizeFamilyManuals: synthesized ${personName}`);
         } catch (err) {
-          logger.error(`Synthesis failed for ${personName}:`, err);
+          logger.error(
+              `synthesizeFamilyManuals: failed for ${personName}:`,
+              err.message,
+          );
           results.push({personName, success: false, error: err.message});
         }
       }
 
-      return {
-        success: true,
-        familySynthesisId,
-        results,
-      };
+      return {success: true, results};
     },
 );
-
 /**
  * Scheduled function that runs daily at 9 PM to generate next day's actions
  * Schedule format: "0 21 * * *" = 9 PM every day
@@ -9710,17 +9439,43 @@ async function spawnActivityFromRecentJournal(db) {
 
   if (recentSnap.empty) return;
 
-  // Find the best candidate: has enrichment with dimensions, hasn't
-  // already spawned an activity.
+  // ---------------------------------------------------------------
+  // Weekly cap: max 3 journal-seeded activities per family per week.
+  // Count recent journal-seeded items and bail early if we're at
+  // capacity. Prevents a burst of journaling from flooding the
+  // Workbook.
+  // ---------------------------------------------------------------
+  const WEEKLY_CAP = 3;
+  const families = new Set();
+  recentSnap.forEach((doc) => {
+    const d = doc.data();
+    if (d.familyId) families.add(d.familyId);
+  });
+
+  const familySeededCounts = {};
+  for (const fid of families) {
+    const seededSnap = await db.collection("growth_items")
+        .where("familyId", "==", fid)
+        .where("generatedBy", "==", "journal_seed")
+        .where("createdAt", ">=",
+            admin.firestore.Timestamp.fromDate(sevenDaysAgo))
+        .get();
+    familySeededCounts[fid] = seededSnap.size;
+  }
+
+  // Find the best candidate: has enrichment with 2+ dimensions
+  // (single-dimension entries are too thin), hasn't already spawned,
+  // and the family hasn't hit the weekly cap.
   let bestEntry = null;
   let bestScore = 0;
 
   for (const docSnap of recentSnap.docs) {
     const data = docSnap.data();
     if (data.activitySpawnedAt) continue; // Already spawned
+    if ((familySeededCounts[data.familyId] || 0) >= WEEKLY_CAP) continue;
     const dims = data.enrichment?.aiDimensions || [];
     const themes = data.enrichment?.themes || [];
-    if (dims.length === 0) continue; // No dimensions = no actionable practice
+    if (dims.length < 2) continue; // Need 2+ dimensions for a grounded practice
     const score = dims.length * 2 + themes.length;
     if (score > bestScore) {
       bestScore = score;
@@ -9729,7 +9484,10 @@ async function spawnActivityFromRecentJournal(db) {
   }
 
   if (!bestEntry) {
-    logger.info("spawnActivityFromRecentJournal: no qualifying entries");
+    logger.info(
+        "spawnActivityFromRecentJournal: no qualifying entries " +
+        "(need 2+ dimensions, under weekly cap)",
+    );
     return;
   }
 
