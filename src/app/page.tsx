@@ -103,6 +103,7 @@ export default function HomePage() {
               key={key}
               href={region.href}
               className="home-book-target"
+              data-walkthrough={`book-${key}`}
               style={{
                 left: region.left,
                 top: region.top,

@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { DM_Sans, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { WalkthroughProvider } from "@/components/walkthrough/WalkthroughContext";
+import WalkthroughOverlay from "@/components/walkthrough/WalkthroughOverlay";
+import WalkthroughTrigger from "@/components/walkthrough/WalkthroughTrigger";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -44,7 +47,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${dmSans.variable} ${cormorant.variable} antialiased`}>
         <AuthProvider>
-          {children}
+          <WalkthroughProvider>
+            {children}
+            <WalkthroughOverlay />
+            <WalkthroughTrigger />
+          </WalkthroughProvider>
         </AuthProvider>
       </body>
     </html>

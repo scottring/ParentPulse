@@ -121,7 +121,7 @@ export default function WorkbookPage() {
                 <PrimaryRow
                   featured={
                     focusItem ? (
-                      <FeaturedFocus item={focusItem} />
+                      <div data-walkthrough="featured-focus"><FeaturedFocus item={focusItem} /></div>
                     ) : allKept ? (
                       <AllKept keptCount={keptThisWeek.length} />
                     ) : (
@@ -143,7 +143,7 @@ export default function WorkbookPage() {
                   }
                   aside={
                     arcGroups.length > 0 ? (
-                      <SideColumn eyebrow="Ongoing" title="Arcs">
+                      <div data-walkthrough="arcs"><SideColumn eyebrow="Ongoing" title="Arcs">
                         {arcGroups.map((group, idx) => (
                           <ArcSpine
                             key={group.arc.arcId}
@@ -151,7 +151,7 @@ export default function WorkbookPage() {
                             index={idx + 1}
                           />
                         ))}
-                      </SideColumn>
+                      </SideColumn></div>
                     ) : undefined
                   }
                 />

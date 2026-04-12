@@ -133,12 +133,12 @@ export default function JournalPage() {
     return map;
   }, [people]);
 
-  const [filter, setFilter] = useState<'all' | 'mine' | 'shared'>('all');
+  const [filter, setFilter] = useState<'all' | 'personal' | 'family'>('all');
 
   const filteredEntries = useMemo(() => {
     if (!user) return entries;
-    if (filter === 'mine') return entries.filter((e) => e.authorId === user.userId);
-    if (filter === 'shared') return entries.filter((e) => e.authorId !== user.userId);
+    if (filter === 'personal') return entries.filter((e) => e.authorId === user.userId);
+    if (filter === 'family') return entries.filter((e) => e.authorId !== user.userId);
     return entries;
   }, [entries, filter, user]);
 
@@ -176,32 +176,32 @@ export default function JournalPage() {
             {hasEntries && (
               <div className="journal-single-col">
 
-                {echo && <EchoHero echo={echo} />}
+                {echo && <div data-walkthrough="echo"><EchoHero echo={echo} /></div>}
 
                 <CaptureButton />
 
-                <div className="journal-filter-row">
-                  {(['all', 'mine', 'shared'] as const).map((f) => (
+                <div className="journal-filter-row" data-walkthrough="journal-filters">
+                  {(['all', 'personal', 'family'] as const).map((f) => (
                     <button
                       key={f}
                       type="button"
                       onClick={() => setFilter(f)}
                       className={`journal-filter-btn${filter === f ? ' active' : ''}`}
                     >
-                      {f === 'all' ? 'All entries' : f === 'mine' ? 'Mine' : 'Shared with me'}
+                      {f === 'all' ? 'All entries' : f === 'personal' ? 'Personal' : 'Family'}
                     </button>
                   ))}
                 </div>
 
-                <div className="journal-stream">
+                <div className="journal-stream" data-walkthrough="journal-entries">
                   {dayGroups.length === 0 && (
                     <p style={{
                       fontFamily: 'var(--font-parent-display)',
                       fontStyle: 'italic', fontSize: 17, color: '#8a7b5f',
                       textAlign: 'center', padding: '32px 0',
                     }}>
-                      {filter === 'shared'
-                        ? 'No entries have been shared with you yet.'
+                      {filter === 'family'
+                        ? 'No family entries yet.'
                         : 'No entries match this filter.'}
                     </p>
                   )}

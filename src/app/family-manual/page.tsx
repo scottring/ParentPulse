@@ -240,7 +240,7 @@ export default function FamilyManualPage() {
               <div className="press-gutter" aria-hidden="true" />
 
               {/* LEFT PAGE — The Atlas */}
-              <div className="press-page-left" style={{ minHeight: 620 }}>
+              <div className="press-page-left" data-walkthrough="atlas" style={{ minHeight: 620 }}>
                 <h2 className="press-display-md mb-1">The atlas</h2>
                 <p
                   className="press-marginalia mb-6"
@@ -296,7 +296,7 @@ export default function FamilyManualPage() {
               </div>
 
               {/* RIGHT PAGE — The Volumes */}
-              <div className="press-page-right" style={{ minHeight: 620 }}>
+              <div className="press-page-right" data-walkthrough="volumes" style={{ minHeight: 620 }}>
                 <h2 className="press-display-md mb-1">The volumes</h2>
                 <p
                   className="press-marginalia mb-6"
@@ -356,7 +356,7 @@ export default function FamilyManualPage() {
                 {/* Add a new volume — secondary action */}
                 {volumes.length > 0 && (
                   <div className="mt-6 pt-5" style={{ borderTop: '1px solid rgba(200,190,172,0.5)' }}>
-                    <Link href="/people" className="press-link-sm">
+                    <Link href="/people" className="press-link-sm" data-walkthrough="add-person">
                       Begin a new volume ⟶
                     </Link>
                   </div>
