@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useJournalEntry } from '@/hooks/useJournalEntry';
 import { useJournal } from '@/hooks/useJournal';
 import { usePerson } from '@/hooks/usePerson';
+import { useCoach } from '@/hooks/useCoach';
 import Navigation from '@/components/layout/Navigation';
 import SideNav from '@/components/layout/SideNav';
 import { JOURNAL_CATEGORIES, type JournalEntry } from '@/types/journal';
@@ -120,6 +121,12 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
   const isMine = entry.authorId === currentUserId;
   const { updateEntry } = useJournal();
   const { people } = usePerson();
+  const {
+    messages: chatMessages,
+    loading: chatLoading,
+    sendMessage: sendChatMessage,
+    clearConversation: clearChat,
+  } = useCoach();
 
   // Initial values come from the entry prop; React won't rerun these
   // initializers until the component is remounted (via `key` on the
@@ -130,9 +137,13 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
     entry.sharedWithUserIds ?? [],
   );
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [chatInput, setChatInput] = useState('');
   const [saveStatus, setSaveStatus] = useState<
     'idle' | 'saving' | 'saved' | 'error'
   >('idle');
+  const chatInputRef = useRef<HTMLInputElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
   // Last-saved server state. Consulted by `flush` to decide whether
   // there's anything to write.
@@ -228,6 +239,13 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
       setSaveStatus('error');
     }
   };
+
+  // Auto-scroll chat to bottom on new messages
+  useEffect(() => {
+    if (showChat && chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages, showChat]);
 
   // Click-outside for the share menu.
   useEffect(() => {
@@ -358,6 +376,111 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
               </Link>
             </div>
           )}
+
+          {/* AI conversation — opens inline below the body. Grounded
+              in the entry text + tagged people's manuals. */}
+          <div className="entry-chat-section">
+            {!showChat ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowChat(true);
+                  // Pre-grind: send the entry text as the opening
+                  // message so the AI has context immediately.
+                  void sendChatMessage(
+                    entry.text,
+                    entry.personMentions || [],
+                  );
+                  setTimeout(
+                    () => chatInputRef.current?.focus(),
+                    200,
+                  );
+                }}
+                className="chat-trigger"
+              >
+                Talk to the AI about this
+                <span className="arrow">⟶</span>
+              </button>
+            ) : (
+              <div className="chat-panel">
+                <div className="chat-header">
+                  <span className="chat-header-label">
+                    Conversation about this entry
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowChat(false);
+                      clearChat();
+                    }}
+                    className="chat-close"
+                    aria-label="Close conversation"
+                  >
+                    &times;
+                  </button>
+                </div>
+                <div className="chat-messages" ref={chatScrollRef}>
+                  {chatMessages
+                    .filter((m) => (m.role as string) !== 'system')
+                    .map((msg, i) => (
+                      <div
+                        key={i}
+                        className={`chat-msg ${
+                          msg.role === 'user'
+                            ? 'chat-msg--user'
+                            : 'chat-msg--ai'
+                        }`}
+                      >
+                        {msg.content}
+                      </div>
+                    ))}
+                  {chatLoading && (
+                    <div className="chat-msg chat-msg--ai chat-msg--loading">
+                      thinking&hellip;
+                    </div>
+                  )}
+                </div>
+                <div className="chat-input-row">
+                  <input
+                    ref={chatInputRef}
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (!chatInput.trim() || chatLoading) return;
+                        const msg = chatInput.trim();
+                        setChatInput('');
+                        void sendChatMessage(
+                          msg,
+                          entry.personMentions || [],
+                        );
+                      }
+                    }}
+                    placeholder="Reply…"
+                    disabled={chatLoading}
+                    className="chat-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!chatInput.trim() || chatLoading) return;
+                      const msg = chatInput.trim();
+                      setChatInput('');
+                      void sendChatMessage(
+                        msg,
+                        entry.personMentions || [],
+                      );
+                    }}
+                    disabled={!chatInput.trim() || chatLoading}
+                    className="chat-send"
+                  >
+                    Send
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           <footer className="entry-footer">
             <div className="privacy-control">
@@ -652,6 +775,132 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
           color: #a8997d;
           font-style: italic;
           min-height: 14px;
+        }
+
+        .entry-chat-section {
+          margin-top: 36px;
+          padding-top: 20px;
+          border-top: 1px solid rgba(200, 190, 172, 0.35);
+        }
+        :global(.chat-trigger) {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: transparent;
+          border: none;
+          padding: 0;
+          cursor: pointer;
+          font-family: var(--font-parent-display);
+          font-style: italic;
+          font-size: 17px;
+          color: #7c6e54;
+          transition: color 0.2s ease;
+        }
+        :global(.chat-trigger:hover) {
+          color: #3a3530;
+        }
+        :global(.chat-trigger .arrow) {
+          display: inline-block;
+          margin-left: 2px;
+          transition: transform 0.25s ease;
+        }
+        :global(.chat-trigger:hover .arrow) {
+          transform: translateX(3px);
+        }
+        .chat-panel {
+          border: 1px solid rgba(200, 190, 172, 0.45);
+          border-radius: 8px;
+          overflow: hidden;
+        }
+        .chat-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 10px 16px;
+          border-bottom: 1px solid rgba(200, 190, 172, 0.35);
+        }
+        .chat-header-label {
+          font-family: var(--font-parent-body);
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: 0.2em;
+          text-transform: uppercase;
+          color: #8a7b5f;
+        }
+        .chat-close {
+          background: transparent;
+          border: none;
+          font-size: 18px;
+          color: #8a7b5f;
+          cursor: pointer;
+          padding: 0 4px;
+          line-height: 1;
+        }
+        .chat-messages {
+          max-height: 320px;
+          overflow-y: auto;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        :global(.chat-msg) {
+          max-width: 85%;
+          padding: 10px 14px;
+          border-radius: 14px;
+          font-family: var(--font-parent-body);
+          font-size: 15px;
+          line-height: 1.5;
+          color: #3a3530;
+          white-space: pre-wrap;
+        }
+        :global(.chat-msg--user) {
+          align-self: flex-end;
+          background: color-mix(in srgb, #7C9082 14%, white);
+          border: 1px solid rgba(124, 144, 130, 0.25);
+        }
+        :global(.chat-msg--ai) {
+          align-self: flex-start;
+          background: rgba(245, 240, 230, 0.6);
+          border: 1px solid rgba(200, 190, 172, 0.4);
+        }
+        :global(.chat-msg--loading) {
+          font-family: var(--font-parent-display);
+          font-style: italic;
+          color: #8a7b5f;
+        }
+        .chat-input-row {
+          display: flex;
+          gap: 8px;
+          padding: 12px 16px;
+          border-top: 1px solid rgba(200, 190, 172, 0.35);
+        }
+        .chat-input {
+          flex: 1;
+          padding: 8px 14px;
+          border-radius: 999px;
+          font-family: var(--font-parent-body);
+          font-size: 15px;
+          color: #3a3530;
+          background: rgba(0, 0, 0, 0.03);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          outline: none;
+        }
+        .chat-send {
+          padding: 8px 18px;
+          border-radius: 999px;
+          font-family: var(--font-parent-body);
+          font-size: 14px;
+          font-weight: 500;
+          background: #7C9082;
+          color: white;
+          border: none;
+          cursor: pointer;
+          transition: opacity 0.2s ease;
+        }
+        .chat-send:disabled {
+          opacity: 0.3;
+          cursor: default;
         }
 
         .entry-provenance {

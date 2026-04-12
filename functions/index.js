@@ -9182,6 +9182,7 @@ Extract the following as JSON. Be conservative — only include people and dimen
 
 {
   "summary": "1-2 sentence essence of what this entry is about (not a paraphrase — a higher-level takeaway)",
+  "title": "3-6 word title for this entry",
   "people": ["personId1", "personId2"],
   "dimensions": ["dimension_id_1", "dimension_id_2"],
   "themes": ["short theme phrase 1", "short theme phrase 2"]
@@ -9192,6 +9193,7 @@ Rules:
 - "dimensions": only use IDs from the DIMENSIONS list above. An entry might touch 0-3 dimensions. Don't stretch — if the connection is weak, omit it.
 - "themes": 1-4 free-text tags (2-5 words each) capturing patterns or topics. These are NOT from a fixed list. Examples: "bedtime resistance", "sibling fairness", "feeling unheard", "gratitude for partner". Make them specific to the entry, not generic.
 - "summary": one sentence, occasionally two. Written as if for a family member reading a digest. Warm but not saccharine.
+- "title": a short evocative title (3-6 words) that captures the heart of the entry. Like a chapter heading, not a headline. Examples: "Bedtime reset", "A quiet evening together", "The screen time standoff". Never generic ("Journal entry" or "Today's thoughts").
 
 Return only the JSON object, no other text.`;
 
@@ -9250,7 +9252,7 @@ Return only the JSON object, no other text.`;
       // ----------------------------------------------------------
       // 5. Write back (admin SDK — bypasses security rules)
       // ----------------------------------------------------------
-      await snap.ref.update({
+      const updateFields = {
         enrichment: {
           summary,
           aiPeople,
@@ -9259,7 +9261,19 @@ Return only the JSON object, no other text.`;
           enrichedAt: admin.firestore.Timestamp.now(),
           model,
         },
-      });
+      };
+
+      // Auto-title: if the entry has no title, fill it from the AI.
+      // Entries with a user-set title are untouched.
+      const existingTitle = data.title;
+      const aiTitle = typeof enrichment.title === "string"
+        ? enrichment.title.trim().slice(0, 100)
+        : "";
+      if ((!existingTitle || existingTitle.trim() === "") && aiTitle) {
+        updateFields.title = aiTitle;
+      }
+
+      await snap.ref.update(updateFields);
 
       logger.info(
           `enrichJournalEntry: enriched ${snap.id} — ` +
