@@ -52,6 +52,18 @@ function getPerformanceMode(type: GrowthItemType): PerformanceMode {
   }
 }
 
+// Readings live in The Journal; practices live in The Workbook.
+// Same growth system, different shelf.
+function isReadingType(type: GrowthItemType): boolean {
+  return type === 'illustrated_story' || type === 'progress_snapshot';
+}
+
+function shelfFor(type: GrowthItemType): { name: string; href: string; returnLabel: string } {
+  return isReadingType(type)
+    ? { name: 'The Journal', href: '/journal', returnLabel: 'Return to the Journal' }
+    : { name: 'The Workbook', href: '/workbook', returnLabel: 'Return to the Workbook' };
+}
+
 function parseSteps(body: string): string[] {
   if (!body.match(/\d+[\.\)]\s/)) return [];
   return body
@@ -385,11 +397,11 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
               <p className="press-empty-title">This page is missing from the volume.</p>
               <p className="press-empty-body">The practice may have been removed or expired.</p>
               <button
-                onClick={() => router.push('/journal')}
+                onClick={() => router.push('/workbook')}
                 className="press-link"
                 style={{ background: 'transparent', cursor: 'pointer' }}
               >
-                Return to the workbook
+                Return to the Workbook
                 <span className="arrow">⟶</span>
               </button>
             </div>
@@ -404,7 +416,7 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
 
   // If already done when the user lands, skip straight to the complete view
   if (isAlreadyDone && step === 'brief') {
-    return <CompleteView item={item} isAlreadyDone onReturn={() => router.push('/journal')} />;
+    return <CompleteView item={item} isAlreadyDone onReturn={() => router.push(shelfFor(item.type).href)} />;
   }
 
   return (
@@ -466,7 +478,7 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
             item={item}
             isAlreadyDone={false}
             selectedReaction={selectedReaction}
-            onReturn={() => router.push('/journal')}
+            onReturn={() => router.push(shelfFor(item.type).href)}
           />
         )}
       </div>
@@ -513,7 +525,8 @@ function BriefView({
 
   // Matches the TOC entry language: ◆ for practices (things to do),
   // ❦ for stories and readings (things to read).
-  const isReading = item.type === 'illustrated_story' || item.type === 'progress_snapshot';
+  const isReading = isReadingType(item.type);
+  const shelf = shelfFor(item.type);
   const kindGlyph = isReading ? '❦' : '◆';
   const glyphColor = isReading ? '#B88E5A' : '#5C8064';
 
@@ -522,7 +535,7 @@ function BriefView({
 
       {/* Running header */}
       <div className="press-running-header" style={{ paddingTop: 32 }}>
-        <span>The Journal</span>
+        <span>{shelf.name}</span>
         <span className="sep">·</span>
         <span>{isReading ? 'A reading' : 'A practice'}</span>
       </div>
@@ -530,11 +543,11 @@ function BriefView({
       {/* Back link */}
       <div style={{ textAlign: 'center', paddingTop: 22, paddingBottom: 14 }}>
         <button
-          onClick={() => router.push('/journal')}
+          onClick={() => router.push(shelf.href)}
           className="press-link-sm"
           style={{ background: 'transparent', cursor: 'pointer' }}
         >
-          ⟵ Return to the Journal
+          ⟵ {shelf.returnLabel}
         </button>
       </div>
 
@@ -2019,6 +2032,7 @@ function CompleteView({
     : null;
 
   const isSetAside = selectedReaction === 'not_now';
+  const shelf = shelfFor(item.type);
   const headerLabel = isSetAside ? 'Set aside' : isAlreadyDone ? 'Already kept' : 'Kept';
   const headerTitle = isSetAside
     ? 'Gently tucked away'
@@ -2029,7 +2043,7 @@ function CompleteView({
   return (
     <div className="press-binder" style={{ maxWidth: 860 }}>
       <div className="press-running-header" style={{ paddingTop: 28 }}>
-        <span>The Journal</span>
+        <span>{shelf.name}</span>
         <span className="sep">·</span>
         <span>Kept</span>
       </div>
@@ -2134,7 +2148,7 @@ function CompleteView({
             }}
           >
             {isSetAside
-              ? 'The Journal will bring it back in a few days.'
+              ? `${shelf.name} will bring it back in a few days.`
               : 'Small keepings accumulate. Come back tomorrow for the next page.'}
           </p>
         )}
@@ -2153,7 +2167,7 @@ function CompleteView({
             fontSize: 20,
           }}
         >
-          Return to the Journal
+          {shelf.returnLabel}
           <span className="arrow">⟶</span>
         </button>
 

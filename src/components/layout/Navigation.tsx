@@ -71,25 +71,38 @@ export default function Navigation() {
           Relish
         </Link>
 
-        {/* My Relish — link back to the compendium */}
-        <Link
-          href="/relish"
-          className="hover:opacity-70 transition-opacity"
-          style={{
-            fontFamily: 'var(--font-parent-display)',
-            fontSize: 15,
-            fontWeight: 400,
-            fontStyle: 'italic',
-            color: pathname === '/relish' ? '#3A3530' : '#6B6254',
-            textDecoration: 'none',
-            letterSpacing: '0.005em',
-            borderBottom: pathname === '/relish' ? '1px solid #3A3530' : '1px solid transparent',
-            paddingBottom: 3,
-            transition: 'color 0.2s ease, border-color 0.2s ease',
-          }}
-        >
-          my relish
-        </Link>
+        {/* Book links — three nav items that map to the bookshelf */}
+        <div className="flex items-center" style={{ gap: 28 }}>
+          {[
+            { href: '/relish', label: 'my relish', match: (p: string) => p === '/relish' },
+            { href: '/people', label: 'family', match: (p: string) => p.startsWith('/people') },
+            { href: '/journal', label: 'journal', match: (p: string) => p.startsWith('/journal') },
+            { href: '/workbook', label: 'workbook', match: (p: string) => p.startsWith('/workbook') },
+          ].map(({ href, label, match }) => {
+            const active = match(pathname);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className="hover:opacity-70 transition-opacity"
+                style={{
+                  fontFamily: 'var(--font-parent-display)',
+                  fontSize: 15,
+                  fontWeight: 400,
+                  fontStyle: 'italic',
+                  color: active ? '#3A3530' : '#6B6254',
+                  textDecoration: 'none',
+                  letterSpacing: '0.005em',
+                  borderBottom: active ? '1px solid #3A3530' : '1px solid transparent',
+                  paddingBottom: 3,
+                  transition: 'color 0.2s ease, border-color 0.2s ease',
+                }}
+              >
+                {label}
+              </Link>
+            );
+          })}
+        </div>
 
         {/* User indicator with dropdown */}
         <div className="relative" ref={menuRef}>
