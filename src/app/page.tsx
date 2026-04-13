@@ -5,9 +5,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
-
 // ================================================================
-// Landing / home page — the library table.
+// Landing / home page — the library desk.
+//
+// Both signed-in and signed-out visitors see the desk. Signed-in
+// users get three book hit targets: the compendium (center),
+// the family manual (back-left), and the workbook (back-right).
+// Signed-out visitors see sign-in / register links.
 //
 // Public to both signed-in and signed-out visitors. The only
 // difference between the two states:
@@ -30,35 +34,47 @@ interface BookRegion {
 }
 
 const BOOK_REGIONS: Record<string, BookRegion> = {
-  manual: {
-    left: '5%',
-    top: '30%',
-    width: '44%',
-    height: '36%',
-    labelLeft: '27%',
-    labelTop: '14%',
-    href: '/family-manual',
-    label: 'The Family Manual',
-  },
+  // Back-left stack: two leather books
   journal: {
-    left: '31%',
-    top: '55%',
-    width: '32%',
-    height: '36%',
-    labelLeft: '47%',
-    labelTop: '14%',
+    left: '12%',
+    top: '28%',
+    width: '33%',
+    height: '16%',
+    labelLeft: '28%',
+    labelTop: '22%',
     href: '/journal',
     label: 'The Journal',
   },
+  manual: {
+    left: '12%',
+    top: '44%',
+    width: '33%',
+    height: '18%',
+    labelLeft: '28%',
+    labelTop: '64%',
+    href: '/family-manual',
+    label: 'The Family Manual',
+  },
+  // Front-right stack: cream + sage books
   workbook: {
-    left: '66%',
-    top: '42%',
+    left: '48%',
+    top: '38%',
     width: '30%',
-    height: '35%',
-    labelLeft: '81%',
-    labelTop: '14%',
+    height: '18%',
+    labelLeft: '63%',
+    labelTop: '30%',
     href: '/workbook',
     label: 'The Workbook',
+  },
+  relish: {
+    left: '48%',
+    top: '56%',
+    width: '30%',
+    height: '16%',
+    labelLeft: '63%',
+    labelTop: '74%',
+    href: '/relish',
+    label: 'Your Relish',
   },
 };
 
@@ -79,6 +95,10 @@ export default function HomePage() {
     }
   };
 
+  // Both signed-in and signed-out see the desk. The difference:
+  // signed-in users get the three books with updated labels
+  // (compendium, manual, workbook). Signed-out visitors get
+  // sign-in/register links.
   return (
     <main className="home-stage">
       {/* ─── Full-bleed photograph ────────────────────────── */}
@@ -94,8 +114,7 @@ export default function HomePage() {
         <div className="home-vignette" />
       </div>
 
-      {/* ─── Book hit targets + floating labels — activated
-          only for signed-in visitors. ─────────────────── */}
+      {/* ─── Book hit targets + floating labels ──────────── */}
       {isSignedIn && (
         <div className="home-books" aria-label="The three volumes">
           {Object.entries(BOOK_REGIONS).map(([key, region]) => (

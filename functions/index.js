@@ -10251,3 +10251,203 @@ Rules:
     usage: response.usage,
   });
 }
+
+// ================================================================
+// AUTOMATION TRIGGERS — The Surface
+//
+// These triggers close the automation loop so the pipeline runs
+// itself: contribution → synthesis → assessments → growth items.
+// ================================================================
+
+// ─── A. onContributionComplete ─────────────────────────────
+// When a contribution status changes to 'complete', schedule
+// synthesis for the relevant person's manual and seed dimension
+// assessments if none exist.
+// ────────────────────────────────────────────────────────────
+exports.onContributionComplete = onDocumentUpdated(
+    {
+      document: "contributions/{contributionId}",
+      region: "us-central1",
+      memory: "512MiB",
+      timeoutSeconds: 120,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (event) => {
+      const logger = require("firebase-functions/logger");
+      const db = admin.firestore();
+
+      const before = event.data.before.data();
+      const after = event.data.after.data();
+
+      // Only fire when status transitions to 'complete'
+      if (before.status === "complete" || after.status !== "complete") {
+        return;
+      }
+
+      const familyId = after.familyId;
+      const personId = after.personId;
+      if (!familyId || !personId) {
+        logger.warn("onContributionComplete: missing familyId or personId");
+        return;
+      }
+
+      logger.info(
+          `onContributionComplete: contribution ${event.params.contributionId}` +
+          ` completed for person ${personId}`,
+      );
+
+      // 1. Schedule synthesis for the person's manual (picked up by
+      //    autoSynthesizeManuals every 5 min).
+      try {
+        const manualSnap = await db.collection("person_manuals")
+            .where("personId", "==", personId)
+            .where("familyId", "==", familyId)
+            .limit(1)
+            .get();
+
+        if (!manualSnap.empty) {
+          const scheduledFor = new Date(Date.now() + 2 * 60 * 1000); // 2 min
+          await manualSnap.docs[0].ref.update({
+            journalSynthesisScheduledFor:
+              admin.firestore.Timestamp.fromDate(scheduledFor),
+          });
+          logger.info(
+              `onContributionComplete: scheduled synthesis for manual ` +
+              `${manualSnap.docs[0].id}`,
+          );
+        }
+      } catch (err) {
+        logger.error(
+            "onContributionComplete: failed to schedule synthesis:",
+            err.message,
+        );
+      }
+
+      // 2. Seed dimension assessments if none exist for this family.
+      try {
+        const assessSnap = await db.collection("dimension_assessments")
+            .where("familyId", "==", familyId)
+            .limit(1)
+            .get();
+
+        if (assessSnap.empty) {
+          logger.info(
+              "onContributionComplete: no assessments found, seeding...",
+          );
+          // Find any user in this family to act as the seeder
+          const userSnap = await db.collection("users")
+              .where("familyId", "==", familyId)
+              .limit(1)
+              .get();
+
+          if (!userSnap.empty) {
+            // Use the seedDimensionAssessments logic directly by calling
+            // the exported function's inner logic. Since we can't easily
+            // call onCall from a trigger, we replicate the core path:
+            // fetch people + contributions + manuals, then call Claude.
+            // For now, we set a flag and let the user's next page load
+            // trigger it via the dashboard hook.
+            await db.collection("families").doc(familyId).update({
+              needsAssessmentSeeding: true,
+            });
+            logger.info(
+                "onContributionComplete: flagged family for assessment seeding",
+            );
+          }
+        }
+      } catch (err) {
+        logger.error(
+            "onContributionComplete: assessment check failed:",
+            err.message,
+        );
+      }
+    },
+);
+
+// ─── B. onSynthesisComplete ────────────────────────────────
+// When a person_manual's synthesizedContent is updated (new
+// synthesis ran), check if growth items should be generated.
+// ────────────────────────────────────────────────────────────
+exports.onSynthesisComplete = onDocumentUpdated(
+    {
+      document: "person_manuals/{manualId}",
+      region: "us-central1",
+      memory: "256MiB",
+      timeoutSeconds: 60,
+    },
+    async (event) => {
+      const logger = require("firebase-functions/logger");
+      const db = admin.firestore();
+
+      const before = event.data.before.data();
+      const after = event.data.after.data();
+
+      // Only fire when lastSynthesizedAt actually changed
+      const beforeTs = before.synthesizedContent?.lastSynthesizedAt?.toMillis?.() || 0;
+      const afterTs = after.synthesizedContent?.lastSynthesizedAt?.toMillis?.() || 0;
+      if (afterTs <= beforeTs) {
+        return;
+      }
+
+      const familyId = after.familyId;
+      if (!familyId) return;
+
+      logger.info(
+          `onSynthesisComplete: synthesis updated for manual ` +
+          `${event.params.manualId} (family: ${familyId})`,
+      );
+
+      // Check if this family has any growth items from the last 7 days.
+      // If not, flag the family for batch generation.
+      try {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        const recentItemsSnap = await db.collection("growth_items")
+            .where("familyId", "==", familyId)
+            .where("createdAt", ">=",
+                admin.firestore.Timestamp.fromDate(sevenDaysAgo))
+            .limit(1)
+            .get();
+
+        if (recentItemsSnap.empty) {
+          logger.info(
+              `onSynthesisComplete: no recent growth items for family ` +
+              `${familyId}, flagging for generation`,
+          );
+          await db.collection("families").doc(familyId).update({
+            needsGrowthGeneration: true,
+            growthGenerationRequestedAt: admin.firestore.Timestamp.now(),
+          });
+        }
+
+        // Check if assessments exist but no growth arc exists
+        const assessSnap = await db.collection("dimension_assessments")
+            .where("familyId", "==", familyId)
+            .limit(1)
+            .get();
+
+        if (!assessSnap.empty) {
+          const arcSnap = await db.collection("growth_arcs")
+              .where("familyId", "==", familyId)
+              .where("status", "==", "active")
+              .limit(1)
+              .get();
+
+          if (arcSnap.empty) {
+            logger.info(
+                `onSynthesisComplete: assessments exist but no active arc ` +
+                `for family ${familyId}, flagging for arc generation`,
+            );
+            await db.collection("families").doc(familyId).update({
+              needsArcGeneration: true,
+            });
+          }
+        }
+      } catch (err) {
+        logger.error(
+            "onSynthesisComplete: growth check failed:", err.message,
+        );
+      }
+    },
+);

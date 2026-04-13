@@ -38,6 +38,7 @@ export function ManualChat({ personId, personName, manual }: ManualChatProps) {
     const msg = input.trim();
     setInput('');
     await sendMessage(msg);
+    inputRef.current?.focus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -50,6 +51,7 @@ export function ManualChat({ personId, personName, manual }: ManualChatProps) {
   const handleSuggestionClick = async (question: SuggestedQuestion) => {
     if (loading) return;
     await sendMessage(question.text);
+    inputRef.current?.focus();
   };
 
   return (

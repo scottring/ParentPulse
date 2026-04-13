@@ -197,6 +197,7 @@ export default function CaptureSheet() {
     const msg = chatInput.trim();
     setChatInput('');
     await sendEntryChat(msg, savedPeopleRef.current);
+    chatInputRef.current?.focus();
   };
 
   const sheetOpen = state !== 'closed';

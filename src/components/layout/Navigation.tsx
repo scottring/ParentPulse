@@ -7,14 +7,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import CaptureSheet from '@/components/capture/CaptureSheet';
 
-const navLinks = [
-  { label: 'home', href: '/', matchPrefixes: ['/'], exact: true },
-  { label: 'family manual', href: '/family-manual', matchPrefixes: ['/family-manual', '/people'] },
-  { label: 'journal', href: '/journal', matchPrefixes: ['/journal'] },
-  { label: 'workbook', href: '/workbook', matchPrefixes: ['/workbook', '/checkin', '/deepen', '/growth', '/dashboard'] },
-  { label: 'reports', href: '/reports', matchPrefixes: ['/reports'] },
-];
-
 export default function Navigation() {
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -79,39 +71,28 @@ export default function Navigation() {
           Relish
         </Link>
 
-        {/* Desktop nav links — italic Cormorant, like chapter entries */}
-        <div className="hidden sm:flex items-center" style={{ gap: 32 }}>
-          {navLinks.map((link) => {
-            const isActive = link.exact
-              ? pathname === link.href
-              : link.matchPrefixes.some(
-                  (p) => pathname === p || pathname.startsWith(p + '/'),
-                );
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                style={{
-                  fontFamily: 'var(--font-parent-display)',
-                  fontSize: 15,
-                  fontWeight: 400,
-                  fontStyle: 'italic',
-                  letterSpacing: '0.005em',
-                  color: isActive ? '#3A3530' : '#6B6254',
-                  textDecoration: 'none',
-                  paddingBottom: 3,
-                  borderBottom: isActive ? '1px solid #3A3530' : '1px solid transparent',
-                  transition: 'color 0.2s ease, border-color 0.2s ease',
-                }}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-        </div>
+        {/* My Relish — link back to the compendium */}
+        <Link
+          href="/relish"
+          className="hover:opacity-70 transition-opacity"
+          style={{
+            fontFamily: 'var(--font-parent-display)',
+            fontSize: 15,
+            fontWeight: 400,
+            fontStyle: 'italic',
+            color: pathname === '/relish' ? '#3A3530' : '#6B6254',
+            textDecoration: 'none',
+            letterSpacing: '0.005em',
+            borderBottom: pathname === '/relish' ? '1px solid #3A3530' : '1px solid transparent',
+            paddingBottom: 3,
+            transition: 'color 0.2s ease, border-color 0.2s ease',
+          }}
+        >
+          my relish
+        </Link>
 
-        {/* User indicator with dropdown — italic name, small caps feel */}
-        <div className="hidden sm:block relative" ref={menuRef}>
+        {/* User indicator with dropdown */}
+        <div className="relative" ref={menuRef}>
           <button
             onClick={() => setShowMenu(!showMenu)}
             className="flex items-center gap-2 hover:opacity-70 transition-opacity"

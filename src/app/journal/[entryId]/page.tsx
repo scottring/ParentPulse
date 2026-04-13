@@ -621,6 +621,7 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
                           msg,
                           entry.personMentions || [],
                         );
+                        setTimeout(() => chatInputRef.current?.focus(), 50);
                       }
                     }}
                     placeholder="Reply…"
@@ -637,6 +638,7 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
                         msg,
                         entry.personMentions || [],
                       );
+                      setTimeout(() => chatInputRef.current?.focus(), 50);
                     }}
                     disabled={!chatInput.trim() || chatLoading}
                     className="chat-send"

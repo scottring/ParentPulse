@@ -33,41 +33,14 @@ const steps: WalkthroughStep[] = [
     placement: 'center',
   },
 
-  // ─── Home page ────────────────────────────────────────────
+  // ─── The Surface (signed-in home) ─────────────────────────
   {
-    id: 'library-table',
-    target: '.home-books',
-    title: 'The Library Table',
+    id: 'the-surface',
+    target: null,
+    title: 'Today\u2019s Page',
     description:
-      'This is home. Three books sit on the table, each one a different way of knowing and growing with your family.',
-    placement: 'top',
-    route: '/',
-  },
-  {
-    id: 'family-manual-book',
-    target: '[data-walkthrough="book-manual"]',
-    title: 'The Family Manual',
-    description:
-      'The atlas of everyone you care about. Tap to open the catalog of volumes\u2009\u2014\u2009one for each person.',
-    placement: 'right',
-    route: '/',
-  },
-  {
-    id: 'journal-book',
-    target: '[data-walkthrough="book-journal"]',
-    title: 'The Journal',
-    description:
-      'A chronological stream of moments, reflections, wins, and questions. Everything you write here feeds the manuals.',
-    placement: 'top',
-    route: '/',
-  },
-  {
-    id: 'workbook-book',
-    target: '[data-walkthrough="book-workbook"]',
-    title: 'The Workbook',
-    description:
-      'Your weekly practice book. AI-generated exercises drawn from what you\u2019ve written, one featured focus per day.',
-    placement: 'left',
+      'This is home. One page that draws from your journal, your family\u2019s manuals, and the growth practices \u2014 showing what matters most right now.',
+    placement: 'center',
     route: '/',
   },
 
