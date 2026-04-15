@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { Timestamp } from 'firebase/firestore';
-import { journalEntryToEntry, contributionToEntries } from '@/lib/entries/adapter';
+import { journalEntryToEntry, contributionToEntries, synthesizedContentToEntries } from '@/lib/entries/adapter';
 import type { JournalEntry } from '@/types/journal';
-import type { Contribution } from '@/types/person-manual';
+import type { Contribution, SynthesizedContent } from '@/types/person-manual';
 
 describe('journalEntryToEntry', () => {
   const testTime = Timestamp.now();
@@ -140,5 +140,53 @@ describe('contributionToEntries', () => {
     const entries = contributionToEntries(c);
     const reflection = entries.find((e) => e.type === 'reflection');
     expect(reflection?.tags).toEqual([]);
+  });
+});
+
+describe('synthesizedContentToEntries', () => {
+  const testTime = Timestamp.now();
+
+  const synth: SynthesizedContent = {
+    overview: 'Liam is curious and persistent.',
+    alignments: [{ id: 'a1', topic: 'persistence', synthesis: 'Both see persistence', selfPerspective: '...', observerPerspective: '...' }],
+    gaps: [],
+    blindSpots: [{ id: 'b1', topic: 'fatigue', synthesis: 'Underestimates fatigue', selfPerspective: '...', observerPerspective: '...' }],
+    lastSynthesizedAt: testTime,
+  } as SynthesizedContent;
+
+  it('emits one entry per non-empty bucket, skipping empty ones', () => {
+    const entries = synthesizedContentToEntries({
+      familyId: 'f1',
+      manualId: 'm1',
+      personId: 'p-liam',
+      synth,
+    });
+    expect(entries.length).toBe(3);
+    expect(entries.every((e) => e.type === 'synthesis')).toBe(true);
+    expect(entries.every((e) => e.author.kind === 'system')).toBe(true);
+  });
+
+  it('attributes entries to the person subject', () => {
+    const entries = synthesizedContentToEntries({
+      familyId: 'f1',
+      manualId: 'm1',
+      personId: 'p-liam',
+      synth,
+    });
+    for (const e of entries) {
+      expect(e.subjects).toEqual([{ kind: 'person', personId: 'p-liam' }]);
+    }
+  });
+
+  it('supports family-level syntheses', () => {
+    const entries = synthesizedContentToEntries({
+      familyId: 'f1',
+      manualId: 'm-family',
+      personId: null,
+      synth,
+    });
+    for (const e of entries) {
+      expect(e.subjects).toEqual([{ kind: 'family' }]);
+    }
   });
 });

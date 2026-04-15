@@ -1,6 +1,6 @@
 import type { Entry, EntrySubject } from '@/types/entry';
 import type { JournalEntry } from '@/types/journal';
-import type { Contribution } from '@/types/person-manual';
+import type { Contribution, SynthesizedContent, SynthesizedInsight } from '@/types/person-manual';
 
 /**
  * Convert a legacy JournalEntry into the unified Entry shape.
@@ -81,4 +81,68 @@ export function contributionToEntries(c: Contribution): Entry[] {
     });
   }
   return out;
+}
+
+/**
+ * Helper to format insights into text.
+ *
+ * Each insight is formatted as "topic: synthesis" if both are present.
+ * If only one is present, use that. Empty lines are filtered out.
+ * Results are joined with newlines.
+ */
+function insightsToText(insights: SynthesizedInsight[] | undefined): string {
+  if (!insights || insights.length === 0) return '';
+  return insights
+    .map((i) => {
+      const topic = i.topic || '';
+      const synthesis = i.synthesis || '';
+      if (topic && synthesis) {
+        return `${topic}: ${synthesis}`;
+      }
+      return topic || synthesis || '';
+    })
+    .filter(Boolean)
+    .join('\n');
+}
+
+/**
+ * Convert SynthesizedContent (multi-perspective synthesis results) into Entry records.
+ *
+ * Emits one Entry per non-empty content bucket (overview, alignments, gaps, blindSpots).
+ * Each entry is type 'synthesis', authored by system, attributed to the person (or family if null).
+ */
+export function synthesizedContentToEntries(args: {
+  familyId: string;
+  manualId: string;
+  personId: string | null; // null = family-level synthesis
+  synth: SynthesizedContent;
+}): Entry[] {
+  const { familyId, manualId, personId, synth } = args;
+  const subjects: EntrySubject[] =
+    personId === null
+      ? [{ kind: 'family' }]
+      : [{ kind: 'person', personId }];
+  const createdAt = synth.lastSynthesizedAt;
+
+  const buckets: Array<{ key: string; content: string }> = [
+    { key: 'overview', content: synth.overview ?? '' },
+    { key: 'alignments', content: insightsToText(synth.alignments) },
+    { key: 'gaps', content: insightsToText(synth.gaps) },
+    { key: 'blindSpots', content: insightsToText(synth.blindSpots) },
+  ];
+
+  return buckets
+    .filter((b) => b.content.trim().length > 0)
+    .map((b) => ({
+      id: `${manualId}:synthesis:${b.key}`,
+      familyId,
+      type: 'synthesis' as const,
+      author: { kind: 'system' as const },
+      subjects,
+      content: b.content,
+      tags: [b.key],
+      visibleToUserIds: [],
+      sharedWithUserIds: [],
+      createdAt,
+    }));
 }
