@@ -23,7 +23,7 @@ function useIsMobile(): boolean {
   return isMobile;
 }
 
-const PAGE_SIZE = 10; // 5 per page × 2 pages
+const PAGE_SIZE = 6; // 3 per page × 2 pages — designed around 800px min-height
 
 export interface JournalSpreadProps {
   entries: Entry[];

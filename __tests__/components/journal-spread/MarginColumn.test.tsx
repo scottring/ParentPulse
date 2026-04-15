@@ -19,23 +19,6 @@ const entry = (over: Partial<Entry>): Entry => ({
 });
 
 describe('MarginColumn', () => {
-  it('renders source count for synthesis entries with sourceEntryIds', () => {
-    render(
-      <MarginColumn
-        side="left"
-        entries={[
-          entry({
-            id: 's1',
-            type: 'synthesis',
-            author: { kind: 'system' },
-            sourceEntryIds: ['e1', 'e2', 'e3'],
-          }),
-        ]}
-      />
-    );
-    expect(screen.getByText(/from 3 entries/)).toBeInTheDocument();
-  });
-
   it('renders external tags, skipping internal/sentinel tags', () => {
     render(
       <MarginColumn
@@ -53,11 +36,11 @@ describe('MarginColumn', () => {
     expect(screen.queryByText(/visibility/)).not.toBeInTheDocument();
   });
 
-  it('emits an empty-height placeholder when an entry has no margin data', () => {
+  it('renders nothing for entries with no margin data (no placeholder)', () => {
     const { container } = render(
       <MarginColumn side="left" entries={[entry({ id: 'p' })]} />
     );
-    expect(container.querySelector('.item-empty')).toBeTruthy();
+    expect(container.querySelector('.item')).toBeNull();
   });
 
   it('renders synthesized date for synthesis entries', () => {

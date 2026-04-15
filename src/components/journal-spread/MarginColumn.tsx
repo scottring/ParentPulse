@@ -46,27 +46,20 @@ function MarginItem({ entry }: { entry: Entry }) {
   const externalTags = entry.tags.filter(
     (t) => !t.startsWith('_') && !t.includes(':') && !SYNTHESIS_BUCKET_TAGS.has(t)
   );
-  const hasSynthesisSource =
-    entry.type === 'synthesis' &&
-    Array.isArray(entry.sourceEntryIds) &&
-    entry.sourceEntryIds.length > 0;
   const hasSynthesisDate =
     entry.type === 'synthesis' && typeof entry.createdAt?.toDate === 'function';
   const synthDate = hasSynthesisDate
     ? entry.createdAt.toDate().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
     : null;
 
-  if (!hasSynthesisSource && externalTags.length === 0 && !hasSynthesisDate) {
-    // Keep space reserved so items align with their anchor entries,
-    // but render nothing visible. Height approximates an entry row.
-    return <div className="item item-empty" />;
+  // Only render when there's something meaningful to say. No empty
+  // placeholders — sparse margins are intentional, not broken.
+  if (externalTags.length === 0 && !hasSynthesisDate) {
+    return null;
   }
 
   return (
     <div className="item">
-      {hasSynthesisSource && (
-        <div className="source">↑ from {entry.sourceEntryIds!.length} entries</div>
-      )}
       {externalTags.map((t) => (
         <div key={t} className="tag">#{t}</div>
       ))}
@@ -75,16 +68,10 @@ function MarginItem({ entry }: { entry: Entry }) {
       )}
       <style jsx>{`
         .item {
-          margin-bottom: 26px;
+          margin-bottom: 34px;
           font-style: italic;
-          opacity: 0.85;
+          opacity: 0.75;
         }
-        .item-empty {
-          margin-bottom: 26px;
-          min-height: 18px;
-          opacity: 0;
-        }
-        .source { color: #b94a3b; }
         .tag {
           color: #5a4628;
           font-style: normal;
@@ -96,7 +83,6 @@ function MarginItem({ entry }: { entry: Entry }) {
           color: #8a6f4a;
           font-size: 10px;
           font-style: italic;
-          margin-top: 2px;
         }
       `}</style>
     </div>

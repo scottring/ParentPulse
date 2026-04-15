@@ -243,16 +243,9 @@ function SynthesisPull({
       : 'them';
   const subjectInitial = subjectName.charAt(0).toUpperCase();
   const subjectLabel = subject?.kind === 'person' ? `${label} · about ${subjectName}` : label;
-  const sourceCount = entry.sourceEntryIds?.length ?? 0;
 
   const { lead, body } = splitLead(entry.content);
   const hasBody = body.length > 0;
-  const bodyOverflow = body.length > 140;
-  const bodyClamped = hasBody && bodyOverflow && !expanded;
-
-  const synthDate = entry.createdAt.toDate
-    ? entry.createdAt.toDate().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-    : null;
 
   return (
     <div className="synth-pull" style={{ borderLeftColor: rule }}>
@@ -263,20 +256,9 @@ function SynthesisPull({
         <span className="label" style={{ color: rule }}>{subjectLabel}</span>
       </div>
       <p className="lead" style={{ color: rule === '#c89b3b' ? '#6a4a1a' : '#5a3520' }}>{lead}</p>
+      {hasBody && expanded && <p className="body">{body}</p>}
       {hasBody && (
-        <>
-          <p className={`body${bodyClamped ? ' clamped' : ''}`}>{body}</p>
-          {bodyOverflow && (
-            <ReadMoreToggle expanded={expanded} onToggle={() => setExpanded((v) => !v)} tone="muted" />
-          )}
-        </>
-      )}
-      {(sourceCount > 0 || synthDate) && (
-        <div className="source" style={{ color: rule, opacity: 0.75 }}>
-          {sourceCount > 0 && <>Drawn from {sourceCount} {sourceCount === 1 ? 'entry' : 'entries'}</>}
-          {sourceCount > 0 && synthDate && ' · '}
-          {synthDate && <em>synthesized {synthDate}</em>}
-        </div>
+        <ReadMoreToggle expanded={expanded} onToggle={() => setExpanded((v) => !v)} tone="muted" />
       )}
       <style jsx>{`
         .synth-pull {

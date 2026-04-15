@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { Timestamp } from 'firebase/firestore';
 import { EntryBlock } from '@/components/journal-spread/EntryBlock';
 import type { Entry } from '@/types/entry';
@@ -228,10 +228,14 @@ describe('SynthesisPull bucket treatments', () => {
     expect(avatar?.textContent).toBe('L');
   });
 
-  it('splits content into a lead and body', () => {
+  it('shows the lead sentence and hides the body until "read more" is clicked', () => {
     const content = 'This is the lead sentence. This is the body that follows.';
     render(<EntryBlock entry={mkSynth('overview', content)} nameOf={() => 'Liam'} />);
     expect(screen.getByText(/This is the lead sentence\./)).toBeInTheDocument();
+    // Body is hidden by default — use queryByText (won't throw) to assert absence.
+    expect(screen.queryByText(/This is the body that follows\./)).not.toBeInTheDocument();
+    // Tap read more — body appears.
+    fireEvent.click(screen.getByText(/read more/i));
     expect(screen.getByText(/This is the body that follows\./)).toBeInTheDocument();
   });
 });
