@@ -1,5 +1,0 @@
-{"type":"server-started","port":60704,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:60704","screen_dir":"/Users/scottkaufman/Developer/Developer/parentpulse-web/.superpowers/brainstorm/87704-1776248862/content","state_dir":"/Users/scottkaufman/Developer/Developer/parentpulse-web/.superpowers/brainstorm/87704-1776248862/state"}
-{"type":"screen-added","file":"/Users/scottkaufman/Developer/Developer/parentpulse-web/.superpowers/brainstorm/87704-1776248862/content/density-redesign.html"}
-{"type":"screen-added","file":"/Users/scottkaufman/Developer/Developer/parentpulse-web/.superpowers/brainstorm/87704-1776248862/content/hybrid-ab.html"}
-{"type":"screen-added","file":"/Users/scottkaufman/Developer/Developer/parentpulse-web/.superpowers/brainstorm/87704-1776248862/content/diary-flow.html"}
-{"type":"server-stopped","reason":"idle timeout"}
