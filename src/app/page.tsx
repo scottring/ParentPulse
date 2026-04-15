@@ -602,27 +602,25 @@ function SpreadHome() {
   return (
     <>
       <a href="/" className="relish-logo" aria-label="Relish home">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/images/relish%20banner.png" alt="Relish" />
+        Relish
         <style jsx>{`
           .relish-logo {
             position: fixed;
-            top: 16px;
-            left: 20px;
+            top: 18px;
+            left: 22px;
             z-index: 20;
-            display: block;
-            opacity: 0.85;
-            transition: opacity 160ms ease, transform 160ms ease;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-style: italic;
+            font-size: 22px;
+            font-weight: 400;
+            color: #2a1f14;
+            text-decoration: none;
+            letter-spacing: 0.01em;
+            transition: transform 160ms ease, color 160ms ease;
           }
           .relish-logo:hover {
-            opacity: 1;
+            color: #1a120a;
             transform: translateY(-1px);
-          }
-          .relish-logo img {
-            height: 32px;
-            width: auto;
-            display: block;
-            filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
           }
         `}</style>
       </a>
