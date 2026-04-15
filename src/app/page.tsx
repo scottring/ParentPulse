@@ -11,6 +11,7 @@ import { usePeopleMap } from '@/hooks/usePeopleMap';
 import { JournalSpread } from '@/components/journal-spread/JournalSpread';
 import type { FilterSelection } from '@/components/journal-spread/FilterPills';
 import type { EntryFilter } from '@/types/entry';
+import Navigation from '@/components/layout/Navigation';
 // ================================================================
 // Landing / home page — the library desk.
 //
@@ -569,22 +570,23 @@ function SpreadHome() {
   }
 
   return (
-    <JournalSpread
-      entries={entries}
-      familyName={selfPerson?.name?.split(' ').slice(-1)[0] ?? 'Family'}
-      volumeLabel="Volume IV · Spring, in progress"
-      dateRangeLabel={dateLabel}
-      members={members}
-      people={members}
-      filter={filterSel}
-      onFilterChange={setFilterSel}
-      nameOf={nameOf}
-      currentUserId={user?.userId}
-      onCapture={() => {
-        // Plan 3 wires this to the unified capture sheet. For now: navigate
-        // to /journal which has the existing capture entrypoint.
-        window.location.href = '/journal';
-      }}
-    />
+    <>
+      <JournalSpread
+        entries={entries}
+        familyName={selfPerson?.name?.split(' ').slice(-1)[0] ?? 'Family'}
+        volumeLabel="Volume IV · Spring, in progress"
+        dateRangeLabel={dateLabel}
+        members={members}
+        people={members}
+        filter={filterSel}
+        onFilterChange={setFilterSel}
+        nameOf={nameOf}
+        currentUserId={user?.userId}
+        onCapture={() => {
+          window.dispatchEvent(new Event('relish:open-capture'));
+        }}
+      />
+      <Navigation />
+    </>
   );
 }
