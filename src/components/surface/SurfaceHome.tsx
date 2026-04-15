@@ -6,6 +6,7 @@ import { useSurfaceNext } from '@/hooks/useSurfaceNext';
 import { NextThingCard } from '@/components/surface/NextThingCard';
 import { SynthesisHighlightCard } from '@/components/surface/SynthesisHighlightCard';
 import { CalmStateCard } from '@/components/surface/CalmStateCard';
+import { InlineJournalPeek } from '@/components/surface/InlineJournalPeek';
 import CaptureSheet from '@/components/capture/CaptureSheet';
 
 /**
@@ -69,6 +70,7 @@ export function SurfaceHome() {
         {!loading && secondarySynthesis && (
           <SynthesisHighlightCard manual={secondarySynthesis} />
         )}
+        {!loading && <InlineJournalPeek />}
       </div>
 
       <CaptureSheet />
