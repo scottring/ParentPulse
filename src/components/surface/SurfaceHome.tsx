@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useSurfaceNext } from '@/hooks/useSurfaceNext';
 import { NextThingCard } from '@/components/surface/NextThingCard';
+import { SynthesisHighlightCard } from '@/components/surface/SynthesisHighlightCard';
 import CaptureSheet from '@/components/capture/CaptureSheet';
 
 /**
@@ -18,11 +19,24 @@ import CaptureSheet from '@/components/capture/CaptureSheet';
 
 export function SurfaceHome() {
   const { user } = useAuth();
-  const { state } = useDashboard();
+  const { state, manuals } = useDashboard();
   const next = useSurfaceNext();
 
   const firstName = user?.name?.split(' ')[0] || '';
   const loading = state === 'loading';
+
+  // Pick a secondary synthesis to highlight — the most recently
+  // synthesized manual that's NOT already showing as the hero.
+  const heroManualId =
+    next?.kind === 'fresh-synthesis' ? next.manual.manualId : null;
+  const secondarySynthesis = [...manuals]
+    .filter((m) => Boolean(m.synthesizedContent?.overview))
+    .filter((m) => m.manualId !== heroManualId)
+    .sort(
+      (a, b) =>
+        (b.synthesizedContent?.lastSynthesizedAt?.toMillis?.() ?? 0) -
+        (a.synthesizedContent?.lastSynthesizedAt?.toMillis?.() ?? 0)
+    )[0];
 
   return (
     <main className="surface">
@@ -60,6 +74,9 @@ export function SurfaceHome() {
               Open the journal
             </Link>
           </div>
+        )}
+        {!loading && secondarySynthesis && (
+          <SynthesisHighlightCard manual={secondarySynthesis} />
         )}
       </div>
 
