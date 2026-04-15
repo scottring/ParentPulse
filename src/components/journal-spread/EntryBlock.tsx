@@ -123,7 +123,7 @@ function ProseEntry({ entry, currentUserId }: { entry: Entry; currentUserId?: st
       </div>
       <p className={`entry-body${shouldClamp ? ' clamped' : ''}`}>
         <span className="first-line">{firstLine}</span>
-        {rest && ` ${rest}`}
+        {rest && (rest.startsWith('\n') ? rest : ` ${rest}`)}
       </p>
       {isOverflowing && (
         <button
@@ -160,6 +160,7 @@ function ProseEntry({ entry, currentUserId }: { entry: Entry; currentUserId?: st
           color: #2d2418;
           margin: 0;
           font-family: Georgia, 'Times New Roman', serif;
+          white-space: pre-wrap;
         }
         .entry-body.clamped {
           display: -webkit-box;
@@ -317,6 +318,7 @@ function SynthesisPull({
           font-style: italic;
           margin: 0;
           font-family: Georgia, 'Times New Roman', serif;
+          white-space: pre-wrap;
         }
         .body {
           font-size: 13px;
@@ -324,6 +326,7 @@ function SynthesisPull({
           color: #5a4628;
           margin: 8px 0 0;
           font-family: Georgia, 'Times New Roman', serif;
+          white-space: pre-wrap;
         }
         .body.clamped {
           display: -webkit-box;
@@ -393,6 +396,7 @@ function FamilyBanner({ entry }: { entry: Entry }) {
           color: #e8eef2;
           font-family: Georgia, 'Times New Roman', serif;
           font-style: italic;
+          white-space: pre-wrap;
         }
         .body.clamped {
           display: -webkit-box;
@@ -455,6 +459,7 @@ function NudgeCallout({ entry }: { entry: Entry }) {
           margin: 0;
           font-family: Georgia, 'Times New Roman', serif;
           font-style: italic;
+          white-space: pre-wrap;
         }
         .body.clamped {
           display: -webkit-box;
@@ -499,6 +504,7 @@ function PromptInline({ entry }: { entry: Entry }) {
           color: #9a8060;
           margin: 0;
           font-family: Georgia, 'Times New Roman', serif;
+          white-space: pre-wrap;
         }
         .body.clamped {
           display: -webkit-box;

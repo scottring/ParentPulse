@@ -310,6 +310,7 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
             line-height: 1.55;
             font-style: italic;
             color: #3d2f1f;
+            white-space: pre-wrap;
           }
           .messages {
             flex: 1;
