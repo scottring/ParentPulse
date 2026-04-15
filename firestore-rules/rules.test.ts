@@ -739,4 +739,104 @@ describe.skipIf(!emulatorAvailable)('Firestore Security Rules', () => {
       });
     });
   });
+
+  // ================================================================
+  // Entries collection (unified stream — Plan 1 Entry foundation)
+  //
+  // Clean shape assumed: no legacy fallback, no isPrivate check.
+  // Reads require the caller to be an explicit member of
+  // visibleToUserIds. Writes require family membership.
+  // ================================================================
+  describe('entries collection rules', () => {
+    // Seed a second parent in the same family so we can test the
+    // "in same family but NOT in visibleToUserIds" denial.
+    const secondParentUid = 'second-parent-id';
+
+    beforeEach(async () => {
+      if (!emulatorAvailable || !testEnv) return;
+
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore();
+
+        // Second parent is in FAMILY_ID but will NOT be in visibleToUserIds
+        await setDoc(doc(db, 'users', secondParentUid), {
+          email: 'second-parent@test.com',
+          role: 'parent',
+          familyId: FAMILY_ID,
+        });
+
+        // Seed e1: parentUser is the only visible reader
+        await setDoc(doc(db, 'entries', 'e1'), {
+          familyId: FAMILY_ID,
+          authorId: parentUser.uid,
+          visibleToUserIds: [parentUser.uid],
+          createdAt: new Date(),
+        });
+
+        // Seed e_other_family: owned by parentUser but in OTHER_FAMILY_ID
+        await setDoc(doc(db, 'entries', 'e_other_family'), {
+          familyId: OTHER_FAMILY_ID,
+          authorId: parentUser.uid,
+          visibleToUserIds: [parentUser.uid],
+          createdAt: new Date(),
+        });
+      });
+    });
+
+    it('allows reads when the caller is in visibleToUserIds', async () => {
+      const db = getAuthContext(parentUser.uid).firestore();
+      await assertSucceeds(getDoc(doc(db, 'entries', 'e1')));
+    });
+
+    it('denies reads when the caller is NOT in visibleToUserIds', async () => {
+      // secondParentUid is in FAMILY_ID but not listed in e1.visibleToUserIds
+      const db = getAuthContext(secondParentUid).firestore();
+      await assertFails(getDoc(doc(db, 'entries', 'e1')));
+    });
+
+    it('denies reads across families', async () => {
+      // parentUser belongs to FAMILY_ID; e_other_family has familyId=OTHER_FAMILY_ID
+      // belongsToFamily check will fail because parentUser.familyId != OTHER_FAMILY_ID
+      const db = getAuthContext(parentUser.uid).firestore();
+      await assertFails(getDoc(doc(db, 'entries', 'e_other_family')));
+    });
+
+    it('allows creates when caller belongs to family and is in visibleToUserIds', async () => {
+      const db = getAuthContext(parentUser.uid).firestore();
+      await assertSucceeds(
+        setDoc(doc(db, 'entries', 'e2'), {
+          familyId: FAMILY_ID,
+          authorId: parentUser.uid,
+          visibleToUserIds: [parentUser.uid],
+          createdAt: new Date(),
+        })
+      );
+    });
+
+    it('denies creates across families', async () => {
+      // parentUser is in FAMILY_ID; trying to create with familyId=OTHER_FAMILY_ID
+      const db = getAuthContext(parentUser.uid).firestore();
+      await assertFails(
+        setDoc(doc(db, 'entries', 'e3'), {
+          familyId: OTHER_FAMILY_ID,
+          authorId: parentUser.uid,
+          visibleToUserIds: [parentUser.uid],
+          createdAt: new Date(),
+        })
+      );
+    });
+
+    it('denies creates when creator is not in visibleToUserIds', async () => {
+      // parentUser is the authenticated caller but is NOT in visibleToUserIds
+      const db = getAuthContext(parentUser.uid).firestore();
+      await assertFails(
+        setDoc(doc(db, 'entries', 'e4'), {
+          familyId: FAMILY_ID,
+          authorId: parentUser.uid,
+          visibleToUserIds: ['otherUid'],
+          createdAt: new Date(),
+        })
+      );
+    });
+  });
 });
