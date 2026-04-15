@@ -47,12 +47,6 @@ export function SurfaceHome() {
           <Link href="/journal" className="link">
             Open the journal →
           </Link>
-          <Link href="/family-manual" className="link">
-            Family manual
-          </Link>
-          <Link href="/workbook" className="link">
-            Workbook
-          </Link>
         </nav>
       </div>
 
