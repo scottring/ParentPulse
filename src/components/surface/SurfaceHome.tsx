@@ -42,8 +42,6 @@ export function SurfaceHome() {
         <h1 className="hello">
           {user?.name ? `Hello, ${user.name.split(' ')[0]}.` : 'Hello.'}
         </h1>
-        <p className="coming">Your surface is coming together.</p>
-
         <nav className="quick-links" aria-label="Quick links">
           <Link href="/journal" className="link">
             Open the journal →
@@ -150,14 +148,8 @@ export function SurfaceHome() {
           color: #2a1f14;
           margin: 0 0 8px;
         }
-        .coming {
-          font-family: Georgia, 'Times New Roman', serif;
-          font-style: italic;
-          font-size: 16px;
-          color: #7a5f3d;
-          margin: 0 0 38px;
-        }
         .quick-links {
+          margin-top: 38px;
           display: flex;
           flex-direction: column;
           gap: 14px;
