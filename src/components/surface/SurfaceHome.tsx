@@ -417,28 +417,25 @@ function PersonRow({
   const initial = person.name.charAt(0).toUpperCase();
 
   return (
-    <li>
+    <li className="row-item">
       <Link href={`/people/${person.personId}/manual`} className="row">
         <span className="initial">{initial}</span>
-        <span className="name">
-          {person.name}
-          {isSelf && <span className="tag">You</span>}
-        </span>
+        <span className="name">{person.name}</span>
+        {isSelf && <span className="tag">You</span>}
+        <span className="spacer" aria-hidden="true" />
         <span className="status">{status}</span>
         <span className="chev" aria-hidden="true">→</span>
       </Link>
       <style jsx>{`
-        li {
+        .row-item {
           border-top: 1px solid rgba(10, 10, 8, 0.08);
         }
-        li:last-child {
+        .row-item:last-child {
           border-bottom: 1px solid rgba(10, 10, 8, 0.08);
         }
         .row {
-          display: grid;
-          grid-template-columns: 34px 1fr auto 18px;
+          display: flex;
           align-items: baseline;
-          gap: 16px;
           padding: 14px 0;
           color: #0a0a08;
           text-decoration: none;
@@ -448,10 +445,10 @@ function PersonRow({
           background: rgba(10, 10, 8, 0.03);
         }
         .initial {
+          flex: 0 0 32px;
           font-family: Georgia, 'Times New Roman', serif;
           font-style: italic;
           font-size: 18px;
-          text-align: center;
           color: #6b6b68;
         }
         .name {
@@ -459,9 +456,7 @@ function PersonRow({
           font-size: 17px;
           line-height: 1;
           color: #0a0a08;
-          display: inline-flex;
-          align-items: baseline;
-          gap: 10px;
+          margin-right: 12px;
         }
         .tag {
           font-family: -apple-system, 'Helvetica Neue', sans-serif;
@@ -470,6 +465,9 @@ function PersonRow({
           text-transform: uppercase;
           color: #6b6b68;
         }
+        .spacer {
+          flex: 1;
+        }
         .status {
           font-family: -apple-system, 'Helvetica Neue', sans-serif;
           font-size: 10px;
@@ -477,6 +475,7 @@ function PersonRow({
           text-transform: uppercase;
           color: #6b6b68;
           white-space: nowrap;
+          margin-right: 16px;
         }
         .chev {
           font-family: -apple-system, sans-serif;
