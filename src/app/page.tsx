@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useEntries } from '@/hooks/useEntries';
+import { usePeopleMap } from '@/hooks/usePeopleMap';
 import { JournalSpread } from '@/components/journal-spread/JournalSpread';
 import type { FilterSelection } from '@/components/journal-spread/FilterPills';
 import type { EntryFilter } from '@/types/entry';
@@ -523,6 +524,7 @@ export default function HomePage() {
 function SpreadHome() {
   const { user } = useAuth();
   const dashboard = useDashboard();
+  const { nameOf } = usePeopleMap();
   const [filterSel, setFilterSel] = useState<FilterSelection>({ kind: 'everyone' });
 
   // familyId is not exposed by useDashboard; read it directly from auth.
@@ -575,6 +577,7 @@ function SpreadHome() {
       people={members}
       filter={filterSel}
       onFilterChange={setFilterSel}
+      nameOf={nameOf}
       onCapture={() => {
         // Plan 3 wires this to the unified capture sheet. For now: navigate
         // to /journal which has the existing capture entrypoint.
