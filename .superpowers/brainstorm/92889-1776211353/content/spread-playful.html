@@ -1,0 +1,239 @@
+<h2>Facing-page spread with horizontal flip</h2>
+<p class="subtitle">Two pages visible at once. Flip left/right to move through time. Content flows L→R like a real book.</p>
+
+<style>
+  .stage { background: #1f160e; padding: 30px 20px; border-radius: 6px; }
+  .book {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    max-width: 900px;
+    margin: 0 auto;
+    background: #6a3f26;
+    padding: 16px;
+    border-radius: 4px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .page {
+    background: #f5ecd8;
+    padding: 22px 22px 26px;
+    min-height: 540px;
+    position: relative;
+    font-family: 'Georgia', serif;
+    color: #2d2418;
+  }
+  .page.left { border-radius: 2px 0 0 2px; box-shadow: inset -10px 0 18px -10px rgba(0,0,0,0.25); }
+  .page.right { border-radius: 0 2px 2px 0; box-shadow: inset 10px 0 18px -10px rgba(0,0,0,0.25); }
+  .gutter {
+    position: absolute; top: 16px; bottom: 16px; left: 50%;
+    width: 4px; transform: translateX(-50%);
+    background: linear-gradient(90deg, rgba(0,0,0,0.35), rgba(255,230,190,0.15), rgba(0,0,0,0.35));
+    z-index: 2;
+  }
+  .flip-left, .flip-right {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 30px; height: 54px;
+    background: rgba(245,236,216,0.1);
+    border: 1px solid rgba(245,236,216,0.25);
+    color: #f5ecd8;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-style: italic;
+    z-index: 5;
+  }
+  .flip-left { left: -38px; border-radius: 3px 0 0 3px; }
+  .flip-right { right: -38px; border-radius: 0 3px 3px 0; }
+
+  .avatars { display: inline-flex; }
+  .avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #3d2f1f;
+    margin-left: -5px; border: 2px solid #f5ecd8;
+    font-family: 'Helvetica', sans-serif;
+  }
+  .avatar:first-child { margin-left: 0; }
+  .avatar.a { background: #e8a17a; }
+  .avatar.b { background: #c9a66b; }
+  .avatar.c { background: #9bb59b; }
+  .avatar.d { background: #c487a3; }
+
+  .masthead-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 10px; margin-bottom: 14px;
+    border-bottom: 1px solid rgba(80,60,40,0.25);
+  }
+  .mast-title {
+    font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: #8a6f4a; font-family: 'Helvetica', sans-serif;
+  }
+  .mast-title em { font-family: 'Georgia', serif; font-style: italic; font-size: 14px; letter-spacing: 0; color: #3d2f1f; text-transform: none; }
+
+  .date-rule {
+    text-align: center; font-size: 10px; letter-spacing: 0.25em;
+    text-transform: uppercase; color: #8a6f4a; padding: 6px 0 10px;
+    font-family: 'Helvetica', sans-serif;
+  }
+  .chapter-head {
+    text-align: center; padding: 4px 0 16px;
+  }
+  .chapter-head .kicker {
+    font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase; color: #8a6f4a;
+    font-family: 'Helvetica', sans-serif;
+  }
+  .chapter-head h3 {
+    font-size: 22px; font-style: italic; font-weight: normal; margin: 4px 0 0;
+  }
+
+  .block {
+    border-radius: 5px; padding: 12px 14px; margin-bottom: 9px;
+  }
+  .block .k {
+    font-size: 8.5px; letter-spacing: 0.22em; text-transform: uppercase;
+    font-weight: 700; margin-bottom: 4px; font-family: 'Helvetica', sans-serif;
+  }
+  .block h4 {
+    font-size: 14px; font-style: italic; font-weight: normal;
+    margin: 0 0 5px; line-height: 1.25;
+  }
+  .block p { font-size: 11.5px; line-height: 1.5; margin: 0; }
+  .block .sig {
+    margin-top: 7px; font-size: 9.5px; color: #5a4628;
+    display: flex; align-items: center; gap: 5px;
+    font-family: 'Helvetica', sans-serif;
+  }
+  .sig .a-mini {
+    width: 14px; height: 14px; border-radius: 50%; font-size: 8px;
+    font-weight: 700; color: #3d2f1f;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .block.synthesis { background: #e8a17a; } .block.synthesis .k { color: #7a2f1a; }
+  .block.nudge { background: #c487a3; color: #3d1830; } .block.nudge .k { color: #591a42; }
+  .block.observation { background: #f3e6b8; } .block.observation .k { color: #7a5f1a; }
+  .block.written { background: #faf3e2; border: 1px solid rgba(120,90,50,0.3); } .block.written .k { color: #8a6f4a; }
+  .block.family { background: #6a8aa0; color: #f5ecd8; } .block.family .k { color: #d0e1ea; }
+  .block.activity { background: #9bb59b; } .block.activity .k { color: #2f5a38; }
+
+  .page-num {
+    position: absolute; bottom: 10px; font-size: 9px;
+    color: #8a6f4a; letter-spacing: 0.2em; font-style: italic;
+    font-family: 'Helvetica', sans-serif;
+  }
+  .page.left .page-num { left: 24px; }
+  .page.right .page-num { right: 24px; }
+
+  .footer-capture {
+    position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%);
+    background: #3d2f1f; color: #f5ecd8; padding: 8px 20px;
+    border-radius: 20px; font-size: 11px; letter-spacing: 0.1em;
+    text-transform: uppercase; font-family: 'Helvetica', sans-serif;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+    z-index: 6;
+  }
+
+  .filters {
+    position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 4px; background: #1f160e; padding: 2px 8px;
+    border-radius: 14px;
+    z-index: 6;
+  }
+  .fp {
+    padding: 4px 10px; border-radius: 12px; font-size: 10px;
+    color: #c8b894; font-family: 'Helvetica', sans-serif;
+    letter-spacing: 0.05em;
+  }
+  .fp.active { background: #d4b483; color: #1f160e; }
+
+  .caption { text-align: center; font-size: 12px; color: var(--muted, #888); margin-top: 20px; font-style: italic; }
+</style>
+
+<div class="stage">
+  <div class="book">
+    <div class="filters">
+      <span class="fp active">Everyone</span>
+      <span class="fp">Sarah</span>
+      <span class="fp">Liam</span>
+      <span class="fp">Mia</span>
+      <span class="fp">Syntheses</span>
+    </div>
+    <div class="flip-left">‹</div>
+    <div class="flip-right">›</div>
+    <div class="gutter"></div>
+
+    <!-- LEFT PAGE -->
+    <div class="page left">
+      <div class="masthead-row">
+        <div class="mast-title">Vol IV · <em>Spring, in progress</em></div>
+        <div class="avatars">
+          <div class="avatar a">S</div>
+          <div class="avatar b">R</div>
+          <div class="avatar c">L</div>
+          <div class="avatar d">M</div>
+        </div>
+      </div>
+
+      <div class="chapter-head">
+        <div class="kicker">Chapter Seven</div>
+        <h3>This week</h3>
+      </div>
+
+      <div class="date-rule">— Monday, April 13 —</div>
+
+      <div class="block family">
+        <div class="k">Family synthesis · weekly</div>
+        <h4>The week is finding its rhythm.</h4>
+        <p>Curiosity up. Parent check-ins down. The kids are inviting more conversation than the adults are initiating.</p>
+      </div>
+
+      <div class="block written">
+        <div class="k">Written · by you</div>
+        <h4>Liam asked "why" six times at dinner.</h4>
+        <p>Started with the weather, ended at photosynthesis. He wanted the real answer each time.</p>
+      </div>
+
+      <div class="block activity">
+        <div class="k">Activity · completed</div>
+        <h4>Check-in with Mia — done.</h4>
+        <p>Third time this week.</p>
+      </div>
+
+      <div class="page-num">— 54 —</div>
+    </div>
+
+    <!-- RIGHT PAGE -->
+    <div class="page right">
+      <div class="masthead-row">
+        <div class="mast-title" style="opacity: 0.5;">&nbsp;</div>
+        <div class="mast-title" style="text-align:right;">April · 2026</div>
+      </div>
+
+      <div class="date-rule">— Tuesday, April 14 —</div>
+
+      <div class="block synthesis">
+        <div class="k">Synthesis · about Liam</div>
+        <h4>He's testing whether his curiosity is welcome.</h4>
+        <p>When Liam asks "why" six times, he isn't stalling — he's building his model of how the world works, and you.</p>
+        <div class="sig"><div class="a-mini" style="background:#9bb59b;">L</div> Based on 3 entries</div>
+      </div>
+
+      <div class="block nudge">
+        <div class="k">One thing to try tonight</div>
+        <h4>Give the long answer.</h4>
+        <p>When he asks "why" at dinner, give the real reason — even if it runs longer than you'd usually offer.</p>
+      </div>
+
+      <div class="block observation">
+        <div class="k">Observation · about Mia</div>
+        <h4>Quiet at dinner — three nights running.</h4>
+        <p>Didn't ask about her day.</p>
+        <div class="sig"><div class="a-mini" style="background:#c9a66b;">R</div> Noted by Rachel</div>
+      </div>
+
+      <div class="page-num">— 55 —</div>
+    </div>
+
+    <div class="footer-capture">+ Add an entry</div>
+  </div>
+</div>
+
+<p class="caption">Older on the left, newer on the right. Click ‹ or › to flip. Content flows across pages like a real book — a date rule can open on the left page and its entries continue on the right.</p>

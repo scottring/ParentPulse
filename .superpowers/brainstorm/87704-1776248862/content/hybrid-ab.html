@@ -1,0 +1,173 @@
+<h2>Hybrid: A's proportions + B's style + taller page</h2>
+<p class="subtitle">3 designed blocks per page (6 per spread). Same width, ~30% taller. Each block carries B's polish without the hero/secondary asymmetry.</p>
+
+<style>
+  .stage { background: #1f160e; padding: 26px; border-radius: 6px; }
+  .book {
+    max-width: 900px; margin: 0 auto;
+    background: #6a3f26;
+    padding: 14px;
+    border-radius: 4px;
+    box-shadow: 0 18px 56px rgba(0,0,0,0.5);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .page {
+    background: #f5ecd8;
+    padding: 32px 30px 36px;
+    min-height: 700px;          /* was 520 in A — ~35% taller */
+    color: #2d2418;
+    font-family: Georgia, serif;
+    position: relative;
+  }
+  .page.left  { box-shadow: inset -10px 0 18px -10px rgba(0,0,0,0.2); }
+  .page.right { box-shadow: inset 10px 0 18px -10px rgba(0,0,0,0.2); }
+
+  .masthead {
+    text-align: center;
+    border-bottom: 1px solid rgba(80,60,40,0.2);
+    padding-bottom: 14px;
+    margin-bottom: 26px;
+  }
+  .masthead .av {
+    display: inline-block; width: 26px; height: 26px;
+    border-radius: 50%; background: #d4b483;
+    color: #3d2f1f; font-weight: 700; font-size: 11px;
+    line-height: 26px; text-align: center;
+    margin: 0 -4px; border: 2px solid #f5ecd8;
+    font-family: -apple-system, sans-serif;
+  }
+  .masthead .vol {
+    font-size: 9px; letter-spacing: 0.25em; text-transform: uppercase;
+    color: #8a6f4a; margin-top: 10px; font-family: -apple-system, sans-serif;
+  }
+  .masthead .vol em {
+    font-family: Georgia, serif; font-style: italic;
+    font-size: 13px; color: #3d2f1f; letter-spacing: 0; text-transform: none;
+  }
+  .masthead .date {
+    font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase;
+    color: #8a6f4a; margin-top: 8px; font-family: -apple-system, sans-serif;
+  }
+
+  /* Block: B's polish at A's density */
+  .block {
+    border-radius: 6px;
+    padding: 18px 20px;
+    margin-bottom: 16px;          /* more air than A */
+    box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+  }
+  .kicker {
+    font-size: 9px; letter-spacing: 0.24em; text-transform: uppercase;
+    font-weight: 700; margin-bottom: 8px;
+    font-family: -apple-system, sans-serif;
+  }
+  .headline {
+    font-size: 17px; font-style: italic; font-weight: normal;
+    line-height: 1.25; margin: 0 0 8px;
+  }
+  .preview {
+    font-size: 12.5px; line-height: 1.55; margin: 0;
+    /* two-line clamp — real text, not nowrap */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .sig {
+    margin-top: 10px; font-size: 9.5px;
+    display: flex; align-items: center; gap: 6px;
+    font-family: -apple-system, sans-serif; opacity: 0.75;
+  }
+  .sig .av-mini {
+    width: 14px; height: 14px; border-radius: 50%;
+    font-size: 8px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    color: #3d2f1f;
+  }
+
+  /* Type variants — same palette as B */
+  .block.synth { background: #e8a17a; color: #3d2518; }
+  .block.synth .kicker { color: #7a2f1a; }
+  .block.synth .preview { color: #5a3520; }
+
+  .block.nudge { background: #c487a3; color: #3d1830; }
+  .block.nudge .kicker { color: #591a42; }
+  .block.nudge .preview { color: #591a42; }
+
+  .block.obs { background: #f3e6b8; color: #3d3218; }
+  .block.obs .kicker { color: #7a5f1a; }
+  .block.obs .preview { color: #5a4628; }
+
+  .block.write { background: #faf3e2; border: 1px solid rgba(120,90,50,0.25); color: #2d2418; }
+  .block.write .kicker { color: #8a6f4a; }
+  .block.write .preview { color: #5a4628; }
+
+  .block.act { background: #9bb59b; color: #1f3020; }
+  .block.act .kicker { color: #2f5a38; }
+  .block.act .preview { color: #2f4a30; }
+
+  .block.fam { background: #6a8aa0; color: #f5ecd8; }
+  .block.fam .kicker { color: #d0e1ea; }
+  .block.fam .preview { color: #e0e8ee; }
+</style>
+
+<div class="stage">
+  <div class="book">
+    <div class="page left">
+      <div class="masthead">
+        <span class="av">S</span><span class="av">R</span><span class="av">L</span><span class="av">M</span>
+        <div class="vol">Kaufman Family · <em>Volume IV · Spring</em></div>
+        <div class="date">— Monday, April 13 —</div>
+      </div>
+
+      <article class="block fam">
+        <div class="kicker">Family synthesis · weekly</div>
+        <h4 class="headline">The week is finding its rhythm.</h4>
+        <p class="preview">Curiosity is up. Check-ins between you and Sarah are down. The kids are inviting more conversation than the adults are initiating.</p>
+      </article>
+
+      <article class="block write">
+        <div class="kicker">Written · by you</div>
+        <h4 class="headline">Liam asked "why" six times at dinner.</h4>
+        <p class="preview">Started with the weather, ended at photosynthesis. He wanted the real answer each time.</p>
+      </article>
+
+      <article class="block act">
+        <div class="kicker">Activity · completed</div>
+        <h4 class="headline">Check-in with Mia — done.</h4>
+        <p class="preview">Third time this week. She brought up the bus thing on her own.</p>
+      </article>
+    </div>
+
+    <div class="page right">
+      <div class="masthead">
+        <span style="color:transparent;">.</span>
+        <div class="vol" style="visibility:hidden;">x</div>
+        <div class="date">— Tuesday, April 14 —</div>
+      </div>
+
+      <article class="block synth">
+        <div class="kicker">Synthesis · about Liam</div>
+        <h4 class="headline">He's testing whether his curiosity is welcome.</h4>
+        <p class="preview">When Liam asks "why" six times, he isn't stalling — he's building his model of the world, and you.</p>
+        <div class="sig"><span class="av-mini" style="background:#9bb59b;">L</span> About Liam · 3 entries</div>
+      </article>
+
+      <article class="block nudge">
+        <div class="kicker">One thing to try tonight</div>
+        <h4 class="headline">Give the long answer.</h4>
+        <p class="preview">When Liam asks "why" at dinner, give the real reason — even if it runs longer than you'd usually offer.</p>
+      </article>
+
+      <article class="block obs">
+        <div class="kicker">Observation · about Mia</div>
+        <h4 class="headline">Quiet at dinner — three nights running.</h4>
+        <p class="preview">Didn't ask about her day.</p>
+        <div class="sig"><span class="av-mini" style="background:#c9a66b;">R</span> Noted by Rachel</div>
+      </article>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="text-align:center; margin-top:20px; font-size:12px;">3 blocks per page · 6 per spread · ~700px page height · 16px gap between blocks</p>
