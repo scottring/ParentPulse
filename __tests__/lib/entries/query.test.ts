@@ -1,4 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
+
+// `@/lib/entries/query` now imports `@/lib/firebase` for the production
+// firestoreEntrySource. Short-circuit the env-var validation that fires
+// at module load so the test environment doesn't throw.
+vi.mock('@/lib/firebase', () => ({
+  firestore: {},
+  auth: {},
+  functions: {},
+  storage: {},
+}));
+
 import { Timestamp } from 'firebase/firestore';
 import { fetchEntries, type EntrySource } from '@/lib/entries/query';
 import type { JournalEntry } from '@/types/journal';

@@ -2,6 +2,8 @@ import type { Entry, EntryFilter } from '@/types/entry';
 import type { JournalEntry } from '@/types/journal';
 import type { Contribution, PersonManual } from '@/types/person-manual';
 import type { GrowthItem } from '@/types/growth';
+import { firestore } from '@/lib/firebase';
+import { collection, getDocs, query as firestoreQuery, where } from 'firebase/firestore';
 import {
   journalEntryToEntry,
   contributionToEntries,
@@ -86,3 +88,49 @@ export function applyFilter(entries: Entry[], filter: EntryFilter): Entry[] {
 
   return out.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
 }
+
+/**
+ * Production-bound EntrySource that reads from Firestore legacy collections.
+ * Each method returns typed objects that the adapters in `./adapter.ts`
+ * know how to consume.
+ *
+ * ID-field mapping (collection-doc-id → typed-field):
+ *   journal_entries  → entryId
+ *   contributions    → contributionId
+ *   person_manuals   → manualId
+ *   growth_items     → growthItemId
+ */
+export const firestoreEntrySource: EntrySource = {
+  async journalEntries(familyId) {
+    const snap = await getDocs(
+      firestoreQuery(collection(firestore, 'journal_entries'), where('familyId', '==', familyId))
+    );
+    return snap.docs.map(
+      (d) => ({ entryId: d.id, ...(d.data() as Omit<JournalEntry, 'entryId'>) })
+    );
+  },
+  async contributions(familyId) {
+    const snap = await getDocs(
+      firestoreQuery(collection(firestore, 'contributions'), where('familyId', '==', familyId))
+    );
+    return snap.docs.map(
+      (d) => ({ contributionId: d.id, ...(d.data() as Omit<Contribution, 'contributionId'>) })
+    );
+  },
+  async personManuals(familyId) {
+    const snap = await getDocs(
+      firestoreQuery(collection(firestore, 'person_manuals'), where('familyId', '==', familyId))
+    );
+    return snap.docs.map(
+      (d) => ({ manualId: d.id, ...(d.data() as Omit<PersonManual, 'manualId'>) })
+    );
+  },
+  async growthItems(familyId) {
+    const snap = await getDocs(
+      firestoreQuery(collection(firestore, 'growth_items'), where('familyId', '==', familyId))
+    );
+    return snap.docs.map(
+      (d) => ({ growthItemId: d.id, ...(d.data() as Omit<GrowthItem, 'growthItemId'>) })
+    );
+  },
+};
