@@ -7,9 +7,11 @@ import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useEntries } from '@/hooks/useEntries';
+import { usePeopleMap } from '@/hooks/usePeopleMap';
 import { JournalSpread } from '@/components/journal-spread/JournalSpread';
 import type { FilterSelection } from '@/components/journal-spread/FilterPills';
 import type { EntryFilter } from '@/types/entry';
+import CaptureSheet from '@/components/capture/CaptureSheet';
 // ================================================================
 // Landing / home page — the library desk.
 //
@@ -523,6 +525,7 @@ export default function HomePage() {
 function SpreadHome() {
   const { user } = useAuth();
   const dashboard = useDashboard();
+  const { nameOf } = usePeopleMap();
   const [filterSel, setFilterSel] = useState<FilterSelection>({ kind: 'everyone' });
 
   // familyId is not exposed by useDashboard; read it directly from auth.
@@ -533,6 +536,7 @@ function SpreadHome() {
   const entryFilter: EntryFilter = useMemo(() => {
     if (filterSel.kind === 'person') return { subjectPersonIds: [filterSel.personId] };
     if (filterSel.kind === 'syntheses') return { types: ['synthesis'] };
+    if (filterSel.kind === 'just-me') return { onlyPrivateToCurrentUser: true };
     return {};
   }, [filterSel]);
 
@@ -566,20 +570,23 @@ function SpreadHome() {
   }
 
   return (
-    <JournalSpread
-      entries={entries}
-      familyName={selfPerson?.name?.split(' ').slice(-1)[0] ?? 'Family'}
-      volumeLabel="Volume IV · Spring, in progress"
-      dateRangeLabel={dateLabel}
-      members={members}
-      people={members}
-      filter={filterSel}
-      onFilterChange={setFilterSel}
-      onCapture={() => {
-        // Plan 3 wires this to the unified capture sheet. For now: navigate
-        // to /journal which has the existing capture entrypoint.
-        window.location.href = '/journal';
-      }}
-    />
+    <>
+      <JournalSpread
+        entries={entries}
+        familyName={selfPerson?.name?.split(' ').slice(-1)[0] ?? 'Family'}
+        volumeLabel="Volume IV · Spring, in progress"
+        dateRangeLabel={dateLabel}
+        members={members}
+        people={members}
+        filter={filterSel}
+        onFilterChange={setFilterSel}
+        nameOf={nameOf}
+        currentUserId={user?.userId}
+        onCapture={() => {
+          window.dispatchEvent(new Event('relish:open-capture'));
+        }}
+      />
+      <CaptureSheet />
+    </>
   );
 }

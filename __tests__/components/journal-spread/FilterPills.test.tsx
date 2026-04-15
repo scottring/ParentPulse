@@ -47,4 +47,28 @@ describe('FilterPills', () => {
     fireEvent.click(screen.getByText('Syntheses'));
     expect(onChange).toHaveBeenCalledWith({ kind: 'syntheses' });
   });
+
+  it('renders a "Just me" pill between Everyone and the people pills', () => {
+    render(
+      <FilterPills
+        people={[{ id: 'p1', name: 'Sarah' }]}
+        active={{ kind: 'everyone' }}
+        onChange={() => {}}
+      />
+    );
+    expect(screen.getByText(/just me/i)).toBeInTheDocument();
+  });
+
+  it('fires onChange with kind "just-me" when the pill is clicked', () => {
+    const onChange = vi.fn();
+    render(
+      <FilterPills
+        people={[]}
+        active={{ kind: 'everyone' }}
+        onChange={onChange}
+      />
+    );
+    fireEvent.click(screen.getByText(/just me/i));
+    expect(onChange).toHaveBeenCalledWith({ kind: 'just-me' });
+  });
 });

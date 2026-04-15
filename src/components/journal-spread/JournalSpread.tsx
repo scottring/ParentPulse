@@ -35,6 +35,8 @@ export interface JournalSpreadProps {
   onCapture: () => void;
   filter?: FilterSelection;
   onFilterChange?: (next: FilterSelection) => void;
+  nameOf?: (personId: string) => string;
+  currentUserId?: string;
 }
 
 /** Group an array of entries by calendar day (local date string), preserving order */
@@ -56,7 +58,15 @@ function groupEntriesByDay(entries: Entry[]): Array<{ dateKey: string; entries: 
 }
 
 /** Render a grouped page: inserts DateBand between day groups */
-function PageEntries({ entries }: { entries: Entry[] }) {
+function PageEntries({
+  entries,
+  nameOf,
+  currentUserId,
+}: {
+  entries: Entry[];
+  nameOf?: (personId: string) => string;
+  currentUserId?: string;
+}) {
   const groups = groupEntriesByDay(entries);
   return (
     <>
@@ -64,7 +74,7 @@ function PageEntries({ entries }: { entries: Entry[] }) {
         <div key={group.dateKey}>
           <DateBand date={group.entries[0].createdAt} />
           {group.entries.map((e) => (
-            <EntryBlock key={e.id} entry={e} />
+            <EntryBlock key={e.id} entry={e} nameOf={nameOf} currentUserId={currentUserId} />
           ))}
         </div>
       ))}
@@ -82,6 +92,8 @@ export function JournalSpread({
   onCapture,
   filter,
   onFilterChange,
+  nameOf,
+  currentUserId,
 }: JournalSpreadProps) {
   const [internalFilter, setInternalFilter] = useState<FilterSelection>({ kind: 'everyone' });
   const activeFilter = filter ?? internalFilter;
@@ -131,12 +143,12 @@ export function JournalSpread({
         <div className="page page-left" style={paperLeftStyle}>
           <MarginColumn entries={leftEntries} side="left" />
           <div className="page-main">
-            <PageEntries entries={leftEntries} />
+            <PageEntries entries={leftEntries} nameOf={nameOf} currentUserId={currentUserId} />
           </div>
         </div>
         <div className="page page-right" style={paperRightStyle}>
           <div className="page-main">
-            <PageEntries entries={rightEntries} />
+            <PageEntries entries={rightEntries} nameOf={nameOf} currentUserId={currentUserId} />
             {currentEntries.length === 0 && (
               <p className="empty-state">A quiet day. Nothing yet — write the first thing.</p>
             )}
