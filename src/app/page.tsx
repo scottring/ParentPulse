@@ -624,6 +624,52 @@ function SpreadHome() {
           }
         `}</style>
       </a>
+      <a
+        href="/settings"
+        className="user-avatar"
+        aria-label={user?.name ? `${user.name} — settings` : 'Settings'}
+        title={user?.name || 'Settings'}
+      >
+        {user?.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={user.avatarUrl} alt="" />
+        ) : (
+          <span>{(user?.name || '?').charAt(0).toUpperCase()}</span>
+        )}
+        <style jsx>{`
+          .user-avatar {
+            position: fixed;
+            top: 14px;
+            right: 22px;
+            z-index: 20;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #d4b483;
+            color: #2a1f14;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, 'Helvetica Neue', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            border: 2px solid #f5ecd8;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            transition: transform 160ms ease, box-shadow 160ms ease;
+            overflow: hidden;
+          }
+          .user-avatar:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
+          }
+          .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+        `}</style>
+      </a>
       <JournalSpread
         entries={entries}
         familyName={selfPerson?.name?.split(' ').slice(-1)[0] ?? 'Family'}
