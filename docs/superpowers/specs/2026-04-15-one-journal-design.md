@@ -237,7 +237,13 @@ The work is mostly **collapsing**, not building new. Each step ships independent
 
 6. **Retire old surfaces.** Redirect `/family-manual`, `/workbook`, `/relish`, `/dashboard`, `/growth/*`, `/journal` to `/` with filters. Delete pages. Retire library-desk home. Update top nav to three items.
 
-7. **Data migration.** One-time backfill of legacy `journal_entries`, `synthesizedContent`, `growthItems` into `entries`. Legacy collections become read-only.
+7. **Data migration (required — no data loss).** One-time backfill Cloud Function that preserves every piece of authored content:
+   - **`journal_entries` → `entries`** with `type: 'written' | 'observation'` (determined by subjects). Timestamps, author, and content preserved verbatim.
+   - **`contributions` → `entries` (prompt + reflection pairs).** For each question/answer in every contribution, emit a `prompt` entry (authored by `system`, content = question prose, timestamped to when asked) and a `reflection` entry (authored by the contributor, content = answer verbatim, `anchorEntryId` = the prompt, timestamped to when answered). Observer contributions and kid sessions migrate with the correct author attributions. Dimension tags ride along. **Hours of user-authored prose are fully preserved, visible in the journal when the user flips back to that period.**
+   - **`synthesizedContent` → `entries`** with `type: 'synthesis'`, `sourceEntryIds` populated by resolving the original contribution references to their newly-migrated prompt/reflection entry IDs.
+   - **`growthItems` → `entries`** with `type: 'nudge' | 'prompt' | 'reflection' | 'activity'` as appropriate.
+   - Legacy collections become read-only archives after verification; the migration is not destructive.
+   - A dry-run mode produces a report (counts per type, sample entries) before any writes.
 
 Steps 1–3 ship behind a flag and are reversible. Step 4 commits the architecture. Steps 5–7 are cleanup.
 
@@ -276,56 +282,70 @@ The spread becomes a single page on narrow viewports (<640px) with the same phot
 
 ---
 
-## Section 8 — Onboarding & Teaching the Journal
+## Section 8 — Onboarding: Journal-Native
 
-Onboarding flows are the moments where the user explicitly teaches the journal who the people are. They remain intact; only the output layer changes.
+Onboarding is the first chapter of the journal, not a lobby you pass through to reach it. The research-backed question bank — representing hours of authoring work — is preserved in full and becomes the engine that posts prompts one at a time onto the spread. No multi-step wizards.
 
-### Preserved flows
+### The first-login experience
 
-- `/welcome` — post-registration landing.
-- `/people/[id]/create-manual` — relationship-type picker (self, spouse, child, etc.) when a new person is added.
-- `/people/[id]/manual/self-onboard` — user's own self-questions.
-- `/people/[id]/manual/onboard` — observer questions for each added person (adult overrides for spouse/friend/sibling; child-centric for kids).
-- `/people/[id]/manual/kid-session` — parent-supervised emoji session; kid contributes about a parent.
-- Spouse invite + welcome flow.
+- A brand-new user signs up and lands at `/`. The journal opens with 3–5 `prompt` entries waiting on today's spread — the opening questions from the self-onboarding bank.
+- The user taps a prompt, the capture sheet opens pre-filled with that question, and they write a `reflection` entry at their pace. Skip is allowed; prompts can be left for later.
+- As reflections land, the backend posts follow-up prompts sparsely (Section 5 cadence). The user never sees "5 of 20" — they see a living book gradually inviting them deeper.
+- After a few reflections exist about the self, the backend posts a prompt inviting the user to add another person. Adding a person posts its own opening prompt about that person.
 
-These surfaces keep their current question sets, living-document UX, draft persistence, and dimension-backed research scaffolding.
+### The question bank (preserved)
 
-### Output layer in the one-journal model
+The existing research-backed question content — all variants (self, observer, adult-override, child-centric emoji) and all dimension tagging — moves unchanged into a **prompt bank** the backend reads. Zero prose is discarded.
 
-- **`Contribution` docs remain** as canonical internal state — the record of what was asked, what was answered, and by whom. Unchanged.
-- **`PersonManual` docs can remain** as derived cache or be retired in favor of synthesis entries; the planning pass decides.
-- **The user-visible artifact is an Entry.** When an onboarding session completes (self or observer), the synthesis function emits a `synthesis` entry into the stream:
-  - Self-onboarding complete → a "Meet [self]" synthesis, subject = self person.
-  - Observer onboarding complete → a "Meet [subject]" synthesis, subject = the person observed, signed with the contributor's avatar.
-  - Kid session complete → a synthesis about the parent the kid answered about, signed with the kid's avatar.
-- **Re-assessment** (editing a contribution later) emits a new `synthesis` entry with `sourceEntryIds` referencing the prior synthesis — the journal shows change over time, honoring the living-document principle.
+- Backend selects the next question for a given subject + perspective + stage using the same selection logic the wizards currently encode.
+- Variants are chosen by audience: parent reader vs. invited spouse vs. supervised kid session.
+- Dimension tags ride along on the posted `prompt` entry and are inherited by the user's `reflection`.
 
-### First-open experience
+### Observer contributions (spouse, future observers)
 
-- A brand-new user completes self-onboarding, then sees the journal open to a single-page spread containing the "Meet [self]" synthesis and a prompt inviting them to add the first person.
-- After adding and onboarding the first other person, the spread extends to include the "Meet [that person]" synthesis.
-- The blank cream page is only visible for the seconds between registration and first synthesis write.
+- When the user invites their spouse, the spouse's first-login experience is the same shape: the journal opens with prompt entries waiting, framed from their perspective ("What does Scott love most about being with you?"). They answer as reflections. Same surface, same rhythm.
+- Visibility of observer reflections follows existing rules (`visibleToUserIds` / `sharedWithUserIds`) — the subject sees them once marked shared.
+
+### Kid sessions
+
+The parent-supervised kid session remains a separate UI (age-specific, emoji-heavy, designed not to look like a parent's journal). Internally it produces `prompt` / `reflection` entries attributed to the child, with the parent as subject. The UI is different; the data is the same.
+
+### Adding a person
+
+- `/people` lists people and supports adding one.
+- Adding a person immediately posts a single `prompt` entry to the journal ("Tell me about [name] — what matters most to know?"). Backend picks a dimension-aware opening question.
+- Follow-up prompts accumulate over days/weeks per Section 5 cadence.
 
 ### Teaching relationships (bonds)
 
-The model supports bonds as first-class subjects (`{kind: 'bond', personIds: [a, b]}`). No dedicated "onboard your relationship" questionnaire is added. Bonds are taught two ways:
+Bonds are not onboarded via a dedicated questionnaire. They are taught two ways:
 
-1. **Observer contributions already ask relationship-framed questions** ("What does Liam love about being with you?"). The synthesis function emits bond-subject entries when the contribution content implies them.
-2. **Normal writing fills in the rest.** When a user writes about a conflict or moment with their spouse and chips both subjects, the bond accumulates. Accumulation triggers a bond synthesis (Section 5 rules). The journal learns bonds by being used.
+1. **Observer-framed questions already produce bond signal** ("What does Liam love about being with you?"). Reflections to these entries tag the bond as a subject; accumulation triggers a bond-subject `synthesis`.
+2. **Normal writing fills in the rest.** Writing an entry and chipping both partners as subjects marks it as a bond entry; accumulation triggers synthesis (Section 5).
 
-This is intentional: adding a fourth onboarding questionnaire per relationship would violate the minimal-effort principle. The research-backed dimensions that apply to bonds stay in the synthesis prompt, invisible to the user.
+### What gets removed
 
-### Stage-aware surface
+The following routes and internal structures are retired at the end of the migration:
 
-The `/` spread is aware of the onboarding stage (prior memory: `new_user → self_complete → has_people → has_contributions → active`):
+- `/people/[id]/manual/self-onboard` — deleted.
+- `/people/[id]/manual/onboard` (observer wizard) — deleted.
+- `/people/[id]/manual/kid-session` — replaced with a simplified kid-session UI that writes entries directly; the wizard form is deleted.
+- `/people/[id]/create-manual` — replaced with a simple "add person" dialog on `/people`.
+- Multi-step wizard React components, progress-bar UI, draft-persistence hooks for wizards — deleted.
+- `Contribution` collection — deprecated after migration (Step 7). Existing docs become read-only archives; new writes go to `entries`.
 
-- `new_user` → redirect to `/welcome` until self-onboarding begins.
-- `self_complete` → journal shows "Meet [self]" + invitation to add a person.
-- `has_people` without contributions → journal shows invitation to onboard each person; pending onboardings appear as `prompt`-type entries on the spread.
-- `has_contributions` and beyond → normal journal behavior.
+### What's preserved
 
-The spread never forces completion; unfinished onboardings surface as gentle prompt entries that can be deferred.
+- **100% of authored content** (user prose answers) via the Step 7 migration.
+- **100% of the research-backed question prose** as the prompt bank.
+- **Dimension tagging and perspective variants** — carried forward unchanged.
+- **Living-document principle** — any reflection can be edited or added to later; re-reflections create new reflection entries anchored to the same prompt, so the journal shows change over time.
+
+### Stage expressed through content, not UI mode
+
+There is no state machine (`new_user → self_complete → ...`) driving branching UI on `/`. The spread always renders what's in the stream. Stage is an **emergent property**: a brand-new user sees a spread of waiting prompts; a user mid-onboarding sees a mix of prompts, reflections, and the first syntheses; a seasoned user sees full journal activity. The UI is the same — only the contents differ.
+
+A soft exception: if the journal has zero content for a brand-new user (pre-first-prompt-posted), the surface shows a single "Preparing your journal..." state for the seconds until the backend seeds the initial prompts.
 
 ## Out of scope
 
