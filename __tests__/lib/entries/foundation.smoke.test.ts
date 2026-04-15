@@ -79,7 +79,7 @@ describe('entries foundation — smoke', () => {
       ]),
     };
 
-    const entries = await fetchEntries('f1', {}, source);
+    const entries = await fetchEntries('f1', {}, source, 'u1');
     // 1 journal + 2 from contribution (prompt + reflection) + 1 synthesis (overview only) + 1 growth = 5
     expect(entries.length).toBe(5);
     // Sorted desc by createdAt: g1 (t3) first, then j1 (t2).
@@ -127,7 +127,8 @@ describe('entries foundation — smoke', () => {
     const entries = await fetchEntries(
       'f1',
       { subjectPersonIds: ['p-liam'] },
-      source
+      source,
+      'u1'
     );
     expect(entries.length).toBe(1);
     expect(entries[0].type).toBe('synthesis');

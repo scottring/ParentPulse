@@ -13,26 +13,35 @@ import {
 
 /**
  * Dependency-injection facade so the query layer is testable without a
- * live Firestore. Production will bind these to actual collection reads
- * in Task 7; tests pass stubs.
+ * live Firestore. Production will bind these to actual collection reads;
+ * tests pass stubs.
+ *
+ * Both familyId AND currentUserId are required so each implementation can
+ * scope its queries to only documents the caller is allowed to read.
  */
 export interface EntrySource {
-  journalEntries(familyId: string): Promise<JournalEntry[]>;
-  contributions(familyId: string): Promise<Contribution[]>;
-  personManuals(familyId: string): Promise<PersonManual[]>;
-  growthItems(familyId: string): Promise<GrowthItem[]>;
+  journalEntries(familyId: string, currentUserId: string): Promise<JournalEntry[]>;
+  contributions(familyId: string, currentUserId: string): Promise<Contribution[]>;
+  personManuals(familyId: string, currentUserId: string): Promise<PersonManual[]>;
+  growthItems(familyId: string, currentUserId: string): Promise<GrowthItem[]>;
 }
+
+export type FamilyRosterFetcher = (familyId: string) => Promise<string[]>;
+
+const SENTINEL_FAMILY_VISIBILITY = '_visibility:family';
 
 export async function fetchEntries(
   familyId: string,
   filter: EntryFilter,
-  source: EntrySource
+  source: EntrySource,
+  currentUserId: string,
+  fetchRoster?: FamilyRosterFetcher
 ): Promise<Entry[]> {
   const [journals, contribs, manuals, growth] = await Promise.all([
-    source.journalEntries(familyId),
-    source.contributions(familyId),
-    source.personManuals(familyId),
-    source.growthItems(familyId),
+    source.journalEntries(familyId, currentUserId),
+    source.contributions(familyId, currentUserId),
+    source.personManuals(familyId, currentUserId),
+    source.growthItems(familyId, currentUserId),
   ]);
 
   const entries: Entry[] = [];
@@ -51,6 +60,20 @@ export async function fetchEntries(
     }
   }
   for (const g of growth) entries.push(growthItemToEntry(g));
+
+  // Sentinel resolution: replace _visibility:family tag with actual roster.
+  const needsRoster = entries.some((e) =>
+    e.tags.includes(SENTINEL_FAMILY_VISIBILITY)
+  );
+  if (needsRoster && fetchRoster) {
+    const roster = await fetchRoster(familyId);
+    for (const e of entries) {
+      if (e.tags.includes(SENTINEL_FAMILY_VISIBILITY)) {
+        e.visibleToUserIds = roster;
+        e.tags = e.tags.filter((t) => t !== SENTINEL_FAMILY_VISIBILITY);
+      }
+    }
+  }
 
   return applyFilter(entries, filter);
 }
@@ -90,9 +113,12 @@ export function applyFilter(entries: Entry[], filter: EntryFilter): Entry[] {
 }
 
 /**
- * Production-bound EntrySource that reads from Firestore legacy collections.
- * Each method returns typed objects that the adapters in `./adapter.ts`
- * know how to consume.
+ * Production-bound EntrySource that reads from Firestore.
+ *
+ * contributions: issues TWO parallel queries — own drafts UNION family
+ * completes — then deduplicates by document id. This satisfies Firestore
+ * security rules that require either `contributorId == me` OR
+ * `status == 'complete'`.
  *
  * ID-field mapping (collection-doc-id → typed-field):
  *   journal_entries  → entryId
@@ -101,7 +127,7 @@ export function applyFilter(entries: Entry[], filter: EntryFilter): Entry[] {
  *   growth_items     → growthItemId
  */
 export const firestoreEntrySource: EntrySource = {
-  async journalEntries(familyId) {
+  async journalEntries(familyId, _currentUserId) {
     const snap = await getDocs(
       firestoreQuery(collection(firestore, 'journal_entries'), where('familyId', '==', familyId))
     );
@@ -109,15 +135,33 @@ export const firestoreEntrySource: EntrySource = {
       (d) => ({ entryId: d.id, ...(d.data() as Omit<JournalEntry, 'entryId'>) })
     );
   },
-  async contributions(familyId) {
-    const snap = await getDocs(
-      firestoreQuery(collection(firestore, 'contributions'), where('familyId', '==', familyId))
-    );
-    return snap.docs.map(
-      (d) => ({ contributionId: d.id, ...(d.data() as Omit<Contribution, 'contributionId'>) })
-    );
+  async contributions(familyId, currentUserId) {
+    const [ownSnap, completeSnap] = await Promise.all([
+      getDocs(
+        firestoreQuery(
+          collection(firestore, 'contributions'),
+          where('familyId', '==', familyId),
+          where('contributorId', '==', currentUserId)
+        )
+      ),
+      getDocs(
+        firestoreQuery(
+          collection(firestore, 'contributions'),
+          where('familyId', '==', familyId),
+          where('status', '==', 'complete')
+        )
+      ),
+    ]);
+    const seen = new Set<string>();
+    const out: Contribution[] = [];
+    for (const d of [...ownSnap.docs, ...completeSnap.docs]) {
+      if (seen.has(d.id)) continue;
+      seen.add(d.id);
+      out.push({ contributionId: d.id, ...(d.data() as Omit<Contribution, 'contributionId'>) });
+    }
+    return out;
   },
-  async personManuals(familyId) {
+  async personManuals(familyId, _currentUserId) {
     const snap = await getDocs(
       firestoreQuery(collection(firestore, 'person_manuals'), where('familyId', '==', familyId))
     );
@@ -125,7 +169,7 @@ export const firestoreEntrySource: EntrySource = {
       (d) => ({ manualId: d.id, ...(d.data() as Omit<PersonManual, 'manualId'>) })
     );
   },
-  async growthItems(familyId) {
+  async growthItems(familyId, _currentUserId) {
     const snap = await getDocs(
       firestoreQuery(collection(firestore, 'growth_items'), where('familyId', '==', familyId))
     );
@@ -133,4 +177,15 @@ export const firestoreEntrySource: EntrySource = {
       (d) => ({ growthItemId: d.id, ...(d.data() as Omit<GrowthItem, 'growthItemId'>) })
     );
   },
+};
+
+/**
+ * Production roster fetcher: queries the `users` collection for all members
+ * of the given family and returns their document ids (= user uids).
+ */
+export const firestoreFamilyRoster: FamilyRosterFetcher = async (familyId) => {
+  const snap = await getDocs(
+    firestoreQuery(collection(firestore, 'users'), where('familyId', '==', familyId))
+  );
+  return snap.docs.map((d) => d.id);
 };
