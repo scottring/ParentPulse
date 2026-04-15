@@ -54,8 +54,13 @@ function ReadMoreToggle({
 }
 
 /** Flowing prose entry — written, observation, reflection, conversation */
-function ProseEntry({ entry }: { entry: Entry }) {
+function ProseEntry({ entry, currentUserId }: { entry: Entry; currentUserId?: string }) {
   const [expanded, setExpanded] = useState(false);
+
+  const isPrivate =
+    currentUserId !== undefined &&
+    entry.visibleToUserIds.length === 1 &&
+    entry.visibleToUserIds[0] === currentUserId;
 
   const typeLabel =
     entry.type === 'observation'
@@ -80,7 +85,10 @@ function ProseEntry({ entry }: { entry: Entry }) {
 
   return (
     <article className="prose-entry">
-      <div className="entry-meta">{typeLabel}</div>
+      <div className="entry-meta">
+        {typeLabel}
+        {isPrivate && <span className="lock" aria-label="Private">🔒</span>}
+      </div>
       <p className={`entry-body${shouldClamp ? ' clamped' : ''}`}>
         <span className="first-line">{firstLine}</span>
         {rest && ` ${rest}`}
@@ -108,6 +116,11 @@ function ProseEntry({ entry }: { entry: Entry }) {
           display: flex;
           align-items: center;
           gap: 6px;
+        }
+        .lock {
+          margin-left: 6px;
+          opacity: 0.55;
+          font-size: 10px;
         }
         .entry-body {
           font-size: 14px;
@@ -397,7 +410,15 @@ function PromptInline({ entry }: { entry: Entry }) {
 
 // ── Discriminated renderer ───────────────────────────────────────────────────
 
-export function EntryBlock({ entry, nameOf }: { entry: Entry; nameOf?: (personId: string) => string }) {
+export function EntryBlock({
+  entry,
+  nameOf,
+  currentUserId,
+}: {
+  entry: Entry;
+  nameOf?: (personId: string) => string;
+  currentUserId?: string;
+}) {
   // synthesis: check subject kind to pick banner vs pull-quote
   if (entry.type === 'synthesis') {
     const firstSubject = entry.subjects[0];
@@ -420,5 +441,5 @@ export function EntryBlock({ entry, nameOf }: { entry: Entry; nameOf?: (personId
   }
 
   // written, observation, reflection, conversation all fall through to prose
-  return <ProseEntry entry={entry} />;
+  return <ProseEntry entry={entry} currentUserId={currentUserId} />;
 }

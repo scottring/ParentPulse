@@ -579,6 +579,7 @@ function SpreadHome() {
       filter={filterSel}
       onFilterChange={setFilterSel}
       nameOf={nameOf}
+      currentUserId={user?.userId}
       onCapture={() => {
         // Plan 3 wires this to the unified capture sheet. For now: navigate
         // to /journal which has the existing capture entrypoint.

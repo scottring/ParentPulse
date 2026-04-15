@@ -162,4 +162,26 @@ describe('EntryBlock', () => {
     render(<EntryBlock entry={synth} />);
     expect(screen.getByText(/about p-liam/i)).toBeInTheDocument();
   });
+
+  // ── lock glyph ────────────────────────────────────────────────────────────
+
+  it('shows a lock glyph when the entry is private to the current user', () => {
+    const privateEntry: Entry = {
+      ...baseEntry,
+      type: 'written',
+      visibleToUserIds: ['u1'],
+    };
+    render(<EntryBlock entry={privateEntry} currentUserId="u1" />);
+    expect(screen.getByText(/🔒|private/i)).toBeInTheDocument();
+  });
+
+  it('does not show the lock glyph when the entry is shared', () => {
+    const sharedEntry: Entry = {
+      ...baseEntry,
+      type: 'written',
+      visibleToUserIds: ['u1', 'u2'],
+    };
+    render(<EntryBlock entry={sharedEntry} currentUserId="u1" />);
+    expect(screen.queryByText('🔒')).not.toBeInTheDocument();
+  });
 });
