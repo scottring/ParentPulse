@@ -34,6 +34,7 @@ export default function CaptureSheet() {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   // Which toolbar picker row is expanded (only one at a time).
   const [openPicker, setOpenPicker] = useState<'category' | 'about' | 'writingAs' | 'privacy' | null>(null);
+  const [visibilityPreset, setVisibilityPreset] = useState<'just-me' | 'spouse' | 'family'>('just-me');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Preserved after save so the "Ask about this" step can use them
@@ -59,6 +60,32 @@ export default function CaptureSheet() {
       )
       .map((p) => ({ userId: p.linkedUserId as string, name: p.name }));
   }, [people, user?.userId]);
+
+  const spouse = shareCandidates[0] ?? null;
+
+  function applyVisibilityPreset(preset: 'just-me' | 'spouse' | 'family') {
+    setVisibilityPreset(preset);
+    if (preset === 'just-me') setSharedWith([]);
+    else if (preset === 'spouse' && spouse) setSharedWith([spouse.userId]);
+    else if (preset === 'family') setSharedWith(shareCandidates.map((c) => c.userId));
+    try {
+      window.localStorage?.setItem('relish:capture:last-visibility', preset);
+    } catch {
+      // storage disabled; not fatal
+    }
+  }
+
+  useEffect(() => {
+    if (state !== 'composing') return;
+    let stored: string | null = null;
+    try { stored = window.localStorage?.getItem('relish:capture:last-visibility'); } catch {}
+    const preset =
+      stored === 'family' ? 'family' :
+      stored === 'spouse' && spouse ? 'spouse' :
+      'just-me';
+    applyVisibilityPreset(preset);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, spouse]);
 
   useEffect(() => {
     if (state === 'composing') {
@@ -104,6 +131,7 @@ export default function CaptureSheet() {
     setCategory('moment');
     setSelectedPeople([]);
     setSharedWith([]);
+    setVisibilityPreset('just-me');
     setChatInput('');
     setSavedEntryId(null);
     setWritingFor(null);
@@ -325,6 +353,58 @@ export default function CaptureSheet() {
                 </div>
               </div>
 
+              {/* Visibility presets */}
+              <div className="shrink-0 px-6 pb-2">
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
+                  <button
+                    type="button"
+                    onClick={() => applyVisibilityPreset('just-me')}
+                    style={{
+                      fontSize: 12, padding: '6px 12px', borderRadius: 16,
+                      border: `1px solid ${visibilityPreset === 'just-me' ? '#3d2f1f' : '#8a6f4a'}`,
+                      color: visibilityPreset === 'just-me' ? '#f5ecd8' : '#5a4628',
+                      background: visibilityPreset === 'just-me' ? '#3d2f1f' : 'transparent',
+                      cursor: 'pointer',
+                      fontFamily: '-apple-system, sans-serif',
+                    }}
+                  >
+                    Just me
+                  </button>
+                  {spouse && (
+                    <button
+                      type="button"
+                      onClick={() => applyVisibilityPreset('spouse')}
+                      style={{
+                        fontSize: 12, padding: '6px 12px', borderRadius: 16,
+                        border: `1px solid ${visibilityPreset === 'spouse' ? '#3d2f1f' : '#8a6f4a'}`,
+                        color: visibilityPreset === 'spouse' ? '#f5ecd8' : '#5a4628',
+                        background: visibilityPreset === 'spouse' ? '#3d2f1f' : 'transparent',
+                        cursor: 'pointer',
+                        fontFamily: '-apple-system, sans-serif',
+                      }}
+                    >
+                      {spouse.name} and me
+                    </button>
+                  )}
+                  {shareCandidates.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => applyVisibilityPreset('family')}
+                      style={{
+                        fontSize: 12, padding: '6px 12px', borderRadius: 16,
+                        border: `1px solid ${visibilityPreset === 'family' ? '#3d2f1f' : '#8a6f4a'}`,
+                        color: visibilityPreset === 'family' ? '#f5ecd8' : '#5a4628',
+                        background: visibilityPreset === 'family' ? '#3d2f1f' : 'transparent',
+                        cursor: 'pointer',
+                        fontFamily: '-apple-system, sans-serif',
+                      }}
+                    >
+                      Everyone
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Textarea — fills available space */}
               <div className="flex-1 px-6 overflow-y-auto" style={{ minHeight: 0 }}>
                 <textarea ref={textareaRef} value={text}
@@ -487,7 +567,7 @@ export default function CaptureSheet() {
                 )}
                 <button type="button" onClick={() => setOpenPicker(openPicker === 'privacy' ? null : 'privacy')}
                   style={chipStyle(openPicker === 'privacy' || sharedWith.length > 0)}>
-                  {sharedWith.length === 0 ? '🔒' : '✦'} {privacyLabel}
+                  {sharedWith.length === 0 ? '🔒' : '✦'} Adjust who can see this →
                 </button>
               </div>
             </div>
