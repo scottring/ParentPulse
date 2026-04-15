@@ -1,10 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
+import { useDashboard } from '@/hooks/useDashboard';
+import { useEntries } from '@/hooks/useEntries';
+import { JournalSpread } from '@/components/journal-spread/JournalSpread';
+import type { FilterSelection } from '@/components/journal-spread/FilterPills';
+import type { EntryFilter } from '@/types/entry';
 // ================================================================
 // Landing / home page — the library desk.
 //
@@ -78,12 +83,18 @@ const BOOK_REGIONS: Record<string, BookRegion> = {
   },
 };
 
+const SHOW_SPREAD = process.env.NEXT_PUBLIC_JOURNAL_SPREAD === '1';
+
 export default function HomePage() {
   const { user, loading: authLoading, logout } = useAuth();
   const router = useRouter();
   const [hoveredBook, setHoveredBook] = useState<string | null>(null);
 
   const isSignedIn = Boolean(user && !authLoading);
+
+  if (SHOW_SPREAD && isSignedIn) {
+    return <SpreadHome />;
+  }
   const firstName = user?.name?.split(' ')[0] || '';
 
   const handleSignOut = async () => {
@@ -501,5 +512,74 @@ export default function HomePage() {
         }
       `}</style>
     </main>
+  );
+}
+
+// ================================================================
+// SpreadHome — rendered at / when NEXT_PUBLIC_JOURNAL_SPREAD=1 and
+// the user is signed in. Wires useDashboard + useEntries into
+// the JournalSpread composite component.
+// ================================================================
+function SpreadHome() {
+  const { user } = useAuth();
+  const dashboard = useDashboard();
+  const [filterSel, setFilterSel] = useState<FilterSelection>({ kind: 'everyone' });
+
+  // familyId is not exposed by useDashboard; read it directly from auth.
+  const familyId = user?.familyId ?? null;
+  const peoplePersons = dashboard.people ?? [];
+  const selfPerson = dashboard.selfPerson ?? null;
+
+  const entryFilter: EntryFilter = useMemo(() => {
+    if (filterSel.kind === 'person') return { subjectPersonIds: [filterSel.personId] };
+    if (filterSel.kind === 'syntheses') return { types: ['synthesis'] };
+    return {};
+  }, [filterSel]);
+
+  const { entries, loading, error } = useEntries({
+    familyId,
+    filter: entryFilter,
+  });
+
+  // Map Person[] → { id, name }[] for MastheadRow + FilterPills
+  const members = useMemo(
+    () => peoplePersons.map((p) => ({ id: p.personId, name: p.name })),
+    [peoplePersons],
+  );
+
+  const today = new Date();
+  const dateLabel = today.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+
+  if (loading) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center', color: '#f5ecd8', background: '#1f160e', minHeight: '100vh' }}>
+        Loading…
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center', color: '#f5ecd8', background: '#1f160e', minHeight: '100vh' }}>
+        Error: {error.message}
+      </div>
+    );
+  }
+
+  return (
+    <JournalSpread
+      entries={entries}
+      familyName={selfPerson?.name?.split(' ').slice(-1)[0] ?? 'Family'}
+      volumeLabel="Volume IV · Spring, in progress"
+      dateRangeLabel={dateLabel}
+      members={members}
+      people={members}
+      filter={filterSel}
+      onFilterChange={setFilterSel}
+      onCapture={() => {
+        // Plan 3 wires this to the unified capture sheet. For now: navigate
+        // to /journal which has the existing capture entrypoint.
+        window.location.href = '/journal';
+      }}
+    />
   );
 }
