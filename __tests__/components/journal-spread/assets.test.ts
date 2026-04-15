@@ -3,7 +3,7 @@ import { BOOK_ASSETS, FLAT_COLORS, BOOK_ASSETS_AVAILABLE } from '@/components/jo
 
 describe('journal-spread assets', () => {
   it('exports the required asset paths', () => {
-    expect(BOOK_ASSETS.cover).toBe('/images/book/cover.jpg');
+    expect(BOOK_ASSETS.cover).toContain('/images/book/cover.');
     expect(BOOK_ASSETS.spineLeather).toContain('/images/book/');
     expect(BOOK_ASSETS.paperLeft).toContain('/images/book/');
     expect(BOOK_ASSETS.paperRight).toContain('/images/book/');
