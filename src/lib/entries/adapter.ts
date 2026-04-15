@@ -1,6 +1,7 @@
 import type { Entry, EntrySubject } from '@/types/entry';
 import type { JournalEntry } from '@/types/journal';
 import type { Contribution, SynthesizedContent, SynthesizedInsight } from '@/types/person-manual';
+import type { GrowthItem, GrowthItemType } from '@/types/growth';
 
 /**
  * Convert a legacy JournalEntry into the unified Entry shape.
@@ -145,4 +146,60 @@ export function synthesizedContentToEntries(args: {
       sharedWithUserIds: [],
       createdAt,
     }));
+}
+
+/**
+ * Convert a GrowthItem into an Entry.
+ *
+ * Type mapping:
+ *   - status === 'completed' → 'activity' (regardless of original type)
+ *   - type ∈ {'reflection_prompt', 'assessment_prompt', 'journaling'} → 'prompt'
+ *   - otherwise → 'nudge'
+ *
+ * Subject: if targetPersonIds is non-empty, use the first one; otherwise [].
+ * Content: concatenate title and body with newline separation, filtering empty parts.
+ * Tags: [g.type] (preserves the original growth-item type).
+ * ArchivedAt: set to createdAt if status ∈ {'expired','skipped'}, otherwise undefined.
+ */
+const PROMPT_TYPES: GrowthItemType[] = [
+  'reflection_prompt',
+  'assessment_prompt',
+  'journaling',
+];
+
+export function growthItemToEntry(g: GrowthItem): Entry {
+  let entryType: Entry['type'];
+  if (g.status === 'completed') {
+    entryType = 'activity';
+  } else if (PROMPT_TYPES.includes(g.type)) {
+    entryType = 'prompt';
+  } else {
+    entryType = 'nudge';
+  }
+
+  // Subject: use the first targetPersonId if available.
+  const subjects: EntrySubject[] =
+    g.targetPersonIds && g.targetPersonIds.length > 0
+      ? [{ kind: 'person', personId: g.targetPersonIds[0] }]
+      : [];
+
+  // Content: concatenate title + body, only including non-empty parts.
+  const title = g.title ?? '';
+  const body = g.body ?? '';
+  const content = [title, body].filter(Boolean).join('\n\n');
+
+  return {
+    id: g.growthItemId,
+    familyId: g.familyId,
+    type: entryType,
+    author: { kind: 'system' },
+    subjects,
+    content,
+    tags: [g.type],
+    visibleToUserIds: [],
+    sharedWithUserIds: [],
+    createdAt: g.createdAt,
+    archivedAt:
+      g.status === 'expired' || g.status === 'skipped' ? g.createdAt : undefined,
+  };
 }

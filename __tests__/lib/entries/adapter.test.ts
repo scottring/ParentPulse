@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { Timestamp } from 'firebase/firestore';
-import { journalEntryToEntry, contributionToEntries, synthesizedContentToEntries } from '@/lib/entries/adapter';
+import { journalEntryToEntry, contributionToEntries, synthesizedContentToEntries, growthItemToEntry } from '@/lib/entries/adapter';
 import type { JournalEntry } from '@/types/journal';
 import type { Contribution, SynthesizedContent } from '@/types/person-manual';
+import type { GrowthItem } from '@/types/growth';
 
 describe('journalEntryToEntry', () => {
   const testTime = Timestamp.now();
@@ -188,5 +189,55 @@ describe('synthesizedContentToEntries', () => {
     for (const e of entries) {
       expect(e.subjects).toEqual([{ kind: 'family' }]);
     }
+  });
+});
+
+describe('growthItemToEntry', () => {
+  const testTime = Timestamp.now();
+
+  const makeGrowthItem = (overrides: Partial<GrowthItem> = {}): GrowthItem => ({
+    growthItemId: 'g1',
+    familyId: 'f1',
+    type: 'micro_activity',
+    title: 'Try the long answer',
+    body: 'Give Liam the real reason when he asks "why" tonight.',
+    emoji: '💬',
+    targetPersonIds: ['p-liam'],
+    targetPersonNames: ['Liam'],
+    assignedToUserId: 'u1',
+    assignedToUserName: 'Scott',
+    speed: 'ambient',
+    scheduledDate: testTime,
+    expiresAt: testTime,
+    estimatedMinutes: 5,
+    status: 'active',
+    createdAt: testTime,
+    generatedBy: 'ai',
+    ...overrides,
+  });
+
+  it('maps micro_activity to nudge', () => {
+    const g = makeGrowthItem({ type: 'micro_activity' });
+    const e = growthItemToEntry(g);
+    expect(e.type).toBe('nudge');
+  });
+
+  it('maps reflection_prompt to prompt', () => {
+    const g = makeGrowthItem({ type: 'reflection_prompt' });
+    const e = growthItemToEntry(g);
+    expect(e.type).toBe('prompt');
+  });
+
+  it('completed items become activity regardless of original type', () => {
+    const g = makeGrowthItem({ type: 'micro_activity', status: 'completed' });
+    const e = growthItemToEntry(g);
+    expect(e.type).toBe('activity');
+  });
+
+  it('combines title and body into content', () => {
+    const g = makeGrowthItem({ type: 'micro_activity' });
+    const e = growthItemToEntry(g);
+    expect(e.content).toContain('Try the long answer');
+    expect(e.content).toContain('Give Liam the real reason');
   });
 });
