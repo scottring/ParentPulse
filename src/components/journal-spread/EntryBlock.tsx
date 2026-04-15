@@ -7,6 +7,51 @@ import type { Entry } from '@/types/entry';
 // in a ~440px main column at the body font/leading used below. Real data
 // varies; the clamp is a hint, not a hard boundary.
 const PROSE_CLAMP_CHARS = 180;
+const BLOCK_CLAMP_CHARS = 160;
+
+/** Small "read more"/"less" toggle shared by all block variants. */
+function ReadMoreToggle({
+  expanded,
+  onToggle,
+  tone = 'muted',
+}: {
+  expanded: boolean;
+  onToggle: () => void;
+  tone?: 'muted' | 'coral' | 'pink' | 'slate';
+}) {
+  const color =
+    tone === 'coral'
+      ? '#b94a3b'
+      : tone === 'pink'
+      ? '#7a3060'
+      : tone === 'slate'
+      ? '#d0e1ea'
+      : '#a89373';
+  return (
+    <button type="button" className="rm-toggle" onClick={onToggle}>
+      {expanded ? 'less' : 'read more'}
+      <style jsx>{`
+        .rm-toggle {
+          margin-top: 6px;
+          padding: 0;
+          background: none;
+          border: none;
+          color: ${color};
+          font-size: 10px;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          font-family: -apple-system, 'Helvetica Neue', sans-serif;
+          cursor: pointer;
+          font-style: italic;
+          opacity: 0.85;
+        }
+        .rm-toggle:hover {
+          opacity: 1;
+        }
+      `}</style>
+    </button>
+  );
+}
 
 /** Flowing prose entry — written, observation, reflection, conversation */
 function ProseEntry({ entry }: { entry: Entry }) {
@@ -144,15 +189,21 @@ function ActivityLine({ entry }: { entry: Entry }) {
 
 /** Pull-quote for synthesis about a person */
 function SynthesisPull({ entry }: { entry: Entry }) {
+  const [expanded, setExpanded] = useState(false);
   const subject = entry.subjects[0];
   const subjectLabel =
     subject?.kind === 'person' ? `about ${subject.personId}` : 'about them';
   const sourceCount = entry.sourceEntryIds?.length ?? 0;
+  const overflowing = entry.content.length > BLOCK_CLAMP_CHARS;
+  const clamped = overflowing && !expanded;
 
   return (
     <div className="synth-pull">
       <div className="label">Synthesis · {subjectLabel}</div>
-      <p className="text">{entry.content}</p>
+      <p className={`text${clamped ? ' clamped' : ''}`}>{entry.content}</p>
+      {overflowing && (
+        <ReadMoreToggle expanded={expanded} onToggle={() => setExpanded(v => !v)} tone="coral" />
+      )}
       {sourceCount > 0 && (
         <div className="source">Drawn from {sourceCount} {sourceCount === 1 ? 'entry' : 'entries'}</div>
       )}
@@ -179,6 +230,12 @@ function SynthesisPull({ entry }: { entry: Entry }) {
           margin: 0;
           font-family: Georgia, 'Times New Roman', serif;
         }
+        .text.clamped {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
         .source {
           margin-top: 6px;
           font-size: 9px;
@@ -195,10 +252,17 @@ function SynthesisPull({ entry }: { entry: Entry }) {
 
 /** Full-width slate banner for family synthesis */
 function FamilyBanner({ entry }: { entry: Entry }) {
+  const [expanded, setExpanded] = useState(false);
+  const overflowing = entry.content.length > BLOCK_CLAMP_CHARS;
+  const clamped = overflowing && !expanded;
+
   return (
     <div className="family-banner">
       <div className="label">Family synthesis</div>
-      <p className="body">{entry.content}</p>
+      <p className={`body${clamped ? ' clamped' : ''}`}>{entry.content}</p>
+      {overflowing && (
+        <ReadMoreToggle expanded={expanded} onToggle={() => setExpanded(v => !v)} tone="slate" />
+      )}
       <style jsx>{`
         .family-banner {
           margin: 8px 0 26px;
@@ -224,6 +288,12 @@ function FamilyBanner({ entry }: { entry: Entry }) {
           font-family: Georgia, 'Times New Roman', serif;
           font-style: italic;
         }
+        .body.clamped {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
       `}</style>
     </div>
   );
@@ -231,10 +301,17 @@ function FamilyBanner({ entry }: { entry: Entry }) {
 
 /** Pink-tinted ruled callout for nudge entries */
 function NudgeCallout({ entry }: { entry: Entry }) {
+  const [expanded, setExpanded] = useState(false);
+  const overflowing = entry.content.length > BLOCK_CLAMP_CHARS;
+  const clamped = overflowing && !expanded;
+
   return (
     <div className="nudge-box">
       <div className="label">One thing to try</div>
-      <p className="body">{entry.content}</p>
+      <p className={`body${clamped ? ' clamped' : ''}`}>{entry.content}</p>
+      {overflowing && (
+        <ReadMoreToggle expanded={expanded} onToggle={() => setExpanded(v => !v)} tone="pink" />
+      )}
       <style jsx>{`
         .nudge-box {
           margin: 16px 0 24px;
@@ -260,6 +337,12 @@ function NudgeCallout({ entry }: { entry: Entry }) {
           font-family: Georgia, 'Times New Roman', serif;
           font-style: italic;
         }
+        .body.clamped {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
       `}</style>
     </div>
   );
@@ -267,10 +350,17 @@ function NudgeCallout({ entry }: { entry: Entry }) {
 
 /** Quiet inline question for prompt entries */
 function PromptInline({ entry }: { entry: Entry }) {
+  const [expanded, setExpanded] = useState(false);
+  const overflowing = entry.content.length > BLOCK_CLAMP_CHARS;
+  const clamped = overflowing && !expanded;
+
   return (
     <div className="prompt-inline">
       <div className="kicker">Question</div>
-      <p className="body">{entry.content}</p>
+      <p className={`body${clamped ? ' clamped' : ''}`}>{entry.content}</p>
+      {overflowing && (
+        <ReadMoreToggle expanded={expanded} onToggle={() => setExpanded(v => !v)} />
+      )}
       <style jsx>{`
         .prompt-inline {
           margin-bottom: 22px;
@@ -290,6 +380,12 @@ function PromptInline({ entry }: { entry: Entry }) {
           color: #9a8060;
           margin: 0;
           font-family: Georgia, 'Times New Roman', serif;
+        }
+        .body.clamped {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
       `}</style>
     </div>
