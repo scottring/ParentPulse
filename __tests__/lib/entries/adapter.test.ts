@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { Timestamp } from 'firebase/firestore';
-import { journalEntryToEntry } from '@/lib/entries/adapter';
+import { journalEntryToEntry, contributionToEntries } from '@/lib/entries/adapter';
 import type { JournalEntry } from '@/types/journal';
+import type { Contribution } from '@/types/person-manual';
 
 describe('journalEntryToEntry', () => {
   const testTime = Timestamp.now();
@@ -55,5 +56,89 @@ describe('journalEntryToEntry', () => {
   it('preserves createdAt timestamp', () => {
     const e = journalEntryToEntry(baseJournal);
     expect(e.createdAt).toBe(testTime);
+  });
+});
+
+describe('contributionToEntries', () => {
+  const testTime = Timestamp.now();
+  const contribution: Contribution = {
+    contributionId: 'c1',
+    manualId: 'm1',
+    personId: 'p-liam',
+    familyId: 'f1',
+    contributorId: 'u1',
+    contributorName: 'Scott',
+    perspectiveType: 'observer',
+    relationshipToSubject: 'parent',
+    topicCategory: 'triggers',
+    answers: {
+      'childhood.firstMemory': 'Riding bikes.',
+      'values.whatMatters': 'Honesty.',
+    },
+    status: 'complete',
+    createdAt: testTime,
+    updatedAt: testTime,
+  };
+
+  it('emits two entries per answer (prompt + reflection)', () => {
+    const entries = contributionToEntries(contribution);
+    expect(entries.length).toBe(4);
+    const prompts = entries.filter((e) => e.type === 'prompt');
+    const reflections = entries.filter((e) => e.type === 'reflection');
+    expect(prompts.length).toBe(2);
+    expect(reflections.length).toBe(2);
+  });
+
+  it('anchors each reflection to its prompt', () => {
+    const entries = contributionToEntries(contribution);
+    const reflections = entries.filter((e) => e.type === 'reflection');
+    for (const r of reflections) {
+      expect(r.anchorEntryId).toBeDefined();
+      const anchor = entries.find((e) => e.id === r.anchorEntryId);
+      expect(anchor?.type).toBe('prompt');
+    }
+  });
+
+  it('attributes prompts to system and reflections to the contributor', () => {
+    const entries = contributionToEntries(contribution);
+    const prompt = entries.find((e) => e.type === 'prompt');
+    const reflection = entries.find((e) => e.type === 'reflection');
+    expect(prompt?.author).toEqual({ kind: 'system' });
+    expect(reflection?.author).toEqual({ kind: 'person', personId: 'u1' });
+  });
+
+  it('sets subject to the person the contribution is about', () => {
+    const entries = contributionToEntries(contribution);
+    for (const e of entries) {
+      expect(e.subjects).toEqual([{ kind: 'person', personId: 'p-liam' }]);
+    }
+  });
+
+  it('preserves answer content verbatim in reflection', () => {
+    const entries = contributionToEntries(contribution);
+    const contents = entries
+      .filter((e) => e.type === 'reflection')
+      .map((e) => e.content);
+    expect(contents).toContain('Riding bikes.');
+    expect(contents).toContain('Honesty.');
+  });
+
+  it('skips empty or missing answers', () => {
+    const c: Contribution = {
+      ...contribution,
+      answers: { 'a.b': '', 'c.d': '   ', 'e.f': 'Real answer.' },
+    };
+    const entries = contributionToEntries(c);
+    expect(entries.filter((e) => e.type === 'reflection').length).toBe(1);
+  });
+
+  it('produces empty tags for dot-free question keys', () => {
+    const c: Contribution = {
+      ...contribution,
+      answers: { 'nodot': 'some answer' },
+    };
+    const entries = contributionToEntries(c);
+    const reflection = entries.find((e) => e.type === 'reflection');
+    expect(reflection?.tags).toEqual([]);
   });
 });
