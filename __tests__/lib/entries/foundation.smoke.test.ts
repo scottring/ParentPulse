@@ -80,7 +80,7 @@ describe('entries foundation — smoke', () => {
     };
 
     const entries = await fetchEntries('f1', { includeContributionSources: true }, source, 'u1');
-    // 1 journal + 1 reflection from contribution + 1 synthesis (overview only) + 1 growth = 4
+    // 1 journal + 1 reflection from contribution + 1 synthesis (overview only; alignments/gaps/blindSpots empty) + 1 growth = 4
     expect(entries.length).toBe(4);
     // Sorted desc by createdAt: g1 (t3) first, then j1 (t2).
     expect(entries[0].id).toBe('g1');
