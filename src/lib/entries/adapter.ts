@@ -47,12 +47,25 @@ export function contributionToEntries(c: Contribution): Entry[] {
     const answer = typeof answerValue === 'string' ? answerValue : String(answerValue ?? '');
     if (!answer.trim()) continue;
 
-    const [sectionId] = questionKey.split('.');
+    const [sectionId, questionId] = questionKey.split('.');
     const promptId = `${c.contributionId}:${questionKey}:prompt`;
     const reflectionId = `${c.contributionId}:${questionKey}:reflection`;
 
     const subjects: EntrySubject[] = [{ kind: 'person', personId: c.personId }];
-    const tags = questionKey.includes('.') ? [sectionId] : [];
+
+    // Visibility resolution. Pure function — emit a sentinel tag for
+    // visible+complete answers; the query layer resolves the sentinel
+    // against the family roster.
+    const answerVisibility =
+      c.answerVisibility?.[sectionId]?.[questionId] ?? 'visible';
+    const isFamilyVisible =
+      answerVisibility === 'visible' && c.status === 'complete';
+
+    const baseTags: string[] = [];
+    if (questionKey.includes('.')) baseTags.push(sectionId);
+    if (isFamilyVisible) baseTags.push('_visibility:family');
+
+    const visibleToUserIds = [c.contributorId];
 
     out.push({
       id: promptId,
@@ -61,8 +74,8 @@ export function contributionToEntries(c: Contribution): Entry[] {
       author: { kind: 'system' },
       subjects,
       content: `(question: ${questionKey})`,
-      tags,
-      visibleToUserIds: [c.contributorId],
+      tags: baseTags,
+      visibleToUserIds,
       sharedWithUserIds: [],
       createdAt: c.createdAt,
     });
@@ -75,8 +88,8 @@ export function contributionToEntries(c: Contribution): Entry[] {
       subjects,
       content: answer,
       anchorEntryId: promptId,
-      tags,
-      visibleToUserIds: [c.contributorId],
+      tags: baseTags,
+      visibleToUserIds,
       sharedWithUserIds: [],
       createdAt: c.createdAt,
     });
