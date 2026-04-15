@@ -78,10 +78,6 @@ export function SurfaceHome() {
             ),
             url('/images/home-table.png') center / cover no-repeat;
         }
-        .surface > :global(*:not(.surface-bg)) {
-          position: relative;
-          z-index: 1;
-        }
         .wordmark {
           position: fixed;
           top: 18px;
@@ -130,6 +126,8 @@ export function SurfaceHome() {
           object-fit: cover;
         }
         .surface-inner {
+          position: relative;
+          z-index: 1;
           max-width: 640px;
           width: 100%;
           text-align: center;
