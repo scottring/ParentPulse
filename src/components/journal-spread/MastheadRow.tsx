@@ -37,26 +37,25 @@ export function MastheadRow({
         .masthead-title {
           font-family: Georgia, 'Times New Roman', serif;
           font-style: italic;
-          font-size: 20px;
+          font-size: 22px;
           font-weight: 400;
-          color: #f5ecd8;
+          color: #2a1f14;
           margin: 0;
           letter-spacing: 0.01em;
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
         }
         .masthead-meta {
-          margin-top: 3px;
+          margin-top: 4px;
           font-family: -apple-system, 'Helvetica Neue', sans-serif;
           font-size: 10px;
           letter-spacing: 0.22em;
           text-transform: uppercase;
-          color: rgba(245, 236, 216, 0.62);
+          color: #7a5f3d;
           display: flex;
           gap: 10px;
           align-items: baseline;
         }
         .sep {
-          opacity: 0.5;
+          opacity: 0.55;
         }
       `}</style>
     </header>
