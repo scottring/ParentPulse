@@ -58,6 +58,12 @@ if (!RUNNING_AGAINST_EMULATOR) {
         seconds: Math.floor(date.getTime() / 1000),
         nanoseconds: 0,
       })),
+      fromMillis: vi.fn((ms: number) => ({
+        toDate: () => new Date(ms),
+        toMillis: () => ms,
+        seconds: Math.floor(ms / 1000),
+        nanoseconds: (ms % 1000) * 1_000_000,
+      })),
     },
     serverTimestamp: vi.fn(() => ({
       toDate: () => new Date(),
