@@ -114,4 +114,9 @@ export interface EntryFilter {
   // Default false — contribution answers are structural manual content,
   // not journal content. Person-manual deep-links opt in.
   includeContributionSources?: boolean;
+
+  // Include the alignments/gaps/blindSpots synthesis buckets. Default
+  // false — only the overview bucket surfaces in the journal stream.
+  // Person-manual deep-links opt in.
+  includeSynthesisDetail?: boolean;
 }

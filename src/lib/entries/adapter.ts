@@ -114,9 +114,18 @@ function insightsToText(insights: SynthesizedInsight[] | undefined): string {
 /**
  * Convert SynthesizedContent (multi-perspective synthesis results) into Entry records.
  *
- * Emits one Entry per non-empty content bucket (overview, alignments, gaps, blindSpots).
- * Each entry is type 'synthesis', authored by system, attributed to the person (or family if null).
+ * Only the `overview` bucket surfaces in the journal stream — that's the
+ * narrative "who this person is" summary. The other three buckets
+ * (alignments, gaps, blindSpots) are structural manual content that
+ * belongs on a person-manual deep-link, not the daily spread; they are
+ * still emitted but tagged `_source:synthesis-detail` so the default
+ * journal filter excludes them. A future person-manual view can opt in.
+ *
+ * Each entry is type 'synthesis', authored by system, attributed to the
+ * person (or family if personId is null).
  */
+const SOURCE_SYNTHESIS_DETAIL_TAG = '_source:synthesis-detail';
+
 export function synthesizedContentToEntries(args: {
   familyId: string;
   manualId: string;
@@ -130,11 +139,11 @@ export function synthesizedContentToEntries(args: {
       : [{ kind: 'person', personId }];
   const createdAt = synth.lastSynthesizedAt;
 
-  const buckets: Array<{ key: string; content: string }> = [
-    { key: 'overview', content: synth.overview ?? '' },
-    { key: 'alignments', content: insightsToText(synth.alignments) },
-    { key: 'gaps', content: insightsToText(synth.gaps) },
-    { key: 'blindSpots', content: insightsToText(synth.blindSpots) },
+  const buckets: Array<{ key: string; content: string; detail: boolean }> = [
+    { key: 'overview',    content: synth.overview ?? '',            detail: false },
+    { key: 'alignments',  content: insightsToText(synth.alignments),detail: true  },
+    { key: 'gaps',        content: insightsToText(synth.gaps),      detail: true  },
+    { key: 'blindSpots',  content: insightsToText(synth.blindSpots),detail: true  },
   ];
 
   return buckets
@@ -146,7 +155,7 @@ export function synthesizedContentToEntries(args: {
       author: { kind: 'system' as const },
       subjects,
       content: b.content,
-      tags: [b.key],
+      tags: b.detail ? [b.key, SOURCE_SYNTHESIS_DETAIL_TAG] : [b.key],
       visibleToUserIds: [],
       sharedWithUserIds: [],
       createdAt,
