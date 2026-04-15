@@ -161,6 +161,28 @@ service cloud.firestore {
       }
     }
 
+    // ==================== Entries (unified stream) ====================
+    //
+    // New collection introduced by Plan 1 (Entry foundation). Mirrors the
+    // journal_entries visibility model: denormalized visibleToUserIds
+    // controls reads; parent family membership gates writes. Reads require
+    // the caller to be an explicit member of visibleToUserIds.
+
+    match /entries/{entryId} {
+      allow read: if isParent()
+                  && belongsToFamily(resource.data.familyId)
+                  && 'visibleToUserIds' in resource.data
+                  && request.auth.uid in resource.data.visibleToUserIds;
+
+      allow create: if isParent()
+                    && belongsToFamily(request.resource.data.familyId)
+                    && 'visibleToUserIds' in request.resource.data
+                    && request.auth.uid in request.resource.data.visibleToUserIds;
+
+      allow update, delete: if isParent()
+                            && belongsToFamily(resource.data.familyId);
+    }
+
     // Child check-ins collection
     match /child_checkins/{checkinId} {
       // Children can create their own check-ins
