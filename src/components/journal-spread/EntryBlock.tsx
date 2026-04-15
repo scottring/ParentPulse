@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Compass, Link2, Unlink2, Eye, Sparkles, Users } from 'lucide-react';
 import type { Entry } from '@/types/entry';
 
 // Approximate character count that fills ~2 lines after the italic lead
@@ -16,6 +17,13 @@ const BUCKET_COLORS: Record<SynthesisBucket, { rule: string; label: string }> = 
   alignments: { rule: '#6a8a6a', label: 'Alignment' },
   gaps:       { rule: '#b94a3b', label: 'Gap' },
   blindSpots: { rule: '#c89b3b', label: 'Blind spot' },
+};
+
+const BUCKET_ICONS: Record<SynthesisBucket, typeof Compass> = {
+  overview:   Compass,
+  alignments: Link2,
+  gaps:       Unlink2,
+  blindSpots: Eye,
 };
 
 const BUCKET_KEYS: SynthesisBucket[] = ['overview', 'alignments', 'gaps', 'blindSpots'];
@@ -253,6 +261,12 @@ function SynthesisPull({
         {subject?.kind === 'person' && (
           <span className="avatar" aria-hidden="true">{subjectInitial}</span>
         )}
+        <span className="icon-wrap" style={{ color: rule }} aria-hidden="true">
+          {(() => {
+            const Icon = BUCKET_ICONS[bucket];
+            return <Icon size={14} strokeWidth={1.5} />;
+          })()}
+        </span>
         <span className="label" style={{ color: rule }}>{subjectLabel}</span>
       </div>
       <p className="lead" style={{ color: rule === '#c89b3b' ? '#6a4a1a' : '#5a3520' }}>{lead}</p>
@@ -271,6 +285,11 @@ function SynthesisPull({
           align-items: center;
           gap: 7px;
           margin-bottom: 8px;
+        }
+        .icon-wrap {
+          display: inline-flex;
+          align-items: center;
+          opacity: 0.65;
         }
         .avatar {
           width: 18px;
@@ -333,7 +352,12 @@ function FamilyBanner({ entry }: { entry: Entry }) {
 
   return (
     <div className="family-banner">
-      <div className="label">Family synthesis</div>
+      <div className="label">
+        <span className="icon-wrap" style={{ color: '#d0e1ea' }} aria-hidden="true">
+          <Users size={14} strokeWidth={1.5} />
+        </span>
+        Family synthesis
+      </div>
       <p className={`body${clamped ? ' clamped' : ''}`}>{entry.content}</p>
       {overflowing && (
         <ReadMoreToggle expanded={expanded} onToggle={() => setExpanded(v => !v)} tone="slate" />
@@ -354,6 +378,14 @@ function FamilyBanner({ entry }: { entry: Entry }) {
           margin-bottom: 6px;
           font-family: -apple-system, 'Helvetica Neue', sans-serif;
           font-weight: 700;
+          display: flex;
+          align-items: center;
+          gap: 5px;
+        }
+        .icon-wrap {
+          display: inline-flex;
+          align-items: center;
+          opacity: 0.65;
         }
         .body {
           font-size: 12.5px;
@@ -382,7 +414,12 @@ function NudgeCallout({ entry }: { entry: Entry }) {
 
   return (
     <div className="nudge-box">
-      <div className="label">One thing to try</div>
+      <div className="label">
+        <span className="icon-wrap" style={{ color: '#7a3060' }} aria-hidden="true">
+          <Sparkles size={14} strokeWidth={1.5} />
+        </span>
+        One thing to try
+      </div>
       <p className={`body${clamped ? ' clamped' : ''}`}>{entry.content}</p>
       {overflowing && (
         <ReadMoreToggle expanded={expanded} onToggle={() => setExpanded(v => !v)} tone="pink" />
@@ -403,6 +440,14 @@ function NudgeCallout({ entry }: { entry: Entry }) {
           margin-bottom: 6px;
           font-family: -apple-system, 'Helvetica Neue', sans-serif;
           font-weight: 700;
+          display: flex;
+          align-items: center;
+          gap: 5px;
+        }
+        .icon-wrap {
+          display: inline-flex;
+          align-items: center;
+          opacity: 0.65;
         }
         .body {
           font-size: 12.5px;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Feather } from 'lucide-react';
 import type { Entry } from '@/types/entry';
 import { EntryBlock } from './EntryBlock';
 import { DateBand } from './DateBand';
@@ -152,7 +153,9 @@ export function JournalSpread({
             {currentEntries.length === 0 && (
               <p className="empty-state">A quiet day. Nothing yet — write the first thing.</p>
             )}
-            <div className="doodle-slot">·  ·  ·</div>
+            <div className="doodle-slot" aria-hidden="true">
+              <Feather size={20} strokeWidth={1.25} />
+            </div>
           </div>
           <MarginColumn entries={rightEntries} side="right" />
         </div>
@@ -246,13 +249,11 @@ export function JournalSpread({
           margin-top: 60px;
         }
         .doodle-slot {
-          text-align: center;
-          color: #c9a66b;
-          letter-spacing: 0.15em;
-          opacity: 0.4;
-          font-style: italic;
-          margin-top: auto;
-          padding-top: 24px;
+          display: flex;
+          justify-content: center;
+          margin: 16px 0 0;
+          color: #a89373;
+          opacity: 0.45;
         }
         @media (max-width: 640px) {
           .book {
