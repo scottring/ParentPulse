@@ -34,8 +34,17 @@ export function useEntries({
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  // Bumped by the `relish:entries-stale` event so mutations elsewhere
+  // (capture, edit, append) force a refetch without a page reload.
+  const [reloadTick, setReloadTick] = useState(0);
 
   const filterKey = useMemo(() => JSON.stringify(filter), [filter]);
+
+  useEffect(() => {
+    const onStale = () => setReloadTick((n) => n + 1);
+    window.addEventListener('relish:entries-stale', onStale);
+    return () => window.removeEventListener('relish:entries-stale', onStale);
+  }, []);
 
   useEffect(() => {
     if (!familyId || !user) {
@@ -66,7 +75,7 @@ export function useEntries({
     };
     // filterKey is the actual change signal for `filter`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [familyId, filterKey, source, fetchRoster, user]);
+  }, [familyId, filterKey, source, fetchRoster, user, reloadTick]);
 
   return { entries, loading, error };
 }

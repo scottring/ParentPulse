@@ -1,0 +1,183 @@
+'use client';
+
+import { useAuth } from '@/context/AuthContext';
+import { useDashboard } from '@/hooks/useDashboard';
+import { useSurfaceNext } from '@/hooks/useSurfaceNext';
+import { NextThingCard } from '@/components/surface/NextThingCard';
+import { SynthesisHighlightCard } from '@/components/surface/SynthesisHighlightCard';
+import { CalmStateCard } from '@/components/surface/CalmStateCard';
+import { InlineJournalPeek } from '@/components/surface/InlineJournalPeek';
+import { UserMenu } from '@/components/layout/UserMenu';
+import CaptureSheet from '@/components/capture/CaptureSheet';
+
+/**
+ * SurfaceHome — Plan 4 Step 3: priority-hierarchy hero.
+ *
+ * Greeting + a single "next thing" hero card driven by the priority
+ * hierarchy (unfinished → time-sensitive → fresh synthesis → …).
+ * When nothing's pressing, falls through to a quiet calm-state
+ * invitation (Step 5 will flesh that out).
+ */
+
+export function SurfaceHome() {
+  const { user } = useAuth();
+  const { state, manuals } = useDashboard();
+  const next = useSurfaceNext();
+
+  const firstName = user?.name?.split(' ')[0] || '';
+  const loading = state === 'loading';
+
+  // Pick a secondary synthesis to highlight — the most recently
+  // synthesized manual that's NOT already showing as the hero.
+  const heroManualId =
+    next?.kind === 'fresh-synthesis' ? next.manual.manualId : null;
+  const secondarySynthesis = [...manuals]
+    .filter((m) => Boolean(m.synthesizedContent?.overview))
+    .filter((m) => m.manualId !== heroManualId)
+    .sort(
+      (a, b) =>
+        (b.synthesizedContent?.lastSynthesizedAt?.toMillis?.() ?? 0) -
+        (a.synthesizedContent?.lastSynthesizedAt?.toMillis?.() ?? 0)
+    )[0];
+
+  return (
+    <main className="surface">
+      <div className="surface-bg" aria-hidden="true" />
+      <a href="/" className="wordmark" aria-label="Relish home">
+        Relish
+      </a>
+      <UserMenu />
+
+      <div className="surface-inner">
+        <p className="eyebrow">Today</p>
+        <h1 className="hello">
+          {firstName ? `Hello, ${firstName}.` : 'Hello.'}
+        </h1>
+
+        {!loading && next && <NextThingCard next={next} />}
+        {!loading && !next && <CalmStateCard firstName={firstName} />}
+        {!loading && secondarySynthesis && (
+          <SynthesisHighlightCard manual={secondarySynthesis} />
+        )}
+        {!loading && <InlineJournalPeek />}
+      </div>
+
+      <CaptureSheet />
+
+      <style jsx>{`
+        .surface {
+          min-height: 100vh;
+          background: #14100c;
+          color: #2a1f14;
+          position: relative;
+          padding: 80px 24px 60px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          overflow: hidden;
+        }
+        .surface-bg {
+          position: fixed;
+          inset: 0;
+          z-index: 0;
+          background:
+            radial-gradient(
+              ellipse at center,
+              rgba(243, 234, 214, 0.985) 0%,
+              rgba(243, 234, 214, 0.97) 45%,
+              rgba(228, 212, 178, 0.92) 100%
+            ),
+            url('/images/home-table.png') center / cover no-repeat;
+        }
+        .wordmark {
+          position: fixed;
+          top: 18px;
+          left: 22px;
+          z-index: 20;
+          font-family: Georgia, 'Times New Roman', serif;
+          font-style: italic;
+          font-size: 22px;
+          color: #2a1f14;
+          text-decoration: none;
+          letter-spacing: 0.01em;
+          transition: transform 160ms ease, color 160ms ease;
+        }
+        .wordmark:hover {
+          color: #1a120a;
+          transform: translateY(-1px);
+        }
+        .surface-inner {
+          position: relative;
+          z-index: 1;
+          max-width: 640px;
+          width: 100%;
+          text-align: center;
+          margin-top: 80px;
+        }
+        .eyebrow {
+          font-family: -apple-system, 'Helvetica Neue', sans-serif;
+          font-size: 10px;
+          letter-spacing: 0.28em;
+          text-transform: uppercase;
+          color: #8a6f4a;
+          margin: 0 0 18px;
+        }
+        .hello {
+          font-family: Georgia, 'Times New Roman', serif;
+          font-style: italic;
+          font-weight: 400;
+          font-size: 34px;
+          line-height: 1.2;
+          color: #2a1f14;
+          margin: 0 0 10px;
+        }
+        .calm {
+          margin-top: 36px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 18px;
+        }
+        .calm-text {
+          font-family: Georgia, 'Times New Roman', serif;
+          font-style: italic;
+          font-size: 16px;
+          color: #7a5f3d;
+          margin: 0;
+        }
+        .quick-links {
+          margin-top: 38px;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          align-items: center;
+        }
+        .link {
+          font-family: -apple-system, 'Helvetica Neue', sans-serif;
+          font-size: 11px;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          color: #5a4628;
+          text-decoration: none;
+          padding: 8px 18px;
+          border-radius: 18px;
+          transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+        }
+        .link:hover {
+          background: rgba(138, 111, 74, 0.14);
+          color: #2a1f14;
+          transform: translateY(-1px);
+        }
+        .link.primary {
+          background: #2a1f14;
+          color: #f5ecd8;
+          padding: 10px 22px;
+        }
+        .link.primary:hover {
+          background: #1a120a;
+          color: #f5ecd8;
+        }
+      `}</style>
+    </main>
+  );
+}

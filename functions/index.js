@@ -382,6 +382,19 @@ async function performManualSynthesis(db, manualId) {
           !userMentions.includes(personId)) {
         return; // Not about this person
       }
+
+      // PRIVACY: exclude entries that aren't shared beyond their
+      // author. The manual synthesis output is visible across the
+      // family; feeding it content only the author can read would
+      // leak private reflections into a shared surface.
+      const visibleToUserIds = Array.isArray(e.visibleToUserIds)
+        ? e.visibleToUserIds : null;
+      const isPrivate = visibleToUserIds &&
+          visibleToUserIds.length <= 1;
+      if (isPrivate) {
+        return; // Private to author; excluded from family-wide synthesis
+      }
+
       const dateStr = e.createdAt ?
         new Date(e.createdAt._seconds * 1000)
             .toLocaleDateString() : "recent";
@@ -414,9 +427,10 @@ async function performManualSynthesis(db, manualId) {
         `${personName}. They capture moments, reflections, wins, and ` +
         `challenges as they happened. Use them to identify evolving ` +
         `patterns and adjust your synthesis accordingly.\n`;
-      prompt += `IMPORTANT: These entries may be private. Never quote ` +
-        `them verbatim. Abstract the patterns you see — the ` +
-        `synthesized output is shared with the whole family.\n\n`;
+      prompt += `Private ("Just me") entries are excluded from this ` +
+        `list — only entries the author shared with at least one ` +
+        `other family member are included here. Even so, prefer ` +
+        `abstraction over verbatim quotation.\n\n`;
       // Cap at 20 most recent entries about this person
       prompt += journalLines.slice(0, 20).join("\n");
       prompt += "\n";
@@ -1167,8 +1181,15 @@ async function retrieveChatContext(familyId, userMessage, personIdOrIds = null, 
 
   const journalEntries = journalSnapshot.docs
     .filter((doc) => {
-      // Include private entries only if the requesting user is the author
-      if (doc.data().isPrivate) return doc.data().authorId === userId;
+      const d = doc.data();
+      // Preferred visibility model: visibleToUserIds list. If present,
+      // the requesting user must be in it.
+      if (Array.isArray(d.visibleToUserIds)) {
+        return userId ? d.visibleToUserIds.includes(userId) : false;
+      }
+      // Legacy fallback for entries written before the visibility
+      // migration: include private only if requester is the author.
+      if (d.isPrivate) return d.authorId === userId;
       return true;
     })
     .map((doc) => ({
@@ -1633,9 +1654,18 @@ async function processFamilyAnalysis(familyId) {
     return {actionsCreated: 0};
   }
 
-  // Prepare journal entries for AI (exclude private entries from family-wide analysis)
+  // Prepare journal entries for AI. Exclude entries that aren't
+  // shared beyond their author — daily actions are a family-wide
+  // surface, so private reflections should not seed them.
   const entries = entriesSnapshot.docs
-    .filter((doc) => !doc.data().isPrivate)
+    .filter((doc) => {
+      const data = doc.data();
+      if (Array.isArray(data.visibleToUserIds)) {
+        return data.visibleToUserIds.length > 1;
+      }
+      // Legacy isPrivate fallback
+      return !data.isPrivate;
+    })
     .map((doc) => {
       const data = doc.data();
       return {
@@ -2081,9 +2111,16 @@ exports.generateStrategicPlan = onCall(
             .limit(20)
             .get();
 
-        // Exclude private journal entries from strategic plan context
+        // Exclude entries not shared beyond the author from the
+        // family-wide strategic plan context.
         const journalEntries = journalSnapshot.docs
-          .filter((doc) => !doc.data().isPrivate)
+          .filter((doc) => {
+            const d = doc.data();
+            if (Array.isArray(d.visibleToUserIds)) {
+              return d.visibleToUserIds.length > 1;
+            }
+            return !d.isPrivate;
+          })
           .map((doc) => ({
           id: doc.id,
           text: doc.data().text,
@@ -9927,6 +9964,15 @@ exports.findSimilarEntries = onCall(
           if (doc.id === entryId) return; // Skip the source entry
           const d = doc.data();
 
+          // PRIVACY: only surface entries the caller can actually see.
+          // The client-side Firestore rule already enforces this, but
+          // admin SDK bypasses rules, so re-check here.
+          if (Array.isArray(d.visibleToUserIds)) {
+            if (!d.visibleToUserIds.includes(request.auth.uid)) return;
+          } else if (d.isPrivate && d.authorId !== request.auth.uid) {
+            return;
+          }
+
           // Only surface entries at least 1 day old for the "echo" effect
           const createdAt = d.createdAt?.toMillis?.() || 0;
           const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
@@ -10514,5 +10560,130 @@ exports.onSynthesisComplete = onDocumentUpdated(
             "onSynthesisComplete: growth check failed:", err.message,
         );
       }
+    },
+);
+
+// ================================================================
+// sanitizeEntryToActivity — user-triggered distillation of a
+// journal entry + its chat thread into a sanitized activity
+// suggestion safe to share with family.
+//
+// Called from AskAboutEntrySheet. Returns DRAFT TEXT ONLY — the
+// client shows it in an editable preview, the user adjusts + picks
+// audience, then the client writes the final journal_entries doc
+// under the standard client-auth rules. No side effects here.
+//
+// Sanitization is enforced by the prompt: no names, no specifics,
+// no verbatim quotes, no references to the underlying private
+// context. The output reads as generic advice anyone could receive.
+// ================================================================
+exports.sanitizeEntryToActivity = onCall(
+    {
+      region: "us-central1",
+      memory: "512MiB",
+      timeoutSeconds: 60,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const {entryId} = request.data || {};
+      if (!entryId) {
+        throw new Error("entryId is required");
+      }
+
+      const db = admin.firestore();
+
+      // Load the entry + access check
+      const entryDoc = await db.collection("journal_entries")
+          .doc(entryId).get();
+      if (!entryDoc.exists) throw new Error("Entry not found");
+      const entryData = entryDoc.data();
+
+      const visibleToUserIds = Array.isArray(entryData.visibleToUserIds)
+        ? entryData.visibleToUserIds : [];
+      if (!visibleToUserIds.includes(request.auth.uid)) {
+        throw new Error("Access denied");
+      }
+
+      // Load the chat thread (if any) for richer context
+      const chatSnap = await db.collection("journal_entries")
+          .doc(entryId).collection("chat")
+          .orderBy("createdAt", "asc").get();
+
+      const chatLines = [];
+      chatSnap.forEach((doc) => {
+        const d = doc.data();
+        if (d.excluded) return;
+        const label = d.role === "user" ? "User" : "AI";
+        chatLines.push(`${label}: ${(d.content || "").trim()}`);
+      });
+
+      // Build the sanitization prompt
+      const prompt = [
+        "You are distilling a private journal entry (and its AI chat",
+        "thread) into a sanitized activity suggestion that will be",
+        "visible to other family members who have no context about",
+        "what prompted it.",
+        "",
+        "SANITIZATION RULES (strict):",
+        "- NO names (first or last), no pronouns that identify a specific",
+        "  person, no roles that identify a specific person (\"my wife\",",
+        "  \"my son\"). Use generic framings like \"someone close to you\"",
+        "  only if essential.",
+        "- NO verbatim quotes from the entry or chat.",
+        "- NO specific incidents, places, times, or situations that would",
+        "  let a reader reverse-engineer what happened.",
+        "- NO emotional details that only make sense given the private",
+        "  context (e.g. \"when you feel the urge to...\" only if the",
+        "  suggestion itself is generic advice).",
+        "- YES keep the actionable intent — the behavior, practice, or",
+        "  small experiment being suggested.",
+        "- Read as if anyone in the family could pick this up. If it",
+        "  would still obviously be \"about\" a specific person after",
+        "  sanitization, return the single string",
+        "  \"CANNOT_SANITIZE\" instead.",
+        "",
+        "FORMAT: 1–3 short sentences. Present tense, action-oriented.",
+        "Start with a verb when natural. No preamble, no disclaimers.",
+        "",
+        "=== PRIVATE ENTRY ===",
+        (entryData.text || "").trim(),
+        "",
+        "=== CHAT THREAD ===",
+        chatLines.length > 0 ? chatLines.join("\n") : "(no chat turns)",
+        "",
+        "Return only the sanitized activity text (or CANNOT_SANITIZE).",
+      ].join("\n");
+
+      const client = getAnthropic();
+      const response = await client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 500,
+        messages: [{role: "user", content: prompt}],
+      });
+
+      const draft = (response.content[0].text || "").trim();
+
+      logger.info(
+          `sanitizeEntryToActivity: entry ${entryId}, ` +
+          `draft length ${draft.length}`,
+      );
+
+      if (draft === "CANNOT_SANITIZE" || draft.startsWith("CANNOT_SANITIZE")) {
+        return {
+          success: false,
+          reason: "cannot_sanitize",
+          message:
+            "This entry is too specific to sanitize safely. " +
+            "Try rephrasing the core insight as a generic practice.",
+        };
+      }
+
+      return {success: true, draft};
     },
 );

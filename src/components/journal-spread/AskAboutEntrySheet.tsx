@@ -1,9 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Sparkles } from 'lucide-react';
+import { X, Sparkles, Share2 } from 'lucide-react';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '@/lib/firebase';
+import { useAuth } from '@/context/AuthContext';
 import { useCoach } from '@/hooks/useCoach';
 import { useEntryChat } from '@/hooks/useEntryChat';
+import { useJournal } from '@/hooks/useJournal';
+import { usePerson } from '@/hooks/usePerson';
 import type { Entry } from '@/types/entry';
 
 interface AskAboutEntrySheetProps {
@@ -74,8 +79,18 @@ function buildContextPreamble(entry: Entry, nameOf?: (id: string) => string): st
   return `[Context: ${kicker.toLowerCase()}${about} from ${date}: "${entry.content}"]`;
 }
 
+type SanitizeState =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'draft'; text: string; audience: 'just-me' | 'spouse' | 'family'; saving: boolean }
+  | { kind: 'cannot'; message: string }
+  | { kind: 'error'; message: string };
+
 export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEntrySheetProps) {
   const journalBacked = isJournalBacked(entry);
+  const { user } = useAuth();
+  const { people } = usePerson();
+  const { createEntry } = useJournal();
 
   // Persisted per-entry chat (user-authored entries only).
   const entryChat = useEntryChat(journalBacked ? entry.id : null);
@@ -84,8 +99,15 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
 
   const [input, setInput] = useState('');
   const [hasAsked, setHasAsked] = useState(false);
+  const [sanitize, setSanitize] = useState<SanitizeState>({ kind: 'idle' });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Spouse = first other family member with a linked user account.
+  const spouse = useMemo(
+    () => people.find((p) => Boolean(p.linkedUserId) && p.linkedUserId !== user?.userId) || null,
+    [people, user?.userId]
+  );
 
   const personIds = useMemo(
     () =>
@@ -155,6 +177,74 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
     }
   };
 
+  // Call the sanitize Cloud Function; transitions the sheet into
+  // preview mode with the draft text. On failure, shows an error
+  // or the "cannot_sanitize" guardrail message.
+  const handleSanitize = async () => {
+    if (!journalBacked) return;
+    setSanitize({ kind: 'loading' });
+    try {
+      const fn = httpsCallable<
+        { entryId: string },
+        | { success: true; draft: string }
+        | { success: false; reason: 'cannot_sanitize'; message: string }
+      >(functions, 'sanitizeEntryToActivity');
+      const res = await fn({ entryId: entry.id });
+      if (res.data.success) {
+        setSanitize({
+          kind: 'draft',
+          text: res.data.draft,
+          audience: 'family',
+          saving: false,
+        });
+      } else {
+        setSanitize({ kind: 'cannot', message: res.data.message });
+      }
+    } catch (err) {
+      setSanitize({
+        kind: 'error',
+        message: err instanceof Error ? err.message : 'Failed to draft',
+      });
+    }
+  };
+
+  // Save the user's edited sanitized draft as a new journal entry
+  // with category='activity' and the chosen audience. No person
+  // mentions — the sanitization stripped them — so the entry reads
+  // as generic advice in the family stream.
+  const handleSaveSanitized = async () => {
+    if (sanitize.kind !== 'draft') return;
+    const trimmed = sanitize.text.trim();
+    if (!trimmed || !user?.userId) return;
+
+    setSanitize({ ...sanitize, saving: true });
+    try {
+      const sharedWithUserIds =
+        sanitize.audience === 'just-me'
+          ? []
+          : sanitize.audience === 'spouse' && spouse?.linkedUserId
+          ? [spouse.linkedUserId]
+          : people
+              .filter((p) => Boolean(p.linkedUserId) && p.linkedUserId !== user.userId)
+              .map((p) => p.linkedUserId as string);
+
+      await createEntry({
+        text: trimmed,
+        category: 'reflection',
+        personMentions: [],
+        sharedWithUserIds,
+      });
+      window.dispatchEvent(new Event('relish:entries-stale'));
+      setSanitize({ kind: 'idle' });
+      onClose();
+    } catch (err) {
+      setSanitize({
+        kind: 'error',
+        message: err instanceof Error ? err.message : 'Failed to save',
+      });
+    }
+  };
+
   const kicker = entryKicker(entry);
   const date = formatDate(entry);
 
@@ -185,41 +275,155 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
           <p className="anchor-body">{entry.content}</p>
         </section>
 
-        <section className="messages">
-          {displayTurns.length === 0 && !loading && (
-            <p className="hint">
-              Ask anything about this entry — patterns, follow-ups,
-              what it might mean, or what to try next.
-              {journalBacked && (
-                <> <br /><br /><em>This thread persists and feeds future synthesis.</em></>
+        {sanitize.kind === 'idle' ? (
+          <>
+            <section className="messages">
+              {displayTurns.length === 0 && !loading && (
+                <p className="hint">
+                  Ask anything about this entry — patterns, follow-ups,
+                  what it might mean, or what to try next.
+                  {journalBacked && (
+                    <> <br /><br /><em>This thread persists and feeds future synthesis.</em></>
+                  )}
+                </p>
               )}
-            </p>
-          )}
-          {displayTurns.map((t) => (
-            <div key={t.key} className={`msg msg-${t.role}`}>
-              {t.content}
-            </div>
-          ))}
-          {loading && <div className="msg msg-assistant loading">thinking…</div>}
-          {error && <div className="error">{error}</div>}
-          <div ref={messagesEndRef} />
-        </section>
+              {displayTurns.map((t) => (
+                <div key={t.key} className={`msg msg-${t.role}`}>
+                  {t.content}
+                </div>
+              ))}
+              {loading && <div className="msg msg-assistant loading">thinking…</div>}
+              {error && <div className="error">{error}</div>}
+              <div ref={messagesEndRef} />
+            </section>
 
-        <form className="composer" onSubmit={handleSubmit}>
-          <textarea
-            ref={inputRef}
-            className="input"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask…"
-            rows={2}
-            disabled={loading}
-          />
-          <button type="submit" className="send" disabled={!input.trim() || loading}>
-            Send
-          </button>
-        </form>
+            <form className="composer" onSubmit={handleSubmit}>
+              <div className="composer-row">
+                <textarea
+                  ref={inputRef}
+                  className="input"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask…"
+                  rows={2}
+                  disabled={loading}
+                />
+                <button type="submit" className="send" disabled={!input.trim() || loading}>
+                  Send
+                </button>
+              </div>
+              {journalBacked && (
+                <button
+                  type="button"
+                  className="share-activity"
+                  onClick={handleSanitize}
+                  title="Create a sanitized activity others can see"
+                >
+                  <Share2 size={12} strokeWidth={1.5} />
+                  Share as sanitized activity
+                </button>
+              )}
+            </form>
+          </>
+        ) : (
+          <section className="sanitize-panel">
+            {sanitize.kind === 'loading' && (
+              <p className="sanitize-status">Drafting a sanitized activity…</p>
+            )}
+            {sanitize.kind === 'cannot' && (
+              <>
+                <p className="sanitize-status error-tone">
+                  {sanitize.message}
+                </p>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setSanitize({ kind: 'idle' })}
+                >
+                  Back to chat
+                </button>
+              </>
+            )}
+            {sanitize.kind === 'error' && (
+              <>
+                <p className="sanitize-status error-tone">
+                  {sanitize.message}
+                </p>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setSanitize({ kind: 'idle' })}
+                >
+                  Back to chat
+                </button>
+              </>
+            )}
+            {sanitize.kind === 'draft' && (
+              <>
+                <div className="sanitize-kicker">Sanitized activity · draft</div>
+                <textarea
+                  className="draft-input"
+                  value={sanitize.text}
+                  onChange={(e) =>
+                    setSanitize({ ...sanitize, text: e.target.value })
+                  }
+                  rows={5}
+                  disabled={sanitize.saving}
+                />
+                <div className="audience">
+                  <span className="audience-label">Who can see this?</span>
+                  <div className="audience-pills">
+                    <button
+                      type="button"
+                      className={`audience-pill${sanitize.audience === 'just-me' ? ' active' : ''}`}
+                      onClick={() => setSanitize({ ...sanitize, audience: 'just-me' })}
+                      disabled={sanitize.saving}
+                    >
+                      Just me
+                    </button>
+                    {spouse && (
+                      <button
+                        type="button"
+                        className={`audience-pill${sanitize.audience === 'spouse' ? ' active' : ''}`}
+                        onClick={() => setSanitize({ ...sanitize, audience: 'spouse' })}
+                        disabled={sanitize.saving}
+                      >
+                        {spouse.name.split(' ')[0]} and me
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className={`audience-pill${sanitize.audience === 'family' ? ' active' : ''}`}
+                      onClick={() => setSanitize({ ...sanitize, audience: 'family' })}
+                      disabled={sanitize.saving}
+                    >
+                      Family
+                    </button>
+                  </div>
+                </div>
+                <div className="sanitize-actions">
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => setSanitize({ kind: 'idle' })}
+                    disabled={sanitize.saving}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="send"
+                    onClick={handleSaveSanitized}
+                    disabled={!sanitize.text.trim() || sanitize.saving}
+                  >
+                    {sanitize.saving ? 'Saving…' : 'Save activity'}
+                  </button>
+                </div>
+              </>
+            )}
+          </section>
+        )}
 
         <style jsx>{`
           .backdrop {
@@ -310,6 +514,7 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
             line-height: 1.55;
             font-style: italic;
             color: #3d2f1f;
+            white-space: pre-wrap;
           }
           .messages {
             flex: 1;
@@ -364,9 +569,141 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
             padding: 12px 16px 18px;
             border-top: 1px dotted #c8b89a;
             display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: rgba(200, 184, 154, 0.12);
+          }
+          .composer-row {
+            display: flex;
             gap: 10px;
             align-items: flex-end;
-            background: rgba(200, 184, 154, 0.12);
+          }
+          .share-activity {
+            align-self: flex-start;
+            background: none;
+            border: none;
+            color: #6a8a6a;
+            font-family: -apple-system, 'Helvetica Neue', sans-serif;
+            font-size: 10px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            padding: 4px 6px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            opacity: 0.75;
+            transition: opacity 140ms ease, color 140ms ease;
+          }
+          .share-activity:hover {
+            opacity: 1;
+            color: #4d6e4d;
+          }
+          .sanitize-panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+          }
+          .sanitize-status {
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #5a4628;
+            font-size: 13px;
+            margin: 4px 0;
+          }
+          .sanitize-status.error-tone {
+            color: #7a3324;
+          }
+          .sanitize-kicker {
+            font-family: -apple-system, 'Helvetica Neue', sans-serif;
+            font-size: 9px;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            color: #6a8a6a;
+            font-weight: 700;
+          }
+          .draft-input {
+            border: 1px solid #c8b89a;
+            background: #fffaf0;
+            border-radius: 4px;
+            padding: 12px 14px;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 14px;
+            line-height: 1.55;
+            color: #2d2418;
+            outline: none;
+            resize: vertical;
+            min-height: 100px;
+          }
+          .draft-input:focus {
+            border-color: #6a8a6a;
+          }
+          .audience {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+          }
+          .audience-label {
+            font-family: -apple-system, sans-serif;
+            font-size: 9px;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: #8a6f4a;
+          }
+          .audience-pills {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+          }
+          .audience-pill {
+            padding: 6px 12px;
+            border-radius: 14px;
+            border: 1px solid #8a6f4a;
+            background: transparent;
+            color: #5a4628;
+            font-family: -apple-system, sans-serif;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background 140ms ease, color 140ms ease;
+          }
+          .audience-pill.active {
+            background: #2a1f14;
+            color: #f5ecd8;
+            border-color: #2a1f14;
+          }
+          .audience-pill:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+          .sanitize-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 8px;
+            padding-top: 10px;
+            border-top: 1px dotted #c8b89a;
+          }
+          .secondary {
+            background: transparent;
+            color: #8a6f4a;
+            border: 1px solid #c8b89a;
+            border-radius: 4px;
+            padding: 10px 18px;
+            font-family: -apple-system, sans-serif;
+            font-size: 11px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            cursor: pointer;
+          }
+          .secondary:hover {
+            background: rgba(138, 111, 74, 0.1);
+          }
+          .secondary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
           }
           .input {
             flex: 1;
