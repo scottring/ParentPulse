@@ -11,7 +11,7 @@ import { usePeopleMap } from '@/hooks/usePeopleMap';
 import { JournalSpread } from '@/components/journal-spread/JournalSpread';
 import type { FilterSelection } from '@/components/journal-spread/FilterPills';
 import type { EntryFilter } from '@/types/entry';
-import Navigation from '@/components/layout/Navigation';
+import CaptureSheet from '@/components/capture/CaptureSheet';
 // ================================================================
 // Landing / home page — the library desk.
 //
@@ -586,7 +586,7 @@ function SpreadHome() {
           window.dispatchEvent(new Event('relish:open-capture'));
         }}
       />
-      <Navigation />
+      <CaptureSheet />
     </>
   );
 }
