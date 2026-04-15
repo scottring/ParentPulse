@@ -276,6 +276,57 @@ The spread becomes a single page on narrow viewports (<640px) with the same phot
 
 ---
 
+## Section 8 — Onboarding & Teaching the Journal
+
+Onboarding flows are the moments where the user explicitly teaches the journal who the people are. They remain intact; only the output layer changes.
+
+### Preserved flows
+
+- `/welcome` — post-registration landing.
+- `/people/[id]/create-manual` — relationship-type picker (self, spouse, child, etc.) when a new person is added.
+- `/people/[id]/manual/self-onboard` — user's own self-questions.
+- `/people/[id]/manual/onboard` — observer questions for each added person (adult overrides for spouse/friend/sibling; child-centric for kids).
+- `/people/[id]/manual/kid-session` — parent-supervised emoji session; kid contributes about a parent.
+- Spouse invite + welcome flow.
+
+These surfaces keep their current question sets, living-document UX, draft persistence, and dimension-backed research scaffolding.
+
+### Output layer in the one-journal model
+
+- **`Contribution` docs remain** as canonical internal state — the record of what was asked, what was answered, and by whom. Unchanged.
+- **`PersonManual` docs can remain** as derived cache or be retired in favor of synthesis entries; the planning pass decides.
+- **The user-visible artifact is an Entry.** When an onboarding session completes (self or observer), the synthesis function emits a `synthesis` entry into the stream:
+  - Self-onboarding complete → a "Meet [self]" synthesis, subject = self person.
+  - Observer onboarding complete → a "Meet [subject]" synthesis, subject = the person observed, signed with the contributor's avatar.
+  - Kid session complete → a synthesis about the parent the kid answered about, signed with the kid's avatar.
+- **Re-assessment** (editing a contribution later) emits a new `synthesis` entry with `sourceEntryIds` referencing the prior synthesis — the journal shows change over time, honoring the living-document principle.
+
+### First-open experience
+
+- A brand-new user completes self-onboarding, then sees the journal open to a single-page spread containing the "Meet [self]" synthesis and a prompt inviting them to add the first person.
+- After adding and onboarding the first other person, the spread extends to include the "Meet [that person]" synthesis.
+- The blank cream page is only visible for the seconds between registration and first synthesis write.
+
+### Teaching relationships (bonds)
+
+The model supports bonds as first-class subjects (`{kind: 'bond', personIds: [a, b]}`). No dedicated "onboard your relationship" questionnaire is added. Bonds are taught two ways:
+
+1. **Observer contributions already ask relationship-framed questions** ("What does Liam love about being with you?"). The synthesis function emits bond-subject entries when the contribution content implies them.
+2. **Normal writing fills in the rest.** When a user writes about a conflict or moment with their spouse and chips both subjects, the bond accumulates. Accumulation triggers a bond synthesis (Section 5 rules). The journal learns bonds by being used.
+
+This is intentional: adding a fourth onboarding questionnaire per relationship would violate the minimal-effort principle. The research-backed dimensions that apply to bonds stay in the synthesis prompt, invisible to the user.
+
+### Stage-aware surface
+
+The `/` spread is aware of the onboarding stage (prior memory: `new_user → self_complete → has_people → has_contributions → active`):
+
+- `new_user` → redirect to `/welcome` until self-onboarding begins.
+- `self_complete` → journal shows "Meet [self]" + invitation to add a person.
+- `has_people` without contributions → journal shows invitation to onboard each person; pending onboardings appear as `prompt`-type entries on the spread.
+- `has_contributions` and beyond → normal journal behavior.
+
+The spread never forces completion; unfinished onboardings surface as gentle prompt entries that can be deferred.
+
 ## Out of scope
 
 - **Share-an-Impression** (parked Apr 13) — remains parked. The one-journal architecture makes it trivially addable later (a shared conversation entry with an invited author), but it does not ship in this rearchitecture.
