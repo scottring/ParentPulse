@@ -2,6 +2,7 @@
 
 export type FilterSelection =
   | { kind: 'everyone' }
+  | { kind: 'just-me' }
   | { kind: 'person'; personId: string }
   | { kind: 'syntheses' };
 
@@ -27,6 +28,7 @@ function isActive(active: FilterSelection, candidate: FilterSelection): boolean 
 export function FilterPills({ people, active, onChange }: FilterPillsProps) {
   const pills: Array<{ label: string; sel: FilterSelection }> = [
     { label: 'Everyone', sel: { kind: 'everyone' } },
+    { label: 'Just me', sel: { kind: 'just-me' } },
     ...people.map((p) => ({ label: p.name, sel: { kind: 'person' as const, personId: p.id } })),
     { label: 'Syntheses', sel: { kind: 'syntheses' } },
   ];

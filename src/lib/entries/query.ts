@@ -75,11 +75,26 @@ export async function fetchEntries(
     }
   }
 
-  return applyFilter(entries, filter);
+  const effective: EntryFilter & { currentUserIdForFilter?: string } = {
+    ...filter,
+    currentUserIdForFilter: currentUserId,
+  };
+  return applyFilter(entries, effective);
 }
 
 export function applyFilter(entries: Entry[], filter: EntryFilter): Entry[] {
   let out = entries;
+
+  if (filter.onlyPrivateToCurrentUser) {
+    const uid = (filter as EntryFilter & { currentUserIdForFilter?: string })
+      .currentUserIdForFilter;
+    if (uid) {
+      out = out.filter(
+        (e) =>
+          e.visibleToUserIds.length === 1 && e.visibleToUserIds[0] === uid
+      );
+    }
+  }
 
   if (!filter.includeArchived) {
     out = out.filter((e) => !e.archivedAt);
