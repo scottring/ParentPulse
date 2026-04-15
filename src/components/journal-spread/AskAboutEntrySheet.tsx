@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, Sparkles } from 'lucide-react';
 import { useCoach } from '@/hooks/useCoach';
+import { useEntryChat } from '@/hooks/useEntryChat';
 import type { Entry } from '@/types/entry';
 
 interface AskAboutEntrySheetProps {
@@ -10,6 +11,12 @@ interface AskAboutEntrySheetProps {
   side: 'left' | 'right';
   nameOf?: (personId: string) => string;
   onClose: () => void;
+}
+
+interface DisplayTurn {
+  key: string;
+  role: 'user' | 'assistant';
+  content: string;
 }
 
 function entryKicker(entry: Entry): string {
@@ -35,6 +42,22 @@ function formatDate(entry: Entry): string {
   }
 }
 
+/**
+ * True when the entry is backed by a `journal_entries` document —
+ * user-authored types. Only these support the persisted per-entry
+ * chat thread via `chatWithEntry`. AI-authored entries fall back to
+ * the ephemeral coach.
+ */
+function isJournalBacked(entry: Entry): boolean {
+  return (
+    entry.author.kind === 'person' &&
+    (entry.type === 'written' ||
+      entry.type === 'observation' ||
+      entry.type === 'reflection' ||
+      entry.type === 'activity')
+  );
+}
+
 function buildContextPreamble(entry: Entry, nameOf?: (id: string) => string): string {
   const kicker = entryKicker(entry);
   const date = formatDate(entry);
@@ -52,15 +75,47 @@ function buildContextPreamble(entry: Entry, nameOf?: (id: string) => string): st
 }
 
 export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEntrySheetProps) {
-  const { messages, loading, error, sendMessage } = useCoach();
+  const journalBacked = isJournalBacked(entry);
+
+  // Persisted per-entry chat (user-authored entries only).
+  const entryChat = useEntryChat(journalBacked ? entry.id : null);
+  // Ephemeral coach (fallback for AI-authored entries).
+  const coach = useCoach();
+
   const [input, setInput] = useState('');
   const [hasAsked, setHasAsked] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  const personIds = useMemo(
+    () =>
+      entry.subjects
+        .filter((s): s is { kind: 'person'; personId: string } => s.kind === 'person')
+        .map((s) => s.personId),
+    [entry.subjects]
+  );
+
+  // Normalize both sources into a common display shape.
+  const displayTurns: DisplayTurn[] = journalBacked
+    ? entryChat.turns
+        .filter((t) => !t.excluded)
+        .map((t) => ({ key: t.turnId, role: t.role, content: t.content }))
+    : coach.messages.map((m, i) => ({
+        // Hide the synthetic context preamble on the very first user message.
+        key: `${i}`,
+        role: m.role,
+        content:
+          i === 0 && m.role === 'user' && m.content.startsWith('[Context:')
+            ? m.content.replace(/^\[Context:[^\]]+\]\s*\n*/, '')
+            : m.content,
+      }));
+
+  const loading = journalBacked ? entryChat.loading : coach.loading;
+  const error = journalBacked ? entryChat.error : coach.error;
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [displayTurns.length, loading]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -74,20 +129,23 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const personIds = entry.subjects
-    .filter((s): s is { kind: 'person'; personId: string } => s.kind === 'person')
-    .map((s) => s.personId);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = input.trim();
     if (!trimmed || loading) return;
     setInput('');
-    const message = hasAsked
-      ? trimmed
-      : `${buildContextPreamble(entry, nameOf)}\n\n${trimmed}`;
-    setHasAsked(true);
-    await sendMessage(message, personIds.length > 0 ? personIds : undefined);
+
+    if (journalBacked) {
+      // chatWithEntry server-side auto-injects entry text on first turn,
+      // so no client-side preamble is needed.
+      await entryChat.sendMessage(trimmed, personIds.length > 0 ? personIds : undefined);
+    } else {
+      const message = hasAsked
+        ? trimmed
+        : `${buildContextPreamble(entry, nameOf)}\n\n${trimmed}`;
+      setHasAsked(true);
+      await coach.sendMessage(message, personIds.length > 0 ? personIds : undefined);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -99,9 +157,6 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
 
   const kicker = entryKicker(entry);
   const date = formatDate(entry);
-  const displayMessages = messages.filter((_, i) => !(i === 0 && messages[0]?.role === 'user'))
-    // show all; the preamble is part of the first user turn but we hide it by trimming
-    ;
 
   return (
     <>
@@ -122,29 +177,29 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
         </header>
 
         <section className="anchor">
-          <div className="anchor-kicker">{kicker}{date ? ` · ${date}` : ''}</div>
+          <div className="anchor-kicker">
+            {kicker}
+            {date ? ` · ${date}` : ''}
+            {!journalBacked && ' · not saved'}
+          </div>
           <p className="anchor-body">{entry.content}</p>
         </section>
 
         <section className="messages">
-          {messages.length === 0 && (
+          {displayTurns.length === 0 && !loading && (
             <p className="hint">
               Ask anything about this entry — patterns, follow-ups,
               what it might mean, or what to try next.
+              {journalBacked && (
+                <> <br /><br /><em>This thread persists and feeds future synthesis.</em></>
+              )}
             </p>
           )}
-          {messages.map((m, i) => {
-            // Hide the context preamble from the first user message
-            const content =
-              i === 0 && m.role === 'user' && m.content.startsWith('[Context:')
-                ? m.content.replace(/^\[Context:[^\]]+\]\s*\n*/, '')
-                : m.content;
-            return (
-              <div key={i} className={`msg msg-${m.role}`}>
-                {content}
-              </div>
-            );
-          })}
+          {displayTurns.map((t) => (
+            <div key={t.key} className={`msg msg-${t.role}`}>
+              {t.content}
+            </div>
+          ))}
           {loading && <div className="msg msg-assistant loading">thinking…</div>}
           {error && <div className="error">{error}</div>}
           <div ref={messagesEndRef} />
@@ -271,6 +326,10 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
             color: #8a6f4a;
             margin: 0;
             opacity: 0.85;
+          }
+          .hint em {
+            color: #6a8a6a;
+            font-style: italic;
           }
           .msg {
             font-family: Georgia, 'Times New Roman', serif;
