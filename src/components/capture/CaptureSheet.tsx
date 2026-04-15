@@ -48,7 +48,7 @@ export default function CaptureSheet() {
   const savedTextRef = useRef('');
   const savedPeopleRef = useRef<string[]>([]);
 
-  const { createEntry, updateEntry, saving } = useJournal();
+  const { createEntry, updateEntry, saving, error: journalError } = useJournal();
   const { people } = usePerson();
   const privacyLock = usePrivacyLock();
   // When saving a just-me entry without a PIN, we pause the save and
@@ -220,8 +220,15 @@ export default function CaptureSheet() {
           editMode === 'append'
             ? `${originalText.trim()}\n\n— added ${new Date().toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} —\n${text.trim()}`
             : text.trim();
-        await updateEntry(editingEntryId, { text: nextText });
-        handleClose();
+        try {
+          await updateEntry(editingEntryId, { text: nextText });
+          window.dispatchEvent(new Event('relish:entries-stale'));
+          handleClose();
+        } catch (err) {
+          // Don't swallow edit errors — the outer catch would hide them.
+          console.error('Failed to save edit:', err);
+          throw err;
+        }
         return;
       }
 
@@ -262,7 +269,9 @@ export default function CaptureSheet() {
 
       setSavedEntryId(entryId);
       setState('saved');
-    } catch {
+      window.dispatchEvent(new Event('relish:entries-stale'));
+    } catch (err) {
+      console.error('CaptureSheet save failed:', err);
       setUploadProgress(null);
     }
   };
@@ -414,6 +423,15 @@ export default function CaptureSheet() {
                     aria-label="Close">&times;</button>
                 </div>
               </div>
+
+              {journalError && (
+                <div className="px-6 pb-2 shrink-0" style={{
+                  fontFamily: '-apple-system, sans-serif', fontSize: 12,
+                  color: '#b94a3b',
+                }}>
+                  {journalError}
+                </div>
+              )}
 
               {/* Visibility presets */}
               <div className="shrink-0 px-6 pb-2">
