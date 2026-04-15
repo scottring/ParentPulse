@@ -1,0 +1,163 @@
+'use client';
+
+import { useState } from 'react';
+import type { Entry } from '@/types/entry';
+import { EntryBlock } from './EntryBlock';
+import { MastheadRow, type MastheadMember } from './MastheadRow';
+import { FilterPills, type FilterPillsPerson, type FilterSelection } from './FilterPills';
+import { usePageWindow } from './usePageWindow';
+import { BOOK_ASSETS, BOOK_ASSETS_AVAILABLE, FLAT_COLORS } from './assets';
+
+const PAGE_SIZE = 12; // 6 per page × 2 pages
+
+export interface JournalSpreadProps {
+  entries: Entry[];
+  familyName: string;
+  volumeLabel: string;
+  dateRangeLabel: string;
+  members: MastheadMember[];
+  people: FilterPillsPerson[];
+  onCapture: () => void;
+  filter?: FilterSelection;
+  onFilterChange?: (next: FilterSelection) => void;
+}
+
+export function JournalSpread({
+  entries,
+  familyName,
+  volumeLabel,
+  dateRangeLabel,
+  members,
+  people,
+  onCapture,
+  filter,
+  onFilterChange,
+}: JournalSpreadProps) {
+  const [internalFilter, setInternalFilter] = useState<FilterSelection>({ kind: 'everyone' });
+  const activeFilter = filter ?? internalFilter;
+  const handleFilterChange = (next: FilterSelection) => {
+    if (onFilterChange) onFilterChange(next);
+    else setInternalFilter(next);
+  };
+
+  const { currentEntries, canFlipNewer, canFlipOlder, flipNewer, flipOlder, currentPageIndex, totalPages } =
+    usePageWindow(entries, PAGE_SIZE);
+
+  const half = Math.ceil(currentEntries.length / 2);
+  const leftEntries = currentEntries.slice(0, half);
+  const rightEntries = currentEntries.slice(half);
+
+  const bgStyle = BOOK_ASSETS_AVAILABLE
+    ? { backgroundImage: `url(${BOOK_ASSETS.cover})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : { backgroundColor: '#1f160e' };
+  const paperLeftStyle = BOOK_ASSETS_AVAILABLE
+    ? { backgroundImage: `url(${BOOK_ASSETS.paperLeft})`, backgroundSize: 'cover' }
+    : { backgroundColor: FLAT_COLORS.paper };
+  const paperRightStyle = BOOK_ASSETS_AVAILABLE
+    ? { backgroundImage: `url(${BOOK_ASSETS.paperRight})`, backgroundSize: 'cover' }
+    : { backgroundColor: FLAT_COLORS.paper };
+
+  return (
+    <div className="spread-stage" style={bgStyle}>
+      <FilterPills people={people} active={activeFilter} onChange={handleFilterChange} />
+      <MastheadRow
+        familyName={familyName}
+        volumeLabel={volumeLabel}
+        dateRangeLabel={dateRangeLabel}
+        members={members}
+      />
+      <div className="book">
+        {canFlipNewer && (
+          <button type="button" className="flip flip-left" onClick={flipNewer} aria-label="Newer entries">
+            ‹
+          </button>
+        )}
+        {canFlipOlder && (
+          <button type="button" className="flip flip-right" onClick={flipOlder} aria-label="Older entries">
+            ›
+          </button>
+        )}
+        <div className="page page-left" style={paperLeftStyle}>
+          {leftEntries.map((e) => (
+            <EntryBlock key={e.id} entry={e} />
+          ))}
+        </div>
+        <div className="page page-right" style={paperRightStyle}>
+          {rightEntries.map((e) => (
+            <EntryBlock key={e.id} entry={e} />
+          ))}
+          {currentEntries.length === 0 && (
+            <p className="empty-state">A quiet day. Nothing yet — write the first thing.</p>
+          )}
+        </div>
+      </div>
+      <button type="button" className="capture-btn" onClick={onCapture}>
+        + Add an entry
+      </button>
+      <div className="page-meta">
+        Page {currentPageIndex + 1} of {totalPages}
+      </div>
+      <style jsx>{`
+        .spread-stage { padding: 30px 20px 60px; min-height: 100vh; }
+        .book {
+          position: relative;
+          max-width: 960px;
+          margin: 0 auto;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          background: ${BOOK_ASSETS_AVAILABLE ? 'transparent' : FLAT_COLORS.spineDark};
+          padding: 16px;
+          border-radius: 4px;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .page { padding: 22px 22px 26px; min-height: 540px; position: relative; color: ${FLAT_COLORS.ink}; }
+        .page-left  { border-radius: 2px 0 0 2px; }
+        .page-right { border-radius: 0 2px 2px 0; }
+        .flip {
+          position: absolute; top: 50%; transform: translateY(-50%);
+          width: 32px; height: 56px;
+          background: rgba(245,236,216,0.12);
+          border: 1px solid rgba(245,236,216,0.3);
+          color: #f5ecd8;
+          font-size: 22px;
+          font-style: italic;
+          cursor: pointer;
+          z-index: 5;
+        }
+        .flip-left  { left: -38px; border-radius: 3px 0 0 3px; }
+        .flip-right { right: -38px; border-radius: 0 3px 3px 0; }
+        .capture-btn {
+          display: block;
+          margin: 18px auto 0;
+          background: ${FLAT_COLORS.spineDark};
+          color: #f5ecd8;
+          padding: 10px 22px;
+          border: none;
+          border-radius: 22px;
+          font-size: 12px;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          cursor: pointer;
+          font-family: -apple-system, sans-serif;
+        }
+        .page-meta {
+          text-align: center;
+          margin-top: 14px;
+          font-size: 10px;
+          color: ${FLAT_COLORS.inkMuted};
+          letter-spacing: 0.2em;
+          text-transform: uppercase;
+          font-style: italic;
+          font-family: -apple-system, sans-serif;
+        }
+        .empty-state {
+          font-family: Georgia, serif;
+          font-style: italic;
+          color: ${FLAT_COLORS.inkMuted};
+          text-align: center;
+          margin-top: 60px;
+        }
+      `}</style>
+    </div>
+  );
+}
