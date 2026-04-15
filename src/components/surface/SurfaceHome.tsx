@@ -69,22 +69,14 @@ export function SurfaceHome() {
           position: fixed;
           inset: 0;
           z-index: 0;
-          background-image: url('/images/home-table.png');
-          background-size: cover;
-          background-position: center;
-          opacity: 0.55;
-        }
-        .surface-bg::after {
-          content: '';
-          position: absolute;
-          inset: 0;
           background:
             radial-gradient(
               ellipse at center,
-              rgba(243, 234, 214, 0.88) 0%,
-              rgba(243, 234, 214, 0.78) 40%,
-              rgba(20, 16, 12, 0.35) 100%
-            );
+              rgba(243, 234, 214, 0.985) 0%,
+              rgba(243, 234, 214, 0.97) 45%,
+              rgba(228, 212, 178, 0.92) 100%
+            ),
+            url('/images/home-table.png') center / cover no-repeat;
         }
         .surface > :global(*:not(.surface-bg)) {
           position: relative;
