@@ -1,12 +1,17 @@
 'use client';
 
+import { useState } from 'react';
 import type { Entry } from '@/types/entry';
 
-// ── Internal sub-components ──────────────────────────────────────────────────
+// Approximate character count that fills ~2 lines after the italic lead
+// in a ~440px main column at the body font/leading used below. Real data
+// varies; the clamp is a hint, not a hard boundary.
+const PROSE_CLAMP_CHARS = 180;
 
 /** Flowing prose entry — written, observation, reflection, conversation */
 function ProseEntry({ entry }: { entry: Entry }) {
-  // Build kicker: type label + optional subject context
+  const [expanded, setExpanded] = useState(false);
+
   const typeLabel =
     entry.type === 'observation'
       ? 'Observation'
@@ -16,23 +21,34 @@ function ProseEntry({ entry }: { entry: Entry }) {
       ? 'Conversation'
       : 'Written';
 
-  const kicker = typeLabel;
-
   // Split content: first sentence becomes italic lead; rest is body
   const dotIndex = entry.content.indexOf('. ');
-  const hasMultipleSentences = dotIndex !== -1 && dotIndex < entry.content.length - 2;
+  const hasMultipleSentences =
+    dotIndex !== -1 && dotIndex < entry.content.length - 2;
   const firstLine = hasMultipleSentences
     ? entry.content.slice(0, dotIndex + 1)
     : entry.content;
   const rest = hasMultipleSentences ? entry.content.slice(dotIndex + 2) : '';
 
+  const isOverflowing = rest.length > PROSE_CLAMP_CHARS;
+  const shouldClamp = isOverflowing && !expanded;
+
   return (
     <article className="prose-entry">
-      <div className="entry-meta">{kicker}</div>
-      <p className="entry-body">
+      <div className="entry-meta">{typeLabel}</div>
+      <p className={`entry-body${shouldClamp ? ' clamped' : ''}`}>
         <span className="first-line">{firstLine}</span>
         {rest && ` ${rest}`}
       </p>
+      {isOverflowing && (
+        <button
+          type="button"
+          className="toggle"
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {expanded ? 'less' : 'read more'}
+        </button>
+      )}
       <style jsx>{`
         .prose-entry {
           margin-bottom: 26px;
@@ -55,8 +71,30 @@ function ProseEntry({ entry }: { entry: Entry }) {
           margin: 0;
           font-family: Georgia, 'Times New Roman', serif;
         }
+        .entry-body.clamped {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
         .first-line {
           font-style: italic;
+        }
+        .toggle {
+          margin-top: 4px;
+          padding: 0;
+          background: none;
+          border: none;
+          color: #a89373;
+          font-size: 10px;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          font-family: -apple-system, 'Helvetica Neue', sans-serif;
+          cursor: pointer;
+          font-style: italic;
+        }
+        .toggle:hover {
+          color: #8a6f4a;
         }
       `}</style>
     </article>
