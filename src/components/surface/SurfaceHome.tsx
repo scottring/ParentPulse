@@ -1,11 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useSurfaceNext } from '@/hooks/useSurfaceNext';
 import { NextThingCard } from '@/components/surface/NextThingCard';
 import { SynthesisHighlightCard } from '@/components/surface/SynthesisHighlightCard';
+import { CalmStateCard } from '@/components/surface/CalmStateCard';
 import CaptureSheet from '@/components/capture/CaptureSheet';
 
 /**
@@ -65,16 +65,7 @@ export function SurfaceHome() {
         </h1>
 
         {!loading && next && <NextThingCard next={next} />}
-        {!loading && !next && (
-          <div className="calm">
-            <p className="calm-text">
-              All quiet. You've been listening well.
-            </p>
-            <Link href="/journal" className="link primary">
-              Open the journal
-            </Link>
-          </div>
-        )}
+        {!loading && !next && <CalmStateCard firstName={firstName} />}
         {!loading && secondarySynthesis && (
           <SynthesisHighlightCard manual={secondarySynthesis} />
         )}
