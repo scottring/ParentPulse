@@ -133,4 +133,33 @@ describe('EntryBlock', () => {
     expect(screen.getByText(/question/i)).toBeInTheDocument();
     expect(screen.getByText('Dinner was loud tonight.')).toBeInTheDocument();
   });
+
+  // ── nameOf resolution ──────────────────────────────────────────────────────
+
+  it('renders the resolved person name for synthesis pull-quote when nameOf is provided', () => {
+    const synth: Entry = {
+      ...baseEntry,
+      id: 's1',
+      type: 'synthesis',
+      author: { kind: 'system' },
+      subjects: [{ kind: 'person', personId: 'p-liam' }],
+      content: 'Short synthesis.',
+    };
+    render(<EntryBlock entry={synth} nameOf={(id) => (id === 'p-liam' ? 'Liam' : id)} />);
+    expect(screen.getByText(/about Liam/i)).toBeInTheDocument();
+    expect(screen.queryByText(/p-liam/)).not.toBeInTheDocument();
+  });
+
+  it('falls back to personId when nameOf is not provided', () => {
+    const synth: Entry = {
+      ...baseEntry,
+      id: 's2',
+      type: 'synthesis',
+      author: { kind: 'system' },
+      subjects: [{ kind: 'person', personId: 'p-liam' }],
+      content: 'Short.',
+    };
+    render(<EntryBlock entry={synth} />);
+    expect(screen.getByText(/about p-liam/i)).toBeInTheDocument();
+  });
 });

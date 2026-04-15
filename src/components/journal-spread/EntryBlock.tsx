@@ -188,11 +188,14 @@ function ActivityLine({ entry }: { entry: Entry }) {
 }
 
 /** Pull-quote for synthesis about a person */
-function SynthesisPull({ entry }: { entry: Entry }) {
+function SynthesisPull({ entry, nameOf }: { entry: Entry; nameOf?: (personId: string) => string }) {
   const [expanded, setExpanded] = useState(false);
   const subject = entry.subjects[0];
-  const subjectLabel =
-    subject?.kind === 'person' ? `about ${subject.personId}` : 'about them';
+  const subjectName =
+    subject?.kind === 'person'
+      ? (nameOf ? nameOf(subject.personId) : subject.personId)
+      : 'them';
+  const subjectLabel = `about ${subjectName}`;
   const sourceCount = entry.sourceEntryIds?.length ?? 0;
   const overflowing = entry.content.length > BLOCK_CLAMP_CHARS;
   const clamped = overflowing && !expanded;
@@ -394,14 +397,14 @@ function PromptInline({ entry }: { entry: Entry }) {
 
 // ── Discriminated renderer ───────────────────────────────────────────────────
 
-export function EntryBlock({ entry }: { entry: Entry }) {
+export function EntryBlock({ entry, nameOf }: { entry: Entry; nameOf?: (personId: string) => string }) {
   // synthesis: check subject kind to pick banner vs pull-quote
   if (entry.type === 'synthesis') {
     const firstSubject = entry.subjects[0];
     if (firstSubject?.kind === 'family') {
       return <FamilyBanner entry={entry} />;
     }
-    return <SynthesisPull entry={entry} />;
+    return <SynthesisPull entry={entry} nameOf={nameOf} />;
   }
 
   if (entry.type === 'nudge') {
