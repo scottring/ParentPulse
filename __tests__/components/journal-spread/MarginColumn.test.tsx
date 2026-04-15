@@ -59,4 +59,16 @@ describe('MarginColumn', () => {
     );
     expect(container.querySelector('.item-empty')).toBeTruthy();
   });
+
+  it('renders synthesized date for synthesis entries', () => {
+    const s: Entry = entry({
+      id: 's1',
+      type: 'synthesis',
+      author: { kind: 'system' },
+      sourceEntryIds: ['e1'],
+      createdAt: Timestamp.fromMillis(Date.UTC(2026, 3, 14)), // Apr 14 UTC
+    });
+    render(<MarginColumn side="left" entries={[s]} />);
+    expect(screen.getByText(/synthesized/i)).toBeInTheDocument();
+  });
 });
