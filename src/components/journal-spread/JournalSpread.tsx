@@ -8,8 +8,16 @@ import { DateBand } from './DateBand';
 import { MastheadRow, type MastheadMember } from './MastheadRow';
 import { FilterPills, type FilterPillsPerson, type FilterSelection } from './FilterPills';
 import { usePageWindow } from './usePageWindow';
-import { BOOK_ASSETS, BOOK_ASSETS_AVAILABLE, FLAT_COLORS } from './assets';
+import { FLAT_COLORS } from './assets';
 import { MarginItem } from './MarginColumn';
+import dynamic from 'next/dynamic';
+
+const AskAboutEntrySheet = dynamic(
+  () => import('./AskAboutEntrySheet').then((m) => m.AskAboutEntrySheet),
+  { ssr: false }
+);
+
+const WOOD_DESK_IMG = '/images/overhead-desk.png';
 
 function useIsMobile(): boolean {
   const [isMobile, setIsMobile] = useState(false);
@@ -65,13 +73,16 @@ function PageEntries({
   side,
   nameOf,
   currentUserId,
+  onAsk,
 }: {
   entries: Entry[];
   side: 'left' | 'right';
   nameOf?: (personId: string) => string;
   currentUserId?: string;
+  onAsk?: (entry: Entry, side: 'left' | 'right') => void;
 }) {
   const groups = groupEntriesByDay(entries);
+  const handleAsk = onAsk ? (e: Entry) => onAsk(e, side) : undefined;
   return (
     <>
       {groups.map((group) => (
@@ -86,13 +97,13 @@ function PageEntries({
                   <MarginItem entry={e} />
                 </div>
                 <div className="main-cell">
-                  <EntryBlock entry={e} nameOf={nameOf} currentUserId={currentUserId} />
+                  <EntryBlock entry={e} nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} />
                 </div>
               </div>
             ) : (
               <div key={e.id} style={{ display: 'contents' }}>
                 <div className="main-cell">
-                  <EntryBlock entry={e} nameOf={nameOf} currentUserId={currentUserId} />
+                  <EntryBlock entry={e} nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} />
                 </div>
                 <div className="margin-cell margin-right">
                   <MarginItem entry={e} />
@@ -134,18 +145,14 @@ export function JournalSpread({
   const leftEntries = currentEntries.slice(0, half);
   const rightEntries = currentEntries.slice(half);
 
-  const bgStyle = BOOK_ASSETS_AVAILABLE
-    ? { backgroundImage: `url(${BOOK_ASSETS.cover})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-    : { backgroundColor: '#1f160e' };
-  const paperLeftStyle = BOOK_ASSETS_AVAILABLE
-    ? { backgroundImage: `url(${BOOK_ASSETS.paperLeft})`, backgroundSize: 'cover' }
-    : { backgroundColor: FLAT_COLORS.paper };
-  const paperRightStyle = BOOK_ASSETS_AVAILABLE
-    ? { backgroundImage: `url(${BOOK_ASSETS.paperRight})`, backgroundSize: 'cover' }
-    : { backgroundColor: FLAT_COLORS.paper };
+  const [askTarget, setAskTarget] = useState<{ entry: Entry; side: 'left' | 'right' } | null>(null);
+  const handleAsk = (entry: Entry, side: 'left' | 'right') => {
+    // On mobile the whole spread is the right page, so sheet slides from right.
+    setAskTarget({ entry, side: isMobile ? 'right' : side });
+  };
 
   return (
-    <div className="spread-stage" style={bgStyle}>
+    <div className="spread-stage">
       <FilterPills people={people} active={activeFilter} onChange={handleFilterChange} />
       <MastheadRow
         familyName={familyName}
@@ -164,11 +171,11 @@ export function JournalSpread({
             ›
           </button>
         )}
-        <div className="page page-left" style={paperLeftStyle}>
-          <PageEntries entries={leftEntries} side="left" nameOf={nameOf} currentUserId={currentUserId} />
+        <div className="page page-left">
+          <PageEntries entries={leftEntries} side="left" nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} />
         </div>
-        <div className="page page-right" style={paperRightStyle}>
-          <PageEntries entries={rightEntries} side="right" nameOf={nameOf} currentUserId={currentUserId} />
+        <div className="page page-right">
+          <PageEntries entries={rightEntries} side="right" nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} />
           {currentEntries.length === 0 && (
             <p className="empty-state">A quiet day. Nothing yet — write the first thing.</p>
           )}
@@ -183,22 +190,62 @@ export function JournalSpread({
       <div className="page-meta">
         Page {currentPageIndex + 1} of {totalPages}
       </div>
+      {askTarget && (
+        <AskAboutEntrySheet
+          entry={askTarget.entry}
+          side={askTarget.side}
+          nameOf={nameOf}
+          onClose={() => setAskTarget(null)}
+        />
+      )}
       <style jsx>{`
-        .spread-stage { padding: 30px 20px 60px; min-height: 100vh; }
+        .spread-stage {
+          position: relative;
+          min-height: 100vh;
+          padding: 32px 28px 72px;
+          background-image: url(${WOOD_DESK_IMG});
+          background-size: 260%;
+          background-position: center 38%;
+          background-repeat: no-repeat;
+          background-attachment: fixed;
+        }
+        .spread-stage::before {
+          content: '';
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          background:
+            radial-gradient(
+              ellipse at center,
+              transparent 0%,
+              transparent 45%,
+              rgba(40, 24, 10, 0.22) 85%,
+              rgba(30, 18, 8, 0.42) 100%
+            );
+          z-index: 0;
+        }
+        .book,
+        :global(.spread-stage > *) {
+          position: relative;
+          z-index: 1;
+        }
         .book {
           position: relative;
-          max-width: 1120px;
+          max-width: 1288px;
           margin: 0 auto;
           display: grid;
           grid-template-columns: 1fr 1fr;
-          background: ${BOOK_ASSETS_AVAILABLE ? 'transparent' : FLAT_COLORS.spineDark};
-          padding: 16px;
+          padding: 14px;
+          background: #2a1f14;
           border-radius: 4px;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+          box-shadow:
+            0 24px 60px rgba(0, 0, 0, 0.55),
+            0 8px 20px rgba(0, 0, 0, 0.35);
         }
         .page {
           min-height: 800px;
           position: relative;
+          background: ${FLAT_COLORS.paper};
           color: ${FLAT_COLORS.ink};
           display: grid;
           grid-auto-rows: min-content;
@@ -207,68 +254,91 @@ export function JournalSpread({
         }
         .page-left  {
           border-radius: 2px 0 0 2px;
-          grid-template-columns: 160px 1fr;
+          grid-template-columns: 140px 1fr;
+          padding-right: 40px;
+          box-shadow: inset -12px 0 18px -12px rgba(0, 0, 0, 0.25);
         }
         .page-right {
           border-radius: 0 2px 2px 0;
-          grid-template-columns: 1fr 160px;
+          grid-template-columns: 1fr 140px;
+          padding-left: 40px;
+          box-shadow: inset 12px 0 18px -12px rgba(0, 0, 0, 0.25);
         }
         .page :global(.date-row) {
           grid-column: 1 / -1;
-          padding: 0 28px;
+          padding: 0 14px;
         }
         .page :global(.main-cell) {
-          padding: 0 28px;
+          padding: 0 14px;
         }
         .page :global(.margin-cell) {
-          padding: 0 16px;
+          padding: 0 14px;
           font-family: Georgia, 'Times New Roman', serif;
           color: #8a6f4a;
           font-size: 11px;
           line-height: 1.5;
+          background: transparent;
         }
         .page-left :global(.margin-cell) {
           text-align: right;
+          border-right: 1px dotted #c8b89a;
         }
         .page-right :global(.margin-cell) {
           text-align: left;
+          border-left: 1px dotted #c8b89a;
         }
         .flip {
           position: absolute; top: 50%; transform: translateY(-50%);
-          width: 32px; height: 56px;
-          background: rgba(245,236,216,0.12);
-          border: 1px solid rgba(245,236,216,0.3);
+          width: 40px; height: 40px;
+          background: transparent;
+          border: none;
           color: #f5ecd8;
-          font-size: 22px;
+          font-size: 32px;
           font-style: italic;
+          line-height: 1;
           cursor: pointer;
           z-index: 5;
+          opacity: 0.55;
+          transition: opacity 0.25s ease, transform 0.25s ease;
+          text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
         }
-        .flip-left  { left: -38px; border-radius: 3px 0 0 3px; }
-        .flip-right { right: -38px; border-radius: 0 3px 3px 0; }
+        .flip:hover {
+          opacity: 1;
+        }
+        .flip-left  { left: -56px; }
+        .flip-right { right: -56px; }
+        .flip-left:hover  { transform: translateY(-50%) translateX(-2px); }
+        .flip-right:hover { transform: translateY(-50%) translateX(2px); }
         .capture-btn {
           display: block;
-          margin: 18px auto 0;
-          background: ${FLAT_COLORS.spineDark};
+          margin: 26px auto 0;
+          background: rgba(20, 12, 4, 0.72);
           color: #f5ecd8;
-          padding: 10px 22px;
-          border: none;
-          border-radius: 22px;
-          font-size: 12px;
-          letter-spacing: 0.1em;
+          padding: 11px 26px;
+          border: 1px solid rgba(245, 236, 216, 0.18);
+          border-radius: 24px;
+          font-size: 11px;
+          letter-spacing: 0.14em;
           text-transform: uppercase;
           cursor: pointer;
           font-family: -apple-system, sans-serif;
+          backdrop-filter: blur(4px);
+          transition: background 0.2s ease, transform 0.2s ease;
+        }
+        .capture-btn:hover {
+          background: rgba(20, 12, 4, 0.88);
+          transform: translateY(-1px);
         }
         .page-meta {
           text-align: center;
-          margin-top: 14px;
+          margin-top: 16px;
           font-size: 10px;
-          color: ${FLAT_COLORS.inkMuted};
-          letter-spacing: 0.2em;
+          color: rgba(245, 236, 216, 0.5);
+          letter-spacing: 0.22em;
           text-transform: uppercase;
           font-style: italic;
           font-family: -apple-system, sans-serif;
+          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
         }
         .empty-state {
           grid-column: 1 / -1;
@@ -293,14 +363,13 @@ export function JournalSpread({
           .page-left {
             display: none;
           }
-          .page-left, .page-right {
+          .page-right {
             grid-template-columns: 1fr;
+            border-radius: 2px;
+            box-shadow: none;
           }
           :global(.margin-cell) {
             display: none;
-          }
-          .page-right {
-            border-radius: 2px;
           }
           .flip-left { left: 4px; }
           .flip-right { right: 4px; }

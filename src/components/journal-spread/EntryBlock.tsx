@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Compass, Link2, Unlink2, Eye, Sparkles, Users } from 'lucide-react';
+import { Compass, Link2, Unlink2, Eye, Sparkles, Users, MessageCircleQuestion } from 'lucide-react';
 import type { Entry } from '@/types/entry';
 
 // Approximate character count that fills ~2 lines after the italic lead
@@ -256,7 +256,7 @@ function SynthesisPull({
   const hasBody = body.length > 0;
 
   return (
-    <div className="synth-pull" style={{ borderLeftColor: rule }}>
+    <div className="synth-pull">
       <div className="meta">
         {subject?.kind === 'person' && (
           <span className="avatar" aria-hidden="true">{subjectInitial}</span>
@@ -277,8 +277,7 @@ function SynthesisPull({
       <style jsx>{`
         .synth-pull {
           margin: 8px 0 24px;
-          padding: 4px 0 4px 16px;
-          border-left: 3px solid;
+          padding: 4px 0 4px 0;
         }
         .meta {
           display: flex;
@@ -514,36 +513,81 @@ function PromptInline({ entry }: { entry: Entry }) {
 
 // ── Discriminated renderer ───────────────────────────────────────────────────
 
+function renderEntryBody(
+  entry: Entry,
+  nameOf?: (personId: string) => string,
+  currentUserId?: string
+) {
+  if (entry.type === 'synthesis') {
+    const firstSubject = entry.subjects[0];
+    if (firstSubject?.kind === 'family') return <FamilyBanner entry={entry} />;
+    return <SynthesisPull entry={entry} nameOf={nameOf} />;
+  }
+  if (entry.type === 'nudge')    return <NudgeCallout entry={entry} />;
+  if (entry.type === 'activity') return <ActivityLine entry={entry} />;
+  if (entry.type === 'prompt')   return <PromptInline entry={entry} />;
+  return <ProseEntry entry={entry} currentUserId={currentUserId} />;
+}
+
 export function EntryBlock({
   entry,
   nameOf,
   currentUserId,
+  onAsk,
 }: {
   entry: Entry;
   nameOf?: (personId: string) => string;
   currentUserId?: string;
+  onAsk?: (entry: Entry) => void;
 }) {
-  // synthesis: check subject kind to pick banner vs pull-quote
-  if (entry.type === 'synthesis') {
-    const firstSubject = entry.subjects[0];
-    if (firstSubject?.kind === 'family') {
-      return <FamilyBanner entry={entry} />;
-    }
-    return <SynthesisPull entry={entry} nameOf={nameOf} />;
-  }
-
-  if (entry.type === 'nudge') {
-    return <NudgeCallout entry={entry} />;
-  }
-
-  if (entry.type === 'activity') {
-    return <ActivityLine entry={entry} />;
-  }
-
-  if (entry.type === 'prompt') {
-    return <PromptInline entry={entry} />;
-  }
-
-  // written, observation, reflection, conversation all fall through to prose
-  return <ProseEntry entry={entry} currentUserId={currentUserId} />;
+  return (
+    <div className="entry-wrap">
+      {renderEntryBody(entry, nameOf, currentUserId)}
+      {onAsk && (
+        <button
+          type="button"
+          className="ask-btn"
+          onClick={() => onAsk(entry)}
+          aria-label="Ask about this entry"
+        >
+          <MessageCircleQuestion size={13} strokeWidth={1.5} />
+          <span>Ask</span>
+        </button>
+      )}
+      <style jsx>{`
+        .entry-wrap {
+          position: relative;
+        }
+        .ask-btn {
+          position: absolute;
+          top: 0;
+          right: 0;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 4px 8px;
+          background: transparent;
+          border: 1px solid transparent;
+          border-radius: 4px;
+          color: #8a6a9a;
+          font-family: -apple-system, 'Helvetica Neue', sans-serif;
+          font-size: 9px;
+          letter-spacing: 0.2em;
+          text-transform: uppercase;
+          cursor: pointer;
+          opacity: 0;
+          transition: opacity 160ms ease, background 160ms ease;
+        }
+        .entry-wrap:hover .ask-btn,
+        .ask-btn:focus-visible {
+          opacity: 0.85;
+        }
+        .ask-btn:hover {
+          opacity: 1;
+          background: rgba(138, 106, 154, 0.1);
+          border-color: rgba(138, 106, 154, 0.3);
+        }
+      `}</style>
+    </div>
+  );
 }
