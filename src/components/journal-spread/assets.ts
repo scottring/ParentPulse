@@ -11,10 +11,10 @@ export const BOOK_ASSETS_AVAILABLE =
   process.env.NEXT_PUBLIC_BOOK_ASSETS_PRESENT === '1';
 
 export const BOOK_ASSETS = {
-  cover: '/images/book/cover.avif',
-  spineLeather: '/images/book/cover.avif',
-  paperLeft: '/images/book/paper.avif',
-  paperRight: '/images/book/paper.avif',
+  cover: '/images/book/cover.jpg',
+  spineLeather: '/images/book/spine-leather.jpg',
+  paperLeft: '/images/book/paper-left.jpg',
+  paperRight: '/images/book/paper-right.jpg',
   gutterShadow: '/images/book/gutter-shadow.png',
   bindingThread: '/images/book/binding-thread.png',
 } as const;
