@@ -133,14 +133,17 @@ describe('contributionToEntries', () => {
     expect(entries.filter((e) => e.type === 'reflection').length).toBe(1);
   });
 
-  it('produces empty tags for dot-free question keys', () => {
+  it('produces no sectionId tag for dot-free question keys', () => {
     const c: Contribution = {
       ...contribution,
       answers: { 'nodot': 'some answer' },
     };
     const entries = contributionToEntries(c);
     const reflection = entries.find((e) => e.type === 'reflection');
-    expect(reflection?.tags).toEqual([]);
+    // No sectionId tag because the key has no dot; the family sentinel
+    // is still present since the contribution is complete with default visibility.
+    expect(reflection?.tags).not.toContain('nodot');
+    expect(reflection?.tags).toContain('_visibility:family');
   });
 });
 
@@ -188,6 +191,68 @@ describe('synthesizedContentToEntries', () => {
     });
     for (const e of entries) {
       expect(e.subjects).toEqual([{ kind: 'family' }]);
+    }
+  });
+});
+
+describe('contributionToEntries — answerVisibility', () => {
+  const baseContribution: Contribution = {
+    contributionId: 'c1',
+    manualId: 'm1',
+    personId: 'p-liam',
+    familyId: 'f1',
+    contributorId: 'u1',
+    contributorName: 'Scott',
+    perspectiveType: 'observer',
+    relationshipToSubject: 'parent',
+    topicCategory: 'triggers',
+    answers: {
+      'sec.private_q': 'private content',
+      'sec.public_q': 'public content',
+    },
+    answerVisibility: {
+      sec: {
+        private_q: 'private',
+        public_q: 'visible',
+      },
+    },
+    status: 'complete',
+    createdAt: Timestamp.fromMillis(1_700_000_000_000),
+    updatedAt: Timestamp.fromMillis(1_700_000_000_000),
+  } as unknown as Contribution;
+
+  it('private answers stay contributor-only', () => {
+    const entries = contributionToEntries(baseContribution);
+    const reflection = entries.find(
+      (e) => e.type === 'reflection' && e.content === 'private content'
+    );
+    expect(reflection?.visibleToUserIds).toEqual(['u1']);
+    expect(reflection?.tags).not.toContain('_visibility:family');
+  });
+
+  it('visible answers in completed contributions tag _visibility:family', () => {
+    const entries = contributionToEntries(baseContribution);
+    const reflection = entries.find(
+      (e) => e.type === 'reflection' && e.content === 'public content'
+    );
+    expect(reflection?.tags).toContain('_visibility:family');
+  });
+
+  it('visible answers in DRAFT contributions stay contributor-only', () => {
+    const draft: Contribution = { ...baseContribution, status: 'draft' };
+    const entries = contributionToEntries(draft);
+    const reflection = entries.find(
+      (e) => e.type === 'reflection' && e.content === 'public content'
+    );
+    expect(reflection?.tags).not.toContain('_visibility:family');
+    expect(reflection?.visibleToUserIds).toEqual(['u1']);
+  });
+
+  it('missing answerVisibility defaults to visible', () => {
+    const c: Contribution = { ...baseContribution, answerVisibility: undefined };
+    const entries = contributionToEntries(c);
+    for (const e of entries.filter((x) => x.type === 'reflection')) {
+      expect(e.tags).toContain('_visibility:family');
     }
   });
 });

@@ -11,6 +11,10 @@ vi.mock('@/lib/firebase', () => ({
   storage: {},
 }));
 
+vi.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({ user: { userId: 'u1' } }),
+}));
+
 import { renderHook, waitFor } from '@testing-library/react';
 import { Timestamp } from 'firebase/firestore';
 import { useEntries } from '@/hooks/useEntries';
