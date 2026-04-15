@@ -1,12 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Entry } from '@/types/entry';
 import { EntryBlock } from './EntryBlock';
 import { MastheadRow, type MastheadMember } from './MastheadRow';
 import { FilterPills, type FilterPillsPerson, type FilterSelection } from './FilterPills';
 import { usePageWindow } from './usePageWindow';
 import { BOOK_ASSETS, BOOK_ASSETS_AVAILABLE, FLAT_COLORS } from './assets';
+
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(max-width: 640px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+  return isMobile;
+}
 
 const PAGE_SIZE = 12; // 6 per page × 2 pages
 
@@ -43,7 +56,8 @@ export function JournalSpread({
   const { currentEntries, canFlipNewer, canFlipOlder, flipNewer, flipOlder, currentPageIndex, totalPages } =
     usePageWindow(entries, PAGE_SIZE);
 
-  const half = Math.ceil(currentEntries.length / 2);
+  const isMobile = useIsMobile();
+  const half = isMobile ? 0 : Math.ceil(currentEntries.length / 2);
   const leftEntries = currentEntries.slice(0, half);
   const rightEntries = currentEntries.slice(half);
 
@@ -156,6 +170,19 @@ export function JournalSpread({
           color: ${FLAT_COLORS.inkMuted};
           text-align: center;
           margin-top: 60px;
+        }
+        @media (max-width: 640px) {
+          .book {
+            grid-template-columns: 1fr;
+          }
+          .page-left {
+            display: none;
+          }
+          .page-right {
+            border-radius: 2px;
+          }
+          .flip-left { left: 4px; }
+          .flip-right { right: 4px; }
         }
       `}</style>
     </div>
