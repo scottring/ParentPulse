@@ -48,26 +48,30 @@ export function FilterPills({ people, active, onChange }: FilterPillsProps) {
       <style jsx>{`
         .filter-pills {
           display: flex;
-          gap: 6px;
+          gap: 2px;
           justify-content: center;
           flex-wrap: wrap;
-          margin-bottom: 14px;
+          margin-bottom: 6px;
         }
         .pill {
           padding: 4px 10px;
-          border-radius: 12px;
-          font-size: 11px;
-          border: 1px solid #8a6f4a;
-          color: #5a4628;
+          font-size: 10px;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          border: none;
+          border-bottom: 1px solid transparent;
+          color: rgba(245, 236, 216, 0.55);
           background: transparent;
-          font-family: -apple-system, sans-serif;
-          letter-spacing: 0.05em;
+          font-family: -apple-system, 'Helvetica Neue', sans-serif;
           cursor: pointer;
+          transition: color 140ms ease, border-color 140ms ease;
+        }
+        .pill:hover {
+          color: rgba(245, 236, 216, 0.85);
         }
         .pill.active {
-          background: #3d2f1f;
           color: #f5ecd8;
-          border-color: #3d2f1f;
+          border-bottom-color: rgba(245, 236, 216, 0.6);
         }
       `}</style>
     </div>

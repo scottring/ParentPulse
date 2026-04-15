@@ -165,13 +165,13 @@ export function JournalSpread({
 
   return (
     <div className="spread-stage">
-      <FilterPills people={people} active={activeFilter} onChange={handleFilterChange} />
       <MastheadRow
         familyName={familyName}
         volumeLabel={volumeLabel}
         dateRangeLabel={dateRangeLabel}
         members={members}
       />
+      <FilterPills people={people} active={activeFilter} onChange={handleFilterChange} />
       <div className="book">
         {canFlipNewer && (
           <button type="button" className="flip flip-left" onClick={flipNewer} aria-label="Newer entries">
