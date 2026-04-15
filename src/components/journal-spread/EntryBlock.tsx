@@ -1,73 +1,287 @@
 'use client';
 
-import type { Entry, EntryType } from '@/types/entry';
+import type { Entry } from '@/types/entry';
 
-const KICKERS: Record<EntryType, string> = {
-  written: 'Written',
-  observation: 'Observation',
-  activity: 'Activity',
-  synthesis: 'Synthesis',
-  nudge: 'One thing to try',
-  prompt: 'Question',
-  reflection: 'Reflection',
-  conversation: 'Conversation',
-};
+// ── Internal sub-components ──────────────────────────────────────────────────
 
-const TYPE_CLASSES: Record<EntryType, string> = {
-  written: 'block-written',
-  observation: 'block-observation',
-  activity: 'block-activity',
-  synthesis: 'block-synthesis',
-  nudge: 'block-nudge',
-  prompt: 'block-prompt',
-  reflection: 'block-reflection',
-  conversation: 'block-conversation',
-};
+/** Flowing prose entry — written, observation, reflection, conversation */
+function ProseEntry({ entry }: { entry: Entry }) {
+  // Build kicker: type label + optional subject context
+  const typeLabel =
+    entry.type === 'observation'
+      ? 'Observation'
+      : entry.type === 'reflection'
+      ? 'Reflection'
+      : entry.type === 'conversation'
+      ? 'Conversation'
+      : 'Written';
 
-export function EntryBlock({ entry }: { entry: Entry }) {
+  const kicker = typeLabel;
+
+  // Split content: first sentence becomes italic lead; rest is body
+  const dotIndex = entry.content.indexOf('. ');
+  const hasMultipleSentences = dotIndex !== -1 && dotIndex < entry.content.length - 2;
+  const firstLine = hasMultipleSentences
+    ? entry.content.slice(0, dotIndex + 1)
+    : entry.content;
+  const rest = hasMultipleSentences ? entry.content.slice(dotIndex + 2) : '';
+
   return (
-    <article className={`entry-block ${TYPE_CLASSES[entry.type]}`}>
-      <div className="entry-kicker">{KICKERS[entry.type]}</div>
-      <p className="entry-content">{entry.content}</p>
+    <article className="prose-entry">
+      <div className="entry-meta">{kicker}</div>
+      <p className="entry-body">
+        <span className="first-line">{firstLine}</span>
+        {rest && ` ${rest}`}
+      </p>
       <style jsx>{`
-        .entry-block {
-          border-radius: 6px;
-          padding: 14px 16px;
-          margin-bottom: 10px;
-          font-family: Georgia, 'Times New Roman', serif;
-          color: #2d2418;
+        .prose-entry {
+          margin-bottom: 28px;
         }
-        .entry-kicker {
+        .entry-meta {
           font-size: 9px;
           letter-spacing: 0.22em;
           text-transform: uppercase;
+          color: #a89373;
+          margin-bottom: 5px;
           font-family: -apple-system, 'Helvetica Neue', sans-serif;
-          font-weight: 700;
-          margin-bottom: 6px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
         }
-        .entry-content {
+        .entry-body {
           font-size: 14px;
-          line-height: 1.5;
+          line-height: 1.6;
+          color: #2d2418;
           margin: 0;
+          font-family: Georgia, 'Times New Roman', serif;
+        }
+        .first-line {
           font-style: italic;
         }
-        .block-written  { background: #faf3e2; border: 1px solid rgba(120,90,50,0.3); }
-        .block-written  .entry-kicker { color: #8a6f4a; }
-        .block-observation { background: #f3e6b8; }
-        .block-observation .entry-kicker { color: #7a5f1a; }
-        .block-activity { background: #9bb59b; color: #1f3020; }
-        .block-activity .entry-kicker { color: #2f5a38; }
-        .block-synthesis { background: #e8a17a; color: #3d2518; }
-        .block-synthesis .entry-kicker { color: #7a2f1a; }
-        .block-nudge    { background: #c487a3; color: #3d1830; }
-        .block-nudge    .entry-kicker { color: #591a42; }
-        .block-prompt   { background: #efe6cd; }
-        .block-prompt   .entry-kicker { color: #8a6f4a; }
-        .block-reflection { background: #faf3e2; }
-        .block-reflection .entry-kicker { color: #8a6f4a; }
-        .block-conversation { background: #6a8aa0; color: #f5ecd8; }
-        .block-conversation .entry-kicker { color: #d0e1ea; }
       `}</style>
     </article>
   );
+}
+
+/** One-line check item for activity entries */
+function ActivityLine({ entry }: { entry: Entry }) {
+  return (
+    <div className="activity-line">
+      <span className="check">✓</span>
+      <span className="activity-content">{entry.content}</span>
+      <span className="meta">Done</span>
+      <style jsx>{`
+        .activity-line {
+          margin-bottom: 20px;
+          font-size: 12.5px;
+          color: #5a4628;
+          font-family: Georgia, 'Times New Roman', serif;
+          font-style: italic;
+          display: flex;
+          align-items: baseline;
+          gap: 8px;
+        }
+        .check {
+          color: #2f5a38;
+          font-size: 14px;
+          line-height: 1;
+          font-style: normal;
+        }
+        .activity-content {
+          flex: 1;
+        }
+        .meta {
+          font-size: 9px;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          color: #a89373;
+          font-family: -apple-system, 'Helvetica Neue', sans-serif;
+          font-style: normal;
+          margin-left: auto;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/** Pull-quote for synthesis about a person */
+function SynthesisPull({ entry }: { entry: Entry }) {
+  const subject = entry.subjects[0];
+  const subjectLabel =
+    subject?.kind === 'person' ? `about ${subject.personId}` : 'about them';
+  const sourceCount = entry.sourceEntryIds?.length ?? 0;
+
+  return (
+    <div className="synth-pull">
+      <div className="label">Synthesis · {subjectLabel}</div>
+      <p className="text">{entry.content}</p>
+      {sourceCount > 0 && (
+        <div className="source">Drawn from {sourceCount} {sourceCount === 1 ? 'entry' : 'entries'}</div>
+      )}
+      <style jsx>{`
+        .synth-pull {
+          margin: 8px 0 24px;
+          padding: 4px 0 4px 16px;
+          border-left: 3px solid #b94a3b;
+        }
+        .label {
+          font-size: 9px;
+          letter-spacing: 0.28em;
+          text-transform: uppercase;
+          color: #b94a3b;
+          margin-bottom: 6px;
+          font-family: -apple-system, 'Helvetica Neue', sans-serif;
+          font-weight: 700;
+        }
+        .text {
+          font-size: 16px;
+          line-height: 1.45;
+          font-style: italic;
+          color: #5a3520;
+          margin: 0;
+          font-family: Georgia, 'Times New Roman', serif;
+        }
+        .source {
+          margin-top: 6px;
+          font-size: 9px;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: #b94a3b;
+          opacity: 0.75;
+          font-family: -apple-system, 'Helvetica Neue', sans-serif;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/** Full-width slate banner for family synthesis */
+function FamilyBanner({ entry }: { entry: Entry }) {
+  return (
+    <div className="family-banner">
+      <div className="label">Family synthesis</div>
+      <p className="body">{entry.content}</p>
+      <style jsx>{`
+        .family-banner {
+          margin: 12px 0 28px;
+          padding: 18px 20px;
+          background: #6a8aa0;
+          color: #f5ecd8;
+          border-radius: 4px;
+        }
+        .label {
+          font-size: 9px;
+          letter-spacing: 0.28em;
+          text-transform: uppercase;
+          color: #d0e1ea;
+          margin-bottom: 6px;
+          font-family: -apple-system, 'Helvetica Neue', sans-serif;
+          font-weight: 700;
+        }
+        .body {
+          font-size: 12.5px;
+          line-height: 1.5;
+          margin: 0;
+          color: #e8eef2;
+          font-family: Georgia, 'Times New Roman', serif;
+          font-style: italic;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/** Pink-tinted ruled callout for nudge entries */
+function NudgeCallout({ entry }: { entry: Entry }) {
+  return (
+    <div className="nudge-box">
+      <div className="label">One thing to try</div>
+      <p className="body">{entry.content}</p>
+      <style jsx>{`
+        .nudge-box {
+          margin: 18px 0 24px;
+          background: rgba(196, 135, 163, 0.18);
+          border: 1px solid rgba(196, 135, 163, 0.6);
+          border-radius: 4px;
+          padding: 14px 16px;
+        }
+        .label {
+          font-size: 9px;
+          letter-spacing: 0.28em;
+          text-transform: uppercase;
+          color: #7a3060;
+          margin-bottom: 6px;
+          font-family: -apple-system, 'Helvetica Neue', sans-serif;
+          font-weight: 700;
+        }
+        .body {
+          font-size: 12.5px;
+          line-height: 1.5;
+          color: #591a42;
+          margin: 0;
+          font-family: Georgia, 'Times New Roman', serif;
+          font-style: italic;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/** Quiet inline question for prompt entries */
+function PromptInline({ entry }: { entry: Entry }) {
+  return (
+    <div className="prompt-inline">
+      <div className="kicker">Question</div>
+      <p className="body">{entry.content}</p>
+      <style jsx>{`
+        .prompt-inline {
+          margin-bottom: 22px;
+        }
+        .kicker {
+          font-size: 9px;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          color: #b0956a;
+          margin-bottom: 4px;
+          font-family: -apple-system, 'Helvetica Neue', sans-serif;
+        }
+        .body {
+          font-size: 13px;
+          line-height: 1.55;
+          font-style: italic;
+          color: #9a8060;
+          margin: 0;
+          font-family: Georgia, 'Times New Roman', serif;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ── Discriminated renderer ───────────────────────────────────────────────────
+
+export function EntryBlock({ entry }: { entry: Entry }) {
+  // synthesis: check subject kind to pick banner vs pull-quote
+  if (entry.type === 'synthesis') {
+    const firstSubject = entry.subjects[0];
+    if (firstSubject?.kind === 'family') {
+      return <FamilyBanner entry={entry} />;
+    }
+    return <SynthesisPull entry={entry} />;
+  }
+
+  if (entry.type === 'nudge') {
+    return <NudgeCallout entry={entry} />;
+  }
+
+  if (entry.type === 'activity') {
+    return <ActivityLine entry={entry} />;
+  }
+
+  if (entry.type === 'prompt') {
+    return <PromptInline entry={entry} />;
+  }
+
+  // written, observation, reflection, conversation all fall through to prose
+  return <ProseEntry entry={entry} />;
 }

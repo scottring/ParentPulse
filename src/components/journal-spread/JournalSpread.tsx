@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import type { Entry } from '@/types/entry';
 import { EntryBlock } from './EntryBlock';
+import { DateBand } from './DateBand';
 import { MastheadRow, type MastheadMember } from './MastheadRow';
 import { FilterPills, type FilterPillsPerson, type FilterSelection } from './FilterPills';
 import { usePageWindow } from './usePageWindow';
@@ -21,7 +22,7 @@ function useIsMobile(): boolean {
   return isMobile;
 }
 
-const PAGE_SIZE = 12; // 6 per page × 2 pages
+const PAGE_SIZE = 8; // 4 per page × 2 pages — new layout takes more vertical room
 
 export interface JournalSpreadProps {
   entries: Entry[];
@@ -33,6 +34,41 @@ export interface JournalSpreadProps {
   onCapture: () => void;
   filter?: FilterSelection;
   onFilterChange?: (next: FilterSelection) => void;
+}
+
+/** Group an array of entries by calendar day (local date string), preserving order */
+function groupEntriesByDay(entries: Entry[]): Array<{ dateKey: string; entries: Entry[] }> {
+  const groups: Array<{ dateKey: string; entries: Entry[] }> = [];
+  let current: { dateKey: string; entries: Entry[] } | null = null;
+
+  for (const entry of entries) {
+    const d = entry.createdAt.toDate();
+    const dateKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    if (!current || current.dateKey !== dateKey) {
+      current = { dateKey, entries: [] };
+      groups.push(current);
+    }
+    current.entries.push(entry);
+  }
+
+  return groups;
+}
+
+/** Render a grouped page: inserts DateBand between day groups */
+function PageEntries({ entries }: { entries: Entry[] }) {
+  const groups = groupEntriesByDay(entries);
+  return (
+    <>
+      {groups.map((group) => (
+        <div key={group.dateKey}>
+          <DateBand date={group.entries[0].createdAt} />
+          {group.entries.map((e) => (
+            <EntryBlock key={e.id} entry={e} />
+          ))}
+        </div>
+      ))}
+    </>
+  );
 }
 
 export function JournalSpread({
@@ -92,17 +128,14 @@ export function JournalSpread({
           </button>
         )}
         <div className="page page-left" style={paperLeftStyle}>
-          {leftEntries.map((e) => (
-            <EntryBlock key={e.id} entry={e} />
-          ))}
+          <PageEntries entries={leftEntries} />
         </div>
         <div className="page page-right" style={paperRightStyle}>
-          {rightEntries.map((e) => (
-            <EntryBlock key={e.id} entry={e} />
-          ))}
+          <PageEntries entries={rightEntries} />
           {currentEntries.length === 0 && (
             <p className="empty-state">A quiet day. Nothing yet — write the first thing.</p>
           )}
+          <div className="doodle-slot">·  ·  ·</div>
         </div>
       </div>
       <button type="button" className="capture-btn" onClick={onCapture}>
@@ -124,7 +157,12 @@ export function JournalSpread({
           border-radius: 4px;
           box-shadow: 0 20px 60px rgba(0,0,0,0.5);
         }
-        .page { padding: 22px 22px 26px; min-height: 540px; position: relative; color: ${FLAT_COLORS.ink}; }
+        .page {
+          padding: 38px 36px 40px;
+          min-height: 720px;
+          position: relative;
+          color: ${FLAT_COLORS.ink};
+        }
         .page-left  { border-radius: 2px 0 0 2px; }
         .page-right { border-radius: 0 2px 2px 0; }
         .flip {
@@ -170,6 +208,15 @@ export function JournalSpread({
           color: ${FLAT_COLORS.inkMuted};
           text-align: center;
           margin-top: 60px;
+        }
+        .doodle-slot {
+          text-align: center;
+          color: #c9a66b;
+          letter-spacing: 0.15em;
+          opacity: 0.4;
+          font-style: italic;
+          margin-top: auto;
+          padding-top: 24px;
         }
         @media (max-width: 640px) {
           .book {
