@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useEntries } from '@/hooks/useEntries';
@@ -14,6 +15,20 @@ import type { EntryFilter } from '@/types/entry';
 import CaptureSheet from '@/components/capture/CaptureSheet';
 
 /**
+ * Parse a URL `?focus=…` param into a journal filter. Accepted:
+ *   focus=just-me        → private view (triggers PIN gate)
+ *   focus=syntheses      → synthesis-only
+ *   focus=<personId>     → that person
+ * Anything else falls through to everyone.
+ */
+function filterFromFocus(raw: string | null): FilterSelection {
+  if (!raw) return { kind: 'everyone' };
+  if (raw === 'just-me') return { kind: 'just-me' };
+  if (raw === 'syntheses') return { kind: 'syntheses' };
+  return { kind: 'person', personId: raw };
+}
+
+/**
  * SpreadHome — the journal book surface. Mounted at /journal. Wires
  * useDashboard + useEntries into the JournalSpread composite, plus
  * the privacy-lock guard for the "Just me" filter and the capture
@@ -24,9 +39,22 @@ export function SpreadHome() {
   const { user } = useAuth();
   const dashboard = useDashboard();
   const { nameOf } = usePeopleMap();
-  const [filterSel, setFilterSel] = useState<FilterSelection>({ kind: 'everyone' });
+  const searchParams = useSearchParams();
+  const focusParam = searchParams.get('focus');
+  const [filterSel, setFilterSel] = useState<FilterSelection>(() =>
+    filterFromFocus(focusParam)
+  );
   const privacyLock = usePrivacyLock();
   const [pendingFilter, setPendingFilter] = useState<FilterSelection | null>(null);
+
+  // Keep state in sync when the URL param changes (e.g. user
+  // navigates from the Surface to /journal?focus=… a second time).
+  useEffect(() => {
+    const next = filterFromFocus(focusParam);
+    setFilterSel((prev) =>
+      JSON.stringify(prev) === JSON.stringify(next) ? prev : next
+    );
+  }, [focusParam]);
 
   const handleFilterChange = (next: FilterSelection) => {
     if (

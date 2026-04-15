@@ -79,7 +79,6 @@ export function SurfaceHome() {
       <section className="family" aria-label="Family">
         <div className="section-head">
           <span className="section-label">The family</span>
-          <Link href="/people" className="section-link">Manage</Link>
         </div>
         <ul className="roster">
           {familyRows.map(({ person, manual }) => (
@@ -418,7 +417,7 @@ function PersonRow({
 
   return (
     <li className="row-item">
-      <Link href={`/people/${person.personId}/manual`} className="row">
+      <Link href={`/journal?focus=${person.personId}`} className="row">
         <span className="initial">{initial}</span>
         <span className="name">{person.name}</span>
         {isSelf && <span className="tag">You</span>}

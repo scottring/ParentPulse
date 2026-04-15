@@ -105,7 +105,7 @@ export function useSurfaceNext(): SurfaceNext {
       return {
         kind: 'fresh-synthesis',
         manual: freshManual,
-        href: `/people/${freshManual.personId}/manual`,
+        href: `/journal?focus=${freshManual.personId}`,
       };
     }
 
