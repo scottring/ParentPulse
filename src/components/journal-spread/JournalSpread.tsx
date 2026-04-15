@@ -228,11 +228,9 @@ export function JournalSpread({
           line-height: 1.5;
         }
         .page-left :global(.margin-cell) {
-          border-right: 1px dashed rgba(120,90,50,0.22);
           text-align: right;
         }
         .page-right :global(.margin-cell) {
-          border-left: 1px dashed rgba(120,90,50,0.22);
           text-align: left;
         }
         .flip {
