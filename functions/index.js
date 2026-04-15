@@ -382,6 +382,19 @@ async function performManualSynthesis(db, manualId) {
           !userMentions.includes(personId)) {
         return; // Not about this person
       }
+
+      // PRIVACY: exclude entries that aren't shared beyond their
+      // author. The manual synthesis output is visible across the
+      // family; feeding it content only the author can read would
+      // leak private reflections into a shared surface.
+      const visibleToUserIds = Array.isArray(e.visibleToUserIds)
+        ? e.visibleToUserIds : null;
+      const isPrivate = visibleToUserIds &&
+          visibleToUserIds.length <= 1;
+      if (isPrivate) {
+        return; // Private to author; excluded from family-wide synthesis
+      }
+
       const dateStr = e.createdAt ?
         new Date(e.createdAt._seconds * 1000)
             .toLocaleDateString() : "recent";
@@ -414,9 +427,10 @@ async function performManualSynthesis(db, manualId) {
         `${personName}. They capture moments, reflections, wins, and ` +
         `challenges as they happened. Use them to identify evolving ` +
         `patterns and adjust your synthesis accordingly.\n`;
-      prompt += `IMPORTANT: These entries may be private. Never quote ` +
-        `them verbatim. Abstract the patterns you see — the ` +
-        `synthesized output is shared with the whole family.\n\n`;
+      prompt += `Private ("Just me") entries are excluded from this ` +
+        `list — only entries the author shared with at least one ` +
+        `other family member are included here. Even so, prefer ` +
+        `abstraction over verbatim quotation.\n\n`;
       // Cap at 20 most recent entries about this person
       prompt += journalLines.slice(0, 20).join("\n");
       prompt += "\n";
@@ -1167,8 +1181,15 @@ async function retrieveChatContext(familyId, userMessage, personIdOrIds = null, 
 
   const journalEntries = journalSnapshot.docs
     .filter((doc) => {
-      // Include private entries only if the requesting user is the author
-      if (doc.data().isPrivate) return doc.data().authorId === userId;
+      const d = doc.data();
+      // Preferred visibility model: visibleToUserIds list. If present,
+      // the requesting user must be in it.
+      if (Array.isArray(d.visibleToUserIds)) {
+        return userId ? d.visibleToUserIds.includes(userId) : false;
+      }
+      // Legacy fallback for entries written before the visibility
+      // migration: include private only if requester is the author.
+      if (d.isPrivate) return d.authorId === userId;
       return true;
     })
     .map((doc) => ({
