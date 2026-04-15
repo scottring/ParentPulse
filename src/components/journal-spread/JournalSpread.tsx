@@ -9,7 +9,7 @@ import { MastheadRow, type MastheadMember } from './MastheadRow';
 import { FilterPills, type FilterPillsPerson, type FilterSelection } from './FilterPills';
 import { usePageWindow } from './usePageWindow';
 import { BOOK_ASSETS, BOOK_ASSETS_AVAILABLE, FLAT_COLORS } from './assets';
-import { MarginColumn } from './MarginColumn';
+import { MarginItem } from './MarginColumn';
 
 function useIsMobile(): boolean {
   const [isMobile, setIsMobile] = useState(false);
@@ -58,13 +58,16 @@ function groupEntriesByDay(entries: Entry[]): Array<{ dateKey: string; entries: 
   return groups;
 }
 
-/** Render a grouped page: inserts DateBand between day groups */
+/** Render a grouped page: each entry shares a grid row with its margin item
+ *  so margin notes align with their entries instead of stacking at the top. */
 function PageEntries({
   entries,
+  side,
   nameOf,
   currentUserId,
 }: {
   entries: Entry[];
+  side: 'left' | 'right';
   nameOf?: (personId: string) => string;
   currentUserId?: string;
 }) {
@@ -72,11 +75,31 @@ function PageEntries({
   return (
     <>
       {groups.map((group) => (
-        <div key={group.dateKey}>
-          <DateBand date={group.entries[0].createdAt} />
-          {group.entries.map((e) => (
-            <EntryBlock key={e.id} entry={e} nameOf={nameOf} currentUserId={currentUserId} />
-          ))}
+        <div key={group.dateKey} style={{ display: 'contents' }}>
+          <div className="date-row">
+            <DateBand date={group.entries[0].createdAt} />
+          </div>
+          {group.entries.map((e) =>
+            side === 'left' ? (
+              <div key={e.id} style={{ display: 'contents' }}>
+                <div className="margin-cell margin-left">
+                  <MarginItem entry={e} />
+                </div>
+                <div className="main-cell">
+                  <EntryBlock entry={e} nameOf={nameOf} currentUserId={currentUserId} />
+                </div>
+              </div>
+            ) : (
+              <div key={e.id} style={{ display: 'contents' }}>
+                <div className="main-cell">
+                  <EntryBlock entry={e} nameOf={nameOf} currentUserId={currentUserId} />
+                </div>
+                <div className="margin-cell margin-right">
+                  <MarginItem entry={e} />
+                </div>
+              </div>
+            )
+          )}
         </div>
       ))}
     </>
@@ -142,22 +165,16 @@ export function JournalSpread({
           </button>
         )}
         <div className="page page-left" style={paperLeftStyle}>
-          <MarginColumn entries={leftEntries} side="left" />
-          <div className="page-main">
-            <PageEntries entries={leftEntries} nameOf={nameOf} currentUserId={currentUserId} />
-          </div>
+          <PageEntries entries={leftEntries} side="left" nameOf={nameOf} currentUserId={currentUserId} />
         </div>
         <div className="page page-right" style={paperRightStyle}>
-          <div className="page-main">
-            <PageEntries entries={rightEntries} nameOf={nameOf} currentUserId={currentUserId} />
-            {currentEntries.length === 0 && (
-              <p className="empty-state">A quiet day. Nothing yet — write the first thing.</p>
-            )}
-            <div className="doodle-slot" aria-hidden="true">
-              <Feather size={20} strokeWidth={1.25} />
-            </div>
+          <PageEntries entries={rightEntries} side="right" nameOf={nameOf} currentUserId={currentUserId} />
+          {currentEntries.length === 0 && (
+            <p className="empty-state">A quiet day. Nothing yet — write the first thing.</p>
+          )}
+          <div className="doodle-slot" aria-hidden="true">
+            <Feather size={20} strokeWidth={1.25} />
           </div>
-          <MarginColumn entries={rightEntries} side="right" />
         </div>
       </div>
       <button type="button" className="capture-btn" onClick={onCapture}>
@@ -184,6 +201,9 @@ export function JournalSpread({
           position: relative;
           color: ${FLAT_COLORS.ink};
           display: grid;
+          grid-auto-rows: min-content;
+          align-content: start;
+          padding: 30px 0 32px;
         }
         .page-left  {
           border-radius: 2px 0 0 2px;
@@ -193,16 +213,27 @@ export function JournalSpread({
           border-radius: 0 2px 2px 0;
           grid-template-columns: 1fr 160px;
         }
-        .page-main {
-          padding: 30px 28px 32px;
+        .page :global(.date-row) {
+          grid-column: 1 / -1;
+          padding: 0 28px;
         }
-        :global(.page-left .margin-col) {
-          padding: 30px 16px 32px;
+        .page :global(.main-cell) {
+          padding: 0 28px;
+        }
+        .page :global(.margin-cell) {
+          padding: 0 16px;
+          font-family: Georgia, 'Times New Roman', serif;
+          color: #8a6f4a;
+          font-size: 11px;
+          line-height: 1.5;
+        }
+        .page-left :global(.margin-cell) {
           border-right: 1px dashed rgba(120,90,50,0.22);
+          text-align: right;
         }
-        :global(.page-right .margin-col) {
-          padding: 30px 16px 32px;
+        .page-right :global(.margin-cell) {
           border-left: 1px dashed rgba(120,90,50,0.22);
+          text-align: left;
         }
         .flip {
           position: absolute; top: 50%; transform: translateY(-50%);
@@ -242,6 +273,7 @@ export function JournalSpread({
           font-family: -apple-system, sans-serif;
         }
         .empty-state {
+          grid-column: 1 / -1;
           font-family: Georgia, serif;
           font-style: italic;
           color: ${FLAT_COLORS.inkMuted};
@@ -249,6 +281,7 @@ export function JournalSpread({
           margin-top: 60px;
         }
         .doodle-slot {
+          grid-column: 1 / -1;
           display: flex;
           justify-content: center;
           margin: 16px 0 0;
@@ -265,7 +298,7 @@ export function JournalSpread({
           .page-left, .page-right {
             grid-template-columns: 1fr;
           }
-          :global(.margin-col) {
+          :global(.margin-cell) {
             display: none;
           }
           .page-right {

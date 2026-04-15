@@ -42,7 +42,7 @@ export function MarginColumn({ entries, side }: MarginColumnProps) {
 
 const SYNTHESIS_BUCKET_TAGS = new Set(['overview', 'alignments', 'gaps', 'blindSpots']);
 
-function MarginItem({ entry }: { entry: Entry }) {
+export function MarginItem({ entry }: { entry: Entry }) {
   const externalTags = entry.tags.filter(
     (t) => !t.startsWith('_') && !t.includes(':') && !SYNTHESIS_BUCKET_TAGS.has(t)
   );
