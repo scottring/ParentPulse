@@ -28,7 +28,7 @@ export function DateBand({ date }: DateBandProps) {
       <style jsx>{`
         .date-band {
           text-align: center;
-          margin: 18px 0 22px;
+          margin: 14px 0 22px;
           font-family: Georgia, 'Times New Roman', serif;
           font-style: italic;
           font-size: 14px;

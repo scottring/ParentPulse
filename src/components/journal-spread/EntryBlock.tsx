@@ -35,7 +35,7 @@ function ProseEntry({ entry }: { entry: Entry }) {
       </p>
       <style jsx>{`
         .prose-entry {
-          margin-bottom: 28px;
+          margin-bottom: 26px;
         }
         .entry-meta {
           font-size: 9px;
@@ -163,7 +163,7 @@ function FamilyBanner({ entry }: { entry: Entry }) {
       <p className="body">{entry.content}</p>
       <style jsx>{`
         .family-banner {
-          margin: 12px 0 28px;
+          margin: 8px 0 26px;
           padding: 18px 20px;
           background: #6a8aa0;
           color: #f5ecd8;
@@ -199,7 +199,7 @@ function NudgeCallout({ entry }: { entry: Entry }) {
       <p className="body">{entry.content}</p>
       <style jsx>{`
         .nudge-box {
-          margin: 18px 0 24px;
+          margin: 16px 0 24px;
           background: rgba(196, 135, 163, 0.18);
           border: 1px solid rgba(196, 135, 163, 0.6);
           border-radius: 4px;
