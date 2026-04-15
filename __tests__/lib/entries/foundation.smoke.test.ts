@@ -79,12 +79,40 @@ describe('entries foundation — smoke', () => {
       ]),
     };
 
-    const entries = await fetchEntries('f1', {}, source, 'u1');
-    // 1 journal + 2 from contribution (prompt + reflection) + 1 synthesis (overview only) + 1 growth = 5
-    expect(entries.length).toBe(5);
+    const entries = await fetchEntries('f1', { includeContributionSources: true }, source, 'u1');
+    // 1 journal + 1 reflection from contribution + 1 synthesis (overview only) + 1 growth = 4
+    expect(entries.length).toBe(4);
     // Sorted desc by createdAt: g1 (t3) first, then j1 (t2).
     expect(entries[0].id).toBe('g1');
     expect(entries[1].id).toBe('j1');
+  });
+
+  it('excludes contribution-sourced reflections by default', async () => {
+    const t = Timestamp.fromMillis(1_700_000_000_000);
+    const source: EntrySource = {
+      journalEntries: vi.fn().mockResolvedValue([]),
+      contributions: vi.fn().mockResolvedValue([
+        {
+          contributionId: 'c1',
+          manualId: 'm1',
+          personId: 'p-liam',
+          familyId: 'f1',
+          contributorId: 'u1',
+          contributorName: 'Scott',
+          perspectiveType: 'observer',
+          relationshipToSubject: 'parent',
+          topicCategory: 'triggers',
+          answers: { 'a.b': 'an answer' },
+          status: 'complete',
+          createdAt: t,
+          updatedAt: t,
+        } as unknown as Contribution,
+      ]),
+      personManuals: vi.fn().mockResolvedValue([]),
+      growthItems: vi.fn().mockResolvedValue([]),
+    };
+    const entries = await fetchEntries('f1', {}, source, 'u1');
+    expect(entries.length).toBe(0);
   });
 
   it('filters by subject', async () => {

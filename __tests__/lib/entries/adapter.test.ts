@@ -81,31 +81,40 @@ describe('contributionToEntries', () => {
     updatedAt: testTime,
   };
 
-  it('emits two entries per answer (prompt + reflection)', () => {
+  it('emits one reflection per answer (no placeholder prompts)', () => {
     const entries = contributionToEntries(contribution);
-    expect(entries.length).toBe(4);
-    const prompts = entries.filter((e) => e.type === 'prompt');
-    const reflections = entries.filter((e) => e.type === 'reflection');
-    expect(prompts.length).toBe(2);
-    expect(reflections.length).toBe(2);
+    expect(entries.length).toBe(2);
+    expect(entries.every((e) => e.type === 'reflection')).toBe(true);
   });
 
-  it('anchors each reflection to its prompt', () => {
+  it('tags every reflection with _source:contribution', () => {
     const entries = contributionToEntries(contribution);
-    const reflections = entries.filter((e) => e.type === 'reflection');
-    for (const r of reflections) {
-      expect(r.anchorEntryId).toBeDefined();
-      const anchor = entries.find((e) => e.id === r.anchorEntryId);
-      expect(anchor?.type).toBe('prompt');
+    for (const e of entries) {
+      expect(e.tags).toContain('_source:contribution');
     }
   });
 
-  it('attributes prompts to system and reflections to the contributor', () => {
+  it('attributes reflections to the contributor', () => {
     const entries = contributionToEntries(contribution);
-    const prompt = entries.find((e) => e.type === 'prompt');
-    const reflection = entries.find((e) => e.type === 'reflection');
-    expect(prompt?.author).toEqual({ kind: 'system' });
-    expect(reflection?.author).toEqual({ kind: 'person', personId: 'u1' });
+    for (const e of entries) {
+      expect(e.author).toEqual({ kind: 'person', personId: 'u1' });
+    }
+  });
+
+  it('skips non-string answer values (likert, multi-select, objects)', () => {
+    const c: Contribution = {
+      ...contribution,
+      answers: {
+        'a.b': 'valid string',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        'c.d': { value: 5, label: 'agree' } as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        'e.f': [1, 2, 3] as any,
+      },
+    };
+    const entries = contributionToEntries(c);
+    expect(entries.length).toBe(1);
+    expect(entries[0].content).toBe('valid string');
   });
 
   it('sets subject to the person the contribution is about', () => {

@@ -109,4 +109,9 @@ export interface EntryFilter {
 
   // Include entries soft-archived by the AI cadence (default false).
   includeArchived?: boolean;
+
+  // Include reflection entries derived from onboarding contributions.
+  // Default false — contribution answers are structural manual content,
+  // not journal content. Person-manual deep-links opt in.
+  includeContributionSources?: boolean;
 }

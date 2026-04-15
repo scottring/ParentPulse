@@ -31,54 +31,47 @@ export function journalEntryToEntry(j: JournalEntry): Entry {
 }
 
 /**
- * Convert a Contribution's answers into prompt + reflection entry pairs.
+ * Convert a Contribution's answers into reflection entries.
  *
- * Each non-empty answer emits:
- *   - a 'prompt' entry (authored by system) carrying the question key
- *   - a 'reflection' entry (authored by the contributor) with the answer text,
- *     anchored to the prompt.
+ * Contribution answers are onboarding knowledge — they capture structured
+ * responses about people rather than journal-worthy moments. They are
+ * emitted as 'reflection' entries tagged `_source:contribution` so the
+ * journal surface can filter them out by default (they surface only when
+ * a consumer asks for a person-manual view).
  *
- * Question-prose lookup is deferred to a later plan; for now the prompt
- * content is a placeholder derived from the question key.
+ * Structured answers (likert scales, multi-selects, objects) are skipped
+ * entirely — they need custom rendering not yet implemented.
+ *
+ * Prompt entries are NOT emitted until the question-text lookup exists.
+ * Until then a placeholder prompt ("(question: X.Y)") is worse than no
+ * prompt at all.
  */
+const SOURCE_CONTRIBUTION_TAG = '_source:contribution';
+
 export function contributionToEntries(c: Contribution): Entry[] {
   const out: Entry[] = [];
   for (const [questionKey, answerValue] of Object.entries(c.answers ?? {})) {
-    const answer = typeof answerValue === 'string' ? answerValue : String(answerValue ?? '');
-    if (!answer.trim()) continue;
+    // Only string answers are renderable today. Skip objects (likert,
+    // multi-select) cleanly; a future pass will add typed renderers.
+    if (typeof answerValue !== 'string') continue;
+    const answer = answerValue.trim();
+    if (!answer) continue;
 
     const [sectionId, questionId] = questionKey.split('.');
-    const promptId = `${c.contributionId}:${questionKey}:prompt`;
     const reflectionId = `${c.contributionId}:${questionKey}:reflection`;
 
     const subjects: EntrySubject[] = [{ kind: 'person', personId: c.personId }];
 
-    // Visibility resolution. Pure function — emit a sentinel tag for
-    // visible+complete answers; the query layer resolves the sentinel
-    // against the family roster.
     const answerVisibility =
       c.answerVisibility?.[sectionId]?.[questionId] ?? 'visible';
     const isFamilyVisible =
       answerVisibility === 'visible' && c.status === 'complete';
 
-    const baseTags: string[] = [];
+    const baseTags: string[] = [SOURCE_CONTRIBUTION_TAG];
     if (questionKey.includes('.')) baseTags.push(sectionId);
     if (isFamilyVisible) baseTags.push('_visibility:family');
 
     const visibleToUserIds = [c.contributorId];
-
-    out.push({
-      id: promptId,
-      familyId: c.familyId,
-      type: 'prompt',
-      author: { kind: 'system' },
-      subjects,
-      content: `(question: ${questionKey})`,
-      tags: baseTags,
-      visibleToUserIds,
-      sharedWithUserIds: [],
-      createdAt: c.createdAt,
-    });
 
     out.push({
       id: reflectionId,
@@ -87,7 +80,6 @@ export function contributionToEntries(c: Contribution): Entry[] {
       author: { kind: 'person', personId: c.contributorId },
       subjects,
       content: answer,
-      anchorEntryId: promptId,
       tags: baseTags,
       visibleToUserIds,
       sharedWithUserIds: [],

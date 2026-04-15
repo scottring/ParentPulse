@@ -85,6 +85,10 @@ export function applyFilter(entries: Entry[], filter: EntryFilter): Entry[] {
     out = out.filter((e) => !e.archivedAt);
   }
 
+  if (!filter.includeContributionSources) {
+    out = out.filter((e) => !e.tags.includes('_source:contribution'));
+  }
+
   if (filter.types && filter.types.length > 0) {
     out = out.filter((e) => filter.types!.includes(e.type));
   }
