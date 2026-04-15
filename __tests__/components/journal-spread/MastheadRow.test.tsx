@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { MastheadRow } from '@/components/journal-spread/MastheadRow';
 
 describe('MastheadRow', () => {
-  it('renders family member initials', () => {
+  it('renders family name as heading', () => {
     render(
       <MastheadRow
         familyName="Kaufman"
@@ -16,9 +16,7 @@ describe('MastheadRow', () => {
         ]}
       />
     );
-    expect(screen.getByText('S')).toBeInTheDocument();
-    expect(screen.getByText('R')).toBeInTheDocument();
-    expect(screen.getByText('L')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /the kaufman family/i })).toBeInTheDocument();
   });
 
   it('renders volume label and date', () => {

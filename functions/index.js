@@ -372,6 +372,8 @@ async function performManualSynthesis(db, manualId) {
         .get();
 
     const journalLines = [];
+    // Track matched entries so we can pull their AI-chat threads next.
+    const matchedEntries = [];
     journalSnap.forEach((doc) => {
       const e = doc.data();
       const aiPeople = e.enrichment?.aiPeople || [];
@@ -398,6 +400,12 @@ async function performManualSynthesis(db, manualId) {
         line += ` [tags: ${tags}]`;
       }
       journalLines.push(line);
+      matchedEntries.push({
+        entryId: doc.id,
+        dateStr,
+        hasChatThread: e.hasChatThread === true,
+        snippet: (e.text || "").slice(0, 40).trim(),
+      });
     });
 
     if (journalLines.length > 0) {
@@ -412,6 +420,63 @@ async function performManualSynthesis(db, manualId) {
       // Cap at 20 most recent entries about this person
       prompt += journalLines.slice(0, 20).join("\n");
       prompt += "\n";
+    }
+
+    // -------------------------------------------------------------
+    // Ask-about-this chat threads.
+    //
+    // When the user chats with the AI about a specific entry, their
+    // questions and follow-up thinking are themselves primary-source
+    // reflection: what they're wondering, what they want help with,
+    // what they noticed. Feed the user turns into synthesis so these
+    // thoughts inform future insights.
+    //
+    // AI turns are intentionally excluded — they're model output,
+    // not evidence. Only the user's own words count.
+    // -------------------------------------------------------------
+    const threaded = matchedEntries
+        .filter((m) => m.hasChatThread)
+        .slice(0, 20);
+    if (threaded.length > 0) {
+      const chatSnaps = await Promise.all(
+          threaded.map((m) =>
+            db.collection("journal_entries").doc(m.entryId)
+                .collection("chat")
+                .orderBy("createdAt", "asc")
+                .get()
+                .then((snap) => ({m, snap}))
+                .catch(() => ({m, snap: null})),
+          ),
+      );
+
+      const chatLines = [];
+      for (const {m, snap} of chatSnaps) {
+        if (!snap) continue;
+        snap.forEach((doc) => {
+          const d = doc.data();
+          if (d.role !== "user" || d.excluded) return;
+          const body = (d.content || "").trim();
+          if (!body) return;
+          const short = body.length > 200 ?
+            body.slice(0, 200).trim() + "..." : body;
+          chatLines.push(
+              `- [${m.dateStr}] (chat re: "${m.snippet}...") ${short}`,
+          );
+        });
+      }
+
+      if (chatLines.length > 0) {
+        prompt += `\n=== AI-CHAT REFLECTIONS ABOUT ${personName.toUpperCase()} ===\n`;
+        prompt += `The following are questions and thoughts the user ` +
+          `raised while chatting with the AI about specific journal ` +
+          `entries above. They reveal what the user is wondering, ` +
+          `what they want to understand, and where their thinking is ` +
+          `going — primary-source reflection, not AI-inferred.\n`;
+        prompt += `Only USER turns are included. AI turns are omitted ` +
+          `(model output, not evidence).\n\n`;
+        prompt += chatLines.slice(0, 30).join("\n");
+        prompt += "\n";
+      }
     }
   } catch (journalErr) {
     logger.warn("performManualSynthesis: journal entries fetch failed " +

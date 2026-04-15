@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Compass, Link2, Unlink2, Eye, Sparkles, Users, MessageCircleQuestion, Pencil, Plus } from 'lucide-react';
 import type { Entry } from '@/types/entry';
 
 // Approximate character count that fills ~2 lines after the italic lead
@@ -16,6 +17,13 @@ const BUCKET_COLORS: Record<SynthesisBucket, { rule: string; label: string }> = 
   alignments: { rule: '#6a8a6a', label: 'Alignment' },
   gaps:       { rule: '#b94a3b', label: 'Gap' },
   blindSpots: { rule: '#c89b3b', label: 'Blind spot' },
+};
+
+const BUCKET_ICONS: Record<SynthesisBucket, typeof Compass> = {
+  overview:   Compass,
+  alignments: Link2,
+  gaps:       Unlink2,
+  blindSpots: Eye,
 };
 
 const BUCKET_KEYS: SynthesisBucket[] = ['overview', 'alignments', 'gaps', 'blindSpots'];
@@ -248,11 +256,17 @@ function SynthesisPull({
   const hasBody = body.length > 0;
 
   return (
-    <div className="synth-pull" style={{ borderLeftColor: rule }}>
+    <div className="synth-pull">
       <div className="meta">
         {subject?.kind === 'person' && (
           <span className="avatar" aria-hidden="true">{subjectInitial}</span>
         )}
+        <span className="icon-wrap" style={{ color: rule }} aria-hidden="true">
+          {(() => {
+            const Icon = BUCKET_ICONS[bucket];
+            return <Icon size={14} strokeWidth={1.5} />;
+          })()}
+        </span>
         <span className="label" style={{ color: rule }}>{subjectLabel}</span>
       </div>
       <p className="lead" style={{ color: rule === '#c89b3b' ? '#6a4a1a' : '#5a3520' }}>{lead}</p>
@@ -263,14 +277,18 @@ function SynthesisPull({
       <style jsx>{`
         .synth-pull {
           margin: 8px 0 24px;
-          padding: 4px 0 4px 16px;
-          border-left: 3px solid;
+          padding: 4px 0 4px 0;
         }
         .meta {
           display: flex;
           align-items: center;
           gap: 7px;
           margin-bottom: 8px;
+        }
+        .icon-wrap {
+          display: inline-flex;
+          align-items: center;
+          opacity: 0.65;
         }
         .avatar {
           width: 18px;
@@ -333,7 +351,12 @@ function FamilyBanner({ entry }: { entry: Entry }) {
 
   return (
     <div className="family-banner">
-      <div className="label">Family synthesis</div>
+      <div className="label">
+        <span className="icon-wrap" style={{ color: '#d0e1ea' }} aria-hidden="true">
+          <Users size={14} strokeWidth={1.5} />
+        </span>
+        Family synthesis
+      </div>
       <p className={`body${clamped ? ' clamped' : ''}`}>{entry.content}</p>
       {overflowing && (
         <ReadMoreToggle expanded={expanded} onToggle={() => setExpanded(v => !v)} tone="slate" />
@@ -354,6 +377,14 @@ function FamilyBanner({ entry }: { entry: Entry }) {
           margin-bottom: 6px;
           font-family: -apple-system, 'Helvetica Neue', sans-serif;
           font-weight: 700;
+          display: flex;
+          align-items: center;
+          gap: 5px;
+        }
+        .icon-wrap {
+          display: inline-flex;
+          align-items: center;
+          opacity: 0.65;
         }
         .body {
           font-size: 12.5px;
@@ -382,7 +413,12 @@ function NudgeCallout({ entry }: { entry: Entry }) {
 
   return (
     <div className="nudge-box">
-      <div className="label">One thing to try</div>
+      <div className="label">
+        <span className="icon-wrap" style={{ color: '#7a3060' }} aria-hidden="true">
+          <Sparkles size={14} strokeWidth={1.5} />
+        </span>
+        One thing to try
+      </div>
       <p className={`body${clamped ? ' clamped' : ''}`}>{entry.content}</p>
       {overflowing && (
         <ReadMoreToggle expanded={expanded} onToggle={() => setExpanded(v => !v)} tone="pink" />
@@ -403,6 +439,14 @@ function NudgeCallout({ entry }: { entry: Entry }) {
           margin-bottom: 6px;
           font-family: -apple-system, 'Helvetica Neue', sans-serif;
           font-weight: 700;
+          display: flex;
+          align-items: center;
+          gap: 5px;
+        }
+        .icon-wrap {
+          display: inline-flex;
+          align-items: center;
+          opacity: 0.65;
         }
         .body {
           font-size: 12.5px;
@@ -469,36 +513,138 @@ function PromptInline({ entry }: { entry: Entry }) {
 
 // ── Discriminated renderer ───────────────────────────────────────────────────
 
+function renderEntryBody(
+  entry: Entry,
+  nameOf?: (personId: string) => string,
+  currentUserId?: string
+) {
+  if (entry.type === 'synthesis') {
+    const firstSubject = entry.subjects[0];
+    if (firstSubject?.kind === 'family') return <FamilyBanner entry={entry} />;
+    return <SynthesisPull entry={entry} nameOf={nameOf} />;
+  }
+  if (entry.type === 'nudge')    return <NudgeCallout entry={entry} />;
+  if (entry.type === 'activity') return <ActivityLine entry={entry} />;
+  if (entry.type === 'prompt')   return <PromptInline entry={entry} />;
+  return <ProseEntry entry={entry} currentUserId={currentUserId} />;
+}
+
+const EDIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+function isEditableType(entry: Entry): boolean {
+  return (
+    entry.author.kind === 'person' &&
+    (entry.type === 'written' ||
+      entry.type === 'observation' ||
+      entry.type === 'reflection' ||
+      entry.type === 'activity')
+  );
+}
+
 export function EntryBlock({
   entry,
   nameOf,
   currentUserId,
+  onAsk,
+  onEdit,
 }: {
   entry: Entry;
   nameOf?: (personId: string) => string;
   currentUserId?: string;
+  onAsk?: (entry: Entry) => void;
+  onEdit?: (entry: Entry, mode: 'edit' | 'append') => void;
 }) {
-  // synthesis: check subject kind to pick banner vs pull-quote
-  if (entry.type === 'synthesis') {
-    const firstSubject = entry.subjects[0];
-    if (firstSubject?.kind === 'family') {
-      return <FamilyBanner entry={entry} />;
-    }
-    return <SynthesisPull entry={entry} nameOf={nameOf} />;
-  }
+  const canEdit = onEdit && isEditableType(entry);
+  const ageMs = canEdit
+    ? Date.now() - (entry.createdAt?.toDate?.().getTime() ?? 0)
+    : 0;
+  const editMode: 'edit' | 'append' = ageMs < EDIT_WINDOW_MS ? 'edit' : 'append';
 
-  if (entry.type === 'nudge') {
-    return <NudgeCallout entry={entry} />;
-  }
-
-  if (entry.type === 'activity') {
-    return <ActivityLine entry={entry} />;
-  }
-
-  if (entry.type === 'prompt') {
-    return <PromptInline entry={entry} />;
-  }
-
-  // written, observation, reflection, conversation all fall through to prose
-  return <ProseEntry entry={entry} currentUserId={currentUserId} />;
+  return (
+    <div className="entry-wrap">
+      {renderEntryBody(entry, nameOf, currentUserId)}
+      <div className="entry-actions">
+        {canEdit && (
+          <button
+            type="button"
+            className="action-btn edit-btn"
+            onClick={(ev) => {
+              ev.stopPropagation();
+              onEdit!(entry, editMode);
+            }}
+            aria-label={editMode === 'edit' ? 'Edit entry' : 'Add to entry'}
+          >
+            {editMode === 'edit' ? (
+              <Pencil size={13} strokeWidth={1.5} />
+            ) : (
+              <Plus size={13} strokeWidth={1.5} />
+            )}
+            <span>{editMode === 'edit' ? 'Edit' : 'Add'}</span>
+          </button>
+        )}
+        {onAsk && (
+          <button
+            type="button"
+            className="action-btn ask-btn"
+            onClick={(ev) => {
+              ev.stopPropagation();
+              onAsk(entry);
+            }}
+            aria-label="Ask about this entry"
+          >
+            <MessageCircleQuestion size={13} strokeWidth={1.5} />
+            <span>Ask</span>
+          </button>
+        )}
+      </div>
+      <style jsx>{`
+        .entry-wrap {
+          position: relative;
+        }
+        .entry-actions {
+          position: absolute;
+          top: 0;
+          right: 0;
+          display: flex;
+          gap: 4px;
+        }
+        .action-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 4px 8px;
+          background: transparent;
+          border: 1px solid transparent;
+          border-radius: 4px;
+          font-family: -apple-system, 'Helvetica Neue', sans-serif;
+          font-size: 9px;
+          letter-spacing: 0.2em;
+          text-transform: uppercase;
+          cursor: pointer;
+          opacity: 0;
+          transition: opacity 160ms ease, background 160ms ease;
+        }
+        .edit-btn {
+          color: #6a8a6a;
+        }
+        .ask-btn {
+          color: #8a6a9a;
+        }
+        .entry-wrap:hover .action-btn,
+        .action-btn:focus-visible {
+          opacity: 0.85;
+        }
+        .edit-btn:hover {
+          opacity: 1;
+          background: rgba(106, 138, 106, 0.1);
+          border-color: rgba(106, 138, 106, 0.3);
+        }
+        .ask-btn:hover {
+          opacity: 1;
+          background: rgba(138, 106, 154, 0.1);
+          border-color: rgba(138, 106, 154, 0.3);
+        }
+      `}</style>
+    </div>
+  );
 }

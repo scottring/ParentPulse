@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -10,6 +10,8 @@ import { useEntries } from '@/hooks/useEntries';
 import { usePeopleMap } from '@/hooks/usePeopleMap';
 import { JournalSpread } from '@/components/journal-spread/JournalSpread';
 import type { FilterSelection } from '@/components/journal-spread/FilterPills';
+import { usePrivacyLock } from '@/hooks/usePrivacyLock';
+import { PinKeypad } from '@/components/privacy/PinKeypad';
 import type { EntryFilter } from '@/types/entry';
 import CaptureSheet from '@/components/capture/CaptureSheet';
 // ================================================================
@@ -527,6 +529,34 @@ function SpreadHome() {
   const dashboard = useDashboard();
   const { nameOf } = usePeopleMap();
   const [filterSel, setFilterSel] = useState<FilterSelection>({ kind: 'everyone' });
+  const privacyLock = usePrivacyLock();
+  // Holds a pending filter change awaiting PIN verification.
+  const [pendingFilter, setPendingFilter] = useState<FilterSelection | null>(null);
+
+  const handleFilterChange = (next: FilterSelection) => {
+    // Guard: Just-me requires unlock when a PIN has been set.
+    if (
+      next.kind === 'just-me' &&
+      privacyLock.pinIsSet &&
+      !privacyLock.unlocked
+    ) {
+      setPendingFilter(next);
+      return;
+    }
+    setFilterSel(next);
+  };
+
+  // Auto-switch away from 'just-me' when the session re-locks
+  // (inactivity timeout). Prevents stale private content on screen.
+  useEffect(() => {
+    if (
+      filterSel.kind === 'just-me' &&
+      privacyLock.pinIsSet &&
+      !privacyLock.unlocked
+    ) {
+      setFilterSel({ kind: 'everyone' });
+    }
+  }, [filterSel.kind, privacyLock.pinIsSet, privacyLock.unlocked]);
 
   // familyId is not exposed by useDashboard; read it directly from auth.
   const familyId = user?.familyId ?? null;
@@ -571,6 +601,75 @@ function SpreadHome() {
 
   return (
     <>
+      <a href="/" className="relish-logo" aria-label="Relish home">
+        Relish
+        <style jsx>{`
+          .relish-logo {
+            position: fixed;
+            top: 18px;
+            left: 22px;
+            z-index: 20;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-style: italic;
+            font-size: 22px;
+            font-weight: 400;
+            color: #2a1f14;
+            text-decoration: none;
+            letter-spacing: 0.01em;
+            transition: transform 160ms ease, color 160ms ease;
+          }
+          .relish-logo:hover {
+            color: #1a120a;
+            transform: translateY(-1px);
+          }
+        `}</style>
+      </a>
+      <a
+        href="/settings"
+        className="user-avatar"
+        aria-label={user?.name ? `${user.name} — settings` : 'Settings'}
+        title={user?.name || 'Settings'}
+      >
+        {user?.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={user.avatarUrl} alt="" />
+        ) : (
+          <span>{(user?.name || '?').charAt(0).toUpperCase()}</span>
+        )}
+        <style jsx>{`
+          .user-avatar {
+            position: fixed;
+            top: 14px;
+            right: 22px;
+            z-index: 20;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #d4b483;
+            color: #2a1f14;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, 'Helvetica Neue', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            border: 2px solid #f5ecd8;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            transition: transform 160ms ease, box-shadow 160ms ease;
+            overflow: hidden;
+          }
+          .user-avatar:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
+          }
+          .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+        `}</style>
+      </a>
       <JournalSpread
         entries={entries}
         familyName={selfPerson?.name?.split(' ').slice(-1)[0] ?? 'Family'}
@@ -579,7 +678,7 @@ function SpreadHome() {
         members={members}
         people={members}
         filter={filterSel}
-        onFilterChange={setFilterSel}
+        onFilterChange={handleFilterChange}
         nameOf={nameOf}
         currentUserId={user?.userId}
         onCapture={() => {
@@ -587,6 +686,22 @@ function SpreadHome() {
         }}
       />
       <CaptureSheet />
+      {pendingFilter && (
+        <PinKeypad
+          title="Unlock private view"
+          subtitle="Enter your 4-digit PIN"
+          error={privacyLock.error}
+          onSubmit={async (pin) => {
+            const ok = await privacyLock.verify(pin);
+            if (ok && pendingFilter) {
+              setFilterSel(pendingFilter);
+              setPendingFilter(null);
+            }
+            return ok;
+          }}
+          onCancel={() => setPendingFilter(null)}
+        />
+      )}
     </>
   );
 }

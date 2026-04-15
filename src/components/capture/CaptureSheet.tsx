@@ -5,8 +5,10 @@ import { useAuth } from '@/context/AuthContext';
 import { useJournal } from '@/hooks/useJournal';
 import { usePerson } from '@/hooks/usePerson';
 import { useEntryChat } from '@/hooks/useEntryChat';
+import { usePrivacyLock } from '@/hooks/usePrivacyLock';
 import { JOURNAL_CATEGORIES, type JournalCategory, type JournalMedia } from '@/types/journal';
 import { uploadEntryMedia } from '@/lib/upload-media';
+import { PinSetupModal } from '@/components/privacy/PinSetupModal';
 
 interface ShareCandidate {
   userId: string;
@@ -29,6 +31,11 @@ export default function CaptureSheet() {
   // Child-supervised mode — when set, the parent is writing on behalf
   // of this child. The entry saves with subjectType='child_proxy'.
   const [writingFor, setWritingFor] = useState<{ personId: string; name: string } | null>(null);
+  // Edit mode — when set, save updates the existing entry instead of
+  // creating a new one. 'append' preserves original text + separator.
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState<'edit' | 'append' | null>(null);
+  const [originalText, setOriginalText] = useState('');
   // Media attachments — staged files before upload. Uploaded on save.
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -43,6 +50,12 @@ export default function CaptureSheet() {
 
   const { createEntry, updateEntry, saving } = useJournal();
   const { people } = usePerson();
+  const privacyLock = usePrivacyLock();
+  // When saving a just-me entry without a PIN, we pause the save and
+  // show the PIN setup modal. The pending-save flag resumes save()
+  // after the PIN is configured.
+  const [showPinSetup, setShowPinSetup] = useState(false);
+  const [pendingSave, setPendingSave] = useState(false);
   const {
     turns: chatTurns,
     loading: chatLoading,
@@ -114,9 +127,26 @@ export default function CaptureSheet() {
     };
     window.addEventListener('relish:open-capture-for', childHandler);
 
+    // Edit/append: dispatch 'relish:open-edit' with
+    // detail: { entry: { id, content }, mode: 'edit' | 'append' }
+    const editHandler = (e: Event) => {
+      const detail = (e as CustomEvent<{
+        entry: { id: string; content: string };
+        mode: 'edit' | 'append';
+      }>).detail;
+      if (!detail?.entry?.id) return;
+      setEditingEntryId(detail.entry.id);
+      setEditMode(detail.mode);
+      setOriginalText(detail.entry.content);
+      setText(detail.mode === 'edit' ? detail.entry.content : '');
+      setState('composing');
+    };
+    window.addEventListener('relish:open-edit', editHandler);
+
     return () => {
       window.removeEventListener('relish:open-capture', handler);
       window.removeEventListener('relish:open-capture-for', childHandler);
+      window.removeEventListener('relish:open-edit', editHandler);
     };
   }, []);
 
@@ -138,6 +168,9 @@ export default function CaptureSheet() {
     setStagedFiles([]);
     setUploadProgress(null);
     setOpenPicker(null);
+    setEditingEntryId(null);
+    setEditMode(null);
+    setOriginalText('');
   };
 
   const handleClose = () => {
@@ -164,7 +197,34 @@ export default function CaptureSheet() {
   // Step 1: Save → upload media → transition to confirmation state
   const handleSave = async () => {
     if (!text.trim() || saving) return;
+
+    // Guard: first-use PIN setup for private entries. Only applies
+    // to NEW entries (edit/append skip this — the entry already
+    // exists). We check visibility preset, not sharedWith, so that
+    // "no other accounts yet" doesn't unintentionally require a PIN.
+    if (
+      !editingEntryId &&
+      visibilityPreset === 'just-me' &&
+      !privacyLock.loading &&
+      !privacyLock.pinIsSet
+    ) {
+      setPendingSave(true);
+      setShowPinSetup(true);
+      return;
+    }
+
     try {
+      // Edit/append path: update existing entry, skip the AI follow-up.
+      if (editingEntryId) {
+        const nextText =
+          editMode === 'append'
+            ? `${originalText.trim()}\n\n— added ${new Date().toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} —\n${text.trim()}`
+            : text.trim();
+        await updateEntry(editingEntryId, { text: nextText });
+        handleClose();
+        return;
+      }
+
       savedTextRef.current = text.trim();
       savedPeopleRef.current = [...selectedPeople];
 
@@ -333,7 +393,9 @@ export default function CaptureSheet() {
                     fontFamily: 'var(--font-parent-display)',
                     fontStyle: 'italic', fontSize: 22, fontWeight: 400, color: '#3A3530', margin: 0,
                   }}>
-                    {writingFor ? `${writingFor.name}'s entry` : 'New entry'}
+                    {editingEntryId
+                      ? (editMode === 'append' ? 'Add to entry' : 'Edit entry')
+                      : writingFor ? `${writingFor.name}'s entry` : 'New entry'}
                   </h2>
                 </div>
                 <div className="flex items-center gap-3">
@@ -407,6 +469,19 @@ export default function CaptureSheet() {
 
               {/* Textarea — fills available space */}
               <div className="flex-1 px-6 overflow-y-auto" style={{ minHeight: 0 }}>
+                {editMode === 'append' && originalText && (
+                  <div style={{
+                    marginBottom: 12, padding: '12px 14px',
+                    background: 'rgba(200, 184, 154, 0.15)',
+                    borderLeft: '2px solid rgba(138, 111, 74, 0.4)',
+                    borderRadius: 4,
+                    fontFamily: 'var(--font-parent-body)', fontSize: 14,
+                    lineHeight: 1.5, color: '#5a4628', fontStyle: 'italic',
+                    whiteSpace: 'pre-wrap',
+                  }}>
+                    {originalText}
+                  </div>
+                )}
                 <textarea ref={textareaRef} value={text}
                   onChange={(e) => setText(e.target.value)}
                   className="w-full h-full resize-none"
@@ -415,7 +490,13 @@ export default function CaptureSheet() {
                     color: '#3A3530', background: 'transparent',
                     border: 'none', outline: 'none', minHeight: 160,
                   }}
-                  placeholder="A moment, a thought, a question…"
+                  placeholder={
+                    editMode === 'append'
+                      ? 'Add more…'
+                      : editMode === 'edit'
+                        ? 'Edit your entry…'
+                        : 'A moment, a thought, a question…'
+                  }
                   onClick={() => setOpenPicker(null)} />
 
                 {/* Staged media thumbnails */}
@@ -692,6 +773,24 @@ export default function CaptureSheet() {
           </>
         )}
       </div>
+
+      {showPinSetup && (
+        <PinSetupModal
+          onComplete={async (pin) => {
+            await privacyLock.setupPin(pin);
+            setShowPinSetup(false);
+            if (pendingSave) {
+              setPendingSave(false);
+              // Re-run save on next tick so pinIsSet has propagated.
+              setTimeout(() => { void handleSave(); }, 0);
+            }
+          }}
+          onCancel={() => {
+            setShowPinSetup(false);
+            setPendingSave(false);
+          }}
+        />
+      )}
     </>
   );
 }

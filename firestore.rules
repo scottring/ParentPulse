@@ -52,6 +52,12 @@ service cloud.firestore {
       // Parents can read all users in their family
       allow read: if isSignedIn() && isParent() &&
                      resource.data.familyId == getUserData().familyId;
+
+      // User-private subcollection: only the owner can read/write.
+      // Holds the PIN hash for private-view unlock, etc.
+      match /private/{docId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
     }
 
     // Families collection
