@@ -2,20 +2,71 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useDashboard, type DashboardState } from '@/hooks/useDashboard';
 import CaptureSheet from '@/components/capture/CaptureSheet';
 
 /**
- * SurfaceHome — Plan 4, Step 1 scaffold.
+ * SurfaceHome — Plan 4 Step 2: state-aware greeting.
  *
- * A near-empty surface that will grow into the stage-aware single-page
- * home. This step only establishes the route, the chrome (wordmark +
- * avatar), and a link down into the journal so users can still reach
- * the book. Subsequent steps layer on the state-aware greeting, the
- * "next thing" hero, the synthesis highlight, and the inline journal
- * peek.
+ * Greeting copy and the primary CTA adapt to the user's stage
+ * (new_user → self_complete → has_people → has_contributions →
+ * active). Below the greeting, a quiet link into the journal is
+ * always available. Later steps will add the "next thing" hero,
+ * the synthesis highlight, the calm state, and the inline peek.
  */
+
+interface GreetingCopy {
+  subtitle: string;
+  cta: { label: string; href: string } | null;
+}
+
+function greetingFor(
+  state: DashboardState,
+  selfPersonId: string | null
+): GreetingCopy {
+  switch (state) {
+    case 'new_user':
+      return {
+        subtitle: 'Your manual starts with you. Answer a few questions to begin.',
+        cta: selfPersonId
+          ? { label: 'Start your manual →', href: `/people/${selfPersonId}/manual/self-onboard` }
+          : { label: 'Begin →', href: '/welcome' },
+      };
+    case 'self_complete':
+      return {
+        subtitle: 'You\'re in. Now invite the people who help you write this.',
+        cta: { label: 'Add someone to the family →', href: '/people' },
+      };
+    case 'has_people':
+      return {
+        subtitle: 'The people are here. Notice something, write it down.',
+        cta: { label: 'Drop a thought →', href: '/journal' },
+      };
+    case 'has_contributions':
+      return {
+        subtitle: 'The shape of things is starting to show. Keep watching.',
+        cta: { label: 'See what\'s coming together →', href: '/journal' },
+      };
+    case 'active':
+      return {
+        subtitle: 'What\'s happening today?',
+        cta: { label: 'Open the journal →', href: '/journal' },
+      };
+    default:
+      return {
+        subtitle: '',
+        cta: null,
+      };
+  }
+}
+
 export function SurfaceHome() {
   const { user } = useAuth();
+  const dashboard = useDashboard();
+
+  const firstName = user?.name?.split(' ')[0] || '';
+  const selfPersonId = dashboard.selfPerson?.personId ?? null;
+  const copy = greetingFor(dashboard.state, selfPersonId);
 
   return (
     <main className="surface">
@@ -40,13 +91,21 @@ export function SurfaceHome() {
       <div className="surface-inner">
         <p className="eyebrow">Today</p>
         <h1 className="hello">
-          {user?.name ? `Hello, ${user.name.split(' ')[0]}.` : 'Hello.'}
+          {firstName ? `Hello, ${firstName}.` : 'Hello.'}
         </h1>
-        <nav className="quick-links" aria-label="Quick links">
-          <Link href="/journal" className="link">
-            Open the journal →
-          </Link>
-        </nav>
+        {copy.subtitle && <p className="subtitle">{copy.subtitle}</p>}
+        {copy.cta && (
+          <nav className="quick-links" aria-label="Quick links">
+            <Link href={copy.cta.href} className="link primary">
+              {copy.cta.label}
+            </Link>
+            {copy.cta.href !== '/journal' && (
+              <Link href="/journal" className="link">
+                Open the journal
+              </Link>
+            )}
+          </nav>
+        )}
       </div>
 
       <CaptureSheet />
@@ -146,7 +205,18 @@ export function SurfaceHome() {
           font-size: 34px;
           line-height: 1.2;
           color: #2a1f14;
-          margin: 0 0 8px;
+          margin: 0 0 10px;
+        }
+        .subtitle {
+          font-family: Georgia, 'Times New Roman', serif;
+          font-style: italic;
+          font-size: 16px;
+          line-height: 1.5;
+          color: #7a5f3d;
+          margin: 0;
+          max-width: 440px;
+          margin-left: auto;
+          margin-right: auto;
         }
         .quick-links {
           margin-top: 38px;
@@ -170,6 +240,15 @@ export function SurfaceHome() {
           background: rgba(138, 111, 74, 0.14);
           color: #2a1f14;
           transform: translateY(-1px);
+        }
+        .link.primary {
+          background: #2a1f14;
+          color: #f5ecd8;
+          padding: 10px 22px;
+        }
+        .link.primary:hover {
+          background: #1a120a;
+          color: #f5ecd8;
         }
       `}</style>
     </main>
