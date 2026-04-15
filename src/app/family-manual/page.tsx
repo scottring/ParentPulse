@@ -75,7 +75,14 @@ export default function FamilyManualPage() {
     setSynthesizing(true);
     setSyntheseDone(false);
     try {
-      const synthesizeFamilyManuals = httpsCallable(functions, 'synthesizeFamilyManuals');
+      // Server timeout is 540s; match it on the client (default is 70s,
+      // which trips on families with many manuals since synthesis runs
+      // sequentially through Claude.)
+      const synthesizeFamilyManuals = httpsCallable(
+        functions,
+        'synthesizeFamilyManuals',
+        { timeout: 540_000 },
+      );
       await synthesizeFamilyManuals({});
       setSyntheseDone(true);
       setTimeout(() => setSyntheseDone(false), 6000);
