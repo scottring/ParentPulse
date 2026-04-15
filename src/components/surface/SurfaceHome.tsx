@@ -2,71 +2,27 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { useDashboard, type DashboardState } from '@/hooks/useDashboard';
+import { useDashboard } from '@/hooks/useDashboard';
+import { useSurfaceNext } from '@/hooks/useSurfaceNext';
+import { NextThingCard } from '@/components/surface/NextThingCard';
 import CaptureSheet from '@/components/capture/CaptureSheet';
 
 /**
- * SurfaceHome — Plan 4 Step 2: state-aware greeting.
+ * SurfaceHome — Plan 4 Step 3: priority-hierarchy hero.
  *
- * Greeting copy and the primary CTA adapt to the user's stage
- * (new_user → self_complete → has_people → has_contributions →
- * active). Below the greeting, a quiet link into the journal is
- * always available. Later steps will add the "next thing" hero,
- * the synthesis highlight, the calm state, and the inline peek.
+ * Greeting + a single "next thing" hero card driven by the priority
+ * hierarchy (unfinished → time-sensitive → fresh synthesis → …).
+ * When nothing's pressing, falls through to a quiet calm-state
+ * invitation (Step 5 will flesh that out).
  */
-
-interface GreetingCopy {
-  subtitle: string;
-  cta: { label: string; href: string } | null;
-}
-
-function greetingFor(
-  state: DashboardState,
-  selfPersonId: string | null
-): GreetingCopy {
-  switch (state) {
-    case 'new_user':
-      return {
-        subtitle: 'Your manual starts with you. Answer a few questions to begin.',
-        cta: selfPersonId
-          ? { label: 'Start your manual →', href: `/people/${selfPersonId}/manual/self-onboard` }
-          : { label: 'Begin →', href: '/welcome' },
-      };
-    case 'self_complete':
-      return {
-        subtitle: 'You\'re in. Now invite the people who help you write this.',
-        cta: { label: 'Add someone to the family →', href: '/people' },
-      };
-    case 'has_people':
-      return {
-        subtitle: 'The people are here. Notice something, write it down.',
-        cta: { label: 'Drop a thought →', href: '/journal' },
-      };
-    case 'has_contributions':
-      return {
-        subtitle: 'The shape of things is starting to show. Keep watching.',
-        cta: { label: 'See what\'s coming together →', href: '/journal' },
-      };
-    case 'active':
-      return {
-        subtitle: 'What\'s happening today?',
-        cta: { label: 'Open the journal →', href: '/journal' },
-      };
-    default:
-      return {
-        subtitle: '',
-        cta: null,
-      };
-  }
-}
 
 export function SurfaceHome() {
   const { user } = useAuth();
-  const dashboard = useDashboard();
+  const { state } = useDashboard();
+  const next = useSurfaceNext();
 
   const firstName = user?.name?.split(' ')[0] || '';
-  const selfPersonId = dashboard.selfPerson?.personId ?? null;
-  const copy = greetingFor(dashboard.state, selfPersonId);
+  const loading = state === 'loading';
 
   return (
     <main className="surface">
@@ -93,18 +49,17 @@ export function SurfaceHome() {
         <h1 className="hello">
           {firstName ? `Hello, ${firstName}.` : 'Hello.'}
         </h1>
-        {copy.subtitle && <p className="subtitle">{copy.subtitle}</p>}
-        {copy.cta && (
-          <nav className="quick-links" aria-label="Quick links">
-            <Link href={copy.cta.href} className="link primary">
-              {copy.cta.label}
+
+        {!loading && next && <NextThingCard next={next} />}
+        {!loading && !next && (
+          <div className="calm">
+            <p className="calm-text">
+              All quiet. You've been listening well.
+            </p>
+            <Link href="/journal" className="link primary">
+              Open the journal
             </Link>
-            {copy.cta.href !== '/journal' && (
-              <Link href="/journal" className="link">
-                Open the journal
-              </Link>
-            )}
-          </nav>
+          </div>
         )}
       </div>
 
@@ -207,16 +162,19 @@ export function SurfaceHome() {
           color: #2a1f14;
           margin: 0 0 10px;
         }
-        .subtitle {
+        .calm {
+          margin-top: 36px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 18px;
+        }
+        .calm-text {
           font-family: Georgia, 'Times New Roman', serif;
           font-style: italic;
           font-size: 16px;
-          line-height: 1.5;
           color: #7a5f3d;
           margin: 0;
-          max-width: 440px;
-          margin-left: auto;
-          margin-right: auto;
         }
         .quick-links {
           margin-top: 38px;
