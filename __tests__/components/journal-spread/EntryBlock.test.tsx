@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { Timestamp } from 'firebase/firestore';
 import { EntryBlock } from '@/components/journal-spread/EntryBlock';
 import type { Entry } from '@/types/entry';
@@ -62,6 +62,7 @@ describe('EntryBlock', () => {
     const entry: Entry = {
       ...baseEntry,
       type: 'synthesis',
+      tags: ['overview'],
       subjects: [{ kind: 'person', personId: 'p2' }],
     };
     render(<EntryBlock entry={entry} />);
@@ -72,6 +73,7 @@ describe('EntryBlock', () => {
     const entry: Entry = {
       ...baseEntry,
       type: 'synthesis',
+      tags: ['overview'],
       subjects: [{ kind: 'person', personId: 'p2' }],
     };
     const { container } = render(<EntryBlock entry={entry} />);
@@ -84,6 +86,7 @@ describe('EntryBlock', () => {
     const entry: Entry = {
       ...baseEntry,
       type: 'synthesis',
+      tags: ['overview'],
       subjects: [{ kind: 'person', personId: 'p2' }],
     };
     render(<EntryBlock entry={entry} />);
@@ -143,6 +146,7 @@ describe('EntryBlock', () => {
       type: 'synthesis',
       author: { kind: 'system' },
       subjects: [{ kind: 'person', personId: 'p-liam' }],
+      tags: ['overview'],
       content: 'Short synthesis.',
     };
     render(<EntryBlock entry={synth} nameOf={(id) => (id === 'p-liam' ? 'Liam' : id)} />);
@@ -157,6 +161,7 @@ describe('EntryBlock', () => {
       type: 'synthesis',
       author: { kind: 'system' },
       subjects: [{ kind: 'person', personId: 'p-liam' }],
+      tags: ['overview'],
       content: 'Short.',
     };
     render(<EntryBlock entry={synth} />);
@@ -183,5 +188,54 @@ describe('EntryBlock', () => {
     };
     render(<EntryBlock entry={sharedEntry} currentUserId="u1" />);
     expect(screen.queryByText('🔒')).not.toBeInTheDocument();
+  });
+});
+
+describe('SynthesisPull bucket treatments', () => {
+  const mkSynth = (bucket: string, content: string): Entry => ({
+    id: `s-${bucket}`,
+    familyId: 'f1',
+    type: 'synthesis',
+    author: { kind: 'system' },
+    subjects: [{ kind: 'person', personId: 'p-liam' }],
+    content,
+    tags: [bucket],
+    visibleToUserIds: [],
+    sharedWithUserIds: [],
+    createdAt: Timestamp.fromMillis(1_744_700_000_000),
+  });
+
+  it('renders "Alignment · about Liam" for alignments bucket', () => {
+    render(<EntryBlock entry={mkSynth('alignments', 'We agree.')} nameOf={() => 'Liam'} />);
+    expect(screen.getByText(/Alignment · about Liam/)).toBeInTheDocument();
+  });
+
+  it('renders "Gap · about Liam" for gaps bucket', () => {
+    render(<EntryBlock entry={mkSynth('gaps', 'We differ.')} nameOf={() => 'Liam'} />);
+    expect(screen.getByText(/Gap · about Liam/)).toBeInTheDocument();
+  });
+
+  it('renders "Blind spot · about Liam" for blindSpots bucket', () => {
+    render(<EntryBlock entry={mkSynth('blindSpots', 'He does not see it.')} nameOf={() => 'Liam'} />);
+    expect(screen.getByText(/Blind spot · about Liam/)).toBeInTheDocument();
+  });
+
+  it('renders a subject avatar initial', () => {
+    const { container } = render(
+      <EntryBlock entry={mkSynth('overview', 'Summary of Liam.')} nameOf={() => 'Liam'} />
+    );
+    const avatar = container.querySelector('.avatar');
+    expect(avatar?.textContent).toBe('L');
+  });
+
+  it('shows the lead sentence and hides the body until "read more" is clicked', () => {
+    const content = 'This is the lead sentence. This is the body that follows.';
+    render(<EntryBlock entry={mkSynth('overview', content)} nameOf={() => 'Liam'} />);
+    expect(screen.getByText(/This is the lead sentence\./)).toBeInTheDocument();
+    // Body is hidden by default — use queryByText (won't throw) to assert absence.
+    expect(screen.queryByText(/This is the body that follows\./)).not.toBeInTheDocument();
+    // Tap read more — body appears.
+    fireEvent.click(screen.getByText(/read more/i));
+    expect(screen.getByText(/This is the body that follows\./)).toBeInTheDocument();
   });
 });

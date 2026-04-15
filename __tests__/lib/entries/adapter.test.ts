@@ -177,6 +177,10 @@ describe('synthesizedContentToEntries', () => {
     expect(entries.length).toBe(3);
     expect(entries.every((e) => e.type === 'synthesis')).toBe(true);
     expect(entries.every((e) => e.author.kind === 'system')).toBe(true);
+    // Each entry is tagged with its bucket key (no synthesis-detail sentinel)
+    expect(entries.map((e) => e.tags[0]).sort()).toEqual(
+      ['alignments', 'blindSpots', 'overview'].sort()
+    );
   });
 
   it('attributes entries to the person subject', () => {

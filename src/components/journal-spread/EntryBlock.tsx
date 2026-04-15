@@ -9,6 +9,30 @@ import type { Entry } from '@/types/entry';
 const PROSE_CLAMP_CHARS = 180;
 const BLOCK_CLAMP_CHARS = 160;
 
+type SynthesisBucket = 'overview' | 'alignments' | 'gaps' | 'blindSpots';
+
+const BUCKET_COLORS: Record<SynthesisBucket, { rule: string; label: string }> = {
+  overview:   { rule: '#8a6a9a', label: 'Synthesis' },
+  alignments: { rule: '#6a8a6a', label: 'Alignment' },
+  gaps:       { rule: '#b94a3b', label: 'Gap' },
+  blindSpots: { rule: '#c89b3b', label: 'Blind spot' },
+};
+
+const BUCKET_KEYS: SynthesisBucket[] = ['overview', 'alignments', 'gaps', 'blindSpots'];
+
+function pickBucket(tags: string[]): SynthesisBucket {
+  for (const t of tags) {
+    if (BUCKET_KEYS.includes(t as SynthesisBucket)) return t as SynthesisBucket;
+  }
+  return 'gaps'; // fallback
+}
+
+function splitLead(content: string): { lead: string; body: string } {
+  const dot = content.indexOf('. ');
+  if (dot === -1 || dot >= content.length - 2) return { lead: content, body: '' };
+  return { lead: content.slice(0, dot + 1), body: content.slice(dot + 2) };
+}
+
 /** Small "read more"/"less" toggle shared by all block variants. */
 function ReadMoreToggle({
   expanded,
@@ -201,64 +225,99 @@ function ActivityLine({ entry }: { entry: Entry }) {
 }
 
 /** Pull-quote for synthesis about a person */
-function SynthesisPull({ entry, nameOf }: { entry: Entry; nameOf?: (personId: string) => string }) {
+function SynthesisPull({
+  entry,
+  nameOf,
+}: {
+  entry: Entry;
+  nameOf?: (personId: string) => string;
+}) {
   const [expanded, setExpanded] = useState(false);
+  const bucket = pickBucket(entry.tags);
+  const { rule, label } = BUCKET_COLORS[bucket];
+
   const subject = entry.subjects[0];
   const subjectName =
     subject?.kind === 'person'
       ? (nameOf ? nameOf(subject.personId) : subject.personId)
       : 'them';
-  const subjectLabel = `about ${subjectName}`;
-  const sourceCount = entry.sourceEntryIds?.length ?? 0;
-  const overflowing = entry.content.length > BLOCK_CLAMP_CHARS;
-  const clamped = overflowing && !expanded;
+  const subjectInitial = subjectName.charAt(0).toUpperCase();
+  const subjectLabel = subject?.kind === 'person' ? `${label} · about ${subjectName}` : label;
+
+  const { lead, body } = splitLead(entry.content);
+  const hasBody = body.length > 0;
 
   return (
-    <div className="synth-pull">
-      <div className="label">Synthesis · {subjectLabel}</div>
-      <p className={`text${clamped ? ' clamped' : ''}`}>{entry.content}</p>
-      {overflowing && (
-        <ReadMoreToggle expanded={expanded} onToggle={() => setExpanded(v => !v)} tone="coral" />
-      )}
-      {sourceCount > 0 && (
-        <div className="source">Drawn from {sourceCount} {sourceCount === 1 ? 'entry' : 'entries'}</div>
+    <div className="synth-pull" style={{ borderLeftColor: rule }}>
+      <div className="meta">
+        {subject?.kind === 'person' && (
+          <span className="avatar" aria-hidden="true">{subjectInitial}</span>
+        )}
+        <span className="label" style={{ color: rule }}>{subjectLabel}</span>
+      </div>
+      <p className="lead" style={{ color: rule === '#c89b3b' ? '#6a4a1a' : '#5a3520' }}>{lead}</p>
+      {hasBody && expanded && <p className="body">{body}</p>}
+      {hasBody && (
+        <ReadMoreToggle expanded={expanded} onToggle={() => setExpanded((v) => !v)} tone="muted" />
       )}
       <style jsx>{`
         .synth-pull {
           margin: 8px 0 24px;
           padding: 4px 0 4px 16px;
-          border-left: 3px solid #b94a3b;
+          border-left: 3px solid;
+        }
+        .meta {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          margin-bottom: 8px;
+        }
+        .avatar {
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: #d4b483;
+          color: #3d2f1f;
+          font-size: 10px;
+          font-weight: 700;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-family: -apple-system, 'Helvetica Neue', sans-serif;
+          border: 2px solid #f5ecd8;
         }
         .label {
           font-size: 9px;
           letter-spacing: 0.28em;
           text-transform: uppercase;
-          color: #b94a3b;
-          margin-bottom: 6px;
           font-family: -apple-system, 'Helvetica Neue', sans-serif;
           font-weight: 700;
         }
-        .text {
+        .lead {
           font-size: 16px;
           line-height: 1.45;
           font-style: italic;
-          color: #5a3520;
           margin: 0;
           font-family: Georgia, 'Times New Roman', serif;
         }
-        .text.clamped {
+        .body {
+          font-size: 13px;
+          line-height: 1.55;
+          color: #5a4628;
+          margin: 8px 0 0;
+          font-family: Georgia, 'Times New Roman', serif;
+        }
+        .body.clamped {
           display: -webkit-box;
-          -webkit-line-clamp: 3;
+          -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
         .source {
-          margin-top: 6px;
+          margin-top: 8px;
           font-size: 9px;
           letter-spacing: 0.18em;
           text-transform: uppercase;
-          color: #b94a3b;
-          opacity: 0.75;
           font-family: -apple-system, 'Helvetica Neue', sans-serif;
         }
       `}</style>
