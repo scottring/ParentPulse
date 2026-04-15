@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -10,6 +10,8 @@ import { useEntries } from '@/hooks/useEntries';
 import { usePeopleMap } from '@/hooks/usePeopleMap';
 import { JournalSpread } from '@/components/journal-spread/JournalSpread';
 import type { FilterSelection } from '@/components/journal-spread/FilterPills';
+import { usePrivacyLock } from '@/hooks/usePrivacyLock';
+import { PinKeypad } from '@/components/privacy/PinKeypad';
 import type { EntryFilter } from '@/types/entry';
 import CaptureSheet from '@/components/capture/CaptureSheet';
 // ================================================================
@@ -527,6 +529,34 @@ function SpreadHome() {
   const dashboard = useDashboard();
   const { nameOf } = usePeopleMap();
   const [filterSel, setFilterSel] = useState<FilterSelection>({ kind: 'everyone' });
+  const privacyLock = usePrivacyLock();
+  // Holds a pending filter change awaiting PIN verification.
+  const [pendingFilter, setPendingFilter] = useState<FilterSelection | null>(null);
+
+  const handleFilterChange = (next: FilterSelection) => {
+    // Guard: Just-me requires unlock when a PIN has been set.
+    if (
+      next.kind === 'just-me' &&
+      privacyLock.pinIsSet &&
+      !privacyLock.unlocked
+    ) {
+      setPendingFilter(next);
+      return;
+    }
+    setFilterSel(next);
+  };
+
+  // Auto-switch away from 'just-me' when the session re-locks
+  // (inactivity timeout). Prevents stale private content on screen.
+  useEffect(() => {
+    if (
+      filterSel.kind === 'just-me' &&
+      privacyLock.pinIsSet &&
+      !privacyLock.unlocked
+    ) {
+      setFilterSel({ kind: 'everyone' });
+    }
+  }, [filterSel.kind, privacyLock.pinIsSet, privacyLock.unlocked]);
 
   // familyId is not exposed by useDashboard; read it directly from auth.
   const familyId = user?.familyId ?? null;
@@ -579,7 +609,7 @@ function SpreadHome() {
         members={members}
         people={members}
         filter={filterSel}
-        onFilterChange={setFilterSel}
+        onFilterChange={handleFilterChange}
         nameOf={nameOf}
         currentUserId={user?.userId}
         onCapture={() => {
@@ -587,6 +617,22 @@ function SpreadHome() {
         }}
       />
       <CaptureSheet />
+      {pendingFilter && (
+        <PinKeypad
+          title="Unlock private view"
+          subtitle="Enter your 4-digit PIN"
+          error={privacyLock.error}
+          onSubmit={async (pin) => {
+            const ok = await privacyLock.verify(pin);
+            if (ok && pendingFilter) {
+              setFilterSel(pendingFilter);
+              setPendingFilter(null);
+            }
+            return ok;
+          }}
+          onCancel={() => setPendingFilter(null)}
+        />
+      )}
     </>
   );
 }

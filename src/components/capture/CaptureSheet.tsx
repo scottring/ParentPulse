@@ -5,8 +5,10 @@ import { useAuth } from '@/context/AuthContext';
 import { useJournal } from '@/hooks/useJournal';
 import { usePerson } from '@/hooks/usePerson';
 import { useEntryChat } from '@/hooks/useEntryChat';
+import { usePrivacyLock } from '@/hooks/usePrivacyLock';
 import { JOURNAL_CATEGORIES, type JournalCategory, type JournalMedia } from '@/types/journal';
 import { uploadEntryMedia } from '@/lib/upload-media';
+import { PinSetupModal } from '@/components/privacy/PinSetupModal';
 
 interface ShareCandidate {
   userId: string;
@@ -48,6 +50,12 @@ export default function CaptureSheet() {
 
   const { createEntry, updateEntry, saving } = useJournal();
   const { people } = usePerson();
+  const privacyLock = usePrivacyLock();
+  // When saving a just-me entry without a PIN, we pause the save and
+  // show the PIN setup modal. The pending-save flag resumes save()
+  // after the PIN is configured.
+  const [showPinSetup, setShowPinSetup] = useState(false);
+  const [pendingSave, setPendingSave] = useState(false);
   const {
     turns: chatTurns,
     loading: chatLoading,
@@ -189,6 +197,22 @@ export default function CaptureSheet() {
   // Step 1: Save → upload media → transition to confirmation state
   const handleSave = async () => {
     if (!text.trim() || saving) return;
+
+    // Guard: first-use PIN setup for private entries. Only applies
+    // to NEW entries (edit/append skip this — the entry already
+    // exists). We check visibility preset, not sharedWith, so that
+    // "no other accounts yet" doesn't unintentionally require a PIN.
+    if (
+      !editingEntryId &&
+      visibilityPreset === 'just-me' &&
+      !privacyLock.loading &&
+      !privacyLock.pinIsSet
+    ) {
+      setPendingSave(true);
+      setShowPinSetup(true);
+      return;
+    }
+
     try {
       // Edit/append path: update existing entry, skip the AI follow-up.
       if (editingEntryId) {
@@ -749,6 +773,24 @@ export default function CaptureSheet() {
           </>
         )}
       </div>
+
+      {showPinSetup && (
+        <PinSetupModal
+          onComplete={async (pin) => {
+            await privacyLock.setupPin(pin);
+            setShowPinSetup(false);
+            if (pendingSave) {
+              setPendingSave(false);
+              // Re-run save on next tick so pinIsSet has propagated.
+              setTimeout(() => { void handleSave(); }, 0);
+            }
+          }}
+          onCancel={() => {
+            setShowPinSetup(false);
+            setPendingSave(false);
+          }}
+        />
+      )}
     </>
   );
 }
