@@ -31,54 +31,47 @@ export function journalEntryToEntry(j: JournalEntry): Entry {
 }
 
 /**
- * Convert a Contribution's answers into prompt + reflection entry pairs.
+ * Convert a Contribution's answers into reflection entries.
  *
- * Each non-empty answer emits:
- *   - a 'prompt' entry (authored by system) carrying the question key
- *   - a 'reflection' entry (authored by the contributor) with the answer text,
- *     anchored to the prompt.
+ * Contribution answers are onboarding knowledge — they capture structured
+ * responses about people rather than journal-worthy moments. They are
+ * emitted as 'reflection' entries tagged `_source:contribution` so the
+ * journal surface can filter them out by default (they surface only when
+ * a consumer asks for a person-manual view).
  *
- * Question-prose lookup is deferred to a later plan; for now the prompt
- * content is a placeholder derived from the question key.
+ * Structured answers (likert scales, multi-selects, objects) are skipped
+ * entirely — they need custom rendering not yet implemented.
+ *
+ * Prompt entries are NOT emitted until the question-text lookup exists.
+ * Until then a placeholder prompt ("(question: X.Y)") is worse than no
+ * prompt at all.
  */
+const SOURCE_CONTRIBUTION_TAG = '_source:contribution';
+
 export function contributionToEntries(c: Contribution): Entry[] {
   const out: Entry[] = [];
   for (const [questionKey, answerValue] of Object.entries(c.answers ?? {})) {
-    const answer = typeof answerValue === 'string' ? answerValue : String(answerValue ?? '');
-    if (!answer.trim()) continue;
+    // Only string answers are renderable today. Skip objects (likert,
+    // multi-select) cleanly; a future pass will add typed renderers.
+    if (typeof answerValue !== 'string') continue;
+    const answer = answerValue.trim();
+    if (!answer) continue;
 
     const [sectionId, questionId] = questionKey.split('.');
-    const promptId = `${c.contributionId}:${questionKey}:prompt`;
     const reflectionId = `${c.contributionId}:${questionKey}:reflection`;
 
     const subjects: EntrySubject[] = [{ kind: 'person', personId: c.personId }];
 
-    // Visibility resolution. Pure function — emit a sentinel tag for
-    // visible+complete answers; the query layer resolves the sentinel
-    // against the family roster.
     const answerVisibility =
       c.answerVisibility?.[sectionId]?.[questionId] ?? 'visible';
     const isFamilyVisible =
       answerVisibility === 'visible' && c.status === 'complete';
 
-    const baseTags: string[] = [];
+    const baseTags: string[] = [SOURCE_CONTRIBUTION_TAG];
     if (questionKey.includes('.')) baseTags.push(sectionId);
     if (isFamilyVisible) baseTags.push('_visibility:family');
 
     const visibleToUserIds = [c.contributorId];
-
-    out.push({
-      id: promptId,
-      familyId: c.familyId,
-      type: 'prompt',
-      author: { kind: 'system' },
-      subjects,
-      content: `(question: ${questionKey})`,
-      tags: baseTags,
-      visibleToUserIds,
-      sharedWithUserIds: [],
-      createdAt: c.createdAt,
-    });
 
     out.push({
       id: reflectionId,
@@ -87,7 +80,6 @@ export function contributionToEntries(c: Contribution): Entry[] {
       author: { kind: 'person', personId: c.contributorId },
       subjects,
       content: answer,
-      anchorEntryId: promptId,
       tags: baseTags,
       visibleToUserIds,
       sharedWithUserIds: [],
@@ -122,9 +114,18 @@ function insightsToText(insights: SynthesizedInsight[] | undefined): string {
 /**
  * Convert SynthesizedContent (multi-perspective synthesis results) into Entry records.
  *
- * Emits one Entry per non-empty content bucket (overview, alignments, gaps, blindSpots).
- * Each entry is type 'synthesis', authored by system, attributed to the person (or family if null).
+ * Only the `overview` bucket surfaces in the journal stream — that's the
+ * narrative "who this person is" summary. The other three buckets
+ * (alignments, gaps, blindSpots) are structural manual content that
+ * belongs on a person-manual deep-link, not the daily spread; they are
+ * still emitted but tagged `_source:synthesis-detail` so the default
+ * journal filter excludes them. A future person-manual view can opt in.
+ *
+ * Each entry is type 'synthesis', authored by system, attributed to the
+ * person (or family if personId is null).
  */
+const SOURCE_SYNTHESIS_DETAIL_TAG = '_source:synthesis-detail';
+
 export function synthesizedContentToEntries(args: {
   familyId: string;
   manualId: string;
@@ -138,11 +139,11 @@ export function synthesizedContentToEntries(args: {
       : [{ kind: 'person', personId }];
   const createdAt = synth.lastSynthesizedAt;
 
-  const buckets: Array<{ key: string; content: string }> = [
-    { key: 'overview', content: synth.overview ?? '' },
-    { key: 'alignments', content: insightsToText(synth.alignments) },
-    { key: 'gaps', content: insightsToText(synth.gaps) },
-    { key: 'blindSpots', content: insightsToText(synth.blindSpots) },
+  const buckets: Array<{ key: string; content: string; detail: boolean }> = [
+    { key: 'overview',    content: synth.overview ?? '',            detail: false },
+    { key: 'alignments',  content: insightsToText(synth.alignments),detail: true  },
+    { key: 'gaps',        content: insightsToText(synth.gaps),      detail: true  },
+    { key: 'blindSpots',  content: insightsToText(synth.blindSpots),detail: true  },
   ];
 
   return buckets
@@ -154,7 +155,7 @@ export function synthesizedContentToEntries(args: {
       author: { kind: 'system' as const },
       subjects,
       content: b.content,
-      tags: [b.key],
+      tags: b.detail ? [b.key, SOURCE_SYNTHESIS_DETAIL_TAG] : [b.key],
       visibleToUserIds: [],
       sharedWithUserIds: [],
       createdAt,

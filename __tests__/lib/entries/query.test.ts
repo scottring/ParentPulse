@@ -116,7 +116,7 @@ describe('fetchEntries — _visibility:family sentinel resolution', () => {
     const familyRoster = ['u1', 'u2', 'u3'];
     const entries = await fetchEntries(
       'f1',
-      {},
+      { includeContributionSources: true },
       source,
       'u1',
       async () => familyRoster
@@ -153,7 +153,7 @@ describe('fetchEntries — _visibility:family sentinel resolution', () => {
       growthItems: vi.fn().mockResolvedValue([]),
     };
 
-    const entries = await fetchEntries('f1', {}, source, 'u1', async () => ['u1', 'u2']);
+    const entries = await fetchEntries('f1', { includeContributionSources: true }, source, 'u1', async () => ['u1', 'u2']);
     const reflection = entries.find((e) => e.type === 'reflection');
     expect(reflection?.visibleToUserIds).toEqual(['u1']);
   });

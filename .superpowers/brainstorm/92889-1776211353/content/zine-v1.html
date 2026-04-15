@@ -1,0 +1,185 @@
+<h2>Family zine direction — v1</h2>
+<p class="subtitle">Colored article-blocks, warm cream page, avatars at the top. Same stream; printed personality.</p>
+
+<style>
+  .zine-frame {
+    background: #f5ecd8;
+    border-radius: 4px;
+    box-shadow: 0 12px 40px rgba(60,40,20,0.2);
+    padding: 28px 26px 40px;
+    max-width: 560px;
+    margin: 0 auto;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    color: #2d2418;
+  }
+  .zine-head {
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center; padding-bottom: 18px;
+    border-bottom: 1px solid rgba(80,60,40,0.2);
+    margin-bottom: 20px;
+  }
+  .family-avatars { display: flex; gap: -8px; margin-bottom: 10px; }
+  .avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: #d4b483; display: flex; align-items: center; justify-content: center;
+    font-weight: 600; color: #3d2f1f; font-size: 14px; font-family: 'Helvetica', sans-serif;
+    margin-left: -6px; border: 2px solid #f5ecd8;
+  }
+  .avatar:first-child { margin-left: 0; }
+  .avatar.a { background: #e8a17a; }
+  .avatar.b { background: #c9a66b; }
+  .avatar.c { background: #9bb59b; }
+  .avatar.d { background: #c487a3; }
+  .zine-title {
+    font-size: 26px; font-style: italic; font-weight: normal;
+    margin: 4px 0 2px; letter-spacing: -0.01em;
+  }
+  .zine-sub {
+    font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase;
+    color: #8a6f4a; font-family: 'Helvetica', sans-serif;
+  }
+  .date-rule {
+    text-align: center; font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase;
+    color: #8a6f4a; padding: 14px 0 10px;
+    font-family: 'Helvetica', sans-serif;
+  }
+  .block {
+    border-radius: 5px; padding: 16px 18px; margin-bottom: 10px;
+    position: relative;
+  }
+  .block .kicker {
+    font-size: 9px; letter-spacing: 0.24em; text-transform: uppercase;
+    font-family: 'Helvetica', sans-serif;
+    margin-bottom: 6px; font-weight: 600;
+  }
+  .block h4 {
+    font-size: 17px; font-style: italic; font-weight: normal;
+    margin: 0 0 8px; line-height: 1.25;
+  }
+  .block p {
+    font-size: 13px; line-height: 1.55; margin: 0;
+  }
+  .block .sig {
+    display: flex; align-items: center; gap: 6px;
+    margin-top: 10px; font-size: 10px; color: #5a4628;
+    font-family: 'Helvetica', sans-serif;
+  }
+  .sig .dot {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #d4b483; font-size: 10px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; color: #3d2f1f;
+  }
+
+  /* block variants */
+  .block.synthesis { background: #e8a17a; color: #3d2518; }
+  .block.synthesis .kicker { color: #7a2f1a; }
+
+  .block.observation { background: #f3e6b8; color: #3d3218; }
+  .block.observation .kicker { color: #7a5f1a; }
+
+  .block.nudge { background: #c487a3; color: #3d1830; }
+  .block.nudge .kicker { color: #591a42; }
+
+  .block.written { background: #faf3e2; color: #2d2418; border: 1px solid rgba(120,90,50,0.25); }
+  .block.written .kicker { color: #8a6f4a; }
+
+  .block.activity { background: #9bb59b; color: #1f3020; }
+  .block.activity .kicker { color: #2f5a38; }
+
+  .block.family { background: #6a8aa0; color: #f5ecd8; }
+  .block.family .kicker { color: #c8dde8; }
+
+  .footer-actions {
+    margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(80,60,40,0.2);
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'Helvetica', sans-serif;
+  }
+  .capture-btn {
+    background: #3d2f1f; color: #f5ecd8; padding: 10px 18px;
+    border-radius: 20px; font-size: 12px; letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .filters {
+    display: flex; gap: 6px; font-size: 10px;
+  }
+  .filter-pill {
+    padding: 4px 9px; border-radius: 12px; border: 1px solid #8a6f4a;
+    color: #5a4628;
+  }
+  .filter-pill.active { background: #3d2f1f; color: #f5ecd8; border-color: #3d2f1f; }
+
+  .caption {
+    text-align: center; font-size: 12px; color: var(--muted, #888);
+    margin-top: 14px; font-style: italic;
+  }
+</style>
+
+<div class="zine-frame">
+  <div class="zine-head">
+    <div class="family-avatars">
+      <div class="avatar a">S</div>
+      <div class="avatar b">R</div>
+      <div class="avatar c">L</div>
+      <div class="avatar d">M</div>
+    </div>
+    <div class="zine-sub">The Kaufman Family · Volume IV</div>
+    <h1 class="zine-title">Spring, in progress</h1>
+  </div>
+
+  <div class="filters" style="justify-content:center; margin-bottom: 18px;">
+    <span class="filter-pill active">Everyone</span>
+    <span class="filter-pill">Sarah</span>
+    <span class="filter-pill">Liam</span>
+    <span class="filter-pill">Mia</span>
+    <span class="filter-pill">Syntheses</span>
+  </div>
+
+  <div class="date-rule">— Tuesday, April 14 —</div>
+
+  <div class="block synthesis">
+    <div class="kicker">Synthesis · about Liam</div>
+    <h4>He's testing whether his curiosity is welcome.</h4>
+    <p>Drawn from your last two entries and an older note on how he processes questions. When he asks "why" six times, he isn't stalling — he's building his model of how the world works, and you.</p>
+    <div class="sig"><div class="dot">L</div> About Liam · based on 3 entries</div>
+  </div>
+
+  <div class="block nudge">
+    <div class="kicker">One thing to try tonight</div>
+    <h4>Give the long answer.</h4>
+    <p>When Liam asks "why" at dinner, give the real reason — even if it runs longer than you'd usually offer.</p>
+  </div>
+
+  <div class="block observation">
+    <div class="kicker">Observation · Mia</div>
+    <h4>Quiet at dinner — three nights running.</h4>
+    <p>Didn't ask about her day.</p>
+    <div class="sig"><div class="dot">R</div> Noted by Rachel</div>
+  </div>
+
+  <div class="date-rule">— Monday, April 13 —</div>
+
+  <div class="block family">
+    <div class="kicker">Family synthesis · weekly</div>
+    <h4>The week is finding its rhythm.</h4>
+    <p>Curiosity is up. Check-ins between parents are down. The kids are inviting more conversation than the adults are initiating.</p>
+  </div>
+
+  <div class="block written">
+    <div class="kicker">Written · by you</div>
+    <h4>Liam asked "why" six times at dinner.</h4>
+    <p>Started with the weather, ended at photosynthesis. He wanted the real answer each time.</p>
+  </div>
+
+  <div class="block activity">
+    <div class="kicker">Activity · completed</div>
+    <h4>Check-in with Mia — done.</h4>
+    <p>You marked the "dinner question" practice complete. Third time this week.</p>
+  </div>
+
+  <div class="footer-actions">
+    <div class="capture-btn">+ Add an entry</div>
+    <div style="font-size: 10px; color: #8a6f4a; letter-spacing: 0.15em; text-transform: uppercase;">Page 1 of 42</div>
+  </div>
+</div>
+
+<p class="caption">One stream. Entry type drives the block color. Filters across the top. Family avatars are the masthead.</p>
