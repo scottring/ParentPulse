@@ -74,12 +74,14 @@ function PageEntries({
   nameOf,
   currentUserId,
   onAsk,
+  onEdit,
 }: {
   entries: Entry[];
   side: 'left' | 'right';
   nameOf?: (personId: string) => string;
   currentUserId?: string;
   onAsk?: (entry: Entry, side: 'left' | 'right') => void;
+  onEdit?: (entry: Entry, mode: 'edit' | 'append') => void;
 }) {
   const groups = groupEntriesByDay(entries);
   const handleAsk = onAsk ? (e: Entry) => onAsk(e, side) : undefined;
@@ -97,13 +99,13 @@ function PageEntries({
                   <MarginItem entry={e} />
                 </div>
                 <div className="main-cell">
-                  <EntryBlock entry={e} nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} />
+                  <EntryBlock entry={e} nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} onEdit={onEdit} />
                 </div>
               </div>
             ) : (
               <div key={e.id} style={{ display: 'contents' }}>
                 <div className="main-cell">
-                  <EntryBlock entry={e} nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} />
+                  <EntryBlock entry={e} nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} onEdit={onEdit} />
                 </div>
                 <div className="margin-cell margin-right">
                   <MarginItem entry={e} />
@@ -151,6 +153,12 @@ export function JournalSpread({
     setAskTarget({ entry, side: isMobile ? 'right' : side });
   };
 
+  const handleEdit = (entry: Entry, mode: 'edit' | 'append') => {
+    window.dispatchEvent(
+      new CustomEvent('relish:open-edit', { detail: { entry, mode } })
+    );
+  };
+
   return (
     <div className="spread-stage">
       <FilterPills people={people} active={activeFilter} onChange={handleFilterChange} />
@@ -172,10 +180,10 @@ export function JournalSpread({
           </button>
         )}
         <div className="page page-left">
-          <PageEntries entries={leftEntries} side="left" nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} />
+          <PageEntries entries={leftEntries} side="left" nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} onEdit={handleEdit} />
         </div>
         <div className="page page-right">
-          <PageEntries entries={rightEntries} side="right" nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} />
+          <PageEntries entries={rightEntries} side="right" nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} onEdit={handleEdit} />
           {currentEntries.length === 0 && (
             <p className="empty-state">A quiet day. Nothing yet — write the first thing.</p>
           )}

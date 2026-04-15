@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Compass, Link2, Unlink2, Eye, Sparkles, Users, MessageCircleQuestion } from 'lucide-react';
+import { Compass, Link2, Unlink2, Eye, Sparkles, Users, MessageCircleQuestion, Pencil, Plus } from 'lucide-react';
 import type { Entry } from '@/types/entry';
 
 // Approximate character count that fills ~2 lines after the italic lead
@@ -529,39 +529,80 @@ function renderEntryBody(
   return <ProseEntry entry={entry} currentUserId={currentUserId} />;
 }
 
+const EDIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+function isEditableType(entry: Entry): boolean {
+  return (
+    entry.author.kind === 'person' &&
+    (entry.type === 'written' ||
+      entry.type === 'observation' ||
+      entry.type === 'reflection' ||
+      entry.type === 'activity')
+  );
+}
+
 export function EntryBlock({
   entry,
   nameOf,
   currentUserId,
   onAsk,
+  onEdit,
 }: {
   entry: Entry;
   nameOf?: (personId: string) => string;
   currentUserId?: string;
   onAsk?: (entry: Entry) => void;
+  onEdit?: (entry: Entry, mode: 'edit' | 'append') => void;
 }) {
+  const canEdit = onEdit && isEditableType(entry);
+  const ageMs = canEdit
+    ? Date.now() - (entry.createdAt?.toDate?.().getTime() ?? 0)
+    : 0;
+  const editMode: 'edit' | 'append' = ageMs < EDIT_WINDOW_MS ? 'edit' : 'append';
+
   return (
     <div className="entry-wrap">
       {renderEntryBody(entry, nameOf, currentUserId)}
-      {onAsk && (
-        <button
-          type="button"
-          className="ask-btn"
-          onClick={() => onAsk(entry)}
-          aria-label="Ask about this entry"
-        >
-          <MessageCircleQuestion size={13} strokeWidth={1.5} />
-          <span>Ask</span>
-        </button>
-      )}
+      <div className="entry-actions">
+        {canEdit && (
+          <button
+            type="button"
+            className="action-btn edit-btn"
+            onClick={() => onEdit!(entry, editMode)}
+            aria-label={editMode === 'edit' ? 'Edit entry' : 'Add to entry'}
+          >
+            {editMode === 'edit' ? (
+              <Pencil size={13} strokeWidth={1.5} />
+            ) : (
+              <Plus size={13} strokeWidth={1.5} />
+            )}
+            <span>{editMode === 'edit' ? 'Edit' : 'Add'}</span>
+          </button>
+        )}
+        {onAsk && (
+          <button
+            type="button"
+            className="action-btn ask-btn"
+            onClick={() => onAsk(entry)}
+            aria-label="Ask about this entry"
+          >
+            <MessageCircleQuestion size={13} strokeWidth={1.5} />
+            <span>Ask</span>
+          </button>
+        )}
+      </div>
       <style jsx>{`
         .entry-wrap {
           position: relative;
         }
-        .ask-btn {
+        .entry-actions {
           position: absolute;
           top: 0;
           right: 0;
+          display: flex;
+          gap: 4px;
+        }
+        .action-btn {
           display: inline-flex;
           align-items: center;
           gap: 4px;
@@ -569,7 +610,6 @@ export function EntryBlock({
           background: transparent;
           border: 1px solid transparent;
           border-radius: 4px;
-          color: #8a6a9a;
           font-family: -apple-system, 'Helvetica Neue', sans-serif;
           font-size: 9px;
           letter-spacing: 0.2em;
@@ -578,9 +618,20 @@ export function EntryBlock({
           opacity: 0;
           transition: opacity 160ms ease, background 160ms ease;
         }
-        .entry-wrap:hover .ask-btn,
-        .ask-btn:focus-visible {
+        .edit-btn {
+          color: #6a8a6a;
+        }
+        .ask-btn {
+          color: #8a6a9a;
+        }
+        .entry-wrap:hover .action-btn,
+        .action-btn:focus-visible {
           opacity: 0.85;
+        }
+        .edit-btn:hover {
+          opacity: 1;
+          background: rgba(106, 138, 106, 0.1);
+          border-color: rgba(106, 138, 106, 0.3);
         }
         .ask-btn:hover {
           opacity: 1;
