@@ -7,6 +7,7 @@ import { NextThingCard } from '@/components/surface/NextThingCard';
 import { SynthesisHighlightCard } from '@/components/surface/SynthesisHighlightCard';
 import { CalmStateCard } from '@/components/surface/CalmStateCard';
 import { InlineJournalPeek } from '@/components/surface/InlineJournalPeek';
+import { UserMenu } from '@/components/layout/UserMenu';
 import CaptureSheet from '@/components/capture/CaptureSheet';
 
 /**
@@ -45,19 +46,7 @@ export function SurfaceHome() {
       <a href="/" className="wordmark" aria-label="Relish home">
         Relish
       </a>
-      <a
-        href="/settings"
-        className="avatar"
-        aria-label={user?.name ? `${user.name} — settings` : 'Settings'}
-        title={user?.name || 'Settings'}
-      >
-        {user?.avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.avatarUrl} alt="" />
-        ) : (
-          <span>{(user?.name || '?').charAt(0).toUpperCase()}</span>
-        )}
-      </a>
+      <UserMenu />
 
       <div className="surface-inner">
         <p className="eyebrow">Today</p>
@@ -116,36 +105,6 @@ export function SurfaceHome() {
         .wordmark:hover {
           color: #1a120a;
           transform: translateY(-1px);
-        }
-        .avatar {
-          position: fixed;
-          top: 14px;
-          right: 22px;
-          z-index: 20;
-          width: 34px;
-          height: 34px;
-          border-radius: 50%;
-          background: #d4b483;
-          color: #2a1f14;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-family: -apple-system, 'Helvetica Neue', sans-serif;
-          font-size: 13px;
-          font-weight: 600;
-          text-decoration: none;
-          border: 2px solid #f5ecd8;
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
-          transition: transform 160ms ease;
-          overflow: hidden;
-        }
-        .avatar:hover {
-          transform: translateY(-1px);
-        }
-        .avatar :global(img) {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
         }
         .surface-inner {
           position: relative;

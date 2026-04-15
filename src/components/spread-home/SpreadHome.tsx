@@ -9,6 +9,7 @@ import { JournalSpread } from '@/components/journal-spread/JournalSpread';
 import type { FilterSelection } from '@/components/journal-spread/FilterPills';
 import { usePrivacyLock } from '@/hooks/usePrivacyLock';
 import { PinKeypad } from '@/components/privacy/PinKeypad';
+import { UserMenu } from '@/components/layout/UserMenu';
 import type { EntryFilter } from '@/types/entry';
 import CaptureSheet from '@/components/capture/CaptureSheet';
 
@@ -90,75 +91,31 @@ export function SpreadHome() {
 
   return (
     <>
-      <a href="/" className="relish-logo" aria-label="Relish home">
-        Relish
+      <a href="/" className="back-home" aria-label="Back to home">
+        ← Home
         <style jsx>{`
-          .relish-logo {
+          .back-home {
             position: fixed;
             top: 18px;
             left: 22px;
             z-index: 20;
-            font-family: Georgia, 'Times New Roman', serif;
-            font-style: italic;
-            font-size: 22px;
-            font-weight: 400;
-            color: #2a1f14;
-            text-decoration: none;
-            letter-spacing: 0.01em;
-            transition: transform 160ms ease, color 160ms ease;
-          }
-          .relish-logo:hover {
-            color: #1a120a;
-            transform: translateY(-1px);
-          }
-        `}</style>
-      </a>
-      <a
-        href="/settings"
-        className="user-avatar"
-        aria-label={user?.name ? `${user.name} — settings` : 'Settings'}
-        title={user?.name || 'Settings'}
-      >
-        {user?.avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.avatarUrl} alt="" />
-        ) : (
-          <span>{(user?.name || '?').charAt(0).toUpperCase()}</span>
-        )}
-        <style jsx>{`
-          .user-avatar {
-            position: fixed;
-            top: 14px;
-            right: 22px;
-            z-index: 20;
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            background: #d4b483;
-            color: #2a1f14;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             font-family: -apple-system, 'Helvetica Neue', sans-serif;
-            font-size: 13px;
-            font-weight: 600;
+            font-size: 11px;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: #5a4628;
             text-decoration: none;
-            border: 2px solid #f5ecd8;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-            transition: transform 160ms ease, box-shadow 160ms ease;
-            overflow: hidden;
+            padding: 6px 10px;
+            border-radius: 4px;
+            transition: background 140ms ease, color 140ms ease;
           }
-          .user-avatar:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
-          }
-          .user-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+          .back-home:hover {
+            color: #2a1f14;
+            background: rgba(138, 111, 74, 0.12);
           }
         `}</style>
       </a>
+      <UserMenu />
       <JournalSpread
         entries={entries}
         familyName={selfPerson?.name?.split(' ').slice(-1)[0] ?? 'Family'}
