@@ -19,6 +19,7 @@ export function SurfaceHome() {
 
   return (
     <main className="surface">
+      <div className="surface-bg" aria-hidden="true" />
       <a href="/" className="wordmark" aria-label="Relish home">
         Relish
       </a>
@@ -55,13 +56,39 @@ export function SurfaceHome() {
       <style jsx>{`
         .surface {
           min-height: 100vh;
-          background: #f3ead6;
+          background: #14100c;
           color: #2a1f14;
           position: relative;
           padding: 80px 24px 60px;
           display: flex;
           flex-direction: column;
           align-items: center;
+          overflow: hidden;
+        }
+        .surface-bg {
+          position: fixed;
+          inset: 0;
+          z-index: 0;
+          background-image: url('/images/home-table.png');
+          background-size: cover;
+          background-position: center;
+          opacity: 0.55;
+        }
+        .surface-bg::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background:
+            radial-gradient(
+              ellipse at center,
+              rgba(243, 234, 214, 0.88) 0%,
+              rgba(243, 234, 214, 0.78) 40%,
+              rgba(20, 16, 12, 0.35) 100%
+            );
+        }
+        .surface > :global(*:not(.surface-bg)) {
+          position: relative;
+          z-index: 1;
         }
         .wordmark {
           position: fixed;
