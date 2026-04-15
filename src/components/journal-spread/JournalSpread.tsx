@@ -143,9 +143,13 @@ export function JournalSpread({
     usePageWindow(entries, PAGE_SIZE);
 
   const isMobile = useIsMobile();
-  const half = isMobile ? 0 : Math.ceil(currentEntries.length / 2);
-  const leftEntries = currentEntries.slice(0, half);
-  const rightEntries = currentEntries.slice(half);
+  // Within a spread, read chronologically left→right: left = older,
+  // right = newer. The incoming list is newest-first, so reverse the
+  // current window before splitting.
+  const orderedForSpread = [...currentEntries].reverse();
+  const half = isMobile ? 0 : Math.ceil(orderedForSpread.length / 2);
+  const leftEntries = orderedForSpread.slice(0, half);
+  const rightEntries = orderedForSpread.slice(half);
 
   const [askTarget, setAskTarget] = useState<{ entry: Entry; side: 'left' | 'right' } | null>(null);
   const handleAsk = (entry: Entry, side: 'left' | 'right') => {

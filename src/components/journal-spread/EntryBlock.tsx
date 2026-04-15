@@ -568,7 +568,10 @@ export function EntryBlock({
           <button
             type="button"
             className="action-btn edit-btn"
-            onClick={() => onEdit!(entry, editMode)}
+            onClick={(ev) => {
+              ev.stopPropagation();
+              onEdit!(entry, editMode);
+            }}
             aria-label={editMode === 'edit' ? 'Edit entry' : 'Add to entry'}
           >
             {editMode === 'edit' ? (
@@ -583,7 +586,10 @@ export function EntryBlock({
           <button
             type="button"
             className="action-btn ask-btn"
-            onClick={() => onAsk(entry)}
+            onClick={(ev) => {
+              ev.stopPropagation();
+              onAsk(entry);
+            }}
             aria-label="Ask about this entry"
           >
             <MessageCircleQuestion size={13} strokeWidth={1.5} />
