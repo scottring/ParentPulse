@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { MicButton } from '@/components/voice/MicButton';
 
 interface AddBoundaryModalProps {
   isOpen: boolean;
@@ -141,18 +142,25 @@ export function AddBoundaryModal({ isOpen, onClose, onSave, personName }: AddBou
               <label className="block font-medium mb-2" style={{ color: '#3A3530' }}>
                 Context / Why is this important?
               </label>
-              <textarea
-                value={context}
-                onChange={(e) => setContext(e.target.value)}
-                placeholder="e.g., Needs adequate sleep for school and emotional regulation"
-                rows={2}
-                className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
-                style={{
-                  borderColor: 'rgba(255,255,255,0.4)',
-                  backgroundColor: 'rgba(255,255,255,0.5)',
-                  color: '#3A3530'
-                }}
-              />
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+                <textarea
+                  value={context}
+                  onChange={(e) => setContext(e.target.value)}
+                  placeholder="e.g., Needs adequate sleep for school and emotional regulation"
+                  rows={2}
+                  className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
+                  style={{
+                    borderColor: 'rgba(255,255,255,0.4)',
+                    backgroundColor: 'rgba(255,255,255,0.5)',
+                    color: '#3A3530'
+                  }}
+                />
+                <MicButton
+                  size="sm"
+                  disabled={saving}
+                  onTranscript={(t) => setContext((prev) => (prev ? `${prev} ${t}` : t))}
+                />
+              </div>
             </div>
 
             {/* Consequences */}
@@ -160,18 +168,25 @@ export function AddBoundaryModal({ isOpen, onClose, onSave, personName }: AddBou
               <label className="block font-medium mb-2" style={{ color: '#3A3530' }}>
                 Consequences if crossed
               </label>
-              <textarea
-                value={consequences}
-                onChange={(e) => setConsequences(e.target.value)}
-                placeholder="e.g., Becomes overtired, meltdowns the next day"
-                rows={2}
-                className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
-                style={{
-                  borderColor: 'rgba(255,255,255,0.4)',
-                  backgroundColor: 'rgba(255,255,255,0.5)',
-                  color: '#3A3530'
-                }}
-              />
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+                <textarea
+                  value={consequences}
+                  onChange={(e) => setConsequences(e.target.value)}
+                  placeholder="e.g., Becomes overtired, meltdowns the next day"
+                  rows={2}
+                  className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
+                  style={{
+                    borderColor: 'rgba(255,255,255,0.4)',
+                    backgroundColor: 'rgba(255,255,255,0.5)',
+                    color: '#3A3530'
+                  }}
+                />
+                <MicButton
+                  size="sm"
+                  disabled={saving}
+                  onTranscript={(t) => setConsequences((prev) => (prev ? `${prev} ${t}` : t))}
+                />
+              </div>
             </div>
 
             {/* Actions */}

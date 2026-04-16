@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import type { ChildQuestion } from '@/config/child-questionnaire';
 import { getDemoAnswer } from '@/config/demo-answers';
+import { MicButton } from '@/components/voice/MicButton';
 
 interface ChildQuestionDisplayProps {
   question: ChildQuestion;
@@ -77,25 +78,34 @@ export default function ChildQuestionDisplay({
     switch (question.type) {
       case 'text':
         return (
-          <textarea
-            value={typeof localValue === 'string' ? localValue : ''}
-            onChange={(e) => setLocalValue(e.target.value)}
-            placeholder="Type your answer here…"
-            rows={4}
-            className="w-full focus:outline-none"
-            style={{
-              fontFamily: KID_FONT,
-              fontSize: 26,
-              fontWeight: 400,
-              color: KID_INK,
-              background: KID_CARD_BG,
-              border: `2px solid ${KID_BORDER}`,
-              borderRadius: 18,
-              padding: '20px 22px',
-              resize: 'none',
-              lineHeight: 1.5,
-            }}
-          />
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+            <textarea
+              value={typeof localValue === 'string' ? localValue : ''}
+              onChange={(e) => setLocalValue(e.target.value)}
+              placeholder="Type your answer here…"
+              rows={4}
+              className="w-full focus:outline-none"
+              style={{
+                fontFamily: KID_FONT,
+                fontSize: 26,
+                fontWeight: 400,
+                color: KID_INK,
+                background: KID_CARD_BG,
+                border: `2px solid ${KID_BORDER}`,
+                borderRadius: 18,
+                padding: '20px 22px',
+                resize: 'none',
+                lineHeight: 1.5,
+              }}
+            />
+            <MicButton
+              size="sm"
+              onTranscript={(t) => {
+                const cur = typeof localValue === 'string' ? localValue : '';
+                setLocalValue(cur ? `${cur} ${t}` : t);
+              }}
+            />
+          </div>
         );
 
       case 'emoji-scale':
@@ -350,23 +360,32 @@ export default function ChildQuestionDisplay({
               Drawing isn&rsquo;t here yet. For now, tell us what
               you&rsquo;d draw:
             </p>
-            <textarea
-              value={typeof localValue === 'string' ? localValue : ''}
-              onChange={(e) => setLocalValue(e.target.value)}
-              placeholder="What would you draw?"
-              rows={3}
-              className="w-full focus:outline-none"
-              style={{
-                fontFamily: KID_FONT,
-                fontSize: 24,
-                color: KID_INK,
-                background: KID_CARD_BG,
-                border: `2px solid ${KID_BORDER}`,
-                borderRadius: 18,
-                padding: '18px 20px',
-                resize: 'none',
-              }}
-            />
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+              <textarea
+                value={typeof localValue === 'string' ? localValue : ''}
+                onChange={(e) => setLocalValue(e.target.value)}
+                placeholder="What would you draw?"
+                rows={3}
+                className="w-full focus:outline-none"
+                style={{
+                  fontFamily: KID_FONT,
+                  fontSize: 24,
+                  color: KID_INK,
+                  background: KID_CARD_BG,
+                  border: `2px solid ${KID_BORDER}`,
+                  borderRadius: 18,
+                  padding: '18px 20px',
+                  resize: 'none',
+                }}
+              />
+              <MicButton
+                size="sm"
+                onTranscript={(t) => {
+                  const cur = typeof localValue === 'string' ? localValue : '';
+                  setLocalValue(cur ? `${cur} ${t}` : t);
+                }}
+              />
+            </div>
           </div>
         );
 

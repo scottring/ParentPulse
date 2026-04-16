@@ -8,6 +8,7 @@ import { useEntryChat } from '@/hooks/useEntryChat';
 import { usePrivacyLock } from '@/hooks/usePrivacyLock';
 import { JOURNAL_CATEGORIES, type JournalCategory, type JournalMedia } from '@/types/journal';
 import { uploadEntryMedia } from '@/lib/upload-media';
+import { MicButton } from '@/components/voice/MicButton';
 import { PinSetupModal } from '@/components/privacy/PinSetupModal';
 
 interface ShareCandidate {
@@ -568,22 +569,31 @@ export default function CaptureSheet() {
                     {originalText}
                   </div>
                 )}
-                <textarea ref={textareaRef} value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  className="w-full h-full resize-none"
-                  style={{
-                    fontFamily: 'var(--font-parent-body)', fontSize: 17, lineHeight: 1.6,
-                    color: '#3A3530', background: 'transparent',
-                    border: 'none', outline: 'none', minHeight: 160,
-                  }}
-                  placeholder={
-                    editMode === 'append'
-                      ? 'Add more…'
-                      : editMode === 'edit'
-                        ? 'Edit your entry…'
-                        : 'A moment, a thought, a question…'
-                  }
-                  onClick={() => setOpenPicker(null)} />
+                <div style={{ position: 'relative' }}>
+                  <textarea ref={textareaRef} value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    className="w-full h-full resize-none"
+                    style={{
+                      fontFamily: 'var(--font-parent-body)', fontSize: 17, lineHeight: 1.6,
+                      color: '#3A3530', background: 'transparent',
+                      border: 'none', outline: 'none', minHeight: 160,
+                      paddingRight: 52,
+                    }}
+                    placeholder={
+                      editMode === 'append'
+                        ? 'Add more…'
+                        : editMode === 'edit'
+                          ? 'Edit your entry…'
+                          : 'A moment, a thought, a question…'
+                    }
+                    onClick={() => setOpenPicker(null)} />
+                  <div style={{ position: 'absolute', bottom: 4, right: 4 }}>
+                    <MicButton
+                      size="md"
+                      onTranscript={(t) => setText((prev) => (prev ? `${prev} ${t}` : t))}
+                    />
+                  </div>
+                </div>
 
                 {/* Staged media thumbnails */}
                 {stagedFiles.length > 0 && (
@@ -846,6 +856,11 @@ export default function CaptureSheet() {
                     fontFamily: 'var(--font-parent-body)', fontSize: 16, color: '#3A3530',
                     background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.1)', outline: 'none',
                   }} />
+                <MicButton
+                  size="sm"
+                  disabled={chatLoading}
+                  onTranscript={(t) => setChatInput((prev) => (prev ? `${prev} ${t}` : t))}
+                />
                 <button onClick={handleChatSend} disabled={!chatInput.trim() || chatLoading}
                   className="px-6 py-3 rounded-full transition-all hover:opacity-90 disabled:opacity-30"
                   style={{
@@ -880,3 +895,4 @@ export default function CaptureSheet() {
     </>
   );
 }
+

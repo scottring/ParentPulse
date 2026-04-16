@@ -2,6 +2,7 @@
 
 import { OnboardingQuestion } from '@/config/onboarding-questions';
 import { QuestionAnswer, StructuredAnswer } from '@/types/onboarding';
+import { MicButton } from '@/components/voice/MicButton';
 import { LikertScaleQuestion } from './LikertScaleQuestion';
 import { FrequencyQuestion } from './FrequencyQuestion';
 import { MultipleChoiceQuestion } from './MultipleChoiceQuestion';
@@ -91,39 +92,53 @@ export function QuestionRenderer({
       default:
         return (
           <div className="relative">
-            <textarea
-              value={
-                typeof value === 'string'
-                  ? value
-                  : typeof value === 'object' && value !== null && 'primary' in value
-                    ? String((value as StructuredAnswer).primary)
-                    : ''
-              }
-              onChange={(e) => onChange(e.target.value)}
-              onKeyDown={(e) => {
-                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && onKeyboardContinue) {
-                  onKeyboardContinue();
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+              <textarea
+                value={
+                  typeof value === 'string'
+                    ? value
+                    : typeof value === 'object' && value !== null && 'primary' in value
+                      ? String((value as StructuredAnswer).primary)
+                      : ''
                 }
-              }}
-              placeholder={question.placeholder || 'Write in your own words&hellip;'}
-              rows={6}
-              className="w-full focus:outline-none"
-              style={{
-                fontFamily: 'var(--font-parent-display)',
-                fontSize: 19,
-                fontStyle: 'italic',
-                color: '#3A3530',
-                background: 'transparent',
-                border: 0,
-                borderBottom: '1px solid rgba(200, 190, 172, 0.6)',
-                padding: '10px 2px 14px',
-                resize: 'none',
-                lineHeight: 1.55,
-                letterSpacing: '0.002em',
-                minHeight: 160,
-              }}
-              autoFocus
-            />
+                onChange={(e) => onChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && onKeyboardContinue) {
+                    onKeyboardContinue();
+                  }
+                }}
+                placeholder={question.placeholder || 'Write in your own words&hellip;'}
+                rows={6}
+                className="w-full focus:outline-none"
+                style={{
+                  fontFamily: 'var(--font-parent-display)',
+                  fontSize: 19,
+                  fontStyle: 'italic',
+                  color: '#3A3530',
+                  background: 'transparent',
+                  border: 0,
+                  borderBottom: '1px solid rgba(200, 190, 172, 0.6)',
+                  padding: '10px 2px 14px',
+                  resize: 'none',
+                  lineHeight: 1.55,
+                  letterSpacing: '0.002em',
+                  minHeight: 160,
+                }}
+                autoFocus
+              />
+              <MicButton
+                size="sm"
+                onTranscript={(t) => {
+                  const prev =
+                    typeof value === 'string'
+                      ? value
+                      : typeof value === 'object' && value !== null && 'primary' in value
+                        ? String((value as StructuredAnswer).primary)
+                        : '';
+                  onChange(prev ? `${prev} ${t}` : t);
+                }}
+              />
+            </div>
             {isDemo && getDemoAnswer(question.id, demoPerspective) !== undefined && (
               <button
                 type="button"

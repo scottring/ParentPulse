@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { MicButton } from '@/components/voice/MicButton';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
 import { doc, updateDoc, Timestamp } from 'firebase/firestore';
@@ -284,14 +285,21 @@ export function SelfWorthAssessmentModal({
                 <label style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: '#5C5347' }} className="block mb-2">
                   Optional: Add any additional context or notes
                 </label>
-                <textarea
-                  value={currentAnswer.qualitative || ''}
-                  onChange={(e) => handleQualitativeChange(e.target.value)}
-                  placeholder="e.g., This varies depending on..."
-                  className="w-full px-4 py-3 rounded-xl focus:outline-none"
-                  style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: '#3A3530', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.5)' }}
-                  rows={3}
-                />
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+                  <textarea
+                    value={currentAnswer.qualitative || ''}
+                    onChange={(e) => handleQualitativeChange(e.target.value)}
+                    placeholder="e.g., This varies depending on..."
+                    className="w-full px-4 py-3 rounded-xl focus:outline-none"
+                    style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: '#3A3530', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.5)' }}
+                    rows={3}
+                  />
+                  <MicButton
+                    size="sm"
+                    disabled={saving}
+                    onTranscript={(t) => handleQualitativeChange(currentAnswer.qualitative ? `${currentAnswer.qualitative} ${t}` : t)}
+                  />
+                </div>
               </div>
             )}
           </div>

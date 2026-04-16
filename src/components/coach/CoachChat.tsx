@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useCoach, ChatMessage } from '@/hooks/useCoach';
+import { MicButton } from '@/components/voice/MicButton';
 
 interface CoachChatProps {
   personId?: string;
@@ -273,22 +274,29 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
         style={{ borderTop: '1px solid rgba(255,255,255,0.4)' }}
       >
         <div className="flex gap-3">
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={`Ask about ${personName || 'anything'}...`}
-            rows={2}
-            disabled={loading}
-            className="flex-1 p-3 rounded-xl text-sm focus:outline-none resize-none disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              fontFamily: 'var(--font-parent-body)',
-              border: '1px solid rgba(255,255,255,0.4)',
-              background: 'rgba(255,255,255,0.5)',
-              color: '#3A3530',
-            }}
-          />
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, flex: 1 }}>
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={`Ask about ${personName || 'anything'}...`}
+              rows={2}
+              disabled={loading}
+              className="flex-1 p-3 rounded-xl text-sm focus:outline-none resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                fontFamily: 'var(--font-parent-body)',
+                border: '1px solid rgba(255,255,255,0.4)',
+                background: 'rgba(255,255,255,0.5)',
+                color: '#3A3530',
+              }}
+            />
+            <MicButton
+              size="sm"
+              disabled={loading}
+              onTranscript={(t) => setInput((prev) => (prev ? `${prev} ${t}` : t))}
+            />
+          </div>
           <button
             type="submit"
             disabled={!input.trim() || loading}

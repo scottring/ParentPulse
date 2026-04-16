@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+
+vi.mock('@/components/voice/MicButton', () => ({
+  MicButton: () => null,
+}));
+
 import { QuestionRenderer } from '@/components/onboarding/QuestionRenderer';
 import { OnboardingQuestion } from '@/config/onboarding-questions';
 

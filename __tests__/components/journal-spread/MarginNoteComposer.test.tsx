@@ -1,6 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+
+vi.mock('@/components/voice/MicButton', () => ({
+  MicButton: () => null,
+}));
+
 import { MarginNoteComposer } from '@/components/journal-spread/MarginNoteComposer';
 
 describe('MarginNoteComposer', () => {

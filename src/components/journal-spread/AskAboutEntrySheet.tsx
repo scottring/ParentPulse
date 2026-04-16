@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, Sparkles, Share2 } from 'lucide-react';
+import { MicButton } from '@/components/voice/MicButton';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
@@ -309,6 +310,11 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
                   rows={2}
                   disabled={loading}
                 />
+                <MicButton
+                  size="sm"
+                  disabled={loading}
+                  onTranscript={(t) => setInput((prev) => (prev ? `${prev} ${t}` : t))}
+                />
                 <button type="submit" className="send" disabled={!input.trim() || loading}>
                   Send
                 </button>
@@ -362,15 +368,28 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
             {sanitize.kind === 'draft' && (
               <>
                 <div className="sanitize-kicker">Sanitized activity · draft</div>
-                <textarea
-                  className="draft-input"
-                  value={sanitize.text}
-                  onChange={(e) =>
-                    setSanitize({ ...sanitize, text: e.target.value })
-                  }
-                  rows={5}
-                  disabled={sanitize.saving}
-                />
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+                  <textarea
+                    className="draft-input"
+                    value={sanitize.text}
+                    onChange={(e) =>
+                      setSanitize({ ...sanitize, text: e.target.value })
+                    }
+                    rows={5}
+                    disabled={sanitize.saving}
+                  />
+                  <MicButton
+                    size="sm"
+                    disabled={sanitize.saving}
+                    onTranscript={(t) =>
+                      setSanitize((prev) =>
+                        prev.kind === 'draft'
+                          ? { ...prev, text: prev.text ? `${prev.text} ${t}` : t }
+                          : prev
+                      )
+                    }
+                  />
+                </div>
                 <div className="audience">
                   <span className="audience-label">Who can see this?</span>
                   <div className="audience-pills">

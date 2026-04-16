@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { MicButton } from '@/components/voice/MicButton';
 import { LearningStyle } from '@/types';
 
 interface StrengthsStepProps {
@@ -174,6 +175,10 @@ export default function StrengthsStep({
             placeholder="Add another interest..."
             className="flex-1 px-4 py-3 border rounded-lg"
             style={{ borderColor: 'var(--parent-border)' }}
+          />
+          <MicButton
+            size="sm"
+            onTranscript={(t) => setCustomInterest((prev) => (prev ? `${prev} ${t}` : t))}
           />
           <button
             onClick={handleAddCustomInterest}

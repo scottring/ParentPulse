@@ -16,6 +16,7 @@ import { DocumentUploader } from '@/components/onboarding/DocumentUploader';
 import { TopicCategory } from '@/types/person-manual';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
+import { MicButton } from '@/components/voice/MicButton';
 
 // --- Types for document upload flow ---
 type PageMode = 'choose' | 'upload' | 'processing' | 'conflicts' | 'questionnaire';
@@ -941,23 +942,34 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
 
                   {/* Editable area for merge/custom */}
                   {(resolution?.resolution === 'merge' || resolution?.resolution === 'custom') && (
-                    <textarea
-                      value={resolution.value}
-                      onChange={(e) =>
-                        setConflictResolutions((prev) => ({
-                          ...prev,
-                          [key]: { ...prev[key], value: e.target.value },
-                        }))
-                      }
-                      placeholder={
-                        resolution.resolution === 'custom'
-                          ? 'Write your own answer...'
-                          : 'Edit the merged answer...'
-                      }
-                      rows={4}
-                      className="w-full px-4 py-3 rounded-lg focus:outline-none transition-colors"
-                      style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.4)', resize: 'vertical' }}
-                    />
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+                      <textarea
+                        value={resolution.value}
+                        onChange={(e) =>
+                          setConflictResolutions((prev) => ({
+                            ...prev,
+                            [key]: { ...prev[key], value: e.target.value },
+                          }))
+                        }
+                        placeholder={
+                          resolution.resolution === 'custom'
+                            ? 'Write your own answer...'
+                            : 'Edit the merged answer...'
+                        }
+                        rows={4}
+                        className="w-full px-4 py-3 rounded-lg focus:outline-none transition-colors"
+                        style={{ fontFamily: 'var(--font-parent-body)', fontSize: '19px', color: '#5C5347', border: '1px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.4)', resize: 'vertical' }}
+                      />
+                      <MicButton
+                        size="sm"
+                        onTranscript={(t) =>
+                          setConflictResolutions((prev) => ({
+                            ...prev,
+                            [key]: { ...prev[key], value: prev[key]?.value ? `${prev[key].value} ${t}` : t },
+                          }))
+                        }
+                      />
+                    </div>
                   )}
 
                   {/* Resolution indicator */}

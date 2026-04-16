@@ -16,6 +16,7 @@ import { usePerson } from '@/hooks/usePerson';
 import { useEntryChat } from '@/hooks/useEntryChat';
 import Navigation from '@/components/layout/Navigation';
 import SideNav from '@/components/layout/SideNav';
+import { MicButton } from '@/components/voice/MicButton';
 import { JOURNAL_CATEGORIES, type JournalCategory, type JournalEntry } from '@/types/journal';
 import { getDimension, type DimensionId } from '@/config/relationship-dimensions';
 
@@ -480,16 +481,26 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
             aria-label="Entry title"
           />
 
-          <textarea
-            className="entry-body"
-            placeholder={isMine ? 'Keep writing…' : ''}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            onBlur={() => void flush()}
-            readOnly={!isMine}
-            rows={10}
-            aria-label="Entry body"
-          />
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+            <textarea
+              className="entry-body"
+              placeholder={isMine ? 'Keep writing…' : ''}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              onBlur={() => void flush()}
+              readOnly={!isMine}
+              rows={10}
+              aria-label="Entry body"
+              style={{ flex: 1 }}
+            />
+            {isMine && (
+              <MicButton
+                size="sm"
+                disabled={saveStatus === 'saving'}
+                onTranscript={(t) => setBody((prev) => (prev ? `${prev} ${t}` : t))}
+              />
+            )}
+          </div>
 
           {/* Media attachments */}
           {entry.media && entry.media.length > 0 && (
@@ -627,6 +638,11 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
                     placeholder="Reply…"
                     disabled={chatLoading}
                     className="chat-input"
+                  />
+                  <MicButton
+                    size="sm"
+                    disabled={chatLoading}
+                    onTranscript={(t) => setChatInput((prev) => (prev ? `${prev} ${t}` : t))}
                   />
                   <button
                     type="button"
