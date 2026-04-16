@@ -32,6 +32,66 @@ export interface UseAudioRecordingOptions {
 // here cuts the blob size to ~1/3 without accuracy loss.
 const TARGET_SAMPLE_RATE = 16000;
 
+// ──────────────────────────────────────────────────────────────
+// Module-level MediaStream cache
+//
+// Each getUserMedia() call triggers an OS-level mic-in-use notification
+// (meeting-transcription apps like Granola, Krisp, etc. fire on every
+// acquisition). Caching the stream across consecutive recordings means
+// one notification per session instead of one per click. The stream is
+// released after CACHE_IDLE_MS of no recording activity, at which point
+// the browser's red "mic in use" indicator goes away.
+// ──────────────────────────────────────────────────────────────
+
+const CACHE_IDLE_MS = 60_000;
+
+let cachedStream: MediaStream | null = null;
+let cachedDeviceId: string | undefined;
+let releaseTimer: ReturnType<typeof setTimeout> | null = null;
+
+function streamIsLive(s: MediaStream | null): s is MediaStream {
+  if (!s) return false;
+  return s.getAudioTracks().some((t) => t.readyState === 'live');
+}
+
+function releaseStream(): void {
+  if (releaseTimer) { clearTimeout(releaseTimer); releaseTimer = null; }
+  if (cachedStream) {
+    cachedStream.getTracks().forEach((t) => t.stop());
+    cachedStream = null;
+    cachedDeviceId = undefined;
+  }
+}
+
+function scheduleRelease(): void {
+  if (releaseTimer) clearTimeout(releaseTimer);
+  releaseTimer = setTimeout(releaseStream, CACHE_IDLE_MS);
+}
+
+function cancelRelease(): void {
+  if (releaseTimer) { clearTimeout(releaseTimer); releaseTimer = null; }
+}
+
+async function acquireStream(deviceId?: string): Promise<MediaStream> {
+  cancelRelease();
+  if (cachedStream && cachedDeviceId === deviceId && streamIsLive(cachedStream)) {
+    return cachedStream;
+  }
+  if (cachedStream) releaseStream();
+  const constraints: MediaTrackConstraints = deviceId
+    ? { deviceId: { exact: deviceId } }
+    : {};
+  cachedStream = await navigator.mediaDevices.getUserMedia({ audio: constraints });
+  cachedDeviceId = deviceId;
+  return cachedStream;
+}
+
+// Ensure the stream is released when the tab closes — stops the persistent
+// browser "mic in use" indicator and releases the device for other apps.
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', releaseStream);
+}
+
 function downsample(samples: Float32Array, inputRate: number, outputRate: number): Float32Array {
   if (outputRate >= inputRate) return samples;
   const ratio = inputRate / outputRate;
@@ -112,8 +172,11 @@ export function useAudioRecording(options: UseAudioRecordingOptions = {}): UseAu
     sourceRef.current = null;
     ctxRef.current?.close().catch(() => {});
     ctxRef.current = null;
-    streamRef.current?.getTracks().forEach((t) => t.stop());
+    // Don't stop the stream tracks — they're shared across MicButtons. Schedule
+    // a release for CACHE_IDLE_MS from now; if another recording starts before
+    // then, the scheduled release is cancelled and the stream is reused.
     streamRef.current = null;
+    scheduleRelease();
     samplesRef.current = [];
     setElapsedSec(0);
   }, []);
@@ -140,10 +203,7 @@ export function useAudioRecording(options: UseAudioRecordingOptions = {}): UseAu
     setError(null);
     setState('requesting-permission');
     try {
-      const audioConstraints: MediaTrackConstraints = deviceId
-        ? { deviceId: { exact: deviceId } }
-        : {};
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+      const stream = await acquireStream(deviceId);
       streamRef.current = stream;
 
       const AudioCtx =
