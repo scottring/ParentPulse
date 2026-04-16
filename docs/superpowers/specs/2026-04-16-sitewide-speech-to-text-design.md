@@ -32,7 +32,7 @@ The "minimal effort" memory says the app must not be a chore — voice removes t
 ```
 
 - `onTranscript(text)`: called once per recording with final transcribed text. Caller owns insertion logic.
-- `size`: `sm` = 24 px tap target, 14 px glyph (margin notes, chat). `md` = 36 px tap target, 18 px glyph (capture, modals).
+- `size`: `sm` = 14 px glyph, `md` = 18 px glyph. Both sizes use a 44 × 44 px hit area (transparent padding around the visible glyph) to meet WCAG touch-target guidance even when the glyph itself is small (e.g., margin notes).
 - `disabled`: parent-driven disable.
 - `className`: positioning override for in-field placement.
 
