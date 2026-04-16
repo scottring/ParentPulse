@@ -49,3 +49,48 @@ describe("signal.hasJuicySignal — keyword match", () => {
     assert.ok(THEME_KEYWORDS.courage.length > 0, "should have at least one keyword");
   });
 });
+
+describe("signal.hasJuicySignal — additional rules", () => {
+  const now = new Date("2026-04-16T12:00:00Z");
+  const recent = new Date("2026-04-15T12:00:00Z");
+
+  it("matches on the salient flag even without keyword match", () => {
+    const result = hasJuicySignal({
+      theme: "courage",
+      recentJournalEntries: [
+        { id: "j1", text: "We had a really long day", createdAt: recent, authorIsHouseholdMember: true, salient: true },
+      ],
+      recentManualAnswers: [],
+      synthCountInLast7Days: 0,
+      now,
+    });
+    assert.strictEqual(result.matched, true);
+  });
+
+  it("excludes contributions from non-household members (observers/friends)", () => {
+    const result = hasJuicySignal({
+      theme: "courage",
+      recentJournalEntries: [
+        { id: "j1", text: "Mia was brave", createdAt: recent, authorIsHouseholdMember: false },
+      ],
+      recentManualAnswers: [],
+      synthCountInLast7Days: 0,
+      now,
+    });
+    assert.strictEqual(result.matched, false);
+  });
+
+  it("respects the 2-per-week synthesis cap", () => {
+    const result = hasJuicySignal({
+      theme: "courage",
+      recentJournalEntries: [
+        { id: "j1", text: "brave", createdAt: recent, authorIsHouseholdMember: true },
+      ],
+      recentManualAnswers: [],
+      synthCountInLast7Days: 2,
+      now,
+    });
+    assert.strictEqual(result.matched, false);
+    assert.strictEqual(result.reason, "synth-cap-reached");
+  });
+});
