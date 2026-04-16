@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Timestamp } from 'firebase/firestore';
-import { MarginColumn } from '@/components/journal-spread/MarginColumn';
+import { MarginColumn, MarginItem } from '@/components/journal-spread/MarginColumn';
 import type { Entry } from '@/types/entry';
+import type { MarginNote } from '@/types/marginNote';
 
 const entry = (over: Partial<Entry>): Entry => ({
   id: 'x',
@@ -53,5 +55,72 @@ describe('MarginColumn', () => {
     });
     render(<MarginColumn side="left" entries={[s]} />);
     expect(screen.getByText(/synthesized/i)).toBeInTheDocument();
+  });
+});
+
+describe('MarginItem', () => {
+  const mkNote = (over: Partial<MarginNote>): MarginNote => ({
+    id: 'n1',
+    familyId: 'f1',
+    journalEntryId: 'x',
+    authorUserId: 'u1',
+    content: 'scribble',
+    createdAt: Timestamp.now(),
+    visibleToUserIds: ['u1'],
+    sharedWithUserIds: [],
+    ...over,
+  });
+
+  const baseProps = {
+    currentUserId: 'u1',
+    resolveUserName: (_uid: string) => 'Me',
+    onCreateNote: async () => 'new-id',
+  };
+
+  it('renders user notes above tags', () => {
+    const e = entry({
+      id: 'x',
+      tags: ['curiosity'],
+    });
+    const { container } = render(
+      <MarginItem
+        entry={e}
+        side="left"
+        notes={[mkNote({ content: 'yes this' })]}
+        {...baseProps}
+      />
+    );
+    const text = container.textContent ?? '';
+    expect(text.indexOf('yes this')).toBeLessThan(text.indexOf('curiosity'));
+  });
+
+  it('shows composer trigger for annotatable entries when viewer can see the entry', () => {
+    const e = entry({ id: 'x', type: 'written', visibleToUserIds: ['u1'] });
+    render(
+      <MarginItem entry={e} side="left" notes={[]} {...baseProps} />
+    );
+    expect(
+      screen.getByRole('button', { name: /add margin note/i })
+    ).toBeInTheDocument();
+  });
+
+  it('hides composer trigger for non-annotatable entry types', () => {
+    const e = entry({ id: 'x', type: 'synthesis', visibleToUserIds: ['u1'] });
+    render(
+      <MarginItem entry={e} side="left" notes={[]} {...baseProps} />
+    );
+    expect(
+      screen.queryByRole('button', { name: /add margin note/i })
+    ).toBeNull();
+  });
+
+  it('clicking composer trigger switches to the composer', async () => {
+    const e = entry({ id: 'x', type: 'written', visibleToUserIds: ['u1'] });
+    const user = userEvent.setup();
+    render(
+      <MarginItem entry={e} side="left" notes={[]} {...baseProps} />
+    );
+    await user.click(screen.getByRole('button', { name: /add margin note/i }));
+    expect(screen.getByRole('textbox', { name: /margin note/i })).toBeInTheDocument();
   });
 });
