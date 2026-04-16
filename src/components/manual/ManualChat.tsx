@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useManualChat, SuggestedQuestion } from '@/hooks/useManualChat';
+import { MicButton } from '@/components/voice/MicButton';
 import { PersonManual } from '@/types/person-manual';
 
 interface ManualChatProps {
@@ -202,6 +203,11 @@ export function ManualChat({ personId, personName, manual }: ManualChatProps) {
               lineHeight: 1.45,
               padding: '4px 0',
             }}
+          />
+          <MicButton
+            size="sm"
+            disabled={loading}
+            onTranscript={(t) => setInput((prev) => (prev ? `${prev} ${t}` : t))}
           />
           {input.trim() && (
             <button

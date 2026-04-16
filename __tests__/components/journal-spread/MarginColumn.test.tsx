@@ -1,7 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Timestamp } from 'firebase/firestore';
+
+vi.mock('@/components/voice/MicButton', () => ({
+  MicButton: () => null,
+}));
+
 import { MarginColumn, MarginItem } from '@/components/journal-spread/MarginColumn';
 import type { Entry } from '@/types/entry';
 import type { MarginNote } from '@/types/marginNote';

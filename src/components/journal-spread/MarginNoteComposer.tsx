@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
 import { MARGIN_NOTE_MAX_LENGTH } from '@/types/marginNote';
+import { MicButton } from '@/components/voice/MicButton';
 
 export interface MarginNoteComposerProps {
   /** Which margin side we're rendering in — controls text alignment. */
@@ -71,17 +72,28 @@ export function MarginNoteComposer({
 
   return (
     <div className={`composer align-${side}`}>
-      <input
-        ref={ref}
-        type="text"
-        value={value}
-        onChange={(e) => setValue(e.target.value.slice(0, MARGIN_NOTE_MAX_LENGTH))}
-        onKeyDown={handleKeyDown}
-        onBlur={handleCommitOrCancel}
-        maxLength={MARGIN_NOTE_MAX_LENGTH}
-        aria-label="Margin note"
-        className="input"
-      />
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        <input
+          ref={ref}
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value.slice(0, MARGIN_NOTE_MAX_LENGTH))}
+          onKeyDown={handleKeyDown}
+          onBlur={handleCommitOrCancel}
+          maxLength={MARGIN_NOTE_MAX_LENGTH}
+          aria-label="Margin note"
+          className="input"
+        />
+        <MicButton
+          size="sm"
+          onTranscript={(t) => {
+            setValue((prev) => {
+              const combined = prev ? `${prev} ${t}` : t;
+              return combined.slice(0, MARGIN_NOTE_MAX_LENGTH);
+            });
+          }}
+        />
+      </span>
       {showCounter && (
         <div className={counterClass} aria-live="polite" aria-atomic="true">
           {length} / {MARGIN_NOTE_MAX_LENGTH}

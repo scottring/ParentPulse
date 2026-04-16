@@ -4,6 +4,12 @@ import { Timestamp } from 'firebase/firestore';
 import { JournalSpread } from '@/components/journal-spread/JournalSpread';
 import type { Entry } from '@/types/entry';
 
+// Mock MicButton (transitively imported via MarginNoteComposer) so tests
+// don't need real Firebase env vars.
+vi.mock('@/components/voice/MicButton', () => ({
+  MicButton: () => null,
+}));
+
 // Mock hooks that transitively import @/lib/firebase so the test
 // environment doesn't need real Firebase env vars.
 vi.mock('@/hooks/useMarginNotes', () => ({
