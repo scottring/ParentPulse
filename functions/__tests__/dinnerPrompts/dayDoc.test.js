@@ -86,3 +86,27 @@ describe("dayDoc.recordReport", () => {
     assert.ok(state.reportedAt instanceof Date);
   });
 });
+
+describe("dayDoc.recentlyServedLibraryIds", () => {
+  const { recentlyServedLibraryIds } = require("../../dinnerPrompts/dayDoc");
+
+  it("returns library ids from days within the window", async () => {
+    const fakeDays = {
+      where: () => ({
+        get: async () => ({
+          docs: [
+            { data: () => ({ source: "library", sourceRefs: { libraryId: "a" } }) },
+            { data: () => ({ source: "synthesized", sourceRefs: { journalEntryIds: ["j1"] } }) },
+            { data: () => ({ source: "library", sourceRefs: { libraryId: "b" } }) },
+          ],
+        }),
+      }),
+    };
+    const ids = await recentlyServedLibraryIds({
+      daysCollection: fakeDays,
+      now: new Date("2026-04-16T00:00:00Z"),
+      windowDays: 30,
+    });
+    assert.deepStrictEqual(ids.sort(), ["a", "b"]);
+  });
+});

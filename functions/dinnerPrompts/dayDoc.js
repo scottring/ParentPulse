@@ -48,4 +48,18 @@ async function recordReport({ ref, reason, now }) {
   });
 }
 
-module.exports = { writeNewDay, readDay, recordSwap, recordReport };
+async function recentlyServedLibraryIds({ daysCollection, now, windowDays }) {
+  const since = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
+  const sinceIso = since.toISOString().slice(0, 10);
+  const snap = await daysCollection.where("__name__", ">=", sinceIso).get();
+  const ids = [];
+  snap.docs.forEach(d => {
+    const data = d.data();
+    if (data.source === "library" && data.sourceRefs && data.sourceRefs.libraryId) {
+      ids.push(data.sourceRefs.libraryId);
+    }
+  });
+  return ids;
+}
+
+module.exports = { writeNewDay, readDay, recordSwap, recordReport, recentlyServedLibraryIds };
