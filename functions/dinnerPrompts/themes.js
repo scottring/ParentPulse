@@ -30,4 +30,9 @@ function pickTheme({ householdId, date, audience }) {
   return THEMES[idx];
 }
 
-module.exports = { pickTheme, THEMES, isoWeekKey };
+function audienceForDate(date) {
+  // getUTCDay: 0=Sun, 1=Mon, ..., 5=Fri, 6=Sat
+  return date.getUTCDay() === 5 ? "adult" : "kid";
+}
+
+module.exports = { pickTheme, THEMES, isoWeekKey, audienceForDate };
