@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { MicButton } from '@/components/voice/MicButton';
+import { useAudioRecording } from '@/hooks/useAudioRecording';
 
 const STORAGE_KEY = 'voice:deviceId';
 
@@ -132,6 +133,8 @@ export default function VoiceTestPage() {
         )}
       </section>
 
+      <HookDiagnostic deviceId={deviceId || undefined} />
+
       <section>
         <h2 style={{ fontSize: 18 }}>Real feature: MicButton + Whisper</h2>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 16 }}>
@@ -150,5 +153,59 @@ export default function VoiceTestPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+function HookDiagnostic({ deviceId }: { deviceId?: string }) {
+  const rec = useAudioRecording({ deviceId });
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [blobSize, setBlobSize] = useState<number | null>(null);
+
+  const toggle = async () => {
+    if (rec.state === 'recording') {
+      const blob = await rec.stop();
+      if (blob) {
+        setBlobUrl(URL.createObjectURL(blob));
+        setBlobSize(blob.size);
+      }
+      return;
+    }
+    setBlobUrl(null);
+    setBlobSize(null);
+    await rec.start();
+  };
+
+  return (
+    <section style={{ border: '1px solid #d0c7b8', padding: 16, borderRadius: 8, marginBottom: 24 }}>
+      <h2 style={{ fontSize: 18, marginTop: 0 }}>Diagnostic: hook recorder</h2>
+      <p style={{ fontSize: 13, color: '#666' }}>
+        Uses <code>useAudioRecording</code> (our hook) directly, bypassing MicButton + Whisper.
+        Record → Stop → play it back. If this sounds silent but Raw recorder works, the hook is the bug.
+      </p>
+      <button
+        type="button"
+        onClick={toggle}
+        style={{
+          padding: '8px 16px',
+          background: rec.state === 'recording' ? '#C97B63' : '#8a6f4a',
+          color: 'white',
+          border: 'none',
+          borderRadius: 6,
+          cursor: 'pointer',
+          fontSize: 14,
+        }}
+      >
+        {rec.state === 'recording' ? 'Stop' : 'Record'}
+      </button>
+      {rec.state === 'recording' && (
+        <span style={{ marginLeft: 12, color: '#C97B63' }}>recording… {rec.elapsedSec}s</span>
+      )}
+      {blobUrl && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Blob: {blobSize} bytes</div>
+          <audio src={blobUrl} controls style={{ width: '100%' }} />
+        </div>
+      )}
+    </section>
   );
 }
