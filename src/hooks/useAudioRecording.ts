@@ -122,25 +122,10 @@ export function useAudioRecording(options: UseAudioRecordingOptions = {}): UseAu
         }
       };
 
-      // AnalyserNode for silence detection. AudioContext requires a user gesture on
-      // some browsers; the click that triggered start() satisfies that.
-      try {
-        const AudioCtx =
-          (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).AudioContext ??
-          (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-        if (AudioCtx) {
-          const ctx = new AudioCtx();
-          const source = ctx.createMediaStreamSource(stream);
-          const analyser = ctx.createAnalyser();
-          analyser.fftSize = 1024;
-          rmsBufferRef.current = new Float32Array(new ArrayBuffer(analyser.fftSize * 4));
-          source.connect(analyser);
-          audioCtxRef.current = ctx;
-          analyserRef.current = analyser;
-        }
-      } catch {
-        // If AudioContext is unavailable, silence auto-stop is skipped; hard cap still applies.
-      }
+      // Silence detection via AudioContext is DISABLED pending investigation of a
+      // Chrome issue where createMediaStreamSource appears to starve MediaRecorder
+      // of audio (blob sizes drop to ~300 B/s, Whisper hallucinates "you").
+      // The hard 90-second cap still applies.
 
       recorder.start();
       startTsRef.current = Date.now();
