@@ -99,3 +99,70 @@ describe("handlers.handleGetDinnerPrompt — happy path (library)", () => {
     sinon.assert.notCalled(deps.writeNewDay);
   });
 });
+
+describe("handlers.handleSwapDinnerPrompt", () => {
+  const { handleSwapDinnerPrompt } = require("../../dinnerPrompts/handlers");
+
+  it("records a swap and returns a new prompt", async () => {
+    const req = fakeReq({
+      method: "POST",
+      body: { householdId: "h1", date: "2026-04-16", swap: true },
+      headers: { authorization: "Bearer test-key" },
+    });
+    const res = fakeRes();
+
+    const deps = {
+      validateApiKey: sinon.stub().resolves({ ok: true }),
+      readDay: sinon.stub().resolves({
+        text: "Old?", audience: "kid", theme: "courage", source: "library",
+        sourceRefs: { libraryId: "courage-001" }, status: "served",
+      }),
+      recordSwap: sinon.stub().resolves(),
+      audienceForDate: () => "kid",
+      pickTheme: () => "courage",
+      hasJuicySignal: () => ({ matched: false }),
+      pickWithFallback: () => ({
+        prompt: { id: "courage-002", text: "New brave?", themes: ["courage"], audiences: ["kid"] },
+        relaxation: "none",
+      }),
+      collectRecentSignals: sinon.stub().resolves({ journalEntries: [], manualAnswers: [] }),
+      recentlyServedLibraryIds: sinon.stub().resolves(["courage-001"]),
+      flaggedLibraryIds: sinon.stub().resolves([]),
+      synthCountInLast7Days: sinon.stub().resolves(0),
+      synthesizeOrFallback: sinon.stub(),
+      library: [],
+      anthropicClient: null,
+      householdMemberIds: ["user-1"],
+      collections: {
+        apiKeys: {}, days: { doc: () => ({}) }, overlay: {}, journals: {}, contributions: {},
+      },
+      now: new Date("2026-04-16T23:00:00Z"),
+    };
+
+    await handleSwapDinnerPrompt(req, res, deps);
+
+    assert.strictEqual(res.statusCode, 200);
+    assert.strictEqual(res.body.text, "New brave?");
+    sinon.assert.calledOnce(deps.recordSwap);
+    const swapArgs = deps.recordSwap.firstCall.args[0];
+    assert.strictEqual(swapArgs.newPayload.text, "New brave?");
+    assert.strictEqual(swapArgs.newPayload.sourceRefs.libraryId, "courage-002");
+  });
+
+  it("returns 404 when there is no day-doc to swap from", async () => {
+    const req = fakeReq({
+      method: "POST",
+      body: { householdId: "h1", date: "2026-04-16", swap: true },
+      headers: { authorization: "Bearer test-key" },
+    });
+    const res = fakeRes();
+    const deps = {
+      validateApiKey: sinon.stub().resolves({ ok: true }),
+      readDay: sinon.stub().resolves(null),
+      collections: { apiKeys: {}, days: { doc: () => ({}) } },
+      now: new Date(),
+    };
+    await handleSwapDinnerPrompt(req, res, deps);
+    assert.strictEqual(res.statusCode, 404);
+  });
+});

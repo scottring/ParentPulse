@@ -119,4 +119,45 @@ async function handleGetDinnerPrompt(req, res, deps) {
   res.status(200).json(shapeResponse({ ...generated, audience, theme, servedAt: deps.now }, includeRefs));
 }
 
-module.exports = { handleGetDinnerPrompt, dayDocPath, shapeResponse };
+async function handleSwapDinnerPrompt(req, res, deps) {
+  const apiKey = extractBearer(req.headers.authorization);
+  const { householdId, date: dateStr } = req.body;
+
+  if (!householdId || !dateStr) {
+    res.status(400).json({ error: "householdId and date are required" });
+    return;
+  }
+
+  const auth = await deps.validateApiKey({
+    apiKey, householdId, apiKeysCollection: deps.collections.apiKeys,
+  });
+  if (!auth.ok) {
+    res.status(auth.status).json({ error: auth.error });
+    return;
+  }
+
+  const dayRef = deps.collections.days.doc(dateStr);
+  const existing = await deps.readDay({ ref: dayRef });
+  if (!existing) {
+    res.status(404).json({ error: "no prompt to swap; call GET first" });
+    return;
+  }
+
+  const audience = existing.audience;
+  const theme = existing.theme;
+  const generated = await generatePrompt({ deps, householdId, dateStr, audience, theme });
+  if (!generated) {
+    res.status(500).json({ error: "no replacement prompt could be produced" });
+    return;
+  }
+
+  await deps.recordSwap({
+    ref: dayRef,
+    newPayload: generated,
+    now: deps.now,
+  });
+
+  res.status(200).json(shapeResponse({ ...generated, audience, theme, servedAt: deps.now }, false));
+}
+
+module.exports = { handleGetDinnerPrompt, handleSwapDinnerPrompt, dayDocPath, shapeResponse };
