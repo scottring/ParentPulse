@@ -82,6 +82,7 @@ const COMMON_OPTS = {
   timeoutSeconds: 30,
   secrets: ["ANTHROPIC_API_KEY"],
   cors: true,
+  invoker: "public",
 };
 
 const getDinnerPrompt = onRequest(COMMON_OPTS, async (req, res) => {
