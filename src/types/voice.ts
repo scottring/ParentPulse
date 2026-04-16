@@ -35,10 +35,14 @@ export interface TranscribeResponse {
   text: string;
 }
 
-/** Hard caps enforced on both client and server. */
+/** Hard caps enforced server-side (and mirrored on the client for UX). */
 export const VOICE_LIMITS = {
   MAX_RECORDING_SECONDS: 90,
+  MAX_DAILY_MINUTES_PER_USER: 30,
+} as const;
+
+/** Client-only recording behavior tuning. Not enforced by the server. */
+export const RECORDING_TUNING = {
   SILENCE_AUTO_STOP_SECONDS: 30,
   SILENCE_RMS_THRESHOLD: 0.01,
-  MAX_DAILY_MINUTES_PER_USER: 30,
 } as const;
