@@ -62,4 +62,13 @@ async function recentlyServedLibraryIds({ daysCollection, now, windowDays }) {
   return ids;
 }
 
-module.exports = { writeNewDay, readDay, recordSwap, recordReport, recentlyServedLibraryIds };
+async function synthCountInLast7Days({ daysCollection, now }) {
+  const since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const sinceIso = since.toISOString().slice(0, 10);
+  const snap = await daysCollection.where("__name__", ">=", sinceIso).get();
+  let count = 0;
+  snap.docs.forEach(d => { if (d.data().source === "synthesized") count++; });
+  return count;
+}
+
+module.exports = { writeNewDay, readDay, recordSwap, recordReport, recentlyServedLibraryIds, synthCountInLast7Days };

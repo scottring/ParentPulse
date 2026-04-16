@@ -110,3 +110,26 @@ describe("dayDoc.recentlyServedLibraryIds", () => {
     assert.deepStrictEqual(ids.sort(), ["a", "b"]);
   });
 });
+
+describe("dayDoc.synthCountInLast7Days", () => {
+  const { synthCountInLast7Days } = require("../../dinnerPrompts/dayDoc");
+
+  it("counts day-docs with source: synthesized in the last 7 days", async () => {
+    const fakeDays = {
+      where: () => ({
+        get: async () => ({
+          docs: [
+            { data: () => ({ source: "synthesized" }) },
+            { data: () => ({ source: "library" }) },
+            { data: () => ({ source: "synthesized" }) },
+          ],
+        }),
+      }),
+    };
+    const count = await synthCountInLast7Days({
+      daysCollection: fakeDays,
+      now: new Date("2026-04-16T00:00:00Z"),
+    });
+    assert.strictEqual(count, 2);
+  });
+});
