@@ -10767,3 +10767,9 @@ exports.transcribeAudio = onCall(
     },
     transcribeAudioHandler,
 );
+
+// Dinner prompt API (Symphony wall-kiosk integration)
+const dinnerPromptApi = require("./dinnerPrompts");
+exports.getDinnerPrompt = dinnerPromptApi.getDinnerPrompt;
+exports.reportDinnerPrompt = dinnerPromptApi.reportDinnerPrompt;
+
