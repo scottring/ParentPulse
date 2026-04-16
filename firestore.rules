@@ -809,5 +809,18 @@ service cloud.firestore {
       // Parents can delete child workbooks in their family
       allow delete: if isParent() && belongsToFamily(resource.data.familyId);
     }
+
+    // Rate-limit counters per user (written only by transcribeAudio Cloud
+    // Function via Admin SDK, which bypasses these rules). Clients may
+    // never read or write directly.
+    match /rate_limits/{uid} {
+      allow read, write: if false;
+    }
+
+    // Transcription cost log (written only by transcribeAudio Cloud
+    // Function). Clients may never read or write directly.
+    match /transcription_logs/{logId} {
+      allow read, write: if false;
+    }
   }
 }
