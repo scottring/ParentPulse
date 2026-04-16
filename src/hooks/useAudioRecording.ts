@@ -56,7 +56,7 @@ export function useAudioRecording(): UseAudioRecordingApi {
   const lastBlobRef = useRef<Blob | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const rmsBufferRef = useRef<Float32Array | null>(null);
+  const rmsBufferRef = useRef<Float32Array<ArrayBuffer> | null>(null);
   const silenceStartRef = useRef<number | null>(null);
 
   const cleanup = useCallback(() => {
@@ -76,7 +76,7 @@ export function useAudioRecording(): UseAudioRecordingApi {
     setElapsedSec(0);
   }, []);
 
-  function computeRms(analyser: AnalyserNode, buf: Float32Array): number {
+  function computeRms(analyser: AnalyserNode, buf: Float32Array<ArrayBuffer>): number {
     analyser.getFloatTimeDomainData(buf);
     let sumSq = 0;
     for (let i = 0; i < buf.length; i++) sumSq += buf[i] * buf[i];
@@ -124,7 +124,7 @@ export function useAudioRecording(): UseAudioRecordingApi {
           const source = ctx.createMediaStreamSource(stream);
           const analyser = ctx.createAnalyser();
           analyser.fftSize = 1024;
-          rmsBufferRef.current = new Float32Array(analyser.fftSize);
+          rmsBufferRef.current = new Float32Array(new ArrayBuffer(analyser.fftSize * 4));
           source.connect(analyser);
           audioCtxRef.current = ctx;
           analyserRef.current = analyser;
