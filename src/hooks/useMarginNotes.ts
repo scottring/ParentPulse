@@ -157,6 +157,8 @@ export function useMarginNoteMutations(): UseMarginNotesMutationsResult {
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  // Firestore rules enforce author-only update/delete — client checks only auth presence.
+
 
   const createNote = useCallback(
     async (journalEntryId: string, content: string): Promise<string> => {
@@ -209,7 +211,7 @@ export function useMarginNoteMutations(): UseMarginNotesMutationsResult {
 
   const updateNote = useCallback(
     async (noteId: string, content: string): Promise<void> => {
-      if (!user?.userId) throw new Error('Not authenticated');
+      if (!user?.userId || !user?.familyId) throw new Error('Not authenticated');
       const v = validateNoteContent(content);
       if (!v.ok) {
         throw new Error(
@@ -235,7 +237,7 @@ export function useMarginNoteMutations(): UseMarginNotesMutationsResult {
 
   const deleteNote = useCallback(
     async (noteId: string): Promise<void> => {
-      if (!user?.userId) throw new Error('Not authenticated');
+      if (!user?.userId || !user?.familyId) throw new Error('Not authenticated');
       setSaving(true);
       setError(null);
       try {
