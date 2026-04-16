@@ -111,4 +111,31 @@ describe('MarginNoteComposer', () => {
     input.blur();
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
+
+  it('renders delete button only when onDelete prop is provided', async () => {
+    const onDelete = vi.fn();
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <MarginNoteComposer
+        side="left"
+        initialValue="existing"
+        onCommit={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole('button', { name: /delete margin note/i })).toBeNull();
+
+    rerender(
+      <MarginNoteComposer
+        side="left"
+        initialValue="existing"
+        onCommit={vi.fn()}
+        onCancel={vi.fn()}
+        onDelete={onDelete}
+      />
+    );
+    const deleteBtn = screen.getByRole('button', { name: /delete margin note/i });
+    await user.click(deleteBtn);
+    expect(onDelete).toHaveBeenCalledTimes(1);
+  });
 });

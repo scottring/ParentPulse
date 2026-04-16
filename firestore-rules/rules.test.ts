@@ -998,5 +998,49 @@ describe.skipIf(!emulatorAvailable)('Firestore Security Rules', () => {
         deleteDoc(doc(ctx.firestore(), 'margin_notes', 'mn-parent-on-private'))
       );
     });
+
+    it('non-author parent who can see the entry can create a note', async () => {
+      // We need a second parent who is a family member AND in
+      // visibleToUserIds of the parent entry. The existing test users
+      // don't include a second parent — seed one inline for this test.
+      await testEnv!.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore();
+        await setDoc(doc(db, 'users', 'co-parent-user-id'), {
+          email: 'coparent@test.com',
+          role: 'parent',
+          familyId: FAMILY_ID,
+        });
+        // Share the existing private entry with the co-parent so
+        // they're in visibleToUserIds.
+        await setDoc(
+          doc(db, 'journal_entries', 'je-parent-private'),
+          {
+            entryId: 'je-parent-private',
+            familyId: FAMILY_ID,
+            authorId: parentUser.uid,
+            text: 'private entry',
+            category: 'moment',
+            tags: [],
+            personMentions: [],
+            visibleToUserIds: [parentUser.uid, 'co-parent-user-id'],
+            sharedWithUserIds: ['co-parent-user-id'],
+            createdAt: new Date(),
+          }
+        );
+      });
+
+      const ctx = getAuthContext('co-parent-user-id');
+      await assertSucceeds(
+        addDoc(collection(ctx.firestore(), 'margin_notes'), {
+          familyId: FAMILY_ID,
+          journalEntryId: 'je-parent-private',
+          authorUserId: 'co-parent-user-id',
+          content: 'coparent observation',
+          createdAt: new Date(),
+          visibleToUserIds: [parentUser.uid, 'co-parent-user-id'],
+          sharedWithUserIds: ['co-parent-user-id'],
+        })
+      );
+    });
   });
 });

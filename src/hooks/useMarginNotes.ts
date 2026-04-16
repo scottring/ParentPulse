@@ -113,6 +113,7 @@ export function useMarginNotesForJournalEntries(
         setLoading(false);
       },
       (err) => {
+        console.error('useMarginNotesForJournalEntries: subscription error', err);
         setError(err as Error);
         setLoading(false);
       }

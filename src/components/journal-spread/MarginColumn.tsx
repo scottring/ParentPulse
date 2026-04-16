@@ -121,6 +121,14 @@ export function MarginItem({
               setEditingNoteId(null);
             }}
             onCancel={() => setEditingNoteId(null)}
+            onDelete={
+              onDeleteNote
+                ? async () => {
+                    await onDeleteNote(n.id);
+                    setEditingNoteId(null);
+                  }
+                : undefined
+            }
           />
         ) : (
           <UserMarginNote

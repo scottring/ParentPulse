@@ -14,6 +14,11 @@ export interface MarginNoteComposerProps {
   onCancel: () => void;
   /** Optional auto-focus — default true. */
   autoFocus?: boolean;
+  /**
+   * When provided (edit mode), renders a small delete affordance.
+   * Clicking it calls onDelete instead of committing the edit.
+   */
+  onDelete?: () => void;
 }
 
 const COUNTER_SHOW_AT = 60;
@@ -29,6 +34,7 @@ export function MarginNoteComposer({
   onCommit,
   onCancel,
   autoFocus = true,
+  onDelete,
 }: MarginNoteComposerProps) {
   const [value, setValue] = useState(initialValue);
   const ref = useRef<HTMLInputElement>(null);
@@ -81,6 +87,21 @@ export function MarginNoteComposer({
           {length} / {MARGIN_NOTE_MAX_LENGTH}
         </div>
       )}
+      {onDelete && (
+        <button
+          type="button"
+          className="delete-btn"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            if (handledRef.current) return;
+            handledRef.current = true;
+            onDelete();
+          }}
+          aria-label="Delete margin note"
+        >
+          delete
+        </button>
+      )}
       <style jsx>{`
         .composer {
           font-family: Georgia, 'Times New Roman', serif;
@@ -114,6 +135,20 @@ export function MarginNoteComposer({
           opacity: 0.7;
         }
         .counter-amber { color: #b07a28; }
+        .delete-btn {
+          appearance: none;
+          background: transparent;
+          border: none;
+          font: inherit;
+          font-size: 9px;
+          color: #a66;
+          cursor: pointer;
+          opacity: 0.5;
+          letter-spacing: 0.08em;
+          padding: 2px 0;
+          margin-top: 2px;
+        }
+        .delete-btn:hover { opacity: 1; }
       `}</style>
     </div>
   );
