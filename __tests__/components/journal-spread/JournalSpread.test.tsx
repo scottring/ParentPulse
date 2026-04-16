@@ -31,6 +31,16 @@ vi.mock('@/hooks/usePeopleMap', () => ({
   usePeopleMap: () => ({ byId: {}, nameOf: (id: string) => id, loading: false }),
 }));
 
+vi.mock('@/hooks/useJournal', () => ({
+  useJournal: () => ({
+    createEntry: vi.fn(),
+    updateEntry: vi.fn(),
+    deleteEntry: vi.fn(),
+    saving: false,
+    error: null,
+  }),
+}));
+
 const make = (i: number): Entry => ({
   id: `e${i}`,
   familyId: 'f1',
