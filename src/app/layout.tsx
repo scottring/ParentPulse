@@ -5,6 +5,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { WalkthroughProvider } from "@/components/walkthrough/WalkthroughContext";
 import WalkthroughOverlay from "@/components/walkthrough/WalkthroughOverlay";
 import WalkthroughTrigger from "@/components/walkthrough/WalkthroughTrigger";
+import PageFooter from "@/components/layout/PageFooter";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -49,6 +50,7 @@ export default function RootLayout({
         <AuthProvider>
           <WalkthroughProvider>
             {children}
+            <PageFooter />
             <WalkthroughOverlay />
             <WalkthroughTrigger />
           </WalkthroughProvider>
