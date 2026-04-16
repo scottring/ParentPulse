@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Mic, AlertCircle } from 'lucide-react';
 import { useAudioRecording } from '@/hooks/useAudioRecording';
 import { transcribeBlob } from '@/lib/transcribeClient';
@@ -20,6 +20,10 @@ export function MicButton({ onTranscript, size = 'md', disabled, className }: Pr
   const rec = useAudioRecording();
   const [postError, setPostError] = useState<RecordingError | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const error = postError ?? rec.error;
   const isRecording = rec.state === 'recording';
@@ -50,6 +54,7 @@ export function MicButton({ onTranscript, size = 'md', disabled, className }: Pr
     setIsTranscribing(true);
     try {
       const text = await transcribeBlob(blob, elapsed);
+      if (!mountedRef.current) return;
       const trimmed = text.trim();
       if (!trimmed) {
         setPostError({ kind: 'empty', message: 'No speech detected — try again.' });
@@ -57,9 +62,10 @@ export function MicButton({ onTranscript, size = 'md', disabled, className }: Pr
       }
       onTranscript(trimmed);
     } catch (err) {
+      if (!mountedRef.current) return;
       setPostError(err as RecordingError);
     } finally {
-      setIsTranscribing(false);
+      if (mountedRef.current) setIsTranscribing(false);
     }
   };
 

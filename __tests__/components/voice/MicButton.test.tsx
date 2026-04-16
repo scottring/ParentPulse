@@ -70,4 +70,27 @@ describe('MicButton', () => {
       expect(screen.getByText(/no speech detected/i)).toBeInTheDocument(),
     );
   });
+
+  it('clicking the button while in error state clears the error and does not start recording', async () => {
+    stopMock.mockResolvedValue(new Blob(['x'], { type: 'audio/webm' }));
+    (transcribeBlob as ReturnType<typeof vi.fn>).mockResolvedValue('');
+    hookState.state = 'recording';
+
+    render(<MicButton onTranscript={() => {}} />);
+    // First click stops recording, transcribes empty → error shown
+    fireEvent.click(screen.getByRole('button'));
+    await waitFor(() =>
+      expect(screen.getByText(/no speech detected/i)).toBeInTheDocument(),
+    );
+
+    // Reset state to simulate hook being idle again with the post-error active
+    hookState.state = 'idle';
+    startMock.mockClear();
+    resetMock.mockClear();
+
+    // Second click in error state should reset, NOT call start()
+    fireEvent.click(screen.getByRole('button'));
+    expect(resetMock).toHaveBeenCalled();
+    expect(startMock).not.toHaveBeenCalled();
+  });
 });
