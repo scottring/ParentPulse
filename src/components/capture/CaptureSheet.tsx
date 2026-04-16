@@ -183,6 +183,69 @@ export default function CaptureSheet() {
     setState('closed');
   };
 
+  // Save-on-close: if the user dismisses the sheet while still
+  // composing with non-empty text, persist first. Skips the PIN setup
+  // modal (which would block the close) and skips the "saved"
+  // confirmation screen — the entry appears in the journal behind the
+  // sheet once it closes via the `relish:entries-stale` event. If the
+  // save fails, the sheet stays open so the error is visible.
+  const handleCloseWithSave = async () => {
+    if (state !== 'composing' || !text.trim() || saving) {
+      handleClose();
+      return;
+    }
+
+    try {
+      if (editingEntryId) {
+        const nextText =
+          editMode === 'append'
+            ? `${originalText.trim()}\n\n— added ${new Date().toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} —\n${text.trim()}`
+            : text.trim();
+        await updateEntry(editingEntryId, { text: nextText });
+        window.dispatchEvent(new Event('relish:entries-stale'));
+        handleClose();
+        return;
+      }
+
+      const entryId = await createEntry({
+        text,
+        category,
+        personMentions: selectedPeople,
+        sharedWithUserIds: sharedWith,
+        ...(writingFor ? {
+          subjectType: 'child_proxy' as const,
+          subjectPersonId: writingFor.personId,
+        } : {}),
+      });
+
+      if (stagedFiles.length > 0 && user?.familyId) {
+        setUploadProgress(0);
+        const mediaItems: JournalMedia[] = [];
+        for (let i = 0; i < stagedFiles.length; i++) {
+          const item = await uploadEntryMedia({
+            familyId: user.familyId,
+            entryId,
+            file: stagedFiles[i],
+            onProgress: (pct) => {
+              setUploadProgress(
+                Math.round(((i * 100 + pct) / stagedFiles.length)),
+              );
+            },
+          });
+          mediaItems.push(item);
+        }
+        await updateEntry(entryId, { media: mediaItems });
+        setUploadProgress(null);
+      }
+
+      window.dispatchEvent(new Event('relish:entries-stale'));
+      handleClose();
+    } catch (err) {
+      console.error('CaptureSheet auto-save on close failed:', err);
+      setUploadProgress(null);
+    }
+  };
+
   const togglePerson = (personId: string) => {
     setSelectedPeople((prev) =>
       prev.includes(personId)
@@ -336,7 +399,7 @@ export default function CaptureSheet() {
         <div
           className="fixed inset-0 z-50 transition-opacity duration-200"
           style={{ background: 'rgba(0,0,0,0.35)' }}
-          onClick={handleClose}
+          onClick={() => { void handleCloseWithSave(); }}
         />
       )}
 
@@ -422,7 +485,7 @@ export default function CaptureSheet() {
                     }}>
                     {uploadProgress !== null ? `${uploadProgress}%` : saving ? 'Saving…' : 'Save'}
                   </button>
-                  <button onClick={handleClose}
+                  <button onClick={() => { void handleCloseWithSave(); }}
                     className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5"
                     style={{ fontSize: 20, color: '#5F564B', background: 'transparent', border: 'none', cursor: 'pointer' }}
                     aria-label="Close">&times;</button>
