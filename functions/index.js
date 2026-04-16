@@ -10687,3 +10687,65 @@ exports.sanitizeEntryToActivity = onCall(
       return {success: true, draft};
     },
 );
+
+// ================================================================
+// cascadeMarginNoteVisibility — onDocumentUpdated trigger
+//
+// When a journal entry's visibility changes (visibleToUserIds or
+// sharedWithUserIds), fan the new values out onto every margin note
+// attached to that entry. Runs a no-op when the arrays are unchanged,
+// so metadata-only updates (text edits, re-enrichment, etc.) don't
+// trigger writes.
+// ================================================================
+exports.cascadeMarginNoteVisibility = onDocumentUpdated(
+    {
+      document: "journal_entries/{entryId}",
+      region: "us-central1",
+      memory: "256MiB",
+      timeoutSeconds: 60,
+    },
+    async (event) => {
+      const logger = require("firebase-functions/logger");
+      const before = event.data.before.data() || {};
+      const after = event.data.after.data() || {};
+      const entryId = event.params.entryId;
+
+      const sameArray = (a, b) => {
+        if (!Array.isArray(a) || !Array.isArray(b)) return false;
+        if (a.length !== b.length) return false;
+        const sa = [...a].sort();
+        const sb = [...b].sort();
+        return sa.every((v, i) => v === sb[i]);
+      };
+
+      const visibilityUnchanged =
+        sameArray(before.visibleToUserIds, after.visibleToUserIds) &&
+        sameArray(before.sharedWithUserIds, after.sharedWithUserIds);
+      if (visibilityUnchanged) return;
+
+      const db = admin.firestore();
+      const snap = await db
+          .collection("margin_notes")
+          .where("journalEntryId", "==", entryId)
+          .get();
+      if (snap.empty) {
+        logger.info("cascadeMarginNoteVisibility: no notes for entry", {entryId});
+        return;
+      }
+
+      // Firestore batches cap at 500 ops; a single entry has at most a
+      // handful of margin notes in practice, so one batch is always safe.
+      const batch = db.batch();
+      snap.forEach((doc) => {
+        batch.update(doc.ref, {
+          visibleToUserIds: after.visibleToUserIds || [],
+          sharedWithUserIds: after.sharedWithUserIds || [],
+        });
+      });
+      await batch.commit();
+      logger.info("cascadeMarginNoteVisibility: updated notes", {
+        entryId,
+        count: snap.size,
+      });
+    },
+);
