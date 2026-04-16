@@ -79,3 +79,57 @@ describe("library.pickFromLibrary — exclusion", () => {
     assert.strictEqual(result.id, "a");
   });
 });
+
+describe("library.pickWithFallback — fallback chain", () => {
+  const { pickWithFallback } = require("../../dinnerPrompts/library");
+
+  it("returns a normal pick when candidates exist", () => {
+    const lib = [{ id: "a", text: "A", themes: ["courage"], audiences: ["kid"] }];
+    const result = pickWithFallback({
+      library: lib, audience: "kid", theme: "courage",
+      recentlyServedIds: [], flaggedIds: [], now: new Date(),
+    });
+    assert.strictEqual(result.prompt.id, "a");
+    assert.strictEqual(result.relaxation, "none");
+  });
+
+  it("relaxes the recency window when nothing matches", () => {
+    const lib = [{ id: "a", text: "A", themes: ["courage"], audiences: ["kid"] }];
+    const result = pickWithFallback({
+      library: lib, audience: "kid", theme: "courage",
+      recentlyServedIds: ["a"], flaggedIds: [], now: new Date(),
+    });
+    assert.strictEqual(result.prompt.id, "a");
+    assert.strictEqual(result.relaxation, "recency-relaxed");
+  });
+
+  it("drops the theme constraint when still nothing", () => {
+    const lib = [{ id: "kind-1", text: "K", themes: ["kindness"], audiences: ["kid"] }];
+    const result = pickWithFallback({
+      library: lib, audience: "kid", theme: "courage",
+      recentlyServedIds: [], flaggedIds: [], now: new Date(),
+    });
+    assert.strictEqual(result.prompt.id, "kind-1");
+    assert.strictEqual(result.relaxation, "theme-dropped");
+  });
+
+  it("falls back to any audience match as last resort", () => {
+    const lib = [{ id: "any-1", text: "X", themes: ["dreams"], audiences: ["adult"] }];
+    const result = pickWithFallback({
+      library: lib, audience: "kid", theme: "courage",
+      recentlyServedIds: [], flaggedIds: [], now: new Date(),
+    });
+    // No match for kid; ultimate fallback drops audience constraint
+    assert.strictEqual(result.prompt.id, "any-1");
+    assert.strictEqual(result.relaxation, "audience-dropped");
+  });
+
+  it("never returns flagged prompts even after relaxation", () => {
+    const lib = [{ id: "a", text: "A", themes: ["courage"], audiences: ["kid"] }];
+    const result = pickWithFallback({
+      library: lib, audience: "kid", theme: "courage",
+      recentlyServedIds: [], flaggedIds: ["a"], now: new Date(),
+    });
+    assert.strictEqual(result, null);
+  });
+});
