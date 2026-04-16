@@ -119,7 +119,18 @@ interface EntryEditorProps {
 
 function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
   const isMine = entry.authorId === currentUserId;
-  const { updateEntry } = useJournal();
+  const router = useRouter();
+  const { updateEntry, deleteEntry } = useJournal();
+
+  const handleDelete = async () => {
+    if (!window.confirm('Delete this entry? This can\'t be undone.')) return;
+    try {
+      await deleteEntry(entry.entryId);
+      router.push('/journal');
+    } catch {
+      window.alert('Could not delete this entry. Please try again.');
+    }
+  };
   const { people } = usePerson();
   const {
     turns: chatTurns,
@@ -467,6 +478,17 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
             <div className="entry-date">
               <div>{dateLine}</div>
               {timeLine && <div className="entry-time">{timeLine}</div>}
+              {isMine && (
+                <button
+                  type="button"
+                  className="entry-delete"
+                  onClick={handleDelete}
+                  aria-label="Delete this entry"
+                  title="Delete this entry"
+                >
+                  delete
+                </button>
+              )}
             </div>
           </header>
 
@@ -906,6 +928,25 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
         }
         .entry-time {
           color: #a8997d;
+        }
+        .entry-delete {
+          margin-top: 8px;
+          background: none;
+          border: none;
+          padding: 2px 6px;
+          font-family: var(--font-parent-body);
+          font-size: 10px;
+          font-weight: 500;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          color: #c89282;
+          cursor: pointer;
+          border-radius: 3px;
+          transition: background 0.15s ease, color 0.15s ease;
+        }
+        .entry-delete:hover {
+          background: rgba(201, 123, 99, 0.1);
+          color: #9a5545;
         }
 
         .entry-title {
