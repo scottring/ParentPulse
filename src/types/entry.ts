@@ -119,4 +119,10 @@ export interface EntryFilter {
   // exactly the current user (private entries). Requires the consumer
   // to know who the current user is.
   onlyPrivateToCurrentUser?: boolean;
+
+  // When true, drop entries whose visibleToUserIds is exactly
+  // [currentUserId] — i.e., the user's own private entries. The
+  // "Everyone" pill uses this so private entries surface only under
+  // the "Just me" filter.
+  excludePrivateToCurrentUser?: boolean;
 }

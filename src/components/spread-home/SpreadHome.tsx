@@ -86,7 +86,7 @@ export function SpreadHome() {
     if (filterSel.kind === 'person') return { subjectPersonIds: [filterSel.personId] };
     if (filterSel.kind === 'syntheses') return { types: ['synthesis'] };
     if (filterSel.kind === 'just-me') return { onlyPrivateToCurrentUser: true };
-    return {};
+    return { excludePrivateToCurrentUser: true };
   }, [filterSel]);
 
   const { entries, loading, error } = useEntries({

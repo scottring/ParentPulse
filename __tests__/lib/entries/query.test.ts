@@ -68,6 +68,58 @@ describe('fetchEntries', () => {
     const entries = await fetchEntries('f1', { types: ['synthesis'] }, buildSource(), 'u1');
     expect(entries.length).toBe(0);
   });
+
+  // Two entries — one private to u1, one shared with u1 + u2 — covers
+  // the symmetric filter pair (onlyPrivate / excludePrivate).
+  const mixedVisibilitySource = (): EntrySource => ({
+    journalEntries: vi.fn().mockResolvedValue([
+      {
+        entryId: 'private',
+        familyId: 'f1',
+        authorId: 'u1',
+        text: 'just me',
+        category: 'moment',
+        tags: [],
+        visibleToUserIds: ['u1'],
+        sharedWithUserIds: [],
+        createdAt: now,
+      } as unknown as JournalEntry,
+      {
+        entryId: 'shared',
+        familyId: 'f1',
+        authorId: 'u1',
+        text: 'shared with family',
+        category: 'moment',
+        tags: [],
+        visibleToUserIds: ['u1', 'u2'],
+        sharedWithUserIds: ['u2'],
+        createdAt: earlier,
+      } as unknown as JournalEntry,
+    ]),
+    contributions: vi.fn().mockResolvedValue([]),
+    personManuals: vi.fn().mockResolvedValue([]),
+    growthItems: vi.fn().mockResolvedValue([]),
+  });
+
+  it('excludePrivateToCurrentUser drops entries visible only to the current user', async () => {
+    const entries = await fetchEntries(
+      'f1',
+      { excludePrivateToCurrentUser: true },
+      mixedVisibilitySource(),
+      'u1'
+    );
+    expect(entries.map((e) => e.id)).toEqual(['shared']);
+  });
+
+  it('onlyPrivateToCurrentUser keeps only entries visible to the current user alone', async () => {
+    const entries = await fetchEntries(
+      'f1',
+      { onlyPrivateToCurrentUser: true },
+      mixedVisibilitySource(),
+      'u1'
+    );
+    expect(entries.map((e) => e.id)).toEqual(['private']);
+  });
 });
 
 describe('fetchEntries — currentUserId pass-through', () => {

@@ -96,6 +96,17 @@ export function applyFilter(entries: Entry[], filter: EntryFilter): Entry[] {
     }
   }
 
+  if (filter.excludePrivateToCurrentUser) {
+    const uid = (filter as EntryFilter & { currentUserIdForFilter?: string })
+      .currentUserIdForFilter;
+    if (uid) {
+      out = out.filter(
+        (e) =>
+          !(e.visibleToUserIds.length === 1 && e.visibleToUserIds[0] === uid)
+      );
+    }
+  }
+
   if (!filter.includeArchived) {
     out = out.filter((e) => !e.archivedAt);
   }
