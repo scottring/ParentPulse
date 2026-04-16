@@ -47,3 +47,6 @@ next-env.d.ts
 .env.local
 service-account.json
 .superpowers/
+
+# git worktrees (isolated feature branches)
+.worktrees/
