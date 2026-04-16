@@ -190,6 +190,7 @@ export function useJournal(): UseJournalReturn {
         try {
           const notesQuery = query(
             collection(firestore, 'margin_notes'),
+            where('familyId', '==', user.familyId),
             where('journalEntryId', '==', entryId),
             where('visibleToUserIds', 'array-contains', user.userId),
           );
