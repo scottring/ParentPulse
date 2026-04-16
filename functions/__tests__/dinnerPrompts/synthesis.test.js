@@ -35,3 +35,35 @@ describe("synthesis.synthesizePrompt", () => {
     assert.strictEqual(result.text, "Hi?");
   });
 });
+
+describe("synthesis.synthesizeOrFallback", () => {
+  const { synthesizeOrFallback } = require("../../dinnerPrompts/synthesis");
+
+  it("returns the synthesized prompt on success", async () => {
+    const client = {
+      messages: { create: sinon.stub().resolves({ content: [{ type: "text", text: "Q?" }] }) },
+    };
+    const fallback = sinon.stub().returns({ id: "lib-1", text: "Lib?" });
+    const result = await synthesizeOrFallback({
+      client, theme: "courage", audience: "kid",
+      excerpts: [{ source: "journal", text: "x", firstName: "Mia" }],
+      libraryFallback: fallback,
+    });
+    assert.strictEqual(result.source, "synthesized");
+    assert.strictEqual(result.text, "Q?");
+    sinon.assert.notCalled(fallback);
+  });
+
+  it("returns the library fallback when Claude throws", async () => {
+    const client = { messages: { create: sinon.stub().rejects(new Error("boom")) } };
+    const fallback = sinon.stub().returns({ prompt: { id: "lib-1", text: "Lib?" }, relaxation: "none" });
+    const result = await synthesizeOrFallback({
+      client, theme: "courage", audience: "kid",
+      excerpts: [{ source: "journal", text: "x", firstName: "Mia" }],
+      libraryFallback: fallback,
+    });
+    assert.strictEqual(result.source, "library");
+    assert.strictEqual(result.text, "Lib?");
+    sinon.assert.calledOnce(fallback);
+  });
+});

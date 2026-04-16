@@ -39,4 +39,21 @@ Write the question now.`;
   };
 }
 
-module.exports = { synthesizePrompt, SYSTEM_PROMPT };
+async function synthesizeOrFallback({ client, theme, audience, excerpts, libraryFallback }) {
+  try {
+    const synth = await synthesizePrompt({ client, theme, audience, excerpts });
+    return { ...synth, sourceRefs: { journalEntryIds: [], manualAnswerIds: [] } };
+  } catch (err) {
+    console.warn("[dinner-prompts] synthesis failed, falling back to library", err.message);
+    const fb = libraryFallback();
+    if (!fb) return null;
+    return {
+      text: fb.prompt.text,
+      source: "library",
+      sourceRefs: { libraryId: fb.prompt.id },
+      relaxation: fb.relaxation,
+    };
+  }
+}
+
+module.exports = { synthesizePrompt, synthesizeOrFallback, SYSTEM_PROMPT };
