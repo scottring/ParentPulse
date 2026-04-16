@@ -48,7 +48,10 @@ async function transcribeAudioHandler(request) {
   }
 
   const buffer = Buffer.from(audioBase64, "base64");
-  const ext = mimeType.includes("mp4") ? "mp4" : "webm";
+  const ext = mimeType.includes("mp4") ? "mp4" :
+              mimeType.includes("wav") ? "wav" :
+              mimeType.includes("mpeg") || mimeType.includes("mp3") ? "mp3" :
+              "webm";
   const file = await toFile(buffer, `audio.${ext}`, {type: mimeType});
 
   const openai = getOpenAI();

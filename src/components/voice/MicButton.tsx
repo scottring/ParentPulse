@@ -17,13 +17,33 @@ interface Props {
 
 const GLYPH_PX: Record<MicSize, number> = { sm: 14, md: 18 };
 const HIT_AREA_PX = 44; // WCAG touch-target minimum (transparent padding)
+const STORAGE_KEY = 'voice:deviceId';
+
+function readStoredDeviceId(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    return localStorage.getItem(STORAGE_KEY) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export function MicButton({ onTranscript, size = 'md', disabled, className, deviceId }: Props) {
-  const rec = useAudioRecording({ deviceId });
+  // Hydrate stored device choice from localStorage once on mount. The explicit
+  // deviceId prop (if provided) wins — useful for tests and device pickers.
+  const [storedDeviceId, setStoredDeviceId] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    setStoredDeviceId(readStoredDeviceId());
+  }, []);
+  const effectiveDeviceId = deviceId ?? storedDeviceId;
+  const rec = useAudioRecording({ deviceId: effectiveDeviceId });
   const [postError, setPostError] = useState<RecordingError | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mountedRef = useRef(true);
   useEffect(() => {
+    // StrictMode dev double-invokes effects; re-assign on setup so the ref
+    // doesn't stay false after the fake unmount/remount cycle.
+    mountedRef.current = true;
     return () => { mountedRef.current = false; };
   }, []);
 
