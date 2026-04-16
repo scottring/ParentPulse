@@ -166,3 +166,58 @@ describe("handlers.handleSwapDinnerPrompt", () => {
     assert.strictEqual(res.statusCode, 404);
   });
 });
+
+describe("handlers.handleReportDinnerPrompt", () => {
+  const { handleReportDinnerPrompt } = require("../../dinnerPrompts/handlers");
+
+  it("flags the library prompt and records a report on the day-doc", async () => {
+    const req = fakeReq({
+      method: "POST",
+      body: { householdId: "h1", date: "2026-04-16", reason: "too dark" },
+      headers: { authorization: "Bearer test-key" },
+    });
+    const res = fakeRes();
+
+    const deps = {
+      validateApiKey: sinon.stub().resolves({ ok: true }),
+      readDay: sinon.stub().resolves({
+        text: "Bad?", source: "library", sourceRefs: { libraryId: "courage-001" }, status: "served",
+      }),
+      writeFlag: sinon.stub().resolves(),
+      recordReport: sinon.stub().resolves(),
+      collections: { apiKeys: {}, days: { doc: () => ({}) }, overlay: {} },
+      now: new Date("2026-04-16T23:30:00Z"),
+    };
+
+    await handleReportDinnerPrompt(req, res, deps);
+
+    assert.strictEqual(res.statusCode, 200);
+    sinon.assert.calledOnce(deps.writeFlag);
+    sinon.assert.calledOnce(deps.recordReport);
+    const flagCall = deps.writeFlag.firstCall.args[0];
+    assert.strictEqual(flagCall.libraryId, "courage-001");
+    assert.strictEqual(flagCall.reason, "too dark");
+  });
+
+  it("does not call writeFlag when the source is synthesized (no libraryId)", async () => {
+    const req = fakeReq({
+      method: "POST",
+      body: { householdId: "h1", date: "2026-04-16", reason: "weird" },
+      headers: { authorization: "Bearer test-key" },
+    });
+    const res = fakeRes();
+    const deps = {
+      validateApiKey: sinon.stub().resolves({ ok: true }),
+      readDay: sinon.stub().resolves({
+        text: "Synth?", source: "synthesized", sourceRefs: { journalEntryIds: ["j1"] }, status: "served",
+      }),
+      writeFlag: sinon.stub().resolves(),
+      recordReport: sinon.stub().resolves(),
+      collections: { apiKeys: {}, days: { doc: () => ({}) }, overlay: {} },
+      now: new Date(),
+    };
+    await handleReportDinnerPrompt(req, res, deps);
+    sinon.assert.notCalled(deps.writeFlag);
+    sinon.assert.calledOnce(deps.recordReport);
+  });
+});

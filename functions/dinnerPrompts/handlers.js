@@ -160,4 +160,48 @@ async function handleSwapDinnerPrompt(req, res, deps) {
   res.status(200).json(shapeResponse({ ...generated, audience, theme, servedAt: deps.now }, false));
 }
 
-module.exports = { handleGetDinnerPrompt, handleSwapDinnerPrompt, dayDocPath, shapeResponse };
+async function handleReportDinnerPrompt(req, res, deps) {
+  const apiKey = extractBearer(req.headers.authorization);
+  const { householdId, date: dateStr, reason } = req.body;
+
+  if (!householdId || !dateStr) {
+    res.status(400).json({ error: "householdId and date are required" });
+    return;
+  }
+
+  const auth = await deps.validateApiKey({
+    apiKey, householdId, apiKeysCollection: deps.collections.apiKeys,
+  });
+  if (!auth.ok) {
+    res.status(auth.status).json({ error: auth.error });
+    return;
+  }
+
+  const dayRef = deps.collections.days.doc(dateStr);
+  const existing = await deps.readDay({ ref: dayRef });
+  if (!existing) {
+    res.status(404).json({ error: "no day-doc to report" });
+    return;
+  }
+
+  if (existing.source === "library" && existing.sourceRefs && existing.sourceRefs.libraryId) {
+    await deps.writeFlag({
+      overlayCollection: deps.collections.overlay,
+      libraryId: existing.sourceRefs.libraryId,
+      reason: reason || null,
+      now: deps.now,
+    });
+  }
+
+  await deps.recordReport({ ref: dayRef, reason: reason || null, now: deps.now });
+
+  res.status(200).json({ ok: true });
+}
+
+module.exports = {
+  handleGetDinnerPrompt,
+  handleSwapDinnerPrompt,
+  handleReportDinnerPrompt,
+  dayDocPath,
+  shapeResponse,
+};
