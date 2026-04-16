@@ -81,12 +81,16 @@ export interface TranscribeResponse {
   text: string;
 }
 
-/** Hard caps enforced on both client and server. */
+/** Hard caps enforced server-side (and mirrored on the client for UX). */
 export const VOICE_LIMITS = {
   MAX_RECORDING_SECONDS: 90,
+  MAX_DAILY_MINUTES_PER_USER: 30,
+} as const;
+
+/** Client-only recording behavior tuning. Not enforced by the server. */
+export const RECORDING_TUNING = {
   SILENCE_AUTO_STOP_SECONDS: 30,
   SILENCE_RMS_THRESHOLD: 0.01,
-  MAX_DAILY_MINUTES_PER_USER: 30,
 } as const;
 ```
 
@@ -211,6 +215,7 @@ import {
   RecordingError,
   RecordingErrorKind,
   VOICE_LIMITS,
+  RECORDING_TUNING,
 } from '@/types/voice';
 
 const PREFERRED_MIME_TYPES = [
@@ -350,10 +355,10 @@ export function useAudioRecording(): UseAudioRecordingApi {
         const analyser = analyserRef.current;
         if (analyser) {
           const rms = computeRms(analyser);
-          if (rms < VOICE_LIMITS.SILENCE_RMS_THRESHOLD) {
+          if (rms < RECORDING_TUNING.SILENCE_RMS_THRESHOLD) {
             if (silenceStartRef.current == null) silenceStartRef.current = now;
             const silentFor = (now - silenceStartRef.current) / 1000;
-            if (silentFor >= VOICE_LIMITS.SILENCE_AUTO_STOP_SECONDS) {
+            if (silentFor >= RECORDING_TUNING.SILENCE_AUTO_STOP_SECONDS) {
               if (recorderRef.current?.state === 'recording') {
                 recorderRef.current.stop();
               }
