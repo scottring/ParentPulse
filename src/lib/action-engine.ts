@@ -127,7 +127,7 @@ export function generateActionItems(params: {
       priority: isUrgent ? 'high' : 'medium',
       title: 'Weekly check-in due',
       description: `${staleAssessments.length} dimension${staleAssessments.length > 1 ? 's' : ''} haven't been assessed recently.`,
-      actionRoute: '/checkin',
+      actionRoute: '/journal',
       source: 'schedule',
     });
   }

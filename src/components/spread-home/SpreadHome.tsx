@@ -119,30 +119,64 @@ export function SpreadHome() {
 
   return (
     <>
-      <a href="/" className="back-home" aria-label="Back to home">
-        ← Home
-        <style jsx>{`
-          .back-home {
-            position: fixed;
-            top: 18px;
-            left: 22px;
-            z-index: 20;
-            font-family: -apple-system, 'Helvetica Neue', sans-serif;
-            font-size: 11px;
-            letter-spacing: 0.22em;
-            text-transform: uppercase;
-            color: #5a4628;
-            text-decoration: none;
-            padding: 6px 10px;
-            border-radius: 4px;
-            transition: background 140ms ease, color 140ms ease;
-          }
-          .back-home:hover {
-            color: #2a1f14;
-            background: rgba(138, 111, 74, 0.12);
-          }
-        `}</style>
-      </a>
+      <header className="journal-top-bar">
+        <a href="/journal" className="journal-wordmark" aria-label="Relish">
+          Relish
+        </a>
+        <div className="journal-top-right">
+          <a href="/manual" className="cross-nav" aria-label="Open The Family Manual">
+            The Family Manual →
+          </a>
+        </div>
+      </header>
+      <style jsx>{`
+        .journal-top-bar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 20;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 14px 68px 14px 24px;
+          pointer-events: none;
+        }
+        .journal-top-bar :global(a) { pointer-events: auto; }
+        .journal-top-bar .journal-wordmark {
+          font-family: var(--font-parent-display), Georgia, serif;
+          font-style: italic;
+          font-weight: 300;
+          font-size: 28px;
+          line-height: 1;
+          letter-spacing: -0.01em;
+          color: #2a1f14;
+          text-decoration: none;
+          transition: opacity 140ms ease;
+        }
+        .journal-top-bar .journal-wordmark:hover { opacity: 0.7; }
+        .journal-top-right {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+        .journal-top-bar .cross-nav {
+          font-family: var(--font-parent-display), Georgia, serif;
+          font-style: italic;
+          font-weight: 400;
+          font-size: 15px;
+          letter-spacing: 0;
+          color: #2a1f14;
+          text-decoration: none;
+          padding: 4px 10px;
+          border-radius: 4px;
+          transition: background 140ms ease, opacity 140ms ease;
+        }
+        .cross-nav:hover {
+          opacity: 0.7;
+          background: rgba(42, 31, 20, 0.06);
+        }
+      `}</style>
       <UserMenu />
       <JournalSpread
         entries={entries}

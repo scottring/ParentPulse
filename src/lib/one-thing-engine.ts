@@ -128,7 +128,7 @@ export function computeOneThing(params: {
       description: daysSinceCheckin > 30
         ? 'It\u2019s been over a month. A quick check-in keeps your picture accurate.'
         : 'A weekly check-in helps track what\u2019s shifting.',
-      actionRoute: '/checkin',
+      actionRoute: '/journal',
       actionLabel: 'Check in now',
       priority: daysSinceCheckin > 30 ? 1 : 2,
     });
@@ -323,7 +323,7 @@ function getOnboardingThing(
         type: 'time_sensitive',
         title: 'Ready to see the picture',
         description: 'We\u2019ll map your relationships across 20 dimensions.',
-        actionRoute: '/dashboard',
+        actionRoute: '/journal',
         actionLabel: 'Analyze',
         priority: 0,
       };

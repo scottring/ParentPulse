@@ -61,7 +61,7 @@ function isReadingType(type: GrowthItemType): boolean {
 function shelfFor(type: GrowthItemType): { name: string; href: string; returnLabel: string } {
   return isReadingType(type)
     ? { name: 'The Journal', href: '/journal', returnLabel: 'Return to the Journal' }
-    : { name: 'The Workbook', href: '/workbook', returnLabel: 'Return to the Workbook' };
+    : { name: 'The Family Manual', href: '/manual', returnLabel: 'Return to the Manual' };
 }
 
 function parseSteps(body: string): string[] {
@@ -397,11 +397,11 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
               <p className="press-empty-title">This page is missing from the volume.</p>
               <p className="press-empty-body">The practice may have been removed or expired.</p>
               <button
-                onClick={() => router.push('/workbook')}
+                onClick={() => router.push('/manual')}
                 className="press-link"
                 style={{ background: 'transparent', cursor: 'pointer' }}
               >
-                Return to the Workbook
+                Return to the Manual
                 <span className="arrow">⟶</span>
               </button>
             </div>
@@ -481,10 +481,68 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
             onReturn={() => router.push(shelfFor(item.type).href)}
           />
         )}
+
+        <ActivitySidebar item={item} />
       </div>
     </div>
   );
 }
+
+// ================================================================
+// ActivitySidebar — quick affordances for capture + Q&A
+// ================================================================
+function ActivitySidebar({ item }: { item: GrowthItem }) {
+  const openCapture = (prefill: string, category: 'reflection' | 'question') => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(
+      new CustomEvent('relish:open-capture', {
+        detail: { prefillText: prefill, category },
+      }),
+    );
+  };
+  return (
+    <div
+      style={{
+        maxWidth: 640,
+        margin: '32px auto 0',
+        padding: '20px 0',
+        borderTop: '1px solid rgba(10, 10, 8, 0.1)',
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        gap: 24,
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => openCapture(`About "${item.title}":\n\n`, 'reflection')}
+        style={activityActionStyle}
+      >
+        Jot a note about this
+      </button>
+      <button
+        type="button"
+        onClick={() => openCapture(`Question about "${item.title}":\n\n`, 'question')}
+        style={activityActionStyle}
+      >
+        Ask a question
+      </button>
+    </div>
+  );
+}
+
+const activityActionStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-parent-body)',
+  fontSize: 11,
+  fontWeight: 500,
+  letterSpacing: '0.22em',
+  textTransform: 'uppercase',
+  color: '#7a6e5c',
+  background: 'transparent',
+  border: 0,
+  padding: '6px 0',
+  cursor: 'pointer',
+};
 
 // ================================================================
 // BRIEF VIEW — the opening page

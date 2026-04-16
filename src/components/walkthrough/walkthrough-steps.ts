@@ -80,7 +80,7 @@ const steps: WalkthroughStep[] = [
     description:
       'A visual map of your family. Each circle is a person; the lines between them show connection.',
     placement: 'bottom',
-    route: '/family-manual',
+    route: "/manual",
   },
   {
     id: 'volumes',
@@ -89,7 +89,7 @@ const steps: WalkthroughStep[] = [
     description:
       'Every person has a volume. Roman numerals, italic titles, and a quiet health indicator. Tap to read.',
     placement: 'top',
-    route: '/family-manual',
+    route: "/manual",
   },
   {
     id: 'new-volume',
@@ -98,7 +98,7 @@ const steps: WalkthroughStep[] = [
     description:
       'Add someone new to the library\u2009\u2014\u2009a partner, child, friend, parent.',
     placement: 'left',
-    route: '/family-manual',
+    route: "/manual",
   },
 
   // ─── Journal page ─────────────────────────────────────────
@@ -138,7 +138,7 @@ const steps: WalkthroughStep[] = [
     description:
       'Longer growth arcs you\u2019re walking through\u2009\u2014\u2009multi-week practices with phases.',
     placement: 'right',
-    route: '/workbook',
+    route: '/manual',
   },
   {
     id: 'todays-focus',
@@ -147,7 +147,7 @@ const steps: WalkthroughStep[] = [
     description:
       'The one thing the app thinks you should do right now. Three minutes. This is the entire job most days.',
     placement: 'left',
-    route: '/workbook',
+    route: '/manual',
   },
 
   // ─── Closing (centered, no target) ───────────────────────

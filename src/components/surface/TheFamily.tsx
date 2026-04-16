@@ -57,7 +57,7 @@ export default function TheFamily({ people }: TheFamilyProps) {
         ))}
       </div>
       <div className="family-footer">
-        <Link href="/family-manual" className="press-link-sm">
+        <Link href="/manual" className="press-link-sm">
           Open the family manual ⟶
         </Link>
       </div>

@@ -316,7 +316,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
     if (manual && person && answeredQuestions > 0) {
       await saveNow();
     }
-    router.push('/dashboard');
+    router.push('/journal');
   };
 
   const handleFillAll = useCallback(() => {
@@ -527,7 +527,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   useEffect(() => {
     if (isComplete) {
       const timer = setTimeout(() => {
-        router.push('/dashboard');
+        router.push('/journal');
       }, 2000);
       return () => clearTimeout(timer);
     }

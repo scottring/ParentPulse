@@ -82,7 +82,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
               <p className="press-empty-body">
                 The manual may have been archived or is still being prepared.
               </p>
-              <Link href="/family-manual" className="press-link">
+              <Link href="/manual" className="press-link">
                 Return to the family manual
                 <span className="arrow">⟶</span>
               </Link>
@@ -155,7 +155,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
               style={{ borderBottom: '1px solid rgba(200,190,172,0.4)' }}
             >
               <Link
-                href="/family-manual"
+                href="/manual"
                 className="press-link-sm"
               >
                 ⟵ Return to the family manual

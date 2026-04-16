@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
-import { SurfaceHome } from '@/components/surface/SurfaceHome';
 // ================================================================
 // Landing / home page — the library desk.
 //
@@ -23,74 +22,18 @@ import { SurfaceHome } from '@/components/surface/SurfaceHome';
 //      floating label on hover.
 // ================================================================
 
-interface BookRegion {
-  left: string;
-  top: string;
-  width: string;
-  height: string;
-  labelLeft: string;
-  labelTop: string;
-  href: string;
-  label: string;
-}
-
-const BOOK_REGIONS: Record<string, BookRegion> = {
-  // Back-left stack: two leather books
-  journal: {
-    left: '12%',
-    top: '28%',
-    width: '33%',
-    height: '16%',
-    labelLeft: '28%',
-    labelTop: '22%',
-    href: '/journal',
-    label: 'The Journal',
-  },
-  manual: {
-    left: '12%',
-    top: '44%',
-    width: '33%',
-    height: '18%',
-    labelLeft: '28%',
-    labelTop: '64%',
-    href: '/family-manual',
-    label: 'The Family Manual',
-  },
-  // Front-right stack: cream + sage books
-  workbook: {
-    left: '48%',
-    top: '38%',
-    width: '30%',
-    height: '18%',
-    labelLeft: '63%',
-    labelTop: '30%',
-    href: '/workbook',
-    label: 'The Workbook',
-  },
-  relish: {
-    left: '48%',
-    top: '56%',
-    width: '30%',
-    height: '16%',
-    labelLeft: '63%',
-    labelTop: '74%',
-    href: '/relish',
-    label: 'Your Relish',
-  },
-};
-
 export default function HomePage() {
   const { user, loading: authLoading, logout } = useAuth();
   const router = useRouter();
-  const [hoveredBook, setHoveredBook] = useState<string | null>(null);
 
   const isSignedIn = Boolean(user && !authLoading);
 
-  // Signed-in users get The Surface; the library desk is now a
-  // signed-out-only landing experience.
-  if (isSignedIn) {
-    return <SurfaceHome />;
-  }
+  // Signed-in users belong inside the Journal. The library desk is a
+  // signed-out-only landing.
+  useEffect(() => {
+    if (isSignedIn) router.replace('/journal');
+  }, [isSignedIn, router]);
+
   const firstName = user?.name?.split(' ')[0] || '';
 
   const handleSignOut = async () => {
@@ -120,55 +63,6 @@ export default function HomePage() {
         />
         <div className="home-vignette" />
       </div>
-
-      {/* ─── Book hit targets + floating labels ──────────── */}
-      {isSignedIn && (
-        <div className="home-books" aria-label="The three volumes">
-          {Object.entries(BOOK_REGIONS).map(([key, region]) => (
-            <Link
-              key={key}
-              href={region.href}
-              className="home-book-target"
-              data-walkthrough={`book-${key}`}
-              style={{
-                left: region.left,
-                top: region.top,
-                width: region.width,
-                height: region.height,
-              }}
-              aria-label={region.label}
-              onMouseEnter={() => setHoveredBook(key)}
-              onMouseLeave={() =>
-                setHoveredBook((prev) => (prev === key ? null : prev))
-              }
-              onFocus={() => setHoveredBook(key)}
-              onBlur={() =>
-                setHoveredBook((prev) => (prev === key ? null : prev))
-              }
-            >
-              <span className="home-book-glow" aria-hidden="true" />
-            </Link>
-          ))}
-
-          {Object.entries(BOOK_REGIONS).map(([key, region]) => (
-            <span
-              key={`label-${key}`}
-              className="home-book-float-label"
-              style={{
-                left: region.labelLeft,
-                top: region.labelTop,
-                opacity: hoveredBook === key ? 1 : 0,
-                transform: `translate(-50%, ${
-                  hoveredBook === key ? '0' : '6px'
-                })`,
-              }}
-              aria-hidden="true"
-            >
-              {region.label}
-            </span>
-          ))}
-        </div>
-      )}
 
       {/* ─── Wordmark + tagline (upper-left) ─────────────── */}
       <header className="home-header">

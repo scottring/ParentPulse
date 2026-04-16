@@ -186,7 +186,7 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
                 number="III"
                 title="Set it aside for later"
                 body="The volume waits. You can return anytime to add perspectives and begin filling the pages."
-                href="/family-manual"
+                href="/manual"
                 muted
               />
             </div>

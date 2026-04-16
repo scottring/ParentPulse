@@ -67,15 +67,6 @@ export function UserMenu() {
 
       {open && (
         <div className="menu" role="menu">
-          <Link href="/" className="item" role="menuitem" onClick={() => setOpen(false)}>
-            Home
-          </Link>
-          <Link href="/journal" className="item" role="menuitem" onClick={() => setOpen(false)}>
-            Journal
-          </Link>
-          <Link href="/people" className="item" role="menuitem" onClick={() => setOpen(false)}>
-            People
-          </Link>
           <Link href="/settings" className="item" role="menuitem" onClick={() => setOpen(false)}>
             Settings
           </Link>

@@ -53,6 +53,7 @@ export function SurfaceHome() {
 
   return (
     <main className="surface">
+      <div className="surface-bg" aria-hidden="true" />
       <header className="chrome">
         <a href="/" className="wordmark" aria-label="Relish home">Relish</a>
         <span className="date">{todayLabel()}</span>
@@ -122,6 +123,30 @@ export function SurfaceHome() {
           gap: 0;
           padding: 28px 48px 24px;
           font-family: 'Times New Roman', Georgia, serif;
+        }
+        .surface-bg {
+          position: absolute;
+          inset: 0;
+          z-index: 0;
+          background-image: url('/images/scottring-balto_Editorial_still_life_photograph_of_exactly_tw_b0defca1-17b3-48bf-8a21-5705c7afb98c_1.png');
+          background-size: cover;
+          background-position: center;
+          pointer-events: none;
+        }
+        .surface-bg::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(
+            ellipse at center,
+            rgba(250, 250, 247, 0.92) 0%,
+            rgba(250, 250, 247, 0.82) 40%,
+            rgba(250, 250, 247, 0.45) 100%
+          );
+        }
+        .surface > :global(*:not(.surface-bg)) {
+          position: relative;
+          z-index: 1;
         }
 
         /* ─── Chrome ───────────────────────────────────────── */
@@ -413,12 +438,9 @@ function PersonRow({
     : hasContribs
     ? 'In progress'
     : 'Awaiting perspectives';
-  const initial = person.name.charAt(0).toUpperCase();
-
   return (
     <li className="row-item">
       <Link href={`/journal?focus=${person.personId}`} className="row">
-        <span className="initial">{initial}</span>
         <span className="name">{person.name}</span>
         {isSelf && <span className="tag">You</span>}
         <span className="spacer" aria-hidden="true" />
@@ -442,13 +464,6 @@ function PersonRow({
         }
         .row:hover {
           background: rgba(10, 10, 8, 0.03);
-        }
-        .initial {
-          flex: 0 0 32px;
-          font-family: Georgia, 'Times New Roman', serif;
-          font-style: italic;
-          font-size: 18px;
-          color: #6b6b68;
         }
         .name {
           font-family: Georgia, 'Times New Roman', serif;

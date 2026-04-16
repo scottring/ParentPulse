@@ -81,7 +81,7 @@ function computeLead(input: SurfacePriorityInput, dismissed: Set<string>): LeadI
         title: `${firstName} added a new perspective`,
         body: `A fresh contribution has been added${c.personId ? '' : ''}. The manual is richer for it.`,
         ctaLabel: 'Read what changed',
-        ctaHref: c.personId ? `/people/${c.personId}/manual` : '/family-manual',
+        ctaHref: c.personId ? `/people/${c.personId}/manual` : '/manual',
         personName: firstName,
         glyph: '✦',
         glyphColor: '#7C9082',

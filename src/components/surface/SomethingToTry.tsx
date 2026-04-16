@@ -46,13 +46,46 @@ export default function SomethingToTry({ item }: SomethingToTryProps) {
         <h3 className="try-title">{item.title}</h3>
         <p className="try-body">{item.body}</p>
 
-        <Link
-          href={`/growth/${item.growthItemId}`}
-          className="press-link"
-          style={{ marginTop: 20, display: 'inline-block' }}
-        >
-          Begin this practice <span className="arrow">⟶</span>
-        </Link>
+        <div className="try-actions">
+          <Link href={`/growth/${item.growthItemId}`} className="try-primary">
+            <span>Begin this practice</span>
+            <span className="arrow" aria-hidden="true">→</span>
+          </Link>
+          <button
+            type="button"
+            className="try-secondary"
+            onClick={() => {
+              if (typeof window === 'undefined') return;
+              window.dispatchEvent(
+                new CustomEvent('relish:open-capture', {
+                  detail: {
+                    prefillText: `About "${item.title}":\n\n`,
+                    category: 'reflection',
+                  },
+                }),
+              );
+            }}
+          >
+            Jot a note
+          </button>
+          <button
+            type="button"
+            className="try-secondary"
+            onClick={() => {
+              if (typeof window === 'undefined') return;
+              window.dispatchEvent(
+                new CustomEvent('relish:open-capture', {
+                  detail: {
+                    prefillText: `Question about "${item.title}":\n\n`,
+                    category: 'question',
+                  },
+                }),
+              );
+            }}
+          >
+            Ask a question
+          </button>
+        </div>
       </div>
 
       <style jsx>{`
@@ -99,6 +132,47 @@ export default function SomethingToTry({ item }: SomethingToTryProps) {
           color: #4a4238;
           margin: 0;
           max-width: 580px;
+        }
+        .try-actions {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 20px;
+          margin-top: 24px;
+        }
+        .try-primary {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          font-family: var(--font-parent-body);
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.28em;
+          text-transform: uppercase;
+          color: #3a3530;
+          text-decoration: none;
+          padding: 10px 0;
+          border-bottom: 1px solid #3a3530;
+          transition: gap 180ms ease;
+        }
+        .try-primary:hover {
+          gap: 16px;
+        }
+        .try-secondary {
+          font-family: var(--font-parent-body);
+          font-size: 11px;
+          font-weight: 500;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          color: #7a6e5c;
+          background: transparent;
+          border: 0;
+          padding: 10px 0;
+          cursor: pointer;
+          transition: color 160ms ease;
+        }
+        .try-secondary:hover {
+          color: #3a3530;
         }
         @media (max-width: 720px) {
           .try-title {

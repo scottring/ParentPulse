@@ -112,7 +112,12 @@ export default function CaptureSheet() {
   }, [state]);
 
   useEffect(() => {
-    const handler = () => setState('composing');
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ prefillText?: string; category?: JournalCategory } | undefined>).detail;
+      if (detail?.prefillText) setText(detail.prefillText);
+      if (detail?.category) setCategory(detail.category);
+      setState('composing');
+    };
     window.addEventListener('relish:open-capture', handler);
 
     // Child-mode capture: dispatch 'relish:open-capture-for' with

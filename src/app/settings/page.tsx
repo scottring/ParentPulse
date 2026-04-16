@@ -25,7 +25,7 @@ export default function SettingsPage() {
       router.push('/login');
     }
     if (!authLoading && user && user.role !== 'parent') {
-      router.push('/dashboard');
+      router.push('/journal');
     }
   }, [user, authLoading, router]);
 
@@ -87,7 +87,7 @@ export default function SettingsPage() {
             }}
           >
             <div className="flex items-start gap-6">
-              <Link href="/dashboard" className="mt-2 text-3xl transition-colors" style={{ color: '#3A3530' }}>
+              <Link href="/journal" className="mt-2 text-3xl transition-colors" style={{ color: '#3A3530' }}>
                 &#8592;
               </Link>
 

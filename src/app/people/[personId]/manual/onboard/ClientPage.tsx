@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import AssessmentShell from '@/components/shared/AssessmentShell';
+import EditorialShell from '@/components/shared/EditorialShell';
 import { useAuth } from '@/context/AuthContext';
 import { usePersonById } from '@/hooks/usePerson';
 import { usePersonManual } from '@/hooks/usePersonManual';
@@ -254,7 +254,7 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
     if (manual && person && answeredQuestions > 0) {
       await saveNow();
     }
-    router.push('/dashboard');
+    router.push('/journal');
   };
 
   const handleFillAll = useCallback(() => {
@@ -276,49 +276,81 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
   useEffect(() => {
     if (isComplete) {
       const timer = setTimeout(() => {
-        router.push('/dashboard');
+        router.push('/journal');
       }, 2000);
       return () => clearTimeout(timer);
     }
   }, [isComplete, personId, router]);
 
   // Loading
+  const loadingShell = (msg: string) => (
+    <main
+      style={{
+        minHeight: '100vh',
+        background: '#fafaf7',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: "Georgia, 'Times New Roman', serif",
+        fontStyle: 'italic',
+        fontSize: 18,
+        color: '#6b6b68',
+      }}
+    >
+      {msg}
+    </main>
+  );
   if (authLoading || personLoading || manualLoading || !draftLoaded || sections.length === 0) {
-    return (
-      <div className="relish-page">
-        <div className="press-loading">Preparing the page&hellip;</div>
-      </div>
-    );
+    return loadingShell('Preparing the page…');
   }
-
   if (!user || !person || !manual) {
-    return (
-      <div className="relish-page">
-        <div className="press-loading">Unable to open the volume.</div>
-      </div>
-    );
+    return loadingShell('Unable to open the volume.');
   }
 
   if (isComplete) {
     return (
-      <div className="relish-page">
-        <div className="pt-[64px] pb-24">
-          <div className="press-binder" style={{ maxWidth: 560 }}>
-            <div className="press-empty" style={{ padding: '80px 20px' }}>
-              <span className="press-chapter-label" style={{ display: 'block', textAlign: 'center' }}>
-                Saved
-              </span>
-              <h2 className="press-empty-title mt-4" style={{ fontSize: 31 }}>
-                Your observations are kept.
-              </h2>
-              <p className="press-empty-body">
-                Returning to {person.name}&rsquo;s volume&hellip;
-              </p>
-              <div className="press-fleuron" style={{ fontSize: 17 }}>❦</div>
-            </div>
-          </div>
+      <main
+        style={{
+          minHeight: '100vh',
+          background: '#fafaf7',
+          color: '#0f0f0d',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '48px 24px',
+          fontFamily: "Georgia, 'Times New Roman', serif",
+        }}
+      >
+        <div style={{ maxWidth: 560, textAlign: 'center' }}>
+          <p
+            style={{
+              fontFamily: "-apple-system, 'Helvetica Neue', sans-serif",
+              fontSize: 11,
+              letterSpacing: '0.32em',
+              textTransform: 'uppercase',
+              color: '#6b6b68',
+              margin: '0 0 18px',
+            }}
+          >
+            Saved
+          </p>
+          <h1
+            style={{
+              fontStyle: 'italic',
+              fontWeight: 400,
+              fontSize: 'clamp(32px, 4vw, 48px)',
+              lineHeight: 1.1,
+              letterSpacing: '-0.015em',
+              margin: '0 0 16px',
+            }}
+          >
+            Your observations are kept.
+          </h1>
+          <p style={{ fontSize: 16, color: '#3d3d39', margin: 0 }}>
+            Returning to {person.name}&rsquo;s volume&hellip;
+          </p>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -359,60 +391,87 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
     </div>
   ) : null;
 
+  const canGoBack = currentSectionIndex > 0 || currentQuestionIndex > 0;
   const navigation = (
-    <div
-      className="flex items-baseline justify-between mt-10 pt-6"
-      style={{ borderTop: '1px solid rgba(200,190,172,0.4)' }}
-    >
-      <div className="flex items-baseline gap-6">
-        {(currentSectionIndex > 0 || currentQuestionIndex > 0) && (
-          <button
-            onClick={handlePrevious}
-            className="press-link-sm"
-            style={{ background: 'transparent', cursor: 'pointer' }}
-          >
-            ⟵ Previous
-          </button>
-        )}
-        {(currentSectionIndex > 0 || currentQuestionIndex > 0) && (
-          <button
-            onClick={() => { setCurrentSectionIndex(0); setCurrentQuestionIndex(0); }}
-            className="press-marginalia"
-            style={{
-              background: 'transparent',
-              border: 0,
-              cursor: 'pointer',
-              fontSize: 13,
-              color: '#7A6E5C',
-            }}
-          >
-            back to the first page
+    <div className="ed-nav">
+      <div className="ed-nav-left">
+        {canGoBack && (
+          <button onClick={handlePrevious} className="ed-link">
+            ← Previous
           </button>
         )}
       </div>
       <button
         onClick={handleNext}
         disabled={isSubmitting}
-        className="press-link"
-        style={{
-          background: 'transparent',
-          cursor: isSubmitting ? 'wait' : 'pointer',
-          opacity: isSubmitting ? 0.5 : 1,
-          fontSize: 17,
-        }}
+        className="ed-continue"
       >
-        {isSubmitting
-          ? 'Saving…'
-          : isLastQuestion
-          ? 'Complete the chapter'
-          : 'Next'}
-        {!isSubmitting && <span className="arrow">⟶</span>}
+        <span>
+          {isSubmitting ? 'Saving…' : isLastQuestion ? 'Complete' : 'Continue'}
+        </span>
+        {!isSubmitting && <span className="arrow" aria-hidden="true">→</span>}
       </button>
+      <style jsx>{`
+        .ed-nav {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding-top: 24px;
+          border-top: 1px solid rgba(10, 10, 8, 0.1);
+        }
+        .ed-nav-left {
+          min-width: 120px;
+        }
+        .ed-link {
+          font-family: -apple-system, 'Helvetica Neue', sans-serif;
+          font-size: 11px;
+          letter-spacing: 0.28em;
+          text-transform: uppercase;
+          color: #6b6b68;
+          background: transparent;
+          border: 0;
+          padding: 0;
+          cursor: pointer;
+          transition: color 160ms ease;
+        }
+        .ed-link:hover {
+          color: #0a0a08;
+        }
+        .ed-continue {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          font-family: -apple-system, 'Helvetica Neue', sans-serif;
+          font-size: 11px;
+          letter-spacing: 0.32em;
+          text-transform: uppercase;
+          color: #0a0a08;
+          background: transparent;
+          border: 0;
+          padding: 12px 0;
+          border-bottom: 1px solid #0a0a08;
+          cursor: pointer;
+          transition: gap 180ms ease;
+        }
+        .ed-continue:hover {
+          gap: 18px;
+        }
+        .ed-continue:disabled {
+          opacity: 0.5;
+          cursor: wait;
+        }
+        .arrow {
+          transition: transform 180ms ease;
+        }
+        .ed-continue:hover .arrow {
+          transform: translateX(2px);
+        }
+      `}</style>
     </div>
   );
 
   return (
-    <AssessmentShell
+    <EditorialShell
       phase="assess"
       personName={person.name}
       sectionName={currentSection.sectionName}
@@ -441,20 +500,8 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
       navigationSlot={navigation}
     >
       <div>
-        <h2
-          className="press-display-md"
-          style={{ fontSize: 'clamp(26px, 3vw, 32px)', marginBottom: 12, lineHeight: 1.2 }}
-        >
-          {displayQuestion}
-        </h2>
-        {displayHelper && (
-          <p
-            className="press-body-italic"
-            style={{ fontSize: 14, marginBottom: 28, color: '#5F564B' }}
-          >
-            {displayHelper}
-          </p>
-        )}
+        <h2>{displayQuestion}</h2>
+        {displayHelper && <p>{displayHelper}</p>}
 
         <QuestionRenderer
           question={{ ...currentQuestion, placeholder: displayPlaceholder }}
@@ -466,6 +513,6 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
           demoPerspective={person.relationshipType === 'child' ? 'observer_child' : 'observer'}
         />
       </div>
-    </AssessmentShell>
+    </EditorialShell>
   );
 }
