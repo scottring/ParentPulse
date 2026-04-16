@@ -1,16 +1,23 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  addDoc,
   collection,
+  deleteDoc,
+  doc,
+  getDoc,
   onSnapshot,
   query as firestoreQuery,
-  where,
+  serverTimestamp,
   Timestamp,
+  updateDoc,
+  where,
 } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import type { MarginNote } from '@/types/marginNote';
+import { MARGIN_NOTE_MAX_LENGTH } from '@/types/marginNote';
 
 // Firestore 'in' operator caps at 30 values per query. PAGE_SIZE is 6
 // in JournalSpread, so a single query is always sufficient.
@@ -118,4 +125,130 @@ export function useMarginNotesForJournalEntries(
   const notesByEntry = useMemo(() => groupNotesByEntry(notes), [notes]);
 
   return { notesByEntry, loading, error };
+}
+
+export type ValidateNoteResult =
+  | { ok: true; content: string }
+  | { ok: false; reason: 'empty' | 'too_long' };
+
+export function validateNoteContent(raw: string): ValidateNoteResult {
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) return { ok: false, reason: 'empty' };
+  if (trimmed.length > MARGIN_NOTE_MAX_LENGTH) {
+    return { ok: false, reason: 'too_long' };
+  }
+  return { ok: true, content: trimmed };
+}
+
+export interface UseMarginNotesMutationsResult {
+  createNote: (journalEntryId: string, content: string) => Promise<string>;
+  updateNote: (noteId: string, content: string) => Promise<void>;
+  deleteNote: (noteId: string) => Promise<void>;
+  saving: boolean;
+  error: Error | null;
+}
+
+/**
+ * Mutation hook for margin notes. Kept separate from the subscription
+ * hook so pure read-only consumers (e.g., a future "recent margin notes"
+ * view) don't pull in the write path.
+ */
+export function useMarginNoteMutations(): UseMarginNotesMutationsResult {
+  const { user } = useAuth();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const createNote = useCallback(
+    async (journalEntryId: string, content: string): Promise<string> => {
+      if (!user?.userId || !user.familyId) {
+        throw new Error('Not authenticated');
+      }
+      const v = validateNoteContent(content);
+      if (!v.ok) {
+        throw new Error(
+          v.reason === 'empty' ? 'Note is empty' : 'Note is too long'
+        );
+      }
+      setSaving(true);
+      setError(null);
+      try {
+        // Read the parent entry so we can copy its visibility onto the
+        // new note. The rule requires that visibleToUserIds on the note
+        // equals the parent's at write time.
+        const parentSnap = await getDoc(
+          doc(firestore, 'journal_entries', journalEntryId)
+        );
+        if (!parentSnap.exists()) {
+          throw new Error('Parent journal entry not found');
+        }
+        const parent = parentSnap.data();
+        const visibleToUserIds: string[] = parent.visibleToUserIds ?? [];
+        const sharedWithUserIds: string[] = parent.sharedWithUserIds ?? [];
+        if (!visibleToUserIds.includes(user.userId)) {
+          throw new Error('You cannot annotate an entry you cannot see');
+        }
+        const ref = await addDoc(collection(firestore, 'margin_notes'), {
+          familyId: user.familyId,
+          journalEntryId,
+          authorUserId: user.userId,
+          content: v.content,
+          createdAt: serverTimestamp(),
+          visibleToUserIds,
+          sharedWithUserIds,
+        });
+        return ref.id;
+      } catch (err) {
+        setError(err as Error);
+        throw err;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [user?.userId, user?.familyId]
+  );
+
+  const updateNote = useCallback(
+    async (noteId: string, content: string): Promise<void> => {
+      if (!user?.userId) throw new Error('Not authenticated');
+      const v = validateNoteContent(content);
+      if (!v.ok) {
+        throw new Error(
+          v.reason === 'empty' ? 'Note is empty' : 'Note is too long'
+        );
+      }
+      setSaving(true);
+      setError(null);
+      try {
+        await updateDoc(doc(firestore, 'margin_notes', noteId), {
+          content: v.content,
+          editedAt: serverTimestamp(),
+        });
+      } catch (err) {
+        setError(err as Error);
+        throw err;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [user?.userId]
+  );
+
+  const deleteNote = useCallback(
+    async (noteId: string): Promise<void> => {
+      if (!user?.userId) throw new Error('Not authenticated');
+      setSaving(true);
+      setError(null);
+      try {
+        await deleteDoc(doc(firestore, 'margin_notes', noteId));
+      } catch (err) {
+        setError(err as Error);
+        throw err;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [user?.userId]
+  );
+
+  return { createNote, updateNote, deleteNote, saving, error };
 }

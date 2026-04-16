@@ -13,7 +13,7 @@ vi.mock('@/context/AuthContext', () => ({
 }));
 
 import { Timestamp } from 'firebase/firestore';
-import { groupNotesByEntry } from '@/hooks/useMarginNotes';
+import { groupNotesByEntry, validateNoteContent } from '@/hooks/useMarginNotes';
 import type { MarginNote } from '@/types/marginNote';
 
 const note = (over: Partial<MarginNote>): MarginNote => ({
@@ -51,5 +51,31 @@ describe('groupNotesByEntry', () => {
     ];
     const result = groupNotesByEntry(notes).get('e1')!;
     expect(result.map((n) => n.id)).toEqual(['early', 'late']);
+  });
+});
+
+describe('validateNoteContent', () => {
+  it('trims and accepts content within 1..80 chars', () => {
+    expect(validateNoteContent('  hello world  ')).toEqual({
+      ok: true,
+      content: 'hello world',
+    });
+  });
+
+  it('rejects empty / whitespace-only content', () => {
+    expect(validateNoteContent('').ok).toBe(false);
+    expect(validateNoteContent('   ').ok).toBe(false);
+  });
+
+  it('rejects content over 80 chars after trimming', () => {
+    const long = 'a'.repeat(81);
+    expect(validateNoteContent(long).ok).toBe(false);
+  });
+
+  it('accepts exactly 80 chars', () => {
+    const eighty = 'a'.repeat(80);
+    const r = validateNoteContent(eighty);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.content).toBe(eighty);
   });
 });
