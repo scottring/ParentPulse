@@ -182,27 +182,40 @@ export function useJournal(): UseJournalReturn {
       setSaving(true);
       setError(null);
       try {
-        // Cascade: delete all margin notes attached to this entry that the
-        // caller can see. Firestore security rules require queries to be
-        // rule-compatible — the margin_notes read rule checks
-        // `visibleToUserIds` contains the caller, so the query must filter
-        // on it too or Firestore rejects the whole query with "Missing or
-        // insufficient permissions."
-        const notesQuery = query(
-          collection(firestore, 'margin_notes'),
-          where('journalEntryId', '==', entryId),
-          where('visibleToUserIds', 'array-contains', user.userId),
-        );
-        const notesSnap = await getDocs(notesQuery);
-
-        if (notesSnap.size > 0) {
-          const batch = writeBatch(firestore);
-          notesSnap.docs.forEach((d) => batch.delete(d.ref));
-          batch.delete(doc(firestore, 'journal_entries', entryId));
-          await batch.commit();
-        } else {
-          await deleteDoc(doc(firestore, 'journal_entries', entryId));
+        // Delete margin notes first (best-effort, non-fatal). Then the entry.
+        // Splitting the batch lets us pinpoint which step fails when rules
+        // reject one but not the other.
+        let notesFound = 0;
+        let notesDeleted = 0;
+        try {
+          const notesQuery = query(
+            collection(firestore, 'margin_notes'),
+            where('journalEntryId', '==', entryId),
+            where('visibleToUserIds', 'array-contains', user.userId),
+          );
+          const notesSnap = await getDocs(notesQuery);
+          notesFound = notesSnap.size;
+          for (const d of notesSnap.docs) {
+            try {
+              await deleteDoc(d.ref);
+              notesDeleted++;
+            } catch (noteErr) {
+              // eslint-disable-next-line no-console
+              console.warn('[deleteEntry] note delete failed', d.id, noteErr);
+            }
+          }
+        } catch (queryErr) {
+          // eslint-disable-next-line no-console
+          console.warn('[deleteEntry] notes query failed (continuing)', queryErr);
         }
+        // eslint-disable-next-line no-console
+        console.log('[deleteEntry] notes', { found: notesFound, deleted: notesDeleted });
+
+        // eslint-disable-next-line no-console
+        console.log('[deleteEntry] deleting entry', entryId);
+        await deleteDoc(doc(firestore, 'journal_entries', entryId));
+        // eslint-disable-next-line no-console
+        console.log('[deleteEntry] done');
       } catch (err) {
         const message =
           err instanceof Error ? err.message : 'Failed to delete entry';
