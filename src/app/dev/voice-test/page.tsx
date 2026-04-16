@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MicButton } from '@/components/voice/MicButton';
 
 const STORAGE_KEY = 'voice:deviceId';
@@ -10,6 +10,14 @@ export default function VoiceTestPage() {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState<string>('');
 
+  // Raw recorder state — bypasses our hook entirely for diagnostics
+  const [rawRecording, setRawRecording] = useState(false);
+  const [rawBlobUrl, setRawBlobUrl] = useState<string | null>(null);
+  const [rawBlobSize, setRawBlobSize] = useState<number | null>(null);
+  const rawRecorderRef = useRef<MediaRecorder | null>(null);
+  const rawChunksRef = useRef<Blob[]>([]);
+  const rawStreamRef = useRef<MediaStream | null>(null);
+
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) setDeviceId(saved);
@@ -17,7 +25,6 @@ export default function VoiceTestPage() {
 
   const loadDevices = async () => {
     try {
-      // getUserMedia once so labels are populated (browsers hide labels until permission is granted)
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach((t) => t.stop());
       const all = await navigator.mediaDevices.enumerateDevices();
@@ -30,22 +37,46 @@ export default function VoiceTestPage() {
 
   const onPick = (id: string) => {
     setDeviceId(id);
-    if (id) {
-      localStorage.setItem(STORAGE_KEY, id);
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-    }
+    if (id) localStorage.setItem(STORAGE_KEY, id);
+    else localStorage.removeItem(STORAGE_KEY);
+  };
+
+  const startRaw = async () => {
+    setRawBlobUrl(null);
+    setRawBlobSize(null);
+    const audioConstraints: MediaTrackConstraints = deviceId
+      ? { deviceId: { exact: deviceId } }
+      : {};
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+    rawStreamRef.current = stream;
+    const recorder = new MediaRecorder(stream);
+    rawChunksRef.current = [];
+    recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) rawChunksRef.current.push(e.data);
+    };
+    recorder.onstop = () => {
+      const blob = new Blob(rawChunksRef.current, { type: recorder.mimeType });
+      setRawBlobUrl(URL.createObjectURL(blob));
+      setRawBlobSize(blob.size);
+      rawStreamRef.current?.getTracks().forEach((t) => t.stop());
+      rawStreamRef.current = null;
+      setRawRecording(false);
+    };
+    rawRecorderRef.current = recorder;
+    recorder.start();
+    setRawRecording(true);
+  };
+
+  const stopRaw = () => {
+    rawRecorderRef.current?.stop();
   };
 
   return (
-    <main style={{ padding: 32, fontFamily: 'Georgia, serif', maxWidth: 600 }}>
+    <main style={{ padding: 32, fontFamily: 'Georgia, serif', maxWidth: 700 }}>
       <h1>Voice input playground</h1>
-      <p>Click the mic, speak, click again to stop. Transcription appends below.</p>
 
       <div style={{ margin: '16px 0', fontSize: 14 }}>
-        <label style={{ display: 'block', marginBottom: 4, color: '#555' }}>
-          Input device
-        </label>
+        <label style={{ display: 'block', marginBottom: 4, color: '#555' }}>Input device</label>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <select
             value={deviceId}
@@ -67,25 +98,57 @@ export default function VoiceTestPage() {
             {devices.length ? 'Refresh' : 'Load devices'}
           </button>
         </div>
-        <p style={{ fontSize: 12, color: '#888', marginTop: 6 }}>
-          Click &quot;Load devices&quot; first — browsers only expose mic labels after permission is granted.
-        </p>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 16 }}>
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={6}
-          style={{ flex: 1, padding: 12, fontSize: 16, fontFamily: 'Georgia, serif' }}
-          placeholder="Voice transcription will appear here…"
-        />
-        <MicButton
-          size="md"
-          deviceId={deviceId || undefined}
-          onTranscript={(t) => setText((prev) => (prev ? `${prev} ${t}` : t))}
-        />
-      </div>
+      <section style={{ border: '1px solid #d0c7b8', padding: 16, borderRadius: 8, marginBottom: 24 }}>
+        <h2 style={{ fontSize: 18, marginTop: 0 }}>Diagnostic: raw recorder</h2>
+        <p style={{ fontSize: 13, color: '#666' }}>
+          This bypasses the MicButton and our hook. Record 5 seconds, then play it back.
+          If you hear silence, the mic isn&apos;t actually capturing (system issue).
+          If you hear yourself clearly, our pipeline is the problem.
+        </p>
+        <button
+          type="button"
+          onClick={rawRecording ? stopRaw : startRaw}
+          style={{
+            padding: '8px 16px',
+            background: rawRecording ? '#C97B63' : '#8a6f4a',
+            color: 'white',
+            border: 'none',
+            borderRadius: 6,
+            cursor: 'pointer',
+            fontSize: 14,
+          }}
+        >
+          {rawRecording ? 'Stop' : 'Record'}
+        </button>
+        {rawBlobUrl && (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
+              Blob: {rawBlobSize} bytes
+            </div>
+            <audio src={rawBlobUrl} controls style={{ width: '100%' }} />
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 style={{ fontSize: 18 }}>Real feature: MicButton + Whisper</h2>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 16 }}>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={6}
+            style={{ flex: 1, padding: 12, fontSize: 16, fontFamily: 'Georgia, serif' }}
+            placeholder="Voice transcription will appear here…"
+          />
+          <MicButton
+            size="md"
+            deviceId={deviceId || undefined}
+            onTranscript={(t) => setText((prev) => (prev ? `${prev} ${t}` : t))}
+          />
+        </div>
+      </section>
     </main>
   );
 }

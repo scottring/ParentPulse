@@ -101,8 +101,11 @@ export function useAudioRecording(options: UseAudioRecordingOptions = {}): UseAu
         : {};
       const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
       streamRef.current = stream;
-      const mime = pickMimeType();
-      const recorder = new MediaRecorder(stream, { mimeType: mime });
+      // Let the browser pick its default codec. Specifying mimeType explicitly
+      // (even 'audio/webm;codecs=opus') triggered Opus DTX on Chrome that
+      // suppressed speech to ~300 B/s. The browser default produces full-rate
+      // audio that Whisper can actually transcribe.
+      const recorder = new MediaRecorder(stream);
       recorderRef.current = recorder;
       chunksRef.current = [];
 
@@ -110,7 +113,7 @@ export function useAudioRecording(options: UseAudioRecordingOptions = {}): UseAu
         if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
       };
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mime });
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType });
         lastBlobRef.current = blob;
         const resolve = resolveStopRef.current;
         resolveStopRef.current = null;

@@ -7,11 +7,14 @@ class MockMediaRecorder {
   ondataavailable: ((e: { data: Blob }) => void) | null = null;
   onstop: (() => void) | null = null;
   state: 'inactive' | 'recording' | 'paused' = 'inactive';
-  constructor(public stream: MediaStream, public opts: { mimeType: string }) {}
+  mimeType: string;
+  constructor(public stream: MediaStream, public opts?: { mimeType?: string }) {
+    this.mimeType = opts?.mimeType ?? 'audio/webm;codecs=opus';
+  }
   start() { this.state = 'recording'; }
   stop() {
     this.state = 'inactive';
-    this.ondataavailable?.({ data: new Blob(['fake'], { type: this.opts.mimeType }) });
+    this.ondataavailable?.({ data: new Blob(['fake'], { type: this.mimeType }) });
     this.onstop?.();
   }
 }

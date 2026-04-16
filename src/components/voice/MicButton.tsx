@@ -55,6 +55,8 @@ export function MicButton({ onTranscript, size = 'md', disabled, className, devi
     if (!blob || blob.size === 0) return;
     // eslint-disable-next-line no-console
     console.log('[voice] blob', { sizeBytes: blob.size, type: blob.type, elapsedSec: elapsed });
+    // eslint-disable-next-line no-console
+    console.log('[voice] playback url (copy/paste to hear):', URL.createObjectURL(blob));
     setIsTranscribing(true);
     try {
       const text = await transcribeBlob(blob, elapsed);
