@@ -11,13 +11,15 @@ interface Props {
   size?: MicSize;
   disabled?: boolean;
   className?: string;
+  /** Optional audio input device ID. Falls back to browser default. */
+  deviceId?: string;
 }
 
 const GLYPH_PX: Record<MicSize, number> = { sm: 14, md: 18 };
 const HIT_AREA_PX = 44; // WCAG touch-target minimum (transparent padding)
 
-export function MicButton({ onTranscript, size = 'md', disabled, className }: Props) {
-  const rec = useAudioRecording();
+export function MicButton({ onTranscript, size = 'md', disabled, className, deviceId }: Props) {
+  const rec = useAudioRecording({ deviceId });
   const [postError, setPostError] = useState<RecordingError | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mountedRef = useRef(true);
@@ -51,9 +53,13 @@ export function MicButton({ onTranscript, size = 'md', disabled, className }: Pr
     const elapsed = rec.elapsedSec;
     const blob = await rec.stop();
     if (!blob || blob.size === 0) return;
+    // eslint-disable-next-line no-console
+    console.log('[voice] blob', { sizeBytes: blob.size, type: blob.type, elapsedSec: elapsed });
     setIsTranscribing(true);
     try {
       const text = await transcribeBlob(blob, elapsed);
+      // eslint-disable-next-line no-console
+      console.log('[voice] transcript', JSON.stringify(text));
       if (!mountedRef.current) return;
       const trimmed = text.trim();
       if (!trimmed) {

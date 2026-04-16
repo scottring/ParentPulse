@@ -42,7 +42,13 @@ export interface UseAudioRecordingApi {
   reset: () => void;
 }
 
-export function useAudioRecording(): UseAudioRecordingApi {
+export interface UseAudioRecordingOptions {
+  /** If set, requests audio from this specific device. Otherwise uses the browser default. */
+  deviceId?: string;
+}
+
+export function useAudioRecording(options: UseAudioRecordingOptions = {}): UseAudioRecordingApi {
+  const { deviceId } = options;
   const [state, setState] = useState<RecordingState>('idle');
   const [error, setError] = useState<RecordingError | null>(null);
   const [elapsedSec, setElapsedSec] = useState(0);
@@ -90,7 +96,10 @@ export function useAudioRecording(): UseAudioRecordingApi {
     setError(null);
     setState('requesting-permission');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const audioConstraints: MediaTrackConstraints = deviceId
+        ? { deviceId: { exact: deviceId } }
+        : {};
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
       streamRef.current = stream;
       const mime = pickMimeType();
       const recorder = new MediaRecorder(stream, { mimeType: mime });
