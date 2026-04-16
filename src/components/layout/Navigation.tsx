@@ -54,22 +54,55 @@ export default function Navigation() {
     >
       <div className="h-full px-4 sm:px-6 flex items-center justify-between mx-auto" style={{ maxWidth: 1440 }}>
         {/* Wordmark — italic Cormorant, like a book's half-title */}
-        <Link
-          href="/"
-          className="hover:opacity-80 transition-opacity"
-          style={{
-            fontFamily: 'var(--font-parent-display)',
-            fontSize: 24,
-            fontWeight: 300,
-            fontStyle: 'italic',
-            color: '#3A3530',
-            letterSpacing: '-0.015em',
-            textDecoration: 'none',
-            lineHeight: 1,
-          }}
-        >
-          Relish
-        </Link>
+        <div className="flex items-baseline gap-3">
+          <Link
+            href="/"
+            className="hover:opacity-80 transition-opacity"
+            style={{
+              fontFamily: 'var(--font-parent-display)',
+              fontSize: 24,
+              fontWeight: 300,
+              fontStyle: 'italic',
+              color: '#3A3530',
+              letterSpacing: '-0.015em',
+              textDecoration: 'none',
+              lineHeight: 1,
+            }}
+          >
+            Relish
+          </Link>
+          {/* You-are-here label. Empty on home. */}
+          {(() => {
+            const onManualHere =
+              pathname.startsWith('/manual') ||
+              pathname.startsWith('/family-manual') ||
+              /^\/people\/[^/]+\/manual/.test(pathname);
+            const onJournalHere = pathname.startsWith('/journal');
+            const hereLabel = onManualHere
+              ? 'The Family Manual'
+              : onJournalHere
+                ? 'The Journal'
+                : null;
+            if (!hereLabel) return null;
+            return (
+              <span
+                aria-current="page"
+                style={{
+                  fontFamily: 'var(--font-parent-display)',
+                  fontSize: 14,
+                  fontStyle: 'italic',
+                  color: '#8a7b5f',
+                  letterSpacing: '0.01em',
+                  borderLeft: '1px solid rgba(58, 53, 48, 0.2)',
+                  paddingLeft: 12,
+                  lineHeight: 1.1,
+                }}
+              >
+                {hereLabel}
+              </span>
+            );
+          })()}
+        </div>
 
         {/* Contextual cross-nav — show the OTHER publication.
             On Manual pages, offer The Journal. Elsewhere, offer Manual. */}
