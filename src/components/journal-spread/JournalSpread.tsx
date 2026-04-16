@@ -14,6 +14,7 @@ import {
   useMarginNotesForJournalEntries,
   useMarginNoteMutations,
 } from '@/hooks/useMarginNotes';
+import { useJournal } from '@/hooks/useJournal';
 import { usePeopleMap } from '@/hooks/usePeopleMap';
 import type { MarginNote } from '@/types/marginNote';
 import dynamic from 'next/dynamic';
@@ -81,6 +82,7 @@ function PageEntries({
   currentUserId,
   onAsk,
   onEdit,
+  onDeleteEntry,
   notesByEntry,
   onCreateNote,
   onUpdateNote,
@@ -93,6 +95,7 @@ function PageEntries({
   currentUserId?: string;
   onAsk?: (entry: Entry, side: 'left' | 'right') => void;
   onEdit?: (entry: Entry, mode: 'edit' | 'append') => void;
+  onDeleteEntry?: (entry: Entry) => void;
   notesByEntry: Map<string, MarginNote[]>;
   onCreateNote: (journalEntryId: string, content: string) => Promise<string>;
   onUpdateNote: (noteId: string, content: string) => Promise<void>;
@@ -124,13 +127,13 @@ function PageEntries({
                   />
                 </div>
                 <div className="main-cell">
-                  <EntryBlock entry={e} nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} onEdit={onEdit} />
+                  <EntryBlock entry={e} nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} onEdit={onEdit} onDelete={onDeleteEntry} />
                 </div>
               </div>
             ) : (
               <div key={e.id} style={{ display: 'contents' }}>
                 <div className="main-cell">
-                  <EntryBlock entry={e} nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} onEdit={onEdit} />
+                  <EntryBlock entry={e} nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} onEdit={onEdit} onDelete={onDeleteEntry} />
                 </div>
                 <div className="margin-cell margin-right">
                   <MarginItem
@@ -220,6 +223,16 @@ export function JournalSpread({
     );
   };
 
+  const { deleteEntry } = useJournal();
+  const handleDelete = async (entry: Entry) => {
+    if (!window.confirm("Delete this entry? This can't be undone.")) return;
+    try {
+      await deleteEntry(entry.id);
+    } catch {
+      window.alert('Could not delete this entry. Please try again.');
+    }
+  };
+
   return (
     <div className="spread-stage">
       <MastheadRow
@@ -248,6 +261,7 @@ export function JournalSpread({
             currentUserId={currentUserId}
             onAsk={handleAsk}
             onEdit={handleEdit}
+            onDeleteEntry={handleDelete}
             notesByEntry={notesByEntry}
             onCreateNote={createNote}
             onUpdateNote={updateNote}
@@ -263,6 +277,7 @@ export function JournalSpread({
             currentUserId={currentUserId}
             onAsk={handleAsk}
             onEdit={handleEdit}
+            onDeleteEntry={handleDelete}
             notesByEntry={notesByEntry}
             onCreateNote={createNote}
             onUpdateNote={updateNote}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Compass, Link2, Unlink2, Eye, Sparkles, Users, MessageCircleQuestion, Pencil, Plus } from 'lucide-react';
+import { Compass, Link2, Unlink2, Eye, Sparkles, Users, MessageCircleQuestion, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { Entry } from '@/types/entry';
 
 // Approximate character count that fills ~2 lines after the italic lead
@@ -553,18 +553,26 @@ export function EntryBlock({
   currentUserId,
   onAsk,
   onEdit,
+  onDelete,
 }: {
   entry: Entry;
   nameOf?: (personId: string) => string;
   currentUserId?: string;
   onAsk?: (entry: Entry) => void;
   onEdit?: (entry: Entry, mode: 'edit' | 'append') => void;
+  onDelete?: (entry: Entry) => void;
 }) {
   const canEdit = onEdit && isEditableType(entry);
   const ageMs = canEdit
     ? Date.now() - (entry.createdAt?.toDate?.().getTime() ?? 0)
     : 0;
   const editMode: 'edit' | 'append' = ageMs < EDIT_WINDOW_MS ? 'edit' : 'append';
+
+  const isMine =
+    entry.author.kind === 'person' &&
+    currentUserId !== undefined &&
+    entry.author.personId === currentUserId;
+  const canDelete = !!onDelete && isMine && isEditableType(entry);
 
   return (
     <div className="entry-wrap">
@@ -600,6 +608,20 @@ export function EntryBlock({
           >
             <MessageCircleQuestion size={13} strokeWidth={1.5} />
             <span>Ask</span>
+          </button>
+        )}
+        {canDelete && (
+          <button
+            type="button"
+            className="action-btn delete-btn"
+            onClick={(ev) => {
+              ev.stopPropagation();
+              onDelete!(entry);
+            }}
+            aria-label="Delete this entry"
+          >
+            <Trash2 size={13} strokeWidth={1.5} />
+            <span>Delete</span>
           </button>
         )}
       </div>
@@ -649,6 +671,14 @@ export function EntryBlock({
           opacity: 1;
           background: rgba(138, 106, 154, 0.1);
           border-color: rgba(138, 106, 154, 0.3);
+        }
+        .delete-btn {
+          color: #b94a3b;
+        }
+        .delete-btn:hover {
+          opacity: 1;
+          background: rgba(185, 74, 59, 0.08);
+          border-color: rgba(185, 74, 59, 0.3);
         }
       `}</style>
     </div>
