@@ -228,8 +228,11 @@ export function JournalSpread({
     if (!window.confirm("Delete this entry? This can't be undone.")) return;
     try {
       await deleteEntry(entry.id);
-    } catch {
-      window.alert('Could not delete this entry. Please try again.');
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[journal] delete failed', err);
+      const message = err instanceof Error ? err.message : String(err);
+      window.alert(`Could not delete this entry: ${message}`);
     }
   };
 

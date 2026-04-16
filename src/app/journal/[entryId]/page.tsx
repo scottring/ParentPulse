@@ -127,8 +127,11 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
     try {
       await deleteEntry(entry.entryId);
       router.push('/journal');
-    } catch {
-      window.alert('Could not delete this entry. Please try again.');
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[journal] delete failed', err);
+      const message = err instanceof Error ? err.message : String(err);
+      window.alert(`Could not delete this entry: ${message}`);
     }
   };
   const { people } = usePerson();
