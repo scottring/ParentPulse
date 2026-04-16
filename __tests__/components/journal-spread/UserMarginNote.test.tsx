@@ -89,4 +89,17 @@ describe('UserMarginNote', () => {
     await user.click(screen.getByText('reread this'));
     expect(onStartEdit).toHaveBeenCalled();
   });
+
+  it('applies align-right class when side is right', () => {
+    const { container } = render(
+      <UserMarginNote
+        note={base}
+        entryAuthorUserId="u-entry"
+        currentUserId="u-note"
+        side="right"
+        authorName="Miriam"
+      />
+    );
+    expect(container.querySelector('.align-right')).toBeInTheDocument();
+  });
 });

@@ -38,12 +38,18 @@ export function UserMarginNote({
   const initial = authorName?.trim().charAt(0).toUpperCase() ?? '?';
 
   const handleClick = () => {
-    if (isAuthor && onStartEdit) onStartEdit();
+    onStartEdit?.();
   };
 
   return (
     <div className={`note align-${side} ${isAuthor ? 'editable' : ''}`}>
-      <div className="body" onClick={handleClick}>{note.content}</div>
+      {isAuthor ? (
+        <button type="button" className="body body-button" onClick={handleClick}>
+          {note.content}
+        </button>
+      ) : (
+        <div className="body">{note.content}</div>
+      )}
       {isObserverNote && (
         <div className="attribution">— {initial}.</div>
       )}
@@ -60,7 +66,18 @@ export function UserMarginNote({
         .align-left  { text-align: right; }
         .align-right { text-align: left; }
         .body { cursor: default; }
-        .editable .body { cursor: text; }
+        .body-button {
+          appearance: none;
+          background: transparent;
+          border: none;
+          padding: 0;
+          font: inherit;
+          color: inherit;
+          text-align: inherit;
+          cursor: text;
+          width: 100%;
+          display: block;
+        }
         .attribution {
           font-size: 10px;
           margin-top: 2px;
