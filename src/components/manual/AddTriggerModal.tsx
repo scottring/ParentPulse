@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { MicButton } from '@/components/voice/MicButton';
 
 interface AddTriggerModalProps {
   isOpen: boolean;
@@ -105,19 +106,26 @@ export function AddTriggerModal({ isOpen, onClose, onSave, personName }: AddTrig
               <label className="block font-medium mb-2" style={{ color: '#3A3530' }}>
                 Context / When does this happen? *
               </label>
-              <textarea
-                value={context}
-                onChange={(e) => setContext(e.target.value)}
-                placeholder={`e.g., When switching from playtime to homework`}
-                rows={3}
-                className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
-                style={{
-                  borderColor: 'rgba(255,255,255,0.4)',
-                  backgroundColor: 'rgba(255,255,255,0.5)',
-                  color: '#3A3530'
-                }}
-                required
-              />
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+                <textarea
+                  value={context}
+                  onChange={(e) => setContext(e.target.value)}
+                  placeholder={`e.g., When switching from playtime to homework`}
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
+                  style={{
+                    borderColor: 'rgba(255,255,255,0.4)',
+                    backgroundColor: 'rgba(255,255,255,0.5)',
+                    color: '#3A3530'
+                  }}
+                  required
+                />
+                <MicButton
+                  size="sm"
+                  disabled={saving}
+                  onTranscript={(t) => setContext((prev) => (prev ? `${prev} ${t}` : t))}
+                />
+              </div>
             </div>
 
             {/* Typical Response */}
@@ -125,18 +133,25 @@ export function AddTriggerModal({ isOpen, onClose, onSave, personName }: AddTrig
               <label className="block font-medium mb-2" style={{ color: '#3A3530' }}>
                 Typical Response
               </label>
-              <textarea
-                value={typicalResponse}
-                onChange={(e) => setTypicalResponse(e.target.value)}
-                placeholder={`e.g., Whining, delaying, frustration`}
-                rows={2}
-                className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
-                style={{
-                  borderColor: 'rgba(255,255,255,0.4)',
-                  backgroundColor: 'rgba(255,255,255,0.5)',
-                  color: '#3A3530'
-                }}
-              />
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+                <textarea
+                  value={typicalResponse}
+                  onChange={(e) => setTypicalResponse(e.target.value)}
+                  placeholder={`e.g., Whining, delaying, frustration`}
+                  rows={2}
+                  className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
+                  style={{
+                    borderColor: 'rgba(255,255,255,0.4)',
+                    backgroundColor: 'rgba(255,255,255,0.5)',
+                    color: '#3A3530'
+                  }}
+                />
+                <MicButton
+                  size="sm"
+                  disabled={saving}
+                  onTranscript={(t) => setTypicalResponse((prev) => (prev ? `${prev} ${t}` : t))}
+                />
+              </div>
             </div>
 
             {/* De-escalation Strategy */}
@@ -144,18 +159,25 @@ export function AddTriggerModal({ isOpen, onClose, onSave, personName }: AddTrig
               <label className="block font-medium mb-2" style={{ color: '#3A3530' }}>
                 What Helps / De-escalation Strategy
               </label>
-              <textarea
-                value={deescalationStrategy}
-                onChange={(e) => setDeescalationStrategy(e.target.value)}
-                placeholder={`e.g., Give 5-minute warning, offer choices`}
-                rows={2}
-                className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
-                style={{
-                  borderColor: 'rgba(255,255,255,0.4)',
-                  backgroundColor: 'rgba(255,255,255,0.5)',
-                  color: '#3A3530'
-                }}
-              />
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+                <textarea
+                  value={deescalationStrategy}
+                  onChange={(e) => setDeescalationStrategy(e.target.value)}
+                  placeholder={`e.g., Give 5-minute warning, offer choices`}
+                  rows={2}
+                  className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
+                  style={{
+                    borderColor: 'rgba(255,255,255,0.4)',
+                    backgroundColor: 'rgba(255,255,255,0.5)',
+                    color: '#3A3530'
+                  }}
+                />
+                <MicButton
+                  size="sm"
+                  disabled={saving}
+                  onTranscript={(t) => setDeescalationStrategy((prev) => (prev ? `${prev} ${t}` : t))}
+                />
+              </div>
             </div>
 
             {/* Severity */}

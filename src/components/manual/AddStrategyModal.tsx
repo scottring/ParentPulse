@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { MicButton } from '@/components/voice/MicButton';
 
 interface AddStrategyModalProps {
   isOpen: boolean;
@@ -112,19 +113,26 @@ export function AddStrategyModal({ isOpen, onClose, onSave, personName, type }: 
               <label className="block font-medium mb-2" style={{ color: '#3A3530' }}>
                 Context / When to {isWorksType ? 'use' : 'avoid'} this *
               </label>
-              <textarea
-                value={context}
-                onChange={(e) => setContext(e.target.value)}
-                placeholder={contextPlaceholder}
-                rows={3}
-                className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
-                style={{
-                  borderColor: 'rgba(255,255,255,0.4)',
-                  backgroundColor: 'rgba(255,255,255,0.5)',
-                  color: '#3A3530'
-                }}
-                required
-              />
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+                <textarea
+                  value={context}
+                  onChange={(e) => setContext(e.target.value)}
+                  placeholder={contextPlaceholder}
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
+                  style={{
+                    borderColor: 'rgba(255,255,255,0.4)',
+                    backgroundColor: 'rgba(255,255,255,0.5)',
+                    color: '#3A3530'
+                  }}
+                  required
+                />
+                <MicButton
+                  size="sm"
+                  disabled={saving}
+                  onTranscript={(t) => setContext((prev) => (prev ? `${prev} ${t}` : t))}
+                />
+              </div>
             </div>
 
             {/* Effectiveness (only for "What Works") */}
@@ -162,18 +170,25 @@ export function AddStrategyModal({ isOpen, onClose, onSave, personName, type }: 
               <label className="block font-medium mb-2" style={{ color: '#3A3530' }}>
                 Additional Notes
               </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Any additional context or observations..."
-                rows={2}
-                className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
-                style={{
-                  borderColor: 'rgba(255,255,255,0.4)',
-                  backgroundColor: 'rgba(255,255,255,0.5)',
-                  color: '#3A3530'
-                }}
-              />
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Any additional context or observations..."
+                  rows={2}
+                  className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all"
+                  style={{
+                    borderColor: 'rgba(255,255,255,0.4)',
+                    backgroundColor: 'rgba(255,255,255,0.5)',
+                    color: '#3A3530'
+                  }}
+                />
+                <MicButton
+                  size="sm"
+                  disabled={saving}
+                  onTranscript={(t) => setNotes((prev) => (prev ? `${prev} ${t}` : t))}
+                />
+              </div>
             </div>
 
             {/* Actions */}
