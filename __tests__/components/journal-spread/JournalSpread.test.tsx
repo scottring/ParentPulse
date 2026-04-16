@@ -4,6 +4,27 @@ import { Timestamp } from 'firebase/firestore';
 import { JournalSpread } from '@/components/journal-spread/JournalSpread';
 import type { Entry } from '@/types/entry';
 
+// Mock hooks that transitively import @/lib/firebase so the test
+// environment doesn't need real Firebase env vars.
+vi.mock('@/hooks/useMarginNotes', () => ({
+  useMarginNotesForJournalEntries: () => ({
+    notesByEntry: new Map(),
+    loading: false,
+    error: null,
+  }),
+  useMarginNoteMutations: () => ({
+    createNote: vi.fn(),
+    updateNote: vi.fn(),
+    deleteNote: vi.fn(),
+    saving: false,
+    error: null,
+  }),
+}));
+
+vi.mock('@/hooks/usePeopleMap', () => ({
+  usePeopleMap: () => ({ byId: {}, nameOf: (id: string) => id, loading: false }),
+}));
+
 const make = (i: number): Entry => ({
   id: `e${i}`,
   familyId: 'f1',

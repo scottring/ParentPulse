@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Feather } from 'lucide-react';
 import type { Entry } from '@/types/entry';
 import { EntryBlock } from './EntryBlock';
@@ -10,6 +10,12 @@ import { FilterPills, type FilterPillsPerson, type FilterSelection } from './Fil
 import { usePageWindow } from './usePageWindow';
 import { FLAT_COLORS } from './assets';
 import { MarginItem } from './MarginColumn';
+import {
+  useMarginNotesForJournalEntries,
+  useMarginNoteMutations,
+} from '@/hooks/useMarginNotes';
+import { usePeopleMap } from '@/hooks/usePeopleMap';
+import type { MarginNote } from '@/types/marginNote';
 import dynamic from 'next/dynamic';
 
 const AskAboutEntrySheet = dynamic(
@@ -75,6 +81,11 @@ function PageEntries({
   currentUserId,
   onAsk,
   onEdit,
+  notesByEntry,
+  onCreateNote,
+  onUpdateNote,
+  onDeleteNote,
+  resolveUserName,
 }: {
   entries: Entry[];
   side: 'left' | 'right';
@@ -82,6 +93,11 @@ function PageEntries({
   currentUserId?: string;
   onAsk?: (entry: Entry, side: 'left' | 'right') => void;
   onEdit?: (entry: Entry, mode: 'edit' | 'append') => void;
+  notesByEntry: Map<string, MarginNote[]>;
+  onCreateNote: (journalEntryId: string, content: string) => Promise<string>;
+  onUpdateNote: (noteId: string, content: string) => Promise<void>;
+  onDeleteNote: (noteId: string) => Promise<void>;
+  resolveUserName: (userId: string) => string;
 }) {
   const groups = groupEntriesByDay(entries);
   const handleAsk = onAsk ? (e: Entry) => onAsk(e, side) : undefined;
@@ -96,7 +112,16 @@ function PageEntries({
             side === 'left' ? (
               <div key={e.id} style={{ display: 'contents' }}>
                 <div className="margin-cell margin-left">
-                  <MarginItem entry={e} />
+                  <MarginItem
+                    entry={e}
+                    side={side}
+                    notes={notesByEntry.get(e.id) ?? []}
+                    currentUserId={currentUserId}
+                    resolveUserName={resolveUserName}
+                    onCreateNote={onCreateNote}
+                    onUpdateNote={onUpdateNote}
+                    onDeleteNote={onDeleteNote}
+                  />
                 </div>
                 <div className="main-cell">
                   <EntryBlock entry={e} nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} onEdit={onEdit} />
@@ -108,7 +133,16 @@ function PageEntries({
                   <EntryBlock entry={e} nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} onEdit={onEdit} />
                 </div>
                 <div className="margin-cell margin-right">
-                  <MarginItem entry={e} />
+                  <MarginItem
+                    entry={e}
+                    side={side}
+                    notes={notesByEntry.get(e.id) ?? []}
+                    currentUserId={currentUserId}
+                    resolveUserName={resolveUserName}
+                    onCreateNote={onCreateNote}
+                    onUpdateNote={onUpdateNote}
+                    onDeleteNote={onDeleteNote}
+                  />
                 </div>
               </div>
             )
@@ -151,6 +185,29 @@ export function JournalSpread({
   const leftEntries = orderedForSpread.slice(0, half);
   const rightEntries = orderedForSpread.slice(half);
 
+  const annotatableJournalEntryIds = useMemo(
+    () =>
+      orderedForSpread
+        .filter((e) => e.type === 'written' || e.type === 'observation')
+        .map((e) => e.id),
+    [orderedForSpread]
+  );
+
+  const { notesByEntry } = useMarginNotesForJournalEntries(annotatableJournalEntryIds);
+  const { createNote, updateNote, deleteNote } = useMarginNoteMutations();
+  const { byId: peopleById } = usePeopleMap();
+
+  // userId → display name. Derived from the people map by looking up the
+  // person whose linkedUserId matches. Falls back to the userId itself so
+  // something is always rendered for unknown users.
+  const resolveUserName = useMemo(() => {
+    const userIdToName = new Map<string, string>();
+    for (const p of Object.values(peopleById)) {
+      if (p.linkedUserId) userIdToName.set(p.linkedUserId, p.name);
+    }
+    return (userId: string) => userIdToName.get(userId) ?? userId;
+  }, [peopleById]);
+
   const [askTarget, setAskTarget] = useState<{ entry: Entry; side: 'left' | 'right' } | null>(null);
   const handleAsk = (entry: Entry, side: 'left' | 'right') => {
     // On mobile the whole spread is the right page, so sheet slides from right.
@@ -184,10 +241,34 @@ export function JournalSpread({
           </button>
         )}
         <div className="page page-left">
-          <PageEntries entries={leftEntries} side="left" nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} onEdit={handleEdit} />
+          <PageEntries
+            entries={leftEntries}
+            side="left"
+            nameOf={nameOf}
+            currentUserId={currentUserId}
+            onAsk={handleAsk}
+            onEdit={handleEdit}
+            notesByEntry={notesByEntry}
+            onCreateNote={createNote}
+            onUpdateNote={updateNote}
+            onDeleteNote={deleteNote}
+            resolveUserName={resolveUserName}
+          />
         </div>
         <div className="page page-right">
-          <PageEntries entries={rightEntries} side="right" nameOf={nameOf} currentUserId={currentUserId} onAsk={handleAsk} onEdit={handleEdit} />
+          <PageEntries
+            entries={rightEntries}
+            side="right"
+            nameOf={nameOf}
+            currentUserId={currentUserId}
+            onAsk={handleAsk}
+            onEdit={handleEdit}
+            notesByEntry={notesByEntry}
+            onCreateNote={createNote}
+            onUpdateNote={updateNote}
+            onDeleteNote={deleteNote}
+            resolveUserName={resolveUserName}
+          />
           {currentEntries.length === 0 && (
             <p className="empty-state">A quiet day. Nothing yet — write the first thing.</p>
           )}
