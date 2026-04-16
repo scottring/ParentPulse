@@ -17,9 +17,10 @@ This feature is load-bearing for the project's "synthesis of perspectives" one-l
 **In scope**
 - Self-marginalia (author annotates their own entry) and observer-marginalia (another family member annotates an entry they can see).
 - Tied to an entry. No free-floating page scribbles.
-- Inline authoring by clicking the empty margin space next to an entry.
+- **Only journal-backed entries are annotatable in v1** — i.e., `Entry` objects whose `type` is `written` or `observation`. The unified `Entry` type is virtual (see `src/lib/entries/adapter.ts`); only these two types map 1:1 to a real `journal_entries/{id}` document whose `visibleToUserIds` we can denormalize from and cascade against. Synthesis, reflection (from contributions), nudge, prompt, activity, and conversation entries are not annotatable in v1 because they have synthetic or composite IDs with no single owning Firestore doc.
+- Inline authoring by clicking the empty margin space next to an annotatable entry.
 - 80-character plain-text cap.
-- Visibility inherited from the parent entry.
+- Visibility inherited from the parent journal entry.
 - Edit and delete by the note's author only.
 - Desktop/tablet only for authoring; mobile view hides marginalia entirely (unchanged).
 
@@ -49,32 +50,38 @@ import { Timestamp } from 'firebase/firestore';
 export interface MarginNote {
   id: string;
   familyId: string;
-  entryId: string;              // parent entry foreign key
-  authorPersonId: string;       // who wrote the note
-  authorUserId: string;         // used for rule checks
+  // Real journal_entries docId. (Not the virtual Entry.id — for
+  // written/observation entries those are 1:1 equal, but we document
+  // the semantics explicitly so readers know a margin note points at
+  // a Firestore doc, not a synthetic entry.)
+  journalEntryId: string;
+  authorUserId: string;         // request.auth.uid at create time
   content: string;              // trimmed, 1..80 chars, plain text
   createdAt: Timestamp;
   editedAt?: Timestamp;
 
-  // Denormalized from parent entry at write time. Kept in sync via
-  // a Cloud Function cascade when the parent's visibility changes.
+  // Denormalized from parent journal entry at write time. Kept in
+  // sync via a Cloud Function cascade when the parent's visibility
+  // changes.
   visibleToUserIds: string[];
   sharedWithUserIds: string[];
 }
 ```
 
+**Why no `authorPersonId`:** `journal_entries.authorId` is already a userId in this codebase (not a personId). To render an author's name for observer notes, the UI resolves `authorUserId` → person via the existing `usePeopleMap` hook. Keeping the write-side schema userId-only matches the journal entry pattern.
+
 ### Firestore security rules
 
-Same shape as the existing entry rules (symmetry is the point).
+Same shape as the existing `journal_entries` rules (symmetry is the point) — including the `isParent() && belongsToFamily(...)` gating those rules already use.
 
-- **Create:** `request.auth.uid == resource.data.authorUserId`; `request.auth.uid` must appear in the parent entry's `visibleToUserIds`; `visibleToUserIds` and `sharedWithUserIds` on the new note must equal the parent's at write time.
-- **Read:** `request.auth.uid in resource.data.visibleToUserIds`.
+- **Create:** `isParent() && belongsToFamily(...)`; `request.auth.uid == request.resource.data.authorUserId`; `request.auth.uid` must appear in the parent `journal_entries/{journalEntryId}` doc's `visibleToUserIds` (checked via `get(...)` in the rule); `visibleToUserIds` and `sharedWithUserIds` on the new note must equal the parent's at write time.
+- **Read:** `isParent() && belongsToFamily(...) && request.auth.uid in resource.data.visibleToUserIds`.
 - **Update:** author-only. Only `content` and `editedAt` may change. `visibleToUserIds` / `sharedWithUserIds` may not be client-edited — they only change via the cascade function below.
 - **Delete:** author-only.
 
 ### Visibility cascade
 
-A Cloud Function `onUpdate` trigger on `entries/{id}` fans out when `visibleToUserIds` or `sharedWithUserIds` changes, batch-updating matching `margin_notes`. This mirrors the existing cascade pattern for denormalized fields in the codebase.
+A Cloud Function `onUpdate` trigger on `journal_entries/{id}` fans out when `visibleToUserIds` or `sharedWithUserIds` changes, batch-updating matching `margin_notes` where `journalEntryId == {id}`. This matches the denorm-cascade pattern already used for journal-entry-derived fields elsewhere in the codebase.
 
 ### Components
 
@@ -82,9 +89,9 @@ A Cloud Function `onUpdate` trigger on `entries/{id}` fans out when `visibleToUs
 |---|---|
 | `MarginNoteComposer.tsx` *(new)* | Controlled inline input with 80-char cap, side-aware alignment, optimistic state, keyboard handling (Enter commits / Esc cancels / blur commits-or-cancels). |
 | `UserMarginNote.tsx` *(new)* | Renders a single saved note. Italic serif, author-initial attribution when author ≠ entry author, tap-to-edit for own notes. |
-| `MarginColumn.tsx` / `MarginItem` *(edit)* | Accepts a `notes: MarginNote[]` prop. Renders user notes above the existing tag/synth lines. Renders the `+` empty-state composer trigger when the margin cell has no content and the viewer can write. |
-| `useMarginNotes.ts` *(new hook)* | `createNote`, `updateNote`, `deleteNote`, plus a realtime `useMarginNotesForEntries(entryIds)` subscription for hydration. Handles the denorm copy of `visibleToUserIds` / `sharedWithUserIds` from the parent entry at write time. |
-| `JournalSpread.tsx` *(edit)* | Passes the current page's entry IDs into the hook, threads `notes` down through `PageEntries` → `MarginItem`. |
+| `MarginColumn.tsx` / `MarginItem` *(edit)* | Accepts a `notes: MarginNote[]` prop and (when the entry is annotatable) an `onAddNote` / `onEditNote` / `onDeleteNote` callback set. Renders user notes above the existing tag/synth lines. Renders the composer trigger only when the entry is annotatable (`entry.type in ['written', 'observation']`) and the current user is in `entry.visibleToUserIds`. |
+| `useMarginNotes.ts` *(new hook)* | `createNote`, `updateNote`, `deleteNote`, plus a realtime `useMarginNotesForJournalEntries(journalEntryIds)` subscription for hydration. Handles the denorm copy of `visibleToUserIds` / `sharedWithUserIds` by reading the parent journal entry at write time. |
+| `JournalSpread.tsx` *(edit)* | Filters the current page's entries down to annotatable ones, derives their `journalEntryId`s, passes them to the hook, and threads the resulting `Map<entryId, MarginNote[]>` down through `PageEntries` → `MarginItem`. |
 
 ### UX detail
 
@@ -117,11 +124,11 @@ Existing 34px `margin-bottom` between blocks preserves rhythm.
 
 ## Data flow
 
-1. `JournalSpread` computes `currentWindowEntryIds` (≤ `PAGE_SIZE = 6`, well under Firestore's `in`-query cap of 30).
-2. `useMarginNotesForEntries(currentWindowEntryIds)` subscribes; returns `Map<entryId, MarginNote[]>`.
+1. `JournalSpread` computes the current page's window of entries, filters to annotatable ones (`type === 'written' || type === 'observation'`), and derives their `journalEntryId`s. For these types, the virtual `Entry.id` equals `journal_entries.docId` (see `journalEntryToEntry` in `src/lib/entries/adapter.ts`), so no extra mapping is needed.
+2. `useMarginNotesForJournalEntries(journalEntryIds)` subscribes (`where('journalEntryId', 'in', [...])` + `where('visibleToUserIds', 'array-contains', currentUserId)`); returns `Map<journalEntryId, MarginNote[]>`. `PAGE_SIZE = 6`, well under Firestore's `in`-query cap of 30.
 3. `PageEntries` threads notes for each entry into its `MarginItem`.
-4. `MarginItem` renders user notes + auto-derived marginalia, plus the empty-state composer trigger.
-5. Composer writes go through `useMarginNotes.createNote`, which reads the parent entry's visibility and denormalizes it onto the new note doc.
+4. `MarginItem` renders user notes + auto-derived marginalia, plus the composer trigger (for annotatable entries only).
+5. Composer writes go through `useMarginNotes.createNote(journalEntryId, content)`, which reads the parent `journal_entries/{journalEntryId}` doc, copies its `visibleToUserIds` / `sharedWithUserIds` onto the new note, and writes it.
 
 ## Testing
 
@@ -136,3 +143,4 @@ Existing 34px `margin-bottom` between blocks preserves rhythm.
 - **Affordance legibility.** Click-the-margin is elegant but may not read as interactive. Decision: ship A, revisit with a per-entry action button (B) if usage data or self-testing shows the empty cell is being missed.
 - **Attribution when an entry has multiple visible observers.** First-name initial can collide (e.g., two kids whose names start with M). If this occurs in practice, extend attribution to first name or short handle. Not blocking for v1.
 - **Cascade latency.** Parent-visibility changes take one Cloud Function hop to propagate to notes. During that window, a note could briefly be visible to the wrong reader. Acceptable: entry-visibility changes are rare, and the old visibility was already valid.
+- **Synthetic-entry marginalia deferred.** v1 only lets users annotate journal-backed entries (`written` / `observation`). Synthesis and reflection entries would require either a different collection keyed by manualId + insight index, or backfilling real doc IDs for synthetic content. Worth revisiting once v1 usage shows demand; not a v1 blocker.
