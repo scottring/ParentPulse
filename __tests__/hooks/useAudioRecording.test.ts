@@ -76,4 +76,21 @@ describe('useAudioRecording', () => {
     expect(result.current.state).toBe('idle');
     vi.useRealTimers();
   });
+
+  it('returns the blob from stop() even when auto-stop fired first', async () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useAudioRecording());
+    await act(async () => { await result.current.start(); });
+
+    // Advance past hard cap — auto-stop fires, blob produced, state=idle.
+    await act(async () => { vi.advanceTimersByTime(91_000); });
+    expect(result.current.state).toBe('idle');
+
+    // User's stop() arrives late — should still return the blob.
+    let blob: Blob | null = null;
+    await act(async () => { blob = await result.current.stop(); });
+    expect(blob).toBeInstanceOf(Blob);
+    expect(blob!.size).toBeGreaterThan(0);
+    vi.useRealTimers();
+  });
 });

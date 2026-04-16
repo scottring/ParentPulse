@@ -53,8 +53,10 @@ export function useAudioRecording(): UseAudioRecordingApi {
   const startTsRef = useRef<number>(0);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const resolveStopRef = useRef<((b: Blob | null) => void) | null>(null);
+  const lastBlobRef = useRef<Blob | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const rmsBufferRef = useRef<Float32Array | null>(null);
   const silenceStartRef = useRef<number | null>(null);
 
   const cleanup = useCallback(() => {
@@ -69,12 +71,12 @@ export function useAudioRecording(): UseAudioRecordingApi {
     audioCtxRef.current?.close().catch(() => {});
     audioCtxRef.current = null;
     analyserRef.current = null;
+    rmsBufferRef.current = null;
     silenceStartRef.current = null;
     setElapsedSec(0);
   }, []);
 
-  function computeRms(analyser: AnalyserNode): number {
-    const buf = new Float32Array(analyser.fftSize);
+  function computeRms(analyser: AnalyserNode, buf: Float32Array): number {
     analyser.getFloatTimeDomainData(buf);
     let sumSq = 0;
     for (let i = 0; i < buf.length; i++) sumSq += buf[i] * buf[i];
@@ -84,6 +86,7 @@ export function useAudioRecording(): UseAudioRecordingApi {
   useEffect(() => () => cleanup(), [cleanup]);
 
   const start = useCallback(async () => {
+    lastBlobRef.current = null;
     setError(null);
     setState('requesting-permission');
     try {
@@ -99,11 +102,15 @@ export function useAudioRecording(): UseAudioRecordingApi {
       };
       recorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: mime });
+        lastBlobRef.current = blob;
         const resolve = resolveStopRef.current;
         resolveStopRef.current = null;
         cleanup();
         setState('idle');
-        resolve?.(blob);
+        if (resolve) {
+          lastBlobRef.current = null;
+          resolve(blob);
+        }
       };
 
       // AnalyserNode for silence detection. AudioContext requires a user gesture on
@@ -117,6 +124,7 @@ export function useAudioRecording(): UseAudioRecordingApi {
           const source = ctx.createMediaStreamSource(stream);
           const analyser = ctx.createAnalyser();
           analyser.fftSize = 1024;
+          rmsBufferRef.current = new Float32Array(analyser.fftSize);
           source.connect(analyser);
           audioCtxRef.current = ctx;
           analyserRef.current = analyser;
@@ -142,8 +150,9 @@ export function useAudioRecording(): UseAudioRecordingApi {
         }
 
         const analyser = analyserRef.current;
-        if (analyser) {
-          const rms = computeRms(analyser);
+        const rmsBuf = rmsBufferRef.current;
+        if (analyser && rmsBuf) {
+          const rms = computeRms(analyser, rmsBuf);
           if (rms < RECORDING_TUNING.SILENCE_RMS_THRESHOLD) {
             if (silenceStartRef.current == null) silenceStartRef.current = now;
             const silentFor = (now - silenceStartRef.current) / 1000;
@@ -171,7 +180,9 @@ export function useAudioRecording(): UseAudioRecordingApi {
     return new Promise<Blob | null>((resolve) => {
       const recorder = recorderRef.current;
       if (!recorder || recorder.state !== 'recording') {
-        resolve(null);
+        const blob = lastBlobRef.current;
+        lastBlobRef.current = null;
+        resolve(blob);
         return;
       }
       resolveStopRef.current = resolve;
