@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -46,6 +46,14 @@ function relationshipLabel(p: Person): string {
  * /people/[id]/manual.
  */
 export default function ManualPage() {
+  return (
+    <Suspense fallback={null}>
+      <ManualPageInner />
+    </Suspense>
+  );
+}
+
+function ManualPageInner() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
@@ -256,7 +264,7 @@ export default function ManualPage() {
           align-items: center;
           padding: 10px 0 14px;
           margin: 0 auto 8px;
-          max-width: 1288px;
+          max-width: 1440px;
         }
         .masthead-title {
           font-family: Georgia, 'Times New Roman', serif;
@@ -285,10 +293,10 @@ export default function ManualPage() {
         .book {
           position: relative;
           z-index: 1;
-          max-width: 1288px;
+          max-width: 1440px;
           margin: 0 auto;
           display: grid;
-          grid-template-columns: 1fr 1.2fr;
+          grid-template-columns: 1fr 1fr;
           padding: 14px;
           background: linear-gradient(135deg, #4a2020 0%, #3a1818 50%, #2e1010 100%);
           border-radius: 4px;
