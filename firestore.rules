@@ -826,5 +826,16 @@ service cloud.firestore {
     match /transcription_logs/{logId} {
       allow read, write: if false;
     }
+
+    // Dinner prompt feature — server-only access via getDinnerPrompt /
+    // reportDinnerPrompt Cloud Functions (Symphony kiosk integration).
+    match /dinner_prompts/{householdId}/{document=**} {
+      allow read, write: if false;
+    }
+
+    // API keys for the Symphony↔Relish integration. Server-only.
+    match /api_keys/{keyHash} {
+      allow read, write: if false;
+    }
   }
 }
