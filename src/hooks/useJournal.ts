@@ -182,10 +182,16 @@ export function useJournal(): UseJournalReturn {
       setSaving(true);
       setError(null);
       try {
-        // Cascade: delete all margin notes attached to this entry.
+        // Cascade: delete all margin notes attached to this entry that the
+        // caller can see. Firestore security rules require queries to be
+        // rule-compatible — the margin_notes read rule checks
+        // `visibleToUserIds` contains the caller, so the query must filter
+        // on it too or Firestore rejects the whole query with "Missing or
+        // insufficient permissions."
         const notesQuery = query(
           collection(firestore, 'margin_notes'),
           where('journalEntryId', '==', entryId),
+          where('visibleToUserIds', 'array-contains', user.userId),
         );
         const notesSnap = await getDocs(notesQuery);
 
