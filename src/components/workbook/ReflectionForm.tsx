@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Exercise, ReflectionRating, SuggestedManualEntry } from '@/types/workbook';
+import { MicButton } from '@/components/voice/MicButton';
 
 const RATING_OPTIONS: { value: ReflectionRating; label: string; emoji: string }[] = [
   { value: 'didnt_try', label: "Didn't try", emoji: '\uD83D\uDE10' },
@@ -174,21 +175,28 @@ export default function ReflectionForm({
               >
                 {prompt}
               </label>
-              <textarea
-                value={promptAnswers[i] || ''}
-                onChange={(e) =>
-                  setPromptAnswers((prev) => ({ ...prev, [i]: e.target.value }))
-                }
-                rows={2}
-                className="w-full rounded-2xl px-4 py-3 text-sm resize-none"
-                style={{
-                  fontFamily: 'var(--font-parent-body)',
-                  background: 'rgba(0,0,0,0.03)',
-                  border: '1px solid rgba(0,0,0,0.06)',
-                  color: 'var(--parent-text)',
-                }}
-                placeholder="Optional"
-              />
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+                <textarea
+                  value={promptAnswers[i] || ''}
+                  onChange={(e) =>
+                    setPromptAnswers((prev) => ({ ...prev, [i]: e.target.value }))
+                  }
+                  rows={2}
+                  className="w-full rounded-2xl px-4 py-3 text-sm resize-none"
+                  style={{
+                    fontFamily: 'var(--font-parent-body)',
+                    background: 'rgba(0,0,0,0.03)',
+                    border: '1px solid rgba(0,0,0,0.06)',
+                    color: 'var(--parent-text)',
+                  }}
+                  placeholder="Optional"
+                />
+                <MicButton
+                  size="sm"
+                  disabled={submitting}
+                  onTranscript={(t) => setPromptAnswers((prev) => ({ ...prev, [i]: prev[i] ? `${prev[i]} ${t}` : t }))}
+                />
+              </div>
             </div>
           ))}
 
@@ -205,19 +213,26 @@ export default function ReflectionForm({
             >
               What did you discover?
             </label>
-            <textarea
-              value={discoveryNote}
-              onChange={(e) => setDiscoveryNote(e.target.value)}
-              rows={3}
-              className="w-full rounded-2xl px-4 py-3 text-sm resize-none"
-              style={{
-                fontFamily: 'var(--font-parent-body)',
-                background: 'rgba(0,0,0,0.03)',
-                border: '1px solid rgba(0,0,0,0.06)',
-                color: 'var(--parent-text)',
-              }}
-              placeholder="Anything that surprised you or felt important..."
-            />
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+              <textarea
+                value={discoveryNote}
+                onChange={(e) => setDiscoveryNote(e.target.value)}
+                rows={3}
+                className="w-full rounded-2xl px-4 py-3 text-sm resize-none"
+                style={{
+                  fontFamily: 'var(--font-parent-body)',
+                  background: 'rgba(0,0,0,0.03)',
+                  border: '1px solid rgba(0,0,0,0.06)',
+                  color: 'var(--parent-text)',
+                }}
+                placeholder="Anything that surprised you or felt important..."
+              />
+              <MicButton
+                size="sm"
+                disabled={submitting}
+                onTranscript={(t) => setDiscoveryNote((prev) => (prev ? `${prev} ${t}` : t))}
+              />
+            </div>
           </div>
 
           {/* Suggested manual entries */}

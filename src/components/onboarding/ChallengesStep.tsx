@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { MicButton } from '@/components/voice/MicButton';
 import { ChildChallenge, ChallengeCategory, ChallengeSeverity } from '@/types';
 import { Timestamp } from 'firebase/firestore';
 
@@ -219,14 +220,20 @@ export default function ChallengesStep({
                         <label className="block text-sm font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
                           Brief Description
                         </label>
-                        <input
-                          type="text"
-                          value={formData.description}
-                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                          className="w-full px-4 py-2 border rounded-lg"
-                          style={{ borderColor: 'var(--parent-border)' }}
-                          placeholder="e.g., Difficulty focusing on homework"
-                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <input
+                            type="text"
+                            value={formData.description}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            className="w-full px-4 py-2 border rounded-lg"
+                            style={{ borderColor: 'var(--parent-border)' }}
+                            placeholder="e.g., Difficulty focusing on homework"
+                          />
+                          <MicButton
+                            size="sm"
+                            onTranscript={(t) => setFormData((prev) => ({ ...prev, description: prev.description ? `${prev.description} ${t}` : t }))}
+                          />
+                        </div>
                       </div>
 
                       {/* Severity */}
@@ -284,14 +291,20 @@ export default function ChallengesStep({
                         <label className="block text-sm font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
                           Additional Notes (optional)
                         </label>
-                        <textarea
-                          value={formData.notes}
-                          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                          rows={3}
-                          className="w-full px-4 py-2 border rounded-lg"
-                          style={{ borderColor: 'var(--parent-border)' }}
-                          placeholder="Any other details that might be helpful..."
-                        />
+                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+                          <textarea
+                            value={formData.notes}
+                            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                            rows={3}
+                            className="w-full px-4 py-2 border rounded-lg"
+                            style={{ borderColor: 'var(--parent-border)' }}
+                            placeholder="Any other details that might be helpful..."
+                          />
+                          <MicButton
+                            size="sm"
+                            onTranscript={(t) => setFormData((prev) => ({ ...prev, notes: prev.notes ? `${prev.notes} ${t}` : t }))}
+                          />
+                        </div>
                       </div>
                     </div>
 

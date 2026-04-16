@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
+import { MicButton } from '@/components/voice/MicButton';
 import { useAuth } from '@/context/AuthContext';
 import {
   doc,
@@ -1002,27 +1003,34 @@ function WritingPerformance({
 
       {/* The writing surface — large, editorial */}
       <div style={{ padding: '0 56px 20px' }}>
-        <textarea
-          ref={textareaRef}
-          value={myNote}
-          onChange={(e) => setMyNote(e.target.value)}
-          placeholder="Let yourself think on paper&hellip;"
-          rows={14}
-          className="w-full focus:outline-none"
-          style={{
-            fontFamily: 'var(--font-parent-display)',
-            fontSize: 19,
-            fontStyle: 'italic',
-            color: '#3A3530',
-            background: 'transparent',
-            border: 0,
-            lineHeight: 1.55,
-            resize: 'none',
-            padding: '8px 2px',
-            letterSpacing: '0.002em',
-            minHeight: 380,
-          }}
-        />
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+          <textarea
+            ref={textareaRef}
+            value={myNote}
+            onChange={(e) => setMyNote(e.target.value)}
+            placeholder="Let yourself think on paper&hellip;"
+            rows={14}
+            className="w-full focus:outline-none"
+            style={{
+              fontFamily: 'var(--font-parent-display)',
+              fontSize: 19,
+              fontStyle: 'italic',
+              color: '#3A3530',
+              background: 'transparent',
+              border: 0,
+              lineHeight: 1.55,
+              resize: 'none',
+              padding: '8px 2px',
+              letterSpacing: '0.002em',
+              minHeight: 380,
+              flex: 1,
+            }}
+          />
+          <MicButton
+            size="sm"
+            onTranscript={(t) => setMyNote(myNote ? `${myNote} ${t}` : t)}
+          />
+        </div>
       </div>
 
       {/* Word count + elapsed time — marginalia */}
@@ -1760,25 +1768,32 @@ function StoryReactionView({
           Optional. A word, a sentence, a question they asked — whatever
           stayed with them.
         </p>
-        <textarea
-          value={storyComment}
-          onChange={(e) => setStoryComment(e.target.value)}
-          placeholder={`Anything ${childName} said about the story…`}
-          rows={3}
-          className="w-full focus:outline-none"
-          style={{
-            fontFamily: 'var(--font-parent-display)',
-            fontSize: 17,
-            fontStyle: 'italic',
-            color: '#3A3530',
-            background: 'transparent',
-            border: 0,
-            borderBottom: '1px solid rgba(200, 190, 172, 0.6)',
-            padding: '10px 2px 12px',
-            resize: 'none',
-            lineHeight: 1.55,
-          }}
-        />
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+          <textarea
+            value={storyComment}
+            onChange={(e) => setStoryComment(e.target.value)}
+            placeholder={`Anything ${childName} said about the story…`}
+            rows={3}
+            className="w-full focus:outline-none"
+            style={{
+              fontFamily: 'var(--font-parent-display)',
+              fontSize: 17,
+              fontStyle: 'italic',
+              color: '#3A3530',
+              background: 'transparent',
+              border: 0,
+              borderBottom: '1px solid rgba(200, 190, 172, 0.6)',
+              padding: '10px 2px 12px',
+              resize: 'none',
+              lineHeight: 1.55,
+            }}
+          />
+          <MicButton
+            size="sm"
+            disabled={submitting}
+            onTranscript={(t) => setStoryComment(storyComment ? `${storyComment} ${t}` : t)}
+          />
+        </div>
       </div>
 
       <hr className="press-rule" style={{ margin: '24px 56px 20px', width: 'auto' }} />
@@ -2025,25 +2040,31 @@ function ReflectionFieldPress({
       >
         {name ? `What did ${name} notice?` : 'What did you notice?'}
       </p>
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Write anything that stayed with you&hellip;"
-        rows={3}
-        className="w-full focus:outline-none"
-        style={{
-          fontFamily: 'var(--font-parent-display)',
-          fontSize: 16,
-          fontStyle: 'italic',
-          color: '#3A3530',
-          background: 'transparent',
-          border: 0,
-          borderBottom: '1px solid rgba(200,190,172,0.6)',
-          padding: '10px 2px',
-          resize: 'none',
-          lineHeight: 1.55,
-        }}
-      />
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Write anything that stayed with you&hellip;"
+          rows={3}
+          className="w-full focus:outline-none"
+          style={{
+            fontFamily: 'var(--font-parent-display)',
+            fontSize: 16,
+            fontStyle: 'italic',
+            color: '#3A3530',
+            background: 'transparent',
+            border: 0,
+            borderBottom: '1px solid rgba(200,190,172,0.6)',
+            padding: '10px 2px',
+            resize: 'none',
+            lineHeight: 1.55,
+          }}
+        />
+        <MicButton
+          size="sm"
+          onTranscript={(t) => onChange(value ? `${value} ${t}` : t)}
+        />
+      </div>
     </div>
   );
 }

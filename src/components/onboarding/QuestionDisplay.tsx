@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import type { Question } from '@/config/child-onboarding-questions';
+import { MicButton } from '@/components/voice/MicButton';
 
 interface QuestionDisplayProps {
   question: Question;
@@ -75,28 +76,46 @@ export default function QuestionDisplay({
     switch (question.type) {
       case 'text':
         return (
-          <input
-            ref={inputRef as React.RefObject<HTMLInputElement>}
-            type="text"
-            value={localValue}
-            onChange={(e) => setLocalValue(e.target.value)}
-            placeholder={question.placeholder ? replacePlaceholder(question.placeholder) : ''}
-            className="w-full text-2xl px-4 py-3 outline-none bg-transparent transition-colors"
-            style={{ fontFamily: 'var(--font-parent-body)', color: '#3A3530', borderBottom: '2px solid rgba(124,144,130,0.3)' }}
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input
+              ref={inputRef as React.RefObject<HTMLInputElement>}
+              type="text"
+              value={localValue}
+              onChange={(e) => setLocalValue(e.target.value)}
+              placeholder={question.placeholder ? replacePlaceholder(question.placeholder) : ''}
+              className="w-full text-2xl px-4 py-3 outline-none bg-transparent transition-colors"
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#3A3530', borderBottom: '2px solid rgba(124,144,130,0.3)' }}
+            />
+            <MicButton
+              size="sm"
+              onTranscript={(t) => {
+                const cur = typeof localValue === 'string' ? localValue : '';
+                setLocalValue(cur ? `${cur} ${t}` : t);
+              }}
+            />
+          </div>
         );
 
       case 'textarea':
         return (
-          <textarea
-            ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-            value={localValue}
-            onChange={(e) => setLocalValue(e.target.value)}
-            placeholder={question.placeholder ? replacePlaceholder(question.placeholder) : ''}
-            rows={6}
-            className="w-full text-xl px-4 py-3 rounded-lg outline-none resize-none transition-colors"
-            style={{ fontFamily: 'var(--font-parent-body)', color: '#3A3530', border: '1px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.3)' }}
-          />
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+            <textarea
+              ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+              value={localValue}
+              onChange={(e) => setLocalValue(e.target.value)}
+              placeholder={question.placeholder ? replacePlaceholder(question.placeholder) : ''}
+              rows={6}
+              className="w-full text-xl px-4 py-3 rounded-lg outline-none resize-none transition-colors"
+              style={{ fontFamily: 'var(--font-parent-body)', color: '#3A3530', border: '1px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.3)' }}
+            />
+            <MicButton
+              size="sm"
+              onTranscript={(t) => {
+                const cur = typeof localValue === 'string' ? localValue : '';
+                setLocalValue(cur ? `${cur} ${t}` : t);
+              }}
+            />
+          </div>
         );
 
       case 'scale':

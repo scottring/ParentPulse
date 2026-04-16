@@ -158,3 +158,14 @@ Error auto-clears on next tap.
 - Per-user daily cap enforced at the Function layer.
 - All states communicate clearly without text labels (mic color/animation alone tells the story).
 - Voice is additive: every field still accepts typing; mic failure never blocks the user.
+
+## Sweep exclusions (Wave 5)
+
+The following input categories were intentionally left without MicButton during the final sweep:
+- Authentication forms (register page: name/email/password)
+- PIN entry
+- Search bars
+- Email / phone / URL / file name inputs
+- Numeric-only fields
+
+If you add a new text input, default to including MicButton unless the field falls into one of these categories.

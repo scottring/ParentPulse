@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { MicButton } from '@/components/voice/MicButton';
 
 interface Strategy {
   description: string;
@@ -117,23 +118,35 @@ export default function StrategiesStep({
 
         {/* Add Form */}
         <div className="space-y-3 mb-4">
-          <input
-            type="text"
-            value={newWork.description}
-            onChange={(e) => setNewWork({ ...newWork, description: e.target.value })}
-            placeholder="Strategy or approach..."
-            className="w-full px-4 py-3 border rounded-lg"
-            style={{ borderColor: 'var(--parent-border)' }}
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input
+              type="text"
+              value={newWork.description}
+              onChange={(e) => setNewWork({ ...newWork, description: e.target.value })}
+              placeholder="Strategy or approach..."
+              className="w-full px-4 py-3 border rounded-lg"
+              style={{ borderColor: 'var(--parent-border)' }}
+            />
+            <MicButton
+              size="sm"
+              onTranscript={(t) => setNewWork((prev) => ({ ...prev, description: prev.description ? `${prev.description} ${t}` : t }))}
+            />
+          </div>
 
-          <textarea
-            value={newWork.context}
-            onChange={(e) => setNewWork({ ...newWork, context: e.target.value })}
-            placeholder="When or where does this work? (optional)"
-            rows={2}
-            className="w-full px-4 py-3 border rounded-lg"
-            style={{ borderColor: 'var(--parent-border)' }}
-          />
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+            <textarea
+              value={newWork.context}
+              onChange={(e) => setNewWork({ ...newWork, context: e.target.value })}
+              placeholder="When or where does this work? (optional)"
+              rows={2}
+              className="w-full px-4 py-3 border rounded-lg"
+              style={{ borderColor: 'var(--parent-border)' }}
+            />
+            <MicButton
+              size="sm"
+              onTranscript={(t) => setNewWork((prev) => ({ ...prev, context: prev.context ? `${prev.context} ${t}` : t }))}
+            />
+          </div>
 
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--parent-text)' }}>
@@ -236,23 +249,35 @@ export default function StrategiesStep({
 
         {/* Add Form */}
         <div className="space-y-3 mb-4">
-          <input
-            type="text"
-            value={newNoWork.description}
-            onChange={(e) => setNewNoWork({ ...newNoWork, description: e.target.value })}
-            placeholder="What doesn't work..."
-            className="w-full px-4 py-3 border rounded-lg"
-            style={{ borderColor: 'var(--parent-border)' }}
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input
+              type="text"
+              value={newNoWork.description}
+              onChange={(e) => setNewNoWork({ ...newNoWork, description: e.target.value })}
+              placeholder="What doesn't work..."
+              className="w-full px-4 py-3 border rounded-lg"
+              style={{ borderColor: 'var(--parent-border)' }}
+            />
+            <MicButton
+              size="sm"
+              onTranscript={(t) => setNewNoWork((prev) => ({ ...prev, description: prev.description ? `${prev.description} ${t}` : t }))}
+            />
+          </div>
 
-          <textarea
-            value={newNoWork.context}
-            onChange={(e) => setNewNoWork({ ...newNoWork, context: e.target.value })}
-            placeholder="Why doesn't this work? (optional)"
-            rows={2}
-            className="w-full px-4 py-3 border rounded-lg"
-            style={{ borderColor: 'var(--parent-border)' }}
-          />
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+            <textarea
+              value={newNoWork.context}
+              onChange={(e) => setNewNoWork({ ...newNoWork, context: e.target.value })}
+              placeholder="Why doesn't this work? (optional)"
+              rows={2}
+              className="w-full px-4 py-3 border rounded-lg"
+              style={{ borderColor: 'var(--parent-border)' }}
+            />
+            <MicButton
+              size="sm"
+              onTranscript={(t) => setNewNoWork((prev) => ({ ...prev, context: prev.context ? `${prev.context} ${t}` : t }))}
+            />
+          </div>
 
           <button
             onClick={handleAddNoWork}

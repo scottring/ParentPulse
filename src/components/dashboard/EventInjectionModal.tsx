@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { MicButton } from '@/components/voice/MicButton';
 
 interface EventInjectionModalProps {
   open: boolean;
@@ -66,20 +67,27 @@ export default function EventInjectionModal({
         </p>
 
         {/* Text input */}
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="We just had a fight about..."
-          rows={4}
-          className="w-full rounded p-3 text-[17px] resize-none focus:outline-none"
-          style={{
-            fontFamily: 'var(--font-parent-body)',
-            background: '#FAF8F5',
-            border: '1px solid #E8E3DC',
-            color: '#2C2C2C',
-          }}
-          autoFocus
-        />
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="We just had a fight about..."
+            rows={4}
+            className="w-full rounded p-3 text-[17px] resize-none focus:outline-none"
+            style={{
+              fontFamily: 'var(--font-parent-body)',
+              background: '#FAF8F5',
+              border: '1px solid #E8E3DC',
+              color: '#2C2C2C',
+            }}
+            autoFocus
+          />
+          <MicButton
+            size="sm"
+            disabled={loading}
+            onTranscript={(t) => setText((prev) => (prev ? `${prev} ${t}` : t))}
+          />
+        </div>
 
         {/* Actions */}
         <div className="flex justify-end gap-2 mt-3">
