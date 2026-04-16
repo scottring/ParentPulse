@@ -59,12 +59,9 @@ export interface MarginItemProps {
    * used elsewhere — margin note authors are identified by userId.
    */
   resolveUserName?: (userId: string) => string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onCreateNote?: (journalEntryId: string, content: string) => any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onUpdateNote?: (noteId: string, content: string) => any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onDeleteNote?: (noteId: string) => any;
+  onCreateNote?: (journalEntryId: string, content: string) => Promise<unknown> | void;
+  onUpdateNote?: (noteId: string, content: string) => Promise<unknown> | void;
+  onDeleteNote?: (noteId: string) => Promise<unknown> | void;
 }
 
 export function MarginItem({
