@@ -200,10 +200,14 @@ service cloud.firestore {
                     && request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['content', 'editedAt']);
 
-      // Delete: author-only.
+      // Delete: note author OR parent-entry author (so that deleting an
+      // entry can cascade-delete margin notes others wrote on it).
       allow delete: if isParent()
                     && belongsToFamily(resource.data.familyId)
-                    && resource.data.authorUserId == request.auth.uid;
+                    && (
+                      resource.data.authorUserId == request.auth.uid ||
+                      get(/databases/$(database)/documents/journal_entries/$(resource.data.journalEntryId)).data.authorId == request.auth.uid
+                    );
     }
 
     // ==================== Entries (unified stream) ====================

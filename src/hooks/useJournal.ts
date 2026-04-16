@@ -6,6 +6,11 @@ import {
   doc,
   addDoc,
   updateDoc,
+  deleteDoc,
+  getDocs,
+  query,
+  where,
+  writeBatch,
   Timestamp,
 } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
@@ -38,6 +43,8 @@ interface UseJournalReturn {
     // re-fetch.
     authorId?: string,
   ) => Promise<void>;
+  /** Hard-delete an entry and any margin notes attached to it. */
+  deleteEntry: (entryId: string) => Promise<void>;
   saving: boolean;
   error: string | null;
 }
@@ -169,5 +176,38 @@ export function useJournal(): UseJournalReturn {
     [user?.familyId],
   );
 
-  return { createEntry, updateEntry, saving, error };
+  const deleteEntry = useCallback(
+    async (entryId: string): Promise<void> => {
+      if (!user?.familyId) throw new Error('No family context');
+      setSaving(true);
+      setError(null);
+      try {
+        // Cascade: delete all margin notes attached to this entry.
+        const notesQuery = query(
+          collection(firestore, 'margin_notes'),
+          where('journalEntryId', '==', entryId),
+        );
+        const notesSnap = await getDocs(notesQuery);
+
+        if (notesSnap.size > 0) {
+          const batch = writeBatch(firestore);
+          notesSnap.docs.forEach((d) => batch.delete(d.ref));
+          batch.delete(doc(firestore, 'journal_entries', entryId));
+          await batch.commit();
+        } else {
+          await deleteDoc(doc(firestore, 'journal_entries', entryId));
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to delete entry';
+        setError(message);
+        throw err;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [user?.familyId],
+  );
+
+  return { createEntry, updateEntry, deleteEntry, saving, error };
 }
