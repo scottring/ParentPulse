@@ -41,6 +41,14 @@ export function PinKeypad({
       try {
         const ok = await onSubmit(pin);
         if (!ok) setDigits('');
+      } catch (err) {
+        // Swallow here: if onSubmit threw, the parent's error UI
+        // (usually a toast or the Firebase error overlay) will
+        // surface it. Clearing the digits prevents the
+        // digits.length === 4 effect from re-triggering submit in a
+        // loop as `submitting` toggles back to false.
+        console.error('PinKeypad submit failed:', err);
+        setDigits('');
       } finally {
         setSubmitting(false);
       }
