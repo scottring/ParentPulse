@@ -10749,3 +10749,21 @@ exports.cascadeMarginNoteVisibility = onDocumentUpdated(
       });
     },
 );
+
+// ================================================================
+// SPEECH-TO-TEXT — voice input transcription via Whisper
+// ================================================================
+const {transcribeAudioHandler} = require("./transcribeAudio.handler.js");
+const {defineSecret} = require("firebase-functions/params");
+
+const openaiKey = defineSecret("OPENAI_API_KEY");
+
+exports.transcribeAudio = onCall(
+    {
+      region: "us-central1",
+      secrets: [openaiKey],
+      memory: "512MiB",
+      timeoutSeconds: 60,
+    },
+    transcribeAudioHandler,
+);
