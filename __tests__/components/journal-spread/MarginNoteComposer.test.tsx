@@ -92,4 +92,23 @@ describe('MarginNoteComposer', () => {
     expect(counter).toBeInTheDocument();
     expect(counter.className).toMatch(/amber/);
   });
+
+  it('does not double-fire onCancel if Escape is followed by blur', async () => {
+    const onCancel = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <MarginNoteComposer
+        side="left"
+        initialValue="some text"
+        onCommit={vi.fn()}
+        onCancel={onCancel}
+      />
+    );
+    const input = screen.getByRole('textbox');
+    input.focus();
+    await user.keyboard('{Escape}');
+    // Simulate the parent leaving the composer mounted — blur after Escape.
+    input.blur();
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
 });

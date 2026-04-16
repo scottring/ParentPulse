@@ -32,12 +32,16 @@ export function MarginNoteComposer({
 }: MarginNoteComposerProps) {
   const [value, setValue] = useState(initialValue);
   const ref = useRef<HTMLInputElement>(null);
+  const handledRef = useRef(false);
 
   useEffect(() => {
     if (autoFocus) ref.current?.focus();
   }, [autoFocus]);
 
   const handleCommitOrCancel = () => {
+    if (handledRef.current) return;
+    handledRef.current = true;
+
     const trimmed = value.trim();
     if (trimmed.length === 0) onCancel();
     else onCommit(trimmed);
@@ -49,6 +53,8 @@ export function MarginNoteComposer({
       handleCommitOrCancel();
     } else if (e.key === 'Escape') {
       e.preventDefault();
+      if (handledRef.current) return;
+      handledRef.current = true;
       onCancel();
     }
   };
@@ -71,7 +77,7 @@ export function MarginNoteComposer({
         className="input"
       />
       {showCounter && (
-        <div className={counterClass}>
+        <div className={counterClass} aria-live="polite" aria-atomic="true">
           {length} / {MARGIN_NOTE_MAX_LENGTH}
         </div>
       )}
