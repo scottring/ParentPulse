@@ -167,6 +167,45 @@ service cloud.firestore {
       }
     }
 
+    // ==================== Margin Notes ====================
+    //
+    // User-authored annotations tied to a journal_entries doc. Mirrors
+    // the journal_entries visibility model: denormalized visibleToUserIds
+    // at create time, cascade-updated by a Cloud Function when the parent
+    // entry's visibility changes.
+    //
+    // Clients may never mutate visibleToUserIds / sharedWithUserIds
+    // directly after create — they are derived from the parent entry.
+    match /margin_notes/{noteId} {
+      allow read: if isParent()
+                  && belongsToFamily(resource.data.familyId)
+                  && request.auth.uid in resource.data.visibleToUserIds;
+
+      // Create: author must be the caller; denormalized visibility must
+      // equal the parent entry's at write time; caller must be in the
+      // parent entry's visibleToUserIds.
+      allow create: if isParent()
+                    && belongsToFamily(request.resource.data.familyId)
+                    && request.resource.data.authorUserId == request.auth.uid
+                    && request.auth.uid in request.resource.data.visibleToUserIds
+                    && request.resource.data.visibleToUserIds ==
+                         get(/databases/$(database)/documents/journal_entries/$(request.resource.data.journalEntryId)).data.visibleToUserIds
+                    && request.resource.data.sharedWithUserIds ==
+                         get(/databases/$(database)/documents/journal_entries/$(request.resource.data.journalEntryId)).data.sharedWithUserIds;
+
+      // Update: author-only; only content and editedAt may change.
+      allow update: if isParent()
+                    && belongsToFamily(resource.data.familyId)
+                    && resource.data.authorUserId == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['content', 'editedAt']);
+
+      // Delete: author-only.
+      allow delete: if isParent()
+                    && belongsToFamily(resource.data.familyId)
+                    && resource.data.authorUserId == request.auth.uid;
+    }
+
     // ==================== Entries (unified stream) ====================
     //
     // New collection introduced by Plan 1 (Entry foundation). Mirrors the

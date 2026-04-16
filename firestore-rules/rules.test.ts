@@ -232,6 +232,46 @@ beforeEach(async () => {
       relationshipToSubject: 'child-observer',
       status: 'complete',
     });
+
+    // Seed a journal entry owned by parentUser, visible to parent only.
+    await setDoc(doc(db, 'journal_entries', 'je-parent-private'), {
+      entryId: 'je-parent-private',
+      familyId: FAMILY_ID,
+      authorId: parentUser.uid,
+      text: 'private entry',
+      category: 'moment',
+      tags: [],
+      personMentions: [],
+      visibleToUserIds: [parentUser.uid],
+      sharedWithUserIds: [],
+      createdAt: new Date(),
+    });
+
+    // Seed a journal entry owned by parentUser, shared with childUser.
+    await setDoc(doc(db, 'journal_entries', 'je-parent-shared'), {
+      entryId: 'je-parent-shared',
+      familyId: FAMILY_ID,
+      authorId: parentUser.uid,
+      text: 'shared entry',
+      category: 'moment',
+      tags: [],
+      personMentions: [],
+      visibleToUserIds: [parentUser.uid, childUser.uid],
+      sharedWithUserIds: [childUser.uid],
+      createdAt: new Date(),
+    });
+
+    // Seed an existing margin note owned by parentUser, attached to
+    // je-parent-private. Used in read/update/delete tests.
+    await setDoc(doc(db, 'margin_notes', 'mn-parent-on-private'), {
+      familyId: FAMILY_ID,
+      journalEntryId: 'je-parent-private',
+      authorUserId: parentUser.uid,
+      content: 'seeded',
+      createdAt: new Date(),
+      visibleToUserIds: [parentUser.uid],
+      sharedWithUserIds: [],
+    });
   });
 });
 
@@ -836,6 +876,126 @@ describe.skipIf(!emulatorAvailable)('Firestore Security Rules', () => {
           visibleToUserIds: ['otherUid'],
           createdAt: new Date(),
         })
+      );
+    });
+  });
+
+  describe('margin_notes', () => {
+    it('author parent can read their own note', async () => {
+      const ctx = getAuthContext(parentUser.uid);
+      await assertSucceeds(
+        getDoc(doc(ctx.firestore(), 'margin_notes', 'mn-parent-on-private'))
+      );
+    });
+
+    it('non-visible user cannot read the note', async () => {
+      const ctx = getAuthContext(childUser.uid); // child not in visibleToUserIds
+      await assertFails(
+        getDoc(doc(ctx.firestore(), 'margin_notes', 'mn-parent-on-private'))
+      );
+    });
+
+    it('other-family user cannot read the note', async () => {
+      const ctx = getAuthContext(otherFamilyUser.uid);
+      await assertFails(
+        getDoc(doc(ctx.firestore(), 'margin_notes', 'mn-parent-on-private'))
+      );
+    });
+
+    it('parent can create a note on an entry they can see', async () => {
+      const ctx = getAuthContext(parentUser.uid);
+      await assertSucceeds(
+        addDoc(collection(ctx.firestore(), 'margin_notes'), {
+          familyId: FAMILY_ID,
+          journalEntryId: 'je-parent-private',
+          authorUserId: parentUser.uid,
+          content: 'new scribble',
+          createdAt: new Date(),
+          visibleToUserIds: [parentUser.uid],
+          sharedWithUserIds: [],
+        })
+      );
+    });
+
+    it('cannot create a note with mismatched visibility', async () => {
+      const ctx = getAuthContext(parentUser.uid);
+      await assertFails(
+        addDoc(collection(ctx.firestore(), 'margin_notes'), {
+          familyId: FAMILY_ID,
+          journalEntryId: 'je-parent-private',
+          authorUserId: parentUser.uid,
+          content: 'sneaky',
+          createdAt: new Date(),
+          // Parent entry's visibility is just [parentUser.uid], but we
+          // claim child can see this too — rule must reject.
+          visibleToUserIds: [parentUser.uid, childUser.uid],
+          sharedWithUserIds: [childUser.uid],
+        })
+      );
+    });
+
+    it('cannot create a note claiming someone else authored it', async () => {
+      const ctx = getAuthContext(parentUser.uid);
+      await assertFails(
+        addDoc(collection(ctx.firestore(), 'margin_notes'), {
+          familyId: FAMILY_ID,
+          journalEntryId: 'je-parent-private',
+          authorUserId: childUser.uid, // lying
+          content: 'spoof',
+          createdAt: new Date(),
+          visibleToUserIds: [parentUser.uid],
+          sharedWithUserIds: [],
+        })
+      );
+    });
+
+    it('cannot create a note on an entry you cannot see (non-parent role)', async () => {
+      // childUser is in this family (as child role) but not a parent —
+      // the rule requires isParent(), so this write fails.
+      const ctx = getAuthContext(childUser.uid);
+      await assertFails(
+        addDoc(collection(ctx.firestore(), 'margin_notes'), {
+          familyId: FAMILY_ID,
+          journalEntryId: 'je-parent-private',
+          authorUserId: childUser.uid,
+          content: 'child scribble',
+          createdAt: new Date(),
+          visibleToUserIds: [childUser.uid],
+          sharedWithUserIds: [],
+        })
+      );
+    });
+
+    it('author can edit only content + editedAt', async () => {
+      const ctx = getAuthContext(parentUser.uid);
+      await assertSucceeds(
+        updateDoc(doc(ctx.firestore(), 'margin_notes', 'mn-parent-on-private'), {
+          content: 'edited',
+          editedAt: new Date(),
+        })
+      );
+    });
+
+    it('author cannot edit visibility fields', async () => {
+      const ctx = getAuthContext(parentUser.uid);
+      await assertFails(
+        updateDoc(doc(ctx.firestore(), 'margin_notes', 'mn-parent-on-private'), {
+          visibleToUserIds: [parentUser.uid, childUser.uid],
+        })
+      );
+    });
+
+    it('non-author cannot delete', async () => {
+      const ctx = getAuthContext(childUser.uid);
+      await assertFails(
+        deleteDoc(doc(ctx.firestore(), 'margin_notes', 'mn-parent-on-private'))
+      );
+    });
+
+    it('author can delete', async () => {
+      const ctx = getAuthContext(parentUser.uid);
+      await assertSucceeds(
+        deleteDoc(doc(ctx.firestore(), 'margin_notes', 'mn-parent-on-private'))
       );
     });
   });
