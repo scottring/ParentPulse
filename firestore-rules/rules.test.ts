@@ -1044,3 +1044,99 @@ describe.skipIf(!emulatorAvailable)('Firestore Security Rules', () => {
     });
   });
 });
+
+describe.skipIf(!emulatorAvailable)('couple_rituals', () => {
+  const SCOTT = 'scott-uid';
+  const IRIS = 'iris-uid';
+  const STRANGER = 'stranger-uid';
+
+  beforeEach(async () => {
+    await testEnv!.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'users', SCOTT), { familyId: FAMILY_ID, role: 'parent' });
+      await setDoc(doc(db, 'users', IRIS), { familyId: FAMILY_ID, role: 'parent' });
+      await setDoc(doc(db, 'users', STRANGER), { familyId: OTHER_FAMILY_ID, role: 'parent' });
+    });
+  });
+
+  it('lets a participant create a ritual in their family', async () => {
+    const scottDb = getAuthContext(SCOTT).firestore();
+    await assertSucceeds(addDoc(collection(scottDb, 'couple_rituals'), {
+      familyId: FAMILY_ID,
+      participantUserIds: [SCOTT, IRIS],
+      cadence: 'weekly', dayOfWeek: 0,
+      startTimeLocal: '20:00', durationMinutes: 15,
+      timezone: 'America/New_York',
+      status: 'active',
+      startsOn: new Date(),
+      createdAt: new Date(), createdByUserId: SCOTT,
+      updatedAt: new Date(), updatedByUserId: SCOTT,
+    }));
+  });
+
+  it('blocks creation by a user outside the family', async () => {
+    const strangerDb = getAuthContext(STRANGER).firestore();
+    await assertFails(addDoc(collection(strangerDb, 'couple_rituals'), {
+      familyId: FAMILY_ID,
+      participantUserIds: [STRANGER, IRIS],
+      cadence: 'weekly', dayOfWeek: 0,
+      startTimeLocal: '20:00', durationMinutes: 15,
+      timezone: 'America/New_York',
+      status: 'active',
+      startsOn: new Date(),
+      createdAt: new Date(), createdByUserId: STRANGER,
+      updatedAt: new Date(), updatedByUserId: STRANGER,
+    }));
+  });
+
+  it('blocks creation when creator is not in participantUserIds', async () => {
+    const scottDb = getAuthContext(SCOTT).firestore();
+    await assertFails(addDoc(collection(scottDb, 'couple_rituals'), {
+      familyId: FAMILY_ID,
+      participantUserIds: [IRIS, STRANGER],
+      cadence: 'weekly', dayOfWeek: 0,
+      startTimeLocal: '20:00', durationMinutes: 15,
+      timezone: 'America/New_York',
+      status: 'active',
+      startsOn: new Date(),
+      createdAt: new Date(), createdByUserId: SCOTT,
+      updatedAt: new Date(), updatedByUserId: SCOTT,
+    }));
+  });
+
+  it('lets either participant update the ritual', async () => {
+    await testEnv!.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'couple_rituals', 'r1'), {
+        familyId: FAMILY_ID,
+        participantUserIds: [SCOTT, IRIS],
+        status: 'active', cadence: 'weekly', dayOfWeek: 0,
+        startTimeLocal: '20:00', durationMinutes: 15,
+        timezone: 'America/New_York',
+        startsOn: new Date(),
+        createdAt: new Date(), createdByUserId: SCOTT,
+        updatedAt: new Date(), updatedByUserId: SCOTT,
+      });
+    });
+    const irisDb = getAuthContext(IRIS).firestore();
+    await assertSucceeds(updateDoc(doc(irisDb, 'couple_rituals', 'r1'), {
+      status: 'paused', updatedAt: new Date(), updatedByUserId: IRIS,
+    }));
+  });
+
+  it('blocks read by a user in a different family', async () => {
+    await testEnv!.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'couple_rituals', 'r2'), {
+        familyId: FAMILY_ID,
+        participantUserIds: [SCOTT, IRIS],
+        status: 'active', cadence: 'weekly', dayOfWeek: 0,
+        startTimeLocal: '20:00', durationMinutes: 15,
+        timezone: 'America/New_York',
+        startsOn: new Date(),
+        createdAt: new Date(), createdByUserId: SCOTT,
+        updatedAt: new Date(), updatedByUserId: SCOTT,
+      });
+    });
+    const strangerDb = getAuthContext(STRANGER).firestore();
+    await assertFails(getDoc(doc(strangerDb, 'couple_rituals', 'r2')));
+  });
+});

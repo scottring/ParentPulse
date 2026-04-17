@@ -132,14 +132,15 @@ export function SpreadHome() {
       <style jsx>{`
         .journal-top-bar {
           position: fixed;
-          top: 0;
+          top: var(--relish-top-offset, 0);
           left: 0;
           right: 0;
           z-index: 20;
+          transition: top 180ms ease;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 14px 68px 14px 24px;
+          padding: 40px 68px 16px 24px;
           pointer-events: none;
         }
         .journal-top-bar :global(a) { pointer-events: auto; }
@@ -147,7 +148,7 @@ export function SpreadHome() {
           font-family: var(--font-parent-display), Georgia, serif;
           font-style: italic;
           font-weight: 300;
-          font-size: 28px;
+          font-size: 36px;
           line-height: 1;
           letter-spacing: -0.01em;
           color: #2a1f14;

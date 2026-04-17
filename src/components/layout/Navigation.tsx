@@ -45,11 +45,15 @@ export default function Navigation() {
   return (
     <>
     <nav
-      className="fixed top-0 left-0 right-0 z-50"
+      className="fixed left-0 right-0 z-50"
       style={{
-        height: 64,
+        top: 'var(--relish-top-offset, 0px)',
+        height: 88,
+        paddingTop: 20,
         background: '#ECEAE5',
         borderBottom: '1px solid rgba(120, 100, 70, 0.12)',
+        transition: 'top 180ms ease',
+        boxSizing: 'content-box',
       }}
     >
       <div className="h-full px-4 sm:px-6 flex items-center justify-between mx-auto" style={{ maxWidth: 1440 }}>
@@ -59,7 +63,7 @@ export default function Navigation() {
           className="hover:opacity-80 transition-opacity"
           style={{
             fontFamily: 'var(--font-parent-display)',
-            fontSize: 24,
+            fontSize: 34,
             fontWeight: 300,
             fontStyle: 'italic',
             color: '#3A3530',
@@ -71,34 +75,40 @@ export default function Navigation() {
           Relish
         </Link>
 
-        {/* Contextual cross-nav — show the OTHER publication.
-            On Manual pages, offer The Journal. Elsewhere, offer Manual. */}
+        {/* Cross-nav: contextual publication (Manual ↔ Journal) + Rituals as a peer. */}
         {(() => {
           const onManual =
             pathname.startsWith('/manual') ||
             pathname.startsWith('/family-manual') ||
             /^\/people\/[^/]+\/manual/.test(pathname);
-          const target = onManual
-            ? { href: '/journal', label: 'The Journal', arrow: '←' }
-            : { href: '/manual', label: 'The Family Manual', arrow: '→' };
+          const onRituals = pathname.startsWith('/rituals');
+          const primary = onManual
+            ? { href: '/journal', label: 'The Journal' }
+            : { href: '/manual', label: 'The Family Manual' };
+          const linkStyle: React.CSSProperties = {
+            fontFamily: 'var(--font-parent-display)', fontStyle: 'italic',
+            fontWeight: 400, fontSize: 16, color: '#3A3530',
+            textDecoration: 'none', letterSpacing: '0.005em',
+          };
           return (
-            <Link
-              href={target.href}
-              className="hover:opacity-70 transition-opacity"
-              style={{
-                fontFamily: 'var(--font-parent-display)',
-                fontStyle: 'italic',
-                fontWeight: 400,
-                fontSize: 16,
-                color: '#3A3530',
-                textDecoration: 'none',
-                letterSpacing: '0.005em',
-              }}
-            >
-              {onManual && <span style={{ marginRight: 8 }}>{target.arrow}</span>}
-              {target.label}
-              {!onManual && <span style={{ marginLeft: 8 }}>{target.arrow}</span>}
-            </Link>
+            <div style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
+              {!onRituals && (
+                <Link href={primary.href} className="hover:opacity-70 transition-opacity" style={linkStyle}>
+                  {primary.label}
+                </Link>
+              )}
+              <Link
+                href="/rituals"
+                className="hover:opacity-70 transition-opacity"
+                style={{
+                  ...linkStyle,
+                  opacity: onRituals ? 0.55 : 1,
+                  pointerEvents: onRituals ? 'none' : 'auto',
+                }}
+              >
+                Rituals
+              </Link>
+            </div>
           );
         })()}
 

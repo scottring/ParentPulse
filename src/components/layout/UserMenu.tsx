@@ -88,9 +88,10 @@ export function UserMenu() {
       <style jsx>{`
         .user-menu {
           position: fixed;
-          top: 14px;
+          top: calc(var(--relish-top-offset, 0px) + 40px);
           right: 22px;
           z-index: 30;
+          transition: top 180ms ease;
         }
         .avatar {
           width: 34px;
