@@ -48,7 +48,7 @@ export default function Navigation() {
       className="fixed left-0 right-0 z-50"
       style={{
         top: 'var(--relish-top-offset, 0px)',
-        height: 64,
+        height: 88,
         background: '#ECEAE5',
         borderBottom: '1px solid rgba(120, 100, 70, 0.12)',
         transition: 'top 180ms ease',
