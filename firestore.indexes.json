@@ -1,6 +1,20 @@
 {
   "indexes": [
     {
+      "collectionGroup": "couple_rituals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "action_analytics",
       "queryScope": "COLLECTION",
       "fields": [
