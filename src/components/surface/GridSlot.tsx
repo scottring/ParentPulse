@@ -142,7 +142,7 @@ function GridTile({ id, data }: GridTileProps): React.ReactNode {
 
 export function GridSlot({ tileIds, data }: GridSlotProps) {
   return (
-    <div className="p-4 flex flex-col gap-3 overflow-y-auto">
+    <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-3">
         {tileIds.map((id) => (
           <GridTile key={id} id={id} data={data} />

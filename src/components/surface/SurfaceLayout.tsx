@@ -16,27 +16,39 @@ export function SurfaceLayout({ hero, grid, gridTileCount }: SurfaceLayoutProps)
         ? 'wide-hero'
         : 'standard';
 
+  const gridCols =
+    layoutMode === 'full-width'
+      ? '1fr'
+      : layoutMode === 'wide-hero'
+        ? '60% 1fr'
+        : '40% 1fr';
+
   return (
     <div
       className={`surface-layout ${layoutMode}`}
       style={{
         display: 'grid',
-        minHeight: 'calc(100vh - var(--relish-top-offset, 0px) - 88px)',
-        ...(layoutMode === 'full-width'
-          ? { gridTemplateColumns: '1fr' }
-          : layoutMode === 'wide-hero'
-            ? { gridTemplateColumns: '60% 1fr' }
-            : { gridTemplateColumns: '40% 1fr' }),
+        gridTemplateColumns: gridCols,
+        height: 'calc(100vh - var(--relish-top-offset, 0px) - 88px)',
+        overflow: 'hidden',
       }}
     >
-      <div className="surface-hero">{hero}</div>
-      {grid && <div className="surface-grid overflow-y-auto">{grid}</div>}
+      <div className="surface-hero" style={{ overflow: 'hidden' }}>{hero}</div>
+      {grid && (
+        <div className="surface-grid" style={{ overflowY: 'auto', padding: '16px' }}>
+          {grid}
+        </div>
+      )}
 
       <style jsx>{`
         @media (max-width: 768px) {
           .surface-layout {
             grid-template-columns: 1fr !important;
-            min-height: auto !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          .surface-hero {
+            overflow: visible !important;
           }
           .surface-grid {
             overflow-y: visible !important;
