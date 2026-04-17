@@ -33,6 +33,7 @@ export function coupleRitualToIcs(
     `DTSTART;TZID=${ritual.timezone}:${dtstart}`,
     `DTEND;TZID=${ritual.timezone}:${dtend}`,
     rrule,
+    `ORGANIZER;CN=${selfName}:MAILTO:noreply@relish.app`,
     `SUMMARY:Check-in with ${spouseName}`,
     `DESCRIPTION:${ritual.intention ?? `Your regular check-in with ${spouseName}.`}`,
     'END:VEVENT',
