@@ -27,7 +27,7 @@ export default function Navigation() {
 
   if (!user) return null;
 
-  if (pathname === '/login' || pathname === '/register' || pathname === '/') {
+  if (pathname === '/login' || pathname === '/register') {
     return null;
   }
 
