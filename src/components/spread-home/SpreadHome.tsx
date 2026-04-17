@@ -132,10 +132,11 @@ export function SpreadHome() {
       <style jsx>{`
         .journal-top-bar {
           position: fixed;
-          top: 0;
+          top: var(--relish-top-offset, 0);
           left: 0;
           right: 0;
           z-index: 20;
+          transition: top 180ms ease;
           display: flex;
           align-items: center;
           justify-content: space-between;

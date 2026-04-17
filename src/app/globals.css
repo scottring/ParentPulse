@@ -76,6 +76,11 @@ html {
 body {
   margin: 0;
   padding: 0;
+  /* Ritual banner: when visible, RitualBanner.tsx sets --relish-top-offset on
+     :root. Fixed top-bars read it for their `top`; body pads itself the same
+     amount so in-flow page content shifts down with everything else. */
+  padding-top: var(--relish-top-offset, 0);
+  transition: padding-top 180ms ease;
   font-family: var(--font-parent-body);
   font-size: 1rem;
   line-height: 1.55;

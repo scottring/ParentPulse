@@ -7,6 +7,7 @@ import { useSpouse } from '@/hooks/useSpouse';
 import { ritualBannerState, type RitualBannerState } from '@/lib/rituals/isInWindow';
 
 const DISMISS_KEY = 'relish.ritualBanner.dismissed';
+const BANNER_HEIGHT_PX = 48;
 
 /**
  * Dismissals are scoped by (ritualId, state, local date). That way:
@@ -52,16 +53,35 @@ export default function RitualBanner() {
     }
   }, []);
 
-  if (loading || !ritual) return null;
-  const state = ritualBannerState(ritual, now);
-  if (state === 'hidden') return null;
+  // Determine whether the banner is going to render something.
+  const state = ritual && !loading ? ritualBannerState(ritual, now) : 'hidden';
+  const currentKey: DismissKey | null = ritual
+    ? { ritualId: ritual.id, state, date: todayLocalDate() }
+    : null;
+  const showBanner =
+    !!ritual &&
+    !loading &&
+    state !== 'hidden' &&
+    !(dismissed && currentKey && sameDismissal(dismissed, currentKey));
 
-  const currentKey: DismissKey = {
-    ritualId: ritual.id,
-    state,
-    date: todayLocalDate(),
-  };
-  if (dismissed && sameDismissal(dismissed, currentKey)) return null;
+  // The banner lives at viewport top:0 so its height is predictable across
+  // every page layout (some pages render their own fixed top-bar instead
+  // of the shared <Navigation/>). All fixed top-bars downstream read
+  // --relish-top-offset for their own `top`, and body padding-top reads
+  // the same value to push in-flow page content below the banner.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (showBanner) {
+      root.style.setProperty('--relish-top-offset', `${BANNER_HEIGHT_PX}px`);
+    } else {
+      root.style.removeProperty('--relish-top-offset');
+    }
+    return () => {
+      root.style.removeProperty('--relish-top-offset');
+    };
+  }, [showBanner]);
+
+  if (!showBanner || !ritual || !currentKey) return null;
 
   function handleDismiss() {
     setDismissed(currentKey);
@@ -74,52 +94,39 @@ export default function RitualBanner() {
 
   const partner = spouseName ?? 'your partner';
   const timeLabel = formatTime(ritual.startTimeLocal);
-
   const isInWindow = state === 'inWindow';
 
-  // The banner renders two elements:
-  //   1. An invisible flow-spacer that takes vertical space (pushes page content down).
-  //   2. A fixed banner pinned just below the 64px nav.
-  // Together these keep the banner always visible below the nav AND prevent it
-  // from covering content below. Heights must stay in sync.
   return (
-    <>
-      <div aria-hidden="true" className="ritual-banner-spacer" />
-      <div
-        className={`ritual-banner ${isInWindow ? 'in-window' : 'pre-window'}`}
-        role="status"
+    <div
+      className={`ritual-banner ${isInWindow ? 'in-window' : 'pre-window'}`}
+      role="status"
+    >
+      {isInWindow ? (
+        <Link href="/rituals/couple/session" className="ritual-banner-message">
+          Your check-in with {partner} is starting.
+          <span className="ritual-banner-cta">Start together &rarr;</span>
+        </Link>
+      ) : (
+        <span className="ritual-banner-message">
+          Your check-in with {partner} is tonight at {timeLabel}.
+        </span>
+      )}
+      <button
+        type="button"
+        className="ritual-banner-dismiss"
+        onClick={handleDismiss}
+        aria-label="Dismiss"
       >
-        {isInWindow ? (
-          <Link href="/rituals/couple/session" className="ritual-banner-message">
-            Your check-in with {partner} is starting.
-            <span className="ritual-banner-cta">Start together &rarr;</span>
-          </Link>
-        ) : (
-          <span className="ritual-banner-message">
-            Your check-in with {partner} is tonight at {timeLabel}.
-          </span>
-        )}
-        <button
-          type="button"
-          className="ritual-banner-dismiss"
-          onClick={handleDismiss}
-          aria-label="Dismiss"
-        >
-          &times;
-        </button>
-      </div>
+        &times;
+      </button>
       <style jsx>{`
-        .ritual-banner-spacer {
-          height: 48px;
-          flex-shrink: 0;
-        }
         .ritual-banner {
           position: fixed;
-          top: 64px;
+          top: 0;
           left: 0;
           right: 0;
-          height: 48px;
-          z-index: 40;
+          height: ${BANNER_HEIGHT_PX}px;
+          z-index: 60;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -185,7 +192,7 @@ export default function RitualBanner() {
           background: rgba(255, 255, 255, 0.14);
         }
       `}</style>
-    </>
+    </div>
   );
 }
 

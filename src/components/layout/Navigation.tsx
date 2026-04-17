@@ -45,11 +45,13 @@ export default function Navigation() {
   return (
     <>
     <nav
-      className="fixed top-0 left-0 right-0 z-50"
+      className="fixed left-0 right-0 z-50"
       style={{
+        top: 'var(--relish-top-offset, 0px)',
         height: 64,
         background: '#ECEAE5',
         borderBottom: '1px solid rgba(120, 100, 70, 0.12)',
+        transition: 'top 180ms ease',
       }}
     >
       <div className="h-full px-4 sm:px-6 flex items-center justify-between mx-auto" style={{ maxWidth: 1440 }}>
