@@ -1,5 +1,5 @@
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { firestore } from '@/lib/firebase';
 
 /**
  * Find the other parent-role user in the family. Returns null if 0 or
@@ -10,7 +10,7 @@ export async function findSpouseUserId(
   currentUserId: string,
 ): Promise<string | null> {
   const q = query(
-    collection(db, 'users'),
+    collection(firestore, 'users'),
     where('familyId', '==', familyId),
     where('role', '==', 'parent'),
   );
