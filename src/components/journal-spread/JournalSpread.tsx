@@ -444,11 +444,12 @@ export function JournalSpread({
           text-align: center;
           margin-top: 16px;
           font-size: 10px;
-          color: rgba(245, 236, 216, 0.5);
+          color: rgba(58, 53, 48, 0.7);
           letter-spacing: 0.22em;
           text-transform: uppercase;
           font-style: italic;
           font-family: -apple-system, sans-serif;
+          text-shadow: 0 1px 1px rgba(245, 236, 216, 0.4);
           text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
         }
         .empty-state {
