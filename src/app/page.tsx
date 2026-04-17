@@ -1,54 +1,19 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
+import TheSurface from '@/components/surface/TheSurface';
+
 // ================================================================
 // Landing / home page — the library desk.
 //
-// Both signed-in and signed-out visitors see the desk. Signed-in
-// users get three book hit targets: the compendium (center),
-// the family manual (back-left), and the workbook (back-right).
-// Signed-out visitors see sign-in / register links.
-//
-// Public to both signed-in and signed-out visitors. The only
-// difference between the two states:
-//   1. Upper-right: auth links (signed-out) vs. user name + sign
-//      out (signed-in).
-//   2. Books: click-through to their destinations is only
-//      activated for signed-in visitors, who also see the glow +
-//      floating label on hover.
+// Signed-out visitors see the library desk landing (sign-in /
+// register links). Signed-in users go directly to TheSurface —
+// the curated single-page dashboard.
 // ================================================================
 
-export default function HomePage() {
-  const { user, loading: authLoading, logout } = useAuth();
-  const router = useRouter();
-
-  const isSignedIn = Boolean(user && !authLoading);
-
-  // Signed-in users belong inside the Journal. The library desk is a
-  // signed-out-only landing.
-  useEffect(() => {
-    if (isSignedIn) router.replace('/journal');
-  }, [isSignedIn, router]);
-
-  const firstName = user?.name?.split(' ')[0] || '';
-
-  const handleSignOut = async () => {
-    try {
-      await logout();
-      router.push('/');
-    } catch (err) {
-      console.error('Sign out failed:', err);
-    }
-  };
-
-  // Both signed-in and signed-out see the desk. The difference:
-  // signed-in users get the three books with updated labels
-  // (compendium, manual, workbook). Signed-out visitors get
-  // sign-in/register links.
+function SignedOutLanding() {
   return (
     <main className="home-stage">
       {/* ─── Full-bleed photograph ────────────────────────── */}
@@ -74,40 +39,15 @@ export default function HomePage() {
 
       {/* ─── Auth area (upper-right) ─────────────────────── */}
       <nav className="home-auth" aria-label="Enter the library">
-        {authLoading ? null : isSignedIn ? (
-          <>
-            <span
-              className="home-auth-avatar"
-              aria-hidden="true"
-              title={user?.name || firstName}
-            >
-              {firstName ? firstName.charAt(0).toUpperCase() : '·'}
-            </span>
-            <span className="home-auth-name">{firstName}</span>
-            <span className="home-auth-sep" aria-hidden="true">
-              ·
-            </span>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="home-auth-link home-auth-signout"
-            >
-              Sign out
-            </button>
-          </>
-        ) : (
-          <>
-            <Link href="/login" className="home-auth-link">
-              Sign in
-            </Link>
-            <span className="home-auth-sep" aria-hidden="true">
-              ·
-            </span>
-            <Link href="/register" className="home-auth-link home-auth-primary">
-              Begin a volume <span className="arrow">⟶</span>
-            </Link>
-          </>
-        )}
+        <Link href="/login" className="home-auth-link">
+          Sign in
+        </Link>
+        <span className="home-auth-sep" aria-hidden="true">
+          ·
+        </span>
+        <Link href="/register" className="home-auth-link home-auth-primary">
+          Begin a volume <span className="arrow">⟶</span>
+        </Link>
       </nav>
 
       {/* ─── Styles ─────────────────────────────────────── */}
@@ -262,35 +202,6 @@ export default function HomePage() {
           align-items: center;
           gap: 14px;
         }
-        .home-auth-avatar {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 34px;
-          height: 34px;
-          border-radius: 50%;
-          background: rgba(200, 184, 148, 0.18);
-          border: 1px solid rgba(245, 217, 181, 0.35);
-          color: #f5ecd8;
-          font-family: var(--font-parent-display);
-          font-style: italic;
-          font-size: 18px;
-          font-weight: 400;
-          line-height: 1;
-          text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
-          box-shadow:
-            0 1px 0 rgba(255, 220, 180, 0.1) inset,
-            0 2px 12px rgba(0, 0, 0, 0.6);
-        }
-        .home-auth-name {
-          font-family: var(--font-parent-display);
-          font-style: italic;
-          font-size: 19px;
-          color: #f5ecd8;
-          text-shadow:
-            0 2px 12px rgba(0, 0, 0, 0.9),
-            0 0 24px rgba(0, 0, 0, 0.6);
-        }
         :global(.home-auth-link) {
           font-family: var(--font-parent-display);
           font-style: italic;
@@ -327,10 +238,6 @@ export default function HomePage() {
         :global(.home-auth-link:hover .arrow) {
           transform: translateX(3px);
         }
-        :global(.home-auth-signout) {
-          font-size: 15px;
-          color: #a89676;
-        }
         .home-auth-sep {
           color: #5a4f3b;
           font-family: var(--font-parent-body);
@@ -360,19 +267,8 @@ export default function HomePage() {
             right: 22px;
             gap: 10px;
           }
-          .home-auth-avatar {
-            width: 28px;
-            height: 28px;
-            font-size: 14px;
-          }
-          .home-auth-name {
-            font-size: 15px;
-          }
           :global(.home-auth-link) {
             font-size: 15px;
-          }
-          :global(.home-auth-signout) {
-            font-size: 12px;
           }
           .home-auth-sep {
             font-size: 12px;
@@ -390,9 +286,6 @@ export default function HomePage() {
             font-size: 10px;
             max-width: 180px;
           }
-          .home-auth-name {
-            display: none;
-          }
           :global(.home-auth-link) {
             font-size: 13px;
           }
@@ -403,4 +296,42 @@ export default function HomePage() {
       `}</style>
     </main>
   );
+}
+
+export default function HomePage() {
+  const { user, loading: authLoading } = useAuth();
+
+  // Show a minimal loading screen while auth resolves
+  if (authLoading) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: '#14100c',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <span
+          style={{
+            fontFamily: 'var(--font-parent-display)',
+            fontStyle: 'italic',
+            fontSize: '19px',
+            color: '#c8b894',
+          }}
+        >
+          Opening&hellip;
+        </span>
+      </div>
+    );
+  }
+
+  // Signed-in users see TheSurface
+  if (user) {
+    return <TheSurface />;
+  }
+
+  // Signed-out users see the library desk landing
+  return <SignedOutLanding />;
 }
