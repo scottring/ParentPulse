@@ -9,16 +9,22 @@ export default function TimePicker({
   value, onChange,
 }: { value: string; onChange: (v: string) => void }) {
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="px-4 py-3 rounded-xl border border-[rgba(120,100,70,0.18)] bg-white"
-      style={{ fontFamily: 'var(--font-parent-body)', fontSize: 16, color: '#3A3530', minWidth: 160 }}
-    >
+    <div className="flex gap-2 flex-wrap">
       {TIMES.map((t) => (
-        <option key={t} value={t}>{formatTimeLabel(t)}</option>
+        <button
+          key={t}
+          onClick={() => onChange(t)}
+          className={`px-4 py-3 rounded-full border transition-colors ${
+            value === t
+              ? 'border-[#7C9082] bg-[#7C9082] text-white'
+              : 'border-[rgba(120,100,70,0.18)] text-[#3A3530] hover:bg-black/[0.02]'
+          }`}
+          style={{ fontFamily: 'var(--font-parent-body)', fontSize: 14, minWidth: 88 }}
+        >
+          {formatTimeLabel(t)}
+        </button>
       ))}
-    </select>
+    </div>
   );
 }
 

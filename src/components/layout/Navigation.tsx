@@ -71,8 +71,7 @@ export default function Navigation() {
           Relish
         </Link>
 
-        {/* Contextual cross-nav — show the OTHER publication.
-            On Manual pages, offer The Journal. Elsewhere, offer Manual. */}
+        {/* Cross-nav: contextual publication (Manual ↔ Journal) + Rituals as a peer. */}
         {(() => {
           const onManual =
             pathname.startsWith('/manual') ||
@@ -80,36 +79,31 @@ export default function Navigation() {
             /^\/people\/[^/]+\/manual/.test(pathname);
           const onRituals = pathname.startsWith('/rituals');
           const primary = onManual
-            ? { href: '/journal', label: 'The Journal', arrow: '←' }
-            : { href: '/manual', label: 'The Family Manual', arrow: '→' };
+            ? { href: '/journal', label: 'The Journal' }
+            : { href: '/manual', label: 'The Family Manual' };
+          const linkStyle: React.CSSProperties = {
+            fontFamily: 'var(--font-parent-display)', fontStyle: 'italic',
+            fontWeight: 400, fontSize: 16, color: '#3A3530',
+            textDecoration: 'none', letterSpacing: '0.005em',
+          };
           return (
-            <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-              <Link
-                href={primary.href}
-                className="hover:opacity-70 transition-opacity"
-                style={{
-                  fontFamily: 'var(--font-parent-display)', fontStyle: 'italic',
-                  fontWeight: 400, fontSize: 16, color: '#3A3530',
-                  textDecoration: 'none', letterSpacing: '0.005em',
-                }}
-              >
-                {onManual && <span style={{ marginRight: 8 }}>{primary.arrow}</span>}
-                {primary.label}
-                {!onManual && <span style={{ marginLeft: 8 }}>{primary.arrow}</span>}
-              </Link>
+            <div style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
               {!onRituals && (
-                <Link
-                  href="/rituals"
-                  className="hover:opacity-70 transition-opacity"
-                  style={{
-                    fontFamily: 'var(--font-parent-body)', fontSize: 13, fontWeight: 500,
-                    color: '#5C5347', letterSpacing: '0.12em', textTransform: 'uppercase',
-                    textDecoration: 'none',
-                  }}
-                >
-                  Rituals
+                <Link href={primary.href} className="hover:opacity-70 transition-opacity" style={linkStyle}>
+                  {primary.label}
                 </Link>
               )}
+              <Link
+                href="/rituals"
+                className="hover:opacity-70 transition-opacity"
+                style={{
+                  ...linkStyle,
+                  opacity: onRituals ? 0.55 : 1,
+                  pointerEvents: onRituals ? 'none' : 'auto',
+                }}
+              >
+                Rituals
+              </Link>
             </div>
           );
         })()}
