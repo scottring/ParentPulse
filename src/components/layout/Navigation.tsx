@@ -49,7 +49,7 @@ export default function Navigation() {
       style={{
         top: 'var(--relish-top-offset, 0px)',
         height: 88,
-        paddingTop: 32,
+        paddingTop: 20,
         background: '#ECEAE5',
         borderBottom: '1px solid rgba(120, 100, 70, 0.12)',
         transition: 'top 180ms ease',
@@ -63,7 +63,7 @@ export default function Navigation() {
           className="hover:opacity-80 transition-opacity"
           style={{
             fontFamily: 'var(--font-parent-display)',
-            fontSize: 24,
+            fontSize: 34,
             fontWeight: 300,
             fontStyle: 'italic',
             color: '#3A3530',

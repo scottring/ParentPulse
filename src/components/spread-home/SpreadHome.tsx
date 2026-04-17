@@ -140,7 +140,7 @@ export function SpreadHome() {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 56px 68px 18px 24px;
+          padding: 40px 68px 16px 24px;
           pointer-events: none;
         }
         .journal-top-bar :global(a) { pointer-events: auto; }
@@ -148,7 +148,7 @@ export function SpreadHome() {
           font-family: var(--font-parent-display), Georgia, serif;
           font-style: italic;
           font-weight: 300;
-          font-size: 28px;
+          font-size: 36px;
           line-height: 1;
           letter-spacing: -0.01em;
           color: #2a1f14;
