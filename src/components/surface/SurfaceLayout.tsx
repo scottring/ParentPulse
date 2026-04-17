@@ -30,6 +30,7 @@ export function SurfaceLayout({ hero, grid, gridTileCount }: SurfaceLayoutProps)
         display: 'grid',
         gridTemplateColumns: gridCols,
         height: 'calc(100vh - var(--relish-top-offset, 0px) - 88px)',
+        maxHeight: 'calc(100vh - var(--relish-top-offset, 0px) - 88px)',
         overflow: 'hidden',
       }}
     >
