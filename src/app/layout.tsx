@@ -6,6 +6,7 @@ import { WalkthroughProvider } from "@/components/walkthrough/WalkthroughContext
 import WalkthroughOverlay from "@/components/walkthrough/WalkthroughOverlay";
 import WalkthroughTrigger from "@/components/walkthrough/WalkthroughTrigger";
 import PageFooter from "@/components/layout/PageFooter";
+import RitualBanner from '@/components/rituals/RitualBanner';
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -49,6 +50,7 @@ export default function RootLayout({
       <body className={`${dmSans.variable} ${cormorant.variable} antialiased`}>
         <AuthProvider>
           <WalkthroughProvider>
+            <RitualBanner />
             {children}
             <PageFooter />
             <WalkthroughOverlay />
