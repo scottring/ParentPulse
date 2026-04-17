@@ -1,20 +1,6 @@
 {
   "indexes": [
     {
-      "collectionGroup": "couple_rituals",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "action_analytics",
       "queryScope": "COLLECTION",
       "fields": [
@@ -24,6 +10,20 @@
         },
         {
           "fieldPath": "weekStartDate",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "ai_usage_events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
           "order": "DESCENDING"
         }
       ]
@@ -229,6 +229,34 @@
       ]
     },
     {
+      "collectionGroup": "contributions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "couple_rituals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "daily_actions",
       "queryScope": "COLLECTION",
       "fields": [
@@ -261,6 +289,34 @@
       ]
     },
     {
+      "collectionGroup": "dimension_assessments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "currentScore",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "dimension_assessments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dimensionId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "entries",
       "queryScope": "COLLECTION",
       "fields": [
@@ -271,6 +327,52 @@
         {
           "fieldPath": "createdAt",
           "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "growth_arcs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dimensionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "growth_arcs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "growth_items",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "arcId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "arcSequence",
+          "order": "ASCENDING"
         }
       ]
     },
@@ -301,8 +403,48 @@
           "order": "ASCENDING"
         },
         {
+          "fieldPath": "assignedToUserId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "scheduledDate",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "growth_items",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "createdAt",
           "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "growth_items",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sourceInsightId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
         }
       ]
     },
@@ -421,6 +563,20 @@
           "order": "ASCENDING"
         },
         {
+          "fieldPath": "authorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "journal_entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "category",
           "order": "ASCENDING"
         },
@@ -485,6 +641,23 @@
           "order": "ASCENDING"
         },
         {
+          "fieldPath": "embedding",
+          "vectorConfig": {
+            "dimension": 1536,
+            "flat": {}
+          }
+        }
+      ]
+    },
+    {
+      "collectionGroup": "journal_entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "visibleToUserIds",
           "arrayConfig": "CONTAINS"
         },
@@ -499,12 +672,16 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "visibleToUserIds",
+          "arrayConfig": "CONTAINS"
+        },
+        {
           "fieldPath": "familyId",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "authorId",
-          "order": "ASCENDING"
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
         }
       ]
     },
@@ -537,6 +714,24 @@
         {
           "fieldPath": "timestamp",
           "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "margin_notes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "journalEntryId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "visibleToUserIds",
+          "arrayConfig": "CONTAINS"
         }
       ]
     },
@@ -959,152 +1154,6 @@
         {
           "fieldPath": "weekStartDate",
           "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "ai_usage_events",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "growth_items",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "assignedToUserId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "scheduledDate",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "growth_items",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "sourceInsightId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "growth_items",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "arcId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "arcSequence",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "growth_arcs",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "growth_arcs",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "dimensionId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "dimension_assessments",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "dimensionId",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "dimension_assessments",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "currentScore",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "margin_notes",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "familyId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "journalEntryId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "visibleToUserIds",
-          "arrayConfig": "CONTAINS"
         }
       ]
     }
