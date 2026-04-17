@@ -7,7 +7,7 @@ vi.mock('firebase/firestore', () => ({
   where: vi.fn((...args) => ({ __where: args })),
   getDocs: (...args: unknown[]) => getDocsMock(...args),
 }));
-vi.mock('@/lib/firebase', () => ({ db: {} }));
+vi.mock('@/lib/firebase', () => ({ firestore: {} }));
 
 import { findSpouseUserId } from '@/lib/rituals/spouseDetection';
 
