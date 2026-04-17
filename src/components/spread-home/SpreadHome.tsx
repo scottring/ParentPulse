@@ -140,7 +140,7 @@ export function SpreadHome() {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 28px 68px 18px 24px;
+          padding: 56px 68px 18px 24px;
           pointer-events: none;
         }
         .journal-top-bar :global(a) { pointer-events: auto; }

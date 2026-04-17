@@ -49,9 +49,11 @@ export default function Navigation() {
       style={{
         top: 'var(--relish-top-offset, 0px)',
         height: 88,
+        paddingTop: 32,
         background: '#ECEAE5',
         borderBottom: '1px solid rgba(120, 100, 70, 0.12)',
         transition: 'top 180ms ease',
+        boxSizing: 'content-box',
       }}
     >
       <div className="h-full px-4 sm:px-6 flex items-center justify-between mx-auto" style={{ maxWidth: 1440 }}>
