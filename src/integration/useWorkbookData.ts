@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useJournalEntries } from '@/hooks/useJournalEntries';
 import { useCoupleRitual } from '@/hooks/useCoupleRitual';
 import { usePeopleMap } from '@/hooks/usePeopleMap';
+import { usePrivacyLock } from '@/hooks/usePrivacyLock';
 import type { Thread } from '@/design/workbook/TodaySpread';
 import type { RitualDue } from '@/design/workbook/RitualsDue';
 
@@ -39,6 +40,7 @@ export function useWorkbookData() {
   const { entries } = useJournalEntries();
   const { ritual } = useCoupleRitual();
   const { nameOf } = usePeopleMap();
+  const privacyLock = usePrivacyLock();
 
   // Top 3 most recent entries become "open threads".
   const TAG_MAP: Record<string, Thread['tag']> = {
@@ -50,7 +52,18 @@ export function useWorkbookData() {
   };
 
   const threads: Thread[] = useMemo(() => {
-    return entries.slice(0, 3).map((e) => {
+    const userId = user?.userId;
+    const visible = entries.filter((e) => {
+      // Private entry = only the author can see it. On the Workbook
+      // summary surface, hide these unless the PIN has been unlocked.
+      const isPrivate =
+        userId !== undefined &&
+        e.visibleToUserIds.length === 1 &&
+        e.visibleToUserIds[0] === userId;
+      if (isPrivate && !privacyLock.unlocked) return false;
+      return true;
+    });
+    return visible.slice(0, 3).map((e) => {
       const firstPersonId = e.personMentions?.[0];
       const personName = firstPersonId ? nameOf?.(firstPersonId) : undefined;
       const firstTag = e.tags?.[0];
@@ -62,7 +75,7 @@ export function useWorkbookData() {
         tag: firstTag ? TAG_MAP[firstTag] : undefined,
       };
     });
-  }, [entries, nameOf]);
+  }, [entries, nameOf, user?.userId, privacyLock.unlocked]);
 
   // Couple ritual → RitualDue if active.
   const rituals: RitualDue[] = useMemo(() => {

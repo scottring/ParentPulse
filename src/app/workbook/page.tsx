@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { ShellLayout } from '@/design/shell';
+import { Room, Band, Rule } from '@/design/surfaces';
 import { TodaySpread, RitualsDue, CaptureSheet } from '@/design/workbook';
 import { useWorkbookData, useCaptureSubmit } from '@/integration';
 import { usePeopleMap } from '@/hooks/usePeopleMap';
@@ -32,7 +33,7 @@ export default function WorkbookPage() {
 
   return (
     <ShellLayout userName={user.name} onSignOut={() => logout().then(() => router.push('/login'))}>
-      <div style={{ maxWidth: 'var(--r-page-max, 1320px)', margin: '0 auto', padding: '0 32px' }}>
+      <Room name="workbook">
         <TodaySpread
           firstName={wb.firstName}
           date={wb.date}
@@ -40,8 +41,16 @@ export default function WorkbookPage() {
           threads={wb.threads}
           onOpenThread={(id) => router.push(`/journal/${id}`)}
         />
-        <RitualsDue rituals={wb.rituals} />
-      </div>
+        {wb.rituals.length > 0 && (
+          <>
+            <Rule variant="fleuron" style={{ margin: '24px 0' }} />
+            <Band tone="warm" padding="32px 40px" style={{ borderRadius: 'var(--r-radius-2)' }}>
+              <RitualsDue rituals={wb.rituals} />
+            </Band>
+          </>
+        )}
+        <div style={{ height: 96 }} aria-hidden />
+      </Room>
       <CaptureSheet
         people={peopleChips}
         tags={['health', 'home', 'people', 'work', 'plans']}

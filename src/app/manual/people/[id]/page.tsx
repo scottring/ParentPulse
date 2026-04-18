@@ -8,6 +8,7 @@ import { use, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { ShellLayout } from '@/design/shell';
+import { Room } from '@/design/surfaces';
 import { PersonSheet } from '@/design/manual';
 import { useManualPersonSheet } from '@/integration';
 
@@ -29,7 +30,7 @@ export default function PersonVolumePage({
 
   return (
     <ShellLayout userName={user.name} onSignOut={() => logout().then(() => router.push('/login'))}>
-      <div style={{ maxWidth: 'var(--r-page-max, 1320px)', margin: '0 auto', padding: '0 32px' }}>
+      <Room name="manual">
         {sheet ? (
           <PersonSheet
             {...sheet}
@@ -40,7 +41,8 @@ export default function PersonVolumePage({
             This volume is not yet written.
           </p>
         )}
-      </div>
+        <div style={{ height: 96 }} aria-hidden />
+      </Room>
     </ShellLayout>
   );
 }

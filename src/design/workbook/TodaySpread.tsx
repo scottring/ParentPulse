@@ -7,8 +7,8 @@
    ================================================================ */
 
 import { useMemo } from 'react';
-import { Rule, Card } from '../surfaces';
-import { Display, H1, Lede, Eyebrow, BodySerif, Caption } from '../type';
+import { PageSpread } from '../surfaces';
+import { Display, Lede, Eyebrow, BodySerif, Caption } from '../type';
 
 export interface Thread {
   id: string;
@@ -48,51 +48,44 @@ export function TodaySpread({ firstName, date = new Date(), season, threads = []
   const greeting = useMemo(() => greet(date, firstName), [date, firstName]);
   const longDate = useMemo(() => formatLongDate(date), [date]);
 
+  const left = (
+    <>
+      <Eyebrow>{longDate}{season ? ` · ${season}` : ''}</Eyebrow>
+      <Display style={{ margin: '12px 0 16px' }}>{greeting}</Display>
+      <Lede style={{ maxWidth: '38ch' }}>
+        {threads.length === 0
+          ? 'Nothing needs you this morning. The book is quiet.'
+          : threads.length === 1
+            ? 'One thread is open. Take a minute if you have one.'
+            : `${threads.length} threads are open. Here's where you left off.`}
+      </Lede>
+    </>
+  );
+
+  const right = (
+    <>
+      <Eyebrow>Open threads</Eyebrow>
+      <div style={{ marginTop: 16 }}>
+        {threads.map((t, i) => (
+          <ThreadRow
+            key={t.id}
+            thread={t}
+            first={i === 0}
+            onOpen={() => onOpenThread?.(t.id)}
+          />
+        ))}
+        {threads.length === 0 && (
+          <BodySerif style={{ color: 'var(--r-text-4)', fontStyle: 'italic', marginTop: 8 }}>
+            Nothing to pick up. Enjoy the morning.
+          </BodySerif>
+        )}
+      </div>
+    </>
+  );
+
   return (
-    <section
-      aria-label="Today"
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0,1.2fr) 1px minmax(0,1fr)',
-        gap: 48,
-        padding: '48px 0',
-      }}
-    >
-      {/* LEFT PAGE — greeting + season */}
-      <div>
-        <Eyebrow>{longDate}{season ? ` · ${season}` : ''}</Eyebrow>
-        <Display style={{ margin: '12px 0 16px' }}>{greeting}</Display>
-        <Lede style={{ maxWidth: '38ch' }}>
-          {threads.length === 0
-            ? 'Nothing needs you this morning. The book is quiet.'
-            : threads.length === 1
-              ? 'One thread is open. Take a minute if you have one.'
-              : `${threads.length} threads are open. Here's where you left off.`}
-        </Lede>
-      </div>
-
-      {/* GUTTER — the book's spine */}
-      <div aria-hidden style={{ background: 'linear-gradient(180deg, transparent, var(--r-rule-4) 30%, var(--r-rule-4) 70%, transparent)' }} />
-
-      {/* RIGHT PAGE — open threads */}
-      <div>
-        <Eyebrow>Open threads</Eyebrow>
-        <div style={{ marginTop: 16 }}>
-          {threads.map((t, i) => (
-            <ThreadRow
-              key={t.id}
-              thread={t}
-              first={i === 0}
-              onOpen={() => onOpenThread?.(t.id)}
-            />
-          ))}
-          {threads.length === 0 && (
-            <BodySerif style={{ color: 'var(--r-text-4)', fontStyle: 'italic', marginTop: 8 }}>
-              Nothing to pick up. Enjoy the morning.
-            </BodySerif>
-          )}
-        </div>
-      </div>
+    <section aria-label="Today" style={{ padding: '48px 0' }}>
+      <PageSpread left={left} right={right} />
     </section>
   );
 }

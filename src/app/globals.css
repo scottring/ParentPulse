@@ -1,7 +1,126 @@
 @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap');
 
 @import "tailwindcss";
-@import "../design/tokens.css";
+
+/* ================================================================
+   Relish Design System tokens — inlined here (instead of @import)
+   because Tailwind v4's PostCSS inlines @import "tailwindcss" in
+   place, which invalidates subsequent @import statements.
+   Source of truth: src/design/tokens.css — keep in sync.
+   ================================================================ */
+:root {
+  /* Paper & ink */
+  --r-paper:       #FBF8F2;
+  --r-paper-soft:  #F7F5F0;
+  --r-cream:       #F5F0E8;
+  --r-cream-deep:  #ECEAE5;
+  --r-cream-warm:  #E8DDC8;
+  --r-leather:     #14100C;
+  --r-leather-2:   #2A2520;
+
+  --r-ink:         #3A3530;
+  --r-ink-2:       #2A2522;
+  --r-text-2:      #5C5347;
+  --r-text-3:      #5F564B;
+  --r-text-4:      #6B6254;
+  --r-text-5:      #746856;
+  --r-text-6:      #7A6E5C;
+
+  --r-ink-reversed: #F5ECD8;
+  --r-text-reversed-2: #D4C5A8;
+  --r-text-reversed-3: #C8B894;
+  --r-text-reversed-4: #8B7D64;
+
+  /* Rules */
+  --r-rule-1:      #A8988A;
+  --r-rule-2:      #B5A99A;
+  --r-rule-3:      #C0B49F;
+  --r-rule-4:      #D8D3CA;
+  --r-rule-5:      #E5E0D8;
+  --r-rule-reversed: rgba(200, 184, 148, 0.22);
+
+  /* Accents */
+  --r-sage:        #7C9082;
+  --r-sage-2:      #8BAF8E;
+  --r-ember:       #C9864C;
+  --r-ember-soft:  #D4A872;
+  --r-burgundy:    #8C4A3E;
+  --r-amber:       #C9A84C;
+  --r-warn:        #D07070;
+
+  --r-tint-sage:     rgba(124, 144, 130, 0.18);
+  --r-tint-ember:    rgba(201, 134, 76, 0.16);
+  --r-tint-burgundy: rgba(140, 74, 62, 0.16);
+  --r-tint-amber:    rgba(201, 168, 76, 0.18);
+  --r-tint-ink:      rgba(58, 53, 48, 0.08);
+
+  /* Typography families */
+  --r-serif: var(--font-parent-display), 'Cormorant Garamond', Georgia, serif;
+  --r-sans:  var(--font-parent-body),    'DM Sans', system-ui, sans-serif;
+  --r-mono:  ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Type scale */
+  --r-type-wordmark:  34px;
+  --r-type-display-1: clamp(56px, 7vw, 96px);
+  --r-type-display-2: clamp(40px, 5vw, 64px);
+  --r-type-h1:        clamp(32px, 3.2vw, 44px);
+  --r-type-h2:        clamp(24px, 2.2vw, 30px);
+  --r-type-lede:      clamp(20px, 1.8vw, 26px);
+  --r-type-body:      17px;
+  --r-type-body-sm:   15px;
+  --r-type-small:     14px;
+  --r-type-caption:   13px;
+  --r-type-micro:     12px;
+
+  --r-leading-tight:  1.1;
+  --r-leading-snug:   1.3;
+  --r-leading-body:   1.6;
+  --r-leading-loose:  1.75;
+
+  /* Space */
+  --r-space-1: 4px;
+  --r-space-2: 8px;
+  --r-space-3: 16px;
+  --r-space-4: 24px;
+  --r-space-5: 40px;
+  --r-space-6: 64px;
+  --r-space-7: 96px;
+
+  --r-gutter: 32px;
+  --r-page-max: 1440px;
+  --r-column-max: 68ch;
+
+  /* Radii */
+  --r-radius-1: 2px;
+  --r-radius-2: 3px;
+  --r-radius-3: 6px;
+  --r-radius-pill: 999px;
+
+  /* Shadows */
+  --r-shadow-page:
+    0 1px 0 rgba(60, 48, 28, 0.03),
+    0 2px 6px rgba(60, 48, 28, 0.05),
+    0 12px 44px rgba(60, 48, 28, 0.09),
+    0 36px 80px rgba(60, 48, 28, 0.08);
+  --r-shadow-card:
+    0 1px 2px rgba(60, 50, 40, 0.04),
+    0 6px 18px rgba(60, 50, 40, 0.05);
+  --r-shadow-pen:
+    0 2px 6px rgba(20, 16, 12, 0.18),
+    0 12px 28px rgba(20, 16, 12, 0.22);
+
+  /* Motion */
+  --r-ease-ink:   cubic-bezier(0.22, 1, 0.36, 1);
+  --r-dur-quick:  140ms;
+  --r-dur-page:   260ms;
+  --r-dur-settle: 420ms;
+}
+
+.r-dark,
+[data-room='archive'] {
+  background: var(--r-leather);
+  color: var(--r-ink-reversed);
+}
 
 :root {
   /* Parent Theme - Calm Intentionality */

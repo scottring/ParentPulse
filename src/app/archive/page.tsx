@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { ShellLayout } from '@/design/shell';
+import { Room, Rule } from '@/design/surfaces';
 import { YearSelector, YearSummary, MonthTimeline } from '@/design/archive';
 import { useArchiveData } from '@/integration';
 
@@ -31,15 +32,21 @@ export default function ArchivePage() {
   const current = selected ?? yearList[0];
 
   return (
-    <ShellLayout userName={user.name} onSignOut={() => logout().then(() => router.push('/login'))}>
-      <div style={{ maxWidth: 'var(--r-page-max, 1320px)', margin: '0 auto', padding: '0 32px' }}>
+    <ShellLayout
+      userName={user.name}
+      onSignOut={() => logout().then(() => router.push('/login'))}
+      reversed
+    >
+      <Room name="archive" tone="leather">
         <YearSelector years={yearList} selected={current} onSelect={setSelected} />
         <YearSummary year={current} entryCount={entryCountFor(current)} />
+        <Rule variant="asterism" reversed style={{ margin: '24px 0 8px' }} />
         <MonthTimeline
           months={monthsFor(current)}
           onOpen={(id) => router.push(`/journal/${id}`)}
         />
-      </div>
+        <div style={{ height: 96 }} aria-hidden />
+      </Room>
     </ShellLayout>
   );
 }

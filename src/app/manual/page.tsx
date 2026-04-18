@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { ShellLayout } from '@/design/shell';
+import { Room } from '@/design/surfaces';
 import { PeopleGrid } from '@/design/manual';
 import { useManualPeople } from '@/integration';
 
@@ -24,13 +25,14 @@ export default function ManualPage() {
 
   return (
     <ShellLayout userName={user.name} onSignOut={() => logout().then(() => router.push('/login'))}>
-      <div style={{ maxWidth: 'var(--r-page-max, 1320px)', margin: '0 auto', padding: '0 32px' }}>
+      <Room name="manual">
         <PeopleGrid
           people={people}
           onOpen={(id) => router.push(`/manual/people/${id}`)}
           onAdd={() => router.push('/people/new')}
         />
-      </div>
+        <div style={{ height: 96 }} aria-hidden />
+      </Room>
     </ShellLayout>
   );
 }
