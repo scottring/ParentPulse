@@ -54,6 +54,9 @@ export function useWorkbookData() {
   const threads: Thread[] = useMemo(() => {
     const userId = user?.userId;
     const visible = entries.filter((e) => {
+      // Responses are not stand-alone threads; they belong attached to
+      // the parent on the entry detail page.
+      if (e.respondsToEntryId) return false;
       // Private entry = only the author can see it. On the Workbook
       // summary surface, hide these unless the PIN has been unlocked.
       const isPrivate =

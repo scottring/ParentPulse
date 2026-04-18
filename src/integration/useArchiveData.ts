@@ -36,6 +36,8 @@ export function useArchiveData() {
     const counts = new Map<number, number>();
 
     for (const e of entries) {
+      // Responses belong to their parent thread, not the Archive timeline.
+      if (e.respondsToEntryId) continue;
       const d: Date | null = e.createdAt?.toDate ? e.createdAt.toDate() : null;
       if (!d) continue;
       const y = d.getFullYear();
