@@ -16,8 +16,12 @@ import { usePerson } from '@/hooks/usePerson';
 import { useEntryChat } from '@/hooks/useEntryChat';
 import Navigation from '@/components/layout/Navigation';
 
+import { CompanionComposer } from '@/components/journal-spread/CompanionComposer';
+import { ResponseBlock } from '@/components/journal-spread/ResponseBlock';
 import { MicButton } from '@/components/voice/MicButton';
 import { JOURNAL_CATEGORIES, type JournalCategory, type JournalEntry } from '@/types/journal';
+import { useEntryResponses } from '@/hooks/useEntryResponses';
+import { useIsMentionedIn } from '@/hooks/useIsMentionedIn';
 import { getDimension, type DimensionId } from '@/config/relationship-dimensions';
 
 // ================================================================
@@ -135,6 +139,10 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
     }
   };
   const { people } = usePerson();
+  const { responses } = useEntryResponses(entry.entryId);
+  const mentioned = useIsMentionedIn(entry);
+  const authorNameOf = (authorId: string) =>
+    people?.find((p) => p.linkedUserId === authorId)?.name ?? 'Someone';
   const {
     turns: chatTurns,
     loading: chatLoading,
@@ -690,6 +698,22 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
               </div>
             )}
           </div>
+
+          {responses.length > 0 && (
+            <section aria-label="Other perspectives" style={{ marginTop: 32 }}>
+              {responses.map((r) => (
+                <ResponseBlock
+                  key={r.entryId}
+                  response={r}
+                  authorName={authorNameOf(r.authorId)}
+                  currentUserId={currentUserId}
+                />
+              ))}
+            </section>
+          )}
+          {mentioned && (
+            <CompanionComposer parent={entry} />
+          )}
 
           <footer className="entry-footer">
             <div className="privacy-control">
