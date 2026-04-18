@@ -128,11 +128,20 @@ service cloud.firestore {
       // be listed in it (otherwise they couldn't read their own
       // entry). Legacy entries were written under the old rule and
       // are still valid.
+      //
+      // Creates: author must be caller + in visibleToUserIds (existing
+      // rules). If respondsToEntryId is set, the caller must be able to
+      // read the parent entry (i.e. be in its visibleToUserIds).
       allow create: if isParent() &&
                        belongsToFamily(request.resource.data.familyId) &&
                        request.resource.data.authorId == request.auth.uid &&
                        request.resource.data.visibleToUserIds is list &&
-                       request.auth.uid in request.resource.data.visibleToUserIds;
+                       request.auth.uid in request.resource.data.visibleToUserIds &&
+                       (
+                         !('respondsToEntryId' in request.resource.data) ||
+                         request.auth.uid in
+                           get(/databases/$(database)/documents/journal_entries/$(request.resource.data.respondsToEntryId)).data.visibleToUserIds
+                       );
 
       // Parents can update their own entries. Updates may adjust
       // `sharedWithUserIds` / `visibleToUserIds` to reshare or unshare.
@@ -140,11 +149,18 @@ service cloud.firestore {
       // keep access to their own entry — enforce only when the field
       // is present on the write (legacy updates from the migration
       // shim may set the field for the first time).
+      //
+      // Updates: author-only (existing). respondsToEntryId must NOT
+      // change after create — either stay absent or keep the same value.
       allow update: if isParent() &&
                        belongsToFamily(resource.data.familyId) &&
                        resource.data.authorId == request.auth.uid &&
                        (!('visibleToUserIds' in request.resource.data) ||
-                        request.auth.uid in request.resource.data.visibleToUserIds);
+                        request.auth.uid in request.resource.data.visibleToUserIds) &&
+                       (
+                         !('respondsToEntryId' in request.resource.data) && !('respondsToEntryId' in resource.data) ||
+                         request.resource.data.respondsToEntryId == resource.data.respondsToEntryId
+                       );
 
       // Parents can delete their own entries.
       allow delete: if isParent() &&
