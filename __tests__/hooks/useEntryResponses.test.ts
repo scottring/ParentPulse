@@ -17,7 +17,7 @@ vi.mock('firebase/firestore', async () => {
     query: vi.fn((...args: unknown[]) => ({ args })),
     where: vi.fn((...args: unknown[]) => ({ where: args })),
     orderBy: vi.fn((...args: unknown[]) => ({ orderBy: args })),
-    onSnapshot: vi.fn((_q: unknown, cb: (snap: unknown) => void) => {
+    onSnapshot: vi.fn((_q: unknown, cb: (snap: unknown) => void, _onErr?: unknown) => {
       cb({ docs: fakeEntries });
       return () => {};
     }),
