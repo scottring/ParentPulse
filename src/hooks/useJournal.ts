@@ -24,6 +24,7 @@ interface CreateEntryInput {
   text: string;
   category: JournalCategory;
   personMentions?: string[];
+  tags?: string[];
   // User IDs (other than the author) who can read this entry. Empty
   // or omitted = private to author.
   sharedWithUserIds?: string[];
@@ -83,7 +84,7 @@ export function useJournal(): UseJournalReturn {
         authorId: user.userId,
         text: input.text.trim(),
         category: input.category,
-        tags: [],
+        tags: input.tags ?? [],
         visibleToUserIds,
         sharedWithUserIds,
         personMentions: input.personMentions ?? [],

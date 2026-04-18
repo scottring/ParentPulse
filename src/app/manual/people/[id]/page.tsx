@@ -1,20 +1,25 @@
 'use client';
 /* ================================================================
-   Relish · App — /manual (wired)
-   The Family Manual, using real hooks via the integration adapters.
+   Relish · App — /manual/people/[id] (wired)
+   A single volume — one person's sheet — using real data.
    ================================================================ */
 
-import { useEffect } from 'react';
+import { use, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { ShellLayout } from '@/design/shell';
-import { PeopleGrid } from '@/design/manual';
-import { useManualPeople } from '@/integration';
+import { PersonSheet } from '@/design/manual';
+import { useManualPersonSheet } from '@/integration';
 
-export default function ManualPage() {
+export default function PersonVolumePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
   const { user, loading, logout } = useAuth();
   const router = useRouter();
-  const people = useManualPeople();
+  const sheet = useManualPersonSheet(id);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/');
@@ -25,11 +30,16 @@ export default function ManualPage() {
   return (
     <ShellLayout userName={user.name} onSignOut={() => logout().then(() => router.push('/login'))}>
       <div style={{ maxWidth: 'var(--r-page-max, 1320px)', margin: '0 auto', padding: '0 32px' }}>
-        <PeopleGrid
-          people={people}
-          onOpen={(id) => router.push(`/manual/people/${id}`)}
-          onAdd={() => router.push('/people/new')}
-        />
+        {sheet ? (
+          <PersonSheet
+            {...sheet}
+            onEdit={() => router.push(`/people/${id}/manual`)}
+          />
+        ) : (
+          <p style={{ padding: 48, color: 'var(--r-text-4)', fontStyle: 'italic' }}>
+            This volume is not yet written.
+          </p>
+        )}
       </div>
     </ShellLayout>
   );
