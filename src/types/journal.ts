@@ -52,9 +52,11 @@ export interface JournalEntry {
   sharedWithUserIds: string[];
 
   // Companion entry — if set, this entry is a response to another
-  // entry where the author is one of the subjects (personMentions).
-  // Both entries remain independent (own author, own visibility);
-  // the link is denormalized one-way on the response. Null/absent
+  // entry the author can read. Both entries remain independent (own
+  // author, own visibility); the link is denormalized one-way on the
+  // response. The UI restricts composing a response to cases where
+  // the author is one of the parent's mentioned subjects; the rule
+  // enforces the weaker "can read the parent" constraint. Null/absent
   // for stand-alone entries. Immutable after create.
   respondsToEntryId?: string;
 
