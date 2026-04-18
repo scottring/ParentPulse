@@ -31,6 +31,10 @@ interface CreateEntryInput {
   // Child-supervised entry — parent writes on behalf of a child.
   subjectType?: 'self' | 'child_proxy';
   subjectPersonId?: string; // personId of the child
+  // If this entry is a response to another entry, the parent's
+  // entryId. Written once at create-time; server rules enforce
+  // immutability.
+  respondsToEntryId?: string;
 }
 
 interface UseJournalReturn {
@@ -98,6 +102,11 @@ export function useJournal(): UseJournalReturn {
       // Child proxy — record which child is "speaking"
       if (input.subjectType === 'child_proxy' && input.subjectPersonId) {
         docData.subjectPersonId = input.subjectPersonId;
+      }
+
+      // Companion entry — if responding to another entry, record the parent
+      if (input.respondsToEntryId) {
+        docData.respondsToEntryId = input.respondsToEntryId;
       }
 
       // Set legacy childId if exactly one person is mentioned
