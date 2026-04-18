@@ -10,9 +10,8 @@ import { JournalSpread } from '@/components/journal-spread/JournalSpread';
 import type { FilterSelection } from '@/components/journal-spread/FilterPills';
 import { usePrivacyLock } from '@/hooks/usePrivacyLock';
 import { PinKeypad } from '@/components/privacy/PinKeypad';
-import { UserMenu } from '@/components/layout/UserMenu';
+import Navigation from '@/components/layout/Navigation';
 import type { EntryFilter } from '@/types/entry';
-import CaptureSheet from '@/components/capture/CaptureSheet';
 
 /**
  * Parse a URL `?focus=…` param into a journal filter. Accepted:
@@ -119,69 +118,7 @@ export function SpreadHome() {
 
   return (
     <>
-      <header className="journal-top-bar">
-        <a href="/" className="journal-wordmark" aria-label="Relish — home">
-          Relish
-        </a>
-        <div className="journal-top-right">
-          <a href="/manual" className="cross-nav" aria-label="Open The Family Manual">
-            The Manual
-          </a>
-          <a href="/surface" className="cross-nav" aria-label="What's New">
-            What&rsquo;s New
-          </a>
-        </div>
-      </header>
-      <style jsx>{`
-        .journal-top-bar {
-          position: fixed;
-          top: var(--relish-top-offset, 0);
-          left: 0;
-          right: 0;
-          z-index: 20;
-          transition: top 180ms ease;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 40px 68px 16px 24px;
-          pointer-events: none;
-        }
-        .journal-top-bar :global(a) { pointer-events: auto; }
-        .journal-top-bar .journal-wordmark {
-          font-family: var(--font-parent-display), Georgia, serif;
-          font-style: italic;
-          font-weight: 300;
-          font-size: 36px;
-          line-height: 1;
-          letter-spacing: -0.01em;
-          color: #2a1f14;
-          text-decoration: none;
-          transition: opacity 140ms ease;
-        }
-        .journal-top-bar .journal-wordmark:hover { opacity: 0.7; }
-        .journal-top-right {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-        .journal-top-bar .cross-nav {
-          font-family: var(--font-parent-display), Georgia, serif;
-          font-style: italic;
-          font-weight: 400;
-          font-size: 15px;
-          letter-spacing: 0;
-          color: #2a1f14;
-          text-decoration: none;
-          padding: 4px 10px;
-          border-radius: 4px;
-          transition: background 140ms ease, opacity 140ms ease;
-        }
-        .cross-nav:hover {
-          opacity: 0.7;
-          background: rgba(42, 31, 20, 0.06);
-        }
-      `}</style>
-      <UserMenu />
+      <Navigation />
       <JournalSpread
         entries={entries}
         familyName={selfPerson?.name?.split(' ').slice(-1)[0] ?? 'Family'}
@@ -197,7 +134,6 @@ export function SpreadHome() {
           window.dispatchEvent(new Event('relish:open-capture'));
         }}
       />
-      <CaptureSheet />
       {pendingFilter && (
         <PinKeypad
           title="Unlock private view"

@@ -6,8 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useFreshness } from '@/hooks/useFreshness';
-import { UserMenu } from '@/components/layout/UserMenu';
-import CaptureSheet from '@/components/capture/CaptureSheet';
+import Navigation from '@/components/layout/Navigation';
 import { ManualChat } from '@/components/manual/ManualChat';
 import { computeAge } from '@/utils/age';
 import type { Person, PersonManual } from '@/types/person-manual';
@@ -100,20 +99,7 @@ function ManualPageInner() {
 
   return (
     <div className="spread-stage">
-      <header className="journal-top-bar">
-        <a href="/" className="journal-wordmark" aria-label="Relish — home">
-          Relish
-        </a>
-        <div className="journal-top-right">
-          <a href="/journal" className="cross-nav" aria-label="The Journal">
-            The Journal
-          </a>
-          <a href="/surface" className="cross-nav" aria-label="What's New">
-            What&rsquo;s New
-          </a>
-        </div>
-      </header>
-      <UserMenu />
+      <Navigation />
 
       <header className="masthead-row">
         <h1 className="masthead-title">The Family Manual</h1>
@@ -181,13 +167,11 @@ function ManualPageInner() {
         </div>
       </div>
 
-      <CaptureSheet />
-
       <style jsx>{`
         .spread-stage {
           position: relative;
           min-height: 100vh;
-          padding: 72px 28px 60px;
+          padding: 128px 28px 60px;
           background-image: url(${WOOD_DESK_IMG});
           background-size: 260%;
           background-position: center 38%;
@@ -208,53 +192,6 @@ function ManualPageInner() {
             rgba(30, 18, 8, 0.42) 100%
           );
           z-index: 0;
-        }
-
-        .journal-top-bar {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          z-index: 20;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 14px 68px 14px 24px;
-          pointer-events: none;
-        }
-        .journal-top-bar :global(a) { pointer-events: auto; }
-        .journal-top-bar .journal-wordmark {
-          font-family: var(--font-parent-display), Georgia, serif;
-          font-style: italic;
-          font-weight: 300;
-          font-size: 28px;
-          line-height: 1;
-          letter-spacing: -0.01em;
-          color: #2a1f14;
-          text-decoration: none;
-          transition: opacity 140ms ease;
-        }
-        .journal-top-bar .journal-wordmark:hover { opacity: 0.7; }
-        .journal-top-right {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-        .journal-top-bar .cross-nav {
-          font-family: var(--font-parent-display), Georgia, serif;
-          font-style: italic;
-          font-weight: 400;
-          font-size: 15px;
-          letter-spacing: 0;
-          color: #2a1f14;
-          text-decoration: none;
-          padding: 4px 10px;
-          border-radius: 4px;
-          transition: background 140ms ease, opacity 140ms ease;
-        }
-        .cross-nav:hover {
-          opacity: 0.7;
-          background: rgba(42, 31, 20, 0.06);
         }
 
         /* Inner masthead — same structure and type as the Journal's

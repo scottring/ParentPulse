@@ -313,7 +313,7 @@ export function JournalSpread({
         .spread-stage {
           position: relative;
           min-height: 100vh;
-          padding: 96px 28px 72px;
+          padding: 128px 28px 72px;
           background-image: url(${WOOD_DESK_IMG});
           background-size: 260%;
           background-position: center 38%;
