@@ -71,6 +71,7 @@ describe.skipIf(!emulatorAvailable)('journal_entries — respondsToEntryId', () 
   const IRIS = 'iris-uid';
   const SCOTT = 'scott-uid';
   const STRANGER = 'stranger-uid';
+  const OUTSIDER = 'outsider-in-fam-uid';
 
   beforeEach(async () => {
     if (!emulatorAvailable || !env) return;
@@ -78,6 +79,7 @@ describe.skipIf(!emulatorAvailable)('journal_entries — respondsToEntryId', () 
     await seedUser(IRIS, FAM);
     await seedUser(SCOTT, FAM);
     await seedUser(STRANGER, 'fam-2');
+    await seedUser(OUTSIDER, FAM);
     // Parent entry: Iris authored, shared with Scott
     await seedEntry('entry-parent', {
       familyId: FAM,
@@ -152,6 +154,38 @@ describe.skipIf(!emulatorAvailable)('journal_entries — respondsToEntryId', () 
       sharedWithUserIds: [],
       personMentions: [],
       tags: [],
+      createdAt: Timestamp.now(),
+    }));
+  });
+
+  it('cannot add respondsToEntryId to an existing stand-alone entry', async () => {
+    const db = env!.authenticatedContext(SCOTT).firestore();
+    const ref = await addDoc(collection(db, 'journal_entries'), {
+      familyId: FAM,
+      authorId: SCOTT,
+      text: 'standalone',
+      category: 'moment',
+      visibleToUserIds: [SCOTT],
+      sharedWithUserIds: [],
+      personMentions: [],
+      tags: [],
+      createdAt: Timestamp.now(),
+    });
+    await assertFails(updateDoc(ref, { respondsToEntryId: 'entry-parent' }));
+  });
+
+  it('in-family user not in parent visibility cannot create a response', async () => {
+    const db = env!.authenticatedContext(OUTSIDER).firestore();
+    await assertFails(addDoc(collection(db, 'journal_entries'), {
+      familyId: FAM,
+      authorId: OUTSIDER,
+      text: 'butting in',
+      category: 'moment',
+      visibleToUserIds: [OUTSIDER],
+      sharedWithUserIds: [],
+      personMentions: [],
+      tags: [],
+      respondsToEntryId: 'entry-parent',
       createdAt: Timestamp.now(),
     }));
   });
