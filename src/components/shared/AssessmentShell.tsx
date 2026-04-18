@@ -2,7 +2,7 @@
 
 import { ReactNode } from 'react';
 import Navigation from '@/components/layout/Navigation';
-import SideNav from '@/components/layout/SideNav';
+
 
 export type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error';
 
@@ -106,7 +106,7 @@ export default function AssessmentShell({
     return (
       <div className="relish-page">
         <Navigation />
-        <SideNav />
+
 
         <div className="pt-[64px] pb-24">
           {/* Wide, low-padding container — Typeform-style.
@@ -187,7 +187,6 @@ export default function AssessmentShell({
   return (
     <div className="relish-page">
       <Navigation />
-      <SideNav />
 
       <div className="pt-[64px] pb-24">
         <div className="press-binder" style={{ maxWidth: 720 }}>

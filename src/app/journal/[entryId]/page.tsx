@@ -15,7 +15,7 @@ import { useJournal } from '@/hooks/useJournal';
 import { usePerson } from '@/hooks/usePerson';
 import { useEntryChat } from '@/hooks/useEntryChat';
 import Navigation from '@/components/layout/Navigation';
-import SideNav from '@/components/layout/SideNav';
+
 import { MicButton } from '@/components/voice/MicButton';
 import { JOURNAL_CATEGORIES, type JournalCategory, type JournalEntry } from '@/types/journal';
 import { getDimension, type DimensionId } from '@/config/relationship-dimensions';
@@ -54,7 +54,7 @@ export default function JournalEntryDetailPage() {
     return (
       <div className="relish-page">
         <Navigation />
-        <SideNav />
+
         <div className="pt-[64px]">
           <div className="press-loading">Opening the entry&hellip;</div>
         </div>
@@ -68,7 +68,7 @@ export default function JournalEntryDetailPage() {
     return (
       <div className="relish-page">
         <Navigation />
-        <SideNav />
+
         <div className="pt-[64px] pb-24">
           <div className="relish-container">
             <div
@@ -97,7 +97,7 @@ export default function JournalEntryDetailPage() {
   return (
     <div className="relish-page">
       <Navigation />
-      <SideNav />
+
       <EntryEditor
         key={entry.entryId}
         entry={entry}

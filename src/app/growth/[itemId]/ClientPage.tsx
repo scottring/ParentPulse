@@ -19,7 +19,7 @@ import { firestore } from '@/lib/firebase';
 import { useGrowthFeed } from '@/hooks/useGrowthFeed';
 import { usePerson } from '@/hooks/usePerson';
 import Navigation from '@/components/layout/Navigation';
-import SideNav from '@/components/layout/SideNav';
+
 import { EXERCISE_TYPES } from '@/config/exercise-types';
 import type { GrowthItem, GrowthItemType, FeedbackReaction, ImpactRating } from '@/types/growth';
 
@@ -379,7 +379,7 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
     return (
       <div className="relish-page">
         <Navigation />
-        <SideNav />
+
         <div className="pt-[64px]">
           <div className="press-loading">Turning to the page&hellip;</div>
         </div>
@@ -391,7 +391,7 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
     return (
       <div className="relish-page">
         <Navigation />
-        <SideNav />
+
         <div className="pt-[64px]">
           <div className="press-binder">
             <div className="press-empty" style={{ padding: '80px 20px' }}>
@@ -423,7 +423,7 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
   return (
     <div className="relish-page">
       <Navigation />
-      <SideNav />
+
 
       <div className="pt-[64px] pb-24">
         {step === 'brief' && (

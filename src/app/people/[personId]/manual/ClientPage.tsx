@@ -11,7 +11,7 @@ import { ManualChat } from '@/components/manual/ManualChat';
 import { useEquivalentManualIds } from '@/hooks/useEquivalentManualIds';
 import { isKidObserverEligible, computeAge } from '@/utils/age';
 import Navigation from '@/components/layout/Navigation';
-import SideNav from '@/components/layout/SideNav';
+
 
 function spellCount(n: number): string {
   const names = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
@@ -62,7 +62,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
     return (
       <div className="relish-page">
         <Navigation />
-        <SideNav />
+
         <div className="pt-[64px]">
           <div className="press-loading">Opening the volume&hellip;</div>
         </div>
@@ -74,7 +74,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
     return (
       <div className="relish-page">
         <Navigation />
-        <SideNav />
+
         <div className="pt-[64px]">
           <div className="press-binder">
             <div className="press-empty" style={{ padding: '80px 20px' }}>
@@ -134,7 +134,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
   return (
     <div className="relish-page">
       <Navigation />
-      <SideNav />
+
 
       <div className="pt-[64px] pb-24">
         <div className="relish-container" style={{ maxWidth: 1120 }}>

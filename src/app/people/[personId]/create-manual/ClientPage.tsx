@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { usePersonById } from '@/hooks/usePerson';
 import { usePersonManual } from '@/hooks/usePersonManual';
 import Navigation from '@/components/layout/Navigation';
-import SideNav from '@/components/layout/SideNav';
+
 import { RelationshipType } from '@/types/person-manual';
 import { computeAge, isKidSessionEligible, isKidObserverEligible } from '@/utils/age';
 
@@ -65,7 +65,7 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
     return (
       <div className="relish-page">
         <Navigation />
-        <SideNav />
+
         <div className="pt-[64px]">
           <div className="press-loading">Preparing the page&hellip;</div>
         </div>
@@ -107,7 +107,7 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
     return (
       <div className="relish-page">
         <Navigation />
-        <SideNav />
+
 
         <div className="pt-[64px] pb-24">
           <div className="press-binder" style={{ maxWidth: 640 }}>
@@ -212,7 +212,7 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
   return (
     <div className="relish-page">
       <Navigation />
-      <SideNav />
+
 
       <div className="pt-[64px] pb-24">
         <div className="press-binder" style={{ maxWidth: 680 }}>

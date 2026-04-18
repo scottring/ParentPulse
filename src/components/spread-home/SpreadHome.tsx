@@ -120,12 +120,15 @@ export function SpreadHome() {
   return (
     <>
       <header className="journal-top-bar">
-        <a href="/journal" className="journal-wordmark" aria-label="Relish">
+        <a href="/" className="journal-wordmark" aria-label="Relish — home">
           Relish
         </a>
         <div className="journal-top-right">
           <a href="/manual" className="cross-nav" aria-label="Open The Family Manual">
-            The Family Manual →
+            The Manual
+          </a>
+          <a href="/surface" className="cross-nav" aria-label="What's New">
+            What&rsquo;s New
           </a>
         </div>
       </header>

@@ -101,12 +101,15 @@ function ManualPageInner() {
   return (
     <div className="spread-stage">
       <header className="journal-top-bar">
-        <a href="/journal" className="journal-wordmark" aria-label="Relish">
+        <a href="/" className="journal-wordmark" aria-label="Relish — home">
           Relish
         </a>
         <div className="journal-top-right">
-          <a href="/journal" className="cross-nav" aria-label="Return to the Journal">
-            ← The Journal
+          <a href="/journal" className="cross-nav" aria-label="The Journal">
+            The Journal
+          </a>
+          <a href="/surface" className="cross-nav" aria-label="What's New">
+            What&rsquo;s New
           </a>
         </div>
       </header>
