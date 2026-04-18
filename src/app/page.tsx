@@ -90,7 +90,7 @@ function TheSurfacePage() {
   return (
     <>
       <Navigation />
-      <main style={{ background: '#F5F0E8', paddingTop: '88px' }}>
+      <main>
         <SurfaceLayout
           hero={<HeroSlot heroId={resolved.hero} data={data} />}
           grid={<GridSlot tileIds={resolved.gridTiles} data={data} />}

@@ -27,11 +27,14 @@ export function SurfaceLayout({ hero, grid, gridTileCount }: SurfaceLayoutProps)
     <div
       className={`surface-layout ${layoutMode}`}
       style={{
+        position: 'fixed',
+        top: 'calc(var(--relish-top-offset, 0px) + 88px)',
+        left: 0,
+        right: 0,
+        bottom: 0,
         display: 'grid',
         gridTemplateColumns: gridCols,
-        height: 'calc(100vh - var(--relish-top-offset, 0px) - 88px)',
-        maxHeight: 'calc(100vh - var(--relish-top-offset, 0px) - 88px)',
-        overflow: 'hidden',
+        background: '#F5F0E8',
       }}
     >
       <div className="surface-hero" style={{ overflow: 'hidden' }}>{hero}</div>
@@ -44,9 +47,12 @@ export function SurfaceLayout({ hero, grid, gridTileCount }: SurfaceLayoutProps)
       <style jsx>{`
         @media (max-width: 768px) {
           .surface-layout {
+            position: static !important;
+            top: auto !important;
+            left: auto !important;
+            right: auto !important;
+            bottom: auto !important;
             grid-template-columns: 1fr !important;
-            height: auto !important;
-            overflow: visible !important;
           }
           .surface-hero {
             overflow: visible !important;
