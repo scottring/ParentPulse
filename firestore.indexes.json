@@ -689,14 +689,10 @@
       "collectionGroup": "journal_entries",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "respondsToEntryId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "respondsToEntryId", "order": "ASCENDING" },
+        { "fieldPath": "visibleToUserIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]
     },
     {
