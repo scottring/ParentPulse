@@ -44,6 +44,8 @@ export function CompanionComposer({ parent, onPosted }: CompanionComposerProps) 
     const base = new Set(
       parent.sharedWithUserIds.filter((id) => id !== currentUserId),
     );
+    // Include parent author explicitly — they aren't in their own
+    // `sharedWithUserIds` by convention, but we want them to see the reply.
     if (parent.authorId !== currentUserId) {
       base.add(parent.authorId);
     }
