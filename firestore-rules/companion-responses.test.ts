@@ -10,7 +10,7 @@
  * Run with: npm run test:rules
  */
 
-import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import {
   initializeTestEnvironment,
   assertSucceeds,
@@ -18,7 +18,7 @@ import {
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import { readFileSync } from 'fs';
-import { doc, setDoc, updateDoc, addDoc, collection, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, addDoc, collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
 
 const emulatorAvailable = !!process.env.FIRESTORE_EMULATOR_HOST;
 
@@ -188,5 +188,48 @@ describe.skipIf(!emulatorAvailable)('journal_entries — respondsToEntryId', () 
       respondsToEntryId: 'entry-parent',
       createdAt: Timestamp.now(),
     }));
+  });
+
+  it('two users can each read their own sibling responses without the other\'s private response breaking the listener', async () => {
+    // Seed Scott's response (shared with Iris)
+    await seedEntry('response-scott', {
+      familyId: FAM,
+      authorId: SCOTT,
+      text: 'My side of things.',
+      category: 'moment',
+      visibleToUserIds: [SCOTT, IRIS],
+      sharedWithUserIds: [IRIS],
+      personMentions: [],
+      tags: [],
+      respondsToEntryId: 'entry-parent',
+      createdAt: Timestamp.now(),
+    });
+    // Seed Iris's private response (just-me — only Iris)
+    await seedEntry('response-iris-private', {
+      familyId: FAM,
+      authorId: IRIS,
+      text: 'My private thoughts.',
+      category: 'moment',
+      visibleToUserIds: [IRIS],
+      sharedWithUserIds: [],
+      personMentions: [],
+      tags: [],
+      respondsToEntryId: 'entry-parent',
+      createdAt: Timestamp.now(),
+    });
+
+    // As Scott: query WITH visibleToUserIds array-contains Scott.
+    // This mirrors the hook's query shape — Scott should see exactly 1 doc.
+    const db = env!.authenticatedContext(SCOTT).firestore();
+    const q = query(
+      collection(db, 'journal_entries'),
+      where('familyId', '==', FAM),
+      where('respondsToEntryId', '==', 'entry-parent'),
+      where('visibleToUserIds', 'array-contains', SCOTT),
+      orderBy('createdAt', 'asc'),
+    );
+    const snap = await assertSucceeds(getDocs(q));
+    expect(snap.size).toBe(1);
+    expect(snap.docs[0].id).toBe('response-scott');
   });
 });
