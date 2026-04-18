@@ -3,7 +3,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useJournal } from '@/hooks/useJournal';
 
 // Mock firestore addDoc + collection
-const addDocMock = vi.fn(async () => ({ id: 'new-entry-id' }));
+const addDocMock = vi.fn((..._args: unknown[]) => Promise.resolve({ id: 'new-entry-id' }));
 vi.mock('firebase/firestore', async () => {
   const actual = await vi.importActual<typeof import('firebase/firestore')>('firebase/firestore');
   return {
