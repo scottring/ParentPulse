@@ -17,15 +17,19 @@ vi.mock('@/hooks/usePerson', () => ({
 
 describe('useIsMentionedIn', () => {
   it('true when current user\'s linked personId is in personMentions', () => {
-    const { result } = renderHook(() => useIsMentionedIn({ personMentions: ['person-scott'], authorId: 'iris-uid' } as never));
+    const { result } = renderHook(() => useIsMentionedIn({ personMentions: ['person-scott'], sharedWithUserIds: [], authorId: 'iris-uid' } as never));
     expect(result.current).toBe(true);
   });
-  it('false when only other people are mentioned', () => {
-    const { result } = renderHook(() => useIsMentionedIn({ personMentions: ['person-iris'], authorId: 'iris-uid' } as never));
+  it('true when the entry was shared directly with the current user (no tag needed)', () => {
+    const { result } = renderHook(() => useIsMentionedIn({ personMentions: [], sharedWithUserIds: ['scott-uid'], authorId: 'iris-uid' } as never));
+    expect(result.current).toBe(true);
+  });
+  it('false when only other people are mentioned and entry not shared with current user', () => {
+    const { result } = renderHook(() => useIsMentionedIn({ personMentions: ['person-iris'], sharedWithUserIds: ['someone-else'], authorId: 'iris-uid' } as never));
     expect(result.current).toBe(false);
   });
   it('false when the current user is the author', () => {
-    const { result } = renderHook(() => useIsMentionedIn({ personMentions: ['person-scott'], authorId: 'scott-uid' } as never));
+    const { result } = renderHook(() => useIsMentionedIn({ personMentions: ['person-scott'], sharedWithUserIds: ['scott-uid'], authorId: 'scott-uid' } as never));
     expect(result.current).toBe(false);
   });
   it('false when entry is null/undefined', () => {

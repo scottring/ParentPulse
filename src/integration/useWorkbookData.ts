@@ -70,11 +70,18 @@ export function useWorkbookData() {
       const firstPersonId = e.personMentions?.[0];
       const personName = firstPersonId ? nameOf?.(firstPersonId) : undefined;
       const firstTag = e.tags?.[0];
+      const title = personName
+        ? `About ${personName}`
+        : (e.text?.slice(0, 60) || 'A note');
+      // Only include a preview when it adds something beyond the title.
+      // Short entries would otherwise render the same sentence twice.
+      const preview =
+        personName || (e.text && e.text.length > 60) ? e.text : undefined;
       return {
         id: e.entryId,
-        title: personName ? `About ${personName}` : (e.text?.slice(0, 60) || 'A note'),
+        title,
         lastTouched: humaniseAgo(e.createdAt),
-        preview: e.text,
+        preview,
         tag: firstTag ? TAG_MAP[firstTag] : undefined,
       };
     });
