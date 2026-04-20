@@ -45,87 +45,108 @@ export default function HomePage() {
 
   return (
     <main className="home-stage">
-      <div className="home-banner" aria-hidden="true" />
-      <header className="home-header">
-        <p className="home-kicker">Vol. I — No. 01 · A family broadsheet</p>
-        <h1 className="home-wordmark">Relish</h1>
-        <p className="home-subwordmark">
-          <em>Operating manuals</em> for the people you love.
-        </p>
-      </header>
+      <div className="home-inner">
+        <header className="home-header">
+          <p className="home-kicker">Vol. I — No. 01 · A family broadsheet</p>
+          <h1 className="home-wordmark">Relish</h1>
+          <p className="home-subwordmark">
+            <em>Operating manuals</em> for the people you love.
+          </p>
+        </header>
 
-      <section className="home-lede">
-        <p className="lede-text">
-          A private, long-running family journal. You (and your partner)
-          write about the people in your life — kids, parents, friends —
-          and the book gives you back patterns, prompts, briefs, and
-          memories that help you <em>pay attention</em>.
-        </p>
-      </section>
+        <section className="home-lede">
+          <p className="lede-text">
+            A private, long-running family journal. You (and your partner)
+            write about the people in your life — kids, parents, friends —
+            and the book gives you back patterns, prompts, briefs, and
+            memories that help you <em>pay attention</em>.
+          </p>
+        </section>
 
-      <section className="home-rooms" aria-label="The three rooms">
-        <p className="rooms-eyebrow">Three rooms inside</p>
-        <div className="rooms-grid">
-          <article className="room-card">
-            <p className="room-name"><em>The Workbook.</em></p>
-            <p className="room-blurb">
-              The daily entry point. What&apos;s open, what&apos;s kept,
-              what&apos;s waiting.
-            </p>
-          </article>
-          <article className="room-card">
-            <p className="room-name"><em>The Family Manual.</em></p>
-            <p className="room-blurb">
-              The people view. Who&apos;s here, who&apos;s waiting, how
-              they relate.
-            </p>
-          </article>
-          <article className="room-card">
-            <p className="room-name"><em>The Archive.</em></p>
-            <p className="room-blurb">
-              Every line the book has kept. Searchable, readable,
-              yours.
-            </p>
-          </article>
-        </div>
-      </section>
+        <section className="home-rooms" aria-label="The three rooms">
+          <p className="rooms-eyebrow">Three rooms inside</p>
+          <div className="rooms-grid">
+            <article className="room-card">
+              <p className="room-name"><em>The Workbook.</em></p>
+              <p className="room-blurb">
+                The daily entry point. What&apos;s open, what&apos;s kept,
+                what&apos;s waiting.
+              </p>
+            </article>
+            <article className="room-card">
+              <p className="room-name"><em>The Family Manual.</em></p>
+              <p className="room-blurb">
+                The people view. Who&apos;s here, who&apos;s waiting, how
+                they relate.
+              </p>
+            </article>
+            <article className="room-card">
+              <p className="room-name"><em>The Archive.</em></p>
+              <p className="room-blurb">
+                Every line the book has kept. Searchable, readable,
+                yours.
+              </p>
+            </article>
+          </div>
+        </section>
 
-      <nav className="home-auth" aria-label="Enter">
-        <Link href="/login" className="home-auth-link">
-          Sign in
-        </Link>
-        <span className="home-auth-sep" aria-hidden="true">·</span>
-        <Link href="/register" className="home-auth-link home-auth-primary">
-          Begin a volume <span aria-hidden="true">⟶</span>
-        </Link>
-      </nav>
+        <nav className="home-auth" aria-label="Enter">
+          <Link href="/login" className="home-auth-link">
+            Sign in
+          </Link>
+          <span className="home-auth-sep" aria-hidden="true">·</span>
+          <Link href="/register" className="home-auth-link home-auth-primary">
+            Begin a volume <span aria-hidden="true">⟶</span>
+          </Link>
+        </nav>
 
-      <footer className="home-colophon">
-        <span aria-hidden="true" className="fleuron">❦</span>
-        <span>The Workbook, a family broadsheet.</span>
-      </footer>
+        <footer className="home-colophon">
+          <span aria-hidden="true" className="fleuron">❦</span>
+          <span>The Workbook, a family broadsheet.</span>
+        </footer>
+      </div>
 
       <style jsx>{`
+        /* Full-viewport editorial stage: the landing imagery covers the
+           entire page behind a cream wash so the typography reads as
+           paper floating over a botanical still-life, not a 200px
+           masthead strip with empty cream below it. */
         .home-stage {
           position: relative;
           min-height: 100vh;
-          background: var(--r-cream, #F5F0E8);
           color: var(--r-ink, #3A3530);
           font-family: var(--r-serif, Georgia, serif);
           display: flex;
           flex-direction: column;
-          max-width: 1040px;
-          margin: 0 auto;
-          padding: 0 40px 48px;
-        }
-        .home-banner {
-          height: 200px;
-          margin: 0 -40px 48px;
+          /* Layer: top-to-bottom cream wash + image. The wash is
+             lighter at the top so the eucalyptus reads through, denser
+             toward the bottom so lower content still has paper-like
+             contrast. */
+          background-color: var(--r-cream, #F5F0E8);
           background-image:
-            linear-gradient(180deg, rgba(20,16,12,0.1) 0%, rgba(20,16,12,0) 40%, rgba(245,240,232,0.45) 92%, var(--r-cream, #F5F0E8) 100%),
+            linear-gradient(
+              180deg,
+              rgba(245,240,232,0.55) 0%,
+              rgba(245,240,232,0.78) 45%,
+              rgba(245,240,232,0.92) 85%,
+              rgba(245,240,232,1) 100%
+            ),
             url('${stockImagery.landingBanner}');
           background-size: cover;
-          background-position: center 40%;
+          background-position: center top;
+          background-repeat: no-repeat;
+          background-attachment: fixed;
+        }
+        .home-inner {
+          position: relative;
+          z-index: 1;
+          width: 100%;
+          max-width: 1040px;
+          margin: 0 auto;
+          padding: 120px 40px 48px;
+          display: flex;
+          flex-direction: column;
+          flex: 1;
         }
         .home-header {
           text-align: center;
@@ -270,7 +291,12 @@ export default function HomePage() {
         }
         @media (max-width: 720px) {
           .home-stage {
-            padding: 48px 24px 32px;
+            /* On mobile, fixed attachment jumps oddly during scroll
+               on iOS. Fall back to scroll-attached for the cover. */
+            background-attachment: scroll;
+          }
+          .home-inner {
+            padding: 72px 24px 32px;
           }
           .rooms-grid {
             grid-template-columns: 1fr;
