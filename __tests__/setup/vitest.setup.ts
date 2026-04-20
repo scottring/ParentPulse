@@ -77,6 +77,7 @@ if (!RUNNING_AGAINST_EMULATOR) {
       toDate: () => new Date(),
       toMillis: () => Date.now(),
     })),
+    deleteField: vi.fn(() => ({ _methodName: 'deleteField' })),
   }));
 
   vi.doMock('firebase/functions', () => ({

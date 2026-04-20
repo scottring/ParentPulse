@@ -91,4 +91,29 @@ describe('EditPersonSheet', () => {
     expect(d.getMonth()).toBe(6); // July (0-indexed)
     expect(d.getDate()).toBe(4);
   });
+
+  it('emits a FieldValue sentinel for a field the user cleared', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const user = (await import('@testing-library/user-event')).default.setup();
+    const { deleteField } = await import('firebase/firestore');
+
+    render(
+      <EditPersonSheet
+        person={makePerson({ bannerUrl: 'https://img/old-banner.jpg' })}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />
+    );
+
+    await user.clear(screen.getByLabelText(/banner url/i));
+    await user.click(screen.getByRole('button', { name: /save/i }));
+
+    const call = onSave.mock.calls[0][0] as Record<string, unknown>;
+    // deleteField() returns a FieldValue; compare by shape (constructor name).
+    expect(call.bannerUrl).toBeDefined();
+    expect((call.bannerUrl as { _methodName?: string })._methodName ??
+      (call.bannerUrl as object).constructor.name).toMatch(/deleteField|FieldValue/i);
+    // Also confirm it's the same shape Firestore would return:
+    expect(call.bannerUrl).toEqual(deleteField());
+  });
 });

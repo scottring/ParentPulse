@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, deleteField } from 'firebase/firestore';
 import type { Person } from '@/types/person-manual';
 
 export interface EditPersonSheetProps {
@@ -17,6 +17,16 @@ function toDateInputValue(ts?: Timestamp): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+function diffString(
+  next: string,
+  prev: string | undefined,
+): string | ReturnType<typeof deleteField> | undefined {
+  const normalizedPrev = prev ?? '';
+  if (next === normalizedPrev) return undefined;
+  if (next === '' && normalizedPrev !== '') return deleteField();
+  return next;
 }
 
 function fromDateInputValue(value: string): Timestamp | null {
@@ -44,22 +54,23 @@ export function EditPersonSheet({ person, onClose, onSave }: EditPersonSheetProp
       updates.name = trimmedName;
     }
 
-    if (pronouns !== (person.pronouns ?? '')) {
-      updates.pronouns = pronouns;
-    }
+    const pronounsDiff = diffString(pronouns, person.pronouns);
+    if (pronounsDiff !== undefined) updates.pronouns = pronounsDiff;
 
-    if (avatarUrl !== (person.avatarUrl ?? '')) {
-      updates.avatarUrl = avatarUrl;
-    }
+    const avatarDiff = diffString(avatarUrl, person.avatarUrl);
+    if (avatarDiff !== undefined) updates.avatarUrl = avatarDiff;
 
-    if (bannerUrl !== (person.bannerUrl ?? '')) {
-      updates.bannerUrl = bannerUrl;
-    }
+    const bannerDiff = diffString(bannerUrl, person.bannerUrl);
+    if (bannerDiff !== undefined) updates.bannerUrl = bannerDiff;
 
     const currentDob = toDateInputValue(person.dateOfBirth);
     if (dob !== currentDob) {
-      const next = fromDateInputValue(dob);
-      if (next) updates.dateOfBirth = next;
+      if (dob === '') {
+        updates.dateOfBirth = deleteField();
+      } else {
+        const next = fromDateInputValue(dob);
+        if (next) updates.dateOfBirth = next;
+      }
     }
 
     if (Object.keys(updates).length === 0) {
