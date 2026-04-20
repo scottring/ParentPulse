@@ -1,6 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Timestamp } from 'firebase/firestore';
+
+vi.mock('@/lib/upload-person-image', () => ({
+  uploadPersonImage: vi.fn(async () => 'https://img/uploaded.jpg'),
+}));
+
 import { EditPersonSheet } from '@/components/people/EditPersonSheet';
 import type { Person } from '@/types/person-manual';
 
@@ -32,7 +37,7 @@ describe('EditPersonSheet', () => {
 
     expect(screen.getByLabelText(/name/i)).toHaveValue('Mia');
     expect(screen.getByLabelText(/date of birth/i)).toHaveValue('2018-06-14');
-    expect(screen.getByLabelText(/avatar url/i)).toHaveValue('https://img/avatar.jpg');
+    expect(screen.getByLabelText(/^avatar/i)).toHaveValue('https://img/avatar.jpg');
     expect(screen.getByLabelText(/banner url/i)).toHaveValue('https://img/banner.jpg');
   });
 
@@ -49,7 +54,7 @@ describe('EditPersonSheet', () => {
       />
     );
 
-    const avatar = screen.getByLabelText(/avatar url/i);
+    const avatar = screen.getByLabelText(/^avatar/i);
     await user.clear(avatar);
     await user.type(avatar, 'https://img/new.jpg');
 

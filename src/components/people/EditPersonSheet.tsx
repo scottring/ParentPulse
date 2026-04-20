@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Timestamp, deleteField } from 'firebase/firestore';
 import type { Person } from '@/types/person-manual';
+import { uploadPersonImage } from '@/lib/upload-person-image';
 
 export interface EditPersonSheetProps {
   person: Person;
@@ -54,6 +55,32 @@ export function EditPersonSheet({ person, onClose, onSave }: EditPersonSheetProp
   const [bannerUrl, setBannerUrl] = useState(person.bannerUrl ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleAvatarFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setUploading(true);
+    setUploadProgress(0);
+    setError(null);
+    try {
+      const url = await uploadPersonImage({
+        familyId: person.familyId,
+        personId: person.personId,
+        kind: 'avatar',
+        file,
+        onProgress: setUploadProgress,
+      });
+      setAvatarUrl(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed.');
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -131,15 +158,41 @@ export function EditPersonSheet({ person, onClose, onSave }: EditPersonSheetProp
             />
           </label>
 
-          <label className="eps-field">
-            <span>Avatar URL</span>
-            <input
-              type="url"
-              value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-              placeholder="https://…"
-            />
-          </label>
+          <div className="eps-field">
+            <label htmlFor="eps-avatar-url">
+              <span>Avatar</span>
+            </label>
+            <div className="eps-avatar-row">
+              {avatarUrl ? (
+                <img className="eps-avatar-preview" src={avatarUrl} alt="" />
+              ) : (
+                <div className="eps-avatar-preview eps-avatar-placeholder" aria-hidden="true" />
+              )}
+              <input
+                id="eps-avatar-url"
+                type="url"
+                value={avatarUrl}
+                onChange={(e) => setAvatarUrl(e.target.value)}
+                placeholder="https://… or upload"
+              />
+              <button
+                type="button"
+                className="eps-upload"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading || saving}
+              >
+                {uploading ? `Uploading ${uploadProgress}%` : 'Upload'}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarFile}
+                style={{ display: 'none' }}
+                aria-hidden="true"
+              />
+            </div>
+          </div>
 
           <label className="eps-field">
             <span>Banner URL</span>

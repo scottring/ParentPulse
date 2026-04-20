@@ -1610,6 +1610,61 @@ html {
 .eps-field input:focus {
   border-color: var(--r-text-4);
 }
+.eps-field > label {
+  display: flex;
+}
+.eps-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.eps-avatar-row input[type="url"] {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--r-serif);
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--r-ink);
+  background: var(--r-cream);
+  border: 1px solid var(--r-rule-5);
+  border-radius: 3px;
+  padding: 10px 12px;
+  outline: none;
+}
+.eps-avatar-row input[type="url"]:focus {
+  border-color: var(--r-text-4);
+}
+.eps-avatar-preview {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--r-cream-warm);
+  border: 1px solid var(--r-rule-5);
+}
+.eps-avatar-placeholder {
+  background: var(--r-cream-warm);
+}
+.eps-upload {
+  flex: none;
+  cursor: pointer;
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-family: var(--r-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--r-ink);
+  background: var(--r-paper);
+  border: 1px solid var(--r-rule-3);
+  white-space: nowrap;
+}
+.eps-upload:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .eps-error {
   margin: 0;
   font-family: var(--r-serif);
