@@ -120,6 +120,13 @@ export default function CaptureSheet() {
       setState('composing');
     };
     window.addEventListener('relish:open-capture', handler);
+    // Alias event: the editorial redesign dispatches `relish:pen:open`
+    // from the floating Pen (PenHost) and from workbook CTAs ("Open the
+    // book", "Pick up the Pen", "Answer in the book"). Same intent —
+    // just open the sheet, no prefill or category. Keeping both
+    // listeners means callers can migrate at their own pace.
+    const penOpenHandler = () => setState('composing');
+    window.addEventListener('relish:pen:open', penOpenHandler);
 
     // Child-mode capture: dispatch 'relish:open-capture-for' with
     // detail: { personId, name } to open the sheet in child-proxy mode.
@@ -151,6 +158,7 @@ export default function CaptureSheet() {
 
     return () => {
       window.removeEventListener('relish:open-capture', handler);
+      window.removeEventListener('relish:pen:open', penOpenHandler);
       window.removeEventListener('relish:open-capture-for', childHandler);
       window.removeEventListener('relish:open-edit', editHandler);
     };
