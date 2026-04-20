@@ -51,6 +51,7 @@
 import type { Moment } from '@/types/moment';
 import type { Ritual } from '@/types/ritual';
 import type { JournalEntry } from '@/types/journal';
+import type { MomentInvite } from '@/types/moment-invite';
 
 export type OpenThreadReason =
   | 'pending_invite'
@@ -102,6 +103,9 @@ interface Sources {
   // Entries the user can see — used to link moments to their views
   // and to spot overdue practices.
   entries: JournalEntry[];
+  // Pending moment_invites where the current user is the recipient.
+  // Omit for unauthenticated contexts; empty array is fine.
+  pendingInvitesForMe?: MomentInvite[];
   // now() is injectable for determinism in tests.
   now?: Date;
 }
@@ -156,10 +160,25 @@ export function listOpenThreads(sources: Sources): OpenThread[] {
     });
   }
 
-  // Reason 1: pending_invite — requires moment_invites (P6). Stub
-  // until the collection exists; leave the type present so callers
-  // can rely on the shape.
-  // (no iteration)
+  // Reason 1: pending_invite — a moment_invite where the current
+  // user is the recipient and the status is still pending. Shipped
+  // in P6.1–P6.3.
+  for (const inv of sources.pendingInvitesForMe ?? []) {
+    if (inv.status !== 'pending') continue;
+    open.push({
+      id: inv.momentId,
+      kind: 'moment',
+      reason: 'pending_invite',
+      subtitle:
+        inv.prompt ??
+        'Someone asked what you saw on this moment. Your view is waiting.',
+      openedAt: inv.createdAt?.toDate?.(),
+      closingAction: {
+        label: inv.mode === 'blind' ? 'Answer blind' : 'Answer with context',
+        href: `/moments/${inv.momentId}`,
+      },
+    });
+  }
 
   // Reason 3: incomplete_practice — requires reading growth_items.
   // Stub until P3 wires this up. Callers see zero entries of this

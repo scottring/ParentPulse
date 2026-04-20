@@ -17,6 +17,7 @@ import { firestore } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { useRitual, closeRitualRun } from '@/hooks/useRitual';
 import type { JournalEntry } from '@/types/journal';
+import type { Moment } from '@/types/moment';
 
 type Step = 'read' | 'respond' | 'close';
 
@@ -36,6 +37,7 @@ export default function RitualRunPage() {
 
   const [step, setStep] = useState<Step>('read');
   const [sinceEntries, setSinceEntries] = useState<JournalEntry[] | null>(null);
+  const [divergentMoments, setDivergentMoments] = useState<Moment[] | null>(null);
   const [responseText, setResponseText] = useState('');
   const [closingText, setClosingText] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -71,6 +73,41 @@ export default function RitualRunPage() {
       } catch (err) {
         console.error('ritual runner: since-query failed', err);
         setSinceEntries([]);
+      }
+    };
+    void run();
+  }, [ritual, user?.familyId, user?.userId]);
+
+  // Fetch divergent moments since last run — moments the user is a
+  // participant in that have a cached divergenceLine and have not yet
+  // been closed by any ritual. These are the raw material the ritual
+  // exists to metabolize.
+  useEffect(() => {
+    if (!ritual || !user?.familyId || !user?.userId) return;
+
+    const sinceTs = ritual.lastRunAt ?? ritual.createdAt;
+    const run = async () => {
+      try {
+        const q = query(
+          collection(firestore, 'moments'),
+          where('familyId', '==', user.familyId),
+          where('participantUserIds', 'array-contains', user.userId),
+          where('createdAt', '>', sinceTs),
+          orderBy('createdAt', 'desc'),
+          limit(30),
+        );
+        const snap = await getDocs(q);
+        const arr: Moment[] = snap.docs
+          .map((d) => ({
+            ...(d.data() as Omit<Moment, 'momentId'>),
+            momentId: d.id,
+          }))
+          .filter((m) => !!m.synthesis?.divergenceLine)
+          .slice(0, 6);
+        setDivergentMoments(arr);
+      } catch (err) {
+        console.error('ritual runner: divergent-moments query failed', err);
+        setDivergentMoments([]);
       }
     };
     void run();
@@ -227,6 +264,47 @@ export default function RitualRunPage() {
                 <em>intention:</em> {ritual.intention}
               </p>
             )}
+            {divergentMoments && divergentMoments.length > 0 && (
+              <div className="divergent-block">
+                <p className="divergent-label">
+                  Moments from the last stretch where your views diverged:
+                </p>
+                <ul className="divergent-list">
+                  {divergentMoments.map((m) => (
+                    <li key={m.momentId} className="divergent-item">
+                      <p className="divergent-line">
+                        &ldquo;{m.synthesis?.divergenceLine}&rdquo;
+                      </p>
+                      <div className="divergent-actions">
+                        <Link
+                          href={`/moments/${m.momentId}`}
+                          className="divergent-link"
+                        >
+                          open the moment
+                        </Link>
+                        <button
+                          type="button"
+                          className="divergent-bring"
+                          onClick={() => {
+                            const line = m.synthesis?.divergenceLine;
+                            if (!line) return;
+                            setResponseText((prev) => {
+                              const existing = prev.trim();
+                              const add = `On this: "${line}" —`;
+                              if (!existing) return `${add} `;
+                              if (existing.includes(line)) return prev;
+                              return `${existing}\n\n${add} `;
+                            });
+                          }}
+                        >
+                          bring this in →
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <textarea
               className="textarea"
               rows={8}
@@ -366,6 +444,71 @@ const pageStyles = `
     padding: 8px 12px;
     font-size: 14px;
     color: #6b5d45;
+  }
+  .divergent-block {
+    margin: 16px 0 18px 0;
+    padding: 14px 16px 12px;
+    background: #f2ebdc;
+    border: 1px solid #e0d4b8;
+    border-radius: 3px;
+  }
+  .divergent-label {
+    margin: 0 0 10px 0;
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #8a7452;
+  }
+  .divergent-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .divergent-item {
+    padding: 10px 12px;
+    background: #faf7f1;
+    border: 1px solid #e8e1d2;
+    border-radius: 3px;
+  }
+  .divergent-line {
+    margin: 0 0 8px 0;
+    font-family: Georgia, serif;
+    font-size: 14px;
+    line-height: 1.55;
+    color: #2d2418;
+    font-style: italic;
+  }
+  .divergent-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .divergent-link {
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    font-size: 12px;
+    color: #6b5d45;
+    text-decoration: underline;
+    text-decoration-color: #d0c4a8;
+  }
+  .divergent-bring {
+    padding: 6px 12px;
+    background: transparent;
+    color: #2d2418;
+    border: 1px solid #a89373;
+    border-radius: 999px;
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .divergent-bring:hover {
+    background: #2d2418;
+    color: #f7f3ea;
   }
   .since-list {
     list-style: none;

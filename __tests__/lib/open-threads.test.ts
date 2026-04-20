@@ -4,6 +4,7 @@ import { listOpenThreads } from '@/lib/open-threads';
 import type { Moment } from '@/types/moment';
 import type { Ritual } from '@/types/ritual';
 import type { JournalEntry } from '@/types/journal';
+import type { MomentInvite } from '@/types/moment-invite';
 
 const NOW = new Date('2026-04-20T12:00:00Z');
 
@@ -130,6 +131,73 @@ describe('listOpenThreads — unclosed_divergence', () => {
       moments: [moment], rituals: [], entries: [], now: NOW,
     });
     expect(threads).toHaveLength(0);
+  });
+});
+
+describe('listOpenThreads — pending_invite', () => {
+  function makeInvite(overrides: Partial<MomentInvite> = {}): MomentInvite {
+    return {
+      inviteId: 'inv1',
+      familyId: 'fam-a',
+      momentId: 'm1',
+      fromUserId: 'scott',
+      toUserId: 'iris',
+      mode: 'blind',
+      status: 'pending',
+      createdAt: ts('2026-04-19T10:00:00Z'),
+      ...overrides,
+    };
+  }
+
+  it('flags a pending invite for the current user with a blind answer label', () => {
+    const invite = makeInvite({ mode: 'blind', prompt: 'What did you see?' });
+    const threads = listOpenThreads({
+      moments: [], rituals: [], entries: [],
+      pendingInvitesForMe: [invite], now: NOW,
+    });
+    expect(threads).toHaveLength(1);
+    expect(threads[0].reason).toBe('pending_invite');
+    expect(threads[0].id).toBe(invite.momentId);
+    expect(threads[0].closingAction.label).toBe('Answer blind');
+    expect(threads[0].closingAction.href).toBe(`/moments/${invite.momentId}`);
+    expect(threads[0].subtitle).toBe('What did you see?');
+  });
+
+  it('uses "Answer with context" for anchored invites', () => {
+    const invite = makeInvite({ mode: 'anchored' });
+    const threads = listOpenThreads({
+      moments: [], rituals: [], entries: [],
+      pendingInvitesForMe: [invite], now: NOW,
+    });
+    expect(threads[0].closingAction.label).toBe('Answer with context');
+  });
+
+  it('ignores answered or declined invites', () => {
+    const threads = listOpenThreads({
+      moments: [], rituals: [], entries: [],
+      pendingInvitesForMe: [
+        makeInvite({ status: 'answered' }),
+        makeInvite({ inviteId: 'inv2', status: 'declined' }),
+      ],
+      now: NOW,
+    });
+    expect(threads).toHaveLength(0);
+  });
+
+  it('outranks unclosed_divergence when both fire on the same moment', () => {
+    const moment = makeMoment({
+      synthesis: {
+        agreementLine: 'a', divergenceLine: 'b', emergentLine: null,
+        model: 't', generatedAt: ts('2026-04-19T09:00:00Z'),
+      },
+    });
+    const invite = makeInvite({ momentId: moment.momentId });
+    const threads = listOpenThreads({
+      moments: [moment], rituals: [], entries: [],
+      pendingInvitesForMe: [invite], now: NOW,
+    });
+    expect(threads).toHaveLength(1);
+    expect(threads[0].reason).toBe('pending_invite');
   });
 });
 

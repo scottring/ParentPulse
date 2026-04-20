@@ -1010,6 +1010,60 @@ service cloud.firestore {
       }
     }
 
+    // ==================== Moment invites ====================
+    //
+    // A moment_invite is a request for another family member to add
+    // their own view onto a specific moment. Readable by either
+    // party; created by the sender (must be in the family); the
+    // recipient transitions status to 'answered' or 'declined' and
+    // may set answerEntryId. Mode/prompt/momentId/fromUserId/
+    // toUserId/familyId/createdAt are immutable after create.
+    match /moment_invites/{inviteId} {
+      allow read: if isSignedIn()
+                  && belongsToFamily(resource.data.familyId)
+                  && (
+                    request.auth.uid == resource.data.fromUserId ||
+                    request.auth.uid == resource.data.toUserId
+                  );
+
+      allow create: if isParent()
+                    && belongsToFamily(request.resource.data.familyId)
+                    && request.resource.data.fromUserId == request.auth.uid
+                    && request.resource.data.toUserId is string
+                    && request.resource.data.momentId is string
+                    && request.resource.data.status == 'pending'
+                    && (
+                      request.resource.data.mode == 'blind' ||
+                      request.resource.data.mode == 'anchored'
+                    )
+                    // Same-family target and same-family moment.
+                    && exists(/databases/$(database)/documents/users/$(request.resource.data.toUserId))
+                    && get(/databases/$(database)/documents/users/$(request.resource.data.toUserId)).data.familyId == request.resource.data.familyId
+                    && exists(/databases/$(database)/documents/moments/$(request.resource.data.momentId))
+                    && get(/databases/$(database)/documents/moments/$(request.resource.data.momentId)).data.familyId == request.resource.data.familyId;
+
+      // Recipient can transition status to answered/declined and
+      // set answerEntryId. Immutable fields must not change.
+      allow update: if isSignedIn()
+                    && belongsToFamily(resource.data.familyId)
+                    && request.auth.uid == resource.data.toUserId
+                    && request.resource.data.momentId == resource.data.momentId
+                    && request.resource.data.familyId == resource.data.familyId
+                    && request.resource.data.fromUserId == resource.data.fromUserId
+                    && request.resource.data.toUserId == resource.data.toUserId
+                    && request.resource.data.mode == resource.data.mode
+                    && request.resource.data.createdAt == resource.data.createdAt
+                    && (
+                      request.resource.data.status == 'answered' ||
+                      request.resource.data.status == 'declined'
+                    );
+
+      // Sender can delete their own invite (e.g. revoke).
+      allow delete: if isSignedIn()
+                    && belongsToFamily(resource.data.familyId)
+                    && request.auth.uid == resource.data.fromUserId;
+    }
+
     // Couple rituals — scheduled recurring check-ins between two partners.
     match /couple_rituals/{ritualId} {
       allow read: if isSignedIn() && belongsToFamily(resource.data.familyId);
