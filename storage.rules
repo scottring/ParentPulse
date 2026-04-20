@@ -92,6 +92,16 @@ service firebase.storage {
       allow read: if isSignedIn();
     }
 
+    // Person profile images (avatar + banner) for Relish manuals
+    // TEMPORARY: widened to isSignedIn() for diagnostic — will tighten once cause is known
+    match /families/{familyId}/people/{personId}/{filename} {
+      allow create, update: if isSignedIn() &&
+                               request.resource.size < 10 * 1024 * 1024 &&
+                               request.resource.contentType.matches('image/.*');
+      allow read: if isSignedIn();
+      allow delete: if isSignedIn();
+    }
+
     // Parent profile pictures
     match /families/{familyId}/parents/{parentId}/{filename} {
       // Parents can upload their own avatar
