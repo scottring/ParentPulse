@@ -120,6 +120,13 @@ export default function PersonPage({
             }
           >
             <div className="person-plate">
+              {person.avatarUrl && (
+                <img
+                  className="person-avatar"
+                  src={person.avatarUrl}
+                  alt=""
+                />
+              )}
               <span className="tag">
                 {relationLabel(person)}
                 {age != null && ` · ${age}`}
@@ -693,6 +700,15 @@ const styles = `
     line-height: 0.95;
     letter-spacing: -0.025em;
     margin: 0;
+  }
+  .person-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(245, 236, 216, 0.85);
+    box-shadow: 0 4px 18px rgba(20, 16, 12, 0.35);
+    margin-bottom: 6px;
   }
 
   .dossier { padding-top: 12px; display: flex; flex-direction: column; gap: 24px; }
