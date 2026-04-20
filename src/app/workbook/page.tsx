@@ -157,20 +157,13 @@ export default function WorkbookPage() {
               </span>
             </div>
             <div className="masthead-divider" />
-            <div className="masthead-cell align-c">
+            <div className="masthead-cell align-r">
               <span className="masthead-eyebrow">Waiting on you</span>
               <span className="masthead-value">
                 {ledeCount === 0 ? 'Nothing' : `${ledeCount}`}
                 <span className="sub">
                   {ledeCount === 0 ? '' : ledeCount === 1 ? ' thing' : ' things'}
                 </span>
-              </span>
-            </div>
-            <div className="masthead-divider" />
-            <div className="masthead-cell align-r">
-              <span className="masthead-eyebrow">Colophon</span>
-              <span className="masthead-value">
-                The Workbook<span className="sub"> · {partOfDay(today)} edition</span>
               </span>
             </div>
           </div>
@@ -1451,7 +1444,7 @@ const styles = `
     border-top: none;
     padding: 18px 32px;
     display: grid;
-    grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
     gap: 0;
     align-items: center;
   }
