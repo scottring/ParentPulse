@@ -19,6 +19,8 @@ import Navigation from '@/components/layout/Navigation';
 import { CompanionComposer } from '@/components/journal-spread/CompanionComposer';
 import { ResponseBlock } from '@/components/journal-spread/ResponseBlock';
 import { MomentBanner } from '@/components/journal-spread/MomentBanner';
+import { useOpenThreads } from '@/hooks/useOpenThreads';
+import { ClosingActionCard } from '@/components/open-threads/ClosingActionCard';
 import { MicButton } from '@/components/voice/MicButton';
 import { JOURNAL_CATEGORIES, type JournalCategory, type JournalEntry } from '@/types/journal';
 import { useEntryResponses } from '@/hooks/useEntryResponses';
@@ -126,6 +128,12 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
   const isMine = entry.authorId === currentUserId;
   const router = useRouter();
   const { updateEntry, deleteEntry } = useJournal();
+  const { threads } = useOpenThreads();
+  // An entry surfaces its own closing affordance via its moment — a
+  // plain stand-alone entry is not an open thread by itself.
+  const momentThread = entry.momentId
+    ? threads.find((t) => t.kind === 'moment' && t.id === entry.momentId)
+    : undefined;
 
   const handleDelete = async () => {
     if (!window.confirm('Delete this entry? This can\'t be undone.')) return;
@@ -386,6 +394,7 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
         </div>
 
         <article className="entry-paper relish-panel">
+          {momentThread && <ClosingActionCard thread={momentThread} />}
           {entry.momentId && <MomentBanner momentId={entry.momentId} />}
           <header className="entry-meta-row">
             <div className="entry-subject">

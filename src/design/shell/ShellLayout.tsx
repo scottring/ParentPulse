@@ -7,17 +7,19 @@
    ================================================================ */
 
 import type { ReactNode } from 'react';
-import { TopNav } from './TopNav';
 import { PenHost } from './PenHost';
 
 export interface ShellLayoutProps {
   children: ReactNode;
-  userName?: string;
-  onSignOut?: () => void;
+  userName?: string;        // kept for backwards compat; unused
+  onSignOut?: () => void;   // kept for backwards compat; unused
   reversed?: boolean;
 }
 
-export function ShellLayout({ children, userName, onSignOut, reversed = false }: ShellLayoutProps) {
+// TopNav is now mounted once at the root via GlobalNav, so this
+// wrapper only styles the page shell and mounts the Pen. Two-nav
+// duplication was the old world — see P0.1 in the flows audit.
+export function ShellLayout({ children, reversed = false }: ShellLayoutProps) {
   return (
     <div
       style={{
@@ -27,7 +29,6 @@ export function ShellLayout({ children, userName, onSignOut, reversed = false }:
       }}
       data-reversed={reversed ? 'true' : undefined}
     >
-      <TopNav userName={userName} onSignOut={onSignOut} reversed={reversed} />
       <main style={{ paddingTop: 72 }}>{children}</main>
       <PenHost />
     </div>

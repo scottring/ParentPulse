@@ -4,14 +4,20 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useMoment } from '@/hooks/useMoment';
+import { useOpenThreads } from '@/hooks/useOpenThreads';
 import Navigation from '@/components/layout/Navigation';
 import { MomentSynthesisCard } from '@/components/journal-spread/MomentSynthesisCard';
+import { ClosingActionCard } from '@/components/open-threads/ClosingActionCard';
 
 export default function MomentDetailPage() {
   const params = useParams<{ momentId: string }>();
   const momentId = params?.momentId;
   const { user } = useAuth();
   const { moment, views, loading, notFound, error } = useMoment(momentId);
+  const { threads } = useOpenThreads();
+  const selfThread = momentId
+    ? threads.find((t) => t.kind === 'moment' && t.id === momentId)
+    : undefined;
 
   if (!user) {
     return (
@@ -61,6 +67,8 @@ export default function MomentDetailPage() {
           <p className="kicker">Moment</p>
           <h1 className="title">{title}</h1>
         </header>
+
+        {selfThread && <ClosingActionCard thread={selfThread} />}
 
         <MomentSynthesisCard moment={moment} views={views} />
 
