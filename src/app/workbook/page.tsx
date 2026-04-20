@@ -92,13 +92,9 @@ export default function WorkbookPage() {
   return (
     <ShellLayout userName={user.name} onSignOut={() => logout().then(() => router.push('/login'))}>
       <Room name="workbook">
-        {/* When an active ritual exists, it becomes the featured slot.
-            The daily/threads surface falls to second billing. */}
-        {nextRitual && (
-          <div style={{ marginBottom: '32px' }}>
-            <NextRitualCard ritual={nextRitual} />
-          </div>
-        )}
+        {/* Masthead first — the date + greeting + open threads reads
+            like the opening page of a book. The ritual card follows
+            below as the featured action, not above the title. */}
         <TodaySpread
           firstName={wb.firstName}
           date={wb.date}
@@ -109,6 +105,11 @@ export default function WorkbookPage() {
             if (href) router.push(href);
           }}
         />
+        {nextRitual && (
+          <div style={{ marginTop: '32px' }}>
+            <NextRitualCard ritual={nextRitual} />
+          </div>
+        )}
         {noThreadsFallback && (
           <p
             style={{
