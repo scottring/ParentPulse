@@ -219,7 +219,7 @@ export default function CaptureSheet() {
       const entryId = await createEntry({
         text,
         category,
-        personMentions: selectedPeople,
+        personMentions: effectivePersonMentions(),
         sharedWithUserIds: sharedWith,
         ...(writingFor ? {
           subjectType: 'child_proxy' as const,
@@ -261,6 +261,21 @@ export default function CaptureSheet() {
         ? prev.filter((id) => id !== personId)
         : [...prev, personId],
     );
+  };
+
+  // Union of explicit "About" picks and every Person whose linked user
+  // the entry is shared with. Rationale: the two pickers (About vs
+  // Privacy) are visually similar and users frequently share with a
+  // person expecting that to also tag them as a subject. Treating
+  // sharedWith-linked people as tagged reflects the intent without
+  // requiring a UI overhaul.
+  const effectivePersonMentions = (): string[] => {
+    const fromShare = people
+      .filter(
+        (p) => p.linkedUserId && sharedWith.includes(p.linkedUserId),
+      )
+      .map((p) => p.personId);
+    return Array.from(new Set([...selectedPeople, ...fromShare]));
   };
 
   const toggleShareWith = (userId: string) => {
@@ -309,13 +324,14 @@ export default function CaptureSheet() {
         return;
       }
 
+      const effective = effectivePersonMentions();
       savedTextRef.current = text.trim();
-      savedPeopleRef.current = [...selectedPeople];
+      savedPeopleRef.current = [...effective];
 
       const entryId = await createEntry({
         text,
         category,
-        personMentions: selectedPeople,
+        personMentions: effective,
         sharedWithUserIds: sharedWith,
         ...(writingFor ? {
           subjectType: 'child_proxy' as const,
