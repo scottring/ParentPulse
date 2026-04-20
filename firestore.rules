@@ -138,7 +138,10 @@ service cloud.firestore {
       //
       // Creates: author must be caller + in visibleToUserIds (existing
       // rules). If respondsToEntryId is set, the caller must be able to
-      // read the parent entry (i.e. be in its visibleToUserIds).
+      // read the parent entry (i.e. be in its visibleToUserIds). If
+      // momentId is set, the referenced moment must exist and live in
+      // the same family — the exists() check keeps dangling foreign
+      // keys out, the familyId check prevents cross-family attachment.
       allow create: if isParent() &&
                        belongsToFamily(request.resource.data.familyId) &&
                        request.resource.data.authorId == request.auth.uid &&
@@ -148,6 +151,13 @@ service cloud.firestore {
                          !('respondsToEntryId' in request.resource.data) ||
                          request.auth.uid in
                            get(/databases/$(database)/documents/journal_entries/$(request.resource.data.respondsToEntryId)).data.visibleToUserIds
+                       ) &&
+                       (
+                         !('momentId' in request.resource.data) ||
+                         (
+                           exists(/databases/$(database)/documents/moments/$(request.resource.data.momentId)) &&
+                           get(/databases/$(database)/documents/moments/$(request.resource.data.momentId)).data.familyId == request.resource.data.familyId
+                         )
                        );
 
       // Parents can update their own entries. Updates may adjust
@@ -157,8 +167,10 @@ service cloud.firestore {
       // is present on the write (legacy updates from the migration
       // shim may set the field for the first time).
       //
-      // Updates: author-only (existing). respondsToEntryId must NOT
-      // change after create — either stay absent or keep the same value.
+      // Updates: author-only (existing). respondsToEntryId and momentId
+      // must NOT change after create — either stay absent or keep the
+      // same value. Moves between moments would silently re-key the
+      // synthesis cache.
       allow update: if isParent() &&
                        belongsToFamily(resource.data.familyId) &&
                        resource.data.authorId == request.auth.uid &&
@@ -167,6 +179,10 @@ service cloud.firestore {
                        (
                          !('respondsToEntryId' in request.resource.data) && !('respondsToEntryId' in resource.data) ||
                          request.resource.data.respondsToEntryId == resource.data.respondsToEntryId
+                       ) &&
+                       (
+                         !('momentId' in request.resource.data) && !('momentId' in resource.data) ||
+                         request.resource.data.momentId == resource.data.momentId
                        );
 
       // Parents can delete their own entries.
@@ -188,6 +204,62 @@ service cloud.firestore {
         // Writes happen via admin SDK in Cloud Functions only.
         allow write: if false;
       }
+    }
+
+    // ==================== Moments ====================
+    //
+    // A moment holds 1..N views of the same lived event. Each view is
+    // a `journal_entries` doc with `momentId` pointing here. The moment
+    // doc itself carries metadata (title, dimensions, tags), a cached
+    // synthesis, and counters — no private content. Visibility of
+    // content is enforced per-view at the journal_entries layer; the
+    // moment doc is readable by any parent in the same family because
+    // it contains only metadata (agreement/divergence/emergent lines
+    // are aggregations, not quotes).
+    //
+    // Synthesis fields (synthesis, synthesisUpdatedAt, viewCount,
+    // lastViewAddedAt, participantUserIds) are maintained by the
+    // `synthesizeMoment` Cloud Function via admin SDK. Clients may seed
+    // them on create (first view) but cannot mutate them on update.
+    match /moments/{momentId} {
+      // `resource == null` mirrors the journal_entries pattern so a
+      // listener on a deleted moment sees !snap.exists() rather than
+      // permission-denied.
+      allow read: if isSignedIn() && (
+        resource == null || (
+          isParent()
+          && belongsToFamily(resource.data.familyId)
+        )
+      );
+
+      // Create: author in-family; createdByUserId must be the caller.
+      // Client may seed viewCount and participantUserIds for the first
+      // view but the update rule then locks them down.
+      allow create: if isParent()
+                    && belongsToFamily(request.resource.data.familyId)
+                    && request.resource.data.createdByUserId == request.auth.uid;
+
+      // Update: author-editable metadata only (title, dimensions, tags,
+      // updatedAt). Synthesis cache, counters, participants, and
+      // provenance are admin-SDK-maintained — block them at the diff
+      // layer so a client can't touch them after create.
+      allow update: if isParent()
+                    && belongsToFamily(resource.data.familyId)
+                    && !request.resource.data.diff(resource.data).affectedKeys()
+                        .hasAny([
+                          'synthesis', 'synthesisUpdatedAt',
+                          'viewCount', 'lastViewAddedAt',
+                          'participantUserIds',
+                          'familyId', 'createdByUserId', 'createdAt',
+                        ]);
+
+      // Delete: creator only. Cascade-deleting views is left to a
+      // Cloud Function; leaving the rule author-only avoids the
+      // dangling-pointer scenario where a non-creator removes a
+      // moment that others' entries still reference.
+      allow delete: if isParent()
+                    && belongsToFamily(resource.data.familyId)
+                    && resource.data.createdByUserId == request.auth.uid;
     }
 
     // ==================== Margin Notes ====================

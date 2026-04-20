@@ -696,6 +696,16 @@
       ]
     },
     {
+      "collectionGroup": "journal_entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "momentId", "order": "ASCENDING" },
+        { "fieldPath": "visibleToUserIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "knowledge_base",
       "queryScope": "COLLECTION",
       "fields": [
@@ -743,6 +753,14 @@
           "fieldPath": "visibleToUserIds",
           "arrayConfig": "CONTAINS"
         }
+      ]
+    },
+    {
+      "collectionGroup": "moments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "lastViewAddedAt", "order": "DESCENDING" }
       ]
     },
     {

@@ -9875,6 +9875,131 @@ Return only the JSON object, no other text.`;
 );
 
 // ================================================================
+// synthesizeMoment — cross-view synthesis for a moment
+//
+// A moment holds 1..N views (journal_entries with the same momentId).
+// When viewCount >= 2 and the synthesis cache is stale, call an LLM
+// to produce three single-sentence lines:
+//   - agreementLine: what the views agree on
+//   - divergenceLine: the shape of disagreement, or null
+//   - emergentLine: a pattern neither view stated, or null
+//
+// Ships as both:
+//   - onDocumentCreated trigger on journal_entries — maintains moment
+//     counters (viewCount, participantUserIds, lastViewAddedAt) and
+//     fires synthesis when the count crosses 2.
+//   - onCall callable — lets the UI trigger a manual re-synth.
+//
+// NOTE: the prompt copy below is first-draft. Before shipping to
+// production, review the agreement/divergence/emergent phrasing
+// against real multi-view samples — rhythm matters more than
+// literal instructions here.
+// ================================================================
+
+const {runMomentSynthesis} = require("./synthesizeMoment.handler.js");
+
+// Maintain moment counters on every new view. Only runs when the
+// entry has a momentId. Counters are admin-SDK-only so clients
+// can't inflate them (see firestore.rules).
+exports.onMomentViewAdded = onDocumentCreated(
+    {
+      document: "journal_entries/{entryId}",
+      region: "us-central1",
+      memory: "256MiB",
+      timeoutSeconds: 60,
+      secrets: ["OPENAI_API_KEY"],
+    },
+    async (event) => {
+      const logger = require("firebase-functions/logger");
+      const snap = event.data;
+      if (!snap) return;
+      const data = snap.data();
+      if (!data || !data.momentId) return; // Not a view of a moment.
+
+      const db = admin.firestore();
+      const momentRef = db.collection("moments").doc(data.momentId);
+
+      // Count views in one query so the counter reflects reality even
+      // if a prior write was missed (idempotent backfill).
+      const viewsSnap = await db.collection("journal_entries")
+          .where("momentId", "==", data.momentId)
+          .get();
+
+      const participantUserIds = Array.from(new Set(
+          viewsSnap.docs
+              .map((d) => d.data().authorId)
+              .filter((id) => typeof id === "string" && id.length > 0),
+      ));
+      const viewCount = viewsSnap.size;
+
+      const now = admin.firestore.Timestamp.now();
+      await momentRef.update({
+        viewCount,
+        participantUserIds,
+        lastViewAddedAt: now,
+        updatedAt: now,
+      });
+
+      if (viewCount < 2) return; // Nothing to synthesize.
+
+      // Debounced synth: if the cache is newer than the newest view,
+      // skip. We just wrote lastViewAddedAt = now, so in practice this
+      // means "run iff no synthesis yet, or synthesisUpdatedAt is
+      // older than this write".
+      const momentSnap = await momentRef.get();
+      const moment = momentSnap.data();
+      const synthUpdated = moment.synthesisUpdatedAt;
+      if (synthUpdated && moment.synthesis && synthUpdated.toMillis() >= now.toMillis()) {
+        return;
+      }
+
+      try {
+        await runMomentSynthesis(db, data.momentId);
+      } catch (err) {
+        logger.warn(`onMomentViewAdded: synth failed for ${data.momentId}: ${err.message}`);
+      }
+    },
+);
+
+// HTTPS callable — lets the UI trigger an explicit re-synth (e.g.
+// after editing a view's text, or from a "rerun" button on the
+// moment detail page). Auth-gated: caller must belong to the moment's
+// family.
+exports.synthesizeMoment = onCall(
+    {
+      region: "us-central1",
+      memory: "256MiB",
+      timeoutSeconds: 60,
+      secrets: ["OPENAI_API_KEY"],
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+      const {momentId} = request.data || {};
+      if (!momentId || typeof momentId !== "string") {
+        throw new Error("momentId is required");
+      }
+
+      const db = admin.firestore();
+      const momentSnap = await db.collection("moments").doc(momentId).get();
+      if (!momentSnap.exists) {
+        throw new Error("Moment not found");
+      }
+
+      // Caller must belong to the moment's family.
+      const moment = momentSnap.data();
+      const userSnap = await db.collection("users").doc(request.auth.uid).get();
+      const user = userSnap.exists ? userSnap.data() : null;
+      if (!user || user.familyId !== moment.familyId) {
+        throw new Error("Not authorized for this moment's family");
+      }
+
+      return await runMomentSynthesis(db, momentId);
+    },
+);
+
+// ================================================================
 // findSimilarEntries — callable function for AI echo
 //
 // Given a journal entry ID, generates an embedding from its text

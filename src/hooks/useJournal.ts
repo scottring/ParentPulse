@@ -35,6 +35,10 @@ interface CreateEntryInput {
   // entryId. Written once at create-time; server rules enforce
   // immutability.
   respondsToEntryId?: string;
+  // Attach this entry as one view of an existing moment. Caller must
+  // ensure the moment lives in the same family and the caller is a
+  // member (rules enforce both). Null/omitted = stand-alone entry.
+  momentId?: string;
 }
 
 interface UseJournalReturn {
@@ -107,6 +111,11 @@ export function useJournal(): UseJournalReturn {
       // Companion entry — if responding to another entry, record the parent
       if (input.respondsToEntryId) {
         docData.respondsToEntryId = input.respondsToEntryId;
+      }
+
+      // Moment attachment — if set, this entry is one view of a moment.
+      if (input.momentId) {
+        docData.momentId = input.momentId;
       }
 
       // Set legacy childId if exactly one person is mentioned

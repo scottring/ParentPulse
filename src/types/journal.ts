@@ -60,6 +60,14 @@ export interface JournalEntry {
   // for stand-alone entries. Immutable after create.
   respondsToEntryId?: string;
 
+  // Moment aggregation — if set, this entry is one view of a moment
+  // that holds 1..N views (e.g. both partners describing the same
+  // bedtime scene). The moment doc lives at `moments/{momentId}` and
+  // caches cross-view synthesis. Null/absent for stand-alone entries.
+  // Immutable after create; set either by creating a fresh entry with
+  // a new moment, or by attaching a new entry to an existing moment.
+  momentId?: string;
+
   // Legacy binary flag — still present on entries written before
   // per-person sharing existed. Not written by new entries. Used only
   // as a fallback during migration.

@@ -18,6 +18,7 @@ import Navigation from '@/components/layout/Navigation';
 
 import { CompanionComposer } from '@/components/journal-spread/CompanionComposer';
 import { ResponseBlock } from '@/components/journal-spread/ResponseBlock';
+import { MomentBanner } from '@/components/journal-spread/MomentBanner';
 import { MicButton } from '@/components/voice/MicButton';
 import { JOURNAL_CATEGORIES, type JournalCategory, type JournalEntry } from '@/types/journal';
 import { useEntryResponses } from '@/hooks/useEntryResponses';
@@ -385,6 +386,7 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
         </div>
 
         <article className="entry-paper relish-panel">
+          {entry.momentId && <MomentBanner momentId={entry.momentId} />}
           <header className="entry-meta-row">
             <div className="entry-subject">
               {/* Category — clickable to open picker */}
