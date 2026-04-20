@@ -47,9 +47,13 @@ export function EditPersonSheet({ person, onClose, onSave }: EditPersonSheetProp
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const trimmedName = name.trim();
+    if (trimmedName === '') {
+      setError('Name is required.');
+      return;
+    }
     const updates: Record<string, unknown> = {};
 
-    const trimmedName = name.trim();
     if (trimmedName !== (person.name ?? '')) {
       updates.name = trimmedName;
     }

@@ -116,4 +116,23 @@ describe('EditPersonSheet', () => {
     // Also confirm it's the same shape Firestore would return:
     expect(call.bannerUrl).toEqual(deleteField());
   });
+
+  it('blocks save when name is blank', async () => {
+    const onSave = vi.fn();
+    const user = (await import('@testing-library/user-event')).default.setup();
+
+    render(
+      <EditPersonSheet
+        person={makePerson({ name: 'Mia' })}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />
+    );
+
+    await user.clear(screen.getByLabelText(/name/i));
+    await user.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent(/name is required/i);
+  });
 });
