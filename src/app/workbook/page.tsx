@@ -107,13 +107,16 @@ export default function WorkbookPage() {
             <p className="hero-lede">{lede}</p>
             <Link href="/journal" className="hero-action">
               <svg
-                className="pen-glyph"
+                width="14"
+                height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.6"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                style={{ color: 'var(--r-ember)', flex: 'none' }}
+                aria-hidden="true"
               >
                 <path d="M17 3l4 4L8 20l-5 1 1-5L17 3z" />
               </svg>
