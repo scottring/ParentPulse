@@ -87,13 +87,17 @@ export function useWorkbookData() {
     });
   }, [entries, nameOf, user?.userId, privacyLock.unlocked]);
 
-  // Couple ritual → RitualDue if active.
+  // Couple ritual → RitualDue if active. Tags the weekly cadence
+  // with the `weekly-relish` slug so the card routes to the seeded
+  // Practice detail page (Feature B).
   const rituals: RitualDue[] = useMemo(() => {
     if (!ritual || ritual.status !== 'active') return [];
+    const isWeekly = ritual.cadence === 'weekly';
     return [{
       id: ritual.id,
-      name: ritual.intention || 'Couple check-in',
-      cadence: ritual.cadence === 'weekly' ? 'Weekly' : ritual.cadence,
+      name: ritual.intention || 'Our weekly Relish',
+      cadence: isWeekly ? 'Weekly' : ritual.cadence,
+      slug: isWeekly ? 'weekly-relish' : undefined,
     }];
   }, [ritual]);
 

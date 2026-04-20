@@ -976,6 +976,40 @@ service cloud.firestore {
                     && request.auth.uid in resource.data.participantUserIds;
     }
 
+    // ==================== Practices ====================
+    //
+    // A Practice is a recurring sit-down template (the seeded
+    // `weekly-relish` is the default). Readable by any family member;
+    // writeable by any signed-in family member. Sessions subcollection
+    // holds one doc per sit-down.
+    match /practices/{practiceId} {
+      allow read: if isSignedIn()
+                  && resource != null
+                  && belongsToFamily(resource.data.familyId);
+      allow create: if isSignedIn()
+                    && belongsToFamily(request.resource.data.familyId)
+                    && request.resource.data.createdByUserId == request.auth.uid;
+      allow update: if isSignedIn()
+                    && belongsToFamily(resource.data.familyId);
+      allow delete: if isParent()
+                    && belongsToFamily(resource.data.familyId);
+
+      match /sessions/{sessionId} {
+        allow read: if isSignedIn()
+                    && resource != null
+                    && belongsToFamily(resource.data.familyId);
+        allow create: if isSignedIn()
+                      && belongsToFamily(request.resource.data.familyId)
+                      && request.resource.data.createdByUserId == request.auth.uid;
+        allow update: if isSignedIn()
+                      && belongsToFamily(resource.data.familyId)
+                      && resource.data.createdByUserId == request.auth.uid;
+        allow delete: if isSignedIn()
+                      && belongsToFamily(resource.data.familyId)
+                      && resource.data.createdByUserId == request.auth.uid;
+      }
+    }
+
     // Couple rituals — scheduled recurring check-ins between two partners.
     match /couple_rituals/{ritualId} {
       allow read: if isSignedIn() && belongsToFamily(resource.data.familyId);
