@@ -37,4 +37,30 @@ describe('EditPersonSheet', () => {
     expect(screen.getByLabelText(/avatar url/i)).toHaveValue('https://img/avatar.jpg');
     expect(screen.getByLabelText(/banner url/i)).toHaveValue('https://img/banner.jpg');
   });
+
+  it('calls onSave with only the changed fields on submit', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onClose = vi.fn();
+    const user = (await import('@testing-library/user-event')).default.setup();
+
+    render(
+      <EditPersonSheet
+        person={makePerson({ name: 'Mia', avatarUrl: 'https://img/old.jpg' })}
+        onClose={onClose}
+        onSave={onSave}
+      />
+    );
+
+    const avatar = screen.getByLabelText(/avatar url/i);
+    await user.clear(avatar);
+    await user.type(avatar, 'https://img/new.jpg');
+
+    await user.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith({
+      avatarUrl: 'https://img/new.jpg',
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });

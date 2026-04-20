@@ -25,16 +25,50 @@ export function EditPersonSheet({ person, onClose, onSave }: EditPersonSheetProp
   const [dob, setDob] = useState(toDateInputValue(person.dateOfBirth));
   const [avatarUrl, setAvatarUrl] = useState(person.avatarUrl ?? '');
   const [bannerUrl, setBannerUrl] = useState(person.bannerUrl ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const updates: Record<string, unknown> = {};
+
+    const trimmedName = name.trim();
+    if (trimmedName !== (person.name ?? '')) {
+      updates.name = trimmedName;
+    }
+
+    if (pronouns !== (person.pronouns ?? '')) {
+      updates.pronouns = pronouns;
+    }
+
+    if (avatarUrl !== (person.avatarUrl ?? '')) {
+      updates.avatarUrl = avatarUrl;
+    }
+
+    if (bannerUrl !== (person.bannerUrl ?? '')) {
+      updates.bannerUrl = bannerUrl;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      onClose();
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(updates);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save changes.');
+      setSaving(false);
+    }
+  }
 
   return (
     <div role="dialog" aria-modal="true" aria-label={`Edit ${person.name}`}>
       <div className="scrim" onClick={onClose} />
-      <form
-        className="sheet"
-        onSubmit={(e) => {
-          e.preventDefault();
-        }}
-      >
+      <form className="sheet" onSubmit={handleSubmit}>
         <h2>Edit {person.name}</h2>
 
         <label>
@@ -82,9 +116,13 @@ export function EditPersonSheet({ person, onClose, onSave }: EditPersonSheetProp
           />
         </label>
 
+        {error && <p role="alert">{error}</p>}
+
         <div className="actions">
-          <button type="button" onClick={onClose}>Cancel</button>
-          <button type="submit">Save</button>
+          <button type="button" onClick={onClose} disabled={saving}>Cancel</button>
+          <button type="submit" disabled={saving}>
+            {saving ? 'Saving…' : 'Save'}
+          </button>
         </div>
       </form>
     </div>
