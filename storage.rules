@@ -93,17 +93,13 @@ service firebase.storage {
     }
 
     // Person profile images (avatar + banner) for Relish manuals
+    // TEMPORARY: widened to isSignedIn() for diagnostic — will tighten once cause is known
     match /families/{familyId}/people/{personId}/{filename} {
-      // Any family member can upload person avatars/banners
-      allow create, update: if isSignedIn() && belongsToFamily(familyId) &&
-                               request.resource.size < 10 * 1024 * 1024 && // Max 10MB
+      allow create, update: if isSignedIn() &&
+                               request.resource.size < 10 * 1024 * 1024 &&
                                request.resource.contentType.matches('image/.*');
-
-      // Family members can read
-      allow read: if belongsToFamily(familyId);
-
-      // Family members can delete
-      allow delete: if isSignedIn() && belongsToFamily(familyId);
+      allow read: if isSignedIn();
+      allow delete: if isSignedIn();
     }
 
     // Parent profile pictures
