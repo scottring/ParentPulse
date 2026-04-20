@@ -10616,6 +10616,201 @@ exports.generateWeeklyBrief = onCall(
 );
 
 // ================================================================
+// commitChatTurnAsPractice — onCall
+//
+// Turns a specific AI message from an entry's chat into a concrete
+// growth_items practice. This closes the feedback loop for the case
+// where the AI says something useful and the user wants to actually
+// do it — previously the only path was the daily spawn job picking
+// up chat insights, which is indirect and bounded. This is the
+// direct "I want to try this" action.
+//
+// Input: { entryId, turnId, note? }
+// Output: { growthItemId }
+//
+// Flow:
+//   1. Verify caller is a parent in the family that owns the entry.
+//   2. Read the assistant turn from the chat subcollection.
+//   3. Ask Haiku to transform the advice into a practice (title,
+//      body, emoji, type, estimatedMinutes) grounded in the entry.
+//   4. Write growth_items with generatedBy: "chat_commit",
+//      sourceChatTurnId, spawnedFromEntryIds.
+// ================================================================
+exports.commitChatTurnAsPractice = onCall(
+    {
+      region: "us-central1",
+      memory: "256MiB",
+      timeoutSeconds: 60,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+      if (!request.auth) throw new Error("Authentication required");
+
+      const {entryId, turnId, note} = request.data || {};
+      if (!entryId || !turnId) {
+        throw new Error("entryId and turnId are required");
+      }
+
+      const db = admin.firestore();
+      const uid = request.auth.uid;
+
+      // Validate entry + caller family.
+      const entryDoc = await db.collection("journal_entries")
+          .doc(entryId).get();
+      if (!entryDoc.exists) throw new Error("Entry not found");
+      const entry = entryDoc.data();
+      const userDoc = await db.collection("users").doc(uid).get();
+      if (!userDoc.exists) throw new Error("User not found");
+      const user = userDoc.data();
+      if (user.role !== "parent") {
+        throw new Error("Only parents can commit a practice");
+      }
+      if (entry.familyId !== user.familyId) {
+        throw new Error("Entry is not in caller's family");
+      }
+
+      // Read the turn.
+      const turnDoc = await db
+          .collection("journal_entries").doc(entryId)
+          .collection("chat").doc(turnId).get();
+      if (!turnDoc.exists) throw new Error("Chat turn not found");
+      const turn = turnDoc.data();
+      if (turn.role !== "assistant") {
+        throw new Error("Only assistant turns can be committed");
+      }
+      const advice = (turn.content || "").trim();
+      if (advice.length < 10) {
+        throw new Error("Advice too short");
+      }
+
+      // People on the entry for naming in the practice.
+      const familyId = entry.familyId;
+      const peopleSnap = await db.collection("people")
+          .where("familyId", "==", familyId).get();
+      const people = {};
+      peopleSnap.forEach((d) => {
+        people[d.id] = d.data();
+      });
+      const mentionedPeople = (entry.enrichment?.aiPeople || [])
+          .map((id) => people[id]?.name)
+          .filter(Boolean);
+
+      const authorName = user.displayName || user.name || "Parent";
+
+      // Ask Haiku to distill the advice into a practice shape. Cheap,
+      // fast — we only need reformatting, not deep reasoning.
+      const prompt = `You are turning advice from an AI coaching chat into a single concrete practice card in a family journal called Relish. The practice will show up on the user's Workbook tomorrow morning. Keep it specific, short, achievable.
+
+ORIGINAL ENTRY:
+"""
+${(entry.text || "").slice(0, 500)}
+"""
+
+AI ADVICE TO COMMIT:
+"""
+${advice.slice(0, 1500)}
+"""
+
+${note ? `USER NOTE ("${note}") — may adjust the framing.` : ""}
+PEOPLE INVOLVED: ${mentionedPeople.join(", ") || "general/self"}
+
+Output strict JSON:
+{
+  "type": "micro_activity" or "reflection_prompt" or "conversation_guide" or "partner_exercise" or "repair_ritual",
+  "title": "Imperative ≤60 chars — the thing to do",
+  "body": "2-3 sentences of warm, specific instruction. Distill the advice, don't paraphrase generically. Name names.",
+  "emoji": "Single relevant emoji",
+  "estimatedMinutes": 2-15
+}
+
+Return ONLY JSON.`;
+
+      let response;
+      try {
+        response = await getAnthropic().messages.create({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 400,
+          messages: [{role: "user", content: prompt}],
+        });
+      } catch (err) {
+        logger.error("commitChatTurnAsPractice: Claude failed:", err.message);
+        throw err;
+      }
+
+      const text = response.content?.[0]?.text || "";
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("No JSON in response");
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonMatch[0]);
+      } catch (err) {
+        throw new Error(`JSON parse failed: ${err.message}`);
+      }
+
+      // Schedule for tomorrow morning, expire after 5 days.
+      const scheduleDate = new Date();
+      scheduleDate.setDate(scheduleDate.getDate() + 1);
+      scheduleDate.setHours(9, 0, 0, 0);
+      const expiresAt = new Date(scheduleDate);
+      expiresAt.setDate(expiresAt.getDate() + 5);
+
+      // Dimension from entry's enrichment (first), chat insights
+      // (second), or null.
+      const dimensionId =
+        entry.enrichment?.aiDimensions?.[0] ||
+        entry.chatInsights?.aiDimensions?.[0] ||
+        null;
+
+      const ref = db.collection("growth_items").doc();
+      const item = {
+        growthItemId: ref.id,
+        familyId,
+        type: parsed.type || "micro_activity",
+        title: (parsed.title || "Try what the book suggested").trim().slice(0, 80),
+        body: (parsed.body || advice.slice(0, 280)).trim().slice(0, 500),
+        emoji: parsed.emoji || "✨",
+        targetPersonIds: entry.enrichment?.aiPeople || [],
+        targetPersonNames: mentionedPeople,
+        assignedToUserId: uid,
+        assignedToUserName: authorName,
+        relationalLevel: "individual",
+        speed: "intentional",
+        scheduledDate: admin.firestore.Timestamp.fromDate(scheduleDate),
+        expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
+        estimatedMinutes:
+          typeof parsed.estimatedMinutes === "number" ?
+            Math.min(60, Math.max(1, Math.round(parsed.estimatedMinutes))) :
+            5,
+        status: "active",
+        depthTier: "moderate",
+        dimensionId,
+        createdAt: admin.firestore.Timestamp.now(),
+        generatedBy: "chat_commit",
+        sourceChatTurnId: turnId,
+        spawnedFromEntryIds: [entryId],
+      };
+
+      await ref.set(item);
+
+      logger.info(
+          `commitChatTurnAsPractice: wrote ${ref.id} from ` +
+          `entry ${entryId} turn ${turnId}`,
+      );
+
+      await logAIUsage(db, {
+        familyId,
+        userId: uid,
+        functionName: "commitChatTurnAsPractice",
+        model: "claude-haiku-4-5-20251001",
+        usage: response.usage,
+      });
+
+      return {growthItemId: ref.id, title: item.title};
+    },
+);
+
+// ================================================================
 // synthesizeMoment — cross-view synthesis for a moment
 //
 // A moment holds 1..N views (journal_entries with the same momentId).

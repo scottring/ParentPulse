@@ -101,6 +101,16 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
   const [input, setInput] = useState('');
   const [hasAsked, setHasAsked] = useState(false);
   const [sanitize, setSanitize] = useState<SanitizeState>({ kind: 'idle' });
+  // Per-turn "commit as practice" state: keyed by turnId, tracks
+  // pending/committed/error. Lets the UI show inline feedback on
+  // the specific advice the user is acting on.
+  type CommitState =
+    | { kind: 'idle' }
+    | { kind: 'pending' }
+    | { kind: 'done'; growthItemId: string; title: string }
+    | { kind: 'error'; message: string };
+  const [commitState, setCommitState] =
+    useState<Record<string, CommitState>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -175,6 +185,37 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
+    }
+  };
+
+  // Commit a specific AI turn as a practice (growth_items doc).
+  // Only works for journal-backed chats since ephemeral coach turns
+  // don't have stable turnIds to reference.
+  const handleCommitTurn = async (turnId: string) => {
+    if (!journalBacked) return;
+    setCommitState((prev) => ({ ...prev, [turnId]: { kind: 'pending' } }));
+    try {
+      const fn = httpsCallable<
+        { entryId: string; turnId: string },
+        { growthItemId: string; title: string }
+      >(functions, 'commitChatTurnAsPractice');
+      const res = await fn({ entryId: entry.id, turnId });
+      setCommitState((prev) => ({
+        ...prev,
+        [turnId]: {
+          kind: 'done',
+          growthItemId: res.data.growthItemId,
+          title: res.data.title,
+        },
+      }));
+    } catch (err) {
+      setCommitState((prev) => ({
+        ...prev,
+        [turnId]: {
+          kind: 'error',
+          message: err instanceof Error ? err.message : 'Failed',
+        },
+      }));
     }
   };
 
@@ -288,11 +329,44 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
                   )}
                 </p>
               )}
-              {displayTurns.map((t) => (
-                <div key={t.key} className={`msg msg-${t.role}`}>
-                  {t.content}
-                </div>
-              ))}
+              {displayTurns.map((t) => {
+                const canCommit = journalBacked && t.role === 'assistant';
+                const cs = commitState[t.key] ?? { kind: 'idle' };
+                return (
+                  <div key={t.key} className={`msg msg-${t.role}`}>
+                    {t.content}
+                    {canCommit && (
+                      <div className="turn-actions">
+                        {cs.kind === 'idle' && (
+                          <button
+                            type="button"
+                            className="turn-cta"
+                            onClick={() => handleCommitTurn(t.key)}
+                          >
+                            Try this <span aria-hidden>→</span>
+                          </button>
+                        )}
+                        {cs.kind === 'pending' && (
+                          <span className="turn-meta">saving as a practice…</span>
+                        )}
+                        {cs.kind === 'done' && (
+                          <a
+                            className="turn-cta turn-cta-done"
+                            href={`/growth/${cs.growthItemId}`}
+                          >
+                            Saved · {cs.title} <span aria-hidden>↗</span>
+                          </a>
+                        )}
+                        {cs.kind === 'error' && (
+                          <span className="turn-meta turn-error">
+                            {cs.message}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               {loading && <div className="msg msg-assistant loading">thinking…</div>}
               {error && <div className="error">{error}</div>}
               <div ref={messagesEndRef} />
@@ -578,6 +652,54 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
           .msg-assistant.loading {
             opacity: 0.6;
             font-style: italic;
+          }
+          .turn-actions {
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px dashed rgba(138, 111, 74, 0.3);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+          }
+          .turn-cta {
+            font-family: -apple-system, 'Helvetica Neue', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #6a8a6a;
+            background: transparent;
+            border: 1px solid #6a8a6a;
+            border-radius: 999px;
+            padding: 4px 10px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: background 160ms ease, color 160ms ease;
+          }
+          .turn-cta:hover {
+            background: #6a8a6a;
+            color: #f5ecd8;
+          }
+          .turn-cta-done {
+            color: #2d2418;
+            border-color: #c89b3b;
+            background: rgba(200, 155, 59, 0.12);
+          }
+          .turn-cta-done:hover {
+            background: #c89b3b;
+            color: #2d2418;
+          }
+          .turn-meta {
+            font-family: -apple-system, 'Helvetica Neue', sans-serif;
+            font-size: 11px;
+            font-style: italic;
+            color: #8a6f4a;
+          }
+          .turn-error {
+            color: #b94a3b;
           }
           .error {
             color: #b94a3b;

@@ -133,7 +133,8 @@ export interface GrowthItem {
 
   // Metadata
   createdAt: Timestamp;
-  generatedBy: 'ai' | 'system' | 'journal_seed' | 'journal_plus_chat';
+  generatedBy: 'ai' | 'system' | 'journal_seed' | 'journal_plus_chat' | 'chat_commit';
+  sourceChatTurnId?: string;
   batchId?: string;                 // Links items generated together
 }
 
