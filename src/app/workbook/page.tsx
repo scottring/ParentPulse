@@ -19,6 +19,67 @@ function openPen() {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent('relish:pen:open'));
 }
+
+// The three Pen-opening buttons use inline styles because styled-jsx
+// :global() scoping interacts oddly with <button> vs <a> in this
+// component's tree — the previous CSS version let browser button
+// defaults show through and the pill shape never rendered. Inline
+// wins; keep it as the canonical way to style these CTAs.
+
+const heroActionStyle: React.CSSProperties = {
+  all: 'unset',
+  cursor: 'pointer',
+  marginTop: 36,
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 10,
+  padding: '10px 18px 10px 14px',
+  border: '1px solid var(--r-rule-3)',
+  borderRadius: 999,
+  fontFamily: 'var(--r-sans)',
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: '0.16em',
+  textTransform: 'uppercase',
+  color: 'var(--r-ink)',
+  background: 'var(--r-paper)',
+  transition: 'background 160ms var(--r-ease-ink), transform 160ms var(--r-ease-ink)',
+};
+
+const quietCtaStyle: React.CSSProperties = {
+  all: 'unset',
+  cursor: 'pointer',
+  marginTop: 20,
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  padding: '0 0 2px',
+  fontFamily: 'var(--r-sans)',
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: '0.2em',
+  textTransform: 'uppercase',
+  color: 'var(--r-ember)',
+  borderBottom: '1px solid currentColor',
+};
+
+const promptCtaDarkStyle: React.CSSProperties = {
+  all: 'unset',
+  cursor: 'pointer',
+  marginTop: 'auto',
+  paddingTop: 14,
+  borderTop: '1px solid rgba(245,236,216,0.15)',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  fontFamily: 'var(--r-sans)',
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: '0.18em',
+  textTransform: 'uppercase',
+  color: 'var(--r-amber)',
+  width: '100%',
+};
 import { useAuth } from '@/context/AuthContext';
 import { useWorkbookData } from '@/integration';
 import { useNextRitual } from '@/hooks/useNextRitual';
@@ -114,11 +175,7 @@ export default function WorkbookPage() {
             </div>
             <h1 className="hero-title">{greeting}</h1>
             <p className="hero-lede">{lede}</p>
-            <button
-              type="button"
-              className="hero-action"
-              onClick={openPen}
-            >
+            <button type="button" onClick={openPen} style={heroActionStyle}>
               <svg
                 width="14"
                 height="14"
@@ -133,7 +190,9 @@ export default function WorkbookPage() {
               >
                 <path d="M17 3l4 4L8 20l-5 1 1-5L17 3z" />
               </svg>
-              {ledeCount > 0 ? 'Pick up where you left off' : 'Open the book'}
+              <span>
+                {ledeCount > 0 ? 'Pick up where you left off' : 'Open the book'}
+              </span>
             </button>
           </div>
 
@@ -249,8 +308,8 @@ function QuietBlock() {
         Nothing&rsquo;s waiting on you this morning. When you want a line,
         a prompt is below — or pick up the Pen.
       </p>
-      <button type="button" className="prompt-cta" onClick={openPen}>
-        Pick up the Pen →
+      <button type="button" onClick={openPen} style={quietCtaStyle}>
+        Pick up the Pen <span aria-hidden="true">→</span>
       </button>
     </div>
   );
@@ -320,9 +379,9 @@ function FeaturePrompt() {
         write down?
       </blockquote>
       <p className="prompt-attr">— Monday prompt · one minute, in the book</p>
-      <button type="button" className="prompt-cta-dark" onClick={openPen}>
+      <button type="button" onClick={openPen} style={promptCtaDarkStyle}>
         <span>Answer in the book</span>
-        <span>→</span>
+        <span aria-hidden="true">→</span>
       </button>
     </article>
   );
@@ -929,27 +988,21 @@ const styles = `
   }
   .feature-eyebrow .pip { width: 5px; height: 5px; border-radius: 50%; background: var(--r-ember); }
 
-  /* Memory card: real photos come from the archive entry itself
-     (entry.media) when the pipeline's wired. Placeholder until
-     then is a warm paper-soft strip with a subtle fleuron —
-     avoids guessing a stock photo that turns out wedding-y. */
+  /* Memory card: archive photo placeholder. Autumn-leaves still
+     life — evocative and seasonal without being wedding-y. Real
+     photos come from the archive entry's own media when the
+     pipeline's wired. */
   .feature-photo {
-    height: 96px;
+    height: 120px;
     margin: -28px -28px 0;
-    background: var(--r-paper-soft);
     background-image:
-      radial-gradient(ellipse at 75% 40%, rgba(201,134,76,0.08), transparent 55%),
-      radial-gradient(ellipse at 20% 70%, rgba(124,144,130,0.06), transparent 60%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+      linear-gradient(180deg, rgba(20,16,12,0.05) 0%, rgba(251,248,242,0) 60%, var(--r-paper) 100%),
+      url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1600&q=80&auto=format&fit=crop');
+    background-size: cover;
+    background-position: center 50%;
     border-bottom: 1px solid var(--r-rule-5);
   }
-  .photo-fleuron {
-    font-family: var(--r-serif);
-    font-size: 26px;
-    color: var(--r-rule-2);
-  }
+  .photo-fleuron { display: none; }
   .memory-date { font-family: var(--r-serif); font-style: italic; font-size: 15px; color: var(--r-text-4); }
   .memory-quote {
     font-family: var(--r-serif);
