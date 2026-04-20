@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCoupleRitual } from '@/hooks/useCoupleRitual';
 import { useSpouse } from '@/hooks/useSpouse';
+import { stockImagery } from '@/config/stock-imagery';
 import { coupleRitualToIcs } from '@/lib/rituals/icsExport';
 import { downloadIcs } from '@/lib/rituals/downloadIcs';
 
@@ -103,7 +104,7 @@ export default function ClientPage() {
           position: relative;
           background-image:
             linear-gradient(180deg, rgba(20,16,12,0.08) 0%, rgba(20,16,12,0) 40%, rgba(245,240,232,0.35) 100%),
-            url('https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1600&q=80&auto=format&fit=crop');
+            url('${stockImagery.ritualHero}');
           background-size: cover;
           background-position: center 40%;
         }

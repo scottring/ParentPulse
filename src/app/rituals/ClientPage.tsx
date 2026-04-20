@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCoupleRitual } from '@/hooks/useCoupleRitual';
 import { useSpouse } from '@/hooks/useSpouse';
+import { stockImagery } from '@/config/stock-imagery';
 
 export default function ClientPage() {
   const { ritual, loading } = useCoupleRitual();
@@ -149,7 +150,7 @@ export default function ClientPage() {
           height: 220px;
           background-image:
             linear-gradient(180deg, rgba(20,16,12,0.08) 0%, rgba(20,16,12,0) 40%, rgba(245,240,232,0.4) 100%),
-            url('https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1600&q=80&auto=format&fit=crop');
+            url('${stockImagery.ritualHero}');
           background-size: cover;
           background-position: center 40%;
           border-bottom: 1px solid var(--r-rule-5, #E5E0D8);
@@ -212,7 +213,7 @@ export default function ClientPage() {
           height: 140px;
           background-image:
             linear-gradient(180deg, rgba(20,16,12,0.08) 0%, rgba(20,16,12,0) 40%, rgba(245,240,232,0.4) 100%),
-            url('https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1600&q=80&auto=format&fit=crop');
+            url('${stockImagery.ritualHero}');
           background-size: cover;
           background-position: center 40%;
           border-bottom: 1px solid var(--r-rule-5, #E5E0D8);

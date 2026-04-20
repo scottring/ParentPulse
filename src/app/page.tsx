@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { stockImagery } from '@/config/stock-imagery';
 
 // ================================================================
 // Home — editorial broadsheet splash.
@@ -122,7 +123,7 @@ export default function HomePage() {
           margin: 0 -40px 48px;
           background-image:
             linear-gradient(180deg, rgba(20,16,12,0.1) 0%, rgba(20,16,12,0) 40%, rgba(245,240,232,0.45) 92%, var(--r-cream, #F5F0E8) 100%),
-            url('https://images.unsplash.com/photo-1466781783364-36c955e42a7f?w=2400&q=80&auto=format&fit=crop');
+            url('${stockImagery.landingBanner}');
           background-size: cover;
           background-position: center 40%;
         }

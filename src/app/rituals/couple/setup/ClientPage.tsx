@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useSpouse } from '@/hooks/useSpouse';
 import { useCoupleRitual } from '@/hooks/useCoupleRitual';
+import { stockImagery } from '@/config/stock-imagery';
 import CadencePicker from '@/components/rituals/CadencePicker';
 import DayOfWeekPicker from '@/components/rituals/DayOfWeekPicker';
 import TimePicker from '@/components/rituals/TimePicker';
@@ -237,7 +238,7 @@ function Shell({
           overflow: hidden;
           background-image:
             linear-gradient(180deg, rgba(20,16,12,0.12) 0%, rgba(20,16,12,0) 35%, rgba(20,16,12,0.35) 90%, rgba(20,16,12,0.6) 100%),
-            url('https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=2400&q=80&auto=format&fit=crop');
+            url('${stockImagery.ritualHero}');
           background-size: cover;
           background-position: center 40%;
         }

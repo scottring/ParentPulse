@@ -10,6 +10,7 @@
 import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { stockImagery } from '@/config/stock-imagery';
 
 // Dispatch the same custom event the CaptureSheet listens for.
 // "Open the book" / "Answer in the book" / "Pick up the Pen" all
@@ -749,22 +750,22 @@ const styles = `
   .masthead-band[data-season="spring"] {
     background-image:
       linear-gradient(180deg, rgba(20,16,12,0.15) 0%, rgba(20,16,12,0) 40%, rgba(245,240,232,0.35) 82%, rgba(245,240,232,0.62) 100%),
-      url('https://images.unsplash.com/photo-1466781783364-36c955e42a7f?w=2400&q=80&auto=format&fit=crop');
+      url('${stockImagery.masthead.spring}');
   }
   .masthead-band[data-season="summer"] {
     background-image:
       linear-gradient(180deg, rgba(20,16,12,0.12) 0%, rgba(20,16,12,0) 40%, rgba(245,240,232,0.4) 82%, rgba(245,240,232,0.65) 100%),
-      url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=2400&q=80&auto=format&fit=crop');
+      url('${stockImagery.masthead.summer}');
   }
   .masthead-band[data-season="autumn"] {
     background-image:
       linear-gradient(180deg, rgba(20,16,12,0.2) 0%, rgba(20,16,12,0) 40%, rgba(245,240,232,0.35) 82%, rgba(245,240,232,0.62) 100%),
-      url('https://images.unsplash.com/photo-1507371341162-763b5e419408?w=2400&q=80&auto=format&fit=crop');
+      url('${stockImagery.masthead.autumn}');
   }
   .masthead-band[data-season="winter"] {
     background-image:
       linear-gradient(180deg, rgba(20,16,12,0.25) 0%, rgba(20,16,12,0) 40%, rgba(245,240,232,0.35) 82%, rgba(245,240,232,0.62) 100%),
-      url('https://images.unsplash.com/photo-1478860409698-8707f313ee8b?w=2400&q=80&auto=format&fit=crop');
+      url('${stockImagery.masthead.winter}');
   }
   .masthead-strip {
     background: var(--r-paper);
@@ -997,7 +998,7 @@ const styles = `
     margin: -28px -28px 0;
     background-image:
       linear-gradient(180deg, rgba(20,16,12,0.05) 0%, rgba(251,248,242,0) 60%, var(--r-paper) 100%),
-      url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1600&q=80&auto=format&fit=crop');
+      url('${stockImagery.memoryCard}');
     background-size: cover;
     background-position: center 50%;
     border-bottom: 1px solid var(--r-rule-5);
@@ -1487,7 +1488,7 @@ const styles = `
     border-radius: 2px;
     background-image:
       linear-gradient(135deg, rgba(201,134,76,0.25), rgba(140,74,62,0.35)),
-      url('https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=300&q=80&auto=format&fit=crop');
+      url('${stockImagery.songArt}');
     background-size: cover;
     background-position: center;
     flex: none;
