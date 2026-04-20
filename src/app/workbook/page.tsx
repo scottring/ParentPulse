@@ -12,6 +12,9 @@ import { Room, Band, Rule } from '@/design/surfaces';
 import { TodaySpread, RitualsDue, CaptureSheet } from '@/design/workbook';
 import { useWorkbookData, useCaptureSubmit } from '@/integration';
 import { usePeopleMap } from '@/hooks/usePeopleMap';
+import { useNextRitual } from '@/hooks/useNextRitual';
+import { NextRitualCard } from '@/components/workbook/NextRitualCard';
+import { ensureSoloWeekly } from '@/lib/ritual-seeds';
 
 export default function WorkbookPage() {
   const { user, loading, logout } = useAuth();
@@ -19,10 +22,24 @@ export default function WorkbookPage() {
   const wb = useWorkbookData();
   const { nameOf } = usePeopleMap();
   const submit = useCaptureSubmit();
+  const { ritual: nextRitual, loading: ritualLoading } = useNextRitual();
 
   useEffect(() => {
     if (!loading && !user) router.replace('/');
   }, [loading, user, router]);
+
+  // On first Workbook visit, seed a solo_weekly ritual if the user
+  // has none. Idempotent.
+  useEffect(() => {
+    if (ritualLoading || !user?.familyId || !user?.userId) return;
+    if (nextRitual) return; // already has at least one
+    ensureSoloWeekly({
+      familyId: user.familyId,
+      userId: user.userId,
+    }).catch((err) => {
+      console.warn('workbook: ensureSoloWeekly failed', err);
+    });
+  }, [ritualLoading, nextRitual, user?.familyId, user?.userId]);
 
   if (loading || !user) return null;
 
@@ -34,6 +51,13 @@ export default function WorkbookPage() {
   return (
     <ShellLayout userName={user.name} onSignOut={() => logout().then(() => router.push('/login'))}>
       <Room name="workbook">
+        {/* When an active ritual exists, it becomes the featured slot.
+            The daily/threads surface falls to second billing. */}
+        {nextRitual && (
+          <div style={{ marginBottom: '32px' }}>
+            <NextRitualCard ritual={nextRitual} />
+          </div>
+        )}
         <TodaySpread
           firstName={wb.firstName}
           date={wb.date}

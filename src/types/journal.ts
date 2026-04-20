@@ -68,6 +68,11 @@ export interface JournalEntry {
   // a new moment, or by attaching a new entry to an existing moment.
   momentId?: string;
 
+  // Ritual provenance — if set, this entry was emitted by the ritual
+  // runner's "close" step. Lets the UI thread a reflection back to
+  // the scheduled session that produced it. Immutable after create.
+  ritualId?: string;
+
   // Legacy binary flag — still present on entries written before
   // per-person sharing existed. Not written by new entries. Used only
   // as a fallback during migration.

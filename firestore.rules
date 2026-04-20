@@ -945,6 +945,37 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Rituals — generalized scheduled sessions (solo / partner /
+    // family / repair). Supersedes couple_rituals; the old collection
+    // is still read-writable for a 30-day dual-write window (see
+    // scripts/migrate-couple-rituals.ts).
+    //
+    // Who can touch what:
+    //   read — any participant (array-contains on participantUserIds)
+    //   create — caller is in participantUserIds + in the family
+    //   update — caller is in participantUserIds + in the family
+    //   delete — caller is in participantUserIds + in the family
+    //
+    // The synth counters (lastRunAt, lastRunMomentId, nextRunAt) are
+    // client-writable by participants — the runner page computes and
+    // writes them back at the end of a session. No admin-SDK gate.
+    match /rituals/{ritualId} {
+      allow read: if isSignedIn()
+                  && belongsToFamily(resource.data.familyId)
+                  && request.auth.uid in resource.data.participantUserIds;
+      allow create: if isSignedIn()
+                    && belongsToFamily(request.resource.data.familyId)
+                    && request.resource.data.createdByUserId == request.auth.uid
+                    && request.auth.uid in request.resource.data.participantUserIds
+                    && request.resource.data.participantUserIds.size() >= 1;
+      allow update: if isSignedIn()
+                    && belongsToFamily(resource.data.familyId)
+                    && request.auth.uid in resource.data.participantUserIds;
+      allow delete: if isSignedIn()
+                    && belongsToFamily(resource.data.familyId)
+                    && request.auth.uid in resource.data.participantUserIds;
+    }
+
     // Couple rituals — scheduled recurring check-ins between two partners.
     match /couple_rituals/{ritualId} {
       allow read: if isSignedIn() && belongsToFamily(resource.data.familyId);
