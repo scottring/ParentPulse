@@ -7,7 +7,9 @@ import { useAuth } from '@/context/AuthContext';
 import {
   doc,
   getDoc,
+  getDocs as _getDocs,
   updateDoc,
+  addDoc,
   Timestamp,
   collection,
   query,
@@ -18,6 +20,7 @@ import {
 import { firestore } from '@/lib/firebase';
 import { useGrowthFeed } from '@/hooks/useGrowthFeed';
 import { usePerson } from '@/hooks/usePerson';
+import { ProvenanceView } from '@/components/growth/ProvenanceView';
 
 import { EXERCISE_TYPES } from '@/config/exercise-types';
 import type { GrowthItem, GrowthItemType, FeedbackReaction, ImpactRating } from '@/types/growth';
@@ -25,7 +28,10 @@ import type { GrowthItem, GrowthItemType, FeedbackReaction, ImpactRating } from 
 // ================================================================
 // Types
 // ================================================================
-type Step = 'brief' | 'doing' | 'reflect' | 'complete';
+// `provenance` is the first step when the practice was spawned from
+// specific journal entries. Reading order must be moments → pattern
+// → practice; provenance → brief → doing → reflect → complete.
+type Step = 'provenance' | 'brief' | 'doing' | 'reflect' | 'complete';
 type PerformanceMode = 'writing' | 'timer' | 'steps' | 'story' | 'default';
 
 // ================================================================
@@ -162,6 +168,22 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
       cancelled = true;
     };
   }, [itemId, user, authLoading, router]);
+
+  // P3.1 — practices spawned from journal entries open on the
+  // provenance screen first. Reading order is moments → pattern →
+  // practice; the CTA on the provenance screen advances to 'brief'.
+  // Enforced on every open for incomplete practices (not just the
+  // first) so the user re-reads why before doing it again.
+  const provenanceSetRef = useRef(false);
+  useEffect(() => {
+    if (!item) return;
+    if (provenanceSetRef.current) return;
+    provenanceSetRef.current = true;
+    const hasProvenance = Boolean(item.spawnedFromEntryIds?.length);
+    const isCompleted =
+      item.status === 'completed' || item.status === 'skipped';
+    if (hasProvenance && !isCompleted) setStep('provenance');
+  }, [item]);
 
   // Hydrate myNote from an existing draft (or previously-submitted
   // feedback note) the first time item becomes available. This lets
@@ -302,6 +324,72 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
         drafts: nextDrafts,
       } as GrowthItem);
 
+      // P4.1 — if this practice was spawned from specific journal
+      // entries AND the user actually engaged with it (not 'not_now'),
+      // emit a reflection entry back into the stream. The new entry
+      // becomes the first view of a fresh moment, and links back to
+      // the source entries via reflectsOnEntryIds. Failure here is
+      // non-fatal: the practice is already marked complete.
+      const sourceIds = item.spawnedFromEntryIds ?? [];
+      const shouldEmitReflection =
+        reaction !== 'not_now' &&
+        sourceIds.length > 0 &&
+        myNote.trim().length > 0;
+      if (shouldEmitReflection) {
+        try {
+          // Inherit personMentions + sharedWithUserIds from the source
+          // entries (union across them, author excluded from shares).
+          const mentions = new Set<string>();
+          const sharedWith = new Set<string>();
+          for (const id of sourceIds.slice(0, 10)) {
+            const snap = await getDoc(doc(firestore, 'journal_entries', id));
+            if (!snap.exists()) continue;
+            const d = snap.data() as {
+              personMentions?: string[];
+              sharedWithUserIds?: string[];
+            };
+            (d.personMentions ?? []).forEach((p) => mentions.add(p));
+            (d.sharedWithUserIds ?? []).forEach((u) => {
+              if (u !== user.userId) sharedWith.add(u);
+            });
+          }
+          const visibleToUserIds = Array.from(new Set([user.userId, ...sharedWith]));
+
+          // 1. New moment (the reflection is its first view).
+          const momentRef = await addDoc(collection(firestore, 'moments'), {
+            familyId: item.familyId,
+            createdByUserId: user.userId,
+            title: `Reflection · ${item.title}`,
+            dimensions: [],
+            tags: ['reflection', 'practice'],
+            participantUserIds: [user.userId],
+            viewCount: 1,
+            lastViewAddedAt: now,
+            createdAt: now,
+          });
+
+          // 2. Reflection entry, linked back to the originals.
+          await addDoc(collection(firestore, 'journal_entries'), {
+            familyId: item.familyId,
+            authorId: user.userId,
+            text: myNote.trim(),
+            title: `What shifted · ${item.title}`,
+            category: 'reflection',
+            tags: ['reflection', 'practice'],
+            visibleToUserIds,
+            sharedWithUserIds: Array.from(sharedWith),
+            personMentions: Array.from(mentions),
+            subjectType: 'self',
+            momentId: momentRef.id,
+            reflectsOnEntryIds: sourceIds,
+            context: { timeOfDay: 'evening' },
+            createdAt: now,
+          });
+        } catch (reflErr) {
+          console.warn('Failed to emit reflection moment:', reflErr);
+        }
+      }
+
       setStep('complete');
     } catch (err) {
       console.error('Failed to submit feedback:', err);
@@ -422,6 +510,14 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
 
 
       <div className="pt-[64px] pb-24">
+        {step === 'provenance' && (
+          <ProvenanceView
+            item={item}
+            currentUserId={user?.userId ?? ''}
+            onBegin={() => setStep('brief')}
+          />
+        )}
+
         {step === 'brief' && (
           <BriefView
             item={item}
@@ -575,7 +671,8 @@ function BriefView({
   const fromChat = Boolean(
     (item as unknown as { sourceChatSessionId?: string }).sourceChatSessionId,
   );
-  const fromJournal = Boolean(item.spawnedFromEntryIds?.length);
+  // P3.3 — `fromJournal` pill removed from the brief; provenance
+  // now has its own pane (ProvenanceView). Variable retired.
   const router = useRouter();
 
   // Matches the TOC entry language: ◆ for practices (things to do),
@@ -768,14 +865,8 @@ function BriefView({
           drawn from a conversation with the manual
         </p>
       )}
-      {fromJournal && (
-        <p
-          className="press-marginalia"
-          style={{ textAlign: 'center', fontSize: 13, marginTop: 6, marginBottom: 10 }}
-        >
-          from your journal
-        </p>
-      )}
+      {/* P3.3 — the "from your journal" pill is retired; provenance
+          lives on its own screen (ProvenanceView) before the brief. */}
 
       <div className="press-asterism" aria-hidden="true" style={{ margin: '36px 0 32px' }} />
 

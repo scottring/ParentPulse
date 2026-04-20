@@ -20,6 +20,8 @@ import { ResponseBlock } from '@/components/journal-spread/ResponseBlock';
 import { MomentBanner } from '@/components/journal-spread/MomentBanner';
 import { useOpenThreads } from '@/hooks/useOpenThreads';
 import { ClosingActionCard } from '@/components/open-threads/ClosingActionCard';
+import { SeedlingGlyph } from '@/components/journal-spread/SeedlingGlyph';
+import { useReflectionsOfEntry } from '@/hooks/useReflectionsOfEntry';
 import { MicButton } from '@/components/voice/MicButton';
 import { JOURNAL_CATEGORIES, type JournalCategory, type JournalEntry } from '@/types/journal';
 import { useEntryResponses } from '@/hooks/useEntryResponses';
@@ -130,6 +132,11 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
   const momentThread = entry.momentId
     ? threads.find((t) => t.kind === 'moment' && t.id === entry.momentId)
     : undefined;
+  // If any reflection entry cites THIS entry as source (P4.3), surface
+  // a header chip linking to the newest one. Makes "carried forward"
+  // visible to the reader on the original.
+  const reflectionsCiting = useReflectionsOfEntry(entry.entryId);
+  const mostRecentReflection = reflectionsCiting[0];
 
   const handleDelete = async () => {
     if (!window.confirm('Delete this entry? This can\'t be undone.')) return;
@@ -392,6 +399,32 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
         <article className="entry-paper relish-panel">
           {momentThread && <ClosingActionCard thread={momentThread} />}
           {entry.momentId && <MomentBanner momentId={entry.momentId} />}
+          {mostRecentReflection && (
+            <p
+              style={{
+                margin: '0 0 18px 0',
+                padding: '8px 12px',
+                background: 'rgba(92, 128, 100, 0.08)',
+                borderLeft: '2px solid var(--r-sage, #5C8064)',
+                fontFamily: 'Georgia, serif',
+                fontSize: 13,
+                color: '#4a5b4e',
+                fontStyle: 'italic',
+              }}
+            >
+              this moment was carried forward on{' '}
+              {mostRecentReflection.createdAt
+                ?.toDate?.()
+                .toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+              {' — '}
+              <Link
+                href={`/journal/${mostRecentReflection.entryId}`}
+                style={{ color: 'var(--r-ink, #2d2418)', textDecoration: 'underline' }}
+              >
+                see the reflection
+              </Link>
+            </p>
+          )}
           <header className="entry-meta-row">
             <div className="entry-subject">
               {/* Category — clickable to open picker */}
@@ -510,16 +543,25 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
             </div>
           </header>
 
-          <input
-            type="text"
-            className="entry-title"
-            placeholder="Title (optional)"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={() => void flush()}
-            readOnly={!isMine}
-            aria-label="Entry title"
-          />
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            {entry.category === 'reflection' &&
+              (entry.reflectsOnEntryIds?.length ?? 0) > 0 && (
+                <span style={{ flex: 'none', alignSelf: 'center' }}>
+                  <SeedlingGlyph size={18} />
+                </span>
+              )}
+            <input
+              type="text"
+              className="entry-title"
+              placeholder="Title (optional)"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={() => void flush()}
+              readOnly={!isMine}
+              aria-label="Entry title"
+              style={{ flex: 1 }}
+            />
+          </div>
 
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
             <textarea

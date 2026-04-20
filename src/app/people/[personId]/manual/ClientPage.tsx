@@ -8,6 +8,7 @@ import { usePersonManual } from '@/hooks/usePersonManual';
 import { useContribution } from '@/hooks/useContribution';
 import { useFamily } from '@/hooks/useFamily';
 import { ManualChat } from '@/components/manual/ManualChat';
+import { PersonReflections } from '@/components/manual/PersonReflections';
 import { useEquivalentManualIds } from '@/hooks/useEquivalentManualIds';
 import { isKidObserverEligible, computeAge } from '@/utils/age';
 
@@ -509,6 +510,12 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                   />
                 </div>
               )}
+            </div>
+
+            {/* P4.4 — reflection entries that mention this person,
+                surfacing what was carried forward and what shifted. */}
+            <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 32px 48px' }}>
+              <PersonReflections personId={personId} />
             </div>
           </div>
         </div>

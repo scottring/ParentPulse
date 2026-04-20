@@ -4,6 +4,17 @@ import Link from 'next/link';
 import Section from '@/components/magazine/Section';
 import type { JournalEntry } from '@/types/journal';
 import { JOURNAL_CATEGORIES } from '@/types/journal';
+import { SeedlingGlyph } from '@/components/journal-spread/SeedlingGlyph';
+
+// Inline wrapper so the glyph sits left of the title with a small
+// margin and doesn't disturb baseline alignment.
+function SeedlingGlyphInline() {
+  return (
+    <span style={{ marginRight: 6, display: 'inline-flex', verticalAlign: '-2px' }}>
+      <SeedlingGlyph size={14} />
+    </span>
+  );
+}
 
 interface RecentCapturesProps {
   entries: JournalEntry[];
@@ -52,7 +63,15 @@ export default function RecentCaptures({ entries }: RecentCapturesProps) {
                   </>
                 )}
               </div>
-              {entry.title && <h3 className="capture-title">{entry.title}</h3>}
+              {entry.title && (
+                <h3 className="capture-title">
+                  {entry.category === 'reflection' &&
+                    (entry.reflectsOnEntryIds?.length ?? 0) > 0 && (
+                      <SeedlingGlyphInline />
+                    )}
+                  {entry.title}
+                </h3>
+              )}
               <p className="capture-excerpt">{excerpt}</p>
             </Link>
           );

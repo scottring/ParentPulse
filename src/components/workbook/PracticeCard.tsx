@@ -16,7 +16,9 @@ export default function PracticeCard({ item }: PracticeCardProps) {
   const minutes = item.estimatedMinutes || 0;
   const forWhom = item.assignedToUserName?.split(' ')[0] || 'you';
   const about = item.targetPersonNames?.join(' & ');
-  const fromJournal = Boolean(item.spawnedFromEntryIds?.length);
+  // P3.3 — the "from your journal" pill is gone. Provenance is now
+  // the first screen of the practice (ProvenanceView), not a
+  // duplicate pill on the card.
 
   return (
     <Link href={`/growth/${item.growthItemId}`} className="practice-card">
@@ -39,12 +41,6 @@ export default function PracticeCard({ item }: PracticeCardProps) {
             </>
           )}
           for <span className="press-sc">{forWhom}</span>
-          {fromJournal && (
-            <>
-              <span className="sep">·</span>
-              from your journal
-            </>
-          )}
         </p>
       </div>
 

@@ -16,7 +16,8 @@ export default function ReadingCard({ item }: ReadingCardProps) {
   const minutes = item.estimatedMinutes || 0;
   const forWhom = item.assignedToUserName?.split(' ')[0] || 'you';
   const about = item.targetPersonNames?.join(' & ');
-  const fromJournal = Boolean(item.spawnedFromEntryIds?.length);
+  // P3.3 — "from your journal" pill retired; provenance is the
+  // first screen of the practice now.
 
   const bodyExcerpt =
     item.body && item.body.length > 140
@@ -47,12 +48,6 @@ export default function ReadingCard({ item }: ReadingCardProps) {
         ) : (
           <>
             for <span className="press-sc">{forWhom}</span>
-          </>
-        )}
-        {fromJournal && (
-          <>
-            <span className="sep">·</span>
-            from your journal
           </>
         )}
       </p>

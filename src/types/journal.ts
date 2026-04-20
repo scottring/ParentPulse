@@ -73,6 +73,14 @@ export interface JournalEntry {
   // the scheduled session that produced it. Immutable after create.
   ritualId?: string;
 
+  // Reflection source — if this entry is a reflection emitted by the
+  // practice-close flow, it links back to the original entries whose
+  // pattern spawned the practice. Lets the stream re-surface them as
+  // "this moment was carried forward on {date}" and powers the
+  // volume's "what we've tried, and what shifted" section. Mirrors
+  // GrowthItem.spawnedFromEntryIds at write time.
+  reflectsOnEntryIds?: string[];
+
   // Legacy binary flag — still present on entries written before
   // per-person sharing existed. Not written by new entries. Used only
   // as a fallback during migration.
