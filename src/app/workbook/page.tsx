@@ -90,6 +90,7 @@ const promptCtaDarkStyle: React.CSSProperties = {
 import { useAuth } from '@/context/AuthContext';
 import { useWorkbookData } from '@/integration';
 import { useNextRitual } from '@/hooks/useNextRitual';
+import type { Ritual } from '@/types/ritual';
 import { useOpenThreads } from '@/hooks/useOpenThreads';
 import { ensureSoloWeekly } from '@/lib/ritual-seeds';
 import type { OpenThread } from '@/lib/open-threads';
@@ -261,7 +262,7 @@ export default function WorkbookPage() {
               Practices you&rsquo;ve kept, and the ones coming up.
             </p>
           </div>
-          <WeekGrid today={today} nextRitualKind={nextRitual?.kind} />
+          <WeekGrid today={today} nextRitual={nextRitual ?? null} />
           <SongStripPlaceholder />
         </section>
 
@@ -595,6 +596,11 @@ function FeaturePrompt() {
 }
 
 function DispatchLeadPlaceholder() {
+  // The weekly synthesis pipeline is not wired yet — it will write to
+  // a dispatches collection once the cron job lands. Until then this
+  // card is pure status: no CTAs, no dead buttons. When the backend
+  // is ready we'll reintroduce "Read the full dispatch" / "Add to
+  // this week's brief" pointing at the generated record.
   return (
     <article className="lead">
       <div className="lead-text">
@@ -616,14 +622,6 @@ function DispatchLeadPlaceholder() {
               eyebrow as soon as the weekly job runs.
             </span>
           </div>
-        </div>
-        <div className="lead-actions">
-          <button className="lead-pill dark" type="button" disabled>
-            Read the full dispatch
-          </button>
-          <button className="lead-pill" type="button" disabled>
-            Add to this week&rsquo;s brief
-          </button>
         </div>
       </div>
       <div className="lead-art" aria-hidden="true">
@@ -905,10 +903,10 @@ function humanizeReason(
 
 function WeekGrid({
   today,
-  nextRitualKind,
+  nextRitual,
 }: {
   today: Date;
-  nextRitualKind?: string;
+  nextRitual: Ritual | null;
 }) {
   // Sunday-anchored week. Render 7 days starting from this week's Sunday.
   const days = useMemo(() => {
@@ -923,6 +921,18 @@ function WeekGrid({
   }, [today]);
 
   const todayKey = today.toDateString();
+  // Place the ritual chip on the actual scheduled day when it lands
+  // within this week's Sunday→Saturday span; otherwise fall back to
+  // today so the user still sees it.
+  const ritualDate = nextRitual?.nextRunAt?.toDate?.();
+  const ritualInWeek = ritualDate
+    ? days.some((d) => d.toDateString() === ritualDate.toDateString())
+    : false;
+  const ritualDayKey = ritualInWeek
+    ? ritualDate!.toDateString()
+    : nextRitual
+      ? todayKey
+      : null;
 
   return (
     <div className="week-grid">
@@ -937,16 +947,17 @@ function WeekGrid({
           .filter(Boolean)
           .join(' ');
         const letter = d.toLocaleDateString('en-GB', { weekday: 'short' });
-        const entry =
-          isToday && nextRitualKind
-            ? {
-                label: prettyRitualLabel(nextRitualKind),
-                cadence: 'Next ritual',
-                tone: 'ember' as const,
-              }
-            : null;
-        return (
-          <div key={i} className={cls}>
+        const showRitual =
+          !!nextRitual && d.toDateString() === ritualDayKey;
+        const entry = showRitual
+          ? {
+              label: prettyRitualLabel(nextRitual.kind),
+              cadence: ritualInWeek ? 'Next ritual' : 'Coming up',
+              tone: 'ember' as const,
+            }
+          : null;
+        const inner = (
+          <>
             <span className="day-letter">
               {isToday ? `${letter} · Today` : letter}
             </span>
@@ -959,6 +970,22 @@ function WeekGrid({
                 </div>
               </div>
             )}
+          </>
+        );
+        if (showRitual && nextRitual) {
+          return (
+            <Link
+              key={i}
+              href={`/rituals/${nextRitual.ritualId}/run`}
+              className={`${cls} day-link`}
+            >
+              {inner}
+            </Link>
+          );
+        }
+        return (
+          <div key={i} className={cls}>
+            {inner}
           </div>
         );
       })}
@@ -1816,6 +1843,15 @@ const styles = `
     background: var(--r-paper);
     border-color: var(--r-ink);
     box-shadow: 0 0 0 3px var(--r-tint-ember);
+  }
+  a.day-link {
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: background 160ms var(--r-ease-ink);
+  }
+  a.day-link:hover {
+    background: var(--r-tint-ember);
   }
   .day-letter {
     font-family: var(--r-sans);
