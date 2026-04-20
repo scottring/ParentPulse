@@ -412,14 +412,22 @@ export default function CaptureSheet() {
         />
       )}
 
-      {/* Bottom sheet */}
+      {/* Bottom sheet — sized generously so the writing surface feels
+          like a real page, not a peek-drawer. 92vh tall with an 82vh
+          minimum while composing; width caps at 860px on wide screens
+          so the textarea has comfortable line length. */}
       <div
-        className="fixed left-0 right-0 z-50 transition-transform duration-300 ease-out"
+        className="fixed z-50 transition-transform duration-300 ease-out"
         style={{
+          left: '50%',
           bottom: 0,
-          transform: sheetOpen ? 'translateY(0)' : 'translateY(100%)',
-          maxHeight: state === 'chatting' ? '90vh' : '85vh',
-          minHeight: state === 'chatting' ? '60vh' : undefined,
+          width: '100%',
+          maxWidth: 860,
+          transform: sheetOpen
+            ? 'translate(-50%, 0)'
+            : 'translate(-50%, 100%)',
+          maxHeight: state === 'chatting' ? '94vh' : '92vh',
+          minHeight: state === 'chatting' ? '72vh' : '82vh',
           display: 'flex',
           flexDirection: 'column',
           background: 'rgba(255,255,255,0.97)',
