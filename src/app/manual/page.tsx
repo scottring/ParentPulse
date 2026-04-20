@@ -16,6 +16,7 @@ import { useJournalEntries } from '@/hooks/useJournalEntries';
 import { computeAge } from '@/utils/age';
 import type { Person, RelationshipType } from '@/types/person-manual';
 import type { JournalEntry } from '@/types/journal';
+import { entryMentionsPerson } from '@/lib/entry-mentions';
 
 export default function ManualPage() {
   const { user, loading } = useAuth();
@@ -485,7 +486,7 @@ function computePersonMetrics(
     .filter((p) => !p.archived)
     .map((person) => {
       const mentions = entries.filter((e) =>
-        (e.personMentions ?? []).includes(person.personId),
+        entryMentionsPerson(e, person.personId),
       );
       const lastEntryDate =
         mentions

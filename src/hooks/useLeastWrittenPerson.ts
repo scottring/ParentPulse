@@ -5,6 +5,7 @@ import { usePerson } from '@/hooks/usePerson';
 import { useJournalEntries } from '@/hooks/useJournalEntries';
 import type { Person } from '@/types/person-manual';
 import type { JournalEntry } from '@/types/journal';
+import { entryMentionsPerson } from '@/lib/entry-mentions';
 
 export interface LeastWrittenPerson {
   person: Person;
@@ -35,7 +36,7 @@ export function useLeastWrittenPerson(): {
     const now = Date.now();
     const scored = eligible.map((person) => {
       const mentions = entries.filter((e) =>
-        (e.personMentions ?? []).includes(person.personId),
+        entryMentionsPerson(e, person.personId),
       );
       const latest = mentions
         .map((e) => e.createdAt?.toDate?.())

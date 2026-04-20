@@ -17,6 +17,7 @@ import { stockImagery } from '@/config/stock-imagery';
 import type { Person, RelationshipType } from '@/types/person-manual';
 import { EditPersonSheet } from '@/components/people/EditPersonSheet';
 import type { JournalEntry } from '@/types/journal';
+import { entryMentionsPerson } from '@/lib/entry-mentions';
 
 export default function PersonPage({
   params,
@@ -37,7 +38,7 @@ export default function PersonPage({
   const mentions = useMemo(() => {
     if (!person) return [] as JournalEntry[];
     return entries
-      .filter((e) => (e.personMentions ?? []).includes(person.personId))
+      .filter((e) => entryMentionsPerson(e, person.personId))
       .sort((a, b) => {
         const am = a.createdAt?.toMillis?.() ?? 0;
         const bm = b.createdAt?.toMillis?.() ?? 0;
