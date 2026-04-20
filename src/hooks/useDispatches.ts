@@ -60,12 +60,17 @@ function findEcho(entries: JournalEntry[]): EchoDispatch | null {
   });
   if (recent.length === 0) return null;
 
-  // Collect the subjects the user is currently writing about.
+  // Collect the subjects the user is currently writing about. Pull
+  // from both entry-body enrichment AND chat-distilled insights so
+  // themes that only surfaced through conversation still count.
   const recentPeople = new Set<string>();
   const recentThemes = new Set<string>();
   for (const e of recent) {
     for (const p of e.personMentions ?? []) recentPeople.add(p);
     for (const t of e.enrichment?.themes ?? []) {
+      recentThemes.add(t.toLowerCase());
+    }
+    for (const t of e.chatInsights?.themes ?? []) {
       recentThemes.add(t.toLowerCase());
     }
   }
@@ -96,8 +101,14 @@ function findEcho(entries: JournalEntry[]): EchoDispatch | null {
         if (!overlapTag) overlapTag = p;
       }
     }
-    for (const t of e.enrichment?.themes ?? []) {
-      if (recentThemes.has(t.toLowerCase())) {
+    // Match on both entry-body themes AND chat-distilled themes, so
+    // an older entry whose chat explored the same ground surfaces.
+    const candidateThemes = new Set<string>([
+      ...(e.enrichment?.themes ?? []).map((t) => t.toLowerCase()),
+      ...(e.chatInsights?.themes ?? []).map((t) => t.toLowerCase()),
+    ]);
+    for (const t of candidateThemes) {
+      if (recentThemes.has(t)) {
         score += 1;
         if (!overlapTag) overlapTag = t;
       }
