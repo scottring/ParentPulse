@@ -583,7 +583,7 @@ export default function CaptureSheet() {
                       editMode === 'append'
                         ? 'Add more…'
                         : editMode === 'edit'
-                          ? 'Edit your entry…'
+                          ? 'Edit my entry…'
                           : 'A moment, a thought, a question…'
                     }
                     onClick={() => setOpenPicker(null)} />
@@ -659,7 +659,7 @@ export default function CaptureSheet() {
                       <>
                         <button onClick={() => { setWritingFor(null); setOpenPicker(null); }}
                           style={pickerPillStyle(!writingFor)}>
-                          Yourself
+                          Me
                         </button>
                         {people.filter((p) => !p.linkedUserId).map((child) => {
                           const active = writingFor?.personId === child.personId;
@@ -739,7 +739,7 @@ export default function CaptureSheet() {
                 {hasChildren && (
                   <button type="button" onClick={() => setOpenPicker(openPicker === 'writingAs' ? null : 'writingAs')}
                     style={chipStyle(openPicker === 'writingAs' || !!writingFor)}>
-                    {writingFor ? writingFor.name : 'As'}
+                    As {writingFor ? writingFor.name : 'me'}
                   </button>
                 )}
                 <button type="button" onClick={() => setOpenPicker(openPicker === 'privacy' ? null : 'privacy')}
