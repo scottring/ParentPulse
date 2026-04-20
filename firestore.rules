@@ -113,15 +113,22 @@ service cloud.firestore {
     //   intentionally mirrors the old rule so no existing data loses
     //   visibility during the transition window.
     match /journal_entries/{entryId} {
-      allow read: if isParent() && belongsToFamily(resource.data.familyId) && (
-        // New model: entry explicitly lists this user as a reader.
-        ('visibleToUserIds' in resource.data &&
-          request.auth.uid in resource.data.visibleToUserIds) ||
-        // Legacy fallback for entries that predate visibleToUserIds.
-        (!('visibleToUserIds' in resource.data) && (
-          resource.data.authorId == request.auth.uid ||
-          resource.data.get('isPrivate', false) != true
-        ))
+      // `resource == null` lets a listener see a delete event as
+      // !snap.exists() instead of permission-denied. Without it, an
+      // author's own deleteDoc throws on their live subscription.
+      allow read: if isSignedIn() && (
+        resource == null || (
+          isParent() && belongsToFamily(resource.data.familyId) && (
+            // New model: entry explicitly lists this user as a reader.
+            ('visibleToUserIds' in resource.data &&
+              request.auth.uid in resource.data.visibleToUserIds) ||
+            // Legacy fallback for entries that predate visibleToUserIds.
+            (!('visibleToUserIds' in resource.data) && (
+              resource.data.authorId == request.auth.uid ||
+              resource.data.get('isPrivate', false) != true
+            ))
+          )
+        )
       );
 
       // New entries must include visibleToUserIds and the author must
@@ -193,9 +200,15 @@ service cloud.firestore {
     // Clients may never mutate visibleToUserIds / sharedWithUserIds
     // directly after create — they are derived from the parent entry.
     match /margin_notes/{noteId} {
-      allow read: if isParent()
-                  && belongsToFamily(resource.data.familyId)
-                  && request.auth.uid in resource.data.visibleToUserIds;
+      // See journal_entries above — `resource == null` lets a listener
+      // see a delete as !snap.exists() instead of permission-denied.
+      allow read: if isSignedIn() && (
+        resource == null || (
+          isParent()
+          && belongsToFamily(resource.data.familyId)
+          && request.auth.uid in resource.data.visibleToUserIds
+        )
+      );
 
       // Create: author must be the caller; denormalized visibility must
       // equal the parent entry's at write time; caller must be in the
@@ -234,10 +247,16 @@ service cloud.firestore {
     // the caller to be an explicit member of visibleToUserIds.
 
     match /entries/{entryId} {
-      allow read: if isParent()
-                  && belongsToFamily(resource.data.familyId)
-                  && 'visibleToUserIds' in resource.data
-                  && request.auth.uid in resource.data.visibleToUserIds;
+      // See journal_entries above — `resource == null` lets a listener
+      // see a delete as !snap.exists() instead of permission-denied.
+      allow read: if isSignedIn() && (
+        resource == null || (
+          isParent()
+          && belongsToFamily(resource.data.familyId)
+          && 'visibleToUserIds' in resource.data
+          && request.auth.uid in resource.data.visibleToUserIds
+        )
+      );
 
       allow create: if isParent()
                     && belongsToFamily(request.resource.data.familyId)
