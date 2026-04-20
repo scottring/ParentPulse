@@ -123,6 +123,16 @@ export function ProvenanceView({ item, currentUserId, onBegin }: ProvenanceViewP
     return 'A pattern worth sitting with.';
   })();
 
+  // If the practice was shaped by the entry's chat, surface what
+  // emerged through conversation — the user should be able to see
+  // that their chat wasn't a dead-end, it went somewhere.
+  const shapedByChat = item.generatedBy === 'journal_plus_chat';
+  const chatEmergent = shapedByChat
+    ? (entries ?? [])
+        .map((e) => e.chatInsights?.emergent?.trim())
+        .find((s): s is string => !!s && s.length > 0)
+    : undefined;
+
   return (
     <div className="provenance-view">
       <div className="inner">
@@ -168,6 +178,18 @@ export function ProvenanceView({ item, currentUserId, onBegin }: ProvenanceViewP
         <p className="synthesis">
           <em>{synthesisSentence}</em>
         </p>
+
+        {shapedByChat && chatEmergent && (
+          <p className="chat-shaped">
+            <span className="chat-kicker">Shaped by your chat</span>
+            <em>&ldquo;{chatEmergent}&rdquo;</em>
+          </p>
+        )}
+        {shapedByChat && !chatEmergent && (
+          <p className="chat-shaped chat-shaped--quiet">
+            Shaped by your chat with the coach.
+          </p>
+        )}
 
         <button type="button" className="begin-cta" onClick={onBegin}>
           begin the practice <span aria-hidden>→</span>
@@ -275,6 +297,28 @@ export function ProvenanceView({ item, currentUserId, onBegin }: ProvenanceViewP
           border-left: 2px solid #c89b3b;
           font-size: 16px;
           line-height: 1.55;
+        }
+        .chat-shaped {
+          margin: -8px 0 22px 0;
+          padding: 10px 14px;
+          background: #f2ebdc;
+          border-radius: 3px;
+          font-size: 14px;
+          line-height: 1.5;
+          color: #2d2418;
+        }
+        .chat-shaped--quiet {
+          font-style: italic;
+          color: #6b5d45;
+        }
+        .chat-kicker {
+          display: block;
+          font-family: -apple-system, 'Helvetica Neue', sans-serif;
+          font-size: 10px;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: #8a7452;
+          margin-bottom: 4px;
         }
         .begin-cta {
           all: unset;

@@ -145,6 +145,21 @@ export interface JournalEntry {
   hasChatThread?: boolean;
   chatUpdatedAt?: Timestamp;
 
+  // Chat-distilled insights — written by distillChatToInsights (a
+  // separate trigger on chat subcollection writes) every 2 user turns.
+  // Kept distinct from `enrichment` so reEnrichJournalEntry on text
+  // edits does not wipe signal that came from the chat. Merged with
+  // enrichment at activity-generation time so practices reflect what
+  // the chat surfaced, not just the original body text.
+  chatInsights?: {
+    aiDimensions: string[];   // dimensionIds surfaced by the chat
+    themes: string[];         // free-text themes (2-5 words each)
+    emergent: string;         // one-sentence "what's emerging"
+    turnCount: number;        // user turns at time of distillation
+    distilledAt: Timestamp;
+    model: string;
+  };
+
   // Timestamps
   createdAt: Timestamp;
   updatedAt?: Timestamp;

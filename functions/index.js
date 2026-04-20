@@ -9875,6 +9875,191 @@ Return only the JSON object, no other text.`;
 );
 
 // ================================================================
+// distillChatToInsights — onDocumentCreated trigger
+//
+// Fires whenever a new chat turn is written to
+// journal_entries/{entryId}/chat/{turnId}. When the user has sent at
+// least 2 messages and the current user-turn count is a multiple of
+// 2, we read the full chat transcript + source entry and ask a small
+// model to distill structured insights into entry.chatInsights.
+//
+// The output is kept in a separate field from `enrichment` so
+// reEnrichJournalEntry (which runs on text edits) does not clobber
+// signal that emerged through the chat. `spawnActivityFromRecentJournal`
+// merges both fields when picking the most dimension-rich entry and
+// when prompting Claude for a targeted practice.
+// ================================================================
+exports.distillChatToInsights = onDocumentCreated(
+    {
+      document: "journal_entries/{entryId}/chat/{turnId}",
+      region: "us-central1",
+      memory: "256MiB",
+      timeoutSeconds: 60,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (event) => {
+      const logger = require("firebase-functions/logger");
+      const snap = event.data;
+      if (!snap) return;
+      const turn = snap.data();
+      if (!turn || turn.role !== "user" || turn.excluded) return;
+
+      const {entryId} = event.params;
+      const db = admin.firestore();
+
+      // Read the full chat in order; count user turns. We debounce
+      // to avoid distilling on every single turn — once every 2
+      // user turns is enough to stay fresh without doubling cost.
+      const chatSnap = await db
+          .collection("journal_entries")
+          .doc(entryId)
+          .collection("chat")
+          .orderBy("createdAt", "asc")
+          .get();
+
+      const allTurns = chatSnap.docs.map((d) => d.data());
+      const activeTurns = allTurns.filter((t) => !t.excluded);
+      const userTurns = activeTurns.filter((t) => t.role === "user");
+      if (userTurns.length < 2) return;
+      if (userTurns.length % 2 !== 0) return;
+
+      const entryDoc = await db
+          .collection("journal_entries")
+          .doc(entryId)
+          .get();
+      if (!entryDoc.exists) return;
+      const entry = entryDoc.data();
+      if (!entry) return;
+
+      // Skip if we already distilled at this exact turn count (the
+      // trigger can double-fire on retries).
+      const alreadyAt = entry.chatInsights?.turnCount;
+      if (alreadyAt === userTurns.length) return;
+
+      const transcript = activeTurns
+          .map((t) => `${t.role.toUpperCase()}: ${(t.content || "").trim()}`)
+          .join("\n\n");
+
+      const dimensionList = ENRICHMENT_DIMENSIONS
+          .map((d) => `- ${d.id}: ${d.name} (${d.domain})`)
+          .join("\n");
+
+      const alreadyDims = (entry.enrichment?.aiDimensions || [])
+          .join(", ") || "none";
+      const alreadyThemes = (entry.enrichment?.themes || [])
+          .join(", ") || "none";
+
+      const prompt = `You are distilling a chat between a parent and an AI coach about a journal entry. Output strict JSON with the dimensions and themes that the CHAT surfaced — focus on what came up in conversation that wasn't already tagged on the original entry.
+
+ORIGINAL ENTRY:
+"""
+${(entry.text || "").slice(0, 1200)}
+"""
+
+DIMENSIONS ALREADY TAGGED ON THE ENTRY: ${alreadyDims}
+THEMES ALREADY TAGGED ON THE ENTRY: ${alreadyThemes}
+
+CHAT TRANSCRIPT:
+"""
+${transcript.slice(0, 6000)}
+"""
+
+DIMENSION IDS (pick only from this list):
+${dimensionList}
+
+Return ONLY JSON:
+{
+  "aiDimensions": ["dimension_id", ...],   // up to 5, prefer NEW ones not already tagged
+  "themes": ["2-5 word theme", ...],        // up to 5 free-text tags, prefer NEW ones
+  "emergent": "One sentence naming what the chat made clearer than the entry alone did. Specific, not generic."
+}
+
+Rules:
+- aiDimensions must be from the dimension list above — no invention.
+- emergent must be ≤ 180 characters, first-person allowed.
+- If the chat didn't surface anything new, return empty arrays and a short emergent noting that the entry already captured it.
+- Do not restate the entry — name what the chat added.`;
+
+      let response;
+      try {
+        response = await getAnthropic().messages.create({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 400,
+          messages: [{role: "user", content: prompt}],
+        });
+      } catch (err) {
+        logger.error(
+            "distillChatToInsights: Claude call failed:",
+            err.message,
+        );
+        return;
+      }
+
+      const text = response.content?.[0]?.text || "";
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        logger.warn(
+            `distillChatToInsights: no JSON in response for ${entryId}`,
+        );
+        return;
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonMatch[0]);
+      } catch (err) {
+        logger.warn(
+            `distillChatToInsights: JSON parse failed for ${entryId}: ` +
+            err.message,
+        );
+        return;
+      }
+
+      // Validate + clamp.
+      const validDimensionIds = new Set(ENRICHMENT_DIMENSIONS.map((d) => d.id));
+      const aiDimensions = Array.isArray(parsed.aiDimensions) ?
+        parsed.aiDimensions
+            .filter((id) => typeof id === "string" && validDimensionIds.has(id))
+            .slice(0, 5) :
+        [];
+      const themes = Array.isArray(parsed.themes) ?
+        parsed.themes
+            .filter((t) => typeof t === "string" && t.trim().length > 0)
+            .map((t) => t.trim().slice(0, 60))
+            .slice(0, 5) :
+        [];
+      const emergent = typeof parsed.emergent === "string" ?
+        parsed.emergent.trim().slice(0, 280) :
+        "";
+
+      await entryDoc.ref.update({
+        chatInsights: {
+          aiDimensions,
+          themes,
+          emergent,
+          turnCount: userTurns.length,
+          distilledAt: admin.firestore.Timestamp.now(),
+          model: "claude-haiku-4-5-20251001",
+        },
+      });
+
+      logger.info(
+          `distillChatToInsights: ${entryId} at ${userTurns.length} ` +
+          `user turns — +${aiDimensions.length} dims, ` +
+          `+${themes.length} themes`,
+      );
+
+      await logAIUsage(db, {
+        familyId: entry.familyId,
+        userId: entry.authorId,
+        functionName: "distillChatToInsights",
+        model: "claude-haiku-4-5-20251001",
+        usage: response.usage,
+      });
+    },
+);
+
+// ================================================================
 // synthesizeMoment — cross-view synthesis for a moment
 //
 // A moment holds 1..N views (journal_entries with the same momentId).
@@ -10260,20 +10445,35 @@ async function spawnActivityFromRecentJournal(db) {
     if (d.familyId) families.add(d.familyId);
   });
 
+  // Weekly cap counts both journal_seed and journal_plus_chat so a
+  // chat-assisted spawn doesn't stealth-bypass the budget. Issue two
+  // parallel queries instead of `in` to avoid needing a new composite
+  // index.
   const familySeededCounts = {};
   for (const fid of families) {
-    const seededSnap = await db.collection("growth_items")
-        .where("familyId", "==", fid)
-        .where("generatedBy", "==", "journal_seed")
-        .where("createdAt", ">=",
-            admin.firestore.Timestamp.fromDate(sevenDaysAgo))
-        .get();
-    familySeededCounts[fid] = seededSnap.size;
+    const [seedSnap, chatSnap] = await Promise.all([
+      db.collection("growth_items")
+          .where("familyId", "==", fid)
+          .where("generatedBy", "==", "journal_seed")
+          .where("createdAt", ">=",
+              admin.firestore.Timestamp.fromDate(sevenDaysAgo))
+          .get(),
+      db.collection("growth_items")
+          .where("familyId", "==", fid)
+          .where("generatedBy", "==", "journal_plus_chat")
+          .where("createdAt", ">=",
+              admin.firestore.Timestamp.fromDate(sevenDaysAgo))
+          .get(),
+    ]);
+    familySeededCounts[fid] = seedSnap.size + chatSnap.size;
   }
 
   // Find the best candidate: has enrichment with 2+ dimensions
   // (single-dimension entries are too thin), hasn't already spawned,
-  // and the family hasn't hit the weekly cap.
+  // and the family hasn't hit the weekly cap. Merge enrichment +
+  // chatInsights when scoring so entries the user actually chatted
+  // about rise to the top — a chat is strong signal that the topic
+  // warrants a practice.
   let bestEntry = null;
   let bestScore = 0;
 
@@ -10281,10 +10481,22 @@ async function spawnActivityFromRecentJournal(db) {
     const data = docSnap.data();
     if (data.activitySpawnedAt) continue; // Already spawned
     if ((familySeededCounts[data.familyId] || 0) >= WEEKLY_CAP) continue;
-    const dims = data.enrichment?.aiDimensions || [];
-    const themes = data.enrichment?.themes || [];
-    if (dims.length < 2) continue; // Need 2+ dimensions for a grounded practice
-    const score = dims.length * 2 + themes.length;
+    const entryDims = data.enrichment?.aiDimensions || [];
+    const entryThemes = data.enrichment?.themes || [];
+    const chatDims = data.chatInsights?.aiDimensions || [];
+    const chatThemes = data.chatInsights?.themes || [];
+    const mergedDims = Array.from(new Set([...entryDims, ...chatDims]));
+    const mergedThemes = Array.from(new Set([...entryThemes, ...chatThemes]));
+    if (mergedDims.length < 2) continue;
+    // Base score: dimension/theme density. Chat bonus: +3 for any
+    // chat insights, +1 per NEW dimension the chat surfaced that the
+    // entry alone did not. Tips ties toward engaged entries.
+    let score = mergedDims.length * 2 + mergedThemes.length;
+    if (data.chatInsights) {
+      score += 3;
+      const newFromChat = chatDims.filter((id) => !entryDims.includes(id));
+      score += newFromChat.length;
+    }
     if (score > bestScore) {
       bestScore = score;
       bestEntry = {id: docSnap.id, ref: docSnap.ref, data};
@@ -10331,9 +10543,14 @@ async function spawnActivityFromRecentJournal(db) {
     if (item.dimensionId) recentDimensions.add(item.dimensionId);
   });
 
-  // Filter to dimensions not recently addressed
-  const freshDimensions = (entry.enrichment?.aiDimensions || [])
-      .filter((d) => !recentDimensions.has(d));
+  // Merge enrichment + chatInsights dimensions, then drop any already
+  // addressed in recent growth_items. The chat often surfaces things
+  // the original entry text didn't name, so this is where chat
+  // signal actually enters the practice generator.
+  const entryDims = entry.enrichment?.aiDimensions || [];
+  const chatDims = entry.chatInsights?.aiDimensions || [];
+  const mergedDims = Array.from(new Set([...entryDims, ...chatDims]));
+  const freshDimensions = mergedDims.filter((d) => !recentDimensions.has(d));
 
   if (freshDimensions.length === 0) {
     logger.info(
@@ -10348,20 +10565,62 @@ async function spawnActivityFromRecentJournal(db) {
   const dims = freshDimensions
       .map((id) => {
         const dim = ENRICHMENT_DIMENSIONS.find((d) => d.id === id);
-        return dim ? `${dim.name} (${dim.id})` : id;
+        const label = dim ? `${dim.name} (${dim.id})` : id;
+        const fromChat = chatDims.includes(id) && !entryDims.includes(id);
+        return fromChat ? `${label} [via chat]` : label;
       })
       .join(", ");
-  const themes = (entry.enrichment?.themes || []).join(", ");
+  const mergedThemes = Array.from(new Set([
+    ...(entry.enrichment?.themes || []),
+    ...(entry.chatInsights?.themes || []),
+  ]));
+  const themes = mergedThemes.join(", ");
   const mentionedPeople = (entry.enrichment?.aiPeople || [])
       .map((id) => people[id]?.name)
       .filter(Boolean);
+
+  // Pull up to 3 salient user chat lines (truncated) so the activity
+  // can reference what the user actually explored, not just the
+  // entry text. Skip if there's no chat thread.
+  let chatContext = "";
+  const emergent = (entry.chatInsights?.emergent || "").trim();
+  if (entry.hasChatThread) {
+    try {
+      const chatSnap = await db
+          .collection("journal_entries")
+          .doc(bestEntry.id)
+          .collection("chat")
+          .orderBy("createdAt", "asc")
+          .get();
+      const userLines = chatSnap.docs
+          .map((d) => d.data())
+          .filter((t) => t.role === "user" && !t.excluded)
+          .map((t) => (t.content || "").trim())
+          .filter((t) => t.length > 0)
+          .slice(-3)
+          .map((t) => t.length > 220 ? `${t.slice(0, 220)}…` : t);
+      if (userLines.length > 0) {
+        chatContext = `\n\nWHAT THE USER EXPLORED IN THE CHAT (most recent):\n${
+          userLines.map((l) => `- "${l}"`).join("\n")
+        }`;
+      }
+      if (emergent) {
+        chatContext += `\n\nTHROUGH THE CHAT, THIS ALSO EMERGED:\n"${emergent}"`;
+      }
+    } catch (err) {
+      logger.warn(
+          "spawnActivityFromRecentJournal: chat pull failed:",
+          err.message,
+      );
+    }
+  }
 
   const prompt = `You are generating ONE targeted growth activity for a family app called Relish. A user just wrote a journal entry that touches specific relationship dimensions. Generate a practice that directly addresses what came up.
 
 JOURNAL ENTRY CONTEXT:
 """
 ${entryText}
-"""
+"""${chatContext}
 
 DIMENSIONS TOUCHED: ${dims}
 THEMES: ${themes || "none specified"}
@@ -10440,6 +10699,10 @@ Rules:
   const expiresAt = new Date(scheduleDate);
   expiresAt.setDate(expiresAt.getDate() + 3);
 
+  const chatContributed = !!entry.chatInsights &&
+    (entry.chatInsights.aiDimensions?.length > 0 ||
+     (entry.chatInsights.emergent || "").length > 0);
+
   const ref = db.collection("growth_items").doc();
   const growthItem = {
     growthItemId: ref.id,
@@ -10461,7 +10724,7 @@ Rules:
     depthTier: "moderate",
     dimensionId: item.dimensionId || freshDimensions[0] || null,
     createdAt: admin.firestore.Timestamp.now(),
-    generatedBy: "journal_seed",
+    generatedBy: chatContributed ? "journal_plus_chat" : "journal_seed",
     spawnedFromEntryIds: [bestEntry.id],
   };
 
