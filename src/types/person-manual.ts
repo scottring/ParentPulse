@@ -40,6 +40,7 @@ export interface Person {
   name: string;
   dateOfBirth?: Timestamp;
   avatarUrl?: string;
+  bannerUrl?: string;
   pronouns?: string;
   age?: number;
 
