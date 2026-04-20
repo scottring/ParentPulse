@@ -67,7 +67,7 @@ export default function PersonPage({
             <Link href="/manual">← back to the Family Manual</Link>
           </p>
         </div>
-        <style jsx>{styles}</style>
+        <style jsx global>{styles}</style>
       </main>
     );
   }
@@ -341,7 +341,7 @@ export default function PersonPage({
         </footer>
       </div>
 
-      <style jsx>{styles}</style>
+      <style jsx global>{styles}</style>
     </main>
   );
 }
@@ -460,8 +460,11 @@ function formatDays(days: number): string {
   if (days === 0) return 'today';
   if (days === 1) return 'yesterday';
   if (days < 7) return `${days} days ago`;
+  if (days < 14) return 'a week ago';
   if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
-  return `${Math.floor(days / 30)} months ago`;
+  if (days < 60) return 'a month ago';
+  if (days < 365) return `${Math.floor(days / 30)} months ago`;
+  return 'over a year ago';
 }
 
 function formatDaysShort(days: number): string {

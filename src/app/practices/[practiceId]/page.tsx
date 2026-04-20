@@ -45,7 +45,7 @@ export default function PracticeDetailPage() {
     return (
       <main className="pr-app">
         <p className="pr-empty">Opening the practice…</p>
-        <style jsx>{pageStyles}</style>
+        <style jsx global>{pageStyles}</style>
       </main>
     );
   }
@@ -62,7 +62,7 @@ export default function PracticeDetailPage() {
         <p className="pr-back">
           <Link href="/workbook">← back to the Workbook</Link>
         </p>
-        <style jsx>{pageStyles}</style>
+        <style jsx global>{pageStyles}</style>
       </main>
     );
   }
@@ -313,7 +313,7 @@ export default function PracticeDetailPage() {
         </footer>
       </div>
 
-      <style jsx>{pageStyles}</style>
+      <style jsx global>{pageStyles}</style>
     </main>
   );
 }

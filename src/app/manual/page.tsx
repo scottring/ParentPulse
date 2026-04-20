@@ -100,7 +100,7 @@ export default function ManualPage() {
             <div className="masthead-cell align-r">
               <span className="masthead-eyebrow">Quiet longest</span>
               <span className="masthead-value">
-                {hero ? hero.person.name : '—'}
+                {hero ? hero.person.name.split(' ')[0] : '—'}
                 {hero && (
                   <span className="sub"> · {formatDays(hero.daysSinceLast)}</span>
                 )}
@@ -132,11 +132,14 @@ export default function ManualPage() {
               <h1 className="hero-h1">{quietHeadline(hero.daysSinceLast)}</h1>
               <p className="hero-lede">
                 <em>
-                  You haven&rsquo;t written about {hero.person.name.split(' ')[0]}{' '}
-                  {formatDays(hero.daysSinceLast)}.
+                  {hero.daysSinceLast >= 9999
+                    ? `${hero.person.name.split(' ')[0]}'s page is still blank.`
+                    : `You haven't written about ${hero.person.name.split(' ')[0]} ${formatDaysInsideSentence(hero.daysSinceLast)}.`}
                 </em>{' '}
                 {hero.openThreadsCount > 0
                   ? `${spellCount(hero.openThreadsCount)} open ${hero.openThreadsCount === 1 ? 'thread is' : 'threads are'} about them.`
+                  : hero.daysSinceLast >= 9999
+                  ? 'A first line would start the page.'
                   : 'Nothing open, just a quiet patch.'}
               </p>
 
@@ -262,7 +265,7 @@ export default function ManualPage() {
         </footer>
       </div>
 
-      <style jsx>{styles}</style>
+      <style jsx global>{styles}</style>
     </main>
   );
 }
@@ -571,13 +574,34 @@ function shortRelation(t?: RelationshipType): string {
   }
 }
 
+// "Ella, 18 days ago" — the terse elapsed phrase you'd drop into
+// a masthead cell or a stat. Uses natural plurals; avoids
+// "1 weeks ago".
 function formatDays(days: number): string {
   if (days >= 9999) return 'never';
   if (days === 0) return 'today';
-  if (days === 1) return 'since yesterday';
+  if (days === 1) return 'yesterday';
   if (days < 7) return `${days} days ago`;
+  if (days < 14) return 'a week ago';
   if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
-  return `${Math.floor(days / 30)} months ago`;
+  if (days < 60) return 'a month ago';
+  if (days < 365) return `${Math.floor(days / 30)} months ago`;
+  return 'over a year ago';
+}
+
+// "You haven't written about Ella in a week." — the prepositional
+// form used inside the lede sentence. "In" reads better than "for"
+// here and avoids the "since yesterday" awkwardness.
+function formatDaysInsideSentence(days: number): string {
+  if (days >= 9999) return 'yet';
+  if (days === 0) return 'today';
+  if (days === 1) return 'since yesterday';
+  if (days < 7) return `in ${days} days`;
+  if (days < 14) return 'in over a week';
+  if (days < 30) return `in ${Math.floor(days / 7)} weeks`;
+  if (days < 60) return 'in over a month';
+  if (days < 365) return `in ${Math.floor(days / 30)} months`;
+  return 'in over a year';
 }
 
 function formatDaysShort(days: number): string {
@@ -600,9 +624,14 @@ function quietHeadline(days: number): string {
   if (days >= 9999) return 'A new page to start.';
   if (days <= 3) return 'Recently here.';
   if (days < 7) return 'A few days quiet.';
-  if (days < 14) return `${days} days is a while.`;
-  if (days < 30) return `${Math.floor(days / 7)} weeks is a while.`;
-  return `${Math.floor(days / 30)} months is a while.`;
+  if (days < 11) return 'A week is a while.';
+  if (days < 14) return 'A week and a half is a while.';
+  if (days < 21) return 'Two weeks is a while.';
+  if (days < 28) return 'Three weeks is a while.';
+  if (days < 45) return 'A month is a while.';
+  if (days < 80) return 'Over a month now.';
+  if (days < 365) return `${Math.floor(days / 30)} months is a while.`;
+  return 'A year is a long quiet.';
 }
 
 function spellCount(n: number): string {
