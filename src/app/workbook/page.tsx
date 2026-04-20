@@ -11,6 +11,10 @@ import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { stockImagery } from '@/config/stock-imagery';
+import { useMemoryOfTheDay } from '@/hooks/useMemoryOfTheDay';
+import { useLeastWrittenPerson } from '@/hooks/useLeastWrittenPerson';
+import type { JournalEntry } from '@/types/journal';
+import type { LeastWrittenPerson } from '@/hooks/useLeastWrittenPerson';
 
 // Dispatch the same custom event the CaptureSheet listens for.
 // "Open the book" / "Answer in the book" / "Pick up the Pen" all
@@ -317,55 +321,255 @@ function QuietBlock() {
 }
 
 function FeatureMemory() {
+  const { entry, loading } = useMemoryOfTheDay();
+  return <FeatureMemoryView entry={entry} loading={loading} />;
+}
+
+function FeatureMemoryView({
+  entry,
+  loading,
+}: {
+  entry: JournalEntry | null;
+  loading: boolean;
+}) {
+  const date = entry?.createdAt?.toDate?.();
+  const dateLabel = date
+    ? date.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : '';
+  const weekday = date
+    ? date.toLocaleDateString('en-GB', { weekday: 'long' })
+    : '';
+  const excerpt = entry ? memoryExcerpt(entry.text) : '';
+
+  if (loading) {
+    return (
+      <article className="feature memory">
+        <div className="feature-photo" aria-hidden="true" />
+        <span className="feature-eyebrow">
+          <span className="pip" />
+          From the archive · a year ago
+        </span>
+        <span className="memory-date">Turning back the pages…</span>
+      </article>
+    );
+  }
+
+  if (!entry) {
+    return (
+      <article className="feature memory">
+        <div className="feature-photo" aria-hidden="true" />
+        <span className="feature-eyebrow">
+          <span className="pip" />
+          From the archive · a year ago
+        </span>
+        <span className="memory-date">
+          Not quite a year of book yet.
+        </span>
+        <p className="memory-quote">
+          &ldquo;A year from now, a line you wrote this week will land here.&rdquo;
+        </p>
+        <div className="memory-foot">
+          <span>The archive is still filling</span>
+          <span>—</span>
+        </div>
+      </article>
+    );
+  }
+
   return (
-    <article className="feature memory">
-      <div className="feature-photo" aria-hidden="true">
-        <span className="photo-fleuron">❦</span>
-      </div>
+    <Link
+      href={`/journal/${entry.entryId}`}
+      className="feature memory"
+      style={{ textDecoration: 'none', color: 'inherit' }}
+    >
+      <div className="feature-photo" aria-hidden="true" />
       <span className="feature-eyebrow">
         <span className="pip" />
         From the archive · a year ago
       </span>
       <span className="memory-date">
-        A memory will surface here from the archive.
+        {dateLabel}
+        {weekday && ` — a ${weekday}`}
       </span>
-      <p className="memory-quote">
-        &ldquo;A quiet line will appear here when there&rsquo;s a year-ago
-        entry worth re-reading.&rdquo;
-      </p>
+      <p className="memory-quote">&ldquo;{excerpt}&rdquo;</p>
       <div className="memory-foot">
-        <span>Archive pipeline not yet wired</span>
-        <span>Open →</span>
+        <span>Open the entry</span>
+        <span>→</span>
       </div>
-    </article>
+    </Link>
   );
 }
 
+function memoryExcerpt(text: string): string {
+  const t = (text ?? '').trim().replace(/\s+/g, ' ');
+  if (t.length <= 220) return t;
+  return t.slice(0, 219).trimEnd() + '…';
+}
+
 function FeaturePerson() {
+  const { candidate, loading } = useLeastWrittenPerson();
+  return <FeaturePersonView candidate={candidate} loading={loading} />;
+}
+
+function FeaturePersonView({
+  candidate,
+  loading,
+}: {
+  candidate: LeastWrittenPerson | null;
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <article className="feature person">
+        <span className="feature-eyebrow">
+          <span className="pip" />
+          Someone you haven&rsquo;t written about in a while
+        </span>
+        <p className="person-note">Reading through the roster…</p>
+      </article>
+    );
+  }
+
+  if (!candidate) {
+    return (
+      <article className="feature person">
+        <span className="feature-eyebrow">
+          <span className="pip" />
+          Someone to keep
+        </span>
+        <p className="person-note">
+          <em>Add people to the book</em> and one of them will surface here
+          when it&rsquo;s been a while.
+        </p>
+        <div className="person-foot">
+          <Link
+            href="/manual"
+            style={{
+              fontFamily: 'var(--r-sans)',
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.16em',
+              textTransform: 'uppercase',
+              color: 'var(--r-ember)',
+              borderBottom: '1px solid currentColor',
+              textDecoration: 'none',
+              paddingBottom: 2,
+            }}
+          >
+            Open the Family Manual →
+          </Link>
+        </div>
+      </article>
+    );
+  }
+
+  const firstName = candidate.person.name.split(' ')[0];
+  const initial = firstName.slice(0, 1).toUpperCase();
+  const hasHistory = candidate.entriesCount > 0;
+
   return (
-    <article className="feature person">
+    <Link
+      href={`/people/${candidate.person.personId}`}
+      className="feature person"
+      style={{ textDecoration: 'none', color: 'inherit' }}
+    >
       <span className="feature-eyebrow">
         <span className="pip" />
-        Someone you haven&rsquo;t written about in a while
+        {hasHistory
+          ? `Someone you haven't written about in a while`
+          : `Someone worth starting a page for`}
       </span>
       <div className="person-row">
-        <div className="person-portrait">·</div>
+        <div className="person-portrait">{initial}</div>
         <div>
-          <h3 className="person-name">A person surfaces here</h3>
-          <div className="person-rel">Last entry · —</div>
+          <h3 className="person-name">{firstName}</h3>
+          <div className="person-rel">
+            {relationShort(candidate.person.relationshipType)}
+            {hasHistory
+              ? ` · last entry ${formatDaysAgo(candidate.daysSinceLast)}`
+              : ' · no entries yet'}
+          </div>
         </div>
       </div>
-      <p className="person-note">
-        The person longest unwritten-about will appear here with the last line
-        you wrote about them.
-      </p>
+      {hasHistory && candidate.lastEntry ? (
+        <p className="person-note">
+          <em>{entryEcho(candidate.lastEntry.text)}</em>
+        </p>
+      ) : (
+        <p className="person-note">
+          A first line would open their page.
+        </p>
+      )}
       <div className="person-foot">
-        <div className="stat"><span className="num">—</span>entries</div>
-        <div className="stat"><span className="num">—</span>open</div>
-        <div className="stat"><span className="num">—</span>since</div>
+        <div className="stat">
+          <span className="num">{candidate.entriesCount}</span>entries
+        </div>
+        <div className="stat">
+          <span className="num">
+            {candidate.entriesCount > 0
+              ? formatDaysCompact(candidate.daysSinceLast)
+              : '—'}
+          </span>
+          since
+        </div>
       </div>
-    </article>
+    </Link>
   );
+}
+
+function entryEcho(text: string): string {
+  const t = (text ?? '').trim().replace(/\s+/g, ' ');
+  if (!t) return '';
+  // First sentence, or 120-char clip.
+  const dot = t.search(/[.!?]\s/);
+  if (dot !== -1 && dot < 120) return t.slice(0, dot + 1);
+  if (t.length <= 120) return t;
+  return t.slice(0, 119).trimEnd() + '…';
+}
+
+function relationShort(
+  t: import('@/types/person-manual').RelationshipType | undefined,
+): string {
+  switch (t) {
+    case 'spouse':
+      return 'Partner';
+    case 'child':
+      return 'Child';
+    case 'elderly_parent':
+      return 'Parent';
+    case 'sibling':
+      return 'Sibling';
+    case 'friend':
+      return 'Friend';
+    case 'professional':
+      return 'Professional';
+    default:
+      return 'Of the family';
+  }
+}
+
+function formatDaysAgo(days: number): string {
+  if (days >= 9999) return '—';
+  if (days === 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days} days ago`;
+  if (days < 14) return 'a week ago';
+  if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+  if (days < 60) return 'a month ago';
+  if (days < 365) return `${Math.floor(days / 30)} months ago`;
+  return 'over a year ago';
+}
+
+function formatDaysCompact(days: number): string {
+  if (days >= 9999) return '—';
+  if (days < 1) return 'today';
+  if (days < 7) return `${days}d`;
+  if (days < 30) return `${Math.floor(days / 7)}w`;
+  return `${Math.floor(days / 30)}mo`;
 }
 
 function FeaturePrompt() {
