@@ -135,4 +135,43 @@ describe('EditPersonSheet', () => {
     expect(onSave).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toHaveTextContent(/name is required/i);
   });
+
+  it('closes on Escape without calling onSave', async () => {
+    const onSave = vi.fn();
+    const onClose = vi.fn();
+    const user = (await import('@testing-library/user-event')).default.setup();
+
+    render(
+      <EditPersonSheet
+        person={makePerson()}
+        onClose={onClose}
+        onSave={onSave}
+      />
+    );
+
+    screen.getByLabelText(/name/i).focus();
+    await user.keyboard('{Escape}');
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes on scrim click', async () => {
+    const onClose = vi.fn();
+    const user = (await import('@testing-library/user-event')).default.setup();
+
+    const { container } = render(
+      <EditPersonSheet
+        person={makePerson()}
+        onClose={onClose}
+        onSave={vi.fn()}
+      />
+    );
+
+    const scrim = container.querySelector('.scrim') as HTMLElement;
+    expect(scrim).not.toBeNull();
+    await user.click(scrim);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });

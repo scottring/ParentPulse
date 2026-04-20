@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Timestamp, deleteField } from 'firebase/firestore';
 import type { Person } from '@/types/person-manual';
 
@@ -37,6 +37,17 @@ function fromDateInputValue(value: string): Timestamp | null {
 }
 
 export function EditPersonSheet({ person, onClose, onSave }: EditPersonSheetProps) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   const [name, setName] = useState(person.name ?? '');
   const [pronouns, setPronouns] = useState(person.pronouns ?? '');
   const [dob, setDob] = useState(toDateInputValue(person.dateOfBirth));
