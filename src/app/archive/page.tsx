@@ -14,12 +14,32 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useJournalEntries } from '@/hooks/useJournalEntries';
+import { useJournal } from '@/hooks/useJournal';
+import { usePrivacyGate } from '@/hooks/usePrivacyGate';
 import type { JournalEntry, JournalCategory } from '@/types/journal';
 
 export default function ArchivePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const { entries, loading: entriesLoading } = useJournalEntries();
+  const { updateEntry } = useJournal();
+  const { gate: gatePrivate, modal: pinModal } = usePrivacyGate();
+
+  const markPrivate = (entry: JournalEntry) => {
+    if (entry.authorId !== user?.userId) return; // only author can flip
+    if ((entry.sharedWithUserIds ?? []).length === 0) return; // already private
+    gatePrivate(async () => {
+      try {
+        await updateEntry(
+          entry.entryId,
+          { sharedWithUserIds: [] },
+          entry.authorId,
+        );
+      } catch (err) {
+        console.error('Archive: failed to mark entry private', err);
+      }
+    });
+  };
 
   useEffect(() => {
     if (!loading && !user) router.replace('/');
@@ -189,10 +209,14 @@ export default function ArchivePage() {
                   month={Number(monthKey)}
                   year={currentYear}
                   entries={monthEntries}
+                  currentUserId={user.userId}
+                  onMarkPrivate={markPrivate}
                 />
               ))
           )}
         </section>
+
+        {pinModal}
 
         {/* ═══ COLOPHON ═══ */}
         <footer className="colophon">
@@ -218,10 +242,14 @@ function MonthBlock({
   month,
   year,
   entries,
+  currentUserId,
+  onMarkPrivate,
 }: {
   month: number;
   year: number;
   entries: JournalEntry[];
+  currentUserId: string;
+  onMarkPrivate: (entry: JournalEntry) => void;
 }) {
   const monthName = new Date(year, month, 1).toLocaleDateString('en-GB', {
     month: 'long',
@@ -238,14 +266,27 @@ function MonthBlock({
       </div>
       <ol className="ar-entries">
         {entries.map((e) => (
-          <ArchiveEntryRow key={e.entryId} entry={e} />
+          <ArchiveEntryRow
+            key={e.entryId}
+            entry={e}
+            currentUserId={currentUserId}
+            onMarkPrivate={onMarkPrivate}
+          />
         ))}
       </ol>
     </div>
   );
 }
 
-function ArchiveEntryRow({ entry }: { entry: JournalEntry }) {
+function ArchiveEntryRow({
+  entry,
+  currentUserId,
+  onMarkPrivate,
+}: {
+  entry: JournalEntry;
+  currentUserId: string;
+  onMarkPrivate: (entry: JournalEntry) => void;
+}) {
   const d = entry.createdAt?.toDate?.();
   const day = d ? d.getDate() : '';
   const weekday = d
@@ -257,9 +298,11 @@ function ArchiveEntryRow({ entry }: { entry: JournalEntry }) {
   const isReflection =
     entry.category === 'reflection' &&
     (entry.reflectsOnEntryIds?.length ?? 0) > 0;
+  const isPrivate = (entry.sharedWithUserIds?.length ?? 0) === 0;
+  const isMine = entry.authorId === currentUserId;
 
   return (
-    <li>
+    <li className="ar-entry-li">
       <Link href={`/journal/${entry.entryId}`} className="ar-entry">
         <div className="ar-entry-date">
           <span className="num">{day}</span>
@@ -292,6 +335,22 @@ function ArchiveEntryRow({ entry }: { entry: JournalEntry }) {
           </div>
         </div>
       </Link>
+      {isMine && (
+        <button
+          type="button"
+          className={`ar-privacy-toggle ${isPrivate ? 'on' : ''}`}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!isPrivate) onMarkPrivate(entry);
+          }}
+          disabled={isPrivate}
+          aria-label={isPrivate ? 'Already private' : 'Make private (only you can see)'}
+          title={isPrivate ? 'Private — only you can see this' : 'Make private'}
+        >
+          {isPrivate ? '🔒' : '🔓'}
+        </button>
+      )}
     </li>
   );
 }
@@ -581,19 +640,50 @@ const styles = `
     padding: 0;
     margin: 0;
   }
+  .ar-entry-li {
+    position: relative;
+  }
+  .ar-entry-li:last-child .ar-entry { border-bottom: none; }
   .ar-entry {
     display: grid;
     grid-template-columns: 72px 1fr;
     gap: 18px;
-    padding: 22px 0;
+    padding: 22px 56px 22px 0;
     border-bottom: 1px solid var(--r-rule-5);
     text-decoration: none;
     color: inherit;
     transition: background 160ms var(--r-ease-ink);
   }
-  .ar-entry:last-child { border-bottom: none; }
   .ar-entry:hover { background: rgba(251, 248, 242, 0.6); }
   .ar-entry:hover .ar-entry-title { color: var(--r-ember); }
+  .ar-privacy-toggle {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: 1px solid var(--r-rule-4);
+    border-radius: 999px;
+    width: 36px;
+    height: 36px;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.35;
+    transition: opacity 140ms var(--r-ease-ink), background 140ms var(--r-ease-ink), border-color 140ms var(--r-ease-ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ar-entry-li:hover .ar-privacy-toggle { opacity: 1; }
+  .ar-privacy-toggle:hover { background: var(--r-paper); border-color: var(--r-rule-2); }
+  .ar-privacy-toggle.on {
+    opacity: 1;
+    background: var(--r-cream-warm);
+    border-color: var(--r-rule-2);
+    cursor: default;
+  }
+  .ar-privacy-toggle:disabled { cursor: default; }
 
   .ar-entry-date {
     display: flex;

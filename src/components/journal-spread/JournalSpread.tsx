@@ -222,7 +222,15 @@ export function JournalSpread({
 
   const handleEdit = (entry: Entry, mode: 'edit' | 'append') => {
     window.dispatchEvent(
-      new CustomEvent('relish:open-edit', { detail: { entry, mode } })
+      new CustomEvent('relish:open-edit', {
+        detail: {
+          entry,
+          mode,
+          sharedWithUserIds: entry.sharedWithUserIds,
+          authorPersonId:
+            entry.author.kind === 'person' ? entry.author.personId : undefined,
+        },
+      })
     );
   };
 

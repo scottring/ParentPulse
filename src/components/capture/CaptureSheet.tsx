@@ -37,6 +37,11 @@ export default function CaptureSheet() {
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState<'edit' | 'append' | null>(null);
   const [originalText, setOriginalText] = useState('');
+  // Snapshot of the entry's state at edit-open time, used so the
+  // visibility chips render the real current setting and so save() can
+  // detect whether visibility actually changed.
+  const [editingAuthorUserId, setEditingAuthorUserId] = useState<string | null>(null);
+  const [editingInitialShared, setEditingInitialShared] = useState<string[] | null>(null);
   // Media attachments — staged files before upload. Uploaded on save.
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -91,6 +96,17 @@ export default function CaptureSheet() {
 
   useEffect(() => {
     if (state !== 'composing') return;
+    // In edit mode, visibility is seeded from the entry itself (via
+    // the editHandler) — skip the "remembered default" logic so we
+    // don't clobber the entry's actual current setting.
+    if (editingEntryId) {
+      const shared = editingInitialShared ?? [];
+      if (shared.length === 0) setVisibilityPreset('just-me');
+      else if (spouse && shared.length === 1 && shared[0] === spouse.userId)
+        setVisibilityPreset('spouse');
+      else setVisibilityPreset('family');
+      return;
+    }
     let stored: string | null = null;
     try { stored = window.localStorage?.getItem('relish:capture:last-visibility'); } catch {}
     const preset =
@@ -99,7 +115,7 @@ export default function CaptureSheet() {
       'just-me';
     applyVisibilityPreset(preset);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, spouse]);
+  }, [state, spouse, editingEntryId, editingInitialShared]);
 
   useEffect(() => {
     if (state === 'composing') {
@@ -141,17 +157,36 @@ export default function CaptureSheet() {
     window.addEventListener('relish:open-capture-for', childHandler);
 
     // Edit/append: dispatch 'relish:open-edit' with
-    // detail: { entry: { id, content }, mode: 'edit' | 'append' }
+    // detail: { entry, mode, sharedWithUserIds?, authorPersonId? }.
+    // The last two are supplied by callers who know them (JournalSpread
+    // passes through from the Entry record) and enable visibility
+    // editing in-place; older callers can omit them.
     const editHandler = (e: Event) => {
       const detail = (e as CustomEvent<{
         entry: { id: string; content: string };
         mode: 'edit' | 'append';
+        sharedWithUserIds?: string[];
+        authorPersonId?: string;
       }>).detail;
       if (!detail?.entry?.id) return;
       setEditingEntryId(detail.entry.id);
       setEditMode(detail.mode);
       setOriginalText(detail.entry.content);
       setText(detail.mode === 'edit' ? detail.entry.content : '');
+      // If caller provided current visibility, seed the chips from it.
+      if (Array.isArray(detail.sharedWithUserIds)) {
+        setEditingInitialShared(detail.sharedWithUserIds);
+        setSharedWith(detail.sharedWithUserIds);
+      }
+      // Resolve authorPersonId → author userId via the loaded people
+      // list. If we can't find it, updateEntry with visibility changes
+      // will throw, which the error branch surfaces to the user.
+      if (detail.authorPersonId) {
+        const authorPerson = people.find((p) => p.personId === detail.authorPersonId);
+        if (authorPerson?.linkedUserId) {
+          setEditingAuthorUserId(authorPerson.linkedUserId);
+        }
+      }
       setState('composing');
     };
     window.addEventListener('relish:open-edit', editHandler);
@@ -185,6 +220,18 @@ export default function CaptureSheet() {
     setEditingEntryId(null);
     setEditMode(null);
     setOriginalText('');
+    setEditingAuthorUserId(null);
+    setEditingInitialShared(null);
+  };
+
+  // True when the in-progress edit would change the entry's sharing
+  // from whatever it was at open-time. Returns false for create mode.
+  const editVisibilityChanged = (): boolean => {
+    if (!editingEntryId || editingInitialShared === null) return false;
+    if (editingInitialShared.length !== sharedWith.length) return true;
+    const a = [...editingInitialShared].sort();
+    const b = [...sharedWith].sort();
+    return a.some((v, i) => v !== b[i]);
   };
 
   const handleClose = () => {
@@ -210,7 +257,15 @@ export default function CaptureSheet() {
           editMode === 'append'
             ? `${originalText.trim()}\n\n— added ${new Date().toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} —\n${text.trim()}`
             : text.trim();
-        await updateEntry(editingEntryId, { text: nextText });
+        const visibilityChanged =
+          editVisibilityChanged() && !!editingAuthorUserId;
+        await updateEntry(
+          editingEntryId,
+          visibilityChanged
+            ? { text: nextText, sharedWithUserIds: sharedWith }
+            : { text: nextText },
+          visibilityChanged ? editingAuthorUserId ?? undefined : undefined,
+        );
         window.dispatchEvent(new Event('relish:entries-stale'));
         handleClose();
         return;
@@ -290,13 +345,17 @@ export default function CaptureSheet() {
   const handleSave = async () => {
     if (!text.trim() || saving) return;
 
-    // Guard: first-use PIN setup for private entries. Only applies
-    // to NEW entries (edit/append skip this — the entry already
-    // exists). We check visibility preset, not sharedWith, so that
-    // "no other accounts yet" doesn't unintentionally require a PIN.
+    // Guard: first-use PIN setup for private entries. Fires when the
+    // entry is *becoming* private — new entry saved as just-me, or an
+    // edit flipping visibility from shared → just-me. We skip for
+    // entries that were already private at edit-open time (editing
+    // text on an already-private entry shouldn't re-prompt).
+    const goingPrivate = visibilityPreset === 'just-me';
+    const wasAlreadyPrivate =
+      editingInitialShared !== null && editingInitialShared.length === 0;
     if (
-      !editingEntryId &&
-      visibilityPreset === 'just-me' &&
+      goingPrivate &&
+      !wasAlreadyPrivate &&
       !privacyLock.loading &&
       !privacyLock.pinIsSet
     ) {
@@ -313,7 +372,15 @@ export default function CaptureSheet() {
             ? `${originalText.trim()}\n\n— added ${new Date().toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} —\n${text.trim()}`
             : text.trim();
         try {
-          await updateEntry(editingEntryId, { text: nextText });
+          const visibilityChanged =
+            editVisibilityChanged() && !!editingAuthorUserId;
+          await updateEntry(
+            editingEntryId,
+            visibilityChanged
+              ? { text: nextText, sharedWithUserIds: sharedWith }
+              : { text: nextText },
+            visibilityChanged ? editingAuthorUserId ?? undefined : undefined,
+          );
           window.dispatchEvent(new Event('relish:entries-stale'));
           handleClose();
         } catch (err) {
