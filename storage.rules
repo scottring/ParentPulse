@@ -96,7 +96,7 @@ service firebase.storage {
     match /families/{familyId}/people/{personId}/{filename} {
       // Any family member can upload person avatars/banners
       allow create, update: if isSignedIn() && belongsToFamily(familyId) &&
-                               request.resource.size < 5 * 1024 * 1024 && // Max 5MB
+                               request.resource.size < 10 * 1024 * 1024 && // Max 10MB
                                request.resource.contentType.matches('image/.*');
 
       // Family members can read
