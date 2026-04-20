@@ -203,7 +203,7 @@ export default function WorkbookPage() {
                 <path d="M17 3l4 4L8 20l-5 1 1-5L17 3z" />
               </svg>
               <span>
-                {ledeCount > 0 ? 'Pick up where you left off' : 'Open the book'}
+                {ledeCount > 0 ? 'Pick up where you left off' : 'Write a line'}
               </span>
             </button>
           </div>
@@ -318,10 +318,10 @@ function QuietBlock() {
       <h3>The book is quiet.</h3>
       <p>
         Nothing&rsquo;s waiting on you this morning. When you want a line,
-        a prompt is below — or pick up the Pen.
+        a prompt is below — or just write.
       </p>
       <button type="button" onClick={openPen} style={quietCtaStyle}>
-        Pick up the Pen <span aria-hidden="true">→</span>
+        Write a line <span aria-hidden="true">→</span>
       </button>
     </div>
   );
@@ -592,7 +592,7 @@ function FeaturePrompt() {
       </blockquote>
       <p className="prompt-attr">— Monday prompt · one minute, in the book</p>
       <button type="button" onClick={openPen} style={promptCtaDarkStyle}>
-        <span>Answer in the book</span>
+        <span>Answer</span>
         <span aria-hidden="true">→</span>
       </button>
     </article>
@@ -1268,8 +1268,7 @@ function SongStripPlaceholder() {
           A line from what you&rsquo;ve been listening to.
         </div>
         <div className="song-attrib">
-          Wire a song with the Pen&rsquo;s + Song button; the newest one
-          runs here.
+          Paste a song link when you write; the newest one runs here.
         </div>
       </div>
       <span className="song-play" aria-disabled="true">Listen →</span>

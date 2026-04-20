@@ -124,8 +124,8 @@ export default function ArchivePage() {
                 </>
               ) : (
                 <>
-                  <em>Nothing in the archive yet.</em> Pick up the Pen and
-                  start a line — it lands here.
+                  <em>Nothing in the archive yet.</em> Write your first line —
+                  it lands here.
                 </>
               )}
             </p>

@@ -224,7 +224,7 @@ export default function PersonPage({
             {openThreads.length === 0 ? (
               <div className="threads-empty">
                 <p>
-                  No threads waiting. If something lands — pick up the Pen.
+                  Nothing waiting. If something lands, just write.
                 </p>
               </div>
             ) : (
@@ -326,7 +326,7 @@ export default function PersonPage({
               — A question for the next conversation.
             </p>
             <button type="button" onClick={openPen} className="cta">
-              <span>Answer in the book</span>
+              <span>Answer</span>
               <span aria-hidden="true">→</span>
             </button>
           </article>
