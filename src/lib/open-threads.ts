@@ -195,8 +195,13 @@ export function listOpenThreads(sources: Sources): OpenThread[] {
   // (no iteration)
 
   // Reason 5: mention_for_me — entries from the last 7 days written
-  // by someone else that the current user is a subject of (tagged,
-  // AI-extracted, or explicitly shared with).
+  // by someone else that are actually ABOUT the current user. "About"
+  // means explicitly tagged via personMentions or named in the text
+  // (caught by the enrichJournalEntry Cloud Function into
+  // enrichment.aiPeople). Share-with alone does NOT qualify — sharing
+  // is an access signal, not a subject signal, and treating bare
+  // shares as mentions floods the list with entries that merely
+  // include the user in their audience.
   if (sources.me) {
     const me = sources.me;
     const cutoffMs = now.getTime() - 7 * 24 * 60 * 60 * 1000;
@@ -211,8 +216,7 @@ export function listOpenThreads(sources: Sources): OpenThread[] {
       const aiExtracted = (e.enrichment?.aiPeople ?? []).some((pid) =>
         me.personIds.includes(pid),
       );
-      const sharedWithMe = (e.sharedWithUserIds ?? []).includes(me.userId);
-      if (!tagged && !aiExtracted && !sharedWithMe) continue;
+      if (!tagged && !aiExtracted) continue;
 
       open.push({
         id: e.entryId,
