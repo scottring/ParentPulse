@@ -20,6 +20,7 @@ import { ResponseBlock } from '@/components/journal-spread/ResponseBlock';
 import { MomentBanner } from '@/components/journal-spread/MomentBanner';
 import { useOpenThreads } from '@/hooks/useOpenThreads';
 import { ClosingActionCard } from '@/components/open-threads/ClosingActionCard';
+import { usePrivacyGate } from '@/hooks/usePrivacyGate';
 import { SeedlingGlyph } from '@/components/journal-spread/SeedlingGlyph';
 import { useReflectionsOfEntry } from '@/hooks/useReflectionsOfEntry';
 import { EntryMedia } from '@/components/journal-spread/EntryMedia';
@@ -128,6 +129,7 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
   const router = useRouter();
   const { updateEntry, deleteEntry } = useJournal();
   const { threads } = useOpenThreads();
+  const { gate: gatePrivate, modal: pinModal } = usePrivacyGate();
   // An entry surfaces its own closing affordance via its moment — a
   // plain stand-alone entry is not an open thread by itself.
   const momentThread = entry.momentId
@@ -264,11 +266,7 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
 
   // Share toggles save immediately — discrete actions, not keystrokes.
   // Optimistic update with rollback on failure.
-  const toggleShareWith = async (userId: string) => {
-    if (!isMine) return;
-    const next = sharedWith.includes(userId)
-      ? sharedWith.filter((id) => id !== userId)
-      : [...sharedWith, userId];
+  const writeShared = async (next: string[]) => {
     const prev = sharedWith;
     setSharedWith(next);
     setSaveStatus('saving');
@@ -283,6 +281,23 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
       setSharedWith(prev);
       setSaveStatus('error');
     }
+  };
+
+  // If the user is transitioning from shared → private (removing the
+  // last recipient), route through the PIN gate so first-time private
+  // sets a lock. Already-private or adding-a-recipient skips the gate.
+  const applySharedChange = (next: string[]) => {
+    if (!isMine) return;
+    const goingPrivate = next.length === 0 && sharedWith.length > 0;
+    if (goingPrivate) gatePrivate(() => writeShared(next));
+    else void writeShared(next);
+  };
+
+  const toggleShareWith = (userId: string) => {
+    const next = sharedWith.includes(userId)
+      ? sharedWith.filter((id) => id !== userId)
+      : [...sharedWith, userId];
+    applySharedChange(next);
   };
 
   // Auto-scroll chat to bottom on new messages
@@ -800,12 +815,7 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
                           type="button"
                           onClick={() => {
                             const next = allShared ? [] : allIds;
-                            setSharedWith(next);
-                            void updateEntry(
-                              entry.entryId,
-                              { sharedWithUserIds: next },
-                              entry.authorId,
-                            );
+                            applySharedChange(next);
                           }}
                           className={`privacy-pill${allShared ? ' selected' : ''}`}
                         >
@@ -1391,6 +1401,7 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
           }
         }
       `}</style>
+      {pinModal}
     </div>
   );
 }
