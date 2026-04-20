@@ -108,9 +108,9 @@ export default function HomePage() {
 
       <style jsx>{`
         /* Full-viewport editorial stage: the landing imagery covers the
-           entire page behind a cream wash so the typography reads as
-           paper floating over a botanical still-life, not a 200px
-           masthead strip with empty cream below it. */
+           entire page. The typographic content sits on a semi-opaque
+           paper panel (home-inner) so words read cleanly while the
+           botanical still-life breathes around the edges. */
         .home-stage {
           position: relative;
           min-height: 100vh;
@@ -118,18 +118,16 @@ export default function HomePage() {
           font-family: var(--r-serif, Georgia, serif);
           display: flex;
           flex-direction: column;
-          /* Layer: top-to-bottom cream wash + image. The wash is
-             lighter at the top so the eucalyptus reads through, denser
-             toward the bottom so lower content still has paper-like
-             contrast. */
+          /* Very light cream tint on the image — just enough to knock
+             contrast down so the imagery feels like background, not
+             foreground. The real readability comes from the panel
+             behind the text. */
           background-color: var(--r-cream, #F5F0E8);
           background-image:
             linear-gradient(
               180deg,
-              rgba(245,240,232,0.55) 0%,
-              rgba(245,240,232,0.78) 45%,
-              rgba(245,240,232,0.92) 85%,
-              rgba(245,240,232,1) 100%
+              rgba(245,240,232,0.20) 0%,
+              rgba(245,240,232,0.35) 100%
             ),
             url('${stockImagery.landingBanner}');
           background-size: cover;
@@ -141,12 +139,22 @@ export default function HomePage() {
           position: relative;
           z-index: 1;
           width: 100%;
-          max-width: 1040px;
-          margin: 0 auto;
-          padding: 120px 40px 48px;
+          max-width: 760px;
+          margin: 48px auto;
+          padding: 72px 56px 56px;
           display: flex;
           flex-direction: column;
-          flex: 1;
+          /* Semi-opaque paper panel — tall enough to sit over the
+             eucalyptus, translucent enough to let a hint of the
+             botanical read at the edges, but opaque enough that the
+             typography is clean. A soft box-shadow grounds it. */
+          background: rgba(250, 246, 238, 0.88);
+          backdrop-filter: blur(2px);
+          border-radius: 2px;
+          box-shadow:
+            0 1px 0 rgba(255,255,255,0.6) inset,
+            0 24px 60px -20px rgba(40, 32, 20, 0.18),
+            0 2px 10px -2px rgba(40, 32, 20, 0.08);
         }
         .home-header {
           text-align: center;
@@ -296,7 +304,9 @@ export default function HomePage() {
             background-attachment: scroll;
           }
           .home-inner {
-            padding: 72px 24px 32px;
+            margin: 20px auto;
+            padding: 48px 24px 32px;
+            border-radius: 0;
           }
           .rooms-grid {
             grid-template-columns: 1fr;
