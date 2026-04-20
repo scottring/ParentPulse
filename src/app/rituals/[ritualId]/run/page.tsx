@@ -16,6 +16,7 @@ import {
 import { firestore } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { useRitual, closeRitualRun } from '@/hooks/useRitual';
+import { useWeeklyBrief } from '@/hooks/useWeeklyBrief';
 import type { JournalEntry } from '@/types/journal';
 import type { Moment } from '@/types/moment';
 
@@ -38,6 +39,7 @@ export default function RitualRunPage() {
   const [step, setStep] = useState<Step>('read');
   const [sinceEntries, setSinceEntries] = useState<JournalEntry[] | null>(null);
   const [divergentMoments, setDivergentMoments] = useState<Moment[] | null>(null);
+  const { brief } = useWeeklyBrief();
   const [responseText, setResponseText] = useState('');
   const [closingText, setClosingText] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -264,6 +266,39 @@ export default function RitualRunPage() {
                 <em>intention:</em> {ritual.intention}
               </p>
             )}
+            {brief && brief.topics.length > 0 && (
+              <div className="brief-block">
+                <p className="brief-label">
+                  This week&rsquo;s brief — topics worth bringing here:
+                </p>
+                <ul className="brief-list">
+                  {brief.topics.map((t, i) => (
+                    <li key={i} className="brief-item">
+                      <p className="brief-title">{t.title}</p>
+                      {t.framing && (
+                        <p className="brief-framing">{t.framing}</p>
+                      )}
+                      <button
+                        type="button"
+                        className="divergent-bring"
+                        onClick={() => {
+                          const add =
+                            `${t.title} — ${t.framing || ''}`.trim();
+                          setResponseText((prev) => {
+                            const existing = prev.trim();
+                            if (!existing) return `${add}\n\n`;
+                            if (existing.includes(t.title)) return prev;
+                            return `${existing}\n\n${add}\n\n`;
+                          });
+                        }}
+                      >
+                        bring this in →
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {divergentMoments && divergentMoments.length > 0 && (
               <div className="divergent-block">
                 <p className="divergent-label">
@@ -444,6 +479,58 @@ const pageStyles = `
     padding: 8px 12px;
     font-size: 14px;
     color: #6b5d45;
+  }
+  .brief-block {
+    margin: 16px 0 14px 0;
+    padding: 14px 16px 12px;
+    background: #2d2418;
+    border-radius: 3px;
+    color: #f2ebdc;
+  }
+  .brief-label {
+    margin: 0 0 10px 0;
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #c89b3b;
+  }
+  .brief-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .brief-item {
+    padding: 10px 12px;
+    background: rgba(242, 235, 220, 0.06);
+    border: 1px solid rgba(242, 235, 220, 0.18);
+    border-radius: 3px;
+  }
+  .brief-title {
+    margin: 0 0 4px 0;
+    font-family: Georgia, serif;
+    font-size: 15px;
+    font-weight: 500;
+    color: #f2ebdc;
+  }
+  .brief-framing {
+    margin: 0 0 8px 0;
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #d0c4a8;
+  }
+  .brief-item .divergent-bring {
+    color: #f2ebdc;
+    border-color: #c89b3b;
+  }
+  .brief-item .divergent-bring:hover {
+    background: #c89b3b;
+    color: #2d2418;
   }
   .divergent-block {
     margin: 16px 0 18px 0;

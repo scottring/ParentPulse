@@ -7,7 +7,7 @@
    Pen) is provided by the root layout (GlobalNav).
    ================================================================ */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { stockImagery } from '@/config/stock-imagery';
@@ -739,29 +739,123 @@ function DispatchBrief() {
 }
 
 function DispatchBriefView({ brief }: { brief: WeeklyBrief }) {
-  // The brief card shows the first topic prominently on the Workbook
-  // and hints at the rest ("+ 2 more topics"). Clicking opens the
-  // source entry (we don't yet have a dedicated brief detail page).
-  const primary = brief.topics[0];
-  const rest = brief.topics.length - 1;
+  // Shows the first topic prominently; expands to show the rest when
+  // the "+N more" footer is clicked. Each topic's quote deep-links
+  // to the source entry so the card is a real entry point back into
+  // the material it was built from, not a one-way summary.
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? brief.topics : brief.topics.slice(0, 1);
+  const hiddenCount = brief.topics.length - 1;
   return (
     <article className="dispatch brief">
       <span className="eyebrow">
         <span className="pip" />
         Brief for your next conversation
       </span>
-      <h3>{primary.title}</h3>
-      {primary.framing && (
-        <p style={{ fontStyle: 'italic', color: 'var(--r-text-3)', margin: '0 0 10px 0', fontSize: 14 }}>
-          {primary.framing}
+      {visible.map((topic, idx) => (
+        <BriefTopicBlock
+          key={idx}
+          topic={topic}
+          divider={idx > 0}
+        />
+      ))}
+      <div className="foot">
+        <span>
+          {visible[0]?.who.length ? visible[0].who.join(', ') : '—'}
+          {typeof visible[0]?.daysOpen === 'number' && visible[0].daysOpen > 0
+            ? ` · ${visible[0].daysOpen}d open`
+            : ''}
+        </span>
+        {hiddenCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="arrow"
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              color: 'inherit',
+              font: 'inherit',
+            }}
+          >
+            {expanded ? 'show less ←' : `+${hiddenCount} more →`}
+          </button>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function BriefTopicBlock({
+  topic,
+  divider,
+}: {
+  topic: WeeklyBrief['topics'][number];
+  divider: boolean;
+}) {
+  return (
+    <div
+      style={{
+        borderTop: divider ? '1px dashed var(--r-rule-5)' : 'none',
+        paddingTop: divider ? 14 : 0,
+        marginTop: divider ? 14 : 0,
+      }}
+    >
+      {divider && (
+        <p
+          style={{
+            margin: '0 0 6px 0',
+            fontFamily: 'var(--r-sans)',
+            fontSize: 10,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            color: 'var(--r-text-5)',
+          }}
+        >
+          also worth bringing · {topic.who.join(', ') || 'solo'}
+        </p>
+      )}
+      <h3 style={{ margin: divider ? '2px 0 6px 0' : undefined }}>{topic.title}</h3>
+      {topic.framing && (
+        <p
+          style={{
+            fontStyle: 'italic',
+            color: 'var(--r-text-3)',
+            margin: '0 0 10px 0',
+            fontSize: 14,
+          }}
+        >
+          {topic.framing}
         </p>
       )}
       <ul className="bullets">
-        {primary.talkingPoints.slice(0, 3).map((point, i) => (
+        {topic.talkingPoints.slice(0, 3).map((point, i) => (
           <li key={i}>{renderTalkingPoint(point)}</li>
         ))}
       </ul>
-      {primary.sourceQuote && (
+      {topic.sourceQuote && topic.sourceEntryId && (
+        <Link
+          href={`/journal/${topic.sourceEntryId}`}
+          style={{
+            display: 'block',
+            margin: '10px 0 6px 0',
+            padding: '8px 10px',
+            background: 'rgba(200,184,154,0.12)',
+            borderLeft: '2px solid rgba(138,111,74,0.35)',
+            borderRadius: 3,
+            fontSize: 13,
+            lineHeight: 1.5,
+            color: 'var(--r-text-3)',
+            fontStyle: 'italic',
+            textDecoration: 'none',
+          }}
+        >
+          &ldquo;{topic.sourceQuote}&rdquo;
+        </Link>
+      )}
+      {topic.sourceQuote && !topic.sourceEntryId && (
         <p
           style={{
             margin: '10px 0 6px 0',
@@ -775,21 +869,10 @@ function DispatchBriefView({ brief }: { brief: WeeklyBrief }) {
             fontStyle: 'italic',
           }}
         >
-          &ldquo;{primary.sourceQuote}&rdquo;
+          &ldquo;{topic.sourceQuote}&rdquo;
         </p>
       )}
-      <div className="foot">
-        <span>
-          {primary.who.length > 0 ? primary.who.join(', ') : '—'}
-          {typeof primary.daysOpen === 'number' && primary.daysOpen > 0
-            ? ` · ${primary.daysOpen}d open`
-            : ''}
-        </span>
-        <span className="arrow">
-          {rest > 0 ? `+${rest} more →` : '—'}
-        </span>
-      </div>
-    </article>
+    </div>
   );
 }
 
