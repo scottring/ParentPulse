@@ -1153,6 +1153,8 @@ function threadTitle(t: OpenThread): string {
       return 'A view is waiting';
     case 'incomplete_practice':
       return 'A practice left unfinished';
+    case 'mention_for_me':
+      return 'Someone wrote about you';
   }
 }
 
@@ -1178,6 +1180,8 @@ function threadTagClass(t: OpenThread): string {
       return 'people';
     case 'incomplete_practice':
       return 'plans';
+    case 'mention_for_me':
+      return 'people';
   }
 }
 
@@ -1191,6 +1195,8 @@ function threadTagLabel(t: OpenThread): string {
       return 'Invite · waiting';
     case 'incomplete_practice':
       return 'Practice';
+    case 'mention_for_me':
+      return 'Mention · new';
   }
 }
 

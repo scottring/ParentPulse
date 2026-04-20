@@ -17,6 +17,7 @@ const REASON_KICKER: Record<OpenThread['reason'], string> = {
   pending_invite: 'A view is waiting',
   incomplete_practice: 'Practice unfinished',
   unclosed_divergence: 'Divergence to respond to',
+  mention_for_me: 'Someone wrote about you',
 };
 
 /**

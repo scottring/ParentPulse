@@ -11,6 +11,7 @@ import { firestore } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { useJournalEntries } from '@/hooks/useJournalEntries';
 import { useMomentInvite } from '@/hooks/useMomentInvite';
+import { usePerson } from '@/hooks/usePerson';
 import { listOpenThreads, type OpenThread } from '@/lib/open-threads';
 import type { Moment } from '@/types/moment';
 import type { Ritual } from '@/types/ritual';
@@ -29,6 +30,7 @@ export function useOpenThreads(): UseOpenThreadsReturn {
   const { user } = useAuth();
   const { entries } = useJournalEntries();
   const { pendingForMe, loading: invitesLoading } = useMomentInvite();
+  const { people } = usePerson();
   const [moments, setMoments] = useState<Moment[]>([]);
   const [rituals, setRituals] = useState<Ritual[]>([]);
   const [momentsReady, setMomentsReady] = useState(false);
@@ -78,6 +80,14 @@ export function useOpenThreads(): UseOpenThreadsReturn {
     return () => unsub();
   }, [user?.familyId, user?.userId]);
 
+  const me = useMemo(() => {
+    if (!user?.userId) return undefined;
+    const personIds = (people ?? [])
+      .filter((p) => p.linkedUserId === user.userId)
+      .map((p) => p.personId);
+    return { userId: user.userId, personIds };
+  }, [user?.userId, people]);
+
   const threads = useMemo(
     () =>
       listOpenThreads({
@@ -85,8 +95,9 @@ export function useOpenThreads(): UseOpenThreadsReturn {
         rituals,
         entries,
         pendingInvitesForMe: pendingForMe,
+        me,
       }),
-    [moments, rituals, entries, pendingForMe],
+    [moments, rituals, entries, pendingForMe, me],
   );
 
   return {

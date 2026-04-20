@@ -57,7 +57,8 @@ export type OpenThreadReason =
   | 'pending_invite'
   | 'unclosed_divergence'
   | 'incomplete_practice'
-  | 'overdue_ritual';
+  | 'overdue_ritual'
+  | 'mention_for_me';
 
 export type OpenThreadKind = 'moment' | 'entry' | 'ritual' | 'practice';
 
@@ -95,6 +96,7 @@ const REASON_PRECEDENCE: Record<OpenThreadReason, number> = {
   pending_invite: 1,
   incomplete_practice: 2,
   unclosed_divergence: 3,
+  mention_for_me: 4,
 };
 
 interface Sources {
@@ -106,6 +108,13 @@ interface Sources {
   // Pending moment_invites where the current user is the recipient.
   // Omit for unauthenticated contexts; empty array is fine.
   pendingInvitesForMe?: MomentInvite[];
+  // Identity of the current user, used to detect "mention_for_me"
+  // open threads — recent entries written by someone else that are
+  // about this user. Omit for unauthenticated contexts.
+  me?: {
+    userId: string;
+    personIds: string[]; // personIds whose Person.linkedUserId === userId
+  };
   // now() is injectable for determinism in tests.
   now?: Date;
 }
@@ -185,6 +194,40 @@ export function listOpenThreads(sources: Sources): OpenThread[] {
   // kind for now.
   // (no iteration)
 
+  // Reason 5: mention_for_me — entries from the last 7 days written
+  // by someone else that the current user is a subject of (tagged,
+  // AI-extracted, or explicitly shared with).
+  if (sources.me) {
+    const me = sources.me;
+    const cutoffMs = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+    for (const e of sources.entries) {
+      if (e.authorId === me.userId) continue;
+      const ms = e.createdAt?.toMillis?.() ?? 0;
+      if (ms === 0 || ms < cutoffMs) continue;
+
+      const tagged = (e.personMentions ?? []).some((pid) =>
+        me.personIds.includes(pid),
+      );
+      const aiExtracted = (e.enrichment?.aiPeople ?? []).some((pid) =>
+        me.personIds.includes(pid),
+      );
+      const sharedWithMe = (e.sharedWithUserIds ?? []).includes(me.userId);
+      if (!tagged && !aiExtracted && !sharedWithMe) continue;
+
+      open.push({
+        id: e.entryId,
+        kind: 'entry',
+        reason: 'mention_for_me',
+        subtitle: mentionExcerpt(e.text),
+        openedAt: e.createdAt?.toDate?.(),
+        closingAction: {
+          label: 'Read it',
+          href: `/journal/${e.entryId}`,
+        },
+      });
+    }
+  }
+
   // Dedupe by (kind,id), keeping the strongest reason.
   const byKey = new Map<string, OpenThread>();
   for (const t of open) {
@@ -205,6 +248,13 @@ export function listOpenThreads(sources: Sources): OpenThread[] {
     const bMs = b.openedAt?.getTime() ?? 0;
     return bMs - aMs;
   });
+}
+
+function mentionExcerpt(text: string): string {
+  const t = (text ?? '').trim().replace(/\s+/g, ' ');
+  if (!t) return 'Someone wrote about you.';
+  if (t.length <= 110) return t;
+  return t.slice(0, 109).trimEnd() + '…';
 }
 
 function ritualSubtitle(r: Ritual, now: Date): string {
