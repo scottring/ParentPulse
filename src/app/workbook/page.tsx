@@ -13,6 +13,8 @@ import { useRouter } from 'next/navigation';
 import { stockImagery } from '@/config/stock-imagery';
 import { useMemoryOfTheDay } from '@/hooks/useMemoryOfTheDay';
 import { useLeastWrittenPerson } from '@/hooks/useLeastWrittenPerson';
+import { useDispatches, type EchoDispatch, type PatternDispatch } from '@/hooks/useDispatches';
+import { usePerson } from '@/hooks/usePerson';
 import type { JournalEntry } from '@/types/journal';
 import type { LeastWrittenPerson } from '@/hooks/useLeastWrittenPerson';
 
@@ -246,8 +248,8 @@ export default function WorkbookPage() {
 
           <div className="dispatch-row">
             <DispatchBriefPlaceholder />
-            <DispatchPatternPlaceholder />
-            <DispatchEchoPlaceholder />
+            <DispatchPattern />
+            <DispatchEcho />
           </div>
         </section>
 
@@ -661,59 +663,244 @@ function DispatchBriefPlaceholder() {
   );
 }
 
-function DispatchPatternPlaceholder() {
+function DispatchPattern() {
+  const { pattern, loading } = useDispatches();
+  return <DispatchPatternView pattern={pattern} loading={loading} />;
+}
+
+function DispatchPatternView({
+  pattern,
+  loading,
+}: {
+  pattern: PatternDispatch | null;
+  loading: boolean;
+}) {
+  if (loading || !pattern) {
+    return (
+      <article className="dispatch">
+        <span className="eyebrow amber">
+          <span className="pip" />A pattern Relish is watching
+        </span>
+        <h3>A rhythm will surface here.</h3>
+        <p>Reading the last six weeks for shape…</p>
+        <div className="foot">
+          <span>Listening</span>
+          <span className="arrow">—</span>
+        </div>
+      </article>
+    );
+  }
+
+  if (pattern.confidence === 'none' || !pattern.peakDay) {
+    return (
+      <article className="dispatch">
+        <span className="eyebrow amber">
+          <span className="pip" />A pattern Relish is watching
+        </span>
+        <h3>No rhythm yet.</h3>
+        <p>
+          {pattern.totalWindow < 6
+            ? `Only ${pattern.totalWindow} ${pattern.totalWindow === 1 ? 'entry' : 'entries'} in the last six weeks — a rhythm needs more.`
+            : 'The week is even. Nothing stands out yet.'}
+        </p>
+        <div className="pattern-chart" aria-hidden="true">
+          {shiftToMonStart(pattern.dayCounts).map((c, i) => {
+            const maxCount = Math.max(1, ...pattern.dayCounts);
+            const h = Math.max(8, Math.round((c / maxCount) * 88));
+            return (
+              <div
+                key={i}
+                className="bar ember-s"
+                style={{ height: `${h}%` }}
+              />
+            );
+          })}
+        </div>
+        <div className="pattern-legend">
+          <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span>
+          <span>Fri</span><span>Sat</span><span>Sun</span>
+        </div>
+        <div className="foot">
+          <span>{pattern.totalWindow} entries · 6 weeks</span>
+          <span className="arrow">—</span>
+        </div>
+      </article>
+    );
+  }
+
+  // Convert Sunday-start to Monday-start for the chart / legend.
+  const chartCounts = shiftToMonStart(pattern.dayCounts);
+  const peakChartIdx = (pattern.peakDay + 6) % 7; // Mon=0 Sun=6
+  const maxCount = Math.max(1, ...pattern.dayCounts);
+  const share = Math.round((pattern.dayCounts[pattern.peakDay] / pattern.totalWindow) * 100);
+  const headline = patternHeadline(pattern.peakDayLabel!);
+
   return (
     <article className="dispatch">
       <span className="eyebrow amber">
         <span className="pip" />A pattern Relish is watching
       </span>
-      <h3>A rhythm will surface here.</h3>
+      <h3>{headline}</h3>
       <p>
-        Once there&rsquo;s enough in the book, a simple day-of-week chart
-        will run in this cell and name the pattern in one sentence.
+        <em>
+          {pattern.dayCounts[pattern.peakDay]} of {pattern.totalWindow} entries
+          in the last six weeks
+        </em>{' '}
+        landed on a {pattern.peakDayLabel}.
       </p>
       <div className="pattern-chart" aria-hidden="true">
-        {[32, 44, 88, 28, 38, 22, 18].map((h, i) => (
-          <div
-            key={i}
-            className={`bar ${i === 2 ? 'ember' : 'ember-s'}`}
-            style={{ height: `${h}%` }}
-          />
-        ))}
+        {chartCounts.map((c, i) => {
+          const h = Math.max(8, Math.round((c / maxCount) * 88));
+          return (
+            <div
+              key={i}
+              className={`bar ${i === peakChartIdx ? 'ember' : 'ember-s'}`}
+              style={{ height: `${h}%` }}
+            />
+          );
+        })}
       </div>
       <div className="pattern-legend">
         <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span>
         <span>Fri</span><span>Sat</span><span>Sun</span>
       </div>
       <div className="foot">
-        <span>Illustrative — awaiting real data</span>
-        <span className="arrow">—</span>
+        <span>
+          {share}% fall on {pattern.peakDayLabel?.slice(0, 3)} · confidence{' '}
+          {pattern.confidence}
+        </span>
+        <span className="arrow">Look closer →</span>
       </div>
     </article>
   );
 }
 
-function DispatchEchoPlaceholder() {
+function shiftToMonStart(sundayFirst: number[]): number[] {
+  // sundayFirst[0] = Sun ... [6] = Sat. Want [Mon, Tue, ..., Sun].
+  return [
+    sundayFirst[1],
+    sundayFirst[2],
+    sundayFirst[3],
+    sundayFirst[4],
+    sundayFirst[5],
+    sundayFirst[6],
+    sundayFirst[0],
+  ];
+}
+
+function patternHeadline(day: string): string {
+  const rough = ['Monday', 'Tuesday', 'Wednesday'];
+  const quiet = ['Friday', 'Saturday', 'Sunday'];
+  if (rough.includes(day)) return `Your week runs hot on ${day}s.`;
+  if (quiet.includes(day)) return `${day}s carry more of the book than the rest.`;
+  return `${day}s do most of the writing.`;
+}
+
+function DispatchEcho() {
+  const { echo, loading } = useDispatches();
+  const { people } = usePerson();
+  return <DispatchEchoView echo={echo} loading={loading} people={people} />;
+}
+
+function DispatchEchoView({
+  echo,
+  loading,
+  people,
+}: {
+  echo: EchoDispatch | null;
+  loading: boolean;
+  people: { personId: string; name: string }[];
+}) {
+  if (loading) {
+    return (
+      <article className="dispatch">
+        <span className="eyebrow sage">
+          <span className="pip" />
+          An echo · from an earlier chapter
+        </span>
+        <h3>Looking back through the book…</h3>
+      </article>
+    );
+  }
+
+  if (!echo) {
+    return (
+      <article className="dispatch">
+        <span className="eyebrow sage">
+          <span className="pip" />
+          An echo · from an earlier chapter
+        </span>
+        <h3>Nothing to echo yet.</h3>
+        <p>
+          Relish resurfaces older entries when what you&rsquo;re writing
+          this week touches the same subject. Not enough history yet —
+          or nothing lines up.
+        </p>
+        <div className="foot">
+          <span>Echoes appear once there&rsquo;s overlap</span>
+          <span className="arrow">—</span>
+        </div>
+      </article>
+    );
+  }
+
+  const d = echo.entry.createdAt?.toDate?.();
+  const dateLabel = d
+    ? `${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} — a ${d.toLocaleDateString('en-GB', { weekday: 'long' })}`
+    : '';
+  const quote = echoQuote(echo.entry.text);
+  // Replace personId mentions in reason with friendly name.
+  const humanReason = humanizeReason(echo.reason, people);
+
   return (
-    <article className="dispatch">
+    <Link
+      href={`/journal/${echo.entry.entryId}`}
+      className="dispatch"
+      style={{ textDecoration: 'none', color: 'inherit' }}
+    >
       <span className="eyebrow sage">
         <span className="pip" />
-        An echo · from an earlier chapter
+        An echo · from {echoWhenAgo(echo.daysAgo)}
       </span>
-      <blockquote className="echo-quote">
-        &ldquo;A line from the past that matters this week will sit here.&rdquo;
-      </blockquote>
-      <span className="echo-attr">Illustrative</span>
+      <blockquote className="echo-quote">&ldquo;{quote}&rdquo;</blockquote>
+      <span className="echo-attr">You · {dateLabel}</span>
       <p className="echo-note">
-        Relish will resurface an older entry when the current week touches
-        the same subject. It reads better than most reminders.
+        Surfaced because what you&rsquo;re writing this week lines up with it.
       </p>
       <div className="foot">
-        <span>Resurfaces when you&rsquo;ve got history to draw from</span>
-        <span className="arrow">—</span>
+        <span>{humanReason}</span>
+        <span className="arrow">Read both →</span>
       </div>
-    </article>
+    </Link>
   );
+}
+
+function echoQuote(text: string): string {
+  const t = (text ?? '').trim().replace(/\s+/g, ' ');
+  if (t.length <= 200) return t;
+  const dot = t.search(/[.!?]\s/);
+  if (dot !== -1 && dot >= 60 && dot < 200) return t.slice(0, dot + 1);
+  return t.slice(0, 199).trimEnd() + '…';
+}
+
+function echoWhenAgo(days: number): string {
+  const years = Math.floor(days / 365);
+  const months = Math.floor(days / 30);
+  if (years >= 2) return `${years} years ago`;
+  if (years === 1) return 'a year ago';
+  if (months >= 2) return `${months} months ago`;
+  return `${days} days ago`;
+}
+
+function humanizeReason(
+  reason: string,
+  people: { personId: string; name: string }[],
+): string {
+  const personMatch = people.find((p) => reason.includes(p.personId));
+  if (personMatch) {
+    return reason.replace(personMatch.personId, personMatch.name);
+  }
+  return reason;
 }
 
 function WeekGrid({
