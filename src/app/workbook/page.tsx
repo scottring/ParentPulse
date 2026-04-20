@@ -1448,9 +1448,9 @@ const styles = `
     gap: 0;
     align-items: center;
   }
-  .masthead-cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-  .masthead-cell.align-c { align-items: center; text-align: center; }
-  .masthead-cell.align-r { align-items: flex-end; text-align: right; }
+  .masthead-cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; justify-self: start; }
+  .masthead-cell.align-c { align-items: center; text-align: center; justify-self: center; }
+  .masthead-cell.align-r { align-items: flex-end; text-align: right; justify-self: end; }
   .masthead-divider { width: 1px; height: 32px; background: var(--r-rule-5); }
   .masthead-eyebrow {
     font-family: var(--r-sans);
