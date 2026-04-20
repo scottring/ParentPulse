@@ -1376,57 +1376,9 @@ const styles = `
     font-size: 15px;
     color: var(--r-text-5);
   }
-  :global(.thread) {
-    display: block;
-    padding: 18px 2px 20px;
-    border-bottom: 1px solid var(--r-rule-5);
-    color: inherit;
-    text-decoration: none;
-  }
-  :global(.thread:last-child) { border-bottom: none; }
-  :global(.thread:hover .thread-title) { color: var(--r-ember); }
-  :global(.thread-row1) { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
-  :global(.thread-title) {
-    font-family: var(--r-serif);
-    font-style: italic;
-    font-weight: 400;
-    font-size: 21px;
-    color: var(--r-ink);
-    line-height: 1.25;
-    letter-spacing: -0.005em;
-    transition: color 160ms var(--r-ease-ink);
-  }
-  :global(.thread-age) {
-    font-family: var(--r-sans);
-    font-size: 11px;
-    color: var(--r-text-5);
-    letter-spacing: 0.04em;
-    white-space: nowrap;
-  }
-  :global(.thread-preview) {
-    font-family: var(--r-serif);
-    font-size: 15.5px;
-    line-height: 1.5;
-    color: var(--r-text-3);
-    margin: 0;
-  }
-  :global(.thread-tag) {
-    display: inline-block;
-    margin-top: 8px;
-    font-family: var(--r-sans);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--r-text-5);
-    padding: 3px 10px;
-    background: var(--r-cream);
-    border-radius: 999px;
-  }
-  :global(.thread-tag.health)   { color: var(--r-burgundy); background: var(--r-tint-burgundy); }
-  :global(.thread-tag.home)     { color: var(--r-ember);    background: var(--r-tint-ember); }
-  :global(.thread-tag.people)   { color: var(--r-sage);     background: var(--r-tint-sage); }
-  :global(.thread-tag.plans)    { color: #8B6F2B;           background: var(--r-tint-amber); }
+  /* Thread-row styles live in globals.css now — styled-jsx :global
+     proved unreliable at emitting them when the component tree was
+     the first instance to render. Global CSS loads deterministically. */
 
   .quiet-block { padding: 32px 8px; text-align: left; }
   .quiet-block .glyph { font-family: var(--r-serif); font-size: 28px; color: var(--r-rule-2); margin-bottom: 16px; }
