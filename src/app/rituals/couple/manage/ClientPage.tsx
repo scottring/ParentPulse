@@ -101,17 +101,13 @@ export default function ClientPage() {
         }
         .hero-image {
           position: relative;
-          background: var(--r-cream-warm, #E8DDC8);
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          background-image:
+            linear-gradient(180deg, rgba(20,16,12,0.08) 0%, rgba(20,16,12,0) 40%, rgba(245,240,232,0.35) 100%),
+            url('https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1600&q=80&auto=format&fit=crop');
+          background-size: cover;
+          background-position: center 40%;
         }
-        .hero-mark {
-          font-family: var(--r-serif, Georgia, serif);
-          font-size: 56px;
-          color: var(--r-rule-2, #B5A99A);
-          line-height: 1;
-        }
+        .hero-mark { display: none; }
         .hero-body {
           padding: 32px 36px 36px;
         }

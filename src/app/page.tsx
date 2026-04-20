@@ -44,6 +44,7 @@ export default function HomePage() {
 
   return (
     <main className="home-stage">
+      <div className="home-banner" aria-hidden="true" />
       <header className="home-header">
         <p className="home-kicker">Vol. I — No. 01 · A family broadsheet</p>
         <h1 className="home-wordmark">Relish</h1>
@@ -114,11 +115,21 @@ export default function HomePage() {
           flex-direction: column;
           max-width: 1040px;
           margin: 0 auto;
-          padding: 72px 40px 48px;
+          padding: 0 40px 48px;
+        }
+        .home-banner {
+          height: 200px;
+          margin: 0 -40px 48px;
+          background-image:
+            linear-gradient(180deg, rgba(20,16,12,0.1) 0%, rgba(20,16,12,0) 40%, rgba(245,240,232,0.45) 92%, var(--r-cream, #F5F0E8) 100%),
+            url('https://images.unsplash.com/photo-1466781783364-36c955e42a7f?w=2400&q=80&auto=format&fit=crop');
+          background-size: cover;
+          background-position: center 40%;
         }
         .home-header {
           text-align: center;
           padding-bottom: 48px;
+          padding-top: 16px;
           border-bottom: 1px solid var(--r-rule-4, #D8D3CA);
         }
         .home-kicker {

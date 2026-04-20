@@ -235,17 +235,13 @@ function Shell({
           grid-row: 1;
           grid-column: 1;
           overflow: hidden;
-          background: var(--r-cream-warm, #E8DDC8);
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          background-image:
+            linear-gradient(180deg, rgba(20,16,12,0.12) 0%, rgba(20,16,12,0) 35%, rgba(20,16,12,0.35) 90%, rgba(20,16,12,0.6) 100%),
+            url('https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=2400&q=80&auto=format&fit=crop');
+          background-size: cover;
+          background-position: center 40%;
         }
-        .ritual-hero-mark {
-          font-family: var(--r-serif, Georgia, serif);
-          font-size: 72px;
-          color: var(--r-rule-2, #B5A99A);
-          line-height: 1;
-        }
+        .ritual-hero-mark { display: none; }
         .ritual-card {
           position: relative;
           z-index: 5;

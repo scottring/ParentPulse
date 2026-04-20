@@ -146,19 +146,15 @@ export default function ClientPage() {
         }
         .empty-image {
           position: relative;
-          height: 160px;
-          background: var(--r-cream-warm, #E8DDC8);
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          height: 220px;
+          background-image:
+            linear-gradient(180deg, rgba(20,16,12,0.08) 0%, rgba(20,16,12,0) 40%, rgba(245,240,232,0.4) 100%),
+            url('https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1600&q=80&auto=format&fit=crop');
+          background-size: cover;
+          background-position: center 40%;
           border-bottom: 1px solid var(--r-rule-5, #E5E0D8);
         }
-        .empty-fleuron {
-          font-family: var(--r-serif, Georgia, serif);
-          font-size: 48px;
-          color: var(--r-rule-2, #B5A99A);
-          line-height: 1;
-        }
+        .empty-fleuron { display: none; }
         .empty-body {
           padding: 32px 36px 40px;
         }
@@ -213,19 +209,15 @@ export default function ClientPage() {
         }
         .active-image {
           position: relative;
-          height: 120px;
-          background: var(--r-cream-warm, #E8DDC8);
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          height: 140px;
+          background-image:
+            linear-gradient(180deg, rgba(20,16,12,0.08) 0%, rgba(20,16,12,0) 40%, rgba(245,240,232,0.4) 100%),
+            url('https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1600&q=80&auto=format&fit=crop');
+          background-size: cover;
+          background-position: center 40%;
           border-bottom: 1px solid var(--r-rule-5, #E5E0D8);
         }
-        .active-fleuron {
-          font-family: var(--r-serif, Georgia, serif);
-          font-size: 36px;
-          color: var(--r-rule-2, #B5A99A);
-          line-height: 1;
-        }
+        .active-fleuron { display: none; }
         .active-body {
           padding: 28px 32px 32px;
         }

@@ -10,6 +10,15 @@
 import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+
+// Dispatch the same custom event the CaptureSheet listens for.
+// "Open the book" / "Answer in the book" / "Pick up the Pen" all
+// route here — they ask the shared floating Pen to open its sheet,
+// not navigate to another page.
+function openPen() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('relish:pen:open'));
+}
 import { useAuth } from '@/context/AuthContext';
 import { useWorkbookData } from '@/integration';
 import { useNextRitual } from '@/hooks/useNextRitual';
@@ -105,7 +114,11 @@ export default function WorkbookPage() {
             </div>
             <h1 className="hero-title">{greeting}</h1>
             <p className="hero-lede">{lede}</p>
-            <Link href="/journal" className="hero-action">
+            <button
+              type="button"
+              className="hero-action"
+              onClick={openPen}
+            >
               <svg
                 width="14"
                 height="14"
@@ -121,7 +134,7 @@ export default function WorkbookPage() {
                 <path d="M17 3l4 4L8 20l-5 1 1-5L17 3z" />
               </svg>
               {ledeCount > 0 ? 'Pick up where you left off' : 'Open the book'}
-            </Link>
+            </button>
           </div>
 
           <div className="spread-rule" aria-hidden="true" />
@@ -236,9 +249,9 @@ function QuietBlock() {
         Nothing&rsquo;s waiting on you this morning. When you want a line,
         a prompt is below — or pick up the Pen.
       </p>
-      <Link href="/journal" className="prompt-cta">
-        Open the journal →
-      </Link>
+      <button type="button" className="prompt-cta" onClick={openPen}>
+        Pick up the Pen →
+      </button>
     </div>
   );
 }
@@ -307,10 +320,10 @@ function FeaturePrompt() {
         write down?
       </blockquote>
       <p className="prompt-attr">— Monday prompt · one minute, in the book</p>
-      <Link href="/journal" className="prompt-cta-dark">
+      <button type="button" className="prompt-cta-dark" onClick={openPen}>
         <span>Answer in the book</span>
         <span>→</span>
-      </Link>
+      </button>
     </article>
   );
 }
@@ -665,16 +678,35 @@ const styles = `
   /* ═══ MASTHEAD ═══ */
   .masthead { margin: 0 0 0; }
   .masthead-band {
-    height: 96px;
-    background: var(--r-cream-warm);
+    height: 168px;
     border: 1px solid var(--r-rule-4);
     border-bottom: none;
     border-radius: 2px 2px 0 0;
     position: relative;
+    background-size: cover;
+    background-position: center 38%;
+    background-repeat: no-repeat;
   }
-  .masthead-band[data-season="summer"] { background: linear-gradient(135deg, #F0E3C1, #E8DDC8); }
-  .masthead-band[data-season="autumn"] { background: linear-gradient(135deg, #E6CBA8, #D9B994); }
-  .masthead-band[data-season="winter"] { background: linear-gradient(135deg, #DFD4C0, #C9BDA4); }
+  .masthead-band[data-season="spring"] {
+    background-image:
+      linear-gradient(180deg, rgba(20,16,12,0.15) 0%, rgba(20,16,12,0) 40%, rgba(245,240,232,0.35) 82%, rgba(245,240,232,0.62) 100%),
+      url('https://images.unsplash.com/photo-1466781783364-36c955e42a7f?w=2400&q=80&auto=format&fit=crop');
+  }
+  .masthead-band[data-season="summer"] {
+    background-image:
+      linear-gradient(180deg, rgba(20,16,12,0.12) 0%, rgba(20,16,12,0) 40%, rgba(245,240,232,0.4) 82%, rgba(245,240,232,0.65) 100%),
+      url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=2400&q=80&auto=format&fit=crop');
+  }
+  .masthead-band[data-season="autumn"] {
+    background-image:
+      linear-gradient(180deg, rgba(20,16,12,0.2) 0%, rgba(20,16,12,0) 40%, rgba(245,240,232,0.35) 82%, rgba(245,240,232,0.62) 100%),
+      url('https://images.unsplash.com/photo-1507371341162-763b5e419408?w=2400&q=80&auto=format&fit=crop');
+  }
+  .masthead-band[data-season="winter"] {
+    background-image:
+      linear-gradient(180deg, rgba(20,16,12,0.25) 0%, rgba(20,16,12,0) 40%, rgba(245,240,232,0.35) 82%, rgba(245,240,232,0.62) 100%),
+      url('https://images.unsplash.com/photo-1478860409698-8707f313ee8b?w=2400&q=80&auto=format&fit=crop');
+  }
   .masthead-strip {
     background: var(--r-paper);
     border: 1px solid var(--r-rule-4);
@@ -900,13 +932,18 @@ const styles = `
   .feature-photo {
     height: 120px;
     margin: -28px -28px 0;
-    background: var(--r-cream-warm);
+    background-image:
+      linear-gradient(180deg, rgba(20,16,12,0) 0%, rgba(251,248,242,0) 60%, var(--r-paper) 100%),
+      url('https://images.unsplash.com/photo-1529636798458-92182e662485?w=1600&q=80&auto=format&fit=crop');
+    background-size: cover;
+    background-position: center 40%;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    align-items: flex-end;
+    justify-content: flex-start;
+    padding: 12px 16px;
     border-bottom: 1px solid var(--r-rule-5);
   }
-  .photo-fleuron { font-family: var(--r-serif); font-size: 32px; color: var(--r-rule-2); }
+  .photo-fleuron { display: none; }
   .memory-date { font-family: var(--r-serif); font-style: italic; font-size: 15px; color: var(--r-text-4); }
   .memory-quote {
     font-family: var(--r-serif);
@@ -1133,13 +1170,30 @@ const styles = `
   .lead-pill.dark { background: var(--r-leather); color: var(--r-paper); border-color: var(--r-leather); }
   .lead-pill:disabled { opacity: 0.45; cursor: not-allowed; }
   .lead-art {
-    background: linear-gradient(180deg, rgba(20,16,12,0.10), rgba(20,16,12,0)), var(--r-cream-warm);
+    background-image:
+      linear-gradient(180deg, rgba(20,16,12,0.14), rgba(20,16,12,0) 40%, rgba(20,16,12,0.08) 100%),
+      url('https://images.unsplash.com/photo-1513346940221-6f673d962e97?w=1600&q=80&auto=format&fit=crop');
+    background-size: cover;
+    background-position: center 40%;
     min-height: 280px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    position: relative;
   }
-  .lead-art-fleuron { font-family: var(--r-serif); font-size: 56px; color: var(--r-rule-2); }
+  .lead-art::after {
+    content: "A pattern Relish noticed";
+    position: absolute;
+    left: 20px;
+    bottom: 18px;
+    font-family: var(--r-sans);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--r-paper);
+    background: rgba(20,16,12,0.5);
+    padding: 5px 10px;
+    border-radius: 2px;
+  }
+  .lead-art-fleuron { display: none; }
 
   .dispatch-row { display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 24px; }
   .dispatch {
@@ -1360,13 +1414,14 @@ const styles = `
     width: 56px;
     height: 56px;
     border-radius: 2px;
-    background: linear-gradient(135deg, var(--r-ember), var(--r-burgundy));
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background-image:
+      linear-gradient(135deg, rgba(201,134,76,0.25), rgba(140,74,62,0.35)),
+      url('https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=300&q=80&auto=format&fit=crop');
+    background-size: cover;
+    background-position: center;
     flex: none;
   }
-  .song-art-fleuron { color: var(--r-paper); font-size: 24px; font-family: var(--r-serif); font-style: italic; }
+  .song-art-fleuron { display: none; }
   .song-meta { min-width: 0; }
   .song-eyebrow {
     font-family: var(--r-sans);
