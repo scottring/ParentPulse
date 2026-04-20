@@ -22,6 +22,7 @@ import { useOpenThreads } from '@/hooks/useOpenThreads';
 import { ClosingActionCard } from '@/components/open-threads/ClosingActionCard';
 import { SeedlingGlyph } from '@/components/journal-spread/SeedlingGlyph';
 import { useReflectionsOfEntry } from '@/hooks/useReflectionsOfEntry';
+import { EntryMedia } from '@/components/journal-spread/EntryMedia';
 import { MicButton } from '@/components/voice/MicButton';
 import { JOURNAL_CATEGORIES, type JournalCategory, type JournalEntry } from '@/types/journal';
 import { useEntryResponses } from '@/hooks/useEntryResponses';
@@ -584,7 +585,8 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
             )}
           </div>
 
-          {/* Media attachments */}
+          {/* Media attachments — images + audio handled here; song
+              embeds render below via EntryMedia (Feature A). */}
           {entry.media && entry.media.length > 0 && (
             <div className="entry-media-grid">
               {entry.media.filter((m) => m.type === 'image').map((m, i) => (
@@ -606,6 +608,9 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
               ))}
             </div>
           )}
+
+          {/* Song attachments (Spotify / Apple Music / YouTube / link) */}
+          <EntryMedia media={entry.media?.filter((m) => m.type === 'song')} />
 
           {/* AI enrichment markers — quiet read-only display of what
               the Cloud Function extracted. Only render once the

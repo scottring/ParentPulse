@@ -8,9 +8,11 @@ export type JournalCategory =
   | 'question'      // Something you're wondering about
   | 'gratitude';    // Something you're thankful for
 
+export type SongProvider = 'spotify' | 'apple' | 'youtube' | 'other';
+
 export interface JournalMedia {
   url: string;
-  type: 'image' | 'audio' | 'link';
+  type: 'image' | 'audio' | 'link' | 'song';
   filename?: string;
   mimeType?: string;
   // For links — the original URL before any processing.
@@ -19,6 +21,20 @@ export interface JournalMedia {
   transcription?: string;
   // Storage path for Firebase Storage files (used for deletion).
   storagePath?: string;
+
+  // Image-specific metadata, optional.
+  width?: number;
+  height?: number;
+  alt?: string;
+
+  // Song-specific metadata. Populated when `type === 'song'`.
+  // `provider` is parsed from the URL hostname at attach time.
+  // Preview data (title / artist / artworkUrl) may be absent if
+  // we haven't probed oEmbed for it yet.
+  provider?: SongProvider;
+  title?: string;
+  artist?: string;
+  artworkUrl?: string;
 }
 
 export interface JournalEntry {

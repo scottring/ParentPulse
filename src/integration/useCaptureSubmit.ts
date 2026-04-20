@@ -40,6 +40,7 @@ export function useCaptureSubmit() {
         personMentions: personMatch ? [personMatch.personId] : [],
         tags: s.tag ? [s.tag] : [],
         sharedWithUserIds,
+        media: s.media,
       });
     },
     [user, people, createEntry],

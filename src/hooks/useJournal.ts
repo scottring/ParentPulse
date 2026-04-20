@@ -17,6 +17,7 @@ import { firestore } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import type {
   JournalCategory,
+  JournalMedia,
   UpdateEntryInput,
 } from '@/types/journal';
 
@@ -39,6 +40,9 @@ interface CreateEntryInput {
   // ensure the moment lives in the same family and the caller is a
   // member (rules enforce both). Null/omitted = stand-alone entry.
   momentId?: string;
+  // Optional media attachments (images, songs, links). When set,
+  // it's written onto the entry at create time.
+  media?: JournalMedia[];
 }
 
 interface UseJournalReturn {
@@ -116,6 +120,11 @@ export function useJournal(): UseJournalReturn {
       // Moment attachment — if set, this entry is one view of a moment.
       if (input.momentId) {
         docData.momentId = input.momentId;
+      }
+
+      // Media attachments — images, songs, links (Feature A).
+      if (input.media && input.media.length > 0) {
+        docData.media = input.media;
       }
 
       // Set legacy childId if exactly one person is mentioned

@@ -11,6 +11,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Eyebrow } from '../type';
 import { usePrivacyLock } from '@/hooks/usePrivacyLock';
 import { PinSetupModal } from '@/components/privacy/PinSetupModal';
+import { useAuth } from '@/context/AuthContext';
+import { AttachmentRow } from '@/components/capture/AttachmentRow';
+import type { JournalMedia } from '@/types/journal';
 
 export type CaptureVisibility = 'just-me' | 'everyone';
 export interface CaptureSubmission {
@@ -18,6 +21,7 @@ export interface CaptureSubmission {
   person?: string;
   tag?: string;
   visibility: CaptureVisibility;
+  media?: JournalMedia[];
 }
 export interface CaptureSheetProps {
   people?: string[];              // quick-pick chips
@@ -26,11 +30,13 @@ export interface CaptureSheetProps {
 }
 
 export function CaptureSheet({ people = [], tags = [], onSubmit }: CaptureSheetProps) {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const [person, setPerson] = useState<string | undefined>();
   const [tag, setTag] = useState<string | undefined>();
   const [visibility, setVisibility] = useState<CaptureVisibility>('just-me');
+  const [media, setMedia] = useState<JournalMedia[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const [showPinSetup, setShowPinSetup] = useState(false);
@@ -69,9 +75,19 @@ export function CaptureSheet({ people = [], tags = [], onSubmit }: CaptureSheetP
     }
     setSubmitting(true);
     try {
-      await onSubmit?.({ text: text.trim(), person, tag, visibility });
+      await onSubmit?.({
+        text: text.trim(),
+        person,
+        tag,
+        visibility,
+        media: media.length > 0 ? media : undefined,
+      });
       setJustSaved(true);
-      setText(''); setPerson(undefined); setTag(undefined); setVisibility('just-me');
+      setText('');
+      setPerson(undefined);
+      setTag(undefined);
+      setVisibility('just-me');
+      setMedia([]);
       setTimeout(() => { setOpen(false); setJustSaved(false); }, 900);
     } finally {
       setSubmitting(false);
@@ -141,6 +157,16 @@ export function CaptureSheet({ people = [], tags = [], onSubmit }: CaptureSheetP
                 color: 'var(--r-ink)',
               }}
             />
+            {user?.familyId && (
+              <div style={{ marginTop: 8 }}>
+                <AttachmentRow
+                  familyId={user.familyId}
+                  media={media}
+                  onChange={setMedia}
+                  compact
+                />
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 20, marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--r-rule-5)', flexWrap: 'wrap', alignItems: 'center' }}>
               {people.length > 0 && (
                 <ChipRow label="With" options={people} selected={person} onSelect={setPerson} />
