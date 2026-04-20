@@ -10,7 +10,6 @@ import { useFamily } from '@/hooks/useFamily';
 import { ManualChat } from '@/components/manual/ManualChat';
 import { useEquivalentManualIds } from '@/hooks/useEquivalentManualIds';
 import { isKidObserverEligible, computeAge } from '@/utils/age';
-import Navigation from '@/components/layout/Navigation';
 
 
 function spellCount(n: number): string {
@@ -61,7 +60,6 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
   if (loading) {
     return (
       <div className="relish-page">
-        <Navigation />
 
         <div className="pt-[64px]">
           <div className="press-loading">Opening the volume&hellip;</div>
@@ -73,7 +71,6 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
   if (!user || !person || !manual) {
     return (
       <div className="relish-page">
-        <Navigation />
 
         <div className="pt-[64px]">
           <div className="press-binder">
@@ -133,7 +130,6 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
 
   return (
     <div className="relish-page">
-      <Navigation />
 
 
       <div className="pt-[64px] pb-24">

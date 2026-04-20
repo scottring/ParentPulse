@@ -18,7 +18,6 @@ import {
 import { firestore } from '@/lib/firebase';
 import { useGrowthFeed } from '@/hooks/useGrowthFeed';
 import { usePerson } from '@/hooks/usePerson';
-import Navigation from '@/components/layout/Navigation';
 
 import { EXERCISE_TYPES } from '@/config/exercise-types';
 import type { GrowthItem, GrowthItemType, FeedbackReaction, ImpactRating } from '@/types/growth';
@@ -378,7 +377,6 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
   if (authLoading || loading) {
     return (
       <div className="relish-page">
-        <Navigation />
 
         <div className="pt-[64px]">
           <div className="press-loading">Turning to the page&hellip;</div>
@@ -390,7 +388,6 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
   if (!item) {
     return (
       <div className="relish-page">
-        <Navigation />
 
         <div className="pt-[64px]">
           <div className="press-binder">
@@ -422,7 +419,6 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
 
   return (
     <div className="relish-page">
-      <Navigation />
 
 
       <div className="pt-[64px] pb-24">

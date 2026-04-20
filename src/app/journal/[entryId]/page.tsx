@@ -14,7 +14,6 @@ import { useJournalEntry } from '@/hooks/useJournalEntry';
 import { useJournal } from '@/hooks/useJournal';
 import { usePerson } from '@/hooks/usePerson';
 import { useEntryChat } from '@/hooks/useEntryChat';
-import Navigation from '@/components/layout/Navigation';
 
 import { CompanionComposer } from '@/components/journal-spread/CompanionComposer';
 import { ResponseBlock } from '@/components/journal-spread/ResponseBlock';
@@ -60,7 +59,6 @@ export default function JournalEntryDetailPage() {
   if (authLoading || loading) {
     return (
       <div className="relish-page">
-        <Navigation />
 
         <div className="pt-[64px]">
           <div className="press-loading">Opening the entry&hellip;</div>
@@ -74,7 +72,6 @@ export default function JournalEntryDetailPage() {
   if (notFound || error || !entry) {
     return (
       <div className="relish-page">
-        <Navigation />
 
         <div className="pt-[64px] pb-24">
           <div className="relish-container">
@@ -103,7 +100,6 @@ export default function JournalEntryDetailPage() {
   // react-hooks/set-state-in-effect.
   return (
     <div className="relish-page">
-      <Navigation />
 
       <EntryEditor
         key={entry.entryId}

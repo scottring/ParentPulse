@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import Navigation from '@/components/layout/Navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useSpouse } from '@/hooks/useSpouse';
 import { useCoupleRitual } from '@/hooks/useCoupleRitual';
@@ -209,7 +208,6 @@ function Shell({
 }) {
   return (
     <>
-      <Navigation />
       <main className="ritual-stage">
         <div className="ritual-hero" aria-hidden="true">
           <Image

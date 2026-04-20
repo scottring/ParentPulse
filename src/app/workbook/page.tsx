@@ -125,7 +125,11 @@ export default function WorkbookPage() {
         {wb.rituals.length > 0 && (
           <>
             <Rule variant="fleuron" style={{ margin: '24px 0' }} />
-            <Band tone="warm" padding="32px 40px" style={{ borderRadius: 'var(--r-radius-2)' }}>
+            <Band
+              tone="warm"
+              padding={wb.rituals.length === 1 ? '20px 32px' : '32px 40px'}
+              style={{ borderRadius: 'var(--r-radius-2)' }}
+            >
               <RitualsDue rituals={wb.rituals} />
             </Band>
           </>

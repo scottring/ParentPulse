@@ -1,7 +1,6 @@
 'use client';
 
 import { ReactNode } from 'react';
-import Navigation from '@/components/layout/Navigation';
 
 
 export type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error';
@@ -105,7 +104,6 @@ export default function AssessmentShell({
   if (variant === 'kid') {
     return (
       <div className="relish-page">
-        <Navigation />
 
 
         <div className="pt-[64px] pb-24">
@@ -186,7 +184,6 @@ export default function AssessmentShell({
   // ==============================================================
   return (
     <div className="relish-page">
-      <Navigation />
 
       <div className="pt-[64px] pb-24">
         <div className="press-binder" style={{ maxWidth: 720 }}>

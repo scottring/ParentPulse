@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import Navigation from '@/components/layout/Navigation';
 import { useCoupleRitual } from '@/hooks/useCoupleRitual';
 import { useSpouse } from '@/hooks/useSpouse';
 
@@ -275,7 +274,6 @@ export default function ClientPage() {
 function Chrome({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <Navigation />
       <main className="ritual-page">
         <div className="page-inner">
           {children}

@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useMoment } from '@/hooks/useMoment';
 import { useOpenThreads } from '@/hooks/useOpenThreads';
-import Navigation from '@/components/layout/Navigation';
 import { MomentSynthesisCard } from '@/components/journal-spread/MomentSynthesisCard';
 import { ClosingActionCard } from '@/components/open-threads/ClosingActionCard';
 
@@ -30,7 +29,6 @@ export default function MomentDetailPage() {
   if (loading) {
     return (
       <main className="shell">
-        <Navigation />
         <p className="empty">Loading the moment…</p>
       </main>
     );
@@ -39,7 +37,6 @@ export default function MomentDetailPage() {
   if (notFound || !moment) {
     return (
       <main className="shell">
-        <Navigation />
         <p className="empty">We couldn&apos;t find that moment.</p>
         <p className="back"><Link href="/journal">← back to the journal</Link></p>
         <style jsx>{pageStyles}</style>
@@ -50,7 +47,6 @@ export default function MomentDetailPage() {
   if (error) {
     return (
       <main className="shell">
-        <Navigation />
         <p className="empty">{error}</p>
         <style jsx>{pageStyles}</style>
       </main>
@@ -61,7 +57,6 @@ export default function MomentDetailPage() {
 
   return (
     <main className="shell">
-      <Navigation />
       <article className="page">
         <header className="masthead">
           <p className="kicker">Moment</p>

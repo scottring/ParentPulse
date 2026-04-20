@@ -16,7 +16,6 @@ import {
 import { firestore } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { useRitual, closeRitualRun } from '@/hooks/useRitual';
-import Navigation from '@/components/layout/Navigation';
 import type { JournalEntry } from '@/types/journal';
 
 type Step = 'read' | 'respond' | 'close';
@@ -84,7 +83,6 @@ export default function RitualRunPage() {
   if (authLoading || loading) {
     return (
       <main className="shell">
-        <Navigation />
         <p className="empty">Opening the ritual…</p>
         <style jsx>{pageStyles}</style>
       </main>
@@ -94,7 +92,6 @@ export default function RitualRunPage() {
   if (!user || !ritual) {
     return (
       <main className="shell">
-        <Navigation />
         <p className="empty">{notFound || error ? 'Ritual not found.' : '—'}</p>
         <style jsx>{pageStyles}</style>
       </main>
@@ -104,7 +101,6 @@ export default function RitualRunPage() {
   if (!isParticipant) {
     return (
       <main className="shell">
-        <Navigation />
         <p className="empty">You&apos;re not a participant in this ritual.</p>
         <style jsx>{pageStyles}</style>
       </main>
@@ -181,7 +177,6 @@ export default function RitualRunPage() {
 
   return (
     <main className="shell">
-      <Navigation />
       <article className="page">
         <header className="masthead">
           <p className="kicker">{kindLabel} ritual</p>

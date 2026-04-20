@@ -1,9 +1,10 @@
 'use client';
 /* ================================================================
    Relish · Workbook — RitualsDue
-   A small section of "ritual cards" — each a paper tile with an
+   A small section of "practice cards" — each a paper tile with an
    ornamental glyph, serif name, cadence, and a quiet mark-done
-   affordance. Meant to feel ceremonial, not transactional.
+   affordance. Ceremonial voice is preserved through typography;
+   copy is plain so the purpose is legible at a glance.
    ================================================================ */
 
 import { useState } from 'react';
@@ -24,11 +25,25 @@ export interface RitualsDueProps {
 
 export function RitualsDue({ rituals, onMarkDone }: RitualsDueProps) {
   if (rituals.length === 0) return null;
+
+  // Single-item compact row — the grid framing is disproportionate
+  // for one practice. See the flows audit workbook fix.
+  if (rituals.length === 1) {
+    return (
+      <section aria-label="Practice due this week">
+        <Eyebrow>Practice · due this week</Eyebrow>
+        <div style={{ marginTop: 10 }}>
+          <RitualCard ritual={rituals[0]} onMarkDone={onMarkDone} compact />
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section aria-label="Rituals due">
+    <section aria-label="Practices this week">
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
-          <Eyebrow>Rituals · due today</Eyebrow>
+          <Eyebrow>Practices · this week</Eyebrow>
           <BodySerif
             style={{
               marginTop: 6,
@@ -38,7 +53,7 @@ export function RitualsDue({ rituals, onMarkDone }: RitualsDueProps) {
               color: 'var(--r-ink)',
             }}
           >
-            What wants keeping.
+            Recurring things worth keeping up.
           </BodySerif>
         </div>
         <span
@@ -68,7 +83,15 @@ export function RitualsDue({ rituals, onMarkDone }: RitualsDueProps) {
   );
 }
 
-function RitualCard({ ritual, onMarkDone }: { ritual: RitualDue; onMarkDone?: (id: string) => void }) {
+function RitualCard({
+  ritual,
+  onMarkDone,
+  compact,
+}: {
+  ritual: RitualDue;
+  onMarkDone?: (id: string) => void;
+  compact?: boolean;
+}) {
   const [done, setDone] = useState(false);
   const overdue = (ritual.overdueBy ?? 0) > 0;
   const accent = done
@@ -77,10 +100,35 @@ function RitualCard({ ritual, onMarkDone }: { ritual: RitualDue; onMarkDone?: (i
       ? 'var(--r-burgundy)'
       : 'var(--r-ember)';
 
+  const nameStyle: React.CSSProperties = {
+    fontFamily: 'var(--r-serif)',
+    fontStyle: 'italic',
+    fontSize: compact ? 18 : 20,
+    lineHeight: 1.2,
+    color: 'var(--r-ink)',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  };
+
+  const caption = done
+    ? 'Done this cycle'
+    : overdue
+      ? `${ritual.overdueBy} day${ritual.overdueBy === 1 ? '' : 's'} late`
+      : ritual.cadence;
+
+  const markLabel = done ? 'Done' : 'Mark done';
+  const tooltip = done
+    ? 'Completed this cycle'
+    : 'Mark this practice done for this cycle';
+  const aria = done
+    ? `${ritual.name} done this cycle`
+    : `Mark ${ritual.name} done for this cycle`;
+
   return (
     <Card
       tone="paper"
-      padding={20}
+      padding={compact ? 16 : 20}
       lift
       style={{
         position: 'relative',
@@ -94,26 +142,9 @@ function RitualCard({ ritual, onMarkDone }: { ritual: RitualDue; onMarkDone?: (i
     >
       <Glyph done={done} accent={accent} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontFamily: 'var(--r-serif)',
-            fontStyle: 'italic',
-            fontSize: 20,
-            lineHeight: 1.2,
-            color: 'var(--r-ink)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {ritual.name}
-        </div>
+        <div style={nameStyle}>{ritual.name}</div>
         <Caption style={{ color: 'var(--r-text-4)', marginTop: 2 }}>
-          {done
-            ? 'Kept'
-            : overdue
-              ? `${ritual.overdueBy} day${ritual.overdueBy === 1 ? '' : 's'} late`
-              : ritual.cadence}
+          {caption}
         </Caption>
       </div>
       <button
@@ -123,7 +154,8 @@ function RitualCard({ ritual, onMarkDone }: { ritual: RitualDue; onMarkDone?: (i
           onMarkDone?.(ritual.id);
         }}
         disabled={done}
-        aria-label={done ? 'Kept' : `Mark ${ritual.name} as kept`}
+        aria-label={aria}
+        title={tooltip}
         style={{
           all: 'unset',
           cursor: done ? 'default' : 'pointer',
@@ -140,7 +172,7 @@ function RitualCard({ ritual, onMarkDone }: { ritual: RitualDue; onMarkDone?: (i
           flex: 'none',
         }}
       >
-        {done ? 'Kept' : 'Keep'}
+        {markLabel}
       </button>
     </Card>
   );

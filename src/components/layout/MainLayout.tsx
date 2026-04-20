@@ -1,7 +1,5 @@
 'use client';
 
-import Navigation from './Navigation';
-
 import BudgetAlertBanner from './BudgetAlertBanner';
 
 interface MainLayoutProps {
@@ -11,10 +9,11 @@ interface MainLayoutProps {
   climate?: unknown;
 }
 
+// TopNav is mounted once globally via GlobalNav at the root layout.
+// MainLayout only provides the page frame + alert banners.
 export default function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="relish-page">
-      <Navigation />
       <main className="pt-[64px]">
         <BudgetAlertBanner />
         {children}

@@ -10,7 +10,6 @@ import { JournalSpread } from '@/components/journal-spread/JournalSpread';
 import type { FilterSelection } from '@/components/journal-spread/FilterPills';
 import { usePrivacyLock } from '@/hooks/usePrivacyLock';
 import { PinKeypad } from '@/components/privacy/PinKeypad';
-import Navigation from '@/components/layout/Navigation';
 import type { EntryFilter } from '@/types/entry';
 
 /**
@@ -118,7 +117,6 @@ export function SpreadHome() {
 
   return (
     <>
-      <Navigation />
       <JournalSpread
         entries={entries}
         familyName={selfPerson?.name?.split(' ').slice(-1)[0] ?? 'Family'}
