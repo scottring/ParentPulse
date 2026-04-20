@@ -13,8 +13,7 @@ import { useRouter } from 'next/navigation';
 import { stockImagery } from '@/config/stock-imagery';
 import { useMemoryOfTheDay } from '@/hooks/useMemoryOfTheDay';
 import { useLeastWrittenPerson } from '@/hooks/useLeastWrittenPerson';
-import { useDispatches, type EchoDispatch, type PatternDispatch } from '@/hooks/useDispatches';
-import { usePerson } from '@/hooks/usePerson';
+import { useDispatches } from '@/hooks/useDispatches';
 import type { JournalEntry } from '@/types/journal';
 import type { LeastWrittenPerson } from '@/hooks/useLeastWrittenPerson';
 
@@ -105,6 +104,12 @@ export default function WorkbookPage() {
   const wb = useWorkbookData();
   const { ritual: nextRitual, loading: ritualLoading } = useNextRitual();
   const { threads: openThreads } = useOpenThreads();
+  // Section gate: the "What Relish is returning to you" block is
+  // hidden until the family has ever had a Weekly Lead generated.
+  // Once any Lead exists in Firestore, the section is permanent
+  // furniture. See docs/superpowers/specs/2026-04-20-dispatch-collapse-design.md.
+  const { dispatch: leadDispatch, loading: leadLoading } = useWeeklyLead();
+  const hasReturns = !leadLoading && !!leadDispatch;
 
   useEffect(() => {
     if (!loading && !user) router.replace('/');
@@ -211,7 +216,7 @@ export default function WorkbookPage() {
               </span>
             </div>
             {ledeCount === 0 ? (
-              <QuietBlock />
+              <QuietBlock showLeadTeaser={!hasReturns} />
             ) : (
               <div>
                 {openThreads.slice(0, 3).map((t) => (
@@ -229,27 +234,24 @@ export default function WorkbookPage() {
           <FeaturePrompt />
         </section>
 
-        {/* ═══ DISPATCHES ═══ */}
-        <section className="dispatches">
-          <div className="dispatches-head">
-            <h2 className="dispatches-title">
-              What Relish is <em>returning</em> to you.
-            </h2>
-            <p className="sub">
-              You write the raw material in. Once a week Relish sends a few
-              things back — patterns it noticed, a brief for this week&rsquo;s
-              conversations, an echo from last season.
-            </p>
-          </div>
+        {/* ═══ DISPATCHES ═══
+             Earned on first Lead. Hidden until any Lead has ever
+             been written for this family. */}
+        {hasReturns && (
+          <section className="dispatches">
+            <div className="dispatches-head">
+              <h2 className="dispatches-title">
+                This week, <em>from Relish.</em>
+              </h2>
+            </div>
 
-          <DispatchLead />
+            <DispatchLead />
 
-          <div className="dispatch-row">
             <DispatchBrief />
-            <DispatchPattern />
-            <DispatchEcho />
-          </div>
-        </section>
+
+            <PatternFooterLine />
+          </section>
+        )}
 
         {/* ═══ WEEK AHEAD ═══ */}
         <section className="week" aria-label="The week ahead">
@@ -304,7 +306,7 @@ function ThreadRow({ thread }: { thread: OpenThread }) {
   );
 }
 
-function QuietBlock() {
+function QuietBlock({ showLeadTeaser }: { showLeadTeaser: boolean }) {
   return (
     <div className="quiet-block">
       <div className="glyph">❦</div>
@@ -316,20 +318,45 @@ function QuietBlock() {
       <button type="button" onClick={openPen} style={quietCtaStyle}>
         Write a line <span aria-hidden="true">→</span>
       </button>
+      {showLeadTeaser && (
+        <p className="lead-teaser">
+          <em>After a week of writing, Relish starts reading back to you.</em>
+          {' '}Come back Sunday.
+        </p>
+      )}
     </div>
   );
 }
 
 function FeatureMemory() {
-  const { entry, loading } = useMemoryOfTheDay();
-  return <FeatureMemoryView entry={entry} loading={loading} />;
+  // Absorbs the old Echo-dispatch logic: if Relish surfaced an entry
+  // from a year ago that matches what the user is writing about this
+  // week, prefer it. Otherwise fall back to the same-calendar-date
+  // entry. See docs/superpowers/specs/2026-04-20-dispatch-collapse-design.md.
+  const { entry: calendarEntry, loading: memLoading } = useMemoryOfTheDay();
+  const { echo, loading: echoLoading } = useDispatches();
+  const preferred = echo?.entry ?? calendarEntry;
+  const origin: 'echo' | 'calendar' | 'none' = echo?.entry
+    ? 'echo'
+    : calendarEntry
+      ? 'calendar'
+      : 'none';
+  return (
+    <FeatureMemoryView
+      entry={preferred}
+      origin={origin}
+      loading={memLoading || echoLoading}
+    />
+  );
 }
 
 function FeatureMemoryView({
   entry,
+  origin,
   loading,
 }: {
   entry: JournalEntry | null;
+  origin: 'echo' | 'calendar' | 'none';
   loading: boolean;
 }) {
   const date = entry?.createdAt?.toDate?.();
@@ -344,6 +371,10 @@ function FeatureMemoryView({
     ? date.toLocaleDateString('en-GB', { weekday: 'long' })
     : '';
   const excerpt = entry ? memoryExcerpt(entry.text) : '';
+  const eyebrow =
+    origin === 'echo'
+      ? 'From the archive · a year ago · like what you\u2019re writing now'
+      : 'From the archive · a year ago';
 
   if (loading) {
     return (
@@ -389,7 +420,7 @@ function FeatureMemoryView({
       <div className="feature-photo" aria-hidden="true" />
       <span className="feature-eyebrow">
         <span className="pip" />
-        From the archive · a year ago
+        {eyebrow}
       </span>
       <span className="memory-date">
         {dateLabel}
@@ -600,7 +631,7 @@ function DispatchLead() {
         <div className="lead-text">
           <span className="lead-eyebrow">
             <span className="pip" />
-            The weekly synthesis
+            What Relish noticed this week
           </span>
           <h3>Gathering the week&rsquo;s lines…</h3>
         </div>
@@ -632,7 +663,7 @@ function DispatchLeadView({ dispatch }: { dispatch: WeeklyDispatch }) {
       <div className="lead-text">
         <span className="lead-eyebrow">
           <span className="pip" />
-          The weekly synthesis{rangeLabel ? ` · ${rangeLabel}` : ''}
+          What Relish noticed this week{rangeLabel ? ` · ${rangeLabel}` : ''}
         </span>
         <h3>{dispatch.headline}</h3>
         <p className="dek">{dispatch.dek}</p>
@@ -689,9 +720,9 @@ function DispatchLeadPlaceholder() {
       <div className="lead-text">
         <span className="lead-eyebrow">
           <span className="pip" />
-          The weekly synthesis · ready Sunday 9pm
+          What Relish noticed this week · ready Sunday 9pm
         </span>
-        <h3>The weekly synthesis will read here.</h3>
+        <h3>A lead story will read here.</h3>
         <p className="dek">
           Relish will open a lead story once a week — the pattern it thinks
           you&rsquo;re <em>already writing about</em>, with three lines of
@@ -721,7 +752,7 @@ function DispatchBrief() {
       <article className="dispatch brief">
         <span className="eyebrow">
           <span className="pip" />
-          Brief
+          What to bring up
         </span>
         <h3>Pulling the threads together…</h3>
       </article>
@@ -743,7 +774,7 @@ function DispatchBriefView({ brief }: { brief: WeeklyBrief }) {
     <article className="dispatch brief">
       <span className="eyebrow">
         <span className="pip" />
-        Brief for your next conversation
+        What to bring up
       </span>
       {visible.map((topic, idx) => (
         <BriefTopicBlock
@@ -890,7 +921,7 @@ function DispatchBriefPlaceholder() {
     <article className="dispatch brief">
       <span className="eyebrow">
         <span className="pip" />
-        Brief · not yet scheduled
+        What to bring up · not yet scheduled
       </span>
       <h3>A brief for your next hard conversation.</h3>
       <ul className="bullets">
@@ -915,129 +946,20 @@ function DispatchBriefPlaceholder() {
   );
 }
 
-function DispatchPattern() {
-  const { pattern, loading } = useDispatches();
-  return <DispatchPatternView pattern={pattern} loading={loading} />;
-}
-
-function DispatchPatternView({
-  pattern,
-  loading,
-}: {
-  pattern: PatternDispatch | null;
-  loading: boolean;
-}) {
-  if (loading || !pattern) {
-    return (
-      <article className="dispatch">
-        <span className="eyebrow amber">
-          <span className="pip" />A pattern Relish is watching
-        </span>
-        <h3>A rhythm will surface here.</h3>
-        <p>Reading the last six weeks for shape…</p>
-        <div className="foot">
-          <span>Listening</span>
-          <span className="arrow">—</span>
-        </div>
-      </article>
-    );
+// Pattern footer line — subtle italic sentence beneath the Lead +
+// Brief pair. Renders only when Relish has enough data to speak with
+// moderate or high confidence; otherwise silent. No card, no chart.
+function PatternFooterLine() {
+  const { pattern } = useDispatches();
+  if (!pattern || !pattern.peakDayLabel) return null;
+  if (pattern.confidence !== 'moderate' && pattern.confidence !== 'high') {
+    return null;
   }
-
-  if (pattern.confidence === 'none' || !pattern.peakDay) {
-    return (
-      <article className="dispatch">
-        <span className="eyebrow amber">
-          <span className="pip" />A pattern Relish is watching
-        </span>
-        <h3>No rhythm yet.</h3>
-        <p>
-          {pattern.totalWindow < 6
-            ? `Only ${pattern.totalWindow} ${pattern.totalWindow === 1 ? 'entry' : 'entries'} in the last six weeks — a rhythm needs more.`
-            : 'The week is even. Nothing stands out yet.'}
-        </p>
-        <div className="pattern-chart" aria-hidden="true">
-          {shiftToMonStart(pattern.dayCounts).map((c, i) => {
-            const maxCount = Math.max(1, ...pattern.dayCounts);
-            const h = Math.max(8, Math.round((c / maxCount) * 88));
-            return (
-              <div
-                key={i}
-                className="bar ember-s"
-                style={{ height: `${h}%` }}
-              />
-            );
-          })}
-        </div>
-        <div className="pattern-legend">
-          <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span>
-          <span>Fri</span><span>Sat</span><span>Sun</span>
-        </div>
-        <div className="foot">
-          <span>{pattern.totalWindow} entries · 6 weeks</span>
-          <span className="arrow">—</span>
-        </div>
-      </article>
-    );
-  }
-
-  // Convert Sunday-start to Monday-start for the chart / legend.
-  const chartCounts = shiftToMonStart(pattern.dayCounts);
-  const peakChartIdx = (pattern.peakDay + 6) % 7; // Mon=0 Sun=6
-  const maxCount = Math.max(1, ...pattern.dayCounts);
-  const share = Math.round((pattern.dayCounts[pattern.peakDay] / pattern.totalWindow) * 100);
-  const headline = patternHeadline(pattern.peakDayLabel!);
-
   return (
-    <article className="dispatch">
-      <span className="eyebrow amber">
-        <span className="pip" />A pattern Relish is watching
-      </span>
-      <h3>{headline}</h3>
-      <p>
-        <em>
-          {pattern.dayCounts[pattern.peakDay]} of {pattern.totalWindow} entries
-          in the last six weeks
-        </em>{' '}
-        landed on a {pattern.peakDayLabel}.
-      </p>
-      <div className="pattern-chart" aria-hidden="true">
-        {chartCounts.map((c, i) => {
-          const h = Math.max(8, Math.round((c / maxCount) * 88));
-          return (
-            <div
-              key={i}
-              className={`bar ${i === peakChartIdx ? 'ember' : 'ember-s'}`}
-              style={{ height: `${h}%` }}
-            />
-          );
-        })}
-      </div>
-      <div className="pattern-legend">
-        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span>
-        <span>Fri</span><span>Sat</span><span>Sun</span>
-      </div>
-      <div className="foot">
-        <span>
-          {share}% fall on {pattern.peakDayLabel?.slice(0, 3)} · confidence{' '}
-          {pattern.confidence}
-        </span>
-        <span className="arrow">Look closer →</span>
-      </div>
-    </article>
+    <p className="pattern-footer">
+      {patternHeadline(pattern.peakDayLabel)}
+    </p>
   );
-}
-
-function shiftToMonStart(sundayFirst: number[]): number[] {
-  // sundayFirst[0] = Sun ... [6] = Sat. Want [Mon, Tue, ..., Sun].
-  return [
-    sundayFirst[1],
-    sundayFirst[2],
-    sundayFirst[3],
-    sundayFirst[4],
-    sundayFirst[5],
-    sundayFirst[6],
-    sundayFirst[0],
-  ];
 }
 
 function patternHeadline(day: string): string {
@@ -1046,113 +968,6 @@ function patternHeadline(day: string): string {
   if (rough.includes(day)) return `Your week runs hot on ${day}s.`;
   if (quiet.includes(day)) return `${day}s carry more of the book than the rest.`;
   return `${day}s do most of the writing.`;
-}
-
-function DispatchEcho() {
-  const { echo, loading } = useDispatches();
-  const { people } = usePerson();
-  return <DispatchEchoView echo={echo} loading={loading} people={people} />;
-}
-
-function DispatchEchoView({
-  echo,
-  loading,
-  people,
-}: {
-  echo: EchoDispatch | null;
-  loading: boolean;
-  people: { personId: string; name: string }[];
-}) {
-  if (loading) {
-    return (
-      <article className="dispatch">
-        <span className="eyebrow sage">
-          <span className="pip" />
-          An echo · from an earlier chapter
-        </span>
-        <h3>Looking back through the book…</h3>
-      </article>
-    );
-  }
-
-  if (!echo) {
-    return (
-      <article className="dispatch">
-        <span className="eyebrow sage">
-          <span className="pip" />
-          An echo · from an earlier chapter
-        </span>
-        <h3>Nothing to echo yet.</h3>
-        <p>
-          Relish resurfaces older entries when what you&rsquo;re writing
-          this week touches the same subject. Not enough history yet —
-          or nothing lines up.
-        </p>
-        <div className="foot">
-          <span>Echoes appear once there&rsquo;s overlap</span>
-          <span className="arrow">—</span>
-        </div>
-      </article>
-    );
-  }
-
-  const d = echo.entry.createdAt?.toDate?.();
-  const dateLabel = d
-    ? `${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} — a ${d.toLocaleDateString('en-GB', { weekday: 'long' })}`
-    : '';
-  const quote = echoQuote(echo.entry.text);
-  // Replace personId mentions in reason with friendly name.
-  const humanReason = humanizeReason(echo.reason, people);
-
-  return (
-    <Link
-      href={`/journal/${echo.entry.entryId}`}
-      className="dispatch"
-      style={{ textDecoration: 'none', color: 'inherit' }}
-    >
-      <span className="eyebrow sage">
-        <span className="pip" />
-        An echo · from {echoWhenAgo(echo.daysAgo)}
-      </span>
-      <blockquote className="echo-quote">&ldquo;{quote}&rdquo;</blockquote>
-      <span className="echo-attr">You · {dateLabel}</span>
-      <p className="echo-note">
-        Surfaced because what you&rsquo;re writing this week lines up with it.
-      </p>
-      <div className="foot">
-        <span>{humanReason}</span>
-        <span className="arrow">Read both →</span>
-      </div>
-    </Link>
-  );
-}
-
-function echoQuote(text: string): string {
-  const t = (text ?? '').trim().replace(/\s+/g, ' ');
-  if (t.length <= 200) return t;
-  const dot = t.search(/[.!?]\s/);
-  if (dot !== -1 && dot >= 60 && dot < 200) return t.slice(0, dot + 1);
-  return t.slice(0, 199).trimEnd() + '…';
-}
-
-function echoWhenAgo(days: number): string {
-  const years = Math.floor(days / 365);
-  const months = Math.floor(days / 30);
-  if (years >= 2) return `${years} years ago`;
-  if (years === 1) return 'a year ago';
-  if (months >= 2) return `${months} months ago`;
-  return `${days} days ago`;
-}
-
-function humanizeReason(
-  reason: string,
-  people: { personId: string; name: string }[],
-): string {
-  const personMatch = people.find((p) => reason.includes(p.personId));
-  if (personMatch) {
-    return reason.replace(personMatch.personId, personMatch.name);
-  }
-  return reason;
 }
 
 function WeekGrid({
@@ -1611,6 +1426,15 @@ const styles = `
   .quiet-block .glyph { font-family: var(--r-serif); font-size: 28px; color: var(--r-rule-2); margin-bottom: 16px; }
   .quiet-block h3 { font-family: var(--r-serif); font-style: italic; font-weight: 400; font-size: 26px; line-height: 1.25; color: var(--r-ink); margin: 0 0 10px; }
   .quiet-block p { font-family: var(--r-serif); font-size: 16px; line-height: 1.55; color: var(--r-text-3); margin: 0; max-width: 32ch; }
+  .quiet-block .lead-teaser {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--r-rule-5);
+    font-size: 14.5px;
+    color: var(--r-text-4);
+    max-width: 34ch;
+  }
+  .quiet-block .lead-teaser em { font-style: italic; color: var(--r-text-3); }
   :global(.prompt-cta) {
     margin-top: 20px;
     display: inline-block;
@@ -1820,12 +1644,13 @@ const styles = `
     line-height: 1;
   }
   .dispatches-title em { font-style: italic; }
-  .dispatches-head .sub {
+  .pattern-footer {
     font-family: var(--r-serif);
-    font-size: 17px;
-    color: var(--r-text-3);
-    margin: 0;
-    max-width: 44ch;
+    font-style: italic;
+    font-size: 15.5px;
+    line-height: 1.4;
+    color: var(--r-text-4);
+    margin: 20px 0 0;
   }
 
   .lead {
@@ -1938,7 +1763,6 @@ const styles = `
     display: block;
   }
 
-  .dispatch-row { display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 24px; }
   .dispatch {
     background: var(--r-paper);
     border: 1px solid var(--r-rule-5);
@@ -2020,43 +1844,6 @@ const styles = `
   .brief .bullets li em { font-style: italic; color: var(--r-paper); }
   .brief .foot { border-top-color: rgba(245,236,216,0.15); color: rgba(245,236,216,0.55); }
   .brief .foot .arrow { color: var(--r-amber); }
-
-  .pattern-chart { display: flex; align-items: flex-end; gap: 6px; height: 72px; margin: 2px 0 6px; }
-  .pattern-chart .bar { flex: 1; background: var(--r-rule-4); border-radius: 1px; min-height: 8%; }
-  .pattern-chart .bar.ember { background: var(--r-ember); }
-  .pattern-chart .bar.ember-s { background: var(--r-ember-soft); }
-  .pattern-legend {
-    display: flex;
-    justify-content: space-between;
-    font-family: var(--r-sans);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--r-text-5);
-  }
-
-  .echo-quote {
-    font-family: var(--r-serif);
-    font-style: italic;
-    font-weight: 400;
-    font-size: 22px;
-    line-height: 1.3;
-    color: var(--r-ink);
-    border-left: 2px solid var(--r-ember);
-    padding-left: 16px;
-    margin: 0;
-    letter-spacing: -0.005em;
-  }
-  .echo-attr {
-    font-family: var(--r-sans);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--r-text-5);
-  }
-  .echo-note { font-size: 15px; color: var(--r-text-4); margin: 0; }
 
   /* ═══ WEEK AHEAD ═══ */
   .week { padding: 40px 0 48px; border-top: 1px solid var(--r-rule-4); }
@@ -2244,7 +2031,6 @@ const styles = `
     .feature-row { grid-template-columns: 1fr; }
     .lead { grid-template-columns: 1fr; }
     .lead-art { min-height: 180px; }
-    .dispatch-row { grid-template-columns: 1fr; }
     .week-grid { grid-template-columns: repeat(4, 1fr); }
     .masthead-strip { grid-template-columns: 1fr 1fr; gap: 16px; }
     .masthead-divider { display: none; }
