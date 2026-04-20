@@ -6,7 +6,7 @@
    row → colophon. Shell chrome lives at the root (GlobalNav).
    ================================================================ */
 
-import { use, useEffect, useMemo } from 'react';
+import { use, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -15,6 +15,7 @@ import { useJournalEntries } from '@/hooks/useJournalEntries';
 import { computeAge } from '@/utils/age';
 import { stockImagery } from '@/config/stock-imagery';
 import type { Person, RelationshipType } from '@/types/person-manual';
+import { EditPersonSheet } from '@/components/people/EditPersonSheet';
 import type { JournalEntry } from '@/types/journal';
 
 export default function PersonPage({
@@ -25,8 +26,9 @@ export default function PersonPage({
   const { personId } = use(params);
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { person, loading: personLoading } = usePersonById(personId);
+  const { person, loading: personLoading, updatePerson } = usePersonById(personId);
   const { entries } = useJournalEntries();
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/');
@@ -85,11 +87,38 @@ export default function PersonPage({
           <Link href="/manual">The Family Manual</Link>
           <span className="sep">/</span>
           <span>{firstName}</span>
+          <button
+            type="button"
+            className="crumbs-edit"
+            aria-label={`Edit ${firstName}'s page`}
+            onClick={() => setIsEditing(true)}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M17 3l4 4L8 20l-5 1 1-5L17 3z" />
+            </svg>
+          </button>
         </div>
 
         {/* ═══ HERO — PORTRAIT + DOSSIER ═══ */}
         <section className="person-hero">
-          <div className="person-portrait">
+          <div
+            className="person-portrait"
+            style={
+              person.bannerUrl
+                ? { backgroundImage: `url('${person.bannerUrl}')` }
+                : undefined
+            }
+          >
             <div className="person-plate">
               <span className="tag">
                 {relationLabel(person)}
@@ -341,6 +370,16 @@ export default function PersonPage({
         </footer>
       </div>
 
+      {isEditing && person && (
+        <EditPersonSheet
+          person={person}
+          onClose={() => setIsEditing(false)}
+          onSave={async (updates) => {
+            await updatePerson(updates as Partial<Person>);
+          }}
+        />
+      )}
+
       <style jsx global>{styles}</style>
     </main>
   );
@@ -585,6 +624,21 @@ const styles = `
   }
   .crumbs a:hover { border-color: var(--r-text-4); }
   .crumbs .sep { opacity: 0.5; }
+  .crumbs-edit {
+    all: unset;
+    margin-left: auto;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    color: var(--r-text-4);
+    transition: color 120ms var(--r-ease-ink), background 120ms var(--r-ease-ink);
+  }
+  .crumbs-edit:hover { color: var(--r-ink); background: var(--r-cream-warm); }
+  .crumbs-edit:focus-visible { outline: 1px solid var(--r-text-4); outline-offset: 2px; }
 
   /* HERO */
   .person-hero {
