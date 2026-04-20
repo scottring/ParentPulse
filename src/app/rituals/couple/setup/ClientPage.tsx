@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { useSpouse } from '@/hooks/useSpouse';
 import { useCoupleRitual } from '@/hooks/useCoupleRitual';
@@ -210,15 +209,7 @@ function Shell({
     <>
       <main className="ritual-stage">
         <div className="ritual-hero" aria-hidden="true">
-          <Image
-            src="/images/two-books.png"
-            alt=""
-            fill
-            priority
-            sizes="(max-width: 899px) 100vw, 60vw"
-            style={{ objectFit: 'cover', objectPosition: 'center 35%' }}
-          />
-          <div className="ritual-hero-vignette" />
+          <span className="ritual-hero-mark">❦</span>
         </div>
         <div className="ritual-card">
           {eyebrow && <p className="ritual-eyebrow">{eyebrow}</p>}
@@ -244,21 +235,16 @@ function Shell({
           grid-row: 1;
           grid-column: 1;
           overflow: hidden;
+          background: var(--r-cream-warm, #E8DDC8);
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
-        .ritual-hero-vignette {
-          position: absolute;
-          inset: 0;
-          background:
-            linear-gradient(180deg,
-              rgba(20, 16, 12, 0.15) 0%,
-              rgba(20, 16, 12, 0.05) 35%,
-              rgba(20, 16, 12, 0.55) 85%,
-              rgba(20, 16, 12, 0.95) 100%),
-            radial-gradient(ellipse at center,
-              transparent 0%,
-              transparent 55%,
-              rgba(20, 16, 12, 0.35) 100%);
-          pointer-events: none;
+        .ritual-hero-mark {
+          font-family: var(--r-serif, Georgia, serif);
+          font-size: 72px;
+          color: var(--r-rule-2, #B5A99A);
+          line-height: 1;
         }
         .ritual-card {
           position: relative;
@@ -318,18 +304,6 @@ function Shell({
             flex-direction: column;
             justify-content: center;
             min-height: calc(100vh - 64px);
-          }
-          .ritual-hero-vignette {
-            background:
-              linear-gradient(90deg,
-                rgba(20, 16, 12, 0.10) 0%,
-                rgba(20, 16, 12, 0.05) 50%,
-                rgba(20, 16, 12, 0.40) 95%,
-                rgba(20, 16, 12, 0.60) 100%),
-              radial-gradient(ellipse at center,
-                transparent 0%,
-                transparent 50%,
-                rgba(20, 16, 12, 0.35) 100%);
           }
         }
       `}</style>

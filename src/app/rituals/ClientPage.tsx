@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { useCoupleRitual } from '@/hooks/useCoupleRitual';
 import { useSpouse } from '@/hooks/useSpouse';
 
@@ -35,15 +34,8 @@ export default function ClientPage() {
 
         {!ritual && (
           <div className="empty-card">
-            <div className="empty-image">
-              <Image
-                src="/images/two-books.png"
-                alt=""
-                fill
-                sizes="(max-width: 720px) 100vw, 720px"
-                style={{ objectFit: 'cover', objectPosition: 'center 40%' }}
-              />
-              <div className="empty-image-overlay" />
+            <div className="empty-image" aria-hidden="true">
+              <span className="empty-fleuron">❦</span>
             </div>
             <div className="empty-body">
               <h2 className="card-heading">
@@ -73,14 +65,8 @@ export default function ClientPage() {
 
         {ritual && (
           <div className="active-card">
-            <div className="active-image">
-              <Image
-                src="/images/two-books.png"
-                alt=""
-                fill
-                sizes="(max-width: 720px) 100vw, 240px"
-                style={{ objectFit: 'cover', objectPosition: 'center' }}
-              />
+            <div className="active-image" aria-hidden="true">
+              <span className="active-fleuron">❦</span>
             </div>
             <div className="active-body">
               <h2 className="card-heading">{summarize(ritual)}</h2>
@@ -160,19 +146,18 @@ export default function ClientPage() {
         }
         .empty-image {
           position: relative;
-          height: 260px;
-          overflow: hidden;
+          height: 160px;
+          background: var(--r-cream-warm, #E8DDC8);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-bottom: 1px solid var(--r-rule-5, #E5E0D8);
         }
-        .empty-image-overlay {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(
-            180deg,
-            rgba(20, 16, 12, 0) 0%,
-            rgba(20, 16, 12, 0) 65%,
-            rgba(243, 241, 236, 0.9) 100%
-          );
-          pointer-events: none;
+        .empty-fleuron {
+          font-family: var(--r-serif, Georgia, serif);
+          font-size: 48px;
+          color: var(--r-rule-2, #B5A99A);
+          line-height: 1;
         }
         .empty-body {
           padding: 32px 36px 40px;
@@ -228,7 +213,18 @@ export default function ClientPage() {
         }
         .active-image {
           position: relative;
-          height: 180px;
+          height: 120px;
+          background: var(--r-cream-warm, #E8DDC8);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-bottom: 1px solid var(--r-rule-5, #E5E0D8);
+        }
+        .active-fleuron {
+          font-family: var(--r-serif, Georgia, serif);
+          font-size: 36px;
+          color: var(--r-rule-2, #B5A99A);
+          line-height: 1;
         }
         .active-body {
           padding: 28px 32px 32px;

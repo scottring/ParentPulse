@@ -24,7 +24,10 @@ const AskAboutEntrySheet = dynamic(
   { ssr: false }
 );
 
-const WOOD_DESK_IMG = '/images/overhead-desk.png';
+// The spread used to sit on a wood-desk photograph; retired in
+// favor of a paper-toned backdrop so the editorial voice of the
+// redesign lands consistently.
+
 
 function useIsMobile(): boolean {
   const [isMobile, setIsMobile] = useState(false);
@@ -314,11 +317,7 @@ export function JournalSpread({
           position: relative;
           min-height: 100vh;
           padding: 128px 28px 72px;
-          background-image: url(${WOOD_DESK_IMG});
-          background-size: 260%;
-          background-position: center 38%;
-          background-repeat: no-repeat;
-          background-attachment: fixed;
+          background: var(--r-cream, #F5F0E8);
         }
         .spread-stage::before {
           content: '';
@@ -329,9 +328,8 @@ export function JournalSpread({
             radial-gradient(
               ellipse at center,
               transparent 0%,
-              transparent 45%,
-              rgba(40, 24, 10, 0.22) 85%,
-              rgba(30, 18, 8, 0.42) 100%
+              transparent 60%,
+              rgba(60, 50, 40, 0.06) 100%
             );
           z-index: 0;
         }

@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCoupleRitual } from '@/hooks/useCoupleRitual';
@@ -41,14 +40,8 @@ export default function ClientPage() {
     <Chrome>
       <p className="eyebrow">Your couple ritual</p>
       <div className="hero">
-        <div className="hero-image">
-          <Image
-            src="/images/two-books.png"
-            alt=""
-            fill
-            sizes="(max-width: 720px) 100vw, 320px"
-            style={{ objectFit: 'cover', objectPosition: 'center' }}
-          />
+        <div className="hero-image" aria-hidden="true">
+          <span className="hero-mark">❦</span>
         </div>
         <div className="hero-body">
           <h1 className="title">{summarize(ritual)}</h1>
@@ -108,6 +101,16 @@ export default function ClientPage() {
         }
         .hero-image {
           position: relative;
+          background: var(--r-cream-warm, #E8DDC8);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .hero-mark {
+          font-family: var(--r-serif, Georgia, serif);
+          font-size: 56px;
+          color: var(--r-rule-2, #B5A99A);
+          line-height: 1;
         }
         .hero-body {
           padding: 32px 36px 36px;

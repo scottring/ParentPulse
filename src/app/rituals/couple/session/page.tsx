@@ -1,22 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 
 export default function Page() {
   return (
     <main className="session-stage">
-      <div className="session-photograph" aria-hidden="true">
-        <Image
-          src="/images/two-books.png"
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          style={{ objectFit: 'cover', objectPosition: 'center 40%' }}
-        />
-        <div className="session-vignette" />
-      </div>
+      <div className="session-vignette" aria-hidden="true" />
 
       <div className="session-content">
         <p className="eyebrow">Your check-in</p>
@@ -41,31 +30,16 @@ export default function Page() {
           color: #ede4d0;
           overflow: hidden;
         }
-        .session-photograph {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: max(100vw, 150vh);
-          aspect-ratio: 3 / 2;
-          z-index: 1;
-          pointer-events: none;
-        }
         .session-vignette {
           position: absolute;
           inset: 0;
           background:
             radial-gradient(ellipse at center,
-              rgba(20, 16, 12, 0.35) 0%,
-              rgba(20, 16, 12, 0.60) 45%,
-              rgba(20, 16, 12, 0.85) 80%,
-              rgba(20, 16, 12, 0.95) 100%),
-            linear-gradient(180deg,
-              rgba(20, 16, 12, 0.45) 0%,
-              transparent 22%,
-              transparent 78%,
-              rgba(20, 16, 12, 0.45) 100%);
+              rgba(42, 37, 32, 0.0) 0%,
+              rgba(20, 16, 12, 0.35) 60%,
+              rgba(20, 16, 12, 0.6) 100%);
           pointer-events: none;
+          z-index: 1;
         }
         .session-content {
           position: relative;
