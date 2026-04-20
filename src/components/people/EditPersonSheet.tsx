@@ -49,7 +49,6 @@ export function EditPersonSheet({ person, onClose, onSave }: EditPersonSheetProp
   }, [onClose]);
 
   const [name, setName] = useState(person.name ?? '');
-  const [pronouns, setPronouns] = useState(person.pronouns ?? '');
   const [dob, setDob] = useState(toDateInputValue(person.dateOfBirth));
   const [avatarUrl, setAvatarUrl] = useState(person.avatarUrl ?? '');
   const [bannerUrl, setBannerUrl] = useState(person.bannerUrl ?? '');
@@ -68,9 +67,6 @@ export function EditPersonSheet({ person, onClose, onSave }: EditPersonSheetProp
     if (trimmedName !== (person.name ?? '')) {
       updates.name = trimmedName;
     }
-
-    const pronounsDiff = diffString(pronouns, person.pronouns);
-    if (pronounsDiff !== undefined) updates.pronouns = pronounsDiff;
 
     const avatarDiff = diffString(avatarUrl, person.avatarUrl);
     if (avatarDiff !== undefined) updates.avatarUrl = avatarDiff;
@@ -123,16 +119,6 @@ export function EditPersonSheet({ person, onClose, onSave }: EditPersonSheetProp
               value={name}
               onChange={(e) => setName(e.target.value)}
               autoFocus
-            />
-          </label>
-
-          <label className="eps-field">
-            <span>Pronouns</span>
-            <input
-              type="text"
-              value={pronouns}
-              onChange={(e) => setPronouns(e.target.value)}
-              placeholder="she/her, he/him, they/them…"
             />
           </label>
 

@@ -9,7 +9,6 @@ function makePerson(overrides: Partial<Person> = {}): Person {
     personId: 'p-1',
     familyId: 'f-1',
     name: 'Mia',
-    pronouns: 'she/her',
     dateOfBirth: Timestamp.fromDate(new Date(2018, 5, 14)), // June 14, 2018 local
     avatarUrl: 'https://img/avatar.jpg',
     bannerUrl: 'https://img/banner.jpg',
@@ -32,7 +31,6 @@ describe('EditPersonSheet', () => {
     );
 
     expect(screen.getByLabelText(/name/i)).toHaveValue('Mia');
-    expect(screen.getByLabelText(/pronouns/i)).toHaveValue('she/her');
     expect(screen.getByLabelText(/date of birth/i)).toHaveValue('2018-06-14');
     expect(screen.getByLabelText(/avatar url/i)).toHaveValue('https://img/avatar.jpg');
     expect(screen.getByLabelText(/banner url/i)).toHaveValue('https://img/banner.jpg');
