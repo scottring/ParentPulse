@@ -570,10 +570,17 @@ export default function CaptureSheet() {
                 </div>
               </div>
 
-              {/* Textarea — fills available space */}
-              <div className="flex-1 px-6 overflow-y-auto" style={{ minHeight: 0 }}>
+              {/* Textarea — fills all remaining vertical space so
+                  writing happens on the whole sheet, not a 160px band.
+                  The wrapper is a flex column: optional prepended
+                  text (shrink-0), then a flex:1 row that contains the
+                  textarea (which itself handles its own scroll). */}
+              <div
+                className="flex-1 flex flex-col px-6 pb-2"
+                style={{ minHeight: 0 }}
+              >
                 {editMode === 'append' && originalText && (
-                  <div style={{
+                  <div className="shrink-0" style={{
                     marginBottom: 12, padding: '12px 14px',
                     background: 'rgba(200, 184, 154, 0.15)',
                     borderLeft: '2px solid rgba(138, 111, 74, 0.4)',
@@ -585,15 +592,26 @@ export default function CaptureSheet() {
                     {originalText}
                   </div>
                 )}
-                <div style={{ position: 'relative' }}>
+                <div
+                  style={{
+                    position: 'relative',
+                    flex: 1,
+                    display: 'flex',
+                    minHeight: 0,
+                  }}
+                >
                   <textarea ref={textareaRef} value={text}
                     onChange={(e) => setText(e.target.value)}
-                    className="w-full h-full resize-none"
+                    className="resize-none"
                     style={{
+                      flex: 1,
+                      width: '100%',
                       fontFamily: 'var(--font-parent-body)', fontSize: 17, lineHeight: 1.6,
                       color: '#3A3530', background: 'transparent',
-                      border: 'none', outline: 'none', minHeight: 160,
+                      border: 'none', outline: 'none',
                       paddingRight: 52,
+                      paddingBottom: 48,
+                      overflowY: 'auto',
                     }}
                     placeholder={
                       editMode === 'append'
@@ -613,7 +631,7 @@ export default function CaptureSheet() {
 
                 {/* Staged media thumbnails */}
                 {stagedFiles.length > 0 && (
-                  <div className="flex gap-2 pb-3 overflow-x-auto">
+                  <div className="shrink-0 flex gap-2 pt-2 pb-3 overflow-x-auto">
                     {stagedFiles.map((file, i) => (
                       <div key={i} className="relative shrink-0" style={{ width: 56, height: 56 }}>
                         {file.type.startsWith('image/') ? (
