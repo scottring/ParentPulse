@@ -174,7 +174,7 @@ export default function ManualPage() {
                   Write about {hero.person.name.split(' ')[0]}
                 </button>
                 <Link
-                  href={`/people/${hero.person.personId}/manual`}
+                  href={`/people/${hero.person.personId}`}
                   style={heroPillStyle}
                 >
                   Open their page
@@ -341,7 +341,7 @@ function Constellation({
         <Link
           key={i}
           className={`node ${n.m.openThreadsCount > 0 ? 'attention' : ''}`}
-          href={`/people/${n.m.person.personId}/manual`}
+          href={`/people/${n.m.person.personId}`}
           style={{ left: `${n.x}%`, top: `${n.y}%` }}
         >
           <span
@@ -398,7 +398,7 @@ function GroupCard({
         {members.slice(0, 5).map((m) => (
           <Link
             key={m.person.personId}
-            href={`/people/${m.person.personId}/manual`}
+            href={`/people/${m.person.personId}`}
             className="group-row"
           >
             <span className="avatar">{m.person.name.slice(0, 1)}</span>
