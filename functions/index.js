@@ -10060,6 +10060,562 @@ Rules:
 );
 
 // ================================================================
+// generateWeeklyLead — the "What Relish is returning to you" card
+//
+// Produces one weekly_dispatches doc per family per week. Reads all
+// family-shared journal_entries from Mon 00:00 → Sun 23:59:59 local
+// of the specified week (default: most recent Sunday), asks Claude
+// to pick a pattern and pull 3 verbatim evidence quotes, and writes
+// the result. Private-to-self entries are excluded from source
+// material — the lead only references writing the family can see.
+//
+// Callable (for backfills and manual refreshes) + scheduled Sunday
+// 9pm runner that processes every family with 3+ shared entries in
+// the week.
+// ================================================================
+
+// Shared helper: given a weekEnding Date (assumed to be a Sunday at
+// any hour), return the full week's Mon 00:00 → Sun 23:59:59.999
+// local boundaries. Local = America/New_York for now; the user can
+// override when we multi-tenant this.
+function weeklyLeadBounds(weekEnding) {
+  const end = new Date(weekEnding);
+  end.setHours(23, 59, 59, 999);
+  const start = new Date(end);
+  // Walk back to Monday. If Sunday, that's -6 days.
+  const dow = end.getDay(); // 0=Sun, 1=Mon, ... 6=Sat
+  const daysBack = dow === 0 ? 6 : dow - 1;
+  start.setDate(start.getDate() - daysBack);
+  start.setHours(0, 0, 0, 0);
+  return {start, end};
+}
+
+function weeklyDispatchId(familyId, weekEnding) {
+  const y = weekEnding.getFullYear();
+  const m = String(weekEnding.getMonth() + 1).padStart(2, "0");
+  const d = String(weekEnding.getDate()).padStart(2, "0");
+  return `${familyId}_${y}-${m}-${d}`;
+}
+
+async function runWeeklyLead(db, familyId, weekEnding, logger) {
+  const {start, end} = weeklyLeadBounds(weekEnding);
+
+  // Pull all journal_entries in the window for this family.
+  const snap = await db.collection("journal_entries")
+      .where("familyId", "==", familyId)
+      .where("createdAt", ">=", admin.firestore.Timestamp.fromDate(start))
+      .where("createdAt", "<=", admin.firestore.Timestamp.fromDate(end))
+      .get();
+
+  // Family-shared = has sharedWithUserIds non-empty. A "Just me" entry
+  // has an empty sharedWithUserIds array — skip it.
+  const entries = [];
+  snap.forEach((d) => {
+    const data = d.data();
+    const shared = Array.isArray(data.sharedWithUserIds) &&
+      data.sharedWithUserIds.length > 0;
+    if (!shared) return;
+    if (!data.text || data.text.trim().length < 20) return;
+    entries.push({id: d.id, ...data});
+  });
+
+  if (entries.length < 3) {
+    logger.info(
+        `generateWeeklyLead: family ${familyId} week ending ` +
+        `${end.toISOString()} has only ${entries.length} shared ` +
+        `entries — skipping`,
+    );
+    return {skipped: true, reason: "insufficient_entries",
+      entryCount: entries.length};
+  }
+
+  // Fetch user names so the evidence can attribute ("— Iris, Tue").
+  const userIds = Array.from(new Set(entries.map((e) => e.authorId)));
+  const userDocs = await Promise.all(
+      userIds.map((uid) => db.collection("users").doc(uid).get()),
+  );
+  const userNames = {};
+  userDocs.forEach((d) => {
+    if (!d.exists) return;
+    const data = d.data();
+    userNames[d.id] = data.displayName || data.name || "Someone";
+  });
+
+  // Collect all participants for visibility on the dispatch doc.
+  const participantUserIds = Array.from(new Set(
+      entries.flatMap((e) => e.visibleToUserIds || []),
+  ));
+
+  // Build the prompt. We pass each entry with an id + author + date
+  // so the model can cite specific ones; ask it to return entryId
+  // references for evidence so we can rebuild authoritative excerpts
+  // from our own data rather than trusting whatever the model quotes.
+  const digest = entries.map((e) => {
+    const date = e.createdAt?.toDate?.() || new Date();
+    const author = userNames[e.authorId] || "Someone";
+    const clip = e.text.trim().slice(0, 500);
+    return `ID: ${e.id}
+AUTHOR: ${author}
+DATE: ${date.toISOString().slice(0, 10)}
+TEXT: ${clip}`;
+  }).join("\n\n---\n\n");
+
+  const prompt = `You are the voice of Relish — a quiet, observant family journal that writes back to the people who keep it. You read what the family wrote this past week and surface ONE pattern worth naming.
+
+Rules of voice:
+- Write in warm, specific, literary prose — think *The New Yorker* weekly newsletter, not marketing copy.
+- No platitudes. No "keep up the great work". No generic encouragement.
+- Name the concrete thing. Use the actual names that appear.
+- Quote verbatim — never paraphrase someone's words. If you can't find a good quote, say so honestly.
+- ≤ 1 sentence for the headline. ≤ 3 sentences for the dek.
+
+Output strict JSON only:
+{
+  "headline": "One-sentence observation about a pattern. Speak in the book's voice.",
+  "dek": "2-3 sentences unpacking the headline. Specific, never generic.",
+  "themeTag": "Short free-text tag (≤ 30 chars) e.g. 'bedtime friction' or 'Scott's Sunday quiet'",
+  "evidenceEntryIds": ["entryId1", "entryId2", "entryId3"],  // up to 3, MUST match actual IDs from the digest
+  "emergentLine": "Optional one-sentence 'what emerged' — something neither entry alone could say. Can be empty string."
+}
+
+WEEK'S ENTRIES (${entries.length} total):
+${digest}
+
+Return ONLY JSON.`;
+
+  let response;
+  try {
+    response = await getAnthropic().messages.create({
+      model: "claude-sonnet-4-5-20250929",
+      max_tokens: 800,
+      messages: [{role: "user", content: prompt}],
+    });
+  } catch (err) {
+    logger.error("generateWeeklyLead: Claude call failed:", err.message);
+    throw err;
+  }
+
+  const text = response.content?.[0]?.text || "";
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("generateWeeklyLead: no JSON in Claude response");
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch (err) {
+    throw new Error(
+        `generateWeeklyLead: JSON parse failed: ${err.message}`,
+    );
+  }
+
+  // Rebuild evidence from our own authoritative entry data using the
+  // ids the model returned. Drop ids that don't match (hallucinations).
+  const entryById = new Map(entries.map((e) => [e.id, e]));
+  const evidence = (Array.isArray(parsed.evidenceEntryIds) ?
+    parsed.evidenceEntryIds :
+    [])
+      .map((id) => entryById.get(id))
+      .filter(Boolean)
+      .slice(0, 3)
+      .map((e) => ({
+        entryId: e.id,
+        excerpt: e.text.trim().slice(0, 200),
+        authorId: e.authorId,
+        authorName: userNames[e.authorId] || "Someone",
+        createdAt: e.createdAt,
+      }));
+
+  const dispatchId = weeklyDispatchId(familyId, end);
+  const now = admin.firestore.Timestamp.now();
+  const doc = {
+    dispatchId,
+    familyId,
+    participantUserIds,
+    weekStarting: admin.firestore.Timestamp.fromDate(start),
+    weekEnding: admin.firestore.Timestamp.fromDate(end),
+    headline: (parsed.headline || "").trim().slice(0, 300),
+    dek: (parsed.dek || "").trim().slice(0, 600),
+    themeTag: (parsed.themeTag || "").trim().slice(0, 40),
+    evidence,
+    emergentLine: (parsed.emergentLine || "").trim().slice(0, 280) ||
+      null,
+    entryCount: entries.length,
+    generatedBy: "ai",
+    model: "claude-sonnet-4-5-20250929",
+    createdAt: now,
+  };
+  // Strip null so the shape matches the type.
+  if (!doc.emergentLine) delete doc.emergentLine;
+
+  await db.collection("weekly_dispatches").doc(dispatchId).set(doc);
+
+  logger.info(
+      `generateWeeklyLead: wrote dispatch ${dispatchId} — ` +
+      `headline "${doc.headline.slice(0, 80)}", ` +
+      `${evidence.length} evidence items, ${entries.length} entries`,
+  );
+
+  await logAIUsage(db, {
+    familyId,
+    userId: null,
+    functionName: "generateWeeklyLead",
+    model: "claude-sonnet-4-5-20250929",
+    usage: response.usage,
+  });
+
+  return {skipped: false, dispatchId, entryCount: entries.length};
+}
+
+// Callable: trigger a weekly lead for a specific family + weekEnding.
+// Used for backfills and manual refreshes. Caller must be a parent
+// in the target family.
+exports.generateWeeklyLead = onCall(
+    {
+      region: "us-central1",
+      memory: "512MiB",
+      timeoutSeconds: 120,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const db = admin.firestore();
+      const {familyId, weekEnding} = request.data || {};
+
+      // Verify caller is a parent in the target family.
+      const userDoc = await db.collection("users")
+          .doc(request.auth.uid).get();
+      if (!userDoc.exists) throw new Error("User not found");
+      const userData = userDoc.data();
+      if (userData.role !== "parent") {
+        throw new Error("Only parents can run the weekly lead");
+      }
+      const targetFamilyId = familyId || userData.familyId;
+      if (targetFamilyId !== userData.familyId) {
+        throw new Error("Caller is not in the target family");
+      }
+
+      // Default: most recent Sunday.
+      let weekEndingDate;
+      if (weekEnding) {
+        weekEndingDate = new Date(weekEnding);
+        if (isNaN(weekEndingDate.getTime())) {
+          throw new Error("Invalid weekEnding date");
+        }
+      } else {
+        weekEndingDate = new Date();
+        // Walk back to the most recent Sunday (if today is Sunday,
+        // use today).
+        const dow = weekEndingDate.getDay();
+        if (dow !== 0) {
+          weekEndingDate.setDate(weekEndingDate.getDate() - dow);
+        }
+      }
+
+      const result = await runWeeklyLead(
+          db, targetFamilyId, weekEndingDate, logger,
+      );
+      return result;
+    },
+);
+
+// ================================================================
+// generateWeeklyBrief — the "brief for your next hard conversation"
+//
+// Forward-looking companion to the weekly lead. Reads family-shared
+// journal entries in the past week (same window as the lead) plus
+// any moments with a cached divergenceLine, and asks Claude to pick
+// 1-3 topics worth bringing to an upcoming conversation. Each topic
+// gets a title, who it touches, a framing question, 2-3 talking
+// points, and one verbatim source quote.
+//
+// Writes to weekly_briefs/{familyId_YYYY-MM-DD}. Visibility same as
+// the lead — participantUserIds controls read; Cloud Function writes
+// only (admin SDK).
+// ================================================================
+
+async function runWeeklyBrief(db, familyId, weekEnding, logger) {
+  const {start, end} = weeklyLeadBounds(weekEnding);
+
+  // Pull shared entries in the window (same filter as the lead).
+  const snap = await db.collection("journal_entries")
+      .where("familyId", "==", familyId)
+      .where("createdAt", ">=", admin.firestore.Timestamp.fromDate(start))
+      .where("createdAt", "<=", admin.firestore.Timestamp.fromDate(end))
+      .get();
+
+  const entries = [];
+  snap.forEach((d) => {
+    const data = d.data();
+    const shared = Array.isArray(data.sharedWithUserIds) &&
+      data.sharedWithUserIds.length > 0;
+    if (!shared) return;
+    if (!data.text || data.text.trim().length < 20) return;
+    entries.push({id: d.id, ...data});
+  });
+
+  if (entries.length < 3) {
+    logger.info(
+        `generateWeeklyBrief: family ${familyId} week ending ` +
+        `${end.toISOString()} has only ${entries.length} shared ` +
+        `entries — skipping`,
+    );
+    return {skipped: true, reason: "insufficient_entries",
+      entryCount: entries.length};
+  }
+
+  // Author + person names.
+  const userIds = Array.from(new Set(entries.map((e) => e.authorId)));
+  const userDocs = await Promise.all(
+      userIds.map((uid) => db.collection("users").doc(uid).get()),
+  );
+  const userNames = {};
+  userDocs.forEach((d) => {
+    if (!d.exists) return;
+    const data = d.data();
+    userNames[d.id] = data.displayName || data.name || "Someone";
+  });
+
+  // Family people for display names in topic.who[].
+  const peopleSnap = await db.collection("people")
+      .where("familyId", "==", familyId)
+      .get();
+  const peopleNames = peopleSnap.docs.map((d) => d.data().name).filter(Boolean);
+
+  // Pull any moments in the window with a divergenceLine — those are
+  // strong "unresolved" signals worth surfacing in the brief.
+  const momentsSnap = await db.collection("moments")
+      .where("familyId", "==", familyId)
+      .where("createdAt", ">=", admin.firestore.Timestamp.fromDate(start))
+      .where("createdAt", "<=", admin.firestore.Timestamp.fromDate(end))
+      .get();
+  const divergentMoments = [];
+  momentsSnap.forEach((d) => {
+    const m = d.data();
+    if (m.synthesis?.divergenceLine) {
+      divergentMoments.push({id: d.id, ...m});
+    }
+  });
+
+  const participantUserIds = Array.from(new Set(
+      entries.flatMap((e) => e.visibleToUserIds || []),
+  ));
+
+  const digest = entries.map((e) => {
+    const date = e.createdAt?.toDate?.() || new Date();
+    const author = userNames[e.authorId] || "Someone";
+    const clip = e.text.trim().slice(0, 500);
+    return `ID: ${e.id}
+AUTHOR: ${author}
+DATE: ${date.toISOString().slice(0, 10)}
+TEXT: ${clip}`;
+  }).join("\n\n---\n\n");
+
+  const divergentDigest = divergentMoments.length > 0 ?
+    `\n\nMOMENTS WHERE TWO VIEWS DIVERGED THIS WEEK:\n${
+      divergentMoments.map((m) =>
+        `- ${m.title || "(untitled moment)"}: "${m.synthesis.divergenceLine}"`,
+      ).join("\n")
+    }` :
+    "";
+
+  const peopleLine = peopleNames.length > 0 ?
+    `\nFAMILY MEMBERS REFERENCED: ${peopleNames.join(", ")}` :
+    "";
+
+  const prompt = `You are Relish, a family journal that writes briefs — short, forward-looking prep notes for the hardest conversation waiting this week. You read what the family wrote and produce 1 to 3 TOPICS worth bringing to a conversation.
+
+A good topic:
+- Names something specific that recurred in the writing or diverged in a moment.
+- Frames it as a question to hold, not a demand.
+- Gives 2-3 concrete talking points — what to say, what to ask, what to listen for.
+- Grounds itself in one verbatim quote from an entry.
+
+A bad topic: generic encouragement, "keep communicating", abstract themes.
+${peopleLine}${divergentDigest}
+
+ENTRIES (${entries.length} total):
+${digest}
+
+Output strict JSON only:
+{
+  "topics": [
+    {
+      "title": "Short title, ≤50 chars e.g. 'Bedtime with Kaleb'",
+      "who": ["Name1", "Name2"],
+      "framing": "One-sentence question or frame. ≤180 chars.",
+      "talkingPoints": ["short line", "short line", "short line"],
+      "sourceEntryId": "entryId from the digest above",
+      "daysOpen": 3
+    }
+  ]
+}
+
+Rules:
+- 1-3 topics total. Prefer fewer, better.
+- \`who\` must use names that actually appear in the entries or the family list above.
+- \`sourceEntryId\` MUST match an ID from the digest. Omit if none grounds the topic well.
+- \`daysOpen\` = days since the oldest related entry in the digest (integer).
+- Return ONLY JSON.`;
+
+  let response;
+  try {
+    response = await getAnthropic().messages.create({
+      model: "claude-sonnet-4-5-20250929",
+      max_tokens: 1200,
+      messages: [{role: "user", content: prompt}],
+    });
+  } catch (err) {
+    logger.error("generateWeeklyBrief: Claude call failed:", err.message);
+    throw err;
+  }
+
+  const text = response.content?.[0]?.text || "";
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("generateWeeklyBrief: no JSON in Claude response");
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch (err) {
+    throw new Error(
+        `generateWeeklyBrief: JSON parse failed: ${err.message}`,
+    );
+  }
+
+  // Validate + rebuild topics using our own entry data.
+  const entryById = new Map(entries.map((e) => [e.id, e]));
+  const topics = (Array.isArray(parsed.topics) ? parsed.topics : [])
+      .slice(0, 3)
+      .map((t) => {
+        const src = typeof t.sourceEntryId === "string" ?
+          entryById.get(t.sourceEntryId) :
+          null;
+        const talkingPoints = Array.isArray(t.talkingPoints) ?
+          t.talkingPoints
+              .filter((p) => typeof p === "string" && p.trim().length > 0)
+              .map((p) => p.trim().slice(0, 200))
+              .slice(0, 4) :
+          [];
+        const who = Array.isArray(t.who) ?
+          t.who
+              .filter((n) => typeof n === "string" && n.trim().length > 0)
+              .map((n) => n.trim().slice(0, 40))
+              .slice(0, 5) :
+          [];
+        const topic = {
+          title: (t.title || "").trim().slice(0, 80),
+          who,
+          framing: (t.framing || "").trim().slice(0, 240),
+          talkingPoints,
+        };
+        if (src) {
+          topic.sourceEntryId = src.id;
+          topic.sourceQuote = src.text.trim().slice(0, 200);
+        }
+        if (typeof t.daysOpen === "number" && t.daysOpen >= 0) {
+          topic.daysOpen = Math.min(365, Math.round(t.daysOpen));
+        }
+        return topic;
+      })
+      .filter((t) => t.title && t.framing && t.talkingPoints.length > 0);
+
+  if (topics.length === 0) {
+    logger.warn(
+        `generateWeeklyBrief: no valid topics returned for ` +
+        `family ${familyId}`,
+    );
+    return {skipped: true, reason: "no_valid_topics"};
+  }
+
+  const briefId = weeklyDispatchId(familyId, end); // reuse id format
+  const doc = {
+    briefId,
+    familyId,
+    participantUserIds,
+    weekStarting: admin.firestore.Timestamp.fromDate(start),
+    weekEnding: admin.firestore.Timestamp.fromDate(end),
+    topics,
+    entryCount: entries.length,
+    generatedBy: "ai",
+    model: "claude-sonnet-4-5-20250929",
+    createdAt: admin.firestore.Timestamp.now(),
+  };
+
+  await db.collection("weekly_briefs").doc(briefId).set(doc);
+
+  logger.info(
+      `generateWeeklyBrief: wrote brief ${briefId} — ` +
+      `${topics.length} topics, ${entries.length} entries`,
+  );
+
+  await logAIUsage(db, {
+    familyId,
+    userId: null,
+    functionName: "generateWeeklyBrief",
+    model: "claude-sonnet-4-5-20250929",
+    usage: response.usage,
+  });
+
+  return {skipped: false, briefId, topicCount: topics.length,
+    entryCount: entries.length};
+}
+
+exports.generateWeeklyBrief = onCall(
+    {
+      region: "us-central1",
+      memory: "512MiB",
+      timeoutSeconds: 120,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+
+      const db = admin.firestore();
+      const {familyId, weekEnding} = request.data || {};
+
+      const userDoc = await db.collection("users")
+          .doc(request.auth.uid).get();
+      if (!userDoc.exists) throw new Error("User not found");
+      const userData = userDoc.data();
+      if (userData.role !== "parent") {
+        throw new Error("Only parents can run the weekly brief");
+      }
+      const targetFamilyId = familyId || userData.familyId;
+      if (targetFamilyId !== userData.familyId) {
+        throw new Error("Caller is not in the target family");
+      }
+
+      let weekEndingDate;
+      if (weekEnding) {
+        weekEndingDate = new Date(weekEnding);
+        if (isNaN(weekEndingDate.getTime())) {
+          throw new Error("Invalid weekEnding date");
+        }
+      } else {
+        weekEndingDate = new Date();
+        const dow = weekEndingDate.getDay();
+        if (dow !== 0) {
+          weekEndingDate.setDate(weekEndingDate.getDate() - dow);
+        }
+      }
+
+      const result = await runWeeklyBrief(
+          db, targetFamilyId, weekEndingDate, logger,
+      );
+      return result;
+    },
+);
+
+// ================================================================
 // synthesizeMoment — cross-view synthesis for a moment
 //
 // A moment holds 1..N views (journal_entries with the same momentId).

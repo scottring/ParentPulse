@@ -90,7 +90,11 @@ const promptCtaDarkStyle: React.CSSProperties = {
 import { useAuth } from '@/context/AuthContext';
 import { useWorkbookData } from '@/integration';
 import { useNextRitual } from '@/hooks/useNextRitual';
+import { useWeeklyLead } from '@/hooks/useWeeklyLead';
+import { useWeeklyBrief } from '@/hooks/useWeeklyBrief';
 import type { Ritual } from '@/types/ritual';
+import type { WeeklyDispatch } from '@/types/weekly-dispatch';
+import type { WeeklyBrief } from '@/types/weekly-brief';
 import { useOpenThreads } from '@/hooks/useOpenThreads';
 import { ensureSoloWeekly } from '@/lib/ritual-seeds';
 import type { OpenThread } from '@/lib/open-threads';
@@ -245,10 +249,10 @@ export default function WorkbookPage() {
             </p>
           </div>
 
-          <DispatchLeadPlaceholder />
+          <DispatchLead />
 
           <div className="dispatch-row">
-            <DispatchBriefPlaceholder />
+            <DispatchBrief />
             <DispatchPattern />
             <DispatchEcho />
           </div>
@@ -595,12 +599,98 @@ function FeaturePrompt() {
   );
 }
 
+function DispatchLead() {
+  const { dispatch, loading } = useWeeklyLead();
+  if (loading) {
+    return (
+      <article className="lead">
+        <div className="lead-text">
+          <span className="lead-eyebrow">
+            <span className="pip" />
+            The weekly synthesis
+          </span>
+          <h3>Gathering the week&rsquo;s lines…</h3>
+        </div>
+        <div className="lead-art" aria-hidden="true">
+          <span className="lead-art-fleuron">❦</span>
+        </div>
+      </article>
+    );
+  }
+  if (!dispatch) return <DispatchLeadPlaceholder />;
+  return <DispatchLeadView dispatch={dispatch} />;
+}
+
+function DispatchLeadView({ dispatch }: { dispatch: WeeklyDispatch }) {
+  const weekEnding = dispatch.weekEnding?.toDate?.();
+  const weekStarting = dispatch.weekStarting?.toDate?.();
+  const rangeLabel =
+    weekStarting && weekEnding
+      ? `${weekStarting.toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+        })} – ${weekEnding.toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+        })}`
+      : '';
+  return (
+    <article className="lead">
+      <div className="lead-text">
+        <span className="lead-eyebrow">
+          <span className="pip" />
+          The weekly synthesis{rangeLabel ? ` · ${rangeLabel}` : ''}
+        </span>
+        <h3>{dispatch.headline}</h3>
+        <p className="dek">{dispatch.dek}</p>
+        {dispatch.evidence.length > 0 && (
+          <div className="evidence">
+            {dispatch.evidence.map((ev) => {
+              const d = ev.createdAt?.toDate?.();
+              const dateShort = d
+                ? d.toLocaleDateString('en-GB', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short',
+                  })
+                : '';
+              return (
+                <Link
+                  key={ev.entryId}
+                  href={`/journal/${ev.entryId}`}
+                  className="ev"
+                  style={{ textDecoration: 'none', color: 'inherit' }}
+                >
+                  <span className="when">
+                    {ev.authorName}
+                    {dateShort ? ` · ${dateShort}` : ''}
+                  </span>
+                  <span className="line">&ldquo;{ev.excerpt}&rdquo;</span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+        {dispatch.emergentLine && (
+          <p
+            className="dek"
+            style={{ marginTop: 18, fontStyle: 'italic', color: 'var(--r-text-3)' }}
+          >
+            {dispatch.emergentLine}
+          </p>
+        )}
+      </div>
+      <div className="lead-art" aria-hidden="true">
+        <span className="lead-art-fleuron">❦</span>
+      </div>
+    </article>
+  );
+}
+
 function DispatchLeadPlaceholder() {
-  // The weekly synthesis pipeline is not wired yet — it will write to
-  // a dispatches collection once the cron job lands. Until then this
-  // card is pure status: no CTAs, no dead buttons. When the backend
-  // is ready we'll reintroduce "Read the full dispatch" / "Add to
-  // this week's brief" pointing at the generated record.
+  // Backend pipeline hasn't written a dispatch for the user's family
+  // yet (either not Sunday 9pm yet or the family is brand new). Pure
+  // status card — no CTAs, no dead buttons.
   return (
     <article className="lead">
       <div className="lead-text">
@@ -618,8 +708,8 @@ function DispatchLeadPlaceholder() {
           <div className="ev">
             <span className="when">Synthesis</span>
             <span className="line">
-              <em>Not yet wired.</em> The pipeline will land under this
-              eyebrow as soon as the weekly job runs.
+              <em>Nothing for this week yet.</em> The lead writes itself
+              once the weekly job runs.
             </span>
           </div>
         </div>
@@ -629,6 +719,94 @@ function DispatchLeadPlaceholder() {
       </div>
     </article>
   );
+}
+
+function DispatchBrief() {
+  const { brief, loading } = useWeeklyBrief();
+  if (loading) {
+    return (
+      <article className="dispatch brief">
+        <span className="eyebrow">
+          <span className="pip" />
+          Brief
+        </span>
+        <h3>Pulling the threads together…</h3>
+      </article>
+    );
+  }
+  if (!brief || brief.topics.length === 0) return <DispatchBriefPlaceholder />;
+  return <DispatchBriefView brief={brief} />;
+}
+
+function DispatchBriefView({ brief }: { brief: WeeklyBrief }) {
+  // The brief card shows the first topic prominently on the Workbook
+  // and hints at the rest ("+ 2 more topics"). Clicking opens the
+  // source entry (we don't yet have a dedicated brief detail page).
+  const primary = brief.topics[0];
+  const rest = brief.topics.length - 1;
+  return (
+    <article className="dispatch brief">
+      <span className="eyebrow">
+        <span className="pip" />
+        Brief for your next conversation
+      </span>
+      <h3>{primary.title}</h3>
+      {primary.framing && (
+        <p style={{ fontStyle: 'italic', color: 'var(--r-text-3)', margin: '0 0 10px 0', fontSize: 14 }}>
+          {primary.framing}
+        </p>
+      )}
+      <ul className="bullets">
+        {primary.talkingPoints.slice(0, 3).map((point, i) => (
+          <li key={i}>{renderTalkingPoint(point)}</li>
+        ))}
+      </ul>
+      {primary.sourceQuote && (
+        <p
+          style={{
+            margin: '10px 0 6px 0',
+            padding: '8px 10px',
+            background: 'rgba(200,184,154,0.12)',
+            borderLeft: '2px solid rgba(138,111,74,0.35)',
+            borderRadius: 3,
+            fontSize: 13,
+            lineHeight: 1.5,
+            color: 'var(--r-text-3)',
+            fontStyle: 'italic',
+          }}
+        >
+          &ldquo;{primary.sourceQuote}&rdquo;
+        </p>
+      )}
+      <div className="foot">
+        <span>
+          {primary.who.length > 0 ? primary.who.join(', ') : '—'}
+          {typeof primary.daysOpen === 'number' && primary.daysOpen > 0
+            ? ` · ${primary.daysOpen}d open`
+            : ''}
+        </span>
+        <span className="arrow">
+          {rest > 0 ? `+${rest} more →` : '—'}
+        </span>
+      </div>
+    </article>
+  );
+}
+
+// Lightweight italics pass on markers like *word* / _word_ so the
+// LLM can emphasize a phrase in a talking point without us writing
+// a markdown parser.
+function renderTalkingPoint(point: string) {
+  const parts = point.split(/(\*[^*]+\*|_[^_]+_)/);
+  return parts.map((part, i) => {
+    if (part.startsWith('*') && part.endsWith('*')) {
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    }
+    if (part.startsWith('_') && part.endsWith('_')) {
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    }
+    return <span key={i}>{part}</span>;
+  });
 }
 
 function DispatchBriefPlaceholder() {

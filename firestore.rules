@@ -1064,6 +1064,34 @@ service cloud.firestore {
                     && request.auth.uid == resource.data.fromUserId;
     }
 
+    // ==================== Weekly lead dispatches ====================
+    //
+    // The "What Relish is returning to you" card. One doc per family
+    // per week, written by the generateWeeklyLead Cloud Function
+    // (admin SDK, bypasses these rules). Clients can only read —
+    // and only dispatches for their own family where they appear in
+    // participantUserIds (matches the visibility set of the source
+    // entries).
+    match /weekly_dispatches/{dispatchId} {
+      allow read: if isSignedIn()
+                  && belongsToFamily(resource.data.familyId)
+                  && request.auth.uid in resource.data.participantUserIds;
+      // Writes only via admin SDK in Cloud Functions.
+      allow write: if false;
+    }
+
+    // ==================== Weekly briefs ====================
+    //
+    // Forward-looking "brief for your next hard conversation" card —
+    // same visibility model as weekly_dispatches. Written by the
+    // generateWeeklyBrief Cloud Function only.
+    match /weekly_briefs/{briefId} {
+      allow read: if isSignedIn()
+                  && belongsToFamily(resource.data.familyId)
+                  && request.auth.uid in resource.data.participantUserIds;
+      allow write: if false;
+    }
+
     // Couple rituals — scheduled recurring check-ins between two partners.
     match /couple_rituals/{ritualId} {
       allow read: if isSignedIn() && belongsToFamily(resource.data.familyId);

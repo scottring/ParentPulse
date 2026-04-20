@@ -782,6 +782,24 @@
       ]
     },
     {
+      "collectionGroup": "weekly_dispatches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "participantUserIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "weekEnding", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "weekly_briefs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "participantUserIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "weekEnding", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "moment_invites",
       "queryScope": "COLLECTION",
       "fields": [
