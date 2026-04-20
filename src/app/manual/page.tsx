@@ -79,7 +79,7 @@ export default function ManualPage() {
             </div>
             <div className="masthead-divider" />
             <div className="masthead-cell align-c">
-              <span className="masthead-eyebrow">Open threads</span>
+              <span className="masthead-eyebrow">Waiting on you</span>
               <span className="masthead-value">
                 <em>{totalOpenThreads}</em>
                 <span className="sub">
@@ -150,7 +150,7 @@ export default function ManualPage() {
                 </div>
                 <div className="hero-stat">
                   <div className="num">{hero.openThreadsCount}</div>
-                  <div className="lbl">Open threads</div>
+                  <div className="lbl">Waiting</div>
                 </div>
                 <div className="hero-stat">
                   <div className="num">{formatDaysShort(hero.daysSinceLast)}</div>
@@ -648,7 +648,7 @@ function filterLabel(
   openCount: number,
 ): string {
   if (k === 'all') return `All · ${roster.length}`;
-  if (k === 'open') return `Has open threads · ${openCount}`;
+  if (k === 'open') return `Waiting · ${openCount}`;
   if (k === 'quiet') return 'Quiet longest';
   if (k === 'recent') return 'Written recently';
   return k;

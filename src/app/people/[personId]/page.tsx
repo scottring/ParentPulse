@@ -116,8 +116,8 @@ export default function PersonPage({
                     {mentions.length === 1 ? 'entry' : 'entries'} about {firstName}.
                   </em>{' '}
                   {openThreads.length > 0
-                    ? `${spellCount(openThreads.length)} ${openThreads.length === 1 ? 'thread' : 'threads'} still open.`
-                    : 'Nothing open right now.'}
+                    ? `${spellCount(openThreads.length)} ${openThreads.length === 1 ? 'thing' : 'things'} waiting on you.`
+                    : 'Nothing waiting right now.'}
                 </>
               ) : (
                 <>
@@ -134,7 +134,7 @@ export default function PersonPage({
               </div>
               <div className="dossier-stat">
                 <div className="num">{openThreads.length}</div>
-                <div className="lbl">Open threads</div>
+                <div className="lbl">Waiting</div>
               </div>
               <div className="dossier-stat">
                 <div className="num">{formatDaysShort(daysSinceLast)}</div>
@@ -217,7 +217,7 @@ export default function PersonPage({
               </h2>
               <span className="sub">
                 {openThreads.length > 0
-                  ? `${spellCount(openThreads.length)} ${openThreads.length === 1 ? 'thread' : 'threads'}, newest first.`
+                  ? `${spellCount(openThreads.length)} ${openThreads.length === 1 ? 'thing' : 'things'} waiting, newest first.`
                   : 'The book is quiet on this page.'}
               </span>
             </div>

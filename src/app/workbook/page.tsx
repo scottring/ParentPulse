@@ -158,11 +158,11 @@ export default function WorkbookPage() {
             </div>
             <div className="masthead-divider" />
             <div className="masthead-cell align-c">
-              <span className="masthead-eyebrow">Open</span>
+              <span className="masthead-eyebrow">Waiting on you</span>
               <span className="masthead-value">
                 {ledeCount === 0 ? 'Nothing' : `${ledeCount}`}
                 <span className="sub">
-                  {ledeCount === 1 ? ' thread' : ' threads'}
+                  {ledeCount === 0 ? '' : ledeCount === 1 ? ' thing' : ' things'}
                 </span>
               </span>
             </div>
@@ -212,9 +212,9 @@ export default function WorkbookPage() {
 
           <div className="tending">
             <div className="tending-head">
-              <span className="eyebrow">Open threads</span>
+              <span className="eyebrow">Waiting on you</span>
               <span className="count">
-                {ledeCount === 0 ? 'nothing waiting' : `${ledeCount} kept open`}
+                {ledeCount === 0 ? 'nothing waiting' : `${ledeCount} waiting`}
               </span>
             </div>
             {ledeCount === 0 ? (
@@ -1331,9 +1331,9 @@ function isoWeek(d: Date): number {
 function ledeForState(openCount: number): string {
   if (openCount === 0)
     return 'The kitchen is quiet. The book is where you left it.';
-  if (openCount === 1) return 'One thread is open and the kitchen is quiet.';
-  if (openCount === 2) return 'Two threads are open and the kitchen is quiet.';
-  return `${openCount} threads are open.`;
+  if (openCount === 1) return 'One thing is waiting and the kitchen is quiet.';
+  if (openCount === 2) return 'Two things are waiting and the kitchen is quiet.';
+  return `${openCount} things are waiting.`;
 }
 
 function threadTitle(t: OpenThread): string {
