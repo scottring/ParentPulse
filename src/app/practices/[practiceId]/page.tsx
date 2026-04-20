@@ -516,7 +516,7 @@ const pageStyles = `
     text-align: center;
   }
   .pr-back { text-align: center; font-family: var(--r-serif); margin-top: 12px; }
-  .pr-back :global(a) { color: var(--r-ink); text-decoration: underline; }
+  .pr-back a { color: var(--r-ink); text-decoration: underline; }
 
   .crumbs {
     margin: 0 0 20px;
@@ -530,13 +530,13 @@ const pageStyles = `
     text-transform: uppercase;
     color: var(--r-text-5);
   }
-  .crumbs :global(a) {
+  .crumbs a {
     color: var(--r-text-4);
     text-decoration: none;
     border-bottom: 1px solid transparent;
     transition: border-color 120ms var(--r-ease-ink);
   }
-  .crumbs :global(a:hover) { border-color: var(--r-text-4); }
+  .crumbs a:hover { border-color: var(--r-text-4); }
   .crumbs .sep { opacity: 0.5; }
 
   /* HERO */
