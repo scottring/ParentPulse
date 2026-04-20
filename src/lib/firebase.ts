@@ -1,6 +1,6 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentSingleTabManager } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
 
@@ -35,10 +35,15 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Firebase services
 const auth = getAuth(app);
-// Initialize Firestore with offline persistence — writes queue locally and sync when online
+// Initialize Firestore with offline persistence — writes queue
+// locally and sync when online. Uses SINGLE-tab mode: Firebase
+// 12.8.0's multi-tab coordinator races with HMR / StrictMode's
+// rapid subscribe-unsubscribe cycles and throws
+// "INTERNAL ASSERTION FAILED (ca9)" cascades. Single-tab retains
+// offline writes without the state-machine bug.
 const firestore = initializeFirestore(app, {
   localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager(),
+    tabManager: persistentSingleTabManager({ forceOwnership: true }),
   }),
 });
 
