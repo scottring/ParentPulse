@@ -63,4 +63,32 @@ describe('EditPersonSheet', () => {
     });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('converts a changed date of birth into a Firestore Timestamp for that calendar date', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const user = (await import('@testing-library/user-event')).default.setup();
+
+    render(
+      <EditPersonSheet
+        person={makePerson({
+          dateOfBirth: Timestamp.fromDate(new Date(2018, 5, 14)), // June 14, 2018
+        })}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />
+    );
+
+    const dob = screen.getByLabelText(/date of birth/i) as HTMLInputElement;
+    await user.clear(dob);
+    await user.type(dob, '2019-07-04');
+
+    await user.click(screen.getByRole('button', { name: /save/i }));
+
+    const call = onSave.mock.calls[0][0] as Record<string, unknown>;
+    expect(call.dateOfBirth).toBeInstanceOf(Timestamp);
+    const d = (call.dateOfBirth as Timestamp).toDate();
+    expect(d.getFullYear()).toBe(2019);
+    expect(d.getMonth()).toBe(6); // July (0-indexed)
+    expect(d.getDate()).toBe(4);
+  });
 });

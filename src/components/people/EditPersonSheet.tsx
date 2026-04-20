@@ -19,6 +19,13 @@ function toDateInputValue(ts?: Timestamp): string {
   return `${y}-${m}-${day}`;
 }
 
+function fromDateInputValue(value: string): Timestamp | null {
+  if (!value) return null;
+  const [y, m, d] = value.split('-').map((n) => parseInt(n, 10));
+  if (!y || !m || !d) return null;
+  return Timestamp.fromDate(new Date(y, m - 1, d));
+}
+
 export function EditPersonSheet({ person, onClose, onSave }: EditPersonSheetProps) {
   const [name, setName] = useState(person.name ?? '');
   const [pronouns, setPronouns] = useState(person.pronouns ?? '');
@@ -47,6 +54,12 @@ export function EditPersonSheet({ person, onClose, onSave }: EditPersonSheetProp
 
     if (bannerUrl !== (person.bannerUrl ?? '')) {
       updates.bannerUrl = bannerUrl;
+    }
+
+    const currentDob = toDateInputValue(person.dateOfBirth);
+    if (dob !== currentDob) {
+      const next = fromDateInputValue(dob);
+      if (next) updates.dateOfBirth = next;
     }
 
     if (Object.keys(updates).length === 0) {

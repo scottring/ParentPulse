@@ -45,26 +45,34 @@ if (!RUNNING_AGAINST_EMULATOR) {
     where: vi.fn(),
     orderBy: vi.fn(),
     limit: vi.fn(),
-    Timestamp: {
-      now: vi.fn(() => ({
-        toDate: () => new Date(),
-        toMillis: () => Date.now(),
-        seconds: Math.floor(Date.now() / 1000),
-        nanoseconds: 0,
-      })),
-      fromDate: vi.fn((date: Date) => ({
-        toDate: () => date,
-        toMillis: () => date.getTime(),
-        seconds: Math.floor(date.getTime() / 1000),
-        nanoseconds: 0,
-      })),
-      fromMillis: vi.fn((ms: number) => ({
-        toDate: () => new Date(ms),
-        toMillis: () => ms,
-        seconds: Math.floor(ms / 1000),
-        nanoseconds: (ms % 1000) * 1_000_000,
-      })),
-    },
+    Timestamp: (() => {
+      class MockTimestamp {
+        seconds: number;
+        nanoseconds: number;
+        constructor(seconds: number, nanoseconds: number) {
+          this.seconds = seconds;
+          this.nanoseconds = nanoseconds;
+        }
+        toDate() {
+          return new Date(this.seconds * 1000 + Math.floor(this.nanoseconds / 1_000_000));
+        }
+        toMillis() {
+          return this.seconds * 1000 + Math.floor(this.nanoseconds / 1_000_000);
+        }
+        static now() {
+          const ms = Date.now();
+          return new MockTimestamp(Math.floor(ms / 1000), (ms % 1000) * 1_000_000);
+        }
+        static fromDate(date: Date) {
+          const ms = date.getTime();
+          return new MockTimestamp(Math.floor(ms / 1000), (ms % 1000) * 1_000_000);
+        }
+        static fromMillis(ms: number) {
+          return new MockTimestamp(Math.floor(ms / 1000), (ms % 1000) * 1_000_000);
+        }
+      }
+      return MockTimestamp;
+    })(),
     serverTimestamp: vi.fn(() => ({
       toDate: () => new Date(),
       toMillis: () => Date.now(),
