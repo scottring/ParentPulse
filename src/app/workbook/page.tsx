@@ -929,21 +929,27 @@ const styles = `
   }
   .feature-eyebrow .pip { width: 5px; height: 5px; border-radius: 50%; background: var(--r-ember); }
 
+  /* Memory card: real photos come from the archive entry itself
+     (entry.media) when the pipeline's wired. Placeholder until
+     then is a warm paper-soft strip with a subtle fleuron —
+     avoids guessing a stock photo that turns out wedding-y. */
   .feature-photo {
-    height: 120px;
+    height: 96px;
     margin: -28px -28px 0;
+    background: var(--r-paper-soft);
     background-image:
-      linear-gradient(180deg, rgba(20,16,12,0) 0%, rgba(251,248,242,0) 60%, var(--r-paper) 100%),
-      url('https://images.unsplash.com/photo-1529636798458-92182e662485?w=1600&q=80&auto=format&fit=crop');
-    background-size: cover;
-    background-position: center 40%;
+      radial-gradient(ellipse at 75% 40%, rgba(201,134,76,0.08), transparent 55%),
+      radial-gradient(ellipse at 20% 70%, rgba(124,144,130,0.06), transparent 60%);
     display: flex;
-    align-items: flex-end;
-    justify-content: flex-start;
-    padding: 12px 16px;
+    align-items: center;
+    justify-content: center;
     border-bottom: 1px solid var(--r-rule-5);
   }
-  .photo-fleuron { display: none; }
+  .photo-fleuron {
+    font-family: var(--r-serif);
+    font-size: 26px;
+    color: var(--r-rule-2);
+  }
   .memory-date { font-family: var(--r-serif); font-style: italic; font-size: 15px; color: var(--r-text-4); }
   .memory-quote {
     font-family: var(--r-serif);
@@ -1169,14 +1175,22 @@ const styles = `
   }
   .lead-pill.dark { background: var(--r-leather); color: var(--r-paper); border-color: var(--r-leather); }
   .lead-pill:disabled { opacity: 0.45; cursor: not-allowed; }
+  /* Lead art: the redesign mock shows a pattern illustration here;
+     we don't have one sourced yet that's definitively on-brand, so
+     a warm paper panel with a subtle gradient + the "A pattern
+     Relish noticed" label stands in. Swap to real art once a
+     visual pattern-of-the-week is sourced or generated per family. */
   .lead-art {
+    background: var(--r-paper-soft);
     background-image:
-      linear-gradient(180deg, rgba(20,16,12,0.14), rgba(20,16,12,0) 40%, rgba(20,16,12,0.08) 100%),
-      url('https://images.unsplash.com/photo-1513346940221-6f673d962e97?w=1600&q=80&auto=format&fit=crop');
-    background-size: cover;
-    background-position: center 40%;
+      radial-gradient(ellipse at 30% 30%, rgba(201,134,76,0.12), transparent 55%),
+      radial-gradient(ellipse at 80% 70%, rgba(140,74,62,0.08), transparent 60%);
     min-height: 280px;
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-left: 1px solid var(--r-rule-5);
   }
   .lead-art::after {
     content: "A pattern Relish noticed";
@@ -1188,12 +1202,16 @@ const styles = `
     font-weight: 700;
     letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: var(--r-paper);
-    background: rgba(20,16,12,0.5);
-    padding: 5px 10px;
-    border-radius: 2px;
+    color: var(--r-text-5);
+    background: transparent;
+    padding: 0;
   }
-  .lead-art-fleuron { display: none; }
+  .lead-art-fleuron {
+    font-family: var(--r-serif);
+    font-size: 48px;
+    color: var(--r-rule-2);
+    display: block;
+  }
 
   .dispatch-row { display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 24px; }
   .dispatch {
