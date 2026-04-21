@@ -7,6 +7,7 @@ import { useDashboard } from '@/hooks/useDashboard';
 import { useSurfaceNext, type SurfaceNext } from '@/hooks/useSurfaceNext';
 import { UserMenu } from '@/components/layout/UserMenu';
 import CaptureSheet from '@/components/capture/CaptureSheet';
+import { SurfaceTherapyCard } from './SurfaceTherapyCard';
 import type { Person, PersonManual } from '@/types/person-manual';
 
 /**
@@ -98,6 +99,10 @@ export function SurfaceHome() {
           </li>
         </ul>
       </section>
+
+      <div className="therapy-row">
+        <SurfaceTherapyCard />
+      </div>
 
       <nav className="dock" aria-label="Quick actions">
         <button type="button" className="dock-btn dock-primary" onClick={openCapture}>
@@ -295,6 +300,11 @@ export function SurfaceHome() {
           width: 26px;
           text-align: center;
           color: #6b6b68;
+        }
+
+        /* ─── Therapy row ────────────────────────────────── */
+        .therapy-row {
+          padding-bottom: 12px;
         }
 
         /* ─── Dock ────────────────────────────────────────── */
