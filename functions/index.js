@@ -10687,3 +10687,494 @@ exports.sanitizeEntryToActivity = onCall(
       return {success: true, draft};
     },
 );
+
+// ================================================================
+// THERAPY PREP — regenerateTherapyWindow
+//
+// Gathers journal entries, margin notes, manual syntheses, growth
+// items, and prior therapy notes for the open window's date range,
+// then asks Claude to produce 2-4 therapy themes. Existing themes
+// with matching identities keep their userState + lifecycle;
+// themes not returned are soft-retired (removed from themeIds but
+// their docs are preserved); new themes get fresh lifecycle docs.
+//
+// The orchestrator (`performTherapyRegen`) is shared by:
+//   - `regenerateTherapyWindow` — user-triggered onCall
+//   - `autoRegenerateTherapyWindows` — daily scheduled sweep
+// ================================================================
+
+/**
+ * Gather all source material for the open therapy window.
+ * Scoped to [window.openedAt, now].
+ *
+ * @param {FirebaseFirestore.Firestore} db
+ * @param {object} win - window document data (must include ownerUserId, openedAt)
+ * @return {Promise<object>} sources bag
+ */
+async function gatherTherapySources(db, win) {
+  const now = admin.firestore.Timestamp.now();
+  const since = win.openedAt;
+  const ownerUserId = win.ownerUserId;
+
+  // ---- journal entries authored by this user in window ----
+  const journalSnap = await db.collection("journal_entries")
+      .where("authorId", "==", ownerUserId)
+      .where("createdAt", ">=", since)
+      .where("createdAt", "<=", now)
+      .orderBy("createdAt", "desc")
+      .limit(100)
+      .get();
+
+  const journalEntries = [];
+  const journalEntryIds = [];
+  journalSnap.forEach((doc) => {
+    const d = doc.data();
+    journalEntries.push({ id: doc.id, text: d.text || "", createdAt: d.createdAt });
+    journalEntryIds.push(doc.id);
+  });
+
+  // ---- margin notes on those journal entries ----
+  // Firestore 'in' queries max 30 items per call — chunk accordingly.
+  const marginNotes = [];
+  const chunks = [];
+  for (let i = 0; i < journalEntryIds.length; i += 30) {
+    chunks.push(journalEntryIds.slice(i, i + 30));
+  }
+  for (const chunk of chunks) {
+    if (chunk.length === 0) continue;
+    const snap = await db.collection("margin_notes")
+        .where("entryId", "in", chunk)
+        .get();
+    snap.forEach((doc) => {
+      const d = doc.data();
+      marginNotes.push({ id: doc.id, entryId: d.entryId, text: d.text || "", createdAt: d.createdAt });
+    });
+  }
+
+  // ---- manual syntheses updated during window ----
+  const synthSnap = await db.collection("person_manuals")
+      .where("ownerUserId", "==", ownerUserId)
+      .where("updatedAt", ">=", since)
+      .where("updatedAt", "<=", now)
+      .get();
+
+  const manualSyntheses = [];
+  synthSnap.forEach((doc) => {
+    const d = doc.data();
+    if (d.synthesizedContent) {
+      manualSyntheses.push({ id: doc.id, personId: d.personId, overview: d.synthesizedContent.overview || "" });
+    }
+  });
+
+  // ---- growth items completed during window ----
+  const growthSnap = await db.collection("growth_items")
+      .where("ownerUserId", "==", ownerUserId)
+      .where("createdAt", ">=", since)
+      .where("createdAt", "<=", now)
+      .get();
+
+  const growthItems = [];
+  growthSnap.forEach((doc) => {
+    const d = doc.data();
+    growthItems.push({ id: doc.id, title: d.title || "", status: d.status });
+  });
+
+  // ---- prior window therapy notes (already-discussed context) ----
+  // Look for therapy_notes whose windowId matches the carried-forward
+  // source, if any. Fall back to fetching the most recent closed
+  // window's notes for this owner.
+  const priorNotes = [];
+  try {
+    const priorNotesSnap = await db.collection("therapy_notes")
+        .where("ownerUserId", "==", ownerUserId)
+        .orderBy("createdAt", "desc")
+        .limit(20)
+        .get();
+    priorNotesSnap.forEach((doc) => {
+      const d = doc.data();
+      priorNotes.push({ id: doc.id, windowId: d.windowId, content: d.content || "" });
+    });
+  } catch (_) {
+    // Non-critical — proceed without prior notes
+  }
+
+  return { journalEntries, marginNotes, manualSyntheses, growthItems, priorNotes };
+}
+
+/**
+ * Build the Claude prompt for therapy theme generation.
+ *
+ * @param {object} opts
+ * @param {object} opts.sources - from gatherTherapySources
+ * @param {Array}  opts.existingThemes - current theme docs with userState + lifecycle
+ * @param {Array}  opts.priorNotes - therapy notes from previous windows
+ * @return {string}
+ */
+function buildTherapyPrompt({ sources, existingThemes, priorNotes }) {
+  const lines = [];
+
+  lines.push(
+      "You are a thoughtful AI assistant helping a person prepare for a therapy session.",
+      "Based on the journal entries, observations, and context below, identify 2-4 meaningful",
+      "themes that would be worth discussing with a therapist.",
+      "",
+      "Return ONLY a JSON object in this exact shape (no markdown, no explanation):",
+      '{"themes":[{"title":"...","summary":"...","sourceRefs":[],"identity":"..."}]}',
+      "",
+      "Rules:",
+      "- `identity` is a short stable slug (e.g. 'bedtime-battles', 'work-anxiety') that",
+      "  lets us match this theme across regenerations. Choose carefully — it should be",
+      "  descriptive enough to be unique but stable across paraphrasing.",
+      "- `sourceRefs` is an array of {kind, id, snippet} objects referencing the source",
+      "  material. kind is one of: entry | marginalia | synthesis | growth_item | therapy_note",
+      "- Keep summaries concise (2-4 sentences). Write for someone who wants to walk into",
+      "  their therapy session prepared, not surprised.",
+      "",
+  );
+
+  // Existing themes context
+  if (existingThemes.length > 0) {
+    lines.push("=== EXISTING THEMES (from previous generations this window) ===");
+    for (const t of existingThemes) {
+      const state = t.userState || {};
+      const lc = t.lifecycle || {};
+      let flags = "";
+      if (state.dismissed) flags += " [DO NOT RESURFACE — user dismissed]";
+      if (state.starred) flags += " [PRESERVE — user starred as important]";
+      if (lc.carriedForwardCount > 0) flags += ` [carried forward ${lc.carriedForwardCount}x]`;
+      lines.push(`- identity:${t.identity} | title:${t.title}${flags}`);
+    }
+    lines.push("");
+  }
+
+  // Prior therapy notes
+  if (priorNotes && priorNotes.length > 0) {
+    lines.push("=== ALREADY DISCUSSED (prior therapy notes — avoid repeating unless still active) ===");
+    for (const n of priorNotes.slice(0, 10)) {
+      lines.push(`[${n.windowId}] ${n.content.slice(0, 300)}`);
+    }
+    lines.push("");
+  }
+
+  // Journal entries
+  if (sources.journalEntries && sources.journalEntries.length > 0) {
+    lines.push("=== JOURNAL ENTRIES (most recent first) ===");
+    for (const e of sources.journalEntries.slice(0, 30)) {
+      lines.push(`[entry:${e.id}] ${(e.text || "").slice(0, 400)}`);
+    }
+    lines.push("");
+  }
+
+  // Margin notes
+  if (sources.marginNotes && sources.marginNotes.length > 0) {
+    lines.push("=== MARGIN NOTES ===");
+    for (const n of sources.marginNotes.slice(0, 30)) {
+      lines.push(`[marginalia:${n.id} on entry:${n.entryId}] ${(n.text || "").slice(0, 200)}`);
+    }
+    lines.push("");
+  }
+
+  // Manual syntheses
+  if (sources.manualSyntheses && sources.manualSyntheses.length > 0) {
+    lines.push("=== PERSON MANUAL SYNTHESIS (recently updated) ===");
+    for (const s of sources.manualSyntheses) {
+      lines.push(`[synthesis:${s.id} person:${s.personId}] ${(s.overview || "").slice(0, 400)}`);
+    }
+    lines.push("");
+  }
+
+  // Growth items
+  if (sources.growthItems && sources.growthItems.length > 0) {
+    lines.push("=== GROWTH ITEMS (this window) ===");
+    for (const g of sources.growthItems) {
+      lines.push(`[growth_item:${g.id}] ${g.title} (status: ${g.status})`);
+    }
+    lines.push("");
+  }
+
+  lines.push("Now return only the JSON object with 2-4 themes.");
+
+  return lines.join("\n");
+}
+
+/**
+ * Call Claude Sonnet and extract the themes JSON array.
+ *
+ * @param {string} prompt
+ * @return {Promise<Array>} array of theme objects
+ */
+async function callClaudeForThemes(prompt) {
+  const logger = require("firebase-functions/logger");
+  const MODEL = "claude-sonnet-4-5";
+
+  const client = getAnthropic();
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 2048,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const raw = (response.content[0]?.text || "").trim();
+  logger.info(`callClaudeForThemes: raw response length ${raw.length}`);
+
+  // Extract JSON — handle cases where the model wraps it in markdown
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error(`callClaudeForThemes: no JSON found in response: ${raw.slice(0, 200)}`);
+  }
+
+  const parsed = JSON.parse(jsonMatch[0]);
+  if (!Array.isArray(parsed.themes)) {
+    throw new Error(`callClaudeForThemes: expected {themes:[...]}, got ${raw.slice(0, 200)}`);
+  }
+
+  return parsed.themes;
+}
+
+/**
+ * Orchestrate a full regen cycle for one open therapy window.
+ *
+ * Steps:
+ * 1. Fetch open window + existing theme docs
+ * 2. Gather sources, build prompt, call LLM
+ * 3. Batch write:
+ *    - Themes returned by LLM with matching identity → update doc,
+ *      preserve userState + lifecycle
+ *    - New themes (no identity match) → create fresh doc
+ *    - Themes NOT returned → soft-retire (remove from themeIds, doc stays)
+ * 4. Update window.themeIds + lastRegeneratedAt
+ *
+ * @param {FirebaseFirestore.Firestore} db
+ * @param {object} opts
+ * @param {string} opts.windowId
+ * @return {Promise<{themeIds: string[]}>}
+ */
+// therapyInternals is defined here so performTherapyRegen can call
+// callClaudeForThemes through it — this allows sinon to stub the
+// function in tests without breaking the closure.
+const therapyInternals = {};
+
+async function performTherapyRegen(db, { windowId }) {
+  const logger = require("firebase-functions/logger");
+
+  // 1. Fetch the open window
+  const windowRef = db.collection("therapy_windows").doc(windowId);
+  const windowSnap = await windowRef.get();
+  if (!windowSnap.exists) throw new Error(`therapy window ${windowId} not found`);
+
+  const win = windowSnap.data();
+  if (win.status !== "open") throw new Error(`therapy window ${windowId} is not open`);
+
+  // 2. Fetch existing theme docs (to preserve userState + lifecycle)
+  const existingThemeIds = win.themeIds || [];
+  const existingThemeDocs = {};
+  if (existingThemeIds.length > 0) {
+    for (const themeId of existingThemeIds) {
+      const snap = await db.collection("therapy_themes").doc(themeId).get();
+      if (snap.exists) {
+        existingThemeDocs[themeId] = { id: themeId, ...snap.data() };
+      }
+    }
+  }
+
+  // Build a lookup by identity for fast matching
+  const existingByIdentity = {};
+  for (const [id, doc] of Object.entries(existingThemeDocs)) {
+    if (doc.identity) existingByIdentity[doc.identity] = { id, ...doc };
+  }
+
+  // 3. Gather sources + call LLM
+  const sources = await gatherTherapySources(db, win);
+  const existingThemesForPrompt = Object.values(existingThemeDocs);
+  const prompt = buildTherapyPrompt({
+    sources,
+    existingThemes: existingThemesForPrompt,
+    priorNotes: sources.priorNotes,
+  });
+
+  // This is the only step that can throw before we write anything —
+  // intentional: LLM failure leaves window completely untouched.
+  // Call through therapyInternals so tests can stub callClaudeForThemes.
+  const llmThemes = await therapyInternals.callClaudeForThemes(prompt);
+
+  // 4. Compute the new themeIds list and prepare batch writes
+  const batch = db.batch();
+  const newThemeIds = [];
+  const now = admin.firestore.Timestamp.now();
+
+  for (const llmTheme of llmThemes) {
+    const identity = llmTheme.identity || llmTheme.title;
+    const existing = existingByIdentity[identity];
+
+    if (existing) {
+      // Update existing doc — preserve userState + lifecycle, refresh content
+      const themeRef = db.collection("therapy_themes").doc(existing.id);
+      batch.update(themeRef, {
+        title: llmTheme.title,
+        summary: llmTheme.summary,
+        sourceRefs: llmTheme.sourceRefs || [],
+        generatedAt: now,
+        // userState and lifecycle intentionally NOT overwritten
+      });
+      newThemeIds.push(existing.id);
+    } else {
+      // New theme — create fresh doc
+      const themeRef = db.collection("therapy_themes").doc();
+      batch.set(themeRef, {
+        windowId,
+        therapistId: win.therapistId,
+        ownerUserId: win.ownerUserId,
+        title: llmTheme.title,
+        summary: llmTheme.summary,
+        sourceRefs: llmTheme.sourceRefs || [],
+        identity,
+        userState: { starred: false, dismissed: false },
+        lifecycle: {
+          firstSeenWindowId: windowId,
+          carriedForwardCount: 0,
+        },
+        generatedAt: now,
+        model: "claude-sonnet-4-5",
+      });
+      newThemeIds.push(themeRef.id);
+    }
+  }
+
+  // Soft-retire: themes that existed but LLM did not return
+  // Their docs stay in Firestore but are removed from themeIds.
+  // (No batch operation needed — just exclusion from newThemeIds.)
+  const retiredIds = existingThemeIds.filter(
+      (id) => !newThemeIds.includes(id),
+  );
+  if (retiredIds.length > 0) {
+    logger.info(
+        `performTherapyRegen: soft-retiring ${retiredIds.length} theme(s): ${retiredIds.join(", ")}`,
+    );
+  }
+
+  // Update the window
+  batch.update(windowRef, {
+    themeIds: newThemeIds,
+    lastRegeneratedAt: now,
+  });
+
+  await batch.commit();
+
+  logger.info(
+      `performTherapyRegen: window ${windowId} — ` +
+      `${newThemeIds.length} active themes, ${retiredIds.length} retired`,
+  );
+
+  return { themeIds: newThemeIds };
+}
+
+// ----------------------------------------------------------------
+// Export internals for unit tests
+// Populate therapyInternals in-place so performTherapyRegen's
+// reference to therapyInternals.callClaudeForThemes is stubbable.
+// ----------------------------------------------------------------
+Object.assign(therapyInternals, {
+  gatherTherapySources,
+  buildTherapyPrompt,
+  callClaudeForThemes,
+  performTherapyRegen,
+});
+module.exports.__therapyInternals = therapyInternals;
+
+// ----------------------------------------------------------------
+// regenerateTherapyWindow — user-triggered onCall
+// ----------------------------------------------------------------
+exports.regenerateTherapyWindow = onCall(
+    {
+      region: "us-central1",
+      memory: "512MiB",
+      timeoutSeconds: 120,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+      const {HttpsError} = require("firebase-functions/v2/https");
+
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Authentication required");
+      }
+
+      const {windowId} = request.data || {};
+      if (!windowId) {
+        throw new HttpsError("invalid-argument", "windowId is required");
+      }
+
+      const db = admin.firestore();
+
+      // Verify the window belongs to the calling user
+      const windowSnap = await db.collection("therapy_windows").doc(windowId).get();
+      if (!windowSnap.exists) {
+        throw new HttpsError("not-found", "Therapy window not found");
+      }
+      if (windowSnap.data().ownerUserId !== request.auth.uid) {
+        throw new HttpsError("permission-denied", "Access denied");
+      }
+
+      try {
+        const result = await performTherapyRegen(db, { windowId });
+        logger.info(
+            `regenerateTherapyWindow: user ${request.auth.uid} ` +
+            `regenerated window ${windowId} — ${result.themeIds.length} themes`,
+        );
+        return { success: true, themeIds: result.themeIds };
+      } catch (err) {
+        logger.error(`regenerateTherapyWindow: failed for window ${windowId}:`, err.message);
+        throw new HttpsError("internal", err.message);
+      }
+    },
+);
+
+// ----------------------------------------------------------------
+// autoRegenerateTherapyWindows — daily scheduled sweep
+// ----------------------------------------------------------------
+exports.autoRegenerateTherapyWindows = onSchedule(
+    {
+      schedule: "0 6 * * *", // 6 AM daily
+      region: "us-central1",
+      memory: "512MiB",
+      timeoutSeconds: 300,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async () => {
+      const logger = require("firebase-functions/logger");
+      const db = admin.firestore();
+
+      // Find all open therapy windows
+      const openSnap = await db.collection("therapy_windows")
+          .where("status", "==", "open")
+          .get();
+
+      if (openSnap.empty) {
+        logger.info("autoRegenerateTherapyWindows: no open windows");
+        return;
+      }
+
+      logger.info(`autoRegenerateTherapyWindows: ${openSnap.size} open window(s)`);
+
+      let succeeded = 0;
+      let failed = 0;
+
+      for (const winDoc of openSnap.docs) {
+        try {
+          await performTherapyRegen(db, { windowId: winDoc.id });
+          succeeded++;
+          logger.info(`autoRegenerateTherapyWindows: regenerated window ${winDoc.id}`);
+        } catch (err) {
+          failed++;
+          logger.error(
+              `autoRegenerateTherapyWindows: failed for window ${winDoc.id}: ${err.message}`,
+          );
+          // Continue with remaining windows — one failure should not stop the sweep
+        }
+      }
+
+      logger.info(
+          `autoRegenerateTherapyWindows: done — ${succeeded} succeeded, ${failed} failed`,
+      );
+    },
+);
