@@ -394,11 +394,14 @@ function QuietBlock({ showLeadTeaser }: { showLeadTeaser: boolean }) {
 }
 
 function FeatureMemory() {
-  // Absorbs the old Echo-dispatch logic: if Relish surfaced an entry
-  // from a year ago that matches what the user is writing about this
-  // week, prefer it. Otherwise fall back to the same-calendar-date
-  // entry. See docs/superpowers/specs/2026-04-20-dispatch-collapse-design.md.
-  const { entry: calendarEntry, loading: memLoading } = useMemoryOfTheDay();
+  // Absorbs the old Echo-dispatch logic AND the progressive-fallback:
+  // if Relish surfaced a theme-matched year-ago entry, prefer it. Else
+  // fall back to whatever depth of memory the archive can actually
+  // supply — year-ago, or "a month ago", or "two weeks ago" — labeled
+  // honestly. When the archive is too young to have anything older
+  // than a week, the slot is replaced by FeatureInvite instead of a
+  // dead placeholder.
+  const { entry: calendarEntry, ageLabel, loading: memLoading } = useMemoryOfTheDay();
   const { echo, loading: echoLoading } = useDispatches();
   const preferred = echo?.entry ?? calendarEntry;
   const origin: 'echo' | 'calendar' | 'none' = echo?.entry
@@ -406,11 +409,18 @@ function FeatureMemory() {
     : calendarEntry
       ? 'calendar'
       : 'none';
+  const loading = memLoading || echoLoading;
+
+  if (!loading && origin === 'none') {
+    return <FeatureInvite />;
+  }
+
   return (
     <FeatureMemoryView
       entry={preferred}
       origin={origin}
-      loading={memLoading || echoLoading}
+      ageLabel={origin === 'echo' ? 'a year ago' : ageLabel}
+      loading={loading}
     />
   );
 }
@@ -418,10 +428,12 @@ function FeatureMemory() {
 function FeatureMemoryView({
   entry,
   origin,
+  ageLabel,
   loading,
 }: {
   entry: JournalEntry | null;
   origin: 'echo' | 'calendar' | 'none';
+  ageLabel: string | null;
   loading: boolean;
 }) {
   const date = entry?.createdAt?.toDate?.();
@@ -436,10 +448,11 @@ function FeatureMemoryView({
     ? date.toLocaleDateString('en-GB', { weekday: 'long' })
     : '';
   const excerpt = entry ? memoryExcerpt(entry.text) : '';
+  const ageForEyebrow = ageLabel ?? 'a year ago';
   const eyebrow =
     origin === 'echo'
-      ? 'From the archive · a year ago · like what you\u2019re writing now'
-      : 'From the archive · a year ago';
+      ? `From the archive · ${ageForEyebrow} · like what you\u2019re writing now`
+      : `From the archive · ${ageForEyebrow}`;
 
   if (loading) {
     return (
@@ -447,7 +460,7 @@ function FeatureMemoryView({
         <div className="feature-photo" aria-hidden="true" />
         <span className="feature-eyebrow">
           <span className="pip" />
-          From the archive · a year ago
+          From the archive
         </span>
         <span className="memory-date">Turning back the pages…</span>
       </article>
@@ -455,25 +468,9 @@ function FeatureMemoryView({
   }
 
   if (!entry) {
-    return (
-      <article className="feature memory">
-        <div className="feature-photo" aria-hidden="true" />
-        <span className="feature-eyebrow">
-          <span className="pip" />
-          From the archive · a year ago
-        </span>
-        <span className="memory-date">
-          Not quite a year of book yet.
-        </span>
-        <p className="memory-quote">
-          &ldquo;A year from now, a line you wrote this week will land here.&rdquo;
-        </p>
-        <div className="memory-foot">
-          <span>The archive is still filling</span>
-          <span>—</span>
-        </div>
-      </article>
-    );
+    // Unreachable in practice — FeatureMemory swaps in FeatureInvite
+    // when there's no entry — but kept as a defensive fallback.
+    return <FeatureInvite />;
   }
 
   return (
@@ -494,6 +491,35 @@ function FeatureMemoryView({
       <p className="memory-quote">&ldquo;{excerpt}&rdquo;</p>
       <div className="memory-foot">
         <span>Open the entry</span>
+        <span>→</span>
+      </div>
+    </Link>
+  );
+}
+
+// Replacement slot when the archive is too young to have a memory to
+// echo (no entries older than 7 days). Pitches the collaborative
+// angle that gives Relish its magic — rather than a dead placeholder,
+// the slot invites you to invite someone else into the book.
+function FeatureInvite() {
+  return (
+    <Link
+      href="/manual"
+      className="feature memory"
+      style={{ textDecoration: 'none', color: 'inherit' }}
+    >
+      <div className="feature-photo" aria-hidden="true" />
+      <span className="feature-eyebrow">
+        <span className="pip" />
+        A book worth co-writing
+      </span>
+      <span className="memory-date">Two views are better than one.</span>
+      <p className="memory-quote">
+        &ldquo;The magic is what shows up when more than one person reads the
+        same moment.&rdquo;
+      </p>
+      <div className="memory-foot">
+        <span>Open the Family Manual</span>
         <span>→</span>
       </div>
     </Link>
@@ -668,24 +694,144 @@ function formatDaysCompact(days: number): string {
   return `${Math.floor(days / 30)}mo`;
 }
 
+// A stable identifier for the current prompt — so we can remember
+// which prompt the user answered. The prompt is hardcoded today;
+// when it becomes dynamic, this id rotates with it.
+const CURRENT_PROMPT_ID = '2026-w17-monday-weekend-notice';
+const CURRENT_PROMPT_TEXT =
+  'What did you notice this weekend that you almost didn\u2019t write down?';
+
 function FeaturePrompt() {
+  const { user } = useAuth();
+  const wb = useWorkbookData();
+  // We want the entries stream so we can detect the user's answer
+  // the moment it saves. Reading the same stream the rest of the
+  // workbook reads — no extra subscription.
+  const { entries } = useJournalEntries();
+  // Track the click-to-answer moment. When the user clicks "Answer",
+  // we remember the clock time; the first new entry authored by them
+  // after that moment counts as the answer to this prompt.
+  const [clickedAt, setClickedAt] = useState<number | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = window.localStorage.getItem(
+        `relish:prompt:clickedAt:${CURRENT_PROMPT_ID}`,
+      );
+      return raw ? Number(raw) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [answeredEntryId, setAnsweredEntryId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return window.localStorage.getItem(
+        `relish:prompt:answered:${CURRENT_PROMPT_ID}`,
+      );
+    } catch {
+      return null;
+    }
+  });
+
+  // Detect a new entry authored by me after the click moment — that's
+  // the answer. Persist the entryId so reloads keep the ack state.
+  useEffect(() => {
+    if (answeredEntryId) return; // already resolved
+    if (!clickedAt || !user?.userId) return;
+    const MAX_MS = 30 * 60 * 1000; // 30-minute answer window
+    const now = Date.now();
+    if (now - clickedAt > MAX_MS) return;
+    const mine = entries.filter((e) => e.authorId === user.userId);
+    const match = mine.find((e) => {
+      const ms = e.createdAt?.toMillis?.() ?? 0;
+      return ms >= clickedAt;
+    });
+    if (match) {
+      setAnsweredEntryId(match.entryId);
+      try {
+        window.localStorage.setItem(
+          `relish:prompt:answered:${CURRENT_PROMPT_ID}`,
+          match.entryId,
+        );
+      } catch {
+        // storage disabled; in-memory state still works this session
+      }
+    }
+  }, [entries, clickedAt, answeredEntryId, user?.userId]);
+
+  const handleAnswer = () => {
+    const now = Date.now();
+    setClickedAt(now);
+    try {
+      window.localStorage.setItem(
+        `relish:prompt:clickedAt:${CURRENT_PROMPT_ID}`,
+        String(now),
+      );
+    } catch {
+      // not fatal
+    }
+    openPen();
+  };
+
+  if (answeredEntryId) {
+    const answered = entries.find((e) => e.entryId === answeredEntryId);
+    return (
+      <article className="feature prompt">
+        <span className="feature-eyebrow">
+          <span className="pip" />
+          A prompt for this morning · <em>answered</em>
+        </span>
+        <blockquote className="prompt-question-answered">
+          {CURRENT_PROMPT_TEXT}
+        </blockquote>
+        {answered ? (
+          <>
+            <p className="prompt-answer">
+              <em>You wrote:</em> &ldquo;{promptExcerpt(answered.text)}&rdquo;
+            </p>
+            <Link
+              href={`/journal/${answered.entryId}`}
+              style={{ ...promptCtaDarkStyle, textDecoration: 'none' }}
+            >
+              <span>Open the entry</span>
+              <span aria-hidden="true">→</span>
+            </Link>
+          </>
+        ) : (
+          <p className="prompt-answer">
+            <em>Answered.</em> Relish caught it — it&rsquo;s in the book.
+          </p>
+        )}
+      </article>
+    );
+  }
+
+  const name = wb.firstName ?? user?.name?.split(' ')[0] ?? '';
   return (
     <article className="feature prompt">
       <span className="feature-eyebrow">
         <span className="pip" />
         A prompt for this morning
       </span>
-      <blockquote>
-        What did you notice this weekend that you almost didn&rsquo;t
-        write down?
-      </blockquote>
-      <p className="prompt-attr">— Monday prompt · one minute, in the book</p>
-      <button type="button" onClick={openPen} style={promptCtaDarkStyle}>
+      <blockquote>{CURRENT_PROMPT_TEXT}</blockquote>
+      <p className="prompt-attr">
+        — Monday prompt · one minute{name ? `, ${name}` : ''}
+      </p>
+      <button type="button" onClick={handleAnswer} style={promptCtaDarkStyle}>
         <span>Answer</span>
         <span aria-hidden="true">→</span>
       </button>
     </article>
   );
+}
+
+function promptExcerpt(text: string): string {
+  const t = (text ?? '').trim().replace(/\s+/g, ' ');
+  if (!t) return '';
+  if (t.length <= 150) return t;
+  const dot = t.slice(0, 150).search(/[.!?]\s/);
+  if (dot >= 40) return t.slice(0, dot + 1);
+  return t.slice(0, 149).trimEnd() + '…';
 }
 
 function DispatchLead() {
@@ -1661,6 +1807,34 @@ const styles = `
     text-transform: uppercase;
     color: rgba(245,236,216,0.55);
     margin: 0;
+  }
+  .prompt-question-answered {
+    font-family: var(--r-serif);
+    font-style: italic;
+    font-size: 15px;
+    line-height: 1.4;
+    color: rgba(245,236,216,0.55);
+    margin: 0 0 14px;
+    padding: 0;
+    border: none;
+  }
+  .prompt-answer {
+    font-family: var(--r-serif);
+    font-size: 17px;
+    line-height: 1.55;
+    color: var(--r-paper);
+    margin: 0 0 18px;
+  }
+  .prompt-answer em {
+    font-style: italic;
+    color: var(--r-amber);
+    letter-spacing: 0.02em;
+  }
+  .feature.prompt .feature-eyebrow em {
+    color: var(--r-amber);
+    font-style: italic;
+    text-transform: none;
+    letter-spacing: 0.02em;
   }
   :global(.prompt-cta-dark) {
     margin-top: auto;
