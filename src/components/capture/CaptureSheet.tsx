@@ -868,43 +868,77 @@ export default function CaptureSheet() {
           );
         })()}
 
-        {/* ─── SAVED: confirmation + optional follow-up ─── */}
-        {state === 'saved' && (
-          <div className="px-6 pb-8 pt-6 text-center">
-            <div style={{
-              fontFamily: 'var(--font-parent-display)',
-              fontSize: 28, fontStyle: 'italic', color: '#3A3530', marginBottom: 8,
-            }}>
-              <span style={{ color: '#7C9082', marginRight: 10 }}>✓</span>
-              Saved to the Journal
-            </div>
-            <p style={{
-              fontFamily: 'var(--font-parent-display)', fontStyle: 'italic',
-              fontSize: 16, color: '#7c6e54', marginBottom: 28,
-            }}>
-              Want to talk to the AI about what you wrote?
-            </p>
-            <div className="flex gap-3 justify-center">
-              <button onClick={handleClose}
-                className="px-6 py-3 rounded-full transition-all hover:opacity-80"
-                style={{
-                  fontFamily: 'var(--font-parent-body)', fontSize: 15, fontWeight: 500,
-                  background: 'rgba(0,0,0,0.04)', color: '#3A3530',
-                  border: '1px solid rgba(0,0,0,0.08)',
+        {/* ─── SAVED: specific confirmation + optional follow-up ─── */}
+        {state === 'saved' && (() => {
+          // Name who the entry was for. savedPeopleRef already holds
+          // the effective mentions (About picker ∪ share-linked). We
+          // resolve personIds to first names here.
+          const namedFirst = savedPeopleRef.current
+            .map((pid) => people.find((p) => p.personId === pid)?.name.split(' ')[0])
+            .filter((n): n is string => Boolean(n));
+
+          let heading: string;
+          if (namedFirst.length === 0) {
+            heading = 'Saved to the Journal.';
+          } else if (namedFirst.length === 1) {
+            heading = `Saved to ${namedFirst[0]}\u2019s page.`;
+          } else if (namedFirst.length === 2) {
+            heading = `Saved for ${namedFirst[0]} and ${namedFirst[1]}.`;
+          } else {
+            heading = `Saved for ${namedFirst[0]}, ${namedFirst[1]}, and ${namedFirst.length - 2} more.`;
+          }
+
+          const len = savedTextRef.current.length;
+          const weightyLine =
+            len >= 400
+              ? 'That was a longer one. Good that it\u2019s kept.'
+              : null;
+
+          return (
+            <div className="px-6 pb-8 pt-6 text-center">
+              <div style={{
+                fontFamily: 'var(--font-parent-display)',
+                fontSize: 28, fontStyle: 'italic', color: '#3A3530', marginBottom: 8,
+              }}>
+                <span style={{ color: '#7C9082', marginRight: 10 }}>✓</span>
+                {heading}
+              </div>
+              {weightyLine && (
+                <p style={{
+                  fontFamily: 'var(--font-parent-display)', fontStyle: 'italic',
+                  fontSize: 15, color: '#8a6f4a', margin: '0 0 10px',
                 }}>
-                Done
-              </button>
-              <button onClick={handleAskAboutThis}
-                className="px-6 py-3 rounded-full transition-all hover:opacity-90"
-                style={{
-                  fontFamily: 'var(--font-parent-body)', fontSize: 15, fontWeight: 500,
-                  background: '#7C9082', color: 'white',
-                }}>
-                Ask about this →
-              </button>
+                  {weightyLine}
+                </p>
+              )}
+              <p style={{
+                fontFamily: 'var(--font-parent-display)', fontStyle: 'italic',
+                fontSize: 16, color: '#7c6e54', marginBottom: 28,
+              }}>
+                Want to talk to Relish about what you wrote?
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button onClick={handleClose}
+                  className="px-6 py-3 rounded-full transition-all hover:opacity-80"
+                  style={{
+                    fontFamily: 'var(--font-parent-body)', fontSize: 15, fontWeight: 500,
+                    background: 'rgba(0,0,0,0.04)', color: '#3A3530',
+                    border: '1px solid rgba(0,0,0,0.08)',
+                  }}>
+                  Done
+                </button>
+                <button onClick={handleAskAboutThis}
+                  className="px-6 py-3 rounded-full transition-all hover:opacity-90"
+                  style={{
+                    fontFamily: 'var(--font-parent-body)', fontSize: 15, fontWeight: 500,
+                    background: '#7C9082', color: 'white',
+                  }}>
+                  Ask about this →
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ─── CHATTING ─── */}
         {state === 'chatting' && (
