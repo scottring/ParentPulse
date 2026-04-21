@@ -21,6 +21,7 @@ import { MomentBanner } from '@/components/journal-spread/MomentBanner';
 import { useOpenThreads } from '@/hooks/useOpenThreads';
 import { ClosingActionCard } from '@/components/open-threads/ClosingActionCard';
 import { usePrivacyGate } from '@/hooks/usePrivacyGate';
+import { useSettledMentions } from '@/hooks/useSettledMentions';
 import { SeedlingGlyph } from '@/components/journal-spread/SeedlingGlyph';
 import { useReflectionsOfEntry } from '@/hooks/useReflectionsOfEntry';
 import { EntryMedia } from '@/components/journal-spread/EntryMedia';
@@ -130,6 +131,7 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
   const { updateEntry, deleteEntry } = useJournal();
   const { threads } = useOpenThreads();
   const { gate: gatePrivate, modal: pinModal } = usePrivacyGate();
+  const { isSettled, settle } = useSettledMentions();
   // An entry surfaces its own closing affordance via its moment — a
   // plain stand-alone entry is not an open thread by itself.
   const momentThread = entry.momentId
@@ -413,6 +415,18 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
         </div>
 
         <article className="entry-paper relish-panel">
+          <MentionSettleBar
+            entry={entry}
+            authorName={authorNameOf(entry.authorId)}
+            currentUserId={currentUserId}
+            isSettled={isSettled(entry.entryId)}
+            onReply={() => {
+              document
+                .querySelector('.composer-wrap')
+                ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }}
+            onSettle={() => settle(entry.entryId)}
+          />
           {momentThread && <ClosingActionCard thread={momentThread} />}
           {entry.momentId && <MomentBanner momentId={entry.momentId} />}
           {mostRecentReflection && (
@@ -1402,6 +1416,118 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
         }
       `}</style>
       {pinModal}
+    </div>
+  );
+}
+
+// ================================================================
+// MentionSettleBar — opening-the-entry Return panel. When someone
+// else wrote this entry within the last 7 days and it's about the
+// current user (via tag or AI-extracted mention), a small book-voice
+// bar at the top names the moment and offers two closes: reply below
+// or let it settle. Settling persists so the mention drops off the
+// Waiting-on-you list across sessions.
+// ================================================================
+function MentionSettleBar({
+  entry,
+  authorName,
+  currentUserId,
+  isSettled,
+  onReply,
+  onSettle,
+}: {
+  entry: JournalEntry;
+  authorName: string;
+  currentUserId: string;
+  isSettled: boolean;
+  onReply: () => void;
+  onSettle: () => void;
+}) {
+  if (entry.authorId === currentUserId) return null; // mine — not a mention
+  if (isSettled) return null; // already settled
+  const created = entry.createdAt?.toDate?.();
+  if (!created) return null;
+  const ms = Date.now() - created.getTime();
+  if (ms > 7 * 24 * 60 * 60 * 1000) return null; // older than 7 days
+  const firstName = authorName.split(' ')[0] || 'Someone';
+  const whenLabel = created.toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+  return (
+    <div
+      role="status"
+      style={{
+        margin: '0 0 20px',
+        padding: '16px 18px',
+        background: 'rgba(201, 134, 76, 0.06)',
+        borderLeft: '2px solid var(--r-ember, #C9864C)',
+        borderRadius: 2,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 16,
+        flexWrap: 'wrap',
+      }}
+    >
+      <p
+        style={{
+          margin: 0,
+          flex: 1,
+          minWidth: 220,
+          fontFamily: 'var(--r-serif, Georgia, serif)',
+          fontSize: 16,
+          lineHeight: 1.5,
+          color: 'var(--r-text-2, #5c5347)',
+        }}
+      >
+        <em style={{ color: 'var(--r-ink, #3a3530)' }}>
+          {firstName} wrote this for you
+        </em>{' '}
+        on {whenLabel}. Reply below, or let it settle.
+      </p>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          type="button"
+          onClick={onReply}
+          style={{
+            all: 'unset',
+            cursor: 'pointer',
+            padding: '8px 16px',
+            borderRadius: 999,
+            border: '1px solid var(--r-rule-3, #c0b49f)',
+            fontFamily: 'var(--r-sans, -apple-system, sans-serif)',
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: '0.16em',
+            textTransform: 'uppercase',
+            color: 'var(--r-ink, #3a3530)',
+            background: 'transparent',
+          }}
+        >
+          Reply below ↓
+        </button>
+        <button
+          type="button"
+          onClick={onSettle}
+          style={{
+            all: 'unset',
+            cursor: 'pointer',
+            padding: '8px 16px',
+            borderRadius: 999,
+            border: '1px solid var(--r-leather, #14100c)',
+            background: 'var(--r-leather, #14100c)',
+            color: 'var(--r-paper, #fbf8f2)',
+            fontFamily: 'var(--r-sans, -apple-system, sans-serif)',
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: '0.16em',
+            textTransform: 'uppercase',
+          }}
+        >
+          Let it settle
+        </button>
+      </div>
     </div>
   );
 }

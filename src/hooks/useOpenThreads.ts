@@ -12,6 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useJournalEntries } from '@/hooks/useJournalEntries';
 import { useMomentInvite } from '@/hooks/useMomentInvite';
 import { usePerson } from '@/hooks/usePerson';
+import { useSettledMentions } from '@/hooks/useSettledMentions';
 import { listOpenThreads, type OpenThread } from '@/lib/open-threads';
 import type { Moment } from '@/types/moment';
 import type { Ritual } from '@/types/ritual';
@@ -31,6 +32,7 @@ export function useOpenThreads(): UseOpenThreadsReturn {
   const { entries } = useJournalEntries();
   const { pendingForMe, loading: invitesLoading } = useMomentInvite();
   const { people } = usePerson();
+  const { settledIds } = useSettledMentions();
   const [moments, setMoments] = useState<Moment[]>([]);
   const [rituals, setRituals] = useState<Ritual[]>([]);
   const [momentsReady, setMomentsReady] = useState(false);
@@ -85,8 +87,12 @@ export function useOpenThreads(): UseOpenThreadsReturn {
     const personIds = (people ?? [])
       .filter((p) => p.linkedUserId === user.userId)
       .map((p) => p.personId);
-    return { userId: user.userId, personIds };
-  }, [user?.userId, people]);
+    return {
+      userId: user.userId,
+      personIds,
+      settledMentionIds: settledIds,
+    };
+  }, [user?.userId, people, settledIds]);
 
   const threads = useMemo(
     () =>

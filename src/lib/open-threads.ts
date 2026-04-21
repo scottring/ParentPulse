@@ -114,6 +114,10 @@ interface Sources {
   me?: {
     userId: string;
     personIds: string[]; // personIds whose Person.linkedUserId === userId
+    // Entry IDs the current user has explicitly marked "settled" —
+    // acknowledged without a reply. Suppresses the mention_for_me
+    // thread for those entries.
+    settledMentionIds?: Set<string>;
   };
   // now() is injectable for determinism in tests.
   now?: Date;
@@ -221,6 +225,7 @@ export function listOpenThreads(sources: Sources): OpenThread[] {
       const ms = e.createdAt?.toMillis?.() ?? 0;
       if (ms === 0 || ms < cutoffMs) continue;
       if (respondedTo.has(e.entryId)) continue;
+      if (me.settledMentionIds?.has(e.entryId)) continue;
 
       const tagged = (e.personMentions ?? []).some((pid) =>
         me.personIds.includes(pid),
