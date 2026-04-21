@@ -839,4 +839,106 @@ describe.skipIf(!emulatorAvailable)('Firestore Security Rules', () => {
       );
     });
   });
+
+  describe('Therapy collections', () => {
+    const ownerId = 'therapy-owner-id';
+    const strangerId = 'stranger-id';
+
+    beforeEach(async () => {
+      if (!testEnv) return;
+      await testEnv.clearFirestore();
+
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        const db = ctx.firestore();
+        await setDoc(doc(db, 'users', ownerId), {
+          userId: ownerId, familyId: 'f1', role: 'parent',
+        });
+        await setDoc(doc(db, 'users', strangerId), {
+          userId: strangerId, familyId: 'f2', role: 'parent',
+        });
+      });
+    });
+
+    const therapistDoc = (owner: string) => ({
+      ownerUserId: owner,
+      displayName: 'Dr. Test',
+      kind: 'individual',
+      createdAt: new Date(),
+    });
+
+    it('owner can create and read their therapist', async () => {
+      const db = getAuthContext(ownerId).firestore();
+      await assertSucceeds(
+        addDoc(collection(db, 'therapists'), therapistDoc(ownerId))
+      );
+    });
+
+    it('non-owner cannot read therapist', async () => {
+      await testEnv!.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(
+          doc(ctx.firestore(), 'therapists', 't1'),
+          therapistDoc(ownerId)
+        );
+      });
+      const db = getAuthContext(strangerId).firestore();
+      await assertFails(getDoc(doc(db, 'therapists', 't1')));
+    });
+
+    it('cannot create therapist with someone else as owner', async () => {
+      const db = getAuthContext(strangerId).firestore();
+      await assertFails(
+        addDoc(collection(db, 'therapists'), therapistDoc(ownerId))
+      );
+    });
+
+    it('owner can write userState on therapy_theme but not lifecycle', async () => {
+      await testEnv!.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'therapy_themes', 'th1'), {
+          windowId: 'w1',
+          therapistId: 't1',
+          ownerUserId: ownerId,
+          title: 'T', summary: 'S', sourceRefs: [],
+          userState: { starred: false, dismissed: false },
+          lifecycle: { firstSeenWindowId: 'w1', carriedForwardCount: 0 },
+          generatedAt: new Date(),
+          model: 'test',
+        });
+      });
+      const db = getAuthContext(ownerId).firestore();
+
+      await assertSucceeds(
+        updateDoc(doc(db, 'therapy_themes', 'th1'), {
+          'userState.starred': true,
+        })
+      );
+
+      await assertFails(
+        updateDoc(doc(db, 'therapy_themes', 'th1'), {
+          'lifecycle.carriedForwardCount': 99,
+        })
+      );
+
+      await assertFails(
+        updateDoc(doc(db, 'therapy_themes', 'th1'), { summary: 'hacked' })
+      );
+    });
+
+    it('therapy_window status cannot transition closed -> open', async () => {
+      await testEnv!.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'therapy_windows', 'w1'), {
+          therapistId: 't1',
+          ownerUserId: ownerId,
+          status: 'closed',
+          openedAt: new Date(),
+          closedAt: new Date(),
+          themeIds: [],
+          noteIds: [],
+        });
+      });
+      const db = getAuthContext(ownerId).firestore();
+      await assertFails(
+        updateDoc(doc(db, 'therapy_windows', 'w1'), { status: 'open' })
+      );
+    });
+  });
 });

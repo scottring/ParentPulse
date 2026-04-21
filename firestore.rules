@@ -770,5 +770,69 @@ service cloud.firestore {
       // Parents can delete child workbooks in their family
       allow delete: if isParent() && belongsToFamily(resource.data.familyId);
     }
+
+    // ==================== Therapy (owner-scoped, PIN-gated UI) ====================
+    // Therapy collections are strictly personal — no family sharing,
+    // no observer reads. Surface promotions read only count-aggregates.
+
+    match /therapists/{therapistId} {
+      allow read, delete: if isSignedIn()
+        && request.auth.uid == resource.data.ownerUserId;
+      allow create: if isSignedIn()
+        && request.auth.uid == request.resource.data.ownerUserId
+        && request.resource.data.kind in ['individual', 'couples', 'family'];
+      allow update: if isSignedIn()
+        && request.auth.uid == resource.data.ownerUserId
+        && request.resource.data.ownerUserId == resource.data.ownerUserId
+        && request.resource.data.kind == resource.data.kind;
+    }
+
+    match /therapy_windows/{windowId} {
+      allow read, delete: if isSignedIn()
+        && request.auth.uid == resource.data.ownerUserId;
+      allow create: if isSignedIn()
+        && request.auth.uid == request.resource.data.ownerUserId;
+      // Clients may not transition closed -> open, and may not change
+      // ownerUserId or therapistId. Cloud Functions perform the real
+      // mutations via admin SDK (bypasses rules).
+      allow update: if isSignedIn()
+        && request.auth.uid == resource.data.ownerUserId
+        && request.resource.data.ownerUserId == resource.data.ownerUserId
+        && request.resource.data.therapistId == resource.data.therapistId
+        && !(resource.data.status == 'closed'
+             && request.resource.data.status == 'open');
+    }
+
+    match /therapy_themes/{themeId} {
+      allow read, delete: if isSignedIn()
+        && request.auth.uid == resource.data.ownerUserId;
+      // Clients create is disallowed — only Cloud Functions create themes.
+      allow create: if false;
+      // Clients may only mutate userState. Everything else
+      // (title/summary/sourceRefs/lifecycle/windowId/...) is function-only.
+      allow update: if isSignedIn()
+        && request.auth.uid == resource.data.ownerUserId
+        && request.resource.data.ownerUserId == resource.data.ownerUserId
+        && request.resource.data.windowId == resource.data.windowId
+        && request.resource.data.therapistId == resource.data.therapistId
+        && request.resource.data.title == resource.data.title
+        && request.resource.data.summary == resource.data.summary
+        && request.resource.data.sourceRefs == resource.data.sourceRefs
+        && request.resource.data.lifecycle == resource.data.lifecycle
+        && request.resource.data.generatedAt == resource.data.generatedAt
+        && request.resource.data.model == resource.data.model;
+    }
+
+    match /therapy_notes/{noteId} {
+      allow read, delete: if isSignedIn()
+        && request.auth.uid == resource.data.ownerUserId;
+      allow create: if isSignedIn()
+        && request.auth.uid == request.resource.data.ownerUserId;
+      allow update: if isSignedIn()
+        && request.auth.uid == resource.data.ownerUserId
+        && request.resource.data.ownerUserId == resource.data.ownerUserId
+        && request.resource.data.windowId == resource.data.windowId
+        && request.resource.data.therapistId == resource.data.therapistId;
+    }
   }
 }
