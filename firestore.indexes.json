@@ -1075,6 +1075,31 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "therapy_windows",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "therapistId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "therapy_windows",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "therapistId", "order": "ASCENDING" },
+        { "fieldPath": "closedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "therapy_themes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "windowId", "order": "ASCENDING" },
+        { "fieldPath": "userState.dismissed", "order": "ASCENDING" },
+        { "fieldPath": "userState.starred", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
