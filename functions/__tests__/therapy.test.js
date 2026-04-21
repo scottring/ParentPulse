@@ -40,9 +40,38 @@ function setDoc(col, id, data) {
   store[col][id] = { ...data };
 }
 
+function applyUpdate(target, update) {
+  const result = { ...target };
+  for (const [key, val] of Object.entries(update)) {
+    // Handle dot-notation paths like 'lifecycle.carriedForwardCount'
+    const parts = key.split('.');
+    if (parts.length === 1) {
+      if (val && val.__sentinel === INCREMENT_SENTINEL) {
+        result[key] = (result[key] || 0) + val.n;
+      } else {
+        result[key] = val;
+      }
+    } else {
+      // Nested path — shallow-clone each level
+      let obj = result;
+      for (let i = 0; i < parts.length - 1; i++) {
+        obj[parts[i]] = { ...(obj[parts[i]] || {}) };
+        obj = obj[parts[i]];
+      }
+      const leaf = parts[parts.length - 1];
+      if (val && val.__sentinel === INCREMENT_SENTINEL) {
+        obj[leaf] = (obj[leaf] || 0) + val.n;
+      } else {
+        obj[leaf] = val;
+      }
+    }
+  }
+  return result;
+}
+
 function updateDoc(col, id, update) {
   if (!store[col] || !store[col][id]) throw new Error(`Doc ${col}/${id} not found`);
-  store[col][id] = { ...store[col][id], ...update };
+  store[col][id] = applyUpdate(store[col][id], update);
 }
 
 let autoIdCounter = 0;
@@ -136,6 +165,10 @@ const db = {
   batch: () => makeBatch(),
 };
 
+// FieldValue sentinels
+const INCREMENT_SENTINEL = Symbol('INCREMENT');
+function makeIncrement(n) { return { __sentinel: INCREMENT_SENTINEL, n }; }
+
 // Firestore.Timestamp stub
 const adminTimestampStub = {
   Timestamp: {
@@ -144,7 +177,11 @@ const adminTimestampStub = {
   },
   firestore: {
     Timestamp: { now: () => TS_NOW, fromMillis: makeTimestamp },
-    FieldValue: { delete: () => 'DELETE' },
+    FieldValue: {
+      delete: () => 'DELETE',
+      increment: makeIncrement,
+      arrayUnion: (...items) => ({ __sentinel: 'ARRAY_UNION', items }),
+    },
   },
 };
 
@@ -164,7 +201,7 @@ Module._load = function(request, parent, isMain) {
           () => db,
           adminTimestampStub.firestore,
           { Timestamp: adminTimestampStub.Timestamp },
-          { FieldValue: { delete: () => 'DELETE' } },
+          { FieldValue: adminTimestampStub.firestore.FieldValue },
       ),
     };
   }
@@ -200,7 +237,7 @@ const indexModule = require('../index');
 Module._load = originalLoad; // restore
 
 const internals = indexModule.__therapyInternals;
-const { gatherTherapySources, buildTherapyPrompt, callClaudeForThemes, performTherapyRegen } = internals;
+const { gatherTherapySources, buildTherapyPrompt, callClaudeForThemes, performTherapyRegen, performTherapyClose } = internals;
 
 // ----------------------------------------------------------------
 // Helpers to seed the in-memory store
@@ -474,5 +511,117 @@ describe('performTherapyRegen — LLM failure leaves window untouched', () => {
       threw = true;
     }
     expect(threw).to.be.true;
+  });
+});
+
+// ----------------------------------------------------------------
+// therapy — close
+// ----------------------------------------------------------------
+describe('therapy — close', () => {
+  let regenStub;
+
+  beforeEach(() => {
+    resetStore();
+    // Stub performTherapyRegen so post-close regen never calls LLM
+    regenStub = sinon.stub(internals, 'performTherapyRegen').resolves({ themeIds: [] });
+  });
+
+  afterEach(() => sinon.restore());
+
+  it('marks discussed, closes window, creates new open window with carry-forward', async () => {
+    const WIN = 'close-win-1';
+    const THEME_DISCUSSED = 'theme-disc-1';
+    const THEME_UNDISCUSSED = 'theme-undisc-1';
+    const SESSION_MS = NOW_MS + 1000;
+
+    seedWindow(WIN, { themeIds: [THEME_DISCUSSED, THEME_UNDISCUSSED] });
+    seedTheme(THEME_DISCUSSED, WIN, { identity: 'disc-theme', lifecycle: { firstSeenWindowId: WIN, carriedForwardCount: 0 } });
+    seedTheme(THEME_UNDISCUSSED, WIN, { identity: 'undisc-theme', lifecycle: { firstSeenWindowId: WIN, carriedForwardCount: 0 } });
+
+    const result = await performTherapyClose(db, {
+      windowId: WIN,
+      sessionDateMillis: SESSION_MS,
+      discussedThemeIds: [THEME_DISCUSSED],
+      transcript: null,
+    });
+
+    // Closed window should have status=closed
+    const closedWin = getDoc('therapy_windows', WIN);
+    expect(closedWin.status).to.equal('closed');
+    expect(closedWin.closedAt).to.exist;
+
+    // Discussed theme should have discussedAt set
+    const discussedTheme = getDoc('therapy_themes', THEME_DISCUSSED);
+    expect(discussedTheme.lifecycle.discussedAt).to.exist;
+
+    // Undiscussed theme should be reassigned to new window with incremented carriedForwardCount
+    const undiscussedTheme = getDoc('therapy_themes', THEME_UNDISCUSSED);
+    expect(undiscussedTheme.windowId).to.equal(result.newWindowId);
+    expect(undiscussedTheme.lifecycle.carriedForwardCount).to.equal(1);
+
+    // New window should be open with correct fields
+    const newWin = getDoc('therapy_windows', result.newWindowId);
+    expect(newWin.status).to.equal('open');
+    expect(newWin.themeIds).to.deep.equal([THEME_UNDISCUSSED]);
+    expect(newWin.carriedForwardFromWindowId).to.equal(WIN);
+
+    // performTherapyRegen should have been called once (best-effort)
+    expect(regenStub.calledOnce).to.be.true;
+  });
+
+  it('rejects double-close', async () => {
+    const WIN = 'close-win-2';
+    const THEME_A = 'theme-dc-a';
+
+    seedWindow(WIN, { themeIds: [THEME_A] });
+    seedTheme(THEME_A, WIN, { identity: 'theme-a', lifecycle: { firstSeenWindowId: WIN, carriedForwardCount: 0 } });
+
+    // First close
+    await performTherapyClose(db, {
+      windowId: WIN,
+      sessionDateMillis: NOW_MS,
+      discussedThemeIds: [THEME_A],
+      transcript: null,
+    });
+
+    // Second close should fail
+    let threw = false;
+    let errorMessage = '';
+    try {
+      await performTherapyClose(db, {
+        windowId: WIN,
+        sessionDateMillis: NOW_MS + 1000,
+        discussedThemeIds: [],
+        transcript: null,
+      });
+    } catch (err) {
+      threw = true;
+      errorMessage = err.message;
+    }
+
+    expect(threw).to.be.true;
+    expect(errorMessage).to.match(/not open/i);
+  });
+
+  it('writes transcript as therapy_note on closing window', async () => {
+    const WIN = 'close-win-3';
+    const THEME_B = 'theme-note-b';
+    const TRANSCRIPT = 'Today we talked about bedtime routines at length.';
+
+    seedWindow(WIN, { themeIds: [THEME_B] });
+    seedTheme(THEME_B, WIN, { identity: 'bedtime', lifecycle: { firstSeenWindowId: WIN, carriedForwardCount: 0 } });
+
+    await performTherapyClose(db, {
+      windowId: WIN,
+      sessionDateMillis: NOW_MS,
+      discussedThemeIds: [THEME_B],
+      transcript: TRANSCRIPT,
+    });
+
+    // Find the therapy_note doc attached to the closing window
+    const notes = Object.values(store['therapy_notes'] || {});
+    expect(notes).to.have.lengthOf(1);
+    expect(notes[0].windowId).to.equal(WIN);
+    expect(notes[0].transcript).to.equal(TRANSCRIPT);
   });
 });

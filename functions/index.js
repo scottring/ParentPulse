@@ -11079,6 +11079,101 @@ Object.assign(therapyInternals, {
   callClaudeForThemes,
   performTherapyRegen,
 });
+
+// ----------------------------------------------------------------
+// performTherapyClose — atomically close a therapy window and open
+// the next one, carrying undiscussed themes forward.
+//
+// @param {FirebaseFirestore.Firestore} db
+// @param {{ windowId: string, sessionDateMillis: number,
+//           discussedThemeIds: string[], transcript?: string }} opts
+// @return {Promise<{ newWindowId: string }>}
+// ----------------------------------------------------------------
+async function performTherapyClose(db, { windowId, sessionDateMillis, discussedThemeIds, transcript }) {
+  const logger = require("firebase-functions/logger");
+
+  // 1. Fetch + verify window is open
+  const windowRef = db.collection("therapy_windows").doc(windowId);
+  const windowSnap = await windowRef.get();
+  if (!windowSnap.exists) throw new Error(`therapy window ${windowId} not found`);
+  const windowData = windowSnap.data();
+  if (windowData.status !== "open") {
+    throw new Error(`therapy window ${windowId} is not open (status: ${windowData.status})`);
+  }
+
+  const sessionTimestamp = admin.firestore.Timestamp.fromMillis(sessionDateMillis);
+  const discussedSet = new Set(discussedThemeIds);
+  const undiscussedIds = (windowData.themeIds || []).filter((id) => !discussedSet.has(id));
+
+  // 2. Prepare new window ref (auto-id)
+  const newWindowRef = db.collection("therapy_windows").doc();
+  const newWindowId = newWindowRef.id;
+
+  const batch = db.batch();
+
+  // 3. Mark discussed themes
+  for (const themeId of discussedThemeIds) {
+    const themeRef = db.collection("therapy_themes").doc(themeId);
+    batch.update(themeRef, { "lifecycle.discussedAt": sessionTimestamp });
+  }
+
+  // 4. Reassign undiscussed themes to the new window and increment carry-forward count
+  for (const themeId of undiscussedIds) {
+    const themeRef = db.collection("therapy_themes").doc(themeId);
+    batch.update(themeRef, {
+      windowId: newWindowId,
+      "lifecycle.carriedForwardCount": admin.firestore.FieldValue.increment(1),
+    });
+  }
+
+  // 5. If transcript provided, create a therapy_note doc
+  if (transcript && transcript.length > 0) {
+    const noteRef = db.collection("therapy_notes").doc();
+    batch.set(noteRef, {
+      windowId,
+      ownerUserId: windowData.ownerUserId,
+      therapistId: windowData.therapistId,
+      transcript,
+      createdAt: sessionTimestamp,
+    });
+  }
+
+  // 6. Close the current window
+  batch.update(windowRef, {
+    status: "closed",
+    closedAt: sessionTimestamp,
+  });
+
+  // 7. Create the new open window
+  batch.set(newWindowRef, {
+    therapistId: windowData.therapistId,
+    ownerUserId: windowData.ownerUserId,
+    status: "open",
+    openedAt: sessionTimestamp,
+    themeIds: undiscussedIds,
+    noteIds: [],
+    carriedForwardFromWindowId: windowId,
+    lastRegeneratedAt: null,
+  });
+
+  await batch.commit();
+
+  logger.info(
+      `performTherapyClose: closed window ${windowId} → new window ${newWindowId} ` +
+      `(discussed: ${discussedThemeIds.length}, carried: ${undiscussedIds.length})`,
+  );
+
+  // 8. Best-effort regen on the new window — do not fail the close if this throws
+  try {
+    await therapyInternals.performTherapyRegen(db, { windowId: newWindowId });
+  } catch (err) {
+    logger.error(`performTherapyClose: post-close regen failed for ${newWindowId}: ${err.message}`);
+  }
+
+  return { newWindowId };
+}
+
+therapyInternals.performTherapyClose = performTherapyClose;
 module.exports.__therapyInternals = therapyInternals;
 
 // ----------------------------------------------------------------
@@ -11176,5 +11271,58 @@ exports.autoRegenerateTherapyWindows = onSchedule(
       logger.info(
           `autoRegenerateTherapyWindows: done — ${succeeded} succeeded, ${failed} failed`,
       );
+    },
+);
+
+// ----------------------------------------------------------------
+// closeTherapyWindow — user-triggered onCall
+// ----------------------------------------------------------------
+exports.closeTherapyWindow = onCall(
+    { region: "us-central1", secrets: ["ANTHROPIC_API_KEY"] },
+    async (req) => {
+      const logger = require("firebase-functions/logger");
+      const { HttpsError } = require("firebase-functions/v2/https");
+
+      if (!req.auth) {
+        throw new HttpsError("unauthenticated", "Authentication required");
+      }
+
+      const { windowId, sessionDateMillis, discussedThemeIds, transcript } = req.data || {};
+      if (!windowId) {
+        throw new HttpsError("invalid-argument", "windowId is required");
+      }
+      if (typeof sessionDateMillis !== "number") {
+        throw new HttpsError("invalid-argument", "sessionDateMillis is required");
+      }
+      if (!Array.isArray(discussedThemeIds)) {
+        throw new HttpsError("invalid-argument", "discussedThemeIds must be an array");
+      }
+
+      const db = admin.firestore();
+
+      // Verify the window belongs to the calling user
+      const windowSnap = await db.collection("therapy_windows").doc(windowId).get();
+      if (!windowSnap.exists) {
+        throw new HttpsError("not-found", "Therapy window not found");
+      }
+      if (windowSnap.data().ownerUserId !== req.auth.uid) {
+        throw new HttpsError("permission-denied", "Access denied");
+      }
+
+      try {
+        const result = await performTherapyClose(db, {
+          windowId,
+          sessionDateMillis,
+          discussedThemeIds,
+          transcript: transcript || null,
+        });
+        logger.info(
+            `closeTherapyWindow: user ${req.auth.uid} closed window ${windowId} → ${result.newWindowId}`,
+        );
+        return result;
+      } catch (err) {
+        logger.error(`closeTherapyWindow: failed for window ${windowId}: ${err.message}`);
+        throw new HttpsError("internal", err.message);
+      }
     },
 );
