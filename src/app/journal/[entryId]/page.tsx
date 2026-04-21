@@ -665,6 +665,29 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
             </div>
           )}
 
+          {/* Chat insights — the emergent-sentence distillation from
+              the entry's chat thread, written every 2 user turns by
+              the distillChatToInsights Cloud Function. Normally
+              invisible to the user; surfacing it is part of the
+              response-posture principle that the book should speak
+              back when it has something to say. */}
+          {entry.chatInsights?.emergent && (
+            <section className="chat-insight-block" aria-label="What surfaced in your conversation">
+              <span className="chat-insight-eyebrow">
+                <span className="pip" aria-hidden="true" />
+                What Relish heard, in your conversation
+              </span>
+              <p className="chat-insight-line">
+                <em>&ldquo;{entry.chatInsights.emergent}&rdquo;</em>
+              </p>
+              {entry.chatInsights.themes.length > 0 && (
+                <p className="chat-insight-themes">
+                  {entry.chatInsights.themes.slice(0, 4).join(' · ')}
+                </p>
+              )}
+            </section>
+          )}
+
           {/* AI conversation — persistent per-entry thread stored in
               journal_entries/{entryId}/chat subcollection. Opens inline
               below the body. Auto-opens if the entry already has a
@@ -1232,6 +1255,51 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
           margin-top: 36px;
           padding-top: 20px;
           border-top: 1px solid rgba(200, 190, 172, 0.35);
+        }
+        :global(.chat-insight-block) {
+          margin: 28px 0 0;
+          padding: 18px 20px 14px;
+          background: rgba(124, 144, 130, 0.08);
+          border-left: 2px solid var(--r-sage, #7C9082);
+          border-radius: 2px;
+          display: block;
+        }
+        :global(.chat-insight-eyebrow) {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-family: var(--r-sans, -apple-system, sans-serif);
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          color: var(--r-sage-deep, #4d6d55);
+          margin-bottom: 10px;
+        }
+        :global(.chat-insight-eyebrow .pip) {
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: var(--r-sage, #7C9082);
+        }
+        :global(.chat-insight-line) {
+          font-family: var(--r-serif, Georgia, serif);
+          font-size: 18px;
+          line-height: 1.5;
+          color: var(--r-ink, #3A3530);
+          margin: 0 0 8px;
+        }
+        :global(.chat-insight-line em) {
+          font-style: italic;
+        }
+        :global(.chat-insight-themes) {
+          font-family: var(--r-sans, -apple-system, sans-serif);
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: var(--r-text-5, #887C68);
+          margin: 0;
         }
         :global(.chat-trigger) {
           display: inline-flex;
