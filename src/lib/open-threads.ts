@@ -202,13 +202,25 @@ export function listOpenThreads(sources: Sources): OpenThread[] {
   // is an access signal, not a subject signal, and treating bare
   // shares as mentions floods the list with entries that merely
   // include the user in their audience.
+  //
+  // Closure: if the current user has already written a response entry
+  // for this parent (respondsToEntryId === parent.entryId), the loop
+  // is closed and we suppress the mention from Waiting on you. That
+  // is the natural acknowledgment signal — if you wrote back, you
+  // read it.
   if (sources.me) {
     const me = sources.me;
     const cutoffMs = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+    const respondedTo = new Set<string>();
+    for (const e of sources.entries) {
+      if (e.authorId !== me.userId) continue;
+      if (e.respondsToEntryId) respondedTo.add(e.respondsToEntryId);
+    }
     for (const e of sources.entries) {
       if (e.authorId === me.userId) continue;
       const ms = e.createdAt?.toMillis?.() ?? 0;
       if (ms === 0 || ms < cutoffMs) continue;
+      if (respondedTo.has(e.entryId)) continue;
 
       const tagged = (e.personMentions ?? []).some((pid) =>
         me.personIds.includes(pid),

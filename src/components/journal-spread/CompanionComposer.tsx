@@ -311,6 +311,14 @@ function ReturnPanel({
   const firstName = authorName.split(' ')[0];
   const parentExcerpt = excerpt(parent.text, 130);
   const myExcerpt = excerpt(responseText, 130);
+  // A parent entry is almost certainly an open "Waiting on you" thread
+  // if it was written by someone else within the last 7 days — that's
+  // the same window mention_for_me uses. Responding closes that loop;
+  // the closure line acknowledges it so the user feels the drop.
+  const isRecent = parentDate
+    ? Date.now() - parentDate.getTime() < 7 * 24 * 60 * 60 * 1000
+    : false;
+  const closedThread = isRecent;
 
   return (
     <div className="return-wrap" role="status" aria-live="polite">
@@ -326,6 +334,12 @@ function ReturnPanel({
         where you see it differently, and the third line that might surface
         between them.
       </p>
+
+      {closedThread && (
+        <p className="return-close-line">
+          <em>One less thing waiting on you.</em> This thread is off your list.
+        </p>
+      )}
 
       <div className="return-quotes">
         <blockquote className="return-quote">
@@ -382,6 +396,22 @@ function ReturnPanel({
           color: var(--r-text-2, #5c5347);
           margin: 0 0 22px;
           max-width: 58ch;
+        }
+        .return-close-line {
+          font-family: var(--r-serif, Georgia, serif);
+          font-size: 14.5px;
+          line-height: 1.5;
+          color: var(--r-text-3, #5f564b);
+          margin: -10px 0 20px;
+          padding: 8px 14px;
+          background: rgba(124, 144, 130, 0.08);
+          border-left: 2px solid var(--r-sage, #7c9082);
+          border-radius: 2px;
+          max-width: 58ch;
+        }
+        .return-close-line em {
+          font-style: italic;
+          color: var(--r-sage-deep, #4d6d55);
         }
         .return-quotes {
           display: flex;
