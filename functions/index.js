@@ -10,6 +10,11 @@ const {GoogleGenerativeAI} = require("@google/generative-ai");
 
 admin.initializeApp();
 
+// Email handlers — Resend-backed transactional mail.
+// See functions/sendMail.js for the shared client and
+// functions/sendFamilyInvite.js for the invite template + onCall.
+exports.sendFamilyInvite = require("./sendFamilyInvite").sendFamilyInvite;
+
 // Initialize Anthropic client lazily (only when function runs)
 let anthropic;
 function getAnthropic() {

@@ -28,6 +28,10 @@ export default function RegisterPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setIsDemo(params.get('demo') === 'true');
+    // Prefill email when the user arrives from an invite email link
+    // (sendFamilyInvite puts ?email=... on the registerUrl).
+    const invitedEmail = params.get('email');
+    if (invitedEmail) setEmail(invitedEmail);
   }, []);
 
   useEffect(() => {

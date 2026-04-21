@@ -11,7 +11,8 @@ import {
   arrayRemove,
   Timestamp,
 } from 'firebase/firestore';
-import { firestore } from '../lib/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { firestore, functions } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { Family, PendingInvite, COLLECTIONS } from '../types';
 
@@ -124,8 +125,22 @@ export const useFamily = (): UseFamilyReturn => {
       // Refresh family data
       await refreshFamily();
 
-      // TODO: Send email invitation via Cloud Function
-      // For now, the invitee needs to register with this email and they'll be added to family
+      // Send the actual invite email. Firestore write above is the
+      // source of truth for "this person is invited" — the email is
+      // the notification. If sending fails, the invite still exists
+      // and the recipient can still register to join; we just surface
+      // a soft warning so the inviter knows.
+      try {
+        const sendInvite = httpsCallable(functions, 'sendFamilyInvite');
+        await sendInvite({
+          email,
+          inviterName: user.name ?? '',
+          familyName: family?.name ?? '',
+        });
+      } catch (emailErr) {
+        console.warn('Invite email send failed (invite is still valid):', emailErr);
+        // Non-fatal — don't throw. The invite record is written.
+      }
 
     } catch (err: any) {
       console.error('Error inviting parent:', err);
