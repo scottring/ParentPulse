@@ -645,3 +645,279 @@
   border: 1px solid rgba(161, 70, 70, 0.2);
   border-radius: 4px;
 }
+
+/* ── Modal backdrop + body ───────────────────────────────────────── */
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 15, 8, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  padding: 28px;
+}
+
+.modalBody {
+  background: #fefaf0;
+  border-radius: 10px;
+  max-width: 720px;
+  width: 100%;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  max-height: calc(100vh - 56px);
+  overflow-y: auto;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modalTitle {
+  font-family: var(--font-parent-display), Georgia, serif;
+  font-size: 22px;
+  font-weight: 400;
+  margin: 0;
+  color: #2a1f14;
+}
+
+.modalClose {
+  background: transparent;
+  border: 0;
+  color: #6d5a3f;
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+}
+
+.modalTextarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d9c9a8;
+  border-radius: 6px;
+  padding: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  background: #fffdf6;
+  outline: none;
+  transition: border-color 140ms ease;
+}
+
+.modalTextarea:focus {
+  border-color: #c1a36a;
+}
+
+.modalMeta {
+  min-height: 20px;
+  font-size: 12px;
+  font-family: -apple-system, 'Helvetica Neue', sans-serif;
+}
+
+.modalWarn {
+  color: #a97d2f;
+}
+
+.modalError {
+  color: #a14646;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.modalHint {
+  font-size: 13px;
+  color: #6d5a3f;
+  margin: 0;
+  font-family: -apple-system, 'Helvetica Neue', sans-serif;
+}
+
+/* ── Session close sheet ─────────────────────────────────────────── */
+
+.closeControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.miniBtn {
+  background: transparent;
+  border: 1px solid #d9c9a8;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: #3d2f1f;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 120ms ease;
+}
+
+.miniBtn:hover {
+  background: #f7e9c6;
+}
+
+.closeThemeList {
+  list-style: none;
+  margin: 0;
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+  border-top: 1px solid #e8dcc3;
+  border-bottom: 1px solid #e8dcc3;
+}
+
+.closeThemeItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #2a1f14;
+  font-family: -apple-system, 'Helvetica Neue', sans-serif;
+  padding: 2px 0;
+}
+
+.closeThemeTitle {
+  flex: 1;
+}
+
+.closeStarPip {
+  color: #c1a36a;
+  font-size: 13px;
+}
+
+.closeField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: #6d5a3f;
+  font-family: -apple-system, 'Helvetica Neue', sans-serif;
+}
+
+.closeField input[type='date'],
+.closeField textarea {
+  border: 1px solid #d9c9a8;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 14px;
+  background: #fffdf6;
+  outline: none;
+  transition: border-color 140ms ease;
+}
+
+.closeField input[type='date']:focus,
+.closeField textarea:focus {
+  border-color: #c1a36a;
+}
+
+/* ── Past sessions ───────────────────────────────────────────────── */
+
+.pastSessions {
+  margin-top: 64px;
+  border-top: 1px solid #e8dcc3;
+  padding-top: 24px;
+}
+
+.pastToggle {
+  background: transparent;
+  border: 0;
+  font-size: 13px;
+  color: #6d5a3f;
+  cursor: pointer;
+  padding: 0;
+  letter-spacing: 0.02em;
+  font-family: -apple-system, 'Helvetica Neue', sans-serif;
+  transition: color 120ms ease;
+}
+
+.pastToggle:hover {
+  color: #2a1f14;
+}
+
+.pastList {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pastLink {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  color: #3d2f1f;
+  text-decoration: none;
+  font-size: 14px;
+  font-family: -apple-system, 'Helvetica Neue', sans-serif;
+  border-bottom: 1px dotted #e8dcc3;
+  transition: color 120ms ease;
+}
+
+.pastLink:hover {
+  color: #2a1f14;
+}
+
+.pastPip {
+  font-size: 11px;
+  color: #8a6f4a;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: -apple-system, 'Helvetica Neue', sans-serif;
+}
+
+/* ── Closed session view ─────────────────────────────────────────── */
+
+.backLink {
+  font-size: 12px;
+  color: #8a6f4a;
+  text-decoration: none;
+  display: inline-block;
+  margin-bottom: 16px;
+  font-family: -apple-system, 'Helvetica Neue', sans-serif;
+  transition: color 120ms ease;
+}
+
+.backLink:hover {
+  color: #2a1f14;
+}
+
+.closedSectionHead {
+  font-family: var(--font-parent-display), Georgia, serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: #2a1f14;
+  letter-spacing: 0.02em;
+  margin: 28px 0 12px;
+  text-transform: uppercase;
+}
+
+.noteBody {
+  white-space: pre-wrap;
+  font-family: Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: #3d2f1f;
+  background: #fbf5e7;
+  padding: 16px;
+  border-radius: 6px;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  margin: 0;
+}
