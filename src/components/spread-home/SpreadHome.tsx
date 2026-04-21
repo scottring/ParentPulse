@@ -127,6 +127,9 @@ export function SpreadHome() {
           <a href="/manual" className="cross-nav" aria-label="Open The Family Manual">
             The Family Manual →
           </a>
+          <a href="/therapy" className="cross-nav" aria-label="Open Therapy">
+            Therapy →
+          </a>
         </div>
       </header>
       <style jsx>{`
@@ -158,7 +161,7 @@ export function SpreadHome() {
         .journal-top-right {
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 20px;
         }
         .journal-top-bar .cross-nav {
           font-family: var(--font-parent-display), Georgia, serif;

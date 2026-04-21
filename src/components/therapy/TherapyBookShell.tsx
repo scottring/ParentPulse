@@ -206,6 +206,9 @@ function TopBar({ onLock }: { onLock?: () => void }) {
         <Link href="/journal" className={styles.topBarCrossNav}>
           ← The Journal
         </Link>
+        <Link href="/manual" className={styles.topBarCrossNav}>
+          The Family Manual →
+        </Link>
         {onLock && (
           <button
             type="button"
