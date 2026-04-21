@@ -10,65 +10,76 @@ Relish is an app built around a deceptively simple idea: what if you had an oper
 
 Here's what makes it different from anything else out there. Most relationship tools ask YOU to describe someone else. Relish asks both sides. You write about your partner. Your partner writes about themselves. Your kid — yes, even kids as young as eight — contributes their own perspective in a supervised session with emoji-based questions. And then an AI synthesis engine reads all of those perspectives and produces a unified manual that highlights where everyone agrees, where they don't, and what the gaps might mean.
 
-The magic is in the gap. When Scott writes that his son Liam needs space when he's upset, but Liam's own session reveals that he actually wants to be held — that's not a failure. That's the most valuable thing in the entire app. That's the moment where understanding deepens. Relish surfaces those moments automatically.
+The magic is in the **synthesis of perspectives** — what becomes visible when two or more views of the same person, moment, or relationship are held together. Sometimes the views agree (and that's information). Sometimes they diverge (and that's information). Sometimes the combined picture reveals something neither view alone could name. When Scott writes that his son Liam needs space when he's upset, but Liam's own session reveals that he actually wants to be held — that's not a failure. That's the most valuable thing in the entire app. That's the moment where understanding deepens. Relish surfaces those moments automatically.
 
-The app looks nothing like a typical tech product. There are no dashboards, no progress bars, no gamification badges. Instead, it looks like a finely-bound book. Italic Garamond headings. Roman numerals. Cream paper backgrounds. Decorative fleurons — those little typographic ornaments you see in old books. Running headers like you'd find in a novel. The entire aesthetic is literary, warm, and familial. It's deliberately trying to feel like something you'd find on a shelf in a beautiful home library, not something you'd find in a SaaS product comparison chart.
+The app looks nothing like a typical tech product. There are no dashboards, no progress bars, no gamification badges. Instead, it reads like a finely-bound book. Italic Cormorant Garamond headings. Cream paper backgrounds. Decorative fleurons — those little typographic ornaments you see in old books. Running headers like you'd find in a novel. The entire aesthetic is literary, warm, and familial. It's deliberately trying to feel like something you'd find on a shelf in a beautiful home library, not something you'd find in a SaaS product comparison chart.
 
 The tagline is: "Operating manuals for the people you love."
 
 ---
 
-## Part Two: The Desk — Four Books, Four Stages
+## Part Two: The Three Rooms
 
-When you open Relish, you see a desk. A warm, moody photograph of a leather-topped writing desk with four books arranged on it. It looks like something from a study in an old house — brass lamp in the background, worn leather, the kind of desk where serious thinking happens.
+When you sign in, the top of every page shows three room names: **The Workbook**, **The Family Manual**, **The Archive**. These aren't features — they're destinations. Three rooms, one book. A wordmark on the left ("Relish") and your name on the right. That's the entire chrome.
 
-This isn't a metaphor. It IS the navigation. Each book on the desk is a clickable region that takes you to a different part of the app. Four books, four stages of the same material:
+### The Workbook
 
-**The Journal** — a rich burgundy leather-bound volume at the top of the left stack. This is where raw life flows in. Your captures, your moments, your observations. Tap it to open the chronological stream of everything you've written. Entries come in six types — moment, reflection, win, challenge, question, gratitude — grouped by day. The journal is the raw input layer.
+The Workbook is today. It's the canonical landing page — the room you enter when you open the app. A broadsheet-style masthead tells you what day it is, what season and week of the year you're in, and how many things are waiting on you. The hero greets you by name and tells you the state of the book in a short literary lede ("The kitchen is quiet. The book is where you left it.").
 
-**The Family Manual** — a darker brown leather volume beneath the journal in the left stack. This is the synthesized encyclopedia. Organized by person, not by time. You come here to READ about someone — their triggers, what works for them, their boundaries, the gaps between how they see themselves and how others see them. The AI has processed everything from the journal and from onboarding contributions and distilled it into structured, person-by-person knowledge.
+A column on the right — **Waiting on you** — lists what needs your attention. That includes overdue rituals, moments with unresolved divergence, pending invites from your partner, practices you never closed, and entries someone else wrote about you this week that you haven't read. When nothing's waiting, a gentle "The book is quiet" block takes its place, with a soft teaser telling new users that once they've been writing for about a week, Relish will start reading back to them.
 
-**The Workbook** — a cream-colored book with a pen and ribbon, sitting on top of the right stack. This is where understanding becomes action. AI-generated practices drawn from what the manual has learned about your family. Growth arcs that span multiple weeks. One featured focus per day. The practices are invitations, not assignments.
+Beneath the hero, a **feature row** surfaces three things:
 
-**Your Relish** — a sage-green book at the bottom of the right stack. This is the heart of the app. Your personal compendium — a curated daily page that draws from all three other books and shows you what matters most right now.
+- **Memory of the day** — an older entry from roughly a year ago that Relish thinks is worth rereading. When your current writing lines up thematically with an older entry, the system prefers that theme-matched echo; otherwise it falls back to "same calendar date, last year."
+- **Someone you haven't written about in a while** — a quiet nudge toward a family member whose page has been silent.
+- **A prompt** — one literary question. Answer it in a line and it lands in the Journal.
 
-The key insight: these four books represent four stages of the same material. **Raw → Curated → Synthesized → Applied.** You write something in the journal (raw). Your Relish surfaces the most important patterns (curated). The Family Manual organizes it into structured knowledge per person (synthesized). The Workbook turns that knowledge into things to try (applied). Everything connects.
+Once any Weekly Lead has ever been written for your family — roughly after a week of regular writing — a section unfurls that doesn't exist before: **"This week, from Relish."** It holds two things.
 
-### Your Relish — The Compendium
+- **What Relish noticed this week** — a short magazine-style dispatch. A one-sentence headline, a paragraph unpacking it, and up to three verbatim evidence quotes pulled straight from your entries. No paraphrase. Relish quotes you. The headline is written in the book's voice — specific, warm, never "keep up the great work." Example: *"Scott is writing himself notes this week — about his impatience with Kaleb, his insecurity about Iris, his body next to hers."*
+- **What to bring up** — a forward-looking brief naming one to three topics worth raising at your next hard conversation. Each topic gets a framing question, two or three concrete talking points, a verbatim source quote, and a "days open" counter.
 
-Most days, the sage-green book is where you go. Tap it and you land on "Scott's Relish" — a single scrollable page inside a cream paper wrapper with a literary masthead. It has several sections that appear and disappear based on what data exists:
+Beneath both, a small italic footer line surfaces when the data supports it: *"Your week runs hot on Sundays."* — a single-sentence pattern observation. If Relish doesn't have enough signal yet, the line stays silent.
 
-**The Lead** — the single most important thing right now, displayed in large italic type. Could be a synthesis insight ("You've mentioned bedtime difficulty four times. Liam says he needs warnings."), a practice to try, a prompt to contribute, or a calm state ("Everything's steady. The manuals are current."). The app follows a strict priority hierarchy and picks ONE thing — never a list.
+At the bottom of the Workbook, a **week-plotted grid** shows the seven days with any scheduled ritual marked on the right day.
 
-**Recent Captures** — your last two or three journal entries as compact cards. Category glyph, time, title, one-line excerpt. A link to open the full journal.
+### The Family Manual
 
-**What the Manual Sees** — the most striking synthesis insight from any person's manual. A gap between perspectives, a new alignment, a recurring pattern. Side-by-side self vs. observer views. Links to the full manual.
+The Family Manual is the people view. Each family member — spouse, kids, parents, friends you've added — has a page with a hero portrait, a dossier of what you've written about them, a constellation showing who's close to you and who's on the periphery, and a filterable roster. You come here to READ about someone.
 
-**Something to Try** — ONE growth practice, contextually tied to the current insight. Not a feed. One thing.
+A manual isn't written *about* a person; it's co-authored with them. Your spouse contributes their own self-perspective. Kids 8+ contribute in parent-supervised emoji-heavy sessions. The AI synthesizes everything and shows you alignments and gaps.
 
-**The Family** — compact person pills showing who's in the library, with colored dots for data freshness (green = current, amber = aging, gray = stale). Links to the family manual.
+Each person's own page lists the entries that mention them — tagged by you, AI-extracted from the text, or shared with them — sorted by recency, with a "things waiting on you" counter pegged to anything still unclosed.
 
-**The Echo** — a quiet callback to an older semantically similar journal entry. "You wrote something like this before." Gives the page a sense of memory.
+### The Archive
 
-The compendium is the daily destination. The other three books are where you go to dig deeper — but the compendium surfaces the best of each so you rarely need to.
+The Archive is the searchable river of everything kept. Every entry ever written, grouped by year and month. A search box filters across title, text, and tags. Each row shows a date, a title or first line, a short excerpt, and category tag.
+
+On hover, a tiny lock icon appears on the right edge of each row that you authored. Click it and the entry flips to private — only you can see it — and if it's your first time marking something private, the app asks you to set a short PIN first.
+
+A global floating **pen icon** — a small dark circle with a ✎ in the bottom-right — floats over every page. Tap it to capture.
 
 ---
 
-## Part Three: The Floating Pen
+## Part Three: The Capture Sheet
 
-There is one button that matters more than any other in the entire app: a small dark circle with a pen icon, floating in the bottom-right corner of every single page. This is the capture surface, and it's designed to make writing effortless.
+There is one button that matters more than any other in the entire app: a small dark circle with a pen icon, floating in the bottom-right corner of every single page. Tap it and a paper sheet slides up on a dark cinematic stage.
 
-Tap it and a sheet slides up from the bottom. At the top: "What's on your mind?" Below that, a text area. Below that, a row of category pills — moment, reflection, win, challenge, question, gratitude. Then family member tags so you can associate the entry with someone. Then a privacy toggle.
+At the top, a title. Below that, a big serif writing surface with an ember-colored caret. A row of chips at the bottom lets you choose:
 
-At the bottom, two action buttons:
+- **Category** — moment, reflection, win, challenge, question, gratitude. If you don't pick, it defaults to "a moment" and the AI tags it later from the text.
+- **About** — family members the entry is about. Tagging here is what feeds the per-person pages. If you don't tag anyone, the AI enrichment pipeline extracts names from your text and fills in the gap.
+- **Who can see it** — three preset pills. **Just me**, **Iris and me**, **Everyone**. First-time "Just me" triggers a PIN setup so private really means private on this device.
 
-**Save Note** — the fire-and-forget option. Thirty seconds, sheet closes, note joins the journal. No friction. Don't even have to categorize it — the AI figures that out later.
+A microphone button dictates into the text. An attachment row stages photos or a pasted Spotify/Apple Music link. Voice-to-text lands inline; songs resolve to cover art.
 
-**Ask About This** — this expands the sheet into an AI conversation. And here's the clever part: if you tagged a family member, the AI reads their manual first before responding. So when you write "Liam had another meltdown at pickup, I don't know what to do," the AI already knows from the manual that Liam's meltdowns correlate with hunger, that he responds well to advance warnings, and that he actually wants physical comfort even though he pushes away at first. The response is grounded in everything you already know about this specific child — it's not generic parenting advice.
+Hit **Save**. The sheet confirms — *"Saved to the Journal"* — and asks: *"Want to talk to the AI about what you wrote?"* You can close here (most captures end here) or tap **Ask about this**. If you do, the sheet expands into an entry-scoped AI conversation. The AI has access to your entry's text, the people you tagged, and — when you tag someone — their manual. So when you write "Liam had another meltdown at pickup, I don't know what to do," the AI already knows from the manual that Liam's meltdowns correlate with hunger, that he responds well to advance warnings, and that he actually wants physical comfort even though he pushes away at first. The response is grounded in everything you already know about this specific child — not generic parenting advice.
 
-You can go back and forth in conversation. If you want concrete things to try, you can ask: "Give me some things to try this week." The AI generates practices that flow into the Workbook. Everything connects.
+The conversation lives tied to the entry. Re-open the entry later and the thread is still there. Every two user turns, a lightweight distillation pipeline pulls out *what the chat surfaced that the entry alone didn't* and stores those themes on the entry separately from the original enrichment — so text edits can't wipe insights that came from the conversation.
 
-Both actions — Save Note and Ask About This — feed the living library. Your words shape the manual, the manual shapes the practices, and the practices shape your days.
+If you close the sheet while you're still composing, Relish saves the entry automatically before the sheet disappears. Abandoning the draft is almost impossible.
+
+The sheet also opens in edit mode when you tap *edit* on an existing entry from anywhere. In edit mode, the visibility chips seed from the entry's actual current state, so changing visibility is as fast as changing any other chip — and the same PIN gate applies the first time you flip an entry from shared to private.
 
 ---
 
@@ -76,13 +87,15 @@ Both actions — Save Note and Ask About This — feed the living library. Your 
 
 Relish is designed for different depths of engagement, and it respects the fact that most people have about three to five minutes a day for this kind of thing.
 
-**The 30-Second Capture:** Something just happened. Your daughter said something that surprised you. Your partner did something that annoyed you. You noticed something sweet. Tap the floating pen. Type two sentences. Hit save. Don't categorize, don't agonize, don't overthink it. The synthesis engine will find the signal later. This is the most common interaction — quick captures throughout the day.
+**The 30-Second Capture.** Something just happened. Your daughter said something that surprised you. Your partner did something that annoyed you. You noticed something sweet. Tap the pen. Type two sentences. Hit save. Don't categorize, don't agonize, don't overthink it. The AI will find the signal later. This is the most common interaction — quick captures throughout the day.
 
-**The 3-Minute Check-in:** Open the app. You see the desk. Tap the sage-green book — Your Relish. The Lead shows today's practice: "Before the next transition today, give a five-minute warning and name what's coming next." Tap "Begin this practice." Do it. Pick a word for how it landed. Close the app. That's the entire loop.
+**The 3-Minute Check-in.** Open the app. The Workbook loads. The hero tells you what's waiting. If something is — an overdue ritual, an entry Iris wrote about you this morning, a divergent moment unresolved — you see it in the right column and can tap straight to it. If nothing is, the book is quiet and that's also fine. Close the app. Thirty seconds to three minutes depending on what's open.
 
-**The 5-Minute Conversation:** You're trying to understand something. Maybe your son has been having a rough week and you can't figure out why. Tap the pen. Write what you're noticing. Tag the person. Hit "Ask about this." The AI reads the manual, considers the context, and you have a grounded conversation. Not generic advice — advice rooted in everything you've documented about this specific person. Close when you're done.
+**The 5-Minute Conversation.** You're trying to understand something. Maybe your son has been having a rough week and you can't figure out why. Tap the pen. Write what you're noticing. Tag the person. Save. Tap "Ask about this." The AI reads the manual, considers the context, and you have a grounded conversation — advice rooted in everything you've documented about this specific person.
 
-**The Weekly Check-in:** Once a week, open the Family Manual. Look at the Atlas — has anything shifted in the constellation? Read "Of Note" — any surprising patterns surfaced? Tap into a volume — has new material come in from another perspective? Maybe your partner added something to your manual that you didn't know they noticed.
+**The Weekly Read.** Once a week, usually Sunday night, a background pipeline reads everything the family wrote in the past Monday–Sunday window and produces the lead dispatch and the brief for your next conversation. The dispatches land on the Workbook for Monday morning. You can read them in thirty seconds or deep-link from an evidence quote into the source entry and read for five minutes.
+
+**The Weekly Check-in.** Open the Family Manual. Look at the constellation — has anything shifted? Scan the roster for pages that have gone quiet longer than you'd want. Tap into a person — has new material come in from another perspective? Maybe your partner added something about you that you didn't know they noticed.
 
 ---
 
@@ -90,47 +103,51 @@ Relish is designed for different depths of engagement, and it respects the fact 
 
 This is the core innovation and it's worth dwelling on. Most apps that deal with relationships are one-directional. You log things about other people. Relish is fundamentally multi-directional.
 
-**The Self-Perspective:** Every person can fill out their own manual. What are MY triggers? What works for ME? What do I need when I'm stressed? What are my boundaries? This is powerful on its own — most people have never been asked to articulate this stuff clearly.
+**The Self-Perspective.** Every person can fill out their own manual. What are MY triggers? What works for ME? What do I need when I'm stressed? What are my boundaries? This is powerful on its own — most people have never been asked to articulate this stuff clearly.
 
-**The Observer Perspective:** The people around them contribute what they observe. What triggers THEM from my vantage point? What have I noticed works? What patterns do I see? These questions have been carefully tuned for adults — spouse and friend versions aren't child-centric.
+**The Observer Perspective.** The people around them contribute what they observe. What triggers them from my vantage point? What have I noticed works? What patterns do I see? These questions have been tuned for adults — spouse and friend versions aren't child-centric.
 
-**The Spouse Flow:** When you invite your partner, they receive an email invitation, create their own account, and then do two things: fill out their OWN self-manual (here's who I am, here's what I need) AND contribute observations about their partner (here's what I notice about you). Both people end up with manuals that contain both self-knowledge and observations from their closest person.
+**The Spouse Flow.** When you invite your partner, they receive an email invitation, create their own account, and then do two things: fill out their OWN self-manual (here's who I am, here's what I need) AND contribute observations about their partner (here's what I notice about you). Both people end up with manuals that contain both self-knowledge and observations from their closest person.
 
-**The Child Flow:** For kids aged eight and up, there's a parent-supervised session. No login required — the parent starts a session from their account and hands the device to the child. The questions are age-appropriate, emoji-heavy, and in big text. "When you're mad, what helps? Pick all that apply:" with options like a hug emoji, a headphones emoji, a door emoji (for alone time), a talking emoji. Kids can even do a sibling-observer session — "What makes your brother happy?" with emoji answers.
+**The Child Flow.** For kids aged eight and up, there's a parent-supervised session. No login required — the parent starts a session from their account and hands the device to the child. The questions are age-appropriate, emoji-heavy, and in big text. "When you're mad, what helps? Pick all that apply:" with options like a hug emoji, a headphones emoji, a door emoji (for alone time), a talking emoji. Kids can even do a sibling-observer session — "What makes your brother happy?" with emoji answers.
 
-The AI synthesis takes all of these perspectives and produces something none of them could produce alone. It identifies:
+**Moments.** Any entry can be attached to a **moment** — a single lived event that two or more people wrote about. Scott writes about the Friday-night argument from his view; Iris writes about it from hers. They attach both entries to the same moment. When the moment has two or more views, a synthesis runs and produces three one-sentence lines: **agreement**, **divergence**, and **emergent**. The divergence line is the most valuable: *"Iris names exhaustion, Scott names distraction."* That line becomes an open thread waiting to be closed.
 
-- **Alignments** — where everyone agrees. Mom, Dad, and the kid all say transitions are hard. That's validated.
-- **Blind spots** — where one person's self-perception doesn't match what others see. Dad thinks he's patient; both kids say he gets frustrated quickly. That's a blind spot worth exploring gently.
-- **Family patterns** — themes that appear across multiple people. Everyone in the family struggles with transitions. Everyone does better with advance notice. That's a family-level insight that changes how you plan your days.
+If your partner hasn't written their view yet, you can send a **moment invite** — blind (they see only the prompt) or anchored (they see your view as context). Until they submit, the moment stays half-seen.
+
+**Rituals.** Writing alone doesn't build attention — you need a rhythm where you stop and look. Rituals are scheduled check-ins: solo weekly, partner biweekly, family monthly, or ad-hoc repair. Each ritual has a three-step runner — **read, respond, close** — that surfaces the week's divergent moments and the current brief's topics with one-tap "bring this in" buttons that seed your response.
+
+**Mentions of you.** When someone else writes an entry that's about you — either by tagging you explicitly, by naming you in the text (the AI catches that), or both — it appears in your "Waiting on you" column on the Workbook for the next seven days, with a deep-link straight to the entry. You don't have to hunt for things other people wrote about you. They come to you.
+
+The AI synthesis takes all of these perspectives and produces something none of them could alone. It identifies:
+
+- **Alignments** — where everyone agrees. Mom, Dad, and the kid all say transitions are hard. Validated.
+- **Blind spots** — where one person's self-perception doesn't match what others see. Dad thinks he's patient; both kids say he gets frustrated quickly. A blind spot worth exploring gently.
+- **Family patterns** — themes that appear across multiple people. Everyone struggles with transitions. Everyone does better with advance notice. A family-level insight that changes how you plan your days.
 
 ---
 
 ## Part Six: The AI Architecture
 
-There are four layers of AI synthesis working behind the scenes, and they're worth understanding because they're what make the manual truly "living."
+There are several AI pipelines working behind the scenes, and they're worth understanding because they're what make the manual truly "living."
 
-**Layer 1 — Per-Turn Extraction:** After every single message in an AI conversation (the "Ask about this" flow), the system quietly updates the relevant person's manual with any new information that emerged. You mentioned that your daughter loves being read to at bedtime? That gets extracted and added to her volume immediately.
+**Per-entry enrichment.** When you save an entry, a Cloud Function immediately reads the text and extracts: a one-line summary, the family members mentioned by name (stored separately from your explicit tags, so the UI can union them later), the relationship dimensions touched, and two- to five-word themes. Embeddings are generated via OpenAI's text-embedding-3-small (1,536 dimensions) to power semantic search and theme matching.
 
-**Layer 2 — Whole-Session Synthesis:** When a conversation ends, the AI re-reads the entire arc looking for broader themes. Not just individual facts, but patterns — "this conversation was really about the parent feeling overwhelmed by competing needs at pickup time."
+**Per-chat distillation.** Every two user turns in an entry-scoped chat, a second lightweight pipeline pulls out what the conversation surfaced that the entry alone didn't — dimensions, themes, and a one-line "what emerged." These insights are stored separately from the original enrichment so a later text edit can't wipe them.
 
-**Layer 3 — Individual Volume Synthesis:** As contributions accumulate in a person's manual — from journal entries, conversations, onboarding questionnaires, and multiple observers — the AI periodically refreshes the volume overview, updates the gaps analysis, and revises "what we've learned." This runs on a five-minute cadence with a thirty-minute debounce to avoid unnecessary processing.
+**Manual synthesis.** As contributions accumulate in a person's manual — from journal entries, conversations, onboarding answers, and multiple observers — the AI periodically refreshes the volume overview, the gaps analysis, and "what we've learned." This runs on a five-minute cadence with a thirty-minute debounce to avoid unnecessary processing.
 
-**Layer 4 — Family-Wide Synthesis:** On demand, the AI reads every perspective in every volume across the entire family and refreshes the family-level insights. This is where "Of Note" items come from — the cross-family patterns that no individual volume would reveal.
+**Moment synthesis.** When a moment's view count crosses two, a function reads both perspectives and writes the agreement/divergence/emergent lines. Any divergence becomes an open thread.
 
-The journal enrichment pipeline is its own piece of engineering:
-- **Embeddings** are generated using OpenAI's text-embedding-3-small model with 1,536 dimensions, allowing semantic search across all entries
-- **Dimension extraction** maps each entry to the 15 research-backed relationship dimensions
-- **Theme extraction** pulls out recurring topics
-- **Auto-titling** gives a title to entries saved without one, using a cost-optimized AI model
-- **Vector search** powers the "Echo" feature, finding semantically similar older entries to surface
+**Weekly Lead.** Once a week — Sunday 9pm by default — a pipeline reads everything the family wrote in the past Monday–Sunday window and produces the lead dispatch: a headline, a short paragraph, up to three verbatim evidence quotes, and sometimes an "emergent line" naming what the week said together that no single entry said alone.
 
-The manual-to-workbook pipeline completes the loop:
-- A Cloud Function identifies dimension-rich journal entries
-- It generates practices with provenance links back to the source entries
-- It creates multi-week growth arcs when it detects sustained patterns across entries
+**Weekly Brief.** A companion pipeline looks at the same week and produces one to three topics for the next hard conversation — title, framing question, talking points, source quote, and "days open" counter.
 
-The AI models used are Claude Sonnet by Anthropic for complex synthesis tasks and Claude Haiku for cost-optimized tasks like auto-titling, with OpenAI providing the embedding model.
+**Practice generation.** A daily pipeline picks the most dimension-rich entry from the past seven days — one that touches at least two of the relationship dimensions — and asks the AI to generate a single targeted practice: a micro-activity, a reflection prompt, or a conversation guide. Practices can be shaped by chat insights as well as the original text; when a practice is shaped by a conversation, a "Shaped by your chat" block on the practice detail page shows the emergent sentence, so the conversation isn't a dead end.
+
+**Echo matching.** The Memory-of-the-day slot on the Workbook's feature row checks whether any older entry — about a year ago — thematically overlaps with what you're writing this week. If so, that echo wins the slot; otherwise the slot falls back to "same calendar date, last year." Chat insights count for matching too, so a conversation a year ago about bedtime can resurface even if the entry text didn't use those words.
+
+The AI models used are **Claude Sonnet** by Anthropic for complex synthesis tasks, **Claude Haiku** for cost-optimized tasks like auto-titling and chat distillation, and **OpenAI** for embeddings.
 
 ---
 
@@ -138,73 +155,79 @@ The AI models used are Claude Sonnet by Anthropic for complex synthesis tasks an
 
 This is important because the app occupies unusual territory and could easily be misunderstood.
 
-**It is not a task manager.** Practices are invitations, not assignments. There are no streaks. No badges. No daily streak counters making you feel guilty for missing a day. No push notifications shaming you. The language is gentle — "kept this week" instead of "completed," "holding steady" instead of a score.
+**It is not a task manager.** Practices are invitations, not assignments. There are no streaks, no badges, no daily counter making you feel guilty for missing a day. No push notifications shaming you. The language is gentle — "waiting on you" instead of "overdue," "kept this week" instead of "completed," "holding steady" instead of a score. The Workbook's right-column "Waiting on you" is scoped — rituals due, divergences unresolved, invites waiting, practices uncarried-forward, and entries others wrote about you — not a to-do list.
 
 **It is not a replacement for therapy.** Relish is a companion for thinking, not for diagnosis or crisis intervention. It helps you notice patterns and track insights between sessions, but it never pretends to be clinical. If anything, it's designed to make therapy more productive by giving you a structured record of what you've been noticing.
 
-**It is not a quantified-self tool.** There is no score for how good a parent you are. No rating for your marriage. Progress shows as "holding steady" or "in the writing" — qualitative, not quantitative. The three-ring assessment model that organizes dimensions exists to guide growth arcs, not to produce a grade.
+**It is not a quantified-self tool.** There's no score for how good a parent you are. No rating for your marriage. Progress shows as "holding steady" or "in the writing" — qualitative, not quantitative. The research-backed dimensions exist to guide growth, not to produce a grade.
 
-**It is not a surveillance or "gotcha" tool.** Private content stays private, full stop. The sharing model is explicit — you toggle sharing on individual entries with a visible padlock icon. There's no way for one partner to snoop on the other's private entries. The app is designed to help people understand each other, not to build a case against someone.
+**It is not a surveillance or "gotcha" tool.** Private content stays private, full stop. Every entry carries an explicit visibility setting — Just me, partner-shared, or Everyone — that you can see and change from three places: in the capture sheet at write time, inline on the entry detail page's padlock panel, or via a hover-lock on the Archive row if you want to rapid-fire review a bunch of older entries and mark some private. The first time you mark anything private, the app asks you to set a short PIN so private really means private on this device. Once set, subsequent privacy flips anywhere in the app skip straight through. There's no way for one partner to snoop on the other's private entries. The app is designed to help people understand each other, not to build a case against someone.
 
 ---
 
 ## Part Eight: The Design Philosophy
 
-The literary book metaphor isn't just decoration — it's a deliberate design philosophy that shapes every decision in the app.
+The literary book metaphor isn't decoration — it's a deliberate design philosophy that shapes every decision in the app.
 
-**Typography:** Headings use Cormorant Garamond in italic. Body text is warm and readable. Roman numerals are used everywhere — page counts, week numbers, volume numbers. It reads like a beautifully typeset book.
+**Typography.** Headings use Cormorant Garamond in italic. Body text is warm and readable (DM Sans). Mastheads use a weekly magazine's typographic rhythm — eyebrow · value · sub. Drop caps occasionally open featured text.
 
-**Color:** The palette is cream backgrounds (like aged paper), warm browns, and sage green accents. Nothing neon. Nothing tech-blue. The colors evoke a comfortable study or a well-loved nursery.
+**Color.** The palette is cream backgrounds (like aged paper), warm browns, sage green, ember orange, and burgundy accents. Nothing neon. Nothing tech-blue. The colors evoke a comfortable study or a well-loved nursery.
 
-**Ornament:** Fleurons — the ❦ symbol and similar typographic ornaments — serve as section dividers. Running headers appear at the top of pages like a printed book. Drop caps open featured text.
+**Ornament.** Fleurons — the ❦ symbol and similar typographic ornaments — serve as section dividers and as a quiet signal under empty states. A small colophon at the bottom of each page names the room and the part of day, like a running footer in a printed book.
 
-**Metaphor consistency:** The home screen is a writing desk with four books. Sections within the manual are "volumes." Multi-week focuses are "chapters." The relationship map is an "atlas." The manual catalog is "the library." The four books on the desk represent four stages of the same material: raw (journal), curated (your relish), synthesized (family manual), applied (workbook). Every piece of the interface reinforces the idea that you're building something tangible and lasting — a library about your family that grows with you.
+**Metaphor consistency.** The Workbook reads like the front page of a quiet literary weekly. The Family Manual reads like the index and the interior pages of a shared family book. The Archive reads like the chronological back matter — a full bibliography of everything kept. The Pen is just a pen: a single icon, no proprietary name in copy, always reachable. Every surface reinforces the idea that you're writing and reading a book, not filling in a form.
 
-The result is an app that feels warm and unhurried. It asks for three to five minutes a day, most days. It doesn't demand anything. And over weeks and months, three things compound:
+The result is an app that feels warm and unhurried. It asks for three to five minutes a day, most days. It doesn't demand anything. Over weeks and months, three things compound:
 
-1. **A clearer, growing picture of the people you love** — their needs, their triggers, their strengths, and how those shift over time
-2. **Concrete things to try** — grounded in YOUR specific people, not generic advice from a parenting blog
-3. **A record of your noticing** — so small moments of insight don't vanish into the chaos of daily life
+1. **A clearer, growing picture of the people you love** — their needs, their triggers, their strengths, and how those shift over time.
+2. **Concrete things to try** — grounded in YOUR specific people, not generic advice from a parenting blog.
+3. **A record of your noticing** — so small moments of insight don't vanish into the chaos of daily life.
 
 ---
 
 ## Part Nine: A Real Example — The Kaufman Family
 
-To make all of this concrete, here's how it might play out for one family over the first couple of months.
+To make all of this concrete, here's how it plays out for one family over the first couple of months.
 
-**Week One:**
+**Week One.**
 
-Scott signs up and creates volumes for three people: Iris (his partner) and their two kids. He goes through the observer onboarding for each — answering questions about what triggers them, what works well, what their boundaries are, what he's noticed over the years.
+Scott signs up and adds three people: Iris (his partner) and their two kids. He goes through the observer onboarding for each — answering questions about what triggers them, what works well, what their boundaries are.
 
-He invites Iris via email. She gets the invitation, creates her account, and lands on a welcome page that explains she'll be doing two things: filling out her own self-manual (telling the system who she is) and contributing observations about Scott (telling the system what she notices about him). She goes through both onboarding flows.
+He invites Iris via email. She gets the invitation, creates her account, and lands on a welcome page that explains she'll be doing two things: filling out her own self-manual (telling the system who she is) and contributing observations about Scott (telling the system what she notices about him). She goes through both flows.
 
-The kids — let's call them Liam and Mia — do parent-supervised sessions. Liam sits with Mom and taps through big emoji-based questions about himself. "When you're upset, what helps?" He taps the hug emoji and the music emoji. "What makes you mad?" He taps the clock emoji (rushing) and the volume emoji (loud noises). Then he does a sibling session about Mia. Mia does the same in her own session.
+The kids — let's call them Liam and Mia — do parent-supervised sessions. Liam sits with Mom and taps through big emoji-based questions about himself. "When you're upset, what helps?" He taps the hug emoji and the music emoji. "What makes you mad?" He taps the clock (rushing) and the volume (loud noises). Then he does a sibling session about Mia.
 
-By the end of week one, every person in the family has a manual with at least two perspectives — their own and someone else's. The AI has already produced initial synthesis documents.
+By the end of week one, every person in the family has a manual with at least two perspectives. The AI has produced initial synthesis documents.
 
-**Week Two:**
+**Week Two.**
 
-On Tuesday, Scott captures a quick moment in the journal: "Liam melted down at pickup today. Turned out he was hangry — hadn't eaten since lunch and it was 4pm."
+On Tuesday, Scott opens the app. The Workbook loads. The hero says *"Good morning, Scott."* Nothing's waiting on him — the right column shows the quiet-book block. He taps the pen and writes: *"Liam melted down at pickup today. Turned out he was hangry — hadn't eaten since lunch and it was 4pm."* He tags Liam. Saves.
 
-Behind the scenes, the AI processes this. It adds a data point to Liam's manual under triggers: hunger correlates with meltdowns. This joins other observations about Liam from the onboarding. The Workbook generates a practice: "Pack a snack for pickup this week. Notice what changes."
+Behind the scenes, enrichment runs. The entry is added to Liam's manual under triggers: hunger correlates with meltdowns. A practice is generated: *"Pack a snack for pickup this week. Notice what changes."* It lands on the Workbook's feature row.
 
-The next morning, Scott opens the app. The desk appears. He taps the sage-green book — his Relish. The Lead shows today's practice in big italic type: "Pack a snack for pickup." He reads it, thinks "yeah, that's smart," packs a granola bar, and closes the app. Thirty seconds.
+Wednesday morning, Scott opens the app. The masthead says *Waiting on you: 1 thing*. The right column shows one row: *"A practice left unfinished — Pack a snack for pickup."* He reads it, thinks "yeah, that's smart," packs a granola bar.
 
-At pickup, Liam eats the granola bar in the car and the ride home is calm. Scott taps the pen and writes: "Packed the snack. Smooth pickup. He was chatty and happy the whole ride."
+At pickup, Liam eats the granola bar in the car and the ride home is calm. Scott taps the pen and writes: *"Packed the snack. Smooth pickup. He was chatty and happy the whole ride."*
 
-**Week Three:**
+**Week Three.**
 
-Iris captures her own entry: "Noticed Mia is SO much calmer when I give her a five-minute warning before transitions. Bedtime was smooth tonight because I said 'five more minutes of play, then we start getting ready.'"
+Iris captures her own entry from her phone: *"Noticed Mia is SO much calmer when I give her a five-minute warning before transitions. Bedtime was smooth tonight because I said 'five more minutes of play, then we start getting ready.'"* She tags Mia.
 
-The AI updates Mia's manual: transition warnings added to "what works." But then the family-wide synthesis runs, and it notices something: both kids respond well to predictability and advance notice. This surfaces in the Atlas view under "Of Note" as a family-level insight. Now both parents can see that this isn't just a Mia thing or a Liam thing — it's a family pattern. They can plan around it.
+Scott opens the app an hour later. His Workbook's right column now has an entry: *"Someone wrote about you — 'Noticed Mia is SO much calmer when I give her a five-minute warning…'"* He deep-links to the entry, reads it, and a new pattern is in his head.
 
-**Month Two:**
+The family-wide synthesis runs in the background and notices something: both kids respond well to predictability and advance notice. That insight surfaces on each kid's page and as a family-level theme on the constellation.
 
-By now, the manuals are rich. Dozens of journal entries from both parents. Two rounds of kid sessions. Several AI conversations where Scott asked "why does Liam keep pushing me away when he's upset?" and the AI, drawing from the manual, was able to say: "In his own session, Liam indicated he wants physical comfort when upset. The pushing away might be an initial reaction before he's ready for the hug. His manual suggests waiting about thirty seconds and then offering again."
+**Sunday Night, End of Week Three.**
 
-The Gaps and Insights view shows something striking: Scott's observations say Liam needs space when upset, but Liam's own self-report says he wants to be held. That gap is highlighted — not as an accusation, but as an invitation to be curious. "There may be a difference between what Liam shows and what Liam wants. Worth exploring."
+The Weekly Lead pipeline runs at 9pm. Monday morning, Scott opens the Workbook and a new section is there for the first time — *"This week, from Relish."* The lead card reads: *"The household is learning one thing — the value of the five-minute warning."* Three evidence quotes sit below, each linking back to the entry it came from. The brief card next to it says: *"Topics to bring up — 'Transitions with Liam', 'Bedtime with Mia'"* with framing questions and three talking points each. A small italic line beneath: *"Your week runs hot on Sundays."*
 
-Growth arcs have formed. A multi-week chapter called "The Approach" is in week three of four, focused on how Scott shows up in emotionally charged moments with Liam. The practices have been building: week one was about noticing his own body language, week two was about pausing before reacting, week three is about offering comfort after the pause.
+Scott reads both in about a minute. One of the quotes is from an entry he half-remembers writing. He clicks it, rereads, closes.
+
+**Month Two.**
+
+By now, the manuals are rich. Dozens of journal entries from both parents. Two rounds of kid sessions. Several AI conversations where Scott asked *"why does Liam keep pushing me away when he's upset?"* and the AI, drawing from the manual, replied: *"In his own session, Liam indicated he wants physical comfort when upset. The pushing away might be an initial reaction before he's ready for the hug. His manual suggests waiting about thirty seconds and then offering again."*
+
+The Family Manual shows something striking in the Gaps and Insights view: Scott's observations say Liam needs space when upset, but Liam's own self-report says he wants to be held. That gap is highlighted — not as an accusation, but as an invitation to be curious. *"There may be a difference between what Liam shows and what Liam wants. Worth exploring."*
 
 The family has a living document. It's not static. It grows every time someone writes something, every time the AI finds a pattern, every time a perspective is added. It's a book that writes itself, and the family is both the author and the subject.
 
@@ -214,7 +237,7 @@ The family has a living document. It's not static. It grows every time someone w
 
 Relish serves several overlapping communities, all united by the fact that they care deeply about understanding the people closest to them.
 
-**Parents of neurodivergent children** are often the earliest and most enthusiastic adopters. When your child experiences the world differently — sensory sensitivities, executive function challenges, emotional regulation difficulties — having a living manual that tracks what works, what doesn't, and how it changes over time is enormously valuable. Especially when multiple caregivers need to be on the same page.
+**Parents of neurodivergent children** are often the earliest and most enthusiastic adopters. When your child experiences the world differently — sensory sensitivities, executive-function challenges, emotional regulation difficulties — having a living manual that tracks what works, what doesn't, and how it changes over time is enormously valuable. Especially when multiple caregivers need to be on the same page.
 
 **Couples building shared understanding** find that the multi-perspective system reveals things they've never been able to articulate. The gap between "how I see myself" and "how you see me" becomes a starting point for real conversation, not an argument.
 
@@ -222,7 +245,7 @@ Relish serves several overlapping communities, all united by the fact that they 
 
 **People in therapy** who want a structured way to track insights between sessions. Relish becomes a companion to the therapeutic process — a place to capture observations, notice patterns, and bring concrete material to the next appointment.
 
-**Blended families** navigating complex dynamics — step-parents learning new kids, half-siblings building relationships, co-parents trying to stay coordinated across households. The multi-perspective manual is uniquely suited to capturing the complexity of these relationships.
+**Blended families** navigating complex dynamics — step-parents learning new kids, half-siblings building relationships, co-parents staying coordinated across households. The multi-perspective manual is uniquely suited to capturing the complexity of these relationships.
 
 ---
 
@@ -230,16 +253,16 @@ Relish serves several overlapping communities, all united by the fact that they 
 
 If you take nothing else away from this briefing, take this:
 
-Relish asks you to do two things. Tap the pen when something comes up. Open the sage-green book and look at today's page. That's it.
+Relish asks you to do two things. **Tap the pen when something comes up. Open the Workbook and see what's waiting.** That's it.
 
-Four books on a desk. Four stages of the same material. You write raw observations in the journal. Your Relish curates the most important patterns into a single daily page. The Family Manual synthesizes everything into structured, per-person knowledge. The Workbook turns that knowledge into concrete things to try. Raw to curated to synthesized to applied — and the cycle continues, each stage feeding the next.
+Three rooms, one book. The Workbook is today. The Family Manual is the people. The Archive is everything kept. You write raw observations with the pen. Relish enriches, synthesizes, and returns them — some things appear right away (a person's page updates, a practice generates), some things appear once a week (the lead and the brief), some things appear when the shape of your writing lines up with something older you wrote (the echo). Every piece of AI output feeds back into another one. Enrichment feeds practices. Chat feeds practices. Chat also feeds echoes. Moments feed rituals. Rituals produce entries. Briefs feed rituals.
 
-Everything else — the synthesis, the pattern detection, the practice generation, the echo surfacing, the family-wide insights — happens automatically in the background. Your words become understanding. Your understanding becomes action. Your actions generate new words. And the cycle continues, building a richer and richer picture of the people you love.
+Everything else — the synthesis, the pattern detection, the practice generation, the echo surfacing, the family-wide insights, the mention-of-you routing — happens automatically in the background. Your words become understanding. Your understanding becomes action. Your actions generate new words. And the cycle continues, building a richer and richer picture of the people you love.
 
-"Open it, look at today's page. Tap the pen when something comes up. The rest takes care of itself."
+"Open the Workbook, see what's waiting. Tap the pen when something comes up. The rest takes care of itself."
 
 That's Relish.
 
 ---
 
-*Relish is built with Next.js 16, React 19, and Firebase. AI synthesis is powered by Claude (Anthropic) and embeddings by OpenAI. The practice library contains 71 exercises across 15 research-backed relationship dimensions. The app is designed and built by Scott Kaufman.*
+*Relish is built with Next.js 16, React 19, and Firebase (Auth, Firestore, Cloud Functions, Storage). AI synthesis is powered by Claude (Anthropic) and embeddings by OpenAI. The app is designed and built by Scott Kaufman. Deployed at relish.my.*
