@@ -97,6 +97,9 @@ import type { WeeklyBrief } from '@/types/weekly-brief';
 import { useOpenThreads } from '@/hooks/useOpenThreads';
 import { ensureSoloWeekly } from '@/lib/ritual-seeds';
 import type { OpenThread } from '@/lib/open-threads';
+import { useJournalEntries } from '@/hooks/useJournalEntries';
+import { usePerson } from '@/hooks/usePerson';
+import { useWorkbookVisit } from '@/hooks/useWorkbookVisit';
 
 export default function WorkbookPage() {
   const { user, loading, logout } = useAuth();
@@ -110,6 +113,49 @@ export default function WorkbookPage() {
   // furniture. See docs/superpowers/specs/2026-04-20-dispatch-collapse-design.md.
   const { dispatch: leadDispatch, loading: leadLoading } = useWeeklyLead();
   const hasReturns = !leadLoading && !!leadDispatch;
+
+  // Living daily edition: a short book-voice paragraph above the
+  // greeting summarising what changed since the user last opened the
+  // Workbook — primarily, entries someone else wrote about them that
+  // arrived between visits. First-ever visit or no changes render
+  // nothing, so the surface stays quiet when it has nothing to say.
+  const { priorLastSeenAt, loaded: visitLoaded } = useWorkbookVisit();
+  const { entries: allEntries } = useJournalEntries();
+  const { people } = usePerson();
+  const sinceSummary = useMemo<SinceSummary | null>(() => {
+    if (!visitLoaded || !priorLastSeenAt || !user?.userId) return null;
+    const mePersonIds = (people ?? [])
+      .filter((p) => p.linkedUserId === user.userId)
+      .map((p) => p.personId);
+    const priorMs = priorLastSeenAt.getTime();
+    const newMentions = allEntries.filter((e) => {
+      if (e.authorId === user.userId) return false;
+      const ms = e.createdAt?.toMillis?.() ?? 0;
+      if (ms <= priorMs) return false;
+      const tagged = (e.personMentions ?? []).some((pid) =>
+        mePersonIds.includes(pid),
+      );
+      const aiExtracted = (e.enrichment?.aiPeople ?? []).some((pid) =>
+        mePersonIds.includes(pid),
+      );
+      return tagged || aiExtracted;
+    });
+    if (newMentions.length === 0) return null;
+    const authorFirstNames = Array.from(
+      new Set(
+        newMentions.map((e) => {
+          const author = people.find((p) => p.linkedUserId === e.authorId);
+          return author?.name.split(' ')[0] ?? 'Someone';
+        }),
+      ),
+    );
+    return {
+      count: newMentions.length,
+      authors: authorFirstNames,
+      priorLastSeenAt,
+      firstNewEntryId: newMentions[0].entryId,
+    };
+  }, [allEntries, priorLastSeenAt, visitLoaded, people, user?.userId]);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/');
@@ -184,6 +230,25 @@ export default function WorkbookPage() {
               </span>
             </div>
             <h1 className="hero-title">{greeting}</h1>
+            {sinceSummary && (
+              <p className="hero-since">
+                <em>Since you were last here,</em>{' '}
+                {sinceSummary.authors.length === 1
+                  ? `${sinceSummary.authors[0]} wrote`
+                  : `${sinceSummary.authors.slice(0, -1).join(', ')} and ${sinceSummary.authors[sinceSummary.authors.length - 1]} wrote`}{' '}
+                about you
+                {sinceSummary.count > 1
+                  ? ` — ${sinceSummary.count} ${sinceSummary.count === 1 ? 'line' : 'lines'} in the book`
+                  : ''}
+                .{' '}
+                <Link
+                  href={`/journal/${sinceSummary.firstNewEntryId}`}
+                  className="hero-since-link"
+                >
+                  Start with the newest →
+                </Link>
+              </p>
+            )}
             <p className="hero-lede">{lede}</p>
             <button type="button" onClick={openPen} style={heroActionStyle}>
               <svg
@@ -1088,6 +1153,13 @@ function SongStripPlaceholder() {
    Helpers
    ════════════════════════════════════════════════════════════════ */
 
+interface SinceSummary {
+  count: number;
+  authors: string[];        // unique first names of authors
+  priorLastSeenAt: Date;
+  firstNewEntryId: string;  // newest mention-of-me since the prior visit
+}
+
 function greetFor(d: Date, name: string): string {
   const h = d.getHours();
   if (h < 5) return `Still up, ${name}.`;
@@ -1339,6 +1411,31 @@ const styles = `
     max-width: 38ch;
   }
   .hero-lede em { font-style: italic; color: var(--r-ink); }
+  .hero-since {
+    font-family: var(--r-serif);
+    font-size: 17px;
+    line-height: 1.55;
+    color: var(--r-text-3);
+    margin: 24px 0 0;
+    padding: 14px 18px 14px 16px;
+    border-left: 2px solid var(--r-ember);
+    background: rgba(201, 134, 76, 0.06);
+    max-width: 52ch;
+    border-radius: 2px;
+  }
+  .hero-since em { font-style: italic; color: var(--r-ink); }
+  :global(.hero-since-link) {
+    font-family: var(--r-sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--r-ember);
+    border-bottom: 1px solid currentColor;
+    padding-bottom: 2px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
   :global(.hero-action) {
     margin-top: 36px;
     display: inline-flex;
