@@ -10,7 +10,11 @@ import { use, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { usePersonById } from '@/hooks/usePerson';
+import { usePersonById, usePerson } from '@/hooks/usePerson';
+import { usePersonManual } from '@/hooks/usePersonManual';
+import { useContribution } from '@/hooks/useContribution';
+import { useEquivalentManualIds } from '@/hooks/useEquivalentManualIds';
+import { useFamily } from '@/hooks/useFamily';
 import { useJournalEntries } from '@/hooks/useJournalEntries';
 import { computeAge } from '@/utils/age';
 import { stockImagery } from '@/config/stock-imagery';
@@ -28,8 +32,18 @@ export default function PersonPage({
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const { person, loading: personLoading, updatePerson } = usePersonById(personId);
+  const { manual, loading: manualLoading } = usePersonManual(personId);
+  const { people } = usePerson();
+  const equivalentManualIds = useEquivalentManualIds(personId, people);
+  const { contributions } = useContribution(manual?.manualId, equivalentManualIds);
+  const { inviteParent } = useFamily();
   const { entries } = useJournalEntries();
   const [isEditing, setIsEditing] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [inviteDone, setInviteDone] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/');
@@ -56,6 +70,24 @@ export default function PersonPage({
     ).slice(0, 5);
   }, [mentions]);
 
+  // Manual-derived content — computed here (before any early return)
+  // so the hook order is stable across all render branches.
+  const topStrategies = useMemo(
+    () =>
+      (manual?.whatWorks ?? [])
+        .slice()
+        .sort((a, b) => b.effectiveness - a.effectiveness)
+        .slice(0, 4),
+    [manual?.whatWorks],
+  );
+  const topTriggers = useMemo(() => {
+    const order: Record<string, number> = { significant: 0, moderate: 1, mild: 2 };
+    return (manual?.triggers ?? [])
+      .slice()
+      .sort((a, b) => (order[a.severity] ?? 3) - (order[b.severity] ?? 3))
+      .slice(0, 3);
+  }, [manual?.triggers]);
+
   const loading = authLoading || personLoading;
   if (loading || !user) return null;
 
@@ -80,12 +112,50 @@ export default function PersonPage({
   const daysSinceLast = computeDaysSinceLast(mentions);
   const timeline = groupByYear(mentions);
 
+  // Manual-derived content (topStrategies/topTriggers already memoized above)
+  const synth = manual?.synthesizedContent;
+  const strengths = manual?.coreInfo?.strengths?.slice(0, 6) ?? [];
+
+  const selfContributions = contributions.filter((c) => c.perspectiveType === 'self' && c.status === 'complete');
+  const observerContributions = contributions.filter((c) => c.perspectiveType === 'observer' && c.status === 'complete');
+  const isSelf = person.linkedUserId === user.userId;
+  const theyCanContribute = !!person.canSelfContribute && person.relationshipType !== 'child';
+  const theyHaveAccount = !!person.linkedUserId;
+
+  const balance = computeBalance({
+    firstName,
+    mentions: mentions.length,
+    daysSinceLast,
+    openThreads: openThreads.length,
+    hasSelfContribution: selfContributions.length > 0,
+    hasObserverContribution: observerContributions.length > 0,
+    theyCanContribute,
+    theyHaveAccount,
+    isSelf,
+  });
+
+  const handleInvite = async () => {
+    const email = inviteEmail.trim();
+    if (!email) return;
+    setInviteBusy(true);
+    setInviteError(null);
+    try {
+      await inviteParent(email);
+      setInviteDone(true);
+    } catch (err) {
+      console.error('Invite failed:', err);
+      setInviteError('Could not send the invite. Please try again.');
+    } finally {
+      setInviteBusy(false);
+    }
+  };
+
   return (
     <main className="pp-app">
       <div className="pp-page">
         {/* ═══ BREADCRUMBS ═══ */}
         <div className="crumbs">
-          <Link href="/manual">The Family Manual</Link>
+          <Link href="/manual">Family</Link>
           <span className="sep">/</span>
           <span>{firstName}</span>
           <button
@@ -142,27 +212,45 @@ export default function PersonPage({
             <div className="dossier-dateline">
               <span className="dot" />
               <span>
-                A page in the Family Manual · Updated {formatDays(daysSinceLast)}
+                {isSelf ? 'Your page' : 'Their page'}
+                {daysSinceLast < 9999 && <> · updated {formatDays(daysSinceLast)}</>}
               </span>
             </div>
-            <p className="dossier-lede">
-              {mentions.length > 0 ? (
-                <>
-                  <em>
-                    The book has {mentions.length}{' '}
-                    {mentions.length === 1 ? 'entry' : 'entries'} about {firstName}.
-                  </em>{' '}
-                  {openThreads.length > 0
-                    ? `${spellCount(openThreads.length)} ${openThreads.length === 1 ? 'thing' : 'things'} waiting on you.`
-                    : 'Nothing waiting right now.'}
-                </>
-              ) : (
-                <>
-                  <em>A new page, not yet written.</em>{' '}
-                  Start a first line about {firstName} — the book will fill in.
-                </>
-              )}
-            </p>
+
+            {/* Balance line — one sentence that says where things stand */}
+            <div className={`balance-line balance-${balance.state}`}>
+              <span className="balance-dot" aria-hidden="true" />
+              <span className="balance-label">{balance.label}</span>
+              <span className="balance-sep">·</span>
+              <span className="balance-text">{balance.line}</span>
+            </div>
+
+            {/* Synthesis lead — 1–3 sentences distilled from contributions */}
+            {synth?.overview ? (
+              <p className="dossier-lede">
+                <em>{synth.overview}</em>
+              </p>
+            ) : isSelf && !selfContributions.length ? (
+              <p className="dossier-lede">
+                <em>A new page — your own.</em> Answer your questions in your
+                own words. The app will start distilling once you do.
+              </p>
+            ) : isSelf ? (
+              <p className="dossier-lede">
+                <em>Your own perspective is in.</em> More will show up here as
+                you add to it or invite others to add their view of you.
+              </p>
+            ) : mentions.length === 0 ? (
+              <p className="dossier-lede">
+                <em>A new page.</em> Write a first note about {firstName} and
+                this page starts to fill.
+              </p>
+            ) : (
+              <p className="dossier-lede">
+                <em>No summary yet.</em> A few more notes and the app will
+                start distilling what it&rsquo;s hearing.
+              </p>
+            )}
 
             <div className="dossier-stats">
               <div className="dossier-stat">
@@ -194,45 +282,48 @@ export default function PersonPage({
               )}
               <dt>Relation</dt>
               <dd>{relationDescription(person)}</dd>
-              {person.hasManual && person.manualId && (
-                <>
-                  <dt>Manual</dt>
-                  <dd>
-                    <Link
-                      href={`/people/${person.personId}/manual`}
-                      style={{ borderBottom: '1px solid var(--r-rule-3)' }}
-                    >
-                      Open the full manual
-                    </Link>
-                  </dd>
-                </>
-              )}
             </dl>
 
             <div className="dossier-ctas">
-              <button type="button" style={pillDarkStyle} onClick={openPen}>
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ color: 'var(--r-amber)', flex: 'none' }}
-                  aria-hidden="true"
+              {isSelf ? (
+                <Link
+                  href={`/people/${person.personId}/manual/self-onboard`}
+                  style={pillDarkStyle as React.CSSProperties}
                 >
-                  <path d="M17 3l4 4L8 20l-5 1 1-5L17 3z" />
-                </svg>
-                Write about {firstName}
-              </button>
-              <Link
-                href={`/people/${person.personId}/manual`}
-                style={pillStyle}
-              >
-                Open the full manual
-              </Link>
+                  {selfContributions.length > 0
+                    ? 'Revise your own answers'
+                    : 'Continue your own page'}
+                  <span aria-hidden="true">⟶</span>
+                </Link>
+              ) : (
+                <>
+                  <button type="button" style={pillDarkStyle} onClick={openPen}>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ color: 'var(--r-amber)', flex: 'none' }}
+                      aria-hidden="true"
+                    >
+                      <path d="M17 3l4 4L8 20l-5 1 1-5L17 3z" />
+                    </svg>
+                    Write about {firstName}
+                  </button>
+                  <Link
+                    href={`/people/${person.personId}/manual/onboard`}
+                    style={pillStyle}
+                  >
+                    {observerContributions.length > 0
+                      ? 'Revise your observations'
+                      : 'Answer a few questions about them'}
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </section>
@@ -243,25 +334,31 @@ export default function PersonPage({
             <div className="threads-head">
               <h2 className="h2-serif">
                 {openThreads.length > 0 ? (
-                  <>
-                    Still open about <em>{firstName}.</em>
-                  </>
+                  isSelf ? (
+                    <>Waiting <em>for you.</em></>
+                  ) : (
+                    <>Still open about <em>{firstName}.</em></>
+                  )
                 ) : (
-                  <>
-                    Nothing open about <em>{firstName}.</em>
-                  </>
+                  isSelf ? (
+                    <>Nothing <em>waiting.</em></>
+                  ) : (
+                    <>Nothing open about <em>{firstName}.</em></>
+                  )
                 )}
               </h2>
               <span className="sub">
                 {openThreads.length > 0
                   ? `${spellCount(openThreads.length)} ${openThreads.length === 1 ? 'thing' : 'things'} waiting, newest first.`
-                  : 'The book is quiet on this page.'}
+                  : 'Nothing to reply to right now.'}
               </span>
             </div>
             {openThreads.length === 0 ? (
               <div className="threads-empty">
                 <p>
-                  Nothing waiting. If something lands, just write.
+                  {isSelf
+                    ? 'Nothing waiting for you right now.'
+                    : 'Nothing waiting. If something lands, just write.'}
                 </p>
               </div>
             ) : (
@@ -281,7 +378,11 @@ export default function PersonPage({
             <p className="tl-head">Timeline</p>
             {Object.keys(timeline).length === 0 ? (
               <p className="tl-empty">
-                <em>Nothing written about {firstName} yet.</em>
+                <em>
+                  {isSelf
+                    ? 'Nothing written yet.'
+                    : `Nothing written about ${firstName} yet.`}
+                </em>
               </p>
             ) : (
               Object.entries(timeline)
@@ -307,73 +408,162 @@ export default function PersonPage({
           </aside>
         </section>
 
-        {/* ═══ QUIET NOTES ROW ═══ */}
-        <section className="notes-row" aria-label="Notes about them">
-          <article className="note-card">
-            <span className="eyebrow">Things they say</span>
-            <h3>Lines worth keeping.</h3>
-            <ul className="note-list">
-              <li>
-                <span className="q">
-                  Pulled quotes from entries will land here.
-                </span>
-                <span className="meta">awaiting data</span>
-              </li>
-            </ul>
-          </article>
+        {/* ═══ DETAILS — what the app has learned ═══ */}
+        {(topStrategies.length > 0 || topTriggers.length > 0 || strengths.length > 0) && (
+          <section className="details" aria-label="What the app has learned">
+            <div className="details-head">
+              <h2 className="h2-serif"><em>What helps.</em></h2>
+              <span className="sub">
+                Gathered from what you&rsquo;ve written
+                {observerContributions.length > 0 && ' and what others have added'}.
+              </span>
+            </div>
 
-          <article className="note-card">
-            <span className="eyebrow">Dates to remember</span>
-            <h3>On the calendar.</h3>
-            <ul className="note-list">
-              {person.dateOfBirth && (
-                <li>
-                  <span className="q">Birthday</span>
-                  <span className="meta">
-                    {person.dateOfBirth
-                      .toDate()
-                      .toLocaleDateString('en-GB', {
-                        day: 'numeric',
-                        month: 'long',
-                      })}
-                  </span>
-                </li>
+            <div className="details-cols">
+              {topStrategies.length > 0 && (
+                <article className="details-col">
+                  <span className="eyebrow">What works</span>
+                  <ul className="details-list">
+                    {topStrategies.map((s) => (
+                      <li key={s.id}>{s.description}</li>
+                    ))}
+                  </ul>
+                </article>
               )}
-              <li>
-                <span className="q">Last entry</span>
-                <span className="meta">
-                  {mentions[0]?.createdAt
-                    ?.toDate?.()
-                    .toLocaleDateString('en-GB', {
-                      day: 'numeric',
-                      month: 'short',
-                    }) ?? '—'}
-                </span>
-              </li>
-            </ul>
-          </article>
 
-          <article className="note-card dark">
-            <span className="eyebrow">A prompt</span>
-            <blockquote>
-              What do you wish you could ask {firstName} the next time you
-              sit down?
-            </blockquote>
-            <p className="attr">
-              — A question for the next conversation.
-            </p>
-            <button type="button" onClick={openPen} className="cta">
-              <span>Answer</span>
-              <span aria-hidden="true">→</span>
-            </button>
-          </article>
-        </section>
+              {topTriggers.length > 0 && (
+                <article className="details-col">
+                  <span className="eyebrow">Handle with care</span>
+                  <ul className="details-list">
+                    {topTriggers.map((t) => (
+                      <li key={t.id}>
+                        {t.description}
+                        {t.deescalationStrategy && (
+                          <span className="details-quiet"> — {t.deescalationStrategy}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              )}
+
+              {strengths.length > 0 && (
+                <article className="details-col">
+                  <span className="eyebrow">Their strengths</span>
+                  <p className="details-strengths">
+                    {strengths.map((s, i) => (
+                      <span key={i}>
+                        {s.toLowerCase()}
+                        {i < strengths.length - 1 ? ', ' : '.'}
+                      </span>
+                    ))}
+                  </p>
+                </article>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* ═══ THEIR SIDE — their own perspective or an invite ═══ */}
+        {!isSelf && theyCanContribute && (
+          <section className="their-side" aria-label="Their own side">
+            {selfContributions.length > 0 ? (
+              <article className="their-side-card filled">
+                <span className="eyebrow">{firstName}&rsquo;s own side</span>
+                <h3>
+                  <em>{firstName}</em> has added their own view.
+                </h3>
+                <p>
+                  Both perspectives are in this page. As more is written on
+                  each side, the synthesis above fills out.
+                </p>
+              </article>
+            ) : theyHaveAccount ? (
+              <article className="their-side-card">
+                <span className="eyebrow">{firstName}&rsquo;s own side</span>
+                <h3>
+                  <em>{firstName}</em> hasn&rsquo;t added their view yet.
+                </h3>
+                <p>
+                  When they do, their page will hold both perspectives — and
+                  the app can show where you see the same thing and where you
+                  see differently.
+                </p>
+              </article>
+            ) : !inviteOpen && !inviteDone ? (
+              <article className="their-side-card">
+                <span className="eyebrow">{firstName}&rsquo;s own side</span>
+                <h3>
+                  Invite {firstName} to write their own side.
+                </h3>
+                <p>
+                  One email. They&rsquo;ll sign up and land here, with their
+                  own page already waiting.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setInviteOpen(true)}
+                  className="their-side-cta"
+                >
+                  Send an invite <span aria-hidden="true">⟶</span>
+                </button>
+              </article>
+            ) : inviteDone ? (
+              <article className="their-side-card filled">
+                <span className="eyebrow">Invite sent</span>
+                <h3>
+                  On its way to {firstName}.
+                </h3>
+                <p>
+                  When they sign up, their contributions will appear here
+                  alongside yours.
+                </p>
+              </article>
+            ) : (
+              <article className="their-side-card">
+                <span className="eyebrow">Invite {firstName}</span>
+                <div className="invite-form">
+                  <input
+                    type="email"
+                    placeholder="them@example.com"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    disabled={inviteBusy}
+                    className="invite-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleInvite}
+                    disabled={inviteBusy || !inviteEmail.trim()}
+                    className="their-side-cta"
+                  >
+                    {inviteBusy ? 'Sending…' : 'Send invite'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setInviteOpen(false); setInviteEmail(''); }}
+                    className="invite-cancel"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {inviteError && (
+                  <p className="invite-error">{inviteError}</p>
+                )}
+              </article>
+            )}
+          </section>
+        )}
 
         {/* ═══ COLOPHON ═══ */}
         <footer className="colophon">
           <span className="fleuron" aria-hidden="true">❦</span>
           <span>
-            <em>{firstName}&rsquo;s page</em> · in the Family Manual
+            {isSelf ? (
+              <><em>Your own page</em> · in your family manual</>
+            ) : (
+              <><em>{firstName}&rsquo;s page</em> · in your family manual</>
+            )}
           </span>
         </footer>
       </div>
@@ -431,6 +621,120 @@ function ThreadRow({
 /* ════════════════════════════════════════════════════════════════
    Helpers
    ════════════════════════════════════════════════════════════════ */
+
+type BalanceState = 'in-balance' | 'mostly-in-balance' | 'needs-attention' | 'new';
+
+type BalanceInput = {
+  firstName: string;
+  mentions: number;
+  daysSinceLast: number;
+  openThreads: number;
+  hasSelfContribution: boolean;
+  hasObserverContribution: boolean;
+  theyCanContribute: boolean;
+  theyHaveAccount: boolean;
+  isSelf: boolean;
+};
+
+type BalanceOut = {
+  state: BalanceState;
+  label: string;
+  line: string;
+};
+
+// Pick the single biggest signal that's off. One line, one nudge.
+function computeBalance(i: BalanceInput): BalanceOut {
+  const { firstName, mentions, daysSinceLast, openThreads } = i;
+
+  // Self page — quieter framing; we're not telling someone their own page is "off".
+  if (i.isSelf) {
+    if (!i.hasSelfContribution) {
+      return {
+        state: 'new',
+        label: 'Get started',
+        line: `Answer your own questions in your own words.`,
+      };
+    }
+    return {
+      state: 'in-balance',
+      label: 'In balance',
+      line: `Your own page is in. Keep it current as things change.`,
+    };
+  }
+
+  // Brand-new page — nothing written at all.
+  if (mentions === 0 && !i.hasObserverContribution) {
+    return {
+      state: 'new',
+      label: 'A new page',
+      line: `Write a first note about ${firstName} — this page starts to fill.`,
+    };
+  }
+
+  // Reply debt: biggest actionable signal.
+  if (openThreads >= 3) {
+    return {
+      state: 'needs-attention',
+      label: 'Needs attention',
+      line: `${firstName} has ${openThreads} things waiting on you.`,
+    };
+  }
+
+  // Long silence on a page that has history.
+  if (mentions > 0 && daysSinceLast > 60) {
+    return {
+      state: 'needs-attention',
+      label: 'Needs attention',
+      line: `${firstName}'s page has been quiet for ${formatDays(daysSinceLast)}.`,
+    };
+  }
+
+  // You've written a lot, they haven't been invited yet.
+  if (
+    i.theyCanContribute &&
+    !i.theyHaveAccount &&
+    !i.hasSelfContribution &&
+    mentions >= 3
+  ) {
+    return {
+      state: 'needs-attention',
+      label: 'Needs attention',
+      line: `${firstName} hasn't been invited to write their own side yet.`,
+    };
+  }
+
+  // Smaller signals → "mostly in balance".
+  if (openThreads > 0) {
+    return {
+      state: 'mostly-in-balance',
+      label: 'Mostly in balance',
+      line: `${openThreads} ${openThreads === 1 ? 'thing' : 'things'} waiting from ${firstName}.`,
+    };
+  }
+  if (mentions > 0 && daysSinceLast > 14 && daysSinceLast <= 60) {
+    return {
+      state: 'mostly-in-balance',
+      label: 'Mostly in balance',
+      line: `${firstName} hasn't heard from you in ${formatDays(daysSinceLast)}.`,
+    };
+  }
+  if (i.theyCanContribute && !i.theyHaveAccount && !i.hasSelfContribution && mentions >= 1) {
+    return {
+      state: 'mostly-in-balance',
+      label: 'Mostly in balance',
+      line: `Consider inviting ${firstName} to add their own view.`,
+    };
+  }
+
+  // Everything's green.
+  return {
+    state: 'in-balance',
+    label: 'In balance',
+    line: i.hasSelfContribution
+      ? `You and ${firstName} are in tune — recent on both sides, nothing waiting.`
+      : `Things are in tune — nothing waiting on you right now.`,
+  };
+}
 
 function computeDaysSinceLast(entries: JournalEntry[]): number {
   const last = entries[0]?.createdAt?.toDate?.();
@@ -973,6 +1277,228 @@ const styles = `
     line-height: 1.45;
     color: var(--r-ink);
     transition: color 160ms var(--r-ease-ink);
+  }
+
+  /* BALANCE LINE */
+  .balance-line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    margin: 4px 0 8px;
+    border-radius: 3px;
+    font-family: var(--r-sans);
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--r-ink);
+    background: rgba(124,144,130,0.08);
+    border-left: 3px solid #7C9082;
+    flex-wrap: wrap;
+  }
+  .balance-line .balance-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #7C9082;
+    flex: none;
+  }
+  .balance-line .balance-label {
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 10px;
+    color: #2D5F5D;
+  }
+  .balance-line .balance-sep { color: var(--r-text-5); font-size: 11px; }
+  .balance-line .balance-text {
+    font-family: var(--r-serif);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--r-text-2);
+  }
+  .balance-line.balance-mostly-in-balance {
+    background: rgba(196,162,101,0.10);
+    border-left-color: #C4A265;
+  }
+  .balance-line.balance-mostly-in-balance .balance-dot { background: #C4A265; }
+  .balance-line.balance-mostly-in-balance .balance-label { color: #8F6B2D; }
+
+  .balance-line.balance-needs-attention {
+    background: rgba(201,104,82,0.10);
+    border-left-color: #C96852;
+  }
+  .balance-line.balance-needs-attention .balance-dot { background: #C96852; }
+  .balance-line.balance-needs-attention .balance-label { color: #9E4A38; }
+
+  .balance-line.balance-new {
+    background: rgba(60,48,28,0.05);
+    border-left-color: var(--r-text-5);
+  }
+  .balance-line.balance-new .balance-dot { background: var(--r-text-5); }
+  .balance-line.balance-new .balance-label { color: var(--r-text-3); }
+
+  /* DETAILS */
+  .details {
+    padding: 48px 0;
+    border-top: 1px solid var(--r-rule-4);
+  }
+  .details-head { margin-bottom: 28px; }
+  .details-head .h2-serif {
+    font-family: var(--r-serif);
+    font-weight: 300;
+    font-size: clamp(32px, 3.6vw, 44px);
+    line-height: 1.05;
+    color: var(--r-ink);
+    letter-spacing: -0.015em;
+    margin: 0 0 8px;
+  }
+  .details-head .h2-serif em { font-style: italic; }
+  .details-head .sub {
+    font-family: var(--r-sans);
+    font-size: 13px;
+    color: var(--r-text-3);
+  }
+  .details-cols {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+  }
+  .details-col {
+    background: var(--r-paper);
+    border: 1px solid var(--r-rule-5);
+    border-radius: 3px;
+    padding: 24px 24px 22px;
+  }
+  .details-col .eyebrow {
+    font-family: var(--r-sans);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--r-text-4);
+    display: block;
+    margin-bottom: 12px;
+  }
+  .details-list { margin: 0; padding: 0; list-style: none; }
+  .details-list li {
+    padding: 12px 0;
+    border-top: 1px solid var(--r-rule-5);
+    font-family: var(--r-sans);
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--r-text-2);
+  }
+  .details-list li:first-child { border-top: none; padding-top: 0; }
+  .details-quiet {
+    color: var(--r-text-4);
+    font-style: italic;
+  }
+  .details-strengths {
+    margin: 0;
+    font-family: var(--r-serif);
+    font-style: italic;
+    font-size: 17px;
+    line-height: 1.55;
+    color: var(--r-text-2);
+  }
+
+  /* THEIR SIDE */
+  .their-side {
+    padding: 32px 0 48px;
+  }
+  .their-side-card {
+    max-width: 720px;
+    background: var(--r-paper);
+    border: 1px solid var(--r-rule-5);
+    border-radius: 3px;
+    padding: 28px 32px 30px;
+  }
+  .their-side-card.filled {
+    background: rgba(124,144,130,0.06);
+    border-color: rgba(124,144,130,0.35);
+  }
+  .their-side-card .eyebrow {
+    font-family: var(--r-sans);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--r-text-4);
+    display: block;
+    margin-bottom: 10px;
+  }
+  .their-side-card h3 {
+    font-family: var(--r-serif);
+    font-weight: 300;
+    font-size: 26px;
+    line-height: 1.15;
+    color: var(--r-ink);
+    letter-spacing: -0.015em;
+    margin: 0 0 10px;
+  }
+  .their-side-card h3 em { font-style: italic; }
+  .their-side-card p {
+    font-family: var(--r-sans);
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--r-text-3);
+    margin: 0 0 16px;
+  }
+  .their-side-cta {
+    all: unset;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-family: var(--r-sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--r-paper);
+    background: var(--r-leather);
+    border: 1px solid var(--r-leather);
+  }
+  .their-side-cta:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .invite-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .invite-input {
+    flex: 1 1 260px;
+    font-family: var(--r-sans);
+    font-size: 14px;
+    color: var(--r-ink);
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--r-rule-3);
+    padding: 8px 2px 10px;
+  }
+  .invite-input:focus { outline: none; border-bottom-color: #7C9082; }
+  .invite-cancel {
+    all: unset;
+    cursor: pointer;
+    font-family: var(--r-sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--r-text-4);
+  }
+  .invite-error {
+    margin: 10px 0 0;
+    font-family: var(--r-sans);
+    font-size: 13px;
+    color: #9E4A38;
+  }
+
+  @media (max-width: 880px) {
+    .details-cols { grid-template-columns: 1fr; }
   }
 
   /* NOTES ROW */

@@ -66,6 +66,58 @@ export default function ManualPage() {
   const totalOpenThreads = roster.reduce((sum, m) => sum + m.openThreadsCount, 0);
   const writtenThisWeek = roster.filter((m) => m.daysSinceLast <= 7).length;
 
+  // ─── First-run state ──────────────────────────────────────────
+  // When the only person in the family is the user themselves, the
+  // full editorial layout (masthead stats / constellation / roster)
+  // has nothing to show. Render a simple, welcoming page instead.
+  if (roster.length === 0) {
+    const selfPerson = people.find(
+      (p) => p.linkedUserId === user.userId && p.relationshipType === 'self',
+    );
+    const firstName = (user.name || '').trim().split(/\s+/)[0] || 'You';
+    return (
+      <main className="mn-app">
+        <div className="mn-page first-run">
+          <header className="fr-head">
+            <span className="fr-eyebrow">Your family</span>
+            <h1 className="fr-title">Everyone in one place.</h1>
+            <p className="fr-sub">
+              This is where your people live. Start with yourself, then add
+              the others — one at a time, whenever you&rsquo;re ready.
+            </p>
+          </header>
+
+          <div className="fr-grid">
+            <Link
+              href={
+                selfPerson
+                  ? `/people/${selfPerson.personId}/manual/self-onboard`
+                  : '/welcome'
+              }
+              className="fr-card fr-self"
+            >
+              <span className="fr-card-eyebrow">You</span>
+              <span className="fr-card-title">{firstName}</span>
+              <span className="fr-card-hint">
+                Continue your own page <span aria-hidden>⟶</span>
+              </span>
+            </Link>
+
+            <Link href="/people/new" className="fr-card fr-add">
+              <span className="fr-cross" aria-hidden>+</span>
+              <span className="fr-card-title">Add someone</span>
+              <span className="fr-card-hint">
+                A partner, a child, a parent, a friend.
+              </span>
+            </Link>
+          </div>
+        </div>
+
+        <style jsx global>{firstRunStyles}</style>
+      </main>
+    );
+  }
+
   return (
     <main className="mn-app">
       <div className="mn-page">
@@ -73,14 +125,14 @@ export default function ManualPage() {
         <section className="manual-masthead" aria-label="The Family Manual at a glance">
           <div className="masthead-strip">
             <div className="masthead-cell">
-              <span className="masthead-eyebrow">The Manual</span>
+              <span className="masthead-eyebrow">In your manual</span>
               <span className="masthead-value big">
-                {spellCount(totalKept)} kept
+                {totalKept} {totalKept === 1 ? 'person' : 'people'}
               </span>
             </div>
             <div className="masthead-divider" />
             <div className="masthead-cell align-c">
-              <span className="masthead-eyebrow">Waiting on you</span>
+              <span className="masthead-eyebrow">Replies waiting</span>
               <span className="masthead-value">
                 <em>{totalOpenThreads}</em>
                 <span className="sub">
@@ -99,7 +151,7 @@ export default function ManualPage() {
             </div>
             <div className="masthead-divider" />
             <div className="masthead-cell align-r">
-              <span className="masthead-eyebrow">Quiet longest</span>
+              <span className="masthead-eyebrow">Hasn&rsquo;t heard from you</span>
               <span className="masthead-value">
                 {hero ? hero.person.name.split(' ')[0] : '—'}
                 {hero && (
@@ -189,12 +241,12 @@ export default function ManualPage() {
         )}
 
         {/* ═══ CONSTELLATION ═══ */}
-        <section className="constellation-section" aria-label="Who you keep">
+        <section className="constellation-section" aria-label="Your people">
           <div className="constellation-head">
-            <h2 className="h2-serif">The ones <em>you keep.</em></h2>
+            <h2 className="h2-serif"><em>Your people.</em></h2>
             <p className="sub">
-              Closer means written about more often. An ember pip means
-              someone&rsquo;s waiting.
+              People closer to the center are the ones you write about most.
+              A small dot on someone means they&rsquo;re waiting for a reply.
             </p>
           </div>
           <Constellation
@@ -218,7 +270,7 @@ export default function ManualPage() {
             members={metrics.filter(byGroup('parents'))}
           />
           <GroupCard
-            eyebrow="Kept close"
+            eyebrow="Friends &amp; chosen family"
             title={<>Chosen <em>family.</em></>}
             description="Friends, mentors, the company you'd keep if you started over."
             members={metrics.filter(byGroup('kept_close'))}
@@ -226,9 +278,9 @@ export default function ManualPage() {
         </section>
 
         {/* ═══ ROSTER ═══ */}
-        <section className="roster-section" aria-label="Full roster">
+        <section className="roster-section" aria-label="Everyone in your manual">
           <div className="roster-head">
-            <h2 className="h2-serif">The <em>full index.</em></h2>
+            <h2 className="h2-serif"><em>Everyone.</em></h2>
             <div className="roster-filters">
               {(['all', 'open', 'quiet', 'recent'] as const).map((k) => (
                 <button
@@ -246,11 +298,11 @@ export default function ManualPage() {
             {filtered.map((m) => (
               <PersonCard key={m.person.personId} metric={m} />
             ))}
-            <Link href="/settings#add-person" className="add-person">
+            <Link href="/people/new" className="add-person">
               <span className="cross">+</span>
-              <span className="lbl">Someone worth keeping</span>
+              <span className="lbl">Add someone</span>
               <span className="hint">
-                Add a person to the book. They&rsquo;ll get their own page.
+                A partner, a child, a parent, a friend.
               </span>
             </Link>
           </div>
@@ -260,8 +312,15 @@ export default function ManualPage() {
         <footer className="colophon">
           <span className="fleuron" aria-hidden="true">❦</span>
           <span>
-            <em>The Family Manual</em> — {spellCount(totalKept)} kept,{' '}
-            {totalOpenThreads} {totalOpenThreads === 1 ? 'thread' : 'threads'} open.
+            <em>Your family manual</em> — {totalKept}{' '}
+            {totalKept === 1 ? 'person' : 'people'}
+            {totalOpenThreads > 0 && (
+              <>
+                , {totalOpenThreads}{' '}
+                {totalOpenThreads === 1 ? 'reply' : 'replies'} waiting
+              </>
+            )}
+            .
           </span>
         </footer>
       </div>
@@ -367,10 +426,10 @@ function Constellation({
       ))}
 
       <div className="constellation-legend">
-        <span><span className="swatch" />Kept</span>
-        <span><span className="swatch ember" />Someone waiting</span>
-        <span><span className="swatch line" />Close</span>
-        <span><span className="swatch line-weak" />Further</span>
+        <span><span className="swatch" />In your manual</span>
+        <span><span className="swatch ember" />Waiting for a reply</span>
+        <span><span className="swatch line" />Close relation</span>
+        <span><span className="swatch line-weak" />More distant</span>
       </div>
     </div>
   );
@@ -554,8 +613,8 @@ function relationTagFor(p: Person): string {
   const t = p.relationshipType;
   if (t === 'spouse' || t === 'child') return 'Household';
   if (t === 'elderly_parent' || t === 'sibling') return 'Family';
-  if (t === 'friend') return 'Kept close';
-  return 'Of the book';
+  if (t === 'friend') return 'Friend';
+  return 'Other';
 }
 
 function shortRelation(t?: RelationshipType): string {
@@ -702,6 +761,112 @@ const heroPillStyle: React.CSSProperties = {
 /* ════════════════════════════════════════════════════════════════
    Styles
    ════════════════════════════════════════════════════════════════ */
+
+const firstRunStyles = `
+  .mn-app { min-height: 100vh; background: var(--r-cream); }
+  .mn-page.first-run {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 120px 40px 80px;
+  }
+  .fr-head { text-align: center; max-width: 640px; margin: 0 auto 48px; }
+  .fr-eyebrow {
+    display: block;
+    font-family: var(--font-parent-body);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #7A6E5C;
+    margin-bottom: 10px;
+  }
+  .fr-title {
+    font-family: var(--font-parent-display);
+    font-style: italic;
+    font-weight: 400;
+    font-size: clamp(36px, 5vw, 52px);
+    line-height: 1.08;
+    color: #3A3530;
+    margin: 0 0 14px;
+  }
+  .fr-sub {
+    font-family: var(--font-parent-body);
+    font-size: 16px;
+    line-height: 1.6;
+    color: #5A5247;
+    margin: 0 auto;
+    max-width: 480px;
+  }
+  .fr-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  .fr-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: 260px;
+    padding: 28px 28px 32px;
+    background: #FDFBF6;
+    border: 1px solid rgba(200,190,172,0.55);
+    border-radius: 4px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.8) inset,
+      0 1px 2px rgba(60, 48, 28, 0.04),
+      0 6px 24px rgba(60, 48, 28, 0.06);
+  }
+  .fr-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(124,144,130,0.55);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.8) inset,
+      0 2px 3px rgba(60, 48, 28, 0.05),
+      0 12px 32px rgba(60, 48, 28, 0.10);
+  }
+  .fr-card-eyebrow {
+    font-family: var(--font-parent-body);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #7A6E5C;
+    margin-bottom: 6px;
+  }
+  .fr-card-title {
+    font-family: var(--font-parent-display);
+    font-style: italic;
+    font-size: 28px;
+    line-height: 1.1;
+    color: #3A3530;
+    margin: 0 0 10px;
+  }
+  .fr-card-hint {
+    font-family: var(--font-parent-body);
+    font-size: 14px;
+    color: #6B6254;
+    line-height: 1.5;
+  }
+  .fr-add {
+    border-style: dashed;
+    background: transparent;
+    align-items: flex-start;
+  }
+  .fr-cross {
+    font-family: var(--font-parent-display);
+    font-size: 40px;
+    line-height: 1;
+    color: #7C9082;
+    margin-bottom: 12px;
+  }
+  @media (max-width: 640px) {
+    .fr-grid { grid-template-columns: 1fr; }
+    .fr-card { min-height: 180px; }
+  }
+`;
 
 const styles = `
   .mn-app { min-height: 100vh; background: var(--r-cream); }

@@ -111,17 +111,15 @@ export function QuestionRenderer({
                 rows={6}
                 className="w-full focus:outline-none"
                 style={{
-                  fontFamily: 'var(--font-parent-display)',
-                  fontSize: 19,
-                  fontStyle: 'italic',
+                  fontFamily: 'var(--font-parent-body)',
+                  fontSize: 17,
                   color: '#3A3530',
                   background: 'transparent',
                   border: 0,
                   borderBottom: '1px solid rgba(200, 190, 172, 0.6)',
                   padding: '10px 2px 14px',
                   resize: 'none',
-                  lineHeight: 1.55,
-                  letterSpacing: '0.002em',
+                  lineHeight: 1.6,
                   minHeight: 160,
                 }}
                 autoFocus

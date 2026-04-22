@@ -9,7 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 // Register — a small, focused account creation form on the
 // press-cream background. No multi-stage wizard, no illustrations,
 // no marketing content. Single form, collect the essentials,
-// create the volume.
+// create the account.
 // ================================================================
 
 export default function RegisterPage() {
@@ -137,7 +137,7 @@ export default function RegisterPage() {
       <div className="register-card" role="main">
         <div className="register-card-header">
           <span className="press-chapter-label">
-            {isDemo ? 'A demonstration' : 'Begin a volume'}
+            {isDemo ? 'A demonstration' : 'Create an account'}
           </span>
           <h1 className="register-title">Create your library</h1>
           <p className="register-subtitle">
@@ -254,7 +254,7 @@ export default function RegisterPage() {
                 border: 0,
               }}
             >
-              {loading ? 'Binding the volume…' : 'Bind the volume'}
+              {loading ? 'Creating your account…' : 'Create account'}
               {!loading && <span className="arrow">⟶</span>}
             </button>
           </div>
@@ -262,7 +262,7 @@ export default function RegisterPage() {
 
         <div className="register-footer">
           <p className="press-marginalia" style={{ fontSize: 14 }}>
-            Already have a volume?{' '}
+            Already have an account?{' '}
             <Link
               href="/login"
               className="press-link-sm"

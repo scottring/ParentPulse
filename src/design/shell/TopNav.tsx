@@ -165,7 +165,7 @@ export function TopNav({ userName, onSignOut, reversed = false, hideOnRoutes = [
           <div style={{ display: 'flex', gap: 20, alignItems: 'baseline' }}>
             <Link href="/login" style={authLink(quietColor)}>Sign in</Link>
             <Link href="/register" style={authLink(reversed ? 'var(--r-ember-soft)' : 'var(--r-ink)')}>
-              Begin a volume <span aria-hidden style={{ marginLeft: 4 }}>⟶</span>
+              Create an account <span aria-hidden style={{ marginLeft: 4 }}>⟶</span>
             </Link>
           </div>
         )}

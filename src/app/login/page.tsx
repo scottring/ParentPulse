@@ -167,7 +167,7 @@ export default function LoginPage() {
               className="press-link-sm"
               style={{ fontSize: 14 }}
             >
-              Begin a volume ⟶
+              Create an account ⟶
             </Link>
           </p>
         </div>

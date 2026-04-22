@@ -66,9 +66,8 @@ export function QualitativeComment({
           rows={3}
           className="w-full focus:outline-none"
           style={{
-            fontFamily: 'var(--font-parent-display)',
-            fontSize: 16,
-            fontStyle: 'italic',
+            fontFamily: 'var(--font-parent-body)',
+            fontSize: 15,
             color: '#3A3530',
             background: 'transparent',
             border: 0,

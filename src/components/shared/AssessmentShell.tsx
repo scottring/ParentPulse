@@ -206,7 +206,7 @@ export default function AssessmentShell({
               className="press-link-sm"
               style={{ background: 'transparent', cursor: 'pointer' }}
             >
-              ⟵ Save and close the volume
+              ⟵ Save and close
             </button>
           </div>
 

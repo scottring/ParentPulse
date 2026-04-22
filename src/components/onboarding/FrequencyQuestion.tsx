@@ -79,12 +79,11 @@ export function FrequencyQuestion({ scale, value, onChange }: FrequencyQuestionP
                 {/* Label */}
                 <span
                   style={{
-                    fontFamily: 'var(--font-parent-display)',
-                    fontSize: 20,
-                    fontStyle: 'italic',
+                    fontFamily: 'var(--font-parent-body)',
+                    fontSize: 16,
                     color: isSelected ? '#3A3530' : '#5C5347',
-                    fontWeight: isSelected ? 500 : 400,
-                    lineHeight: 1.2,
+                    fontWeight: isSelected ? 600 : 500,
+                    lineHeight: 1.35,
                     flex: 1,
                   }}
                 >

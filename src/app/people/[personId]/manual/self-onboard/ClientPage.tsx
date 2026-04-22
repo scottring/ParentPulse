@@ -63,6 +63,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   const [answers, setAnswers] = useState<Record<string, Record<string, QuestionAnswer>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [showSavedAck, setShowSavedAck] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved' | 'error'>('saved');
@@ -317,7 +318,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
     if (manual && person && answeredQuestions > 0) {
       await saveNow();
     }
-    router.push('/journal');
+    setShowSavedAck(true);
   };
 
   const handleFillAll = useCallback(() => {
@@ -524,15 +525,9 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
     (c) => conflictResolutions[`${c.sectionId}:${c.questionId}`]
   );
 
-  // Redirect after completion
-  useEffect(() => {
-    if (isComplete) {
-      const timer = setTimeout(() => {
-        router.push('/journal');
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [isComplete, personId, router]);
+  // On completion we no longer auto-redirect — the completion screen
+  // offers the next step ("Add someone in your family") as a single,
+  // obvious action the user can take or defer.
 
   // --- Loading ---
   if (authLoading || personLoading || manualLoading || !draftLoaded) {
@@ -551,22 +546,121 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
     );
   }
 
-  if (isComplete) {
+  if (showSavedAck) {
+    const firstName = (person?.name || user?.name || '').trim().split(/\s+/)[0] || 'friend';
+    const progressLine =
+      answeredQuestions > 0
+        ? `You&rsquo;re ${answeredQuestions} of ${totalQuestions} questions in.`
+        : `We&rsquo;ll remember where you left off.`;
     return (
       <div className="relish-page">
         <div className="pt-[64px] pb-24">
           <div className="press-binder" style={{ maxWidth: 560 }}>
-            <div className="press-empty" style={{ padding: '80px 20px' }}>
+            <div className="press-empty" style={{ padding: '80px 32px' }}>
               <span className="press-chapter-label" style={{ display: 'block', textAlign: 'center' }}>
-                Kept
+                Saved
               </span>
-              <h2 className="press-empty-title mt-4" style={{ fontSize: 31 }}>
-                Your perspective is saved.
+              <h2 className="press-empty-title mt-4" style={{ fontSize: 30 }}>
+                Saved, {firstName}.
               </h2>
-              <p className="press-empty-body">
-                Returning to your volume&hellip;
+              <p
+                style={{
+                  fontFamily: 'var(--font-parent-body)',
+                  fontSize: 15.5,
+                  lineHeight: 1.6,
+                  color: '#4a4238',
+                  margin: '14px auto 0',
+                  maxWidth: 440,
+                }}
+                dangerouslySetInnerHTML={{
+                  __html:
+                    progressLine +
+                    ' Your answers are kept. You can pick up right where you left off anytime — your own page lives on your family page.',
+                }}
+              />
+
+              <div style={{ marginTop: 36, display: 'flex', justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => router.push('/manual')}
+                  className="press-link"
+                  style={{
+                    background: 'transparent',
+                    border: 0,
+                    cursor: 'pointer',
+                    fontSize: 19,
+                  }}
+                >
+                  Take me to my family page <span className="arrow">⟶</span>
+                </button>
+              </div>
+
+              <div style={{ marginTop: 18 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowSavedAck(false)}
+                  className="press-link-sm"
+                  style={{ background: 'transparent', border: 0, cursor: 'pointer' }}
+                >
+                  Keep writing
+                </button>
+              </div>
+
+              <div className="press-fleuron mt-8" style={{ fontSize: 17 }}>❦</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isComplete) {
+    const firstName = (person?.name || user?.name || '').trim().split(/\s+/)[0] || 'friend';
+    return (
+      <div className="relish-page">
+        <div className="pt-[64px] pb-24">
+          <div className="press-binder" style={{ maxWidth: 560 }}>
+            <div className="press-empty" style={{ padding: '80px 32px' }}>
+              <span className="press-chapter-label" style={{ display: 'block', textAlign: 'center' }}>
+                Saved
+              </span>
+              <h2 className="press-empty-title mt-4" style={{ fontSize: 32 }}>
+                Nicely done, {firstName}. That&rsquo;s a start.
+              </h2>
+              <p className="press-empty-body" style={{ maxWidth: 440, margin: '14px auto 0' }}>
+                Your own perspective is in. Relish works best when the people
+                you love are here too — their views held next to yours is
+                where the real picture starts to show.
               </p>
-              <div className="press-fleuron" style={{ fontSize: 17 }}>❦</div>
+
+              <div style={{ marginTop: 36, display: 'flex', justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => router.push('/people/new')}
+                  className="press-link"
+                  style={{
+                    background: 'transparent',
+                    border: 0,
+                    cursor: 'pointer',
+                    fontSize: 20,
+                  }}
+                >
+                  Add someone in your family <span className="arrow">⟶</span>
+                </button>
+              </div>
+
+              <div style={{ marginTop: 20 }}>
+                <button
+                  type="button"
+                  onClick={() => router.push('/manual')}
+                  className="press-link-sm"
+                  style={{ background: 'transparent', border: 0, cursor: 'pointer' }}
+                >
+                  I&rsquo;ll come back to this later
+                </button>
+              </div>
+
+              <div className="press-fleuron mt-8" style={{ fontSize: 17 }}>❦</div>
             </div>
           </div>
         </div>
