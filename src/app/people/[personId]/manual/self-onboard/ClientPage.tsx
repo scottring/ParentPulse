@@ -582,7 +582,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
               <div style={{ marginTop: 36, display: 'flex', justifyContent: 'center' }}>
                 <button
                   type="button"
-                  onClick={() => router.push('/manual')}
+                  onClick={() => router.push('/workbook')}
                   className="press-link"
                   style={{
                     background: 'transparent',
@@ -591,7 +591,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
                     fontSize: 19,
                   }}
                 >
-                  Take me to my family page <span className="arrow">⟶</span>
+                  Take me home <span className="arrow">⟶</span>
                 </button>
               </div>
 
@@ -652,7 +652,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
               <div style={{ marginTop: 20 }}>
                 <button
                   type="button"
-                  onClick={() => router.push('/manual')}
+                  onClick={() => router.push('/workbook')}
                   className="press-link-sm"
                   style={{ background: 'transparent', border: 0, cursor: 'pointer' }}
                 >

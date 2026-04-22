@@ -22,6 +22,7 @@ import type { Person, RelationshipType } from '@/types/person-manual';
 import { EditPersonSheet } from '@/components/people/EditPersonSheet';
 import type { JournalEntry } from '@/types/journal';
 import { entryMentionsPerson } from '@/lib/entry-mentions';
+import { computeBalance } from '@/lib/balance';
 
 export default function PersonPage({
   params,
@@ -621,120 +622,6 @@ function ThreadRow({
 /* ════════════════════════════════════════════════════════════════
    Helpers
    ════════════════════════════════════════════════════════════════ */
-
-type BalanceState = 'in-balance' | 'mostly-in-balance' | 'needs-attention' | 'new';
-
-type BalanceInput = {
-  firstName: string;
-  mentions: number;
-  daysSinceLast: number;
-  openThreads: number;
-  hasSelfContribution: boolean;
-  hasObserverContribution: boolean;
-  theyCanContribute: boolean;
-  theyHaveAccount: boolean;
-  isSelf: boolean;
-};
-
-type BalanceOut = {
-  state: BalanceState;
-  label: string;
-  line: string;
-};
-
-// Pick the single biggest signal that's off. One line, one nudge.
-function computeBalance(i: BalanceInput): BalanceOut {
-  const { firstName, mentions, daysSinceLast, openThreads } = i;
-
-  // Self page — quieter framing; we're not telling someone their own page is "off".
-  if (i.isSelf) {
-    if (!i.hasSelfContribution) {
-      return {
-        state: 'new',
-        label: 'Get started',
-        line: `Answer your own questions in your own words.`,
-      };
-    }
-    return {
-      state: 'in-balance',
-      label: 'In balance',
-      line: `Your own page is in. Keep it current as things change.`,
-    };
-  }
-
-  // Brand-new page — nothing written at all.
-  if (mentions === 0 && !i.hasObserverContribution) {
-    return {
-      state: 'new',
-      label: 'A new page',
-      line: `Write a first note about ${firstName} — this page starts to fill.`,
-    };
-  }
-
-  // Reply debt: biggest actionable signal.
-  if (openThreads >= 3) {
-    return {
-      state: 'needs-attention',
-      label: 'Needs attention',
-      line: `${firstName} has ${openThreads} things waiting on you.`,
-    };
-  }
-
-  // Long silence on a page that has history.
-  if (mentions > 0 && daysSinceLast > 60) {
-    return {
-      state: 'needs-attention',
-      label: 'Needs attention',
-      line: `${firstName}'s page has been quiet for ${formatDays(daysSinceLast)}.`,
-    };
-  }
-
-  // You've written a lot, they haven't been invited yet.
-  if (
-    i.theyCanContribute &&
-    !i.theyHaveAccount &&
-    !i.hasSelfContribution &&
-    mentions >= 3
-  ) {
-    return {
-      state: 'needs-attention',
-      label: 'Needs attention',
-      line: `${firstName} hasn't been invited to write their own side yet.`,
-    };
-  }
-
-  // Smaller signals → "mostly in balance".
-  if (openThreads > 0) {
-    return {
-      state: 'mostly-in-balance',
-      label: 'Mostly in balance',
-      line: `${openThreads} ${openThreads === 1 ? 'thing' : 'things'} waiting from ${firstName}.`,
-    };
-  }
-  if (mentions > 0 && daysSinceLast > 14 && daysSinceLast <= 60) {
-    return {
-      state: 'mostly-in-balance',
-      label: 'Mostly in balance',
-      line: `${firstName} hasn't heard from you in ${formatDays(daysSinceLast)}.`,
-    };
-  }
-  if (i.theyCanContribute && !i.theyHaveAccount && !i.hasSelfContribution && mentions >= 1) {
-    return {
-      state: 'mostly-in-balance',
-      label: 'Mostly in balance',
-      line: `Consider inviting ${firstName} to add their own view.`,
-    };
-  }
-
-  // Everything's green.
-  return {
-    state: 'in-balance',
-    label: 'In balance',
-    line: i.hasSelfContribution
-      ? `You and ${firstName} are in tune — recent on both sides, nothing waiting.`
-      : `Things are in tune — nothing waiting on you right now.`,
-  };
-}
 
 function computeDaysSinceLast(entries: JournalEntry[]): number {
   const last = entries[0]?.createdAt?.toDate?.();

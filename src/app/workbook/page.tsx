@@ -99,6 +99,8 @@ import { ensureSoloWeekly } from '@/lib/ritual-seeds';
 import type { OpenThread } from '@/lib/open-threads';
 import { useJournalEntries } from '@/hooks/useJournalEntries';
 import { usePerson } from '@/hooks/usePerson';
+import { entryMentionsPerson } from '@/lib/entry-mentions';
+import { computeBalance, type BalanceState } from '@/lib/balance';
 import { useWorkbookVisit } from '@/hooks/useWorkbookVisit';
 
 export default function WorkbookPage() {
@@ -156,6 +158,77 @@ export default function WorkbookPage() {
       firstNewEntryId: newMentions[0].entryId,
     };
   }, [allEntries, priorLastSeenAt, visitLoaded, people, user?.userId]);
+
+  // Family balance rollup — per-person balance state for everyone
+  // else in the family, aggregated for the masthead sub-strip. Hidden
+  // entirely when the user is alone in their manual.
+  const familyBalance = useMemo(() => {
+    if (!user?.userId || !people || people.length === 0) return null;
+
+    const others = people.filter(
+      (p) =>
+        p.relationshipType !== 'self' &&
+        p.linkedUserId !== user.userId &&
+        !p.archived,
+    );
+    if (others.length === 0) return null;
+
+    const perPerson = others.map((p) => {
+      const fn = p.name.split(' ')[0];
+      const mentions = allEntries
+        .filter((e) => entryMentionsPerson(e, p.personId))
+        .sort((a, b) => {
+          const am = a.createdAt?.toMillis?.() ?? 0;
+          const bm = b.createdAt?.toMillis?.() ?? 0;
+          return bm - am;
+        });
+      const lastMs = mentions[0]?.createdAt?.toMillis?.() ?? 0;
+      const daysSinceLast = lastMs
+        ? Math.floor((Date.now() - lastMs) / 86_400_000)
+        : 9999;
+      const openCount = mentions.filter(
+        (e) => !e.respondsToEntryId && e.category !== 'reflection',
+      ).length;
+
+      const balance = computeBalance({
+        firstName: fn,
+        mentions: mentions.length,
+        daysSinceLast,
+        openThreads: openCount,
+        theyCanContribute: !!p.canSelfContribute,
+        theyHaveAccount: !!p.linkedUserId,
+        // hasSelfContribution / hasObserverContribution intentionally
+        // undefined — a lightweight rollup skips contribution-aware
+        // branches; the deep version lives on the person page.
+      });
+
+      return { person: p, firstName: fn, balance };
+    });
+
+    const counts: Record<BalanceState, number> = {
+      'in-balance': 0,
+      'mostly-in-balance': 0,
+      'needs-attention': 0,
+      'new': 0,
+    };
+    for (const { balance } of perPerson) counts[balance.state]++;
+
+    const needsAttention = perPerson.filter(
+      (p) => p.balance.state === 'needs-attention',
+    );
+    const mostly = perPerson.filter(
+      (p) => p.balance.state === 'mostly-in-balance',
+    );
+
+    return {
+      total: others.length,
+      counts,
+      needsAttention,
+      mostly,
+      allInBalance:
+        counts['needs-attention'] === 0 && counts['mostly-in-balance'] === 0,
+    };
+  }, [people, allEntries, user?.userId]);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/');
@@ -218,6 +291,65 @@ export default function WorkbookPage() {
               </span>
             </div>
           </div>
+
+          {familyBalance && (
+            <div className="masthead-balance" aria-label="Family balance">
+              <span className="mb-eyebrow">In your family</span>
+              <span className="mb-sep">·</span>
+              {familyBalance.allInBalance ? (
+                <span className="mb-text">
+                  {familyBalance.total}{' '}
+                  {familyBalance.total === 1 ? 'person' : 'people'}, in balance.
+                </span>
+              ) : (
+                <span className="mb-text">
+                  {familyBalance.needsAttention.length > 0 && (
+                    <>
+                      {familyBalance.needsAttention.map((p, i) => (
+                        <span key={p.person.personId}>
+                          <Link
+                            href={`/people/${p.person.personId}`}
+                            className="mb-chip mb-chip-attention"
+                          >
+                            {p.firstName}
+                          </Link>
+                          {i < familyBalance.needsAttention.length - 1 && ', '}
+                        </span>
+                      ))}{' '}
+                      {familyBalance.needsAttention.length === 1
+                        ? 'needs attention'
+                        : 'need attention'}
+                      {(familyBalance.counts['in-balance'] > 0 ||
+                        familyBalance.mostly.length > 0) && ' · '}
+                    </>
+                  )}
+                  {familyBalance.mostly.length > 0 &&
+                    familyBalance.needsAttention.length === 0 && (
+                      <>
+                        {familyBalance.mostly.map((p, i) => (
+                          <span key={p.person.personId}>
+                            <Link
+                              href={`/people/${p.person.personId}`}
+                              className="mb-chip mb-chip-mostly"
+                            >
+                              {p.firstName}
+                            </Link>
+                            {i < familyBalance.mostly.length - 1 && ', '}
+                          </span>
+                        ))}{' '}
+                        mostly in balance
+                        {familyBalance.counts['in-balance'] > 0 && ' · '}
+                      </>
+                    )}
+                  {familyBalance.counts['in-balance'] > 0 && (
+                    <>
+                      {familyBalance.counts['in-balance']} in balance
+                    </>
+                  )}
+                </span>
+              )}
+            </div>
+          )}
         </section>
 
         {/* ═══ SPREAD — hero + tending ═══ */}
@@ -321,9 +453,9 @@ export default function WorkbookPage() {
         {/* ═══ WEEK AHEAD ═══ */}
         <section className="week" aria-label="The week ahead">
           <div className="week-head">
-            <h2 className="week-title">The week, plotted.</h2>
+            <h2 className="week-title">The week ahead.</h2>
             <p className="week-sub">
-              Practices you&rsquo;ve kept, and the ones coming up.
+              Practices you&rsquo;ve done, and the ones coming up.
             </p>
           </div>
           <WeekGrid today={today} nextRitual={nextRitual ?? null} />
@@ -334,8 +466,8 @@ export default function WorkbookPage() {
         <footer className="colophon">
           <span className="fleuron" aria-hidden="true">❦</span>
           <span>
-            <em>The Workbook</em>, {partOfDay(today)} edition. &nbsp;·&nbsp; kept
-            by <em>{firstName}</em>.{' '}
+            <em>The Workbook</em>, {partOfDay(today)} edition. &nbsp;·&nbsp;{' '}
+            <em>{firstName}</em>.{' '}
             <button
               type="button"
               className="sign-out"
@@ -561,15 +693,15 @@ function FeaturePersonView({
       <article className="feature person">
         <span className="feature-eyebrow">
           <span className="pip" />
-          Someone to keep
+          Someone in your family
         </span>
         <p className="person-note">
-          <em>Add people to the book</em> and one of them will surface here
+          <em>Add someone to your family</em> and they&rsquo;ll show up here
           when it&rsquo;s been a while.
         </p>
         <div className="person-foot">
           <Link
-            href="/manual"
+            href="/people/new"
             style={{
               fontFamily: 'var(--r-sans)',
               fontSize: 11,
@@ -582,7 +714,7 @@ function FeaturePersonView({
               paddingBottom: 2,
             }}
           >
-            Open the Family Manual →
+            Add someone →
           </Link>
         </div>
       </article>
@@ -694,12 +826,52 @@ function formatDaysCompact(days: number): string {
   return `${Math.floor(days / 30)}mo`;
 }
 
-// A stable identifier for the current prompt — so we can remember
-// which prompt the user answered. The prompt is hardcoded today;
-// when it becomes dynamic, this id rotates with it.
-const CURRENT_PROMPT_ID = '2026-w17-monday-weekend-notice';
-const CURRENT_PROMPT_TEXT =
-  'What did you notice this weekend that you almost didn\u2019t write down?';
+// A rotating pool of prompts. Each day picks one via a stable
+// day-index so the user sees the same prompt all day and a new one
+// tomorrow. Each prompt has a stable `id` so answer state (tracked
+// in localStorage) follows the prompt correctly across sessions.
+const PROMPT_POOL: Array<{ id: string; text: string }> = [
+  { id: 'weekend-notice',
+    text: 'What did you notice this weekend that you almost didn\u2019t write down?' },
+  { id: 'small-thing',
+    text: 'What\u2019s one small thing someone in your family did this week that stuck with you?' },
+  { id: 'surprise',
+    text: 'When was the last time someone surprised you \u2014 and what did it reveal?' },
+  { id: 'pattern-in-me',
+    text: 'What\u2019s a pattern you\u2019ve started to see in yourself lately?' },
+  { id: 'holding-for',
+    text: 'Something you\u2019re holding for someone in your family right now?' },
+  { id: 'meant-to-have',
+    text: 'A conversation you meant to have but haven\u2019t yet \u2014 who, and about what?' },
+  { id: 'woke-up-different',
+    text: 'What\u2019s different about how you woke up today?' },
+  { id: 'unnamed-joy',
+    text: 'A small joy from the last few days you haven\u2019t named?' },
+  { id: 'quiet-this-week',
+    text: 'Where did you feel quiet this week \u2014 the good kind, or the heavy kind?' },
+  { id: 'want-them-to-know',
+    text: 'What would you want someone in your family to know about you today?' },
+  { id: 'on-your-mind',
+    text: 'Who\u2019s been on your mind lately, and what would you tell them?' },
+  { id: 'most-yourself',
+    text: 'A moment this week when you felt most yourself?' },
+  { id: 'lingering',
+    text: 'Something someone close to you said that\u2019s been lingering?' },
+  { id: 'taking-up-space',
+    text: 'What\u2019s taking up space in your head right now?' },
+  { id: 'disagreed-with-self',
+    text: 'Where did you disagree with yourself this week?' },
+];
+
+function daysSinceEpochLocal(d: Date): number {
+  const utc = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  return Math.floor(utc / 86_400_000);
+}
+
+function pickPromptForDate(d: Date): { id: string; text: string } {
+  const i = daysSinceEpochLocal(d) % PROMPT_POOL.length;
+  return PROMPT_POOL[i];
+}
 
 function FeaturePrompt() {
   const { user } = useAuth();
@@ -708,6 +880,15 @@ function FeaturePrompt() {
   // the moment it saves. Reading the same stream the rest of the
   // workbook reads — no extra subscription.
   const { entries } = useJournalEntries();
+
+  // Today's prompt — picked from the rotating pool by local date.
+  // Stable id means answer-tracking per-day, so answering today's
+  // prompt doesn't mark tomorrow's as answered.
+  const todayPrompt = useMemo(() => pickPromptForDate(new Date()), []);
+  const promptId = todayPrompt.id;
+  const promptText = todayPrompt.text;
+  const promptPartOfDay = partOfDay(new Date());
+
   // Track the click-to-answer moment. When the user clicks "Answer",
   // we remember the clock time; the first new entry authored by them
   // after that moment counts as the answer to this prompt.
@@ -715,7 +896,7 @@ function FeaturePrompt() {
     if (typeof window === 'undefined') return null;
     try {
       const raw = window.localStorage.getItem(
-        `relish:prompt:clickedAt:${CURRENT_PROMPT_ID}`,
+        `relish:prompt:clickedAt:${promptId}`,
       );
       return raw ? Number(raw) : null;
     } catch {
@@ -726,7 +907,7 @@ function FeaturePrompt() {
     if (typeof window === 'undefined') return null;
     try {
       return window.localStorage.getItem(
-        `relish:prompt:answered:${CURRENT_PROMPT_ID}`,
+        `relish:prompt:answered:${promptId}`,
       );
     } catch {
       return null;
@@ -750,7 +931,7 @@ function FeaturePrompt() {
       setAnsweredEntryId(match.entryId);
       try {
         window.localStorage.setItem(
-          `relish:prompt:answered:${CURRENT_PROMPT_ID}`,
+          `relish:prompt:answered:${promptId}`,
           match.entryId,
         );
       } catch {
@@ -764,13 +945,21 @@ function FeaturePrompt() {
     setClickedAt(now);
     try {
       window.localStorage.setItem(
-        `relish:prompt:clickedAt:${CURRENT_PROMPT_ID}`,
+        `relish:prompt:clickedAt:${promptId}`,
         String(now),
       );
     } catch {
       // not fatal
     }
-    openPen();
+    // Prefill the Pen with the prompt text + a blank line so the user
+    // writes their answer directly below the question. The saved entry
+    // keeps both the question and the answer — useful provenance when
+    // reading it back later.
+    window.dispatchEvent(
+      new CustomEvent('relish:open-capture', {
+        detail: { prefillText: `${promptText}\n\n` },
+      }),
+    );
   };
 
   if (answeredEntryId) {
@@ -779,10 +968,10 @@ function FeaturePrompt() {
       <article className="feature prompt">
         <span className="feature-eyebrow">
           <span className="pip" />
-          A prompt for this morning · <em>answered</em>
+          A prompt for this {promptPartOfDay} · <em>answered</em>
         </span>
         <blockquote className="prompt-question-answered">
-          {CURRENT_PROMPT_TEXT}
+          {promptText}
         </blockquote>
         {answered ? (
           <>
@@ -811,11 +1000,11 @@ function FeaturePrompt() {
     <article className="feature prompt">
       <span className="feature-eyebrow">
         <span className="pip" />
-        A prompt for this morning
+        A prompt for this {promptPartOfDay}
       </span>
-      <blockquote>{CURRENT_PROMPT_TEXT}</blockquote>
+      <blockquote>{promptText}</blockquote>
       <p className="prompt-attr">
-        — Monday prompt · one minute{name ? `, ${name}` : ''}
+        — One minute{name ? `, ${name}` : ''}
       </p>
       <button type="button" onClick={handleAnswer} style={promptCtaDarkStyle}>
         <span>Answer</span>
@@ -1515,6 +1704,63 @@ const styles = `
     font-weight: 300;
     font-size: 18px;
     color: var(--r-text-4);
+  }
+
+  /* Family balance rollup — a thin sub-strip that names who (if anyone)
+     needs attention. Hidden when the user is alone in their manual. */
+  .masthead-balance {
+    margin-top: 14px;
+    padding: 12px 0 2px;
+    border-top: 1px solid var(--r-rule-5);
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .masthead-balance .mb-eyebrow {
+    font-family: var(--r-sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--r-text-4);
+  }
+  .masthead-balance .mb-sep { color: var(--r-text-5); font-size: 11px; }
+  .masthead-balance .mb-text {
+    font-family: var(--r-serif);
+    font-style: italic;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--r-text-2);
+  }
+  .masthead-balance .mb-chip {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-family: var(--r-sans);
+    font-style: normal;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: background 120ms var(--r-ease-ink);
+  }
+  .masthead-balance .mb-chip-attention {
+    color: #9E4A38;
+    background: rgba(201,104,82,0.10);
+    border-color: rgba(201,104,82,0.35);
+  }
+  .masthead-balance .mb-chip-attention:hover {
+    background: rgba(201,104,82,0.18);
+  }
+  .masthead-balance .mb-chip-mostly {
+    color: #8F6B2D;
+    background: rgba(196,162,101,0.10);
+    border-color: rgba(196,162,101,0.35);
+  }
+  .masthead-balance .mb-chip-mostly:hover {
+    background: rgba(196,162,101,0.18);
   }
 
   /* ═══ SPREAD ═══ */
