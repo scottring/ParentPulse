@@ -55,16 +55,22 @@ export function EditPersonSheet({ person, onClose, onSave }: EditPersonSheetProp
   const [bannerUrl, setBannerUrl] = useState(person.bannerUrl ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarProgress, setAvatarProgress] = useState(0);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [bannerProgress, setBannerProgress] = useState(0);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+
+  // Kept for back-compat with existing JSX references
+  const uploading = uploadingAvatar || uploadingBanner;
 
   async function handleAvatarFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    setUploading(true);
-    setUploadProgress(0);
+    setUploadingAvatar(true);
+    setAvatarProgress(0);
     setError(null);
     try {
       const url = await uploadPersonImage({
@@ -72,13 +78,36 @@ export function EditPersonSheet({ person, onClose, onSave }: EditPersonSheetProp
         personId: person.personId,
         kind: 'avatar',
         file,
-        onProgress: setUploadProgress,
+        onProgress: setAvatarProgress,
       });
       setAvatarUrl(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed.');
     } finally {
-      setUploading(false);
+      setUploadingAvatar(false);
+    }
+  }
+
+  async function handleBannerFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setUploadingBanner(true);
+    setBannerProgress(0);
+    setError(null);
+    try {
+      const url = await uploadPersonImage({
+        familyId: person.familyId,
+        personId: person.personId,
+        kind: 'banner',
+        file,
+        onProgress: setBannerProgress,
+      });
+      setBannerUrl(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed.');
+    } finally {
+      setUploadingBanner(false);
     }
   }
 
@@ -178,13 +207,13 @@ export function EditPersonSheet({ person, onClose, onSave }: EditPersonSheetProp
               <button
                 type="button"
                 className="eps-upload"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => avatarInputRef.current?.click()}
                 disabled={uploading || saving}
               >
-                {uploading ? `Uploading ${uploadProgress}%` : 'Upload'}
+                {uploadingAvatar ? `Uploading ${avatarProgress}%` : 'Upload'}
               </button>
               <input
-                ref={fileInputRef}
+                ref={avatarInputRef}
                 type="file"
                 accept="image/*"
                 onChange={handleAvatarFile}
@@ -194,15 +223,48 @@ export function EditPersonSheet({ person, onClose, onSave }: EditPersonSheetProp
             </div>
           </div>
 
-          <label className="eps-field">
-            <span>Banner URL</span>
-            <input
-              type="url"
-              value={bannerUrl}
-              onChange={(e) => setBannerUrl(e.target.value)}
-              placeholder="https://…"
-            />
-          </label>
+          <div className="eps-field">
+            <label htmlFor="eps-banner-url">
+              <span>Banner image</span>
+            </label>
+            <div className="eps-banner-row">
+              {bannerUrl ? (
+                <div
+                  className="eps-banner-preview"
+                  style={{ backgroundImage: `url('${bannerUrl}')` }}
+                  aria-hidden="true"
+                />
+              ) : (
+                <div
+                  className="eps-banner-preview eps-banner-placeholder"
+                  aria-hidden="true"
+                />
+              )}
+              <input
+                id="eps-banner-url"
+                type="url"
+                value={bannerUrl}
+                onChange={(e) => setBannerUrl(e.target.value)}
+                placeholder="https://… or upload"
+              />
+              <button
+                type="button"
+                className="eps-upload"
+                onClick={() => bannerInputRef.current?.click()}
+                disabled={uploading || saving}
+              >
+                {uploadingBanner ? `Uploading ${bannerProgress}%` : 'Upload'}
+              </button>
+              <input
+                ref={bannerInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleBannerFile}
+                style={{ display: 'none' }}
+                aria-hidden="true"
+              />
+            </div>
+          </div>
 
           {error && <p className="eps-error" role="alert">{error}</p>}
 

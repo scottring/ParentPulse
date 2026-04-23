@@ -1646,6 +1646,40 @@ html {
 .eps-avatar-placeholder {
   background: var(--r-cream-warm);
 }
+.eps-banner-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.eps-banner-row input[type="url"] {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--r-serif);
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--r-ink);
+  background: var(--r-cream);
+  border: 1px solid var(--r-rule-5);
+  border-radius: 3px;
+  padding: 10px 12px;
+  outline: none;
+}
+.eps-banner-row input[type="url"]:focus {
+  border-color: var(--r-text-4);
+}
+.eps-banner-preview {
+  flex: none;
+  width: 88px;
+  height: 52px;
+  border-radius: 3px;
+  background-color: var(--r-cream-warm);
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--r-rule-5);
+}
+.eps-banner-placeholder {
+  background-color: var(--r-cream-warm);
+}
 .eps-upload {
   flex: none;
   cursor: pointer;

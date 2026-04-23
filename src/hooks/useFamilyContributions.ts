@@ -31,9 +31,14 @@ export function useFamilyContributions(): UseFamilyContributionsReturn {
       return;
     }
     setLoading(true);
+    // Must filter to status=='complete' so the rules allow the query
+    // (draft contributions are owner-only). Completeness math only
+    // counts completed contributions anyway, so this is a no-op
+    // behaviorally.
     const q = query(
       collection(firestore, PERSON_MANUAL_COLLECTIONS.CONTRIBUTIONS),
       where('familyId', '==', familyId),
+      where('status', '==', 'complete'),
     );
     const unsub = onSnapshot(
       q,
