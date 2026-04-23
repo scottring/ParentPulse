@@ -11,13 +11,14 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 
-type Room = 'workbook' | 'manual' | 'archive';
+type Room = 'workbook' | 'manual' | 'archive' | 'therapy';
 
 function useActiveRoom(): Room | null {
   const pathname = usePathname() ?? '';
   if (pathname.startsWith('/workbook') || pathname.startsWith('/journal')) return 'workbook';
   if (pathname.startsWith('/manual') || pathname.startsWith('/family-manual') || /^\/people\//.test(pathname)) return 'manual';
   if (pathname.startsWith('/archive') || pathname.startsWith('/reports') || pathname.startsWith('/surface')) return 'archive';
+  if (pathname.startsWith('/therapy')) return 'therapy';
   return null;
 }
 
@@ -98,7 +99,7 @@ export function TopNav({ userName, onSignOut, reversed = false, hideOnRoutes = [
         </Link>
 
         {/* Room tabs */}
-        <div style={{ display: 'flex', gap: 40, alignItems: 'baseline' }}>
+        <div style={{ display: 'flex', gap: 32, alignItems: 'baseline' }}>
           <RoomLink room="workbook" href="/workbook" active={active === 'workbook'} reversed={reversed}>
             The Workbook
           </RoomLink>
@@ -107,6 +108,9 @@ export function TopNav({ userName, onSignOut, reversed = false, hideOnRoutes = [
           </RoomLink>
           <RoomLink room="archive" href="/archive" active={active === 'archive'} reversed={reversed}>
             The Archive
+          </RoomLink>
+          <RoomLink room="therapy" href="/therapy" active={active === 'therapy'} reversed={reversed}>
+            Therapy
           </RoomLink>
         </div>
 
