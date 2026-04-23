@@ -87,7 +87,7 @@ export function ChatClosureKept({
         className="chat-closure-card"
         onClick={(e) => e.stopPropagation()}
       >
-        <span className="cc-eyebrow">Kept.</span>
+        <span className="cc-eyebrow">Saved.</span>
         {emergent ? (
           <p className="cc-emergent">
             <em>&ldquo;{emergent}&rdquo;</em>

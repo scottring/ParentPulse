@@ -198,7 +198,7 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
                 opacity: closing ? 0.6 : 1,
               }}
             >
-              {closing ? 'Keeping…' : 'Close'}
+              {closing ? 'Saving…' : 'Close'}
             </button>
           )}
         </div>
@@ -395,9 +395,9 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
         <ChatClosureKept
           emergent={closureEmergent}
           echo={closureEcho}
-          followUp="A short note from this conversation will appear in your workbook as something to reflect on."
+          followUp="You'll see a note from this conversation in your workbook."
           firstTimeKey="relish:chat-close-intro:coach"
-          firstTimeBody="When you close a conversation, Relish keeps what was most alive from it and surfaces that note back to you in your workbook. It's the back-half of the loop — what you told me comes back to you."
+          firstTimeBody="When you close a coach conversation, Relish saves a short note of what you talked about and surfaces it in your workbook the next time you open it. What you said comes back to you."
           onDismiss={() => {
             setClosureShow(false);
             clearConversation();

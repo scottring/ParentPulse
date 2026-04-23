@@ -1524,9 +1524,9 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
           echo={
             chatTurns.find((t) => t.role === 'user' && !t.excluded)?.content?.slice(0, 180) || ''
           }
-          followUp="Relish has already been distilling this conversation — look for the small “Claude noticed” line on this entry."
+          followUp="A note from this conversation is on the entry — look for the small “Claude noticed” line."
           firstTimeKey="relish:chat-close-intro:entry"
-          firstTimeBody="When you close a conversation about an entry, Relish keeps what was most alive in it and surfaces one line back onto the entry itself. It's the back-half of the loop — what you told the book comes back to you on the page."
+          firstTimeBody="When you close a chat about an entry, Relish saves a short note on the entry itself — a line that captures what came out of the conversation. You'll see it the next time you open the entry."
           onDismiss={() => {
             setChatClosureVisible(false);
             setShowChat(false);
