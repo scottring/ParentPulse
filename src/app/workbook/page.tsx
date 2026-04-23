@@ -52,23 +52,6 @@ const heroActionStyle: React.CSSProperties = {
   transition: 'background 160ms var(--r-ease-ink), transform 160ms var(--r-ease-ink)',
 };
 
-const quietCtaStyle: React.CSSProperties = {
-  all: 'unset',
-  cursor: 'pointer',
-  marginTop: 20,
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-  padding: '0 0 2px',
-  fontFamily: 'var(--r-sans)',
-  fontSize: 11,
-  fontWeight: 600,
-  letterSpacing: '0.2em',
-  textTransform: 'uppercase',
-  color: 'var(--r-ember)',
-  borderBottom: '1px solid currentColor',
-};
-
 const promptCtaDarkStyle: React.CSSProperties = {
   all: 'unset',
   cursor: 'pointer',
@@ -334,74 +317,53 @@ export default function WorkbookPage() {
             </div>
             <div className="masthead-divider" />
             <div className="masthead-cell align-r">
-              <span className="masthead-eyebrow">Waiting on you</span>
-              <span className="masthead-value">
-                {ledeCount === 0 ? 'Nothing' : `${ledeCount}`}
-                <span className="sub">
-                  {ledeCount === 0 ? '' : ledeCount === 1 ? ' thing' : ' things'}
+              <span className="masthead-eyebrow">In your family</span>
+              {!familyBalance ? (
+                <span className="masthead-value">
+                  Just you
                 </span>
-              </span>
-            </div>
-          </div>
-
-          {familyBalance && (
-            <div className="masthead-balance" aria-label="Family balance">
-              <span className="mb-eyebrow">In your family</span>
-              <span className="mb-sep">·</span>
-              {familyBalance.allInBalance ? (
-                <span className="mb-text">
-                  {familyBalance.total}{' '}
-                  {familyBalance.total === 1 ? 'person' : 'people'}, in balance.
+              ) : familyBalance.needsAttention.length === 1 ? (
+                <span className="masthead-value">
+                  <Link
+                    href={`/people/${familyBalance.needsAttention[0].person.personId}`}
+                    className="mb-link mb-link-attention"
+                  >
+                    {familyBalance.needsAttention[0].firstName}
+                  </Link>
+                  <span className="sub"> · needs attention</span>
+                </span>
+              ) : familyBalance.needsAttention.length > 1 ? (
+                <span className="masthead-value">
+                  <em>{familyBalance.needsAttention.length}</em>
+                  <span className="sub"> need attention</span>
+                </span>
+              ) : familyBalance.mostly.length > 0 ? (
+                <span className="masthead-value">
+                  <Link
+                    href={`/people/${familyBalance.mostly[0].person.personId}`}
+                    className="mb-link mb-link-mostly"
+                  >
+                    {familyBalance.mostly[0].firstName}
+                  </Link>
+                  <span className="sub"> · mostly in balance</span>
+                </span>
+              ) : familyBalance.counts['in-balance'] > 0 ? (
+                <span className="masthead-value">
+                  In balance
+                  <span className="sub">
+                    {' '}· {familyBalance.total}{' '}
+                    {familyBalance.total === 1 ? 'person' : 'people'}
+                  </span>
                 </span>
               ) : (
-                <span className="mb-text">
-                  {familyBalance.needsAttention.length > 0 && (
-                    <>
-                      {familyBalance.needsAttention.map((p, i) => (
-                        <span key={p.person.personId}>
-                          <Link
-                            href={`/people/${p.person.personId}`}
-                            className="mb-chip mb-chip-attention"
-                          >
-                            {p.firstName}
-                          </Link>
-                          {i < familyBalance.needsAttention.length - 1 && ', '}
-                        </span>
-                      ))}{' '}
-                      {familyBalance.needsAttention.length === 1
-                        ? 'needs attention'
-                        : 'need attention'}
-                      {(familyBalance.counts['in-balance'] > 0 ||
-                        familyBalance.mostly.length > 0) && ' · '}
-                    </>
-                  )}
-                  {familyBalance.mostly.length > 0 &&
-                    familyBalance.needsAttention.length === 0 && (
-                      <>
-                        {familyBalance.mostly.map((p, i) => (
-                          <span key={p.person.personId}>
-                            <Link
-                              href={`/people/${p.person.personId}`}
-                              className="mb-chip mb-chip-mostly"
-                            >
-                              {p.firstName}
-                            </Link>
-                            {i < familyBalance.mostly.length - 1 && ', '}
-                          </span>
-                        ))}{' '}
-                        mostly in balance
-                        {familyBalance.counts['in-balance'] > 0 && ' · '}
-                      </>
-                    )}
-                  {familyBalance.counts['in-balance'] > 0 && (
-                    <>
-                      {familyBalance.counts['in-balance']} in balance
-                    </>
-                  )}
+                <span className="masthead-value">
+                  {familyBalance.total}{' '}
+                  {familyBalance.total === 1 ? 'person' : 'people'}
+                  <span className="sub"> · new page{familyBalance.total === 1 ? '' : 's'}</span>
                 </span>
               )}
             </div>
-          )}
+          </div>
         </section>
 
         {/* ═══ SPREAD — hero + tending ═══ */}
@@ -464,7 +426,7 @@ export default function WorkbookPage() {
                 <path d="M17 3l4 4L8 20l-5 1 1-5L17 3z" />
               </svg>
               <span>
-                {ledeCount > 0 ? 'Pick up where you left off' : 'Write a line'}
+                {ledeCount > 0 ? 'Pick up where you left off' : 'Write a note'}
               </span>
             </button>
           </div>
@@ -594,14 +556,11 @@ function QuietBlock({ showLeadTeaser }: { showLeadTeaser: boolean }) {
   return (
     <div className="quiet-block">
       <div className="glyph">❦</div>
-      <h3>The book is quiet.</h3>
+      <h3>Nothing waiting.</h3>
       <p>
-        Nothing&rsquo;s waiting on you this morning. When you want a line,
-        a prompt is below — or just write.
+        Replies, reminders, and prompts from your family will show up here
+        when they arrive.
       </p>
-      <button type="button" onClick={openPen} style={quietCtaStyle}>
-        Write a line <span aria-hidden="true">→</span>
-      </button>
       {showLeadTeaser && (
         <p className="lead-teaser">
           <em>After a week of writing, Relish starts reading back to you.</em>
@@ -1630,11 +1589,10 @@ function isoWeek(d: Date): number {
 }
 
 function ledeForState(openCount: number): string {
-  if (openCount === 0)
-    return 'The kitchen is quiet. The book is where you left it.';
-  if (openCount === 1) return 'One thing is waiting and the kitchen is quiet.';
-  if (openCount === 2) return 'Two things are waiting and the kitchen is quiet.';
-  return `${openCount} things are waiting.`;
+  if (openCount === 0) return 'Nothing is open right now. Write whenever something comes up.';
+  if (openCount === 1) return 'One thing is waiting for you.';
+  if (openCount === 2) return 'Two things are waiting for you.';
+  return `${openCount} things are waiting for you.`;
 }
 
 function threadTitle(t: OpenThread): string {
@@ -1793,62 +1751,16 @@ const styles = `
     color: var(--r-text-4);
   }
 
-  /* Family balance rollup — a thin sub-strip that names who (if anyone)
-     needs attention. Hidden when the user is alone in their manual. */
-  .masthead-balance {
-    margin-top: 14px;
-    padding: 12px 0 2px;
-    border-top: 1px solid var(--r-rule-5);
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .masthead-balance .mb-eyebrow {
-    font-family: var(--r-sans);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--r-text-4);
-  }
-  .masthead-balance .mb-sep { color: var(--r-text-5); font-size: 11px; }
-  .masthead-balance .mb-text {
-    font-family: var(--r-serif);
-    font-style: italic;
-    font-size: 16px;
-    line-height: 1.5;
-    color: var(--r-text-2);
-  }
-  .masthead-balance .mb-chip {
-    display: inline-block;
-    padding: 2px 10px;
-    border-radius: 999px;
-    font-family: var(--r-sans);
-    font-style: normal;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
+  /* Balance indicator rendered inside the third masthead cell — uses
+     the cell's own typography, just tinted for attention states. */
+  .mb-link {
     text-decoration: none;
-    border: 1px solid transparent;
-    transition: background 120ms var(--r-ease-ink);
+    border-bottom: 1px dashed currentColor;
+    transition: opacity 120ms var(--r-ease-ink);
   }
-  .masthead-balance .mb-chip-attention {
-    color: #9E4A38;
-    background: rgba(201,104,82,0.10);
-    border-color: rgba(201,104,82,0.35);
-  }
-  .masthead-balance .mb-chip-attention:hover {
-    background: rgba(201,104,82,0.18);
-  }
-  .masthead-balance .mb-chip-mostly {
-    color: #8F6B2D;
-    background: rgba(196,162,101,0.10);
-    border-color: rgba(196,162,101,0.35);
-  }
-  .masthead-balance .mb-chip-mostly:hover {
-    background: rgba(196,162,101,0.18);
-  }
+  .mb-link:hover { opacity: 0.75; }
+  .mb-link-attention { color: #9E4A38; }
+  .mb-link-mostly { color: #8F6B2D; }
 
   /* ═══ SPREAD ═══ */
   .spread {
