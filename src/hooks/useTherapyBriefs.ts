@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import {
   collection,
   onSnapshot,
-  orderBy,
   query,
   where,
 } from 'firebase/firestore';
@@ -35,17 +34,25 @@ export function useTherapyBriefs(): UseTherapyBriefsReturn {
     }
 
     setLoading(true);
+    // Intentionally no orderBy — that would require a composite
+    // (userId, generatedAt) index. Per-user brief counts are small,
+    // so we sort client-side below.
     const q = query(
       collection(firestore, THERAPY_BRIEFS_COLLECTION),
       where('userId', '==', userId),
-      orderBy('generatedAt', 'desc'),
     );
     const unsub = onSnapshot(
       q,
       (snap) => {
-        setBriefs(
-          snap.docs.map((d) => ({ ...(d.data() as TherapyBrief), briefId: d.id })),
+        const docs = snap.docs.map(
+          (d) => ({ ...(d.data() as TherapyBrief), briefId: d.id }),
         );
+        docs.sort((a, b) => {
+          const am = a.generatedAt?.toMillis?.() ?? 0;
+          const bm = b.generatedAt?.toMillis?.() ?? 0;
+          return bm - am;
+        });
+        setBriefs(docs);
         setLoading(false);
       },
       (err) => {

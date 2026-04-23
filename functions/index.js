@@ -12012,14 +12012,24 @@ exports.generateTherapyBrief = onCall(
 
       // Fetch the user's most recent session note (if any) from the
       // previous brief so the model can carry context forward.
+      // No orderBy here — that would require a composite index on
+      // (userId, generatedAt). Scan client-side instead; per-user
+      // brief counts are low.
       const priorSnap = await db.collection("therapy_briefs")
           .where("userId", "==", userId)
-          .orderBy("generatedAt", "desc")
-          .limit(1)
           .get();
-      const priorNote = priorSnap.empty ?
-          null :
-          priorSnap.docs[0].data().sessionNotes || null;
+      let priorNote = null;
+      if (!priorSnap.empty) {
+        const sorted = priorSnap.docs
+            .map((d) => d.data())
+            .filter((d) => d.sessionNotes)
+            .sort((a, b) => {
+              const am = a.generatedAt?.toMillis?.() ?? 0;
+              const bm = b.generatedAt?.toMillis?.() ?? 0;
+              return bm - am;
+            });
+        priorNote = sorted[0]?.sessionNotes || null;
+      }
 
       const systemPrompt = "You are helping a user prepare material for " +
         "their therapy session. You are looking at their own journal " +
