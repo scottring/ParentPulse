@@ -218,12 +218,55 @@ export default function PersonPage({
               </span>
             </div>
 
-            {/* Balance line — one sentence that says where things stand */}
+            {/* Balance line — one sentence that says where things
+                stand. Color of the dot conveys the state (sage = in
+                balance, amber = mostly, coral = needs attention,
+                gray = new). When there's a specific waiting entry,
+                link the sentence into it instead of leaving the
+                reader with a vague "N things waiting". */}
             <div className={`balance-line balance-${balance.state}`}>
               <span className="balance-dot" aria-hidden="true" />
-              <span className="balance-label">{balance.label}</span>
-              <span className="balance-sep">·</span>
-              <span className="balance-text">{balance.line}</span>
+              <span className="balance-text">
+                {(() => {
+                  const firstWaiting = openThreads[0];
+                  if (!isSelf && firstWaiting && openThreads.length === 1) {
+                    // The most common "mostly in balance" case — one
+                    // specific entry by this person waiting for the
+                    // user's reply. Name it and link to it.
+                    const snippet =
+                      firstWaiting.title ?? excerptOf(firstWaiting.text, 70);
+                    return (
+                      <>
+                        <Link
+                          href={`/journal/${firstWaiting.entryId}`}
+                          className="balance-inline-link"
+                        >
+                          “{snippet}”
+                        </Link>
+                        {' '}from {firstName} is waiting for your reply.
+                      </>
+                    );
+                  }
+                  if (!isSelf && firstWaiting && openThreads.length > 1) {
+                    return (
+                      <>
+                        {firstName} has{' '}
+                        <Link
+                          href={`/journal/${firstWaiting.entryId}`}
+                          className="balance-inline-link"
+                        >
+                          {openThreads.length} things
+                        </Link>
+                        {' '}waiting for your reply — start with the oldest.
+                      </>
+                    );
+                  }
+                  // Fall back to the computed sentence for every
+                  // other state (in balance, long silence, not-yet-
+                  // invited, self page, empty page).
+                  return balance.line;
+                })()}
+              </span>
             </div>
 
             {/* Synthesis lead — 1–3 sentences distilled from contributions */}
@@ -1189,40 +1232,39 @@ const styles = `
     background: #7C9082;
     flex: none;
   }
-  .balance-line .balance-label {
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    font-size: 10px;
-    color: #2D5F5D;
-  }
-  .balance-line .balance-sep { color: var(--r-text-5); font-size: 11px; }
   .balance-line .balance-text {
     font-family: var(--r-serif);
     font-style: italic;
     font-size: 16px;
     color: var(--r-text-2);
   }
+  .balance-line .balance-inline-link {
+    color: var(--r-ink);
+    font-style: italic;
+    text-decoration: none;
+    border-bottom: 1px solid var(--r-rule-3);
+    transition: border-color 120ms var(--r-ease-ink);
+  }
+  .balance-line .balance-inline-link:hover {
+    border-bottom-color: var(--r-ink);
+  }
   .balance-line.balance-mostly-in-balance {
     background: rgba(196,162,101,0.10);
     border-left-color: #C4A265;
   }
   .balance-line.balance-mostly-in-balance .balance-dot { background: #C4A265; }
-  .balance-line.balance-mostly-in-balance .balance-label { color: #8F6B2D; }
 
   .balance-line.balance-needs-attention {
     background: rgba(201,104,82,0.10);
     border-left-color: #C96852;
   }
   .balance-line.balance-needs-attention .balance-dot { background: #C96852; }
-  .balance-line.balance-needs-attention .balance-label { color: #9E4A38; }
 
   .balance-line.balance-new {
     background: rgba(60,48,28,0.05);
     border-left-color: var(--r-text-5);
   }
   .balance-line.balance-new .balance-dot { background: var(--r-text-5); }
-  .balance-line.balance-new .balance-label { color: var(--r-text-3); }
 
   /* DETAILS */
   .details {
