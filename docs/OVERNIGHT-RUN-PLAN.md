@@ -21,7 +21,8 @@
 
 ## Task order (lowest risk → highest)
 
-### 1. [TODO] Delete SpreadHome orphan + fix "← The Journal" back-links
+### 1. [DONE] Delete SpreadHome orphan + fix "← The Journal" back-links
+_Also caught 3 other "/journal" back-links in moments, settings, growth. Commit 1e008bf._
 - Confirm `SpreadHome` isn't imported anywhere with a grep (exclude `__tests__`).
 - Delete `src/components/spread-home/` directory.
 - Find every "← The Journal" back-link (grep for the literal string and for `href="/journal"` in contexts where it reads as a back link). In `src/app/journal/[entryId]/page.tsx` and anywhere else, change to "← Back" linking to `/workbook`.
