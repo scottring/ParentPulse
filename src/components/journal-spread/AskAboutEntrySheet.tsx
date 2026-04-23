@@ -179,6 +179,8 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
       setHasAsked(true);
       await coach.sendMessage(message, personIds.length > 0 ? personIds : undefined);
     }
+    // Keep focus in the composer so the user can keep typing.
+    inputRef.current?.focus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

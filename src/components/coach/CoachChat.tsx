@@ -33,6 +33,8 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
     const message = input.trim();
     setInput('');
     await sendMessage(message, personId ? [personId] : undefined);
+    // Keep focus in the composer so the user can keep typing.
+    inputRef.current?.focus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
