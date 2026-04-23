@@ -207,16 +207,25 @@ export default function ManualPage() {
   }
 
   const familyTitle = (() => {
-    const raw = family?.name?.trim() || '';
+    let raw = (family?.name || '').trim();
+    if (!raw) return 'Your family';
+    raw = raw.replace(/^the\s+/i, '').trim();
     if (!raw) return 'Your family';
     const last = raw.toLowerCase();
-    if (/(s|x|z|ch|sh)$/.test(last)) return `The ${raw}es`;
+    if (/(ses|shes|ches|xes|zes)$/.test(last)) return `The ${raw}`;
+    if (/s$/.test(last)) return `The ${raw}`;
+    if (/(x|z|ch|sh)$/.test(last)) return `The ${raw}es`;
     if (/y$/.test(last) && !/[aeiou]y$/.test(last)) return `The ${raw.slice(0, -1)}ies`;
     return `The ${raw}s`;
   })();
 
   return (
     <main className="mn-app">
+      {/* Redundant plain-<style> for new classes. styled-jsx global has
+          been going stale on hot-reload and in fresh prod bundles, so
+          this guarantees the headline serif + completeness bars render
+          even if styled-jsx drops its global block. */}
+      <style dangerouslySetInnerHTML={{ __html: familySummaryCss }} />
       <div className="mn-page">
         {/* ═══ TITLE ═══ — page headline, newspaper style. */}
         <header className="fs-title-block">
@@ -2014,4 +2023,117 @@ const styles = `
     .fr-card { min-height: 180px; }
   }
 
+`;
+
+/* ============================================================
+   familySummaryCss — plain-<style> safety net for the new
+   Family Summary chrome. Not in styled-jsx because styled-jsx
+   global has been flaking on hot-reload / fresh bundles and
+   silently dropping the new rules. Duplicates rules that also
+   live in the big `styles` string above; keep them in sync.
+   ============================================================ */
+const familySummaryCss = `
+.mn-page .fs-title-block {
+  margin: 0 0 32px;
+  padding: 0 0 20px;
+  border-bottom: 1px solid var(--r-rule-5, rgba(60,48,28,0.08));
+}
+.mn-page .fs-title {
+  font-family: var(--r-serif, 'Cormorant Garamond', Georgia, serif);
+  font-style: normal;
+  font-weight: 400;
+  font-size: 72px;
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  color: var(--r-ink, #3A3530);
+  margin: 0;
+}
+.mn-page .fs-title em { font-style: italic; }
+.mn-page .fs-title-dash {
+  color: var(--r-text-4, #6B6254);
+  font-style: normal;
+  margin: 0 0.1em;
+}
+
+.mn-page .mh-complete-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mn-page .mh-complete-overall {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  font-family: var(--r-serif, 'Cormorant Garamond', Georgia, serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 44px;
+  color: var(--r-ink, #3A3530);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin: 2px 0 6px;
+}
+.mn-page .mh-complete-overall em { font-style: italic; }
+.mn-page .mh-complete-overall-mark {
+  font-family: var(--r-serif, 'Cormorant Garamond', Georgia, serif);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 22px;
+  color: var(--r-text-4, #6B6254);
+  letter-spacing: -0.02em;
+}
+.mn-page .mh-complete-dims {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  max-width: 220px;
+}
+.mn-page .mh-complete-dim-row {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  column-gap: 10px;
+  align-items: center;
+  line-height: 1.15;
+}
+.mn-page .mh-complete-dim {
+  font-family: var(--r-sans, 'DM Sans', system-ui, sans-serif);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--r-text-4, #6B6254);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.mn-page .mh-complete-bar {
+  display: block;
+  height: 6px;
+  background: rgba(60,48,28,0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.mn-page .mh-complete-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+}
+.mn-page .mh-complete-sub {
+  font-family: var(--r-serif, 'Cormorant Garamond', Georgia, serif);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 13px;
+  color: var(--r-text-4, #6B6254);
+  letter-spacing: -0.003em;
+  line-height: 1;
+}
+@media (max-width: 1100px) {
+  .mn-page .fs-title { font-size: 52px; }
+}
+@media (max-width: 640px) {
+  .mn-page .fs-title { font-size: 40px; line-height: 1.08; }
+}
 `;
