@@ -138,9 +138,19 @@ export default function CaptureSheet() {
 
   useEffect(() => {
     const handler = (e: Event) => {
-      const detail = (e as CustomEvent<{ prefillText?: string; category?: JournalCategory } | undefined>).detail;
+      const detail = (e as CustomEvent<{
+        prefillText?: string;
+        category?: JournalCategory;
+        mentionPersonIds?: string[];
+      } | undefined>).detail;
       if (detail?.prefillText) setText(detail.prefillText);
       if (detail?.category) setCategory(detail.category);
+      if (detail?.mentionPersonIds && detail.mentionPersonIds.length > 0) {
+        // Page context (e.g. tapping the Pen from /people/[id]) pre-
+        // selects the person in the mentions picker so the user
+        // doesn't have to re-tag what's obvious from where they were.
+        setSelectedPeople(detail.mentionPersonIds);
+      }
       setState('composing');
     };
     window.addEventListener('relish:open-capture', handler);

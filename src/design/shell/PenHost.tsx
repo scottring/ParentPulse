@@ -15,10 +15,22 @@ export function PenHost({ hideOnRoutes = ['/', '/login', '/register'] }: { hideO
   if (hideOnRoutes.some((r) => pathname === r)) return null;
 
   // Emit a window event so the existing CaptureSheet can listen.
-  // When Chunk 3 lands we'll wire directly into the sheet's store.
+  // When the user taps the Pen from a person's page (/people/[id]),
+  // pass that personId so the sheet pre-selects them in the mentions
+  // picker. Everywhere else we leave the payload empty — no
+  // assumptions about context.
   const handle = () => {
     setOpen(true);
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined') return;
+    const personIdMatch = pathname.match(/^\/people\/([^/?#]+)$/);
+    const mentionPersonIds = personIdMatch ? [personIdMatch[1]] : undefined;
+    if (mentionPersonIds) {
+      window.dispatchEvent(
+        new CustomEvent('relish:open-capture', {
+          detail: { mentionPersonIds },
+        }),
+      );
+    } else {
       window.dispatchEvent(new CustomEvent('relish:pen:open'));
     }
   };
