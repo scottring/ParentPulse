@@ -85,6 +85,10 @@ import { usePerson } from '@/hooks/usePerson';
 import { entryMentionsPerson } from '@/lib/entry-mentions';
 import { computeBalance, type BalanceState } from '@/lib/balance';
 import { useLatestCoachClosure } from '@/hooks/useLatestCoachClosure';
+import { useFamilyManuals } from '@/hooks/useFamilyManuals';
+import { useFamilyContributions } from '@/hooks/useFamilyContributions';
+import { useFreshness } from '@/hooks/useFreshness';
+import { FamilyCompletenessRing } from '@/components/dashboard/FamilyCompletenessRing';
 import { useWorkbookVisit } from '@/hooks/useWorkbookVisit';
 
 export default function WorkbookPage() {
@@ -105,6 +109,7 @@ export default function WorkbookPage() {
   // as a small "From your last conversation" card below the spread.
   // Hidden when >7 days old to avoid stale encouragement.
   const { closure: latestClosure } = useLatestCoachClosure();
+
   const freshClosure = (() => {
     if (!latestClosure || !latestClosure.emergent) return null;
     const ms = latestClosure.distilledAt?.toMillis?.() ?? 0;
@@ -122,6 +127,21 @@ export default function WorkbookPage() {
   const { priorLastSeenAt, loaded: visitLoaded } = useWorkbookVisit();
   const { entries: allEntries } = useJournalEntries();
   const { people } = usePerson();
+
+  // Family-wide completeness data for the Ring visualisation.
+  // Hidden on the workbook when the user is alone (nothing meaningful
+  // to compute) to avoid a sad 0% donut on first visit.
+  const { manuals: familyManuals } = useFamilyManuals();
+  const { contributions: familyContributions } = useFamilyContributions();
+  const { familyCompleteness } = useFreshness({
+    people,
+    manuals: familyManuals,
+    contributions: familyContributions,
+  });
+  const activePeopleCount = (people ?? []).filter(
+    (p) => !p.archived,
+  ).length;
+  const showCompletenessRing = activePeopleCount >= 2;
   const sinceSummary = useMemo<SinceSummary | null>(() => {
     if (!visitLoaded || !priorLastSeenAt || !user?.userId) return null;
     const mePersonIds = (people ?? [])
@@ -451,6 +471,21 @@ export default function WorkbookPage() {
             )}
           </div>
         </section>
+
+        {/* ═══ FAMILY COMPLETENESS RING ═══ — at-a-glance "where are
+             we overall" across coverage, freshness, depth. Hidden when
+             the user is alone — nothing meaningful to compute yet. */}
+        {showCompletenessRing && (
+          <section className="completeness-section" aria-label="Family completeness">
+            <div className="completeness-head">
+              <span className="eyebrow">Your family, at a glance</span>
+              <h2 className="h2-serif"><em>Where you are.</em></h2>
+            </div>
+            <div className="completeness-ring-wrap">
+              <FamilyCompletenessRing completeness={familyCompleteness} />
+            </div>
+          </section>
+        )}
 
         {/* ═══ FROM YOUR LAST CONVERSATION ═══ — the back-half of the
              coach-chat loop. Shows the emergent line Relish distilled
@@ -1893,6 +1928,47 @@ const styles = `
     border-bottom: 1px solid currentColor;
     padding-bottom: 2px;
     text-decoration: none;
+  }
+
+  /* ═══ FAMILY COMPLETENESS RING ═══ */
+  .completeness-section {
+    padding: 40px 0 8px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 40px;
+    align-items: center;
+  }
+  .completeness-section .completeness-head {
+    min-width: 240px;
+  }
+  .completeness-section .eyebrow {
+    display: block;
+    font-family: var(--r-sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--r-text-4);
+    margin-bottom: 10px;
+  }
+  .completeness-section .h2-serif {
+    font-family: var(--r-serif);
+    font-weight: 300;
+    font-size: clamp(30px, 3.2vw, 40px);
+    line-height: 1.05;
+    color: var(--r-ink);
+    letter-spacing: -0.015em;
+    margin: 0;
+  }
+  .completeness-section .h2-serif em { font-style: italic; }
+  .completeness-section .completeness-ring-wrap {
+    justify-self: start;
+  }
+  @media (max-width: 720px) {
+    .completeness-section {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
   }
 
   /* ═══ FROM YOUR LAST CONVERSATION ═══ */
