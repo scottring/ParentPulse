@@ -478,20 +478,17 @@ export default function WorkbookPage() {
              we overall" across coverage, freshness, depth. Hidden when
              the user is alone — nothing meaningful to compute yet. */}
         {showCompletenessRing && (
-          <section className="completeness-section" aria-label="Family completeness">
-            <div className="completeness-head">
-              <span className="eyebrow">Your family, at a glance</span>
-              <h2 className="h2-serif"><em>Where you are.</em></h2>
-              <p className="completeness-sub">
-                A reading across coverage, freshness, and depth.{' '}
-                <Link href="/manual" className="completeness-drill">
-                  Open the per-person breakdown <span aria-hidden>⟶</span>
-                </Link>
-              </p>
+          <section className="completeness-card" aria-label="Family completeness">
+            <div className="cc-body">
+              <span className="cc-eyebrow">Your family, at a glance</span>
+              <h2 className="cc-title"><em>Where you are.</em></h2>
+              <Link href="/manual" className="cc-drill">
+                Open the per-person breakdown <span aria-hidden>⟶</span>
+              </Link>
             </div>
             <Link
               href="/manual"
-              className="completeness-ring-link"
+              className="cc-ring-link"
               aria-label="Open the family manual to see each person's coverage"
             >
               <FamilyCompletenessRing completeness={familyCompleteness} />
@@ -1949,76 +1946,83 @@ const styles = `
     text-decoration: none;
   }
 
-  /* ═══ FAMILY COMPLETENESS RING ═══ */
-  .completeness-section {
-    padding: 48px 0 16px;
-    border-top: 1px solid var(--r-rule-4);
+  /* ═══ FAMILY COMPLETENESS — a bounded card (not a section beat).
+     Proportions in sympathy with .feature cards below: paper
+     background, 1px rule-5 border, 3px radius, 28-32px padding,
+     headline sized for inside-a-card (26px) not for a page-level
+     section beat (44px). Subtitle deliberately omitted — the
+     eyebrow + headline + ring carry the whole statement. */
+  .completeness-card {
+    margin-top: 40px;
+    padding: 28px 32px;
+    background: var(--r-paper);
+    border: 1px solid var(--r-rule-5);
+    border-radius: 3px;
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 48px;
     align-items: center;
-    margin-top: 24px;
+    transition: box-shadow 180ms var(--r-ease-ink);
   }
-  .completeness-section .completeness-head {
-    max-width: 52ch;
+  .completeness-card:hover { box-shadow: var(--r-shadow-card); }
+  .completeness-card .cc-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+    min-width: 0;
   }
-  .completeness-section .eyebrow {
-    display: block;
+  .completeness-card .cc-eyebrow {
     font-family: var(--r-sans);
     font-size: 10px;
     font-weight: 700;
-    letter-spacing: 0.22em;
+    letter-spacing: 0.24em;
     text-transform: uppercase;
     color: var(--r-text-4);
-    margin-bottom: 12px;
   }
-  .completeness-section .h2-serif {
+  .completeness-card .cc-title {
     font-family: var(--r-serif);
     font-style: italic;
-    font-weight: 300;
-    font-size: 44px;
-    line-height: 1;
+    font-weight: 400;
+    font-size: 26px;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
     color: var(--r-ink);
-    letter-spacing: -0.015em;
-    margin: 0;
+    margin: 2px 0 0;
   }
-  .completeness-section .h2-serif em { font-style: italic; }
-  .completeness-section .completeness-sub {
-    font-family: var(--r-serif);
-    font-size: 17px;
-    line-height: 1.45;
-    color: var(--r-text-3);
-    margin: 10px 0 0;
-  }
-  .completeness-section .completeness-drill {
-    font-family: var(--r-serif);
-    font-style: italic;
-    font-size: 17px;
-    color: var(--r-ink);
+  .completeness-card .cc-title em { font-style: italic; }
+  .completeness-card .cc-drill {
+    margin-top: 12px;
+    font-family: var(--r-sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--r-text-4);
     text-decoration: none;
     border-bottom: 1px solid var(--r-rule-3);
-    padding-bottom: 1px;
-    transition: border-color 120ms var(--r-ease-ink);
-    white-space: nowrap;
+    padding-bottom: 2px;
+    transition: color 120ms var(--r-ease-ink), border-color 120ms var(--r-ease-ink);
   }
-  .completeness-section .completeness-drill:hover {
+  .completeness-card .cc-drill:hover {
+    color: var(--r-ink);
     border-bottom-color: var(--r-ink);
   }
-  .completeness-section .completeness-ring-link {
+  .completeness-card .cc-ring-link {
     justify-self: end;
     text-decoration: none;
     color: inherit;
     display: inline-block;
-    transition: transform 260ms var(--r-ease-ink), opacity 120ms var(--r-ease-ink);
+    transition: transform 180ms var(--r-ease-ink);
   }
-  .completeness-section .completeness-ring-link:hover { transform: translateY(-1px); opacity: 0.96; }
+  .completeness-card .cc-ring-link:hover { transform: translateY(-1px); }
   @media (max-width: 820px) {
-    .completeness-section {
+    .completeness-card {
       grid-template-columns: 1fr;
       gap: 24px;
+      padding: 24px 24px 28px;
     }
-    .completeness-section .completeness-ring-link { justify-self: start; }
-    .completeness-section .h2-serif { font-size: 36px; }
+    .completeness-card .cc-ring-link { justify-self: start; }
   }
 
   /* ═══ FROM YOUR LAST CONVERSATION ═══ */
