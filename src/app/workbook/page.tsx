@@ -461,7 +461,9 @@ export default function WorkbookPage() {
               </span>
             </div>
             {ledeCount === 0 ? (
-              <QuietBlock showLeadTeaser={!hasReturns} />
+              <QuietBlock
+                showLeadTeaser={!hasReturns && allEntries.length <= 3}
+              />
             ) : (
               <div>
                 {openThreads.slice(0, 3).map((t) => (
@@ -480,10 +482,17 @@ export default function WorkbookPage() {
             <div className="completeness-head">
               <span className="eyebrow">Your family, at a glance</span>
               <h2 className="h2-serif"><em>Where you are.</em></h2>
+              <Link href="/manual" className="completeness-drill">
+                See the per-person breakdown <span aria-hidden>⟶</span>
+              </Link>
             </div>
-            <div className="completeness-ring-wrap">
+            <Link
+              href="/manual"
+              className="completeness-ring-link"
+              aria-label="Open the family manual to see each person's coverage"
+            >
               <FamilyCompletenessRing completeness={familyCompleteness} />
-            </div>
+            </Link>
           </section>
         )}
 
@@ -492,7 +501,11 @@ export default function WorkbookPage() {
              from your most recent coach conversation. Hidden when no
              closure exists, or when it's older than a week. */}
         {freshClosure && (
-          <section className="coach-closure-card" aria-label="From your last conversation">
+          <Link
+            href="/coach"
+            className="coach-closure-card"
+            aria-label="From your last conversation — continue with the coach"
+          >
             <span className="ccc-eyebrow">
               <span className="pip" aria-hidden="true" />
               From your last conversation
@@ -505,7 +518,10 @@ export default function WorkbookPage() {
                 {freshClosure.themes.slice(0, 4).join(' · ')}
               </p>
             )}
-          </section>
+            <span className="ccc-cta">
+              Pick it up <span aria-hidden>⟶</span>
+            </span>
+          </Link>
         )}
 
         {/* ═══ FEATURE ROW — memory · person · prompt ═══ */}
@@ -1961,9 +1977,28 @@ const styles = `
     margin: 0;
   }
   .completeness-section .h2-serif em { font-style: italic; }
-  .completeness-section .completeness-ring-wrap {
-    justify-self: start;
+  .completeness-section .completeness-drill {
+    display: inline-block;
+    margin-top: 14px;
+    font-family: var(--r-sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--r-ember);
+    text-decoration: none;
+    border-bottom: 1px solid currentColor;
+    padding-bottom: 2px;
   }
+  .completeness-section .completeness-drill:hover { opacity: 0.78; }
+  .completeness-section .completeness-ring-link {
+    justify-self: start;
+    text-decoration: none;
+    color: inherit;
+    display: inline-block;
+    transition: opacity 120ms var(--r-ease-ink);
+  }
+  .completeness-section .completeness-ring-link:hover { opacity: 0.92; }
   @media (max-width: 720px) {
     .completeness-section {
       grid-template-columns: 1fr;
@@ -1973,11 +2008,28 @@ const styles = `
 
   /* ═══ FROM YOUR LAST CONVERSATION ═══ */
   .coach-closure-card {
+    display: block;
     margin-top: 32px;
     padding: 20px 24px 22px;
     background: rgba(124,144,130,0.06);
     border-left: 3px solid var(--r-sage, #7C9082);
     border-radius: 2px;
+    text-decoration: none;
+    color: inherit;
+    transition: background 120ms var(--r-ease-ink);
+  }
+  .coach-closure-card:hover { background: rgba(124,144,130,0.10); }
+  .coach-closure-card .ccc-cta {
+    display: inline-block;
+    margin-top: 12px;
+    font-family: var(--r-sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--r-ember);
+    border-bottom: 1px solid currentColor;
+    padding-bottom: 2px;
   }
   .coach-closure-card .ccc-eyebrow {
     display: flex;
