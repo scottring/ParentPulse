@@ -12,13 +12,53 @@ import AIUsageSection from '@/components/settings/AIUsageSection';
 export default function SettingsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { family, inviteParent, removeInvite } = useFamily();
+  const { family, inviteParent, removeInvite, updateFrameworkContext } = useFamily();
 
   // Invitation state
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+
+  // Framework-context state — see useFamily.updateFrameworkContext.
+  const [frameworkDraft, setFrameworkDraft] = useState<string | null>(null);
+  const [frameworkSaving, setFrameworkSaving] = useState(false);
+  const [frameworkSavedAt, setFrameworkSavedAt] = useState<number | null>(null);
+  const [frameworkError, setFrameworkError] = useState<string | null>(null);
+
+  // Hydrate the draft once the family loads; after that the user's
+  // edits take precedence.
+  useEffect(() => {
+    if (frameworkDraft === null && family) {
+      setFrameworkDraft(family.frameworkContext ?? '');
+    }
+  }, [family, frameworkDraft]);
+
+  const handleSaveFramework = async () => {
+    if (frameworkDraft === null) return;
+    setFrameworkSaving(true);
+    setFrameworkError(null);
+    try {
+      await updateFrameworkContext(frameworkDraft.trim());
+      setFrameworkSavedAt(Date.now());
+    } catch (err: any) {
+      setFrameworkError(err?.message || 'Failed to save.');
+    } finally {
+      setFrameworkSaving(false);
+    }
+  };
+
+  const RULER_STARTER =
+    "We're adopting RULER (Marc Brackett, Yale Center for Emotional " +
+    "Intelligence) as the frame for how we notice and talk about " +
+    "emotions in this family. The five skills are Recognize, " +
+    "Understand, Label, Express, and Regulate. When you synthesize " +
+    "or respond, reach for RULER's vocabulary where it fits — " +
+    "notice when a moment is about recognizing a feeling vs. " +
+    "labeling it precisely vs. regulating through it. Value " +
+    "specific emotion words over vague ones. Treat the Mood Meter " +
+    "(pleasantness × energy) as a reasonable way to locate a " +
+    "feeling when we use it.";
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -175,6 +215,117 @@ export default function SettingsPage() {
               >
                 Change
               </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Framework Section — the paragraph that shapes every
+            Claude system prompt across the app. Authoring a frame
+            here (your own, or a professional's like RULER) is how
+            the app's voice and synthesis get integrated at a core
+            level. */}
+        <div className="mb-8 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+          <h2 className="parent-heading text-xl mb-4" style={{ color: 'var(--parent-text)' }}>
+            Your family&rsquo;s framework
+          </h2>
+          <div className="parent-card p-6 space-y-4">
+            <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: 14, lineHeight: 1.55, color: '#5C5347' }}>
+              Write the frame the app operates within — your family&rsquo;s
+              philosophy, or an expert framework like{' '}
+              <a
+                href="https://marcbrackett.com/"
+                target="_blank"
+                rel="noreferrer"
+                style={{ color: '#2D5F5D', borderBottom: '1px solid currentColor' }}
+              >
+                RULER
+              </a>
+              . Every synthesis, prompt, chat response, and distilled
+              insight will reflect this lens.
+            </p>
+            <textarea
+              value={frameworkDraft ?? ''}
+              onChange={(e) => {
+                setFrameworkDraft(e.target.value);
+                setFrameworkSavedAt(null);
+              }}
+              placeholder="e.g. We think about our family through the frame of…"
+              rows={8}
+              style={{
+                width: '100%',
+                fontFamily: 'var(--font-parent-body)',
+                fontSize: 14,
+                lineHeight: 1.6,
+                color: '#3A3530',
+                background: 'var(--r-cream, #F7F5F0)',
+                border: '1px solid rgba(200,190,172,0.6)',
+                borderRadius: 3,
+                padding: '14px 16px',
+                resize: 'vertical',
+              }}
+            />
+            {frameworkError && (
+              <p style={{ fontFamily: 'var(--font-parent-body)', fontSize: 13, color: '#9E4A38' }}>
+                {frameworkError}
+              </p>
+            )}
+            <div className="flex items-center justify-between" style={{ flexWrap: 'wrap', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setFrameworkDraft(RULER_STARTER)}
+                style={{
+                  all: 'unset',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-parent-body)',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: '0.16em',
+                  textTransform: 'uppercase',
+                  color: '#5C5347',
+                }}
+              >
+                Use the RULER starter
+              </button>
+              <div className="flex items-center" style={{ gap: 12 }}>
+                {frameworkSavedAt && (
+                  <span style={{ fontFamily: 'var(--font-parent-display)', fontStyle: 'italic', fontSize: 13, color: '#7C9082' }}>
+                    Saved.
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={handleSaveFramework}
+                  disabled={
+                    frameworkSaving ||
+                    frameworkDraft === null ||
+                    (frameworkDraft.trim() ===
+                      (family?.frameworkContext ?? '').trim())
+                  }
+                  style={{
+                    all: 'unset',
+                    cursor: 'pointer',
+                    padding: '10px 18px',
+                    borderRadius: 999,
+                    fontFamily: 'var(--font-parent-body)',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: '0.16em',
+                    textTransform: 'uppercase',
+                    color: '#FDFBF6',
+                    background: '#14100C',
+                    border: '1px solid #14100C',
+                    opacity:
+                      frameworkSaving ||
+                      frameworkDraft === null ||
+                      (frameworkDraft.trim() ===
+                        (family?.frameworkContext ?? '').trim())
+                        ? 0.5
+                        : 1,
+                  }}
+                >
+                  {frameworkSaving ? 'Saving…' : 'Save'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

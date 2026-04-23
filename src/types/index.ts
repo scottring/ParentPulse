@@ -37,6 +37,13 @@ export interface Family {
   pendingInvites: PendingInvite[];
   createdAt: Timestamp;
   aiBudget?: BudgetConfig;
+  // A short paragraph the family authors that expresses the frame
+  // the app should operate within — e.g. an expert framework like
+  // RULER, or the family's own philosophy. Every Claude system
+  // prompt prepends this so synthesis, chat, briefs, and distilled
+  // insights all reflect the chosen lens. Set via Settings.
+  frameworkContext?: string;
+  frameworkContextUpdatedAt?: Timestamp;
 }
 
 export interface PendingInvite {

@@ -25,6 +25,7 @@ interface UseFamilyReturn {
   inviteParent: (email: string) => Promise<void>;
   removeInvite: (email: string) => Promise<void>;
   refreshFamily: () => Promise<void>;
+  updateFrameworkContext: (context: string) => Promise<void>;
 }
 
 export const useFamily = (): UseFamilyReturn => {
@@ -190,6 +191,33 @@ export const useFamily = (): UseFamilyReturn => {
   };
 
   /**
+   * Update the family's shared framework context — a short paragraph
+   * that prepends every Claude system prompt so the app's voice
+   * reflects the family's chosen lens (e.g. RULER).
+   */
+  const updateFrameworkContext = async (context: string): Promise<void> => {
+    if (!user || !user.familyId) {
+      throw new Error('User must be logged in');
+    }
+    if (user.role !== 'parent') {
+      throw new Error('Only parents can update the family framework');
+    }
+    try {
+      setError(null);
+      const familyRef = doc(firestore, COLLECTIONS.FAMILIES, user.familyId);
+      await updateDoc(familyRef, {
+        frameworkContext: context,
+        frameworkContextUpdatedAt: serverTimestamp(),
+      });
+      await refreshFamily();
+    } catch (err: any) {
+      console.error('Error updating framework context:', err);
+      setError(err.message || 'Failed to save framework');
+      throw err;
+    }
+  };
+
+  /**
    * Refresh family data
    */
   const refreshFamily = async (): Promise<void> => {
@@ -216,6 +244,7 @@ export const useFamily = (): UseFamilyReturn => {
     error,
     inviteParent,
     removeInvite,
+    updateFrameworkContext,
     refreshFamily,
   };
 };

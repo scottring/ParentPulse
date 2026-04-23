@@ -65,6 +65,40 @@ async function generateEmbedding(text) {
 }
 
 // ================================================================
+// FAMILY FRAMEWORK CONTEXT
+// A short paragraph the family authors in Settings that prepends
+// every Claude system prompt. Lets a family (or a professional
+// collaborator) integrate a chosen lens — RULER, Gottman, Bowen,
+// whatever — at the core of the app's voice. Soft-fails: if the
+// read errors, we return an empty string and the calling function
+// proceeds with its default system prompt unchanged.
+// ================================================================
+async function getFrameworkContext(familyId) {
+  if (!familyId) return "";
+  try {
+    const snap = await admin.firestore()
+        .collection("families").doc(familyId).get();
+    if (!snap.exists) return "";
+    const ctx = (snap.data().frameworkContext || "").trim();
+    return ctx;
+  } catch (err) {
+    logger.warn("getFrameworkContext failed:", err);
+    return "";
+  }
+}
+
+function prependFramework(systemPrompt, frameworkContext) {
+  if (!frameworkContext) return systemPrompt;
+  return (
+    "FAMILY FRAMEWORK (set by the family; honor its vocabulary and " +
+    "frame when it fits):\n" +
+    frameworkContext +
+    "\n\n---\n\n" +
+    systemPrompt
+  );
+}
+
+// ================================================================
 // AI USAGE TRACKING
 // Every Anthropic call should be logged via this helper so the cost
 // tracker in Settings can show per-family spend. Non-blocking; never
@@ -1422,7 +1456,14 @@ async function generateChatResponse(messages, context, usageCtx = null) {
   const logger = require("firebase-functions/logger");
 
   // Build system message with context
-  const systemMessage = buildChatSystemMessage(context);
+  let systemMessage = buildChatSystemMessage(context);
+
+  // Prepend the family's framework context (e.g. RULER) so the
+  // coach's voice reflects the chosen lens.
+  if (usageCtx && usageCtx.familyId) {
+    const framework = await getFrameworkContext(usageCtx.familyId);
+    systemMessage = prependFramework(systemMessage, framework);
+  }
 
   // Route to Sonnet 4.5 for high-leverage situations, Haiku 4.5 otherwise.
   const lastUserMessage = messages[messages.length - 1];
@@ -9985,12 +10026,19 @@ Rules:
 - If the chat didn't surface anything new, return empty arrays and a short emergent noting that the entry already captured it.
 - Do not restate the entry — name what the chat added.`;
 
+      // Prepend family framework so distilled themes reflect the
+      // chosen lens (e.g. RULER's 5 skills).
+      const framework = await getFrameworkContext(entry.familyId);
+      const finalPrompt = framework ?
+        prependFramework(prompt, framework) :
+        prompt;
+
       let response;
       try {
         response = await getAnthropic().messages.create({
           model: "claude-haiku-4-5-20251001",
           max_tokens: 400,
-          messages: [{role: "user", content: prompt}],
+          messages: [{role: "user", content: finalPrompt}],
         });
       } catch (err) {
         logger.error(
@@ -11987,6 +12035,11 @@ exports.distillCoachConversation = onCall(
         "{\"emergent\":\"...\",\"themes\":[\"...\",\"...\"]}. No prose " +
         "outside JSON.";
 
+      // Prepend family framework if set, so the emergent line /
+      // themes reflect the family's chosen lens.
+      const framework = await getFrameworkContext(conv.familyId);
+      const finalSystem = prependFramework(systemPrompt, framework);
+
       const client = getAnthropic();
       const model = "claude-haiku-4-5-20251001";
       let emergent = "";
@@ -11995,7 +12048,7 @@ exports.distillCoachConversation = onCall(
         const response = await client.messages.create({
           model,
           max_tokens: 400,
-          system: systemPrompt,
+          system: finalSystem,
           messages: [{role: "user", content: transcript}],
         });
         logAICall({
@@ -12186,6 +12239,18 @@ exports.generateTherapyBrief = onCall(
         "Entries (JSON, newest first):\n" +
         JSON.stringify(entriesForPrompt);
 
+      // Prepend family framework (if set) so the themes reflect the
+      // chosen lens. Look up familyId via the user doc.
+      let familyId = null;
+      try {
+        const userSnap = await db.collection("users").doc(userId).get();
+        familyId = userSnap.exists ? userSnap.data().familyId : null;
+      } catch (_err) {
+        familyId = null;
+      }
+      const framework = await getFrameworkContext(familyId);
+      const finalSystem = prependFramework(systemPrompt, framework);
+
       const client = getAnthropic();
       let themes = [];
       let modelUsed = "claude-sonnet-4-6";
@@ -12193,7 +12258,7 @@ exports.generateTherapyBrief = onCall(
         const response = await client.messages.create({
           model: modelUsed,
           max_tokens: 3000,
-          system: systemPrompt,
+          system: finalSystem,
           messages: [{role: "user", content: userPrompt}],
         });
         logAICall({
