@@ -21,7 +21,7 @@ Scope: as of 2026-04-22, after the Tier-1 clarity pass. This is a living doc —
 | User badge (right) | Shows who's signed in. Clicking opens settings/logout. Confirms identity. |
 | Sign-in / Create account links (signed-out) | Give visitors the two doors into the app. |
 
-⚠ When signed in, there's no "Therapy" link yet — once the simpler therapy brief ships, this becomes four destinations (or three + Therapy below the main trio).
+✅ Therapy is now the fourth destination in the top nav (shipped 2026-04-22).
 
 ### Global Pen / FAB (`src/components/capture/CaptureSheet.tsx` + `PenHost`)
 
@@ -238,7 +238,7 @@ Kid: child-friendly emoji/picture version for ages 6–17.
 
 ---
 
-## Therapy (planned — simpler brief model)
+## Therapy (shipped — simpler brief model)
 
 ### `/therapy`
 
@@ -250,19 +250,51 @@ Kid: child-friendly emoji/picture version for ages 6–17.
 | "Prepare a brief" button | Primary action. Single purpose. |
 | Past briefs list | Lets you reference prior session prep. |
 | Brief detail: themed clusters with verbatim quotes | The output the user takes to session. |
-| Annotation affordance | Add your own notes to the brief before session. |
-| Export / print | Physical output for the room. |
 | Post-session notes field | Short carryover that becomes context for next brief. |
+| Print stylesheet | Physical output for the room. |
 
-Not building: Therapist entity, window/session state machine, auto-regeneration, carry-forward automation. Full model preserved on `origin/therapy-prep` for reference.
+Not built: Therapist entity, window/session state machine, auto-regeneration, carry-forward automation. Full model preserved on `origin/therapy-prep` for reference.
+
+---
+
+## Couple ritual session (shipped 2026-04-23)
+
+### `/rituals/couple/session`
+
+**Mission:** a guided sit-down for the two partners to review the week together and plan the next one, grounded in what they've actually written.
+
+| Element | Why it's there |
+|---|---|
+| AI-generated 5-section script | Week in review → went well → was hard → small joys → plan ahead. Sections open with real pulls from the couple's shared journal entries so the conversation lands in specifics. |
+| Shared note per section | Captures a single sentence or two per section; saves on blur. Private to the couple. |
+| 1–3 intentions on the final section | What you're carrying into the next week. Becomes the "past session" summary on `/rituals`. |
+| Dark cinematic stage | Signals this is a dedicated focus mode, not a feed surface. |
+| Past sessions list on `/rituals` | Lets the couple reference prior intentions before the next session. |
+
+Powered by `generateRitualScript` Cloud Function; rules on `ritual_sessions` allow only the two participants to read/update.
+
+---
+
+## Growth Hub (shipped 2026-04-23)
+
+### `/growth`
+
+**Mission:** a front door for any active growth arcs. Before this shipped, arcs could only be reached via deep-link.
+
+| Element | Why it's there |
+|---|---|
+| Active arcs grouped by domain | Connection / Communication / Values & meaning / etc. Makes it scannable even with multiple arcs in flight. |
+| Phase chip + progress bar per arc | Awareness / Practice / Integration + % complete. Gives a glance-read of where each arc is. |
+| "Next" link per arc | Deep-links into the existing `/growth/[itemId]` detail. No lost functionality. |
+| Empty state | Explains arcs and points back to the Workbook when none exist. |
+| Nav entry in user-menu dropdown | Alongside Rituals. Top nav stays at the four core rooms. |
 
 ---
 
 ## Other surfaces (to expand as we touch them)
 
-- `/rituals` — ritual setup / manage / session pages. Couple ritual session is a known placeholder; Tier-3 build.
-- `/growth/[itemId]` — per-growth-item flow. Rich but no hub; Tier-3 build new hub.
-- `/settings` — user profile, theme, sign-out.
+- `/rituals` — ritual setup / manage / active / past. Couple ritual session is fully built.
+- `/settings` — user profile, framework context, sign-out.
 - `/moments/[momentId]` — shared moment view.
 - `/practices/[practiceId]` — single-practice detail.
 
@@ -275,5 +307,5 @@ Not building: Therapist entity, window/session state machine, auto-regeneration,
 3. ⚠ Workbook dispatches section is hidden on first-run — acceptable but revisit when Weekly Lead auto-generates.
 4. ⚠ Archive needs a rebuild to match the other surfaces' quality.
 5. ⚠ Pen sheet picker density — four collapsible pickers is a lot; default to collapsed for first-time users.
-6. ⚠ Growth hub doesn't exist (only per-item deep links).
-7. ⚠ Couple ritual session is a placeholder.
+6. ⚠ Styled-jsx global bundles are silently dropping rules on Next 16 + Turbopack. `/manual` and `/people/[id]` both carry plain-`<style>` safety nets. If another page renders unstyled, apply the same pattern. Worth a framework-level fix when we have bandwidth.
+7. ⚠ Weekly Lead auto-scheduling is still a manual "Generate Lead" button behind a gate.
