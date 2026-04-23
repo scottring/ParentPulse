@@ -225,7 +225,28 @@ export default function PersonPage({
                 link the sentence into it instead of leaving the
                 reader with a vague "N things waiting". */}
             <div className={`balance-line balance-${balance.state}`}>
-              <span className="balance-dot" aria-hidden="true" />
+              <svg
+                className="balance-leaf"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M5 14c0-5 4-9 9-9h5v5c0 5-4 9-9 9-2 0-3.8-0.8-5-2"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M5 21c2-6 6-10 12-13"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              </svg>
               <span className="balance-text">
                 {(() => {
                   const firstWaiting = openThreads[0];
@@ -311,22 +332,12 @@ export default function PersonPage({
               </div>
             </div>
 
-            <dl className="dossier-facts">
-              {age != null && (
-                <>
-                  <dt>Age</dt>
-                  <dd>{age}</dd>
-                </>
-              )}
-              {person.pronouns && (
-                <>
-                  <dt>Pronouns</dt>
-                  <dd>{person.pronouns}</dd>
-                </>
-              )}
-              <dt>Relation</dt>
-              <dd>{relationDescription(person)}</dd>
-            </dl>
+            <div className="dossier-relation">
+              <span className="dossier-relation-label">Relation</span>
+              <span className="dossier-relation-value">
+                {relationDescription(person)}
+              </span>
+            </div>
 
             <div className="dossier-ctas">
               {isSelf ? (
@@ -358,14 +369,25 @@ export default function PersonPage({
                     </svg>
                     Write about {firstName}
                   </button>
-                  <Link
-                    href={`/people/${person.personId}/manual/onboard`}
-                    style={pillStyle}
-                  >
-                    {observerContributions.length > 0
-                      ? 'Revise your observations'
-                      : 'Answer a few questions about them'}
-                  </Link>
+                  <a href="#invite-iris" style={pillStyle}>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ flex: 'none' }}
+                      aria-hidden="true"
+                    >
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="M9.5 9.5a2.5 2.5 0 115 0c0 1.5-2.5 2-2.5 3.5" />
+                      <path d="M12 17h.01" />
+                    </svg>
+                    Ask {firstName} a few questions
+                  </a>
                 </>
               )}
             </div>
@@ -508,9 +530,13 @@ export default function PersonPage({
           </section>
         )}
 
-        {/* ═══ THEIR SIDE — their own perspective or an invite ═══ */}
+        {/* ═══ THEIR SIDE — invite card (horizontal, illustrated) ═══ */}
         {!isSelf && theyCanContribute && (
-          <section className="their-side" aria-label="Their own side">
+          <section
+            id="invite-iris"
+            className="their-side"
+            aria-label="Their own side"
+          >
             {selfContributions.length > 0 ? (
               <article className="their-side-card filled">
                 <span className="eyebrow">{firstName}&rsquo;s own side</span>
@@ -534,24 +560,6 @@ export default function PersonPage({
                   see differently.
                 </p>
               </article>
-            ) : !inviteOpen && !inviteDone ? (
-              <article className="their-side-card">
-                <span className="eyebrow">{firstName}&rsquo;s own side</span>
-                <h3>
-                  Invite {firstName} to write their own side.
-                </h3>
-                <p>
-                  One email. They&rsquo;ll sign up and land here, with their
-                  own page already waiting.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setInviteOpen(true)}
-                  className="their-side-cta"
-                >
-                  Send an invite <span aria-hidden="true">⟶</span>
-                </button>
-              </article>
             ) : inviteDone ? (
               <article className="their-side-card filled">
                 <span className="eyebrow">Invite sent</span>
@@ -564,36 +572,95 @@ export default function PersonPage({
                 </p>
               </article>
             ) : (
-              <article className="their-side-card">
-                <span className="eyebrow">Invite {firstName}</span>
-                <div className="invite-form">
-                  <input
-                    type="email"
-                    placeholder="them@example.com"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    disabled={inviteBusy}
-                    className="invite-input"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleInvite}
-                    disabled={inviteBusy || !inviteEmail.trim()}
-                    className="their-side-cta"
-                  >
-                    {inviteBusy ? 'Sending…' : 'Send invite'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setInviteOpen(false); setInviteEmail(''); }}
-                    className="invite-cancel"
-                  >
-                    Cancel
-                  </button>
+              <article className="invite-card">
+                <div className="invite-card-icon" aria-hidden="true">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"
+                    strokeLinejoin="round">
+                    <rect x="3" y="5" width="18" height="14" rx="1" />
+                    <path d="M3 7l9 6 9-6" />
+                  </svg>
                 </div>
-                {inviteError && (
-                  <p className="invite-error">{inviteError}</p>
-                )}
+                <div className="invite-card-body">
+                  <span className="invite-card-eyebrow">
+                    {firstName}&rsquo;s own side
+                  </span>
+                  <h3 className="invite-card-title">
+                    Invite {firstName} to write their own side.
+                  </h3>
+                  <p className="invite-card-copy">
+                    One email. They&rsquo;ll sign up and land here,
+                    <br />
+                    with their own page already waiting.
+                  </p>
+                  {!inviteOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => setInviteOpen(true)}
+                      className="invite-card-cta"
+                    >
+                      Send an invite <span aria-hidden="true">⟶</span>
+                    </button>
+                  ) : (
+                    <div className="invite-form">
+                      <input
+                        type="email"
+                        placeholder="them@example.com"
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        disabled={inviteBusy}
+                        className="invite-input"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleInvite}
+                        disabled={inviteBusy || !inviteEmail.trim()}
+                        className="invite-card-cta"
+                      >
+                        {inviteBusy ? 'Sending…' : 'Send invite'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setInviteOpen(false); setInviteEmail(''); }}
+                        className="invite-cancel"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                  {inviteError && (
+                    <p className="invite-error">{inviteError}</p>
+                  )}
+                </div>
+                <div className="invite-card-illustration" aria-hidden="true">
+                  <svg width="180" height="120" viewBox="0 0 180 120" fill="none">
+                    {/* dotted flight path */}
+                    <path
+                      d="M10 90 Q 55 40, 95 60 T 170 30"
+                      stroke="rgba(60,48,28,0.28)"
+                      strokeWidth="1"
+                      strokeDasharray="2 4"
+                      fill="none"
+                    />
+                    {/* envelope */}
+                    <g transform="translate(70 40) rotate(-8)">
+                      <rect x="0" y="0" width="64" height="42" rx="1.5"
+                        fill="#FDFBF6" stroke="#3A3530" strokeWidth="1.3" />
+                      <path d="M0 0 L32 26 L64 0" stroke="#3A3530"
+                        strokeWidth="1.3" fill="none" />
+                    </g>
+                    {/* little leaves */}
+                    <g stroke="#7C9082" strokeWidth="1.2" fill="none"
+                      strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M48 92 q 6 -8 14 -6" />
+                      <path d="M54 88 l 2 2" />
+                      <path d="M58 84 l 2 2" />
+                      <path d="M160 78 q -6 8 -14 6" />
+                      <path d="M154 82 l -2 2" />
+                      <path d="M150 86 l -2 2" />
+                    </g>
+                  </svg>
+                </div>
               </article>
             )}
           </section>
@@ -601,14 +668,7 @@ export default function PersonPage({
 
         {/* ═══ COLOPHON ═══ */}
         <footer className="colophon">
-          <span className="fleuron" aria-hidden="true">❦</span>
-          <span>
-            {isSelf ? (
-              <><em>Your own page</em> · in your family manual</>
-            ) : (
-              <><em>{firstName}&rsquo;s page</em> · in your family manual</>
-            )}
-          </span>
+          <span>A safe place for honest words and stronger relationships.</span>
         </footer>
       </div>
 
@@ -1000,29 +1060,26 @@ const styles = `
     color: var(--r-text-5);
     margin-top: 8px;
   }
-  .dossier-facts {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 10px 24px;
-    margin: 0;
+  .dossier-relation {
+    display: flex;
+    align-items: baseline;
+    gap: 20px;
+    margin: 4px 0 8px;
   }
-  .dossier-facts dt {
+  .dossier-relation-label {
     font-family: var(--r-sans);
     font-size: 10px;
     font-weight: 700;
-    letter-spacing: 0.2em;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
     color: var(--r-text-5);
-    padding-top: 4px;
   }
-  .dossier-facts dd {
-    margin: 0;
+  .dossier-relation-value {
     font-family: var(--r-serif);
     font-size: 17px;
     line-height: 1.5;
     color: var(--r-ink);
   }
-  .dossier-facts dd a { color: inherit; text-decoration: none; }
   .dossier-ctas { display: flex; gap: 10px; flex-wrap: wrap; }
 
   /* THREADS + TIMELINE */
@@ -1214,23 +1271,19 @@ const styles = `
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 10px 14px;
-    margin: 4px 0 8px;
+    padding: 12px 16px;
+    margin: 4px 0 20px;
     border-radius: 3px;
     font-family: var(--r-sans);
     font-size: 13px;
     line-height: 1.45;
     color: var(--r-ink);
-    background: rgba(124,144,130,0.08);
-    border-left: 3px solid #7C9082;
+    background: rgba(124,144,130,0.12);
     flex-wrap: wrap;
   }
-  .balance-line .balance-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #7C9082;
+  .balance-line .balance-leaf {
     flex: none;
+    color: #6C8571;
   }
   .balance-line .balance-text {
     font-family: var(--r-serif);
@@ -1249,22 +1302,19 @@ const styles = `
     border-bottom-color: var(--r-ink);
   }
   .balance-line.balance-mostly-in-balance {
-    background: rgba(196,162,101,0.10);
-    border-left-color: #C4A265;
+    background: rgba(196,162,101,0.14);
   }
-  .balance-line.balance-mostly-in-balance .balance-dot { background: #C4A265; }
+  .balance-line.balance-mostly-in-balance .balance-leaf { color: #A07F3E; }
 
   .balance-line.balance-needs-attention {
-    background: rgba(201,104,82,0.10);
-    border-left-color: #C96852;
+    background: rgba(201,104,82,0.12);
   }
-  .balance-line.balance-needs-attention .balance-dot { background: #C96852; }
+  .balance-line.balance-needs-attention .balance-leaf { color: #A85438; }
 
   .balance-line.balance-new {
-    background: rgba(60,48,28,0.05);
-    border-left-color: var(--r-text-5);
+    background: rgba(60,48,28,0.06);
   }
-  .balance-line.balance-new .balance-dot { background: var(--r-text-5); }
+  .balance-line.balance-new .balance-leaf { color: var(--r-text-5); }
 
   /* DETAILS */
   .details {
@@ -1335,6 +1385,87 @@ const styles = `
   .their-side {
     padding: 32px 0 48px;
   }
+  .invite-card {
+    background: rgba(60,48,28,0.04);
+    border: 1px solid rgba(60,48,28,0.08);
+    border-radius: 4px;
+    padding: 32px 36px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 28px;
+  }
+  .invite-card-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(60,48,28,0.07);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--r-text-4);
+    flex: none;
+  }
+  .invite-card-body { min-width: 0; }
+  .invite-card-eyebrow {
+    display: block;
+    font-family: var(--r-sans);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--r-text-5);
+    margin-bottom: 10px;
+  }
+  .invite-card-title {
+    font-family: var(--r-serif);
+    font-weight: 400;
+    font-size: 24px;
+    line-height: 1.25;
+    color: var(--r-ink);
+    letter-spacing: -0.01em;
+    margin: 0 0 10px;
+  }
+  .invite-card-copy {
+    font-family: var(--r-serif);
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--r-text-3);
+    margin: 0 0 18px;
+    max-width: 42ch;
+  }
+  .invite-card-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 2px;
+    font-family: var(--r-sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #F7F5F0;
+    background: #2B2620;
+    border: 1px solid #2B2620;
+    cursor: pointer;
+    transition: background 160ms ease;
+  }
+  .invite-card-cta:hover { background: #3A3530; }
+  .invite-card-cta:disabled { opacity: 0.5; cursor: not-allowed; }
+  .invite-card-illustration {
+    flex: none;
+    opacity: 0.9;
+    margin-left: 12px;
+  }
+  @media (max-width: 720px) {
+    .invite-card {
+      grid-template-columns: 1fr;
+      padding: 24px;
+    }
+    .invite-card-illustration { display: none; }
+  }
+
   .their-side-card {
     max-width: 720px;
     background: var(--r-paper);
