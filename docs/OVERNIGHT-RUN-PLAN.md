@@ -52,7 +52,8 @@ _Surface was already shipped in commit 1065632 (raison audit was wrong). Added "
 - Empty state: if `chatInsights` is null/empty, render nothing.
 - Commit: `feat(journal): surface chat-distilled insights as "Claude noticed" chips`.
 
-### 5. [TODO] Archive clarity pass
+### 5. [DONE] Archive clarity pass
+_Volumes bookshelf wired, "kept" stripped, empty-state hides stats. Entry-card enhancement deferred. Commit 1918811._
 - `src/app/archive/page.tsx` — strip any remaining jargon in the masthead and hero. "The Archive · everything kept" → "The Archive · read back through it." "kept" → remove.
 - Wire up the existing `Volumes.tsx` bookshelf component if it exists. Import from `src/design/manual/Volumes.tsx` (or wherever it lives — confirm via grep). Add it above the year/month groupings with a heading like "By year." Pass the grouped entries in.
 - Entry cards: verify they show at minimum title + date + mentioned people. If missing any, add.

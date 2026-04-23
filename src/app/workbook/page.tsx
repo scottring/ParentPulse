@@ -159,6 +159,43 @@ export default function WorkbookPage() {
     };
   }, [allEntries, priorLastSeenAt, visitLoaded, people, user?.userId]);
 
+  // Persistent "written about you this week" dispatch — always on
+  // when there's something to surface, not just on return from absence.
+  // Complements sinceSummary (which fires only on re-entry). When both
+  // are available, sinceSummary wins — it's the more specific signal.
+  const mentionsAboutMeRecent = useMemo(() => {
+    if (!user?.userId) return null;
+    const mePersonIds = (people ?? [])
+      .filter((p) => p.linkedUserId === user.userId)
+      .map((p) => p.personId);
+    if (mePersonIds.length === 0) return null;
+    const fourteenDaysAgoMs = Date.now() - 14 * 86_400_000;
+    const recent = allEntries.filter((e) => {
+      if (e.authorId === user.userId) return false;
+      const ms = e.createdAt?.toMillis?.() ?? 0;
+      if (ms < fourteenDaysAgoMs) return false;
+      const tagged = (e.personMentions ?? []).some((pid) =>
+        mePersonIds.includes(pid),
+      );
+      const aiExtracted = (e.enrichment?.aiPeople ?? []).some((pid) =>
+        mePersonIds.includes(pid),
+      );
+      return tagged || aiExtracted;
+    });
+    if (recent.length === 0) return null;
+    const sorted = recent
+      .slice()
+      .sort((a, b) => {
+        const am = a.createdAt?.toMillis?.() ?? 0;
+        const bm = b.createdAt?.toMillis?.() ?? 0;
+        return am - bm; // oldest first — that's the next one to read
+      });
+    return {
+      count: recent.length,
+      oldestEntryId: sorted[0].entryId,
+    };
+  }, [allEntries, people, user?.userId]);
+
   // Family balance rollup — per-person balance state for everyone
   // else in the family, aggregated for the masthead sub-strip. Hidden
   // entirely when the user is alone in their manual.
@@ -362,7 +399,7 @@ export default function WorkbookPage() {
               </span>
             </div>
             <h1 className="hero-title">{greeting}</h1>
-            {sinceSummary && (
+            {sinceSummary ? (
               <p className="hero-since">
                 <em>Since you were last here,</em>{' '}
                 {sinceSummary.authors.length === 1
@@ -380,7 +417,21 @@ export default function WorkbookPage() {
                   Start with the newest →
                 </Link>
               </p>
-            )}
+            ) : mentionsAboutMeRecent ? (
+              <p className="hero-since">
+                <em>
+                  {mentionsAboutMeRecent.count}{' '}
+                  {mentionsAboutMeRecent.count === 1 ? 'thing' : 'things'} written
+                  about you in the last two weeks.
+                </em>{' '}
+                <Link
+                  href={`/journal/${mentionsAboutMeRecent.oldestEntryId}`}
+                  className="hero-since-link"
+                >
+                  Start with the oldest →
+                </Link>
+              </p>
+            ) : null}
             <p className="hero-lede">{lede}</p>
             <button type="button" onClick={openPen} style={heroActionStyle}>
               <svg
