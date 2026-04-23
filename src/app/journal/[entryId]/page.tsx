@@ -14,6 +14,7 @@ import { useJournalEntry } from '@/hooks/useJournalEntry';
 import { useJournal } from '@/hooks/useJournal';
 import { usePerson } from '@/hooks/usePerson';
 import { useEntryChat } from '@/hooks/useEntryChat';
+import { ChatClosureKept } from '@/components/chat/ChatClosureKept';
 
 import { CompanionComposer } from '@/components/journal-spread/CompanionComposer';
 import { ResponseBlock } from '@/components/journal-spread/ResponseBlock';
@@ -181,6 +182,7 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
   const [showPeoplePicker, setShowPeoplePicker] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [chatClosureVisible, setChatClosureVisible] = useState(false);
   const [chatInput, setChatInput] = useState('');
 
   // Auto-open the chat panel if the entry already has a thread
@@ -731,7 +733,16 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
                   </span>
                   <button
                     type="button"
-                    onClick={() => setShowChat(false)}
+                    onClick={() => {
+                      const userTurns = chatTurns.filter(
+                        (t) => t.role === 'user' && !t.excluded,
+                      );
+                      if (userTurns.length > 0) {
+                        setChatClosureVisible(true);
+                      } else {
+                        setShowChat(false);
+                      }
+                    }}
                     className="chat-close"
                     aria-label="Collapse conversation"
                   >
@@ -1508,6 +1519,20 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
         }
       `}</style>
       {pinModal}
+      {chatClosureVisible && (
+        <ChatClosureKept
+          echo={
+            chatTurns.find((t) => t.role === 'user' && !t.excluded)?.content?.slice(0, 180) || ''
+          }
+          followUp="Relish has already been distilling this conversation — look for the small “Claude noticed” line on this entry."
+          firstTimeKey="relish:chat-close-intro:entry"
+          firstTimeBody="When you close a conversation about an entry, Relish keeps what was most alive in it and surfaces one line back onto the entry itself. It's the back-half of the loop — what you told the book comes back to you on the page."
+          onDismiss={() => {
+            setChatClosureVisible(false);
+            setShowChat(false);
+          }}
+        />
+      )}
     </div>
   );
 }

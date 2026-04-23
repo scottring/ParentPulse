@@ -11,6 +11,7 @@ import { JOURNAL_CATEGORIES, type JournalCategory, type JournalMedia } from '@/t
 import { uploadEntryMedia } from '@/lib/upload-media';
 import { MicButton } from '@/components/voice/MicButton';
 import { PinSetupModal } from '@/components/privacy/PinSetupModal';
+import { ChatClosureKept } from '@/components/chat/ChatClosureKept';
 
 interface ShareCandidate {
   userId: string;
@@ -255,6 +256,19 @@ export default function CaptureSheet() {
   const handleClose = () => {
     resetAll();
     setState('closed');
+  };
+
+  // When closing from the chatting state with real user turns, show
+  // the "Kept" moment before the sheet actually closes. State held
+  // here since state itself transitions to 'closed' after dismissal.
+  const [chatClosureVisible, setChatClosureVisible] = useState(false);
+  const handleCloseFromChat = () => {
+    const userTurns = chatTurns.filter((t) => t.role === 'user' && !t.excluded);
+    if (userTurns.length > 0) {
+      setChatClosureVisible(true);
+    } else {
+      handleClose();
+    }
   };
 
   // Save-on-close: if the user dismisses the sheet while still
@@ -992,7 +1006,7 @@ export default function CaptureSheet() {
               }}>
                 About what you wrote
               </h2>
-              <button onClick={handleClose}
+              <button onClick={handleCloseFromChat}
                 className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 shrink-0"
                 style={{ fontSize: 22, color: '#5F564B' }} aria-label="Close">&times;</button>
             </div>
@@ -1081,6 +1095,21 @@ export default function CaptureSheet() {
           onCancel={() => {
             setShowPinSetup(false);
             setPendingSave(false);
+          }}
+        />
+      )}
+
+      {chatClosureVisible && (
+        <ChatClosureKept
+          echo={
+            chatTurns.find((t) => t.role === 'user' && !t.excluded)?.content?.slice(0, 180) || ''
+          }
+          followUp="Relish has been distilling this conversation — look for the small “Claude noticed” line on the entry."
+          firstTimeKey="relish:chat-close-intro:entry"
+          firstTimeBody="When you close a conversation about an entry, Relish keeps what was most alive in it and surfaces one line back onto the entry itself. It's the back-half of the loop — what you told the book comes back to you on the page."
+          onDismiss={() => {
+            setChatClosureVisible(false);
+            handleClose();
           }}
         />
       )}
