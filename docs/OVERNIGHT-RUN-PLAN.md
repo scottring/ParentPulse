@@ -67,7 +67,8 @@ _Persistent "X things written about you in the last two weeks" dispatch in hero,
 - Add a new dispatch card in the workbook (above the feature row): "Written about you · {count} this week". Link to the oldest unread one. Only rendered when count > 0.
 - Commit: `feat(workbook): persistent "written about you" dispatch card`.
 
-### 7. [TODO] Invited-spouse welcome variant
+### 7. [DONE] Invited-spouse welcome variant
+_user.invitedBy persisted during invite-claim; /welcome renders tailored hero. Commit 8ef6511._
 - Detect when a newly-registered user arrived via invite: their `familyId` was pre-existing (i.e., `createUserOwnManual` claimed an unclaimed Person instead of creating a new family), OR check the `pendingInvites` history for the email.
 - The cleanest signal: on register, we know if `existingFamilyId && pendingInvite` was true (see `AuthContext.register`). Persist an `invitedBy: { userId, name }` detail on the user document during this branch.
 - In `src/app/welcome/page.tsx`, when `user.invitedBy` is set, render a different hero:

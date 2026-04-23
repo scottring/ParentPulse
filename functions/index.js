@@ -11917,3 +11917,192 @@ const dinnerPromptApi = require("./dinnerPrompts");
 exports.getDinnerPrompt = dinnerPromptApi.getDinnerPrompt;
 exports.reportDinnerPrompt = dinnerPromptApi.reportDinnerPrompt;
 
+// ===================================================================
+// generateTherapyBrief — produce a one-shot "brief for your therapist"
+// by reading the caller's recent journal entries and asking Claude
+// for 3–5 themed clusters with verbatim quotes.
+//
+// Input:  { daysBack?: number (default 14) }
+// Output: { briefId: string }
+//
+// The brief is written to therapy_briefs/{briefId} owned by the
+// caller. Direct client creation of therapy_briefs is blocked in
+// firestore.rules so all briefs flow through this function.
+// ===================================================================
+exports.generateTherapyBrief = onCall(
+    {
+      region: "us-central1",
+      memory: "512MiB",
+      timeoutSeconds: 120,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+      const userId = request.auth.uid;
+      const daysBack = Math.min(
+          90,
+          Math.max(1, Number(request.data?.daysBack) || 14),
+      );
+
+      const db = admin.firestore();
+      const sinceMs = Date.now() - daysBack * 86400000;
+
+      // Pull the user's own journal entries within the window.
+      // We include entries they authored AND entries where they are
+      // in visibleToUserIds (others wrote about them with visibility
+      // that includes them) — both are material they'd bring.
+      const [authored, visible] = await Promise.all([
+        db.collection("journal_entries")
+            .where("authorId", "==", userId)
+            .where("createdAt", ">=",
+                admin.firestore.Timestamp.fromMillis(sinceMs))
+            .orderBy("createdAt", "desc")
+            .limit(200)
+            .get(),
+        db.collection("journal_entries")
+            .where("visibleToUserIds", "array-contains", userId)
+            .where("createdAt", ">=",
+                admin.firestore.Timestamp.fromMillis(sinceMs))
+            .orderBy("createdAt", "desc")
+            .limit(200)
+            .get(),
+      ]);
+
+      const seen = new Set();
+      const entries = [];
+      for (const d of [...authored.docs, ...visible.docs]) {
+        if (seen.has(d.id)) continue;
+        seen.add(d.id);
+        const data = d.data();
+        const text = (data.text || "").trim();
+        if (!text) continue;
+        entries.push({
+          id: d.id,
+          text,
+          createdAt: data.createdAt,
+          isOwn: data.authorId === userId,
+        });
+      }
+
+      // Sort newest-first, cap at 100 so prompt size stays reasonable.
+      entries.sort((a, b) => {
+        const am = a.createdAt?.toMillis?.() ?? 0;
+        const bm = b.createdAt?.toMillis?.() ?? 0;
+        return bm - am;
+      });
+      const pool = entries.slice(0, 100);
+
+      if (pool.length === 0) {
+        // Write an empty brief so the UI has something to show rather
+        // than a silent failure.
+        const emptyBriefRef = db.collection("therapy_briefs").doc();
+        await emptyBriefRef.set({
+          briefId: emptyBriefRef.id,
+          userId,
+          daysBack,
+          themes: [],
+          model: "none",
+          generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return {briefId: emptyBriefRef.id};
+      }
+
+      // Fetch the user's most recent session note (if any) from the
+      // previous brief so the model can carry context forward.
+      const priorSnap = await db.collection("therapy_briefs")
+          .where("userId", "==", userId)
+          .orderBy("generatedAt", "desc")
+          .limit(1)
+          .get();
+      const priorNote = priorSnap.empty ?
+          null :
+          priorSnap.docs[0].data().sessionNotes || null;
+
+      const systemPrompt = "You are helping a user prepare material for " +
+        "their therapy session. You are looking at their own journal " +
+        "entries (and entries others wrote about them that they can see) " +
+        "from the last " + daysBack + " days. Produce 3 to 5 themed " +
+        "clusters that capture what's been alive for them. For each " +
+        "theme give: a short label (2-5 words), one sentence of summary, " +
+        "and 1-3 verbatim quotes pulled from the entries. Quotes must be " +
+        "real text from the entries — do not paraphrase or invent. " +
+        "Respond with ONLY a JSON object of the form " +
+        "{\"themes\":[{\"label\":...,\"summary\":...,\"quotes\":" +
+        "[{\"entryId\":...,\"snippet\":...}]}]}. No prose outside JSON.";
+
+      const entriesForPrompt = pool.map((e) => ({
+        id: e.id,
+        createdAt: e.createdAt?.toDate?.().toISOString() || "",
+        isOwn: e.isOwn,
+        text: e.text.slice(0, 2000),
+      }));
+
+      const userPrompt = (priorNote ?
+          "Previous session notes the user carried forward:\n" +
+          priorNote + "\n\n" :
+          "") +
+        "Entries (JSON, newest first):\n" +
+        JSON.stringify(entriesForPrompt);
+
+      const client = getAnthropic();
+      let themes = [];
+      let modelUsed = "claude-sonnet-4-6";
+      try {
+        const response = await client.messages.create({
+          model: modelUsed,
+          max_tokens: 3000,
+          system: systemPrompt,
+          messages: [{role: "user", content: userPrompt}],
+        });
+        logAICall({
+          functionName: "generateTherapyBrief",
+          model: modelUsed,
+          usage: response.usage,
+          userId,
+        });
+        const raw = response.content[0]?.text || "";
+        const match = raw.match(/\{[\s\S]*\}/);
+        if (match) {
+          const parsed = JSON.parse(match[0]);
+          if (Array.isArray(parsed.themes)) {
+            themes = parsed.themes.slice(0, 5).map((t, i) => ({
+              id: "theme-" + i,
+              label: String(t.label || "").slice(0, 80),
+              summary: String(t.summary || "").slice(0, 500),
+              quotes: Array.isArray(t.quotes) ?
+                t.quotes.slice(0, 3).map((q) => ({
+                  ...(q.entryId ? {entryId: String(q.entryId)} : {}),
+                  snippet: String(q.snippet || "").slice(0, 800),
+                  ...(function() {
+                    const match = pool.find((p) => p.id === q.entryId);
+                    const iso = match?.createdAt?.toDate?.().toISOString();
+                    return iso ? {sourceDate: iso} : {};
+                  })(),
+                })).filter((q) => q.snippet) :
+                [],
+            })).filter((t) => t.label && t.summary);
+          }
+        }
+      } catch (err) {
+        logger.error("generateTherapyBrief: Claude call failed:", err);
+        throw new Error("Failed to generate brief. Please try again.");
+      }
+
+      const briefRef = db.collection("therapy_briefs").doc();
+      await briefRef.set({
+        briefId: briefRef.id,
+        userId,
+        daysBack,
+        themes,
+        model: modelUsed,
+        generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      return {briefId: briefRef.id};
+    },
+);
+
