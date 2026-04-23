@@ -101,6 +101,7 @@ import { useJournalEntries } from '@/hooks/useJournalEntries';
 import { usePerson } from '@/hooks/usePerson';
 import { entryMentionsPerson } from '@/lib/entry-mentions';
 import { computeBalance, type BalanceState } from '@/lib/balance';
+import { useLatestCoachClosure } from '@/hooks/useLatestCoachClosure';
 import { useWorkbookVisit } from '@/hooks/useWorkbookVisit';
 
 export default function WorkbookPage() {
@@ -115,6 +116,20 @@ export default function WorkbookPage() {
   // furniture. See docs/superpowers/specs/2026-04-20-dispatch-collapse-design.md.
   const { dispatch: leadDispatch, loading: leadLoading } = useWeeklyLead();
   const hasReturns = !leadLoading && !!leadDispatch;
+
+  // Latest coach-chat closure — the one-sentence distillation the app
+  // pulled from your most recent conversation with the coach. Surfaces
+  // as a small "From your last conversation" card below the spread.
+  // Hidden when >7 days old to avoid stale encouragement.
+  const { closure: latestClosure } = useLatestCoachClosure();
+  const freshClosure = (() => {
+    if (!latestClosure || !latestClosure.emergent) return null;
+    const ms = latestClosure.distilledAt?.toMillis?.() ?? 0;
+    if (!ms) return null;
+    const ageDays = (Date.now() - ms) / 86_400_000;
+    if (ageDays > 7) return null;
+    return latestClosure;
+  })();
 
   // Living daily edition: a short book-voice paragraph above the
   // greeting summarising what changed since the user last opened the
@@ -474,6 +489,27 @@ export default function WorkbookPage() {
             )}
           </div>
         </section>
+
+        {/* ═══ FROM YOUR LAST CONVERSATION ═══ — the back-half of the
+             coach-chat loop. Shows the emergent line Relish distilled
+             from your most recent coach conversation. Hidden when no
+             closure exists, or when it's older than a week. */}
+        {freshClosure && (
+          <section className="coach-closure-card" aria-label="From your last conversation">
+            <span className="ccc-eyebrow">
+              <span className="pip" aria-hidden="true" />
+              From your last conversation
+            </span>
+            <p className="ccc-emergent">
+              <em>&ldquo;{freshClosure.emergent}&rdquo;</em>
+            </p>
+            {freshClosure.themes && freshClosure.themes.length > 0 && (
+              <p className="ccc-themes">
+                {freshClosure.themes.slice(0, 4).join(' · ')}
+              </p>
+            )}
+          </section>
+        )}
 
         {/* ═══ FEATURE ROW — memory · person · prompt ═══ */}
         <section className="feature-row" aria-label="Today's readings">
@@ -1945,6 +1981,52 @@ const styles = `
     border-bottom: 1px solid currentColor;
     padding-bottom: 2px;
     text-decoration: none;
+  }
+
+  /* ═══ FROM YOUR LAST CONVERSATION ═══ */
+  .coach-closure-card {
+    margin-top: 32px;
+    padding: 20px 24px 22px;
+    background: rgba(124,144,130,0.06);
+    border-left: 3px solid var(--r-sage, #7C9082);
+    border-radius: 2px;
+  }
+  .coach-closure-card .ccc-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--r-sans);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--r-text-4);
+    margin-bottom: 10px;
+  }
+  .coach-closure-card .ccc-eyebrow .pip {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--r-sage, #7C9082);
+  }
+  .coach-closure-card .ccc-emergent {
+    font-family: var(--r-serif);
+    font-size: 18px;
+    line-height: 1.5;
+    color: var(--r-ink);
+    margin: 0 0 8px;
+  }
+  .coach-closure-card .ccc-emergent em {
+    font-style: italic;
+  }
+  .coach-closure-card .ccc-themes {
+    font-family: var(--r-sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--r-text-5);
+    margin: 0;
   }
 
   /* ═══ FEATURE ROW ═══ */

@@ -11918,6 +11918,135 @@ exports.getDinnerPrompt = dinnerPromptApi.getDinnerPrompt;
 exports.reportDinnerPrompt = dinnerPromptApi.reportDinnerPrompt;
 
 // ===================================================================
+// distillCoachConversation — called when the user closes a coach
+// chat. Pulls the conversation from chat_conversations, asks Claude
+// to produce a one-sentence emergent line + 2-4 themes, writes the
+// result to coach_closures owned by the caller. Returns the closure
+// id and distilled fields so the UI can show a "Kept" moment
+// immediately.
+//
+// Input:  { conversationId }
+// Output: { closureId, emergent, themes, firstUserEcho, turnCount }
+// ===================================================================
+exports.distillCoachConversation = onCall(
+    {
+      region: "us-central1",
+      memory: "512MiB",
+      timeoutSeconds: 60,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+      const userId = request.auth.uid;
+      const {conversationId} = request.data || {};
+      if (!conversationId || typeof conversationId !== "string") {
+        throw new Error("conversationId is required");
+      }
+
+      const db = admin.firestore();
+      const convRef = db.collection("chat_conversations").doc(conversationId);
+      const convSnap = await convRef.get();
+      if (!convSnap.exists) {
+        throw new Error("Conversation not found");
+      }
+      const conv = convSnap.data();
+      if (conv.userId !== userId) {
+        throw new Error("Access denied");
+      }
+
+      const messages = Array.isArray(conv.messages) ? conv.messages : [];
+      const userTurns = messages.filter((m) => m && m.role === "user" && !m.excluded);
+      if (userTurns.length === 0) {
+        // Nothing to distill. Return a shaped null the client can handle.
+        return {
+          closureId: null,
+          emergent: "",
+          themes: [],
+          firstUserEcho: "",
+          turnCount: 0,
+        };
+      }
+
+      const firstUserEcho = String(userTurns[0].content || "").slice(0, 180);
+
+      // Build a compact transcript for Claude.
+      const transcript = messages
+          .filter((m) => m && !m.excluded)
+          .slice(-24) // last ~12 exchanges is enough
+          .map((m) => `${m.role === "user" ? "You" : "Relish"}: ${String(m.content || "").slice(0, 1200)}`)
+          .join("\n\n");
+
+      const systemPrompt = "You are distilling a conversation the user " +
+        "just had with Relish (their personal coach). Produce a one-" +
+        "sentence \"emergent\" line that captures what the conversation " +
+        "was really about, and 2 to 4 short themes (2-5 words each). " +
+        "Speak in the second person (\"you\"), warm and specific. " +
+        "Respond with ONLY a JSON object of the form " +
+        "{\"emergent\":\"...\",\"themes\":[\"...\",\"...\"]}. No prose " +
+        "outside JSON.";
+
+      const client = getAnthropic();
+      const model = "claude-haiku-4-5-20251001";
+      let emergent = "";
+      let themes = [];
+      try {
+        const response = await client.messages.create({
+          model,
+          max_tokens: 400,
+          system: systemPrompt,
+          messages: [{role: "user", content: transcript}],
+        });
+        logAICall({
+          functionName: "distillCoachConversation",
+          model,
+          usage: response.usage,
+          userId,
+        });
+        const raw = response.content[0]?.text || "";
+        const match = raw.match(/\{[\s\S]*\}/);
+        if (match) {
+          const parsed = JSON.parse(match[0]);
+          emergent = String(parsed.emergent || "").slice(0, 400);
+          if (Array.isArray(parsed.themes)) {
+            themes = parsed.themes
+                .slice(0, 4)
+                .map((t) => String(t || "").slice(0, 60))
+                .filter(Boolean);
+          }
+        }
+      } catch (err) {
+        logger.error("distillCoachConversation: Claude call failed:", err);
+        // Soft-fail — still write a closure with what we have so the
+        // client can at least render the echo and turn count.
+      }
+
+      const closureRef = db.collection("coach_closures").doc();
+      await closureRef.set({
+        closureId: closureRef.id,
+        userId,
+        conversationId,
+        emergent,
+        themes,
+        turnCount: userTurns.length,
+        firstUserEcho,
+        model,
+        distilledAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      return {
+        closureId: closureRef.id,
+        emergent,
+        themes,
+        firstUserEcho,
+        turnCount: userTurns.length,
+      };
+    },
+);
+
+// ===================================================================
 // generateTherapyBrief — produce a one-shot "brief for your therapist"
 // by reading the caller's recent journal entries and asking Claude
 // for 3–5 themed clusters with verbatim quotes.

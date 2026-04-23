@@ -1120,5 +1120,17 @@ service cloud.firestore {
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow create: if false;
     }
+
+    // Coach closures — owner-only. A closure is what Relish distilled
+    // from a coach-chat conversation at close-time (emergent line +
+    // themes). Written server-side by distillCoachConversation via
+    // the admin SDK; direct client create is blocked. Owner can update
+    // (seenAt) and delete.
+    match /coach_closures/{closureId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if false;
+    }
   }
 }

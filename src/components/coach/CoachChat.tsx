@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useCoach, ChatMessage } from '@/hooks/useCoach';
 import { MicButton } from '@/components/voice/MicButton';
+import { ChatClosureKept } from '@/components/chat/ChatClosureKept';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '@/lib/firebase';
 
 interface CoachChatProps {
   personId?: string;
@@ -11,10 +14,53 @@ interface CoachChatProps {
 }
 
 export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
-  const { messages, loading, error, context, sendMessage, clearConversation } = useCoach();
+  const { messages, loading, error, context, sendMessage, clearConversation, conversationId } = useCoach();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Close-with-distillation state — when the user clicks Close after
+  // a real conversation, we distill and show a "Kept" moment before
+  // actually dismissing.
+  const [closureShow, setClosureShow] = useState(false);
+  const [closureEmergent, setClosureEmergent] = useState('');
+  const [closureEcho, setClosureEcho] = useState('');
+  const [closing, setClosing] = useState(false);
+
+  const userTurnCount = messages.filter((m) => m.role === 'user').length;
+
+  const handleClose = async () => {
+    if (closing) return;
+    // No conversation yet → plain close, no ceremony.
+    if (userTurnCount === 0 || !conversationId) {
+      onClose?.();
+      return;
+    }
+    setClosing(true);
+    try {
+      const fn = httpsCallable<
+        { conversationId: string },
+        {
+          closureId: string | null;
+          emergent: string;
+          themes: string[];
+          firstUserEcho: string;
+          turnCount: number;
+        }
+      >(functions, 'distillCoachConversation');
+      const res = await fn({ conversationId });
+      setClosureEmergent(res.data.emergent || '');
+      setClosureEcho(res.data.firstUserEcho || '');
+    } catch (err) {
+      // Soft-fail — still show a closure moment so the user feels heard.
+      console.warn('distillCoachConversation failed (non-fatal):', err);
+      const first = messages.find((m) => m.role === 'user');
+      setClosureEcho(first?.content?.slice(0, 180) || '');
+    } finally {
+      setClosing(false);
+      setClosureShow(true);
+    }
+  };
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -141,15 +187,18 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
 
           {onClose && (
             <button
-              onClick={onClose}
+              onClick={handleClose}
+              disabled={closing}
               className="px-4 py-2 rounded-full text-sm font-medium hover:bg-black/[0.03] transition-all"
               style={{
                 fontFamily: 'var(--font-parent-body)',
                 color: '#5C5347',
                 border: '1px solid rgba(255,255,255,0.4)',
+                cursor: closing ? 'wait' : 'pointer',
+                opacity: closing ? 0.6 : 1,
               }}
             >
-              Close
+              {closing ? 'Keeping…' : 'Close'}
             </button>
           )}
         </div>
@@ -341,6 +390,21 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
           </div>
         )}
       </form>
+
+      {closureShow && (
+        <ChatClosureKept
+          emergent={closureEmergent}
+          echo={closureEcho}
+          followUp="A short note from this conversation will appear in your workbook as something to reflect on."
+          firstTimeKey="relish:chat-close-intro:coach"
+          firstTimeBody="When you close a conversation, Relish keeps what was most alive from it and surfaces that note back to you in your workbook. It's the back-half of the loop — what you told me comes back to you."
+          onDismiss={() => {
+            setClosureShow(false);
+            clearConversation();
+            onClose?.();
+          }}
+        />
+      )}
     </div>
   );
 }
