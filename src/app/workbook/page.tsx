@@ -501,28 +501,6 @@ export default function WorkbookPage() {
           </div>
         </section>
 
-        {/* ═══ FAMILY COMPLETENESS RING ═══ — at-a-glance "where are
-             we overall" across coverage, freshness, depth. Hidden when
-             the user is alone — nothing meaningful to compute yet. */}
-        {showCompletenessRing && (
-          <section className="completeness-card" aria-label="Family completeness">
-            <div className="cc-body">
-              <span className="cc-eyebrow">Your family, at a glance</span>
-              <h2 className="cc-title"><em>Where you are.</em></h2>
-              <Link href="/manual" className="cc-drill">
-                Open the per-person breakdown <span aria-hidden>⟶</span>
-              </Link>
-            </div>
-            <Link
-              href="/manual"
-              className="cc-ring-link"
-              aria-label="Open the family manual to see each person's coverage"
-            >
-              <FamilyCompletenessRing completeness={familyCompleteness} />
-            </Link>
-          </section>
-        )}
-
         {/* ═══ FROM YOUR LAST CONVERSATION ═══ — the back-half of the
              coach-chat loop. Shows the emergent line Relish distilled
              from your most recent coach conversation. Hidden when no
@@ -2036,85 +2014,6 @@ const styles = `
     border-bottom: 1px solid currentColor;
     padding-bottom: 2px;
     text-decoration: none;
-  }
-
-  /* ═══ FAMILY COMPLETENESS — a bounded card (not a section beat).
-     Proportions in sympathy with .feature cards below: paper
-     background, 1px rule-5 border, 3px radius, 28-32px padding,
-     headline sized for inside-a-card (26px) not for a page-level
-     section beat (44px). Subtitle deliberately omitted — the
-     eyebrow + headline + ring carry the whole statement. */
-  .completeness-card {
-    margin-top: 40px;
-    padding: 28px 32px;
-    background: var(--r-paper);
-    border: 1px solid var(--r-rule-5);
-    border-radius: 3px;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 48px;
-    align-items: center;
-    transition: box-shadow 180ms var(--r-ease-ink);
-  }
-  .completeness-card:hover { box-shadow: var(--r-shadow-card); }
-  .completeness-card .cc-body {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    align-items: flex-start;
-    min-width: 0;
-  }
-  .completeness-card .cc-eyebrow {
-    font-family: var(--r-sans);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.24em;
-    text-transform: uppercase;
-    color: var(--r-text-4);
-  }
-  .completeness-card .cc-title {
-    font-family: var(--r-serif);
-    font-style: italic;
-    font-weight: 400;
-    font-size: 26px;
-    line-height: 1.15;
-    letter-spacing: -0.01em;
-    color: var(--r-ink);
-    margin: 2px 0 0;
-  }
-  .completeness-card .cc-title em { font-style: italic; }
-  .completeness-card .cc-drill {
-    margin-top: 12px;
-    font-family: var(--r-sans);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--r-text-4);
-    text-decoration: none;
-    border-bottom: 1px solid var(--r-rule-3);
-    padding-bottom: 2px;
-    transition: color 120ms var(--r-ease-ink), border-color 120ms var(--r-ease-ink);
-  }
-  .completeness-card .cc-drill:hover {
-    color: var(--r-ink);
-    border-bottom-color: var(--r-ink);
-  }
-  .completeness-card .cc-ring-link {
-    justify-self: end;
-    text-decoration: none;
-    color: inherit;
-    display: inline-block;
-    transition: transform 180ms var(--r-ease-ink);
-  }
-  .completeness-card .cc-ring-link:hover { transform: translateY(-1px); }
-  @media (max-width: 820px) {
-    .completeness-card {
-      grid-template-columns: 1fr;
-      gap: 24px;
-      padding: 24px 24px 28px;
-    }
-    .completeness-card .cc-ring-link { justify-self: start; }
   }
 
   /* ═══ FROM YOUR LAST CONVERSATION ═══ */

@@ -14,11 +14,14 @@ import { useAuth } from '@/context/AuthContext';
 import { usePerson } from '@/hooks/usePerson';
 import { useJournalEntries } from '@/hooks/useJournalEntries';
 import { useFamilyContributions } from '@/hooks/useFamilyContributions';
+import { useFamilyManuals } from '@/hooks/useFamilyManuals';
+import { useFreshness } from '@/hooks/useFreshness';
 import { computeAge } from '@/utils/age';
-import type { Person, RelationshipType } from '@/types/person-manual';
+import type { Person, RelationshipType, Contribution } from '@/types/person-manual';
 import type { JournalEntry } from '@/types/journal';
 import { entryMentionsPerson } from '@/lib/entry-mentions';
 import PortraitInventory from '@/components/dashboard/PortraitInventory';
+import { FamilyCompletenessRing } from '@/components/dashboard/FamilyCompletenessRing';
 
 export default function ManualPage() {
   const { user, loading } = useAuth();
@@ -78,6 +81,33 @@ export default function ManualPage() {
         ),
       }));
   }, [people, familyContributions, user?.userId]);
+
+  // Family-level completeness for the Ring at the top of this page.
+  const { manuals: familyManuals } = useFamilyManuals();
+  const { familyCompleteness } = useFreshness({
+    people,
+    manuals: familyManuals,
+    contributions: familyContributions,
+  });
+  const activePeopleCount = (people ?? []).filter((p) => !p.archived).length;
+  const showCompletenessSection = activePeopleCount >= 2;
+
+  // Prioritized next steps across the whole family. Priority order:
+  //   1. Reply debt (entries about someone, waiting on you)
+  //   2. Missing self-portrait from an invited contributor
+  //   3. Uninvited adult family members
+  //   4. Long silences (>30 days on someone with history)
+  //   5. Incomplete self-portrait for the current user
+  const nextSteps = useMemo<NextStep[]>(
+    () =>
+      computeNextSteps({
+        people: people ?? [],
+        entries,
+        contributions: familyContributions,
+        currentUserId: user?.userId,
+      }),
+    [people, entries, familyContributions, user?.userId],
+  );
 
   const roster = useMemo(() => {
     return metrics
@@ -179,7 +209,7 @@ export default function ManualPage() {
     <main className="mn-app">
       <div className="mn-page">
         {/* ═══ MASTHEAD ═══ */}
-        <section className="manual-masthead" aria-label="The Family Manual at a glance">
+        <section className="manual-masthead" aria-label="The Family Summary">
           <div className="masthead-strip">
             <div className="masthead-cell">
               <span className="masthead-eyebrow">In your manual</span>
@@ -218,6 +248,72 @@ export default function ManualPage() {
             </div>
           </div>
         </section>
+
+        {/* ═══ FAMILY COMPLETENESS ═══ — the aggregate Ring (coverage,
+             freshness, depth) promoted from the workbook so this page
+             serves as the Family Summary. Hidden when only one active
+             person exists (nothing meaningful to compute). */}
+        {showCompletenessSection && (() => {
+          const dims = [
+            { key: 'coverage' as const, label: 'Coverage', value: familyCompleteness.coverage },
+            { key: 'freshness' as const, label: 'Freshness', value: familyCompleteness.freshness },
+            { key: 'depth' as const, label: 'Depth', value: familyCompleteness.depth },
+          ];
+          const weakest = [...dims].sort((a, b) => a.value - b.value)[0];
+          return (
+            <section className="completeness-section" aria-label="Where your family stands">
+              <div className="completeness-card">
+                <div className="cs-body">
+                  <span className="cs-eyebrow">Where your family stands</span>
+                  <h2 className="cs-title">
+                    <em>{familyCompleteness.overallPercent}% of the picture</em>
+                    {' '}is in.
+                  </h2>
+                  <p className="cs-lede">
+                    {weakest.value < 0.5 ? (
+                      <>
+                        {weakest.label.toLowerCase()} is the thinnest of the
+                        three dimensions today —{' '}
+                        {Math.round(weakest.value * 100)}%. The list below
+                        names what would move it.
+                      </>
+                    ) : (
+                      <>
+                        Coverage, freshness, and depth are all starting to
+                        hold. Keep writing; the list below is what&rsquo;s next.
+                      </>
+                    )}
+                  </p>
+                </div>
+                <div className="cs-ring">
+                  <FamilyCompletenessRing completeness={familyCompleteness} />
+                </div>
+              </div>
+            </section>
+          );
+        })()}
+
+        {/* ═══ NEXT STEPS ═══ — prioritized actions across the whole
+             family. Hidden when nothing actionable surfaces. */}
+        {nextSteps.length >= 3 && (
+          <section className="next-steps-section" aria-label="Next steps for your family">
+            <div className="next-steps-head">
+              <span className="ns-eyebrow">Next steps</span>
+              <h2 className="h2-serif"><em>What would move things forward.</em></h2>
+            </div>
+            <ol className="next-steps-list">
+              {nextSteps.map((step, i) => (
+                <li key={`${step.kind}-${i}`}>
+                  <Link href={step.href} className="ns-item">
+                    <span className="ns-num">{String(i + 1).padStart(2, '0')}</span>
+                    <span className="ns-label">{step.label}</span>
+                    <span className="ns-arrow" aria-hidden>⟶</span>
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
 
         {/* ═══ HERO SPREAD ═══ */}
         {hero && (
@@ -800,6 +896,169 @@ function openPen() {
 }
 
 /* ════════════════════════════════════════════════════════════════
+   Next-steps computation — prioritized actions across the family.
+   Lives here (not in a shared lib) because the priority logic is
+   specific to the Family Summary render. If a second caller ever
+   needs the same list, extract to src/lib/next-steps.ts at that
+   point — per YAGNI.
+   ════════════════════════════════════════════════════════════════ */
+
+export type NextStepKind =
+  | 'reply_debt'
+  | 'missing_self_portrait'
+  | 'uninvited_adult'
+  | 'long_silence'
+  | 'incomplete_self';
+
+export interface NextStep {
+  kind: NextStepKind;
+  label: string;       // one-line italic sentence
+  href: string;        // where the CTA lands
+  priority: number;    // lower = higher priority (for sort)
+}
+
+function computeNextSteps({
+  people,
+  entries,
+  contributions,
+  currentUserId,
+}: {
+  people: Person[];
+  entries: JournalEntry[];
+  contributions: Contribution[];
+  currentUserId?: string;
+}): NextStep[] {
+  if (!currentUserId) return [];
+  const steps: NextStep[] = [];
+  const active = people.filter((p) => !p.archived);
+  const selfPerson = active.find(
+    (p) => p.linkedUserId === currentUserId && p.relationshipType === 'self',
+  );
+
+  // 1) Reply debt — entries authored by someone else that mention a
+  // family member and haven't been responded to. We count the first
+  // three as individual items; more collapse into a single summary.
+  const replyCandidates = entries
+    .filter((e) => {
+      if (e.authorId === currentUserId) return false;
+      if (e.respondsToEntryId) return false;
+      if (e.category === 'reflection') return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const am = a.createdAt?.toMillis?.() ?? 0;
+      const bm = b.createdAt?.toMillis?.() ?? 0;
+      return bm - am;
+    });
+  for (const e of replyCandidates.slice(0, 3)) {
+    const author = active.find((p) => p.linkedUserId === e.authorId);
+    const aboutPerson =
+      (e.personMentions ?? [])
+        .map((pid) => active.find((p) => p.personId === pid))
+        .find(Boolean) ?? null;
+    const authorFirst = author?.name.split(' ')[0] ?? 'Someone';
+    const aboutFirst = aboutPerson?.name.split(' ')[0];
+    const label = aboutFirst
+      ? `Reply to ${authorFirst}'s note about ${aboutFirst}.`
+      : `Reply to ${authorFirst}'s note.`;
+    steps.push({
+      kind: 'reply_debt',
+      label,
+      href: `/journal/${e.entryId}`,
+      priority: 1,
+    });
+  }
+
+  // 2) Missing self-portrait for invited contributors — linkedUserId
+  // exists (they have an account) but no complete self contribution.
+  for (const p of active) {
+    if (!p.linkedUserId) continue;
+    if (p.linkedUserId === currentUserId) continue; // handled in (5)
+    const hasSelf = contributions.some(
+      (c) =>
+        c.contributorId === p.linkedUserId &&
+        c.personId === p.personId &&
+        c.perspectiveType === 'self' &&
+        c.status === 'complete',
+    );
+    if (hasSelf) continue;
+    const first = p.name.split(' ')[0];
+    steps.push({
+      kind: 'missing_self_portrait',
+      label: `${first} hasn't added their own view yet.`,
+      href: `/people/${p.personId}`,
+      priority: 2,
+    });
+  }
+
+  // 3) Uninvited adult family members — canSelfContribute but no
+  // account linked, so they've never been invited to write.
+  for (const p of active) {
+    if (p.linkedUserId) continue;
+    if (!p.canSelfContribute) continue;
+    if (p.relationshipType === 'child') continue; // kids use a different flow
+    const first = p.name.split(' ')[0];
+    steps.push({
+      kind: 'uninvited_adult',
+      label: `Invite ${first} to write their side.`,
+      href: `/people/${p.personId}`,
+      priority: 3,
+    });
+  }
+
+  // 4) Long silences — someone with at least one mention that has no
+  // activity in >30 days. Only flag the top 2 (noise reduction).
+  const longSilenceCandidates: Array<{ p: Person; days: number }> = [];
+  for (const p of active) {
+    if (p.relationshipType === 'self') continue;
+    const mentions = entries
+      .filter((e) => entryMentionsPerson(e, p.personId))
+      .sort((a, b) => {
+        const am = a.createdAt?.toMillis?.() ?? 0;
+        const bm = b.createdAt?.toMillis?.() ?? 0;
+        return bm - am;
+      });
+    if (mentions.length === 0) continue;
+    const lastMs = mentions[0].createdAt?.toMillis?.() ?? 0;
+    const days = Math.floor((Date.now() - lastMs) / 86_400_000);
+    if (days > 30) longSilenceCandidates.push({ p, days });
+  }
+  longSilenceCandidates.sort((a, b) => b.days - a.days);
+  for (const { p, days } of longSilenceCandidates.slice(0, 2)) {
+    const first = p.name.split(' ')[0];
+    const span = days >= 60 ? `${Math.floor(days / 30)} months` : `${Math.floor(days / 7)} weeks`;
+    steps.push({
+      kind: 'long_silence',
+      label: `You haven't written about ${first} in ${span}.`,
+      href: `/people/${p.personId}`,
+      priority: 4,
+    });
+  }
+
+  // 5) Incomplete self-portrait for the current user.
+  if (selfPerson) {
+    const hasOwnSelf = contributions.some(
+      (c) =>
+        c.contributorId === currentUserId &&
+        c.personId === selfPerson.personId &&
+        c.perspectiveType === 'self' &&
+        c.status === 'complete',
+    );
+    if (!hasOwnSelf) {
+      steps.push({
+        kind: 'incomplete_self',
+        label: 'Continue your own page.',
+        href: `/people/${selfPerson.personId}/manual/self-onboard`,
+        priority: 5,
+      });
+    }
+  }
+
+  // Sort by priority, cap at 5.
+  return steps.sort((a, b) => a.priority - b.priority).slice(0, 5);
+}
+
+/* ════════════════════════════════════════════════════════════════
    Inline styles for the hero pills
    ════════════════════════════════════════════════════════════════ */
 
@@ -1255,6 +1514,139 @@ const styles = `
     text-transform: uppercase;
     color: var(--r-text-5);
   }
+
+  /* ═══ COMPLETENESS SECTION (Ring + lede) ═══
+     Hero of the Family Summary page. Lives in a bounded card, same
+     paper/border grammar as .feature cards, sized to be the page's
+     hero rather than a section beat. */
+  .completeness-section {
+    padding: 40px 0 8px;
+    border-top: 1px solid var(--r-rule-4);
+    margin-top: 32px;
+  }
+  .completeness-card {
+    background: var(--r-paper);
+    border: 1px solid var(--r-rule-5);
+    border-radius: 3px;
+    padding: 32px 40px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 56px;
+    align-items: center;
+  }
+  .completeness-card .cs-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+  .completeness-card .cs-eyebrow {
+    font-family: var(--r-sans);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--r-text-4);
+  }
+  .completeness-card .cs-title {
+    font-family: var(--r-serif);
+    font-weight: 300;
+    font-size: clamp(28px, 3vw, 36px);
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    color: var(--r-ink);
+    margin: 2px 0 0;
+  }
+  .completeness-card .cs-title em { font-style: italic; }
+  .completeness-card .cs-lede {
+    font-family: var(--r-serif);
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--r-text-3);
+    margin: 6px 0 0;
+    max-width: 48ch;
+  }
+  .completeness-card .cs-ring { justify-self: end; }
+  @media (max-width: 820px) {
+    .completeness-card {
+      grid-template-columns: 1fr;
+      gap: 28px;
+      padding: 28px 24px 32px;
+    }
+    .completeness-card .cs-ring { justify-self: start; }
+  }
+
+  /* ═══ NEXT STEPS ═══ — prioritized family-wide actions. Compact
+     numbered list in editorial voice. */
+  .next-steps-section {
+    padding: 48px 0 8px;
+  }
+  .next-steps-head { margin-bottom: 20px; }
+  .next-steps-head .ns-eyebrow {
+    display: block;
+    font-family: var(--r-sans);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--r-text-4);
+    margin-bottom: 10px;
+  }
+  .next-steps-head .h2-serif {
+    font-family: var(--r-serif);
+    font-weight: 300;
+    font-size: clamp(26px, 2.6vw, 32px);
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    color: var(--r-ink);
+    margin: 0;
+  }
+  .next-steps-head .h2-serif em { font-style: italic; }
+  .next-steps-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--r-rule-5);
+  }
+  .next-steps-list li {
+    border-bottom: 1px solid var(--r-rule-5);
+  }
+  .next-steps-list .ns-item {
+    display: grid;
+    grid-template-columns: 40px 1fr 20px;
+    gap: 18px;
+    align-items: baseline;
+    padding: 16px 4px;
+    text-decoration: none;
+    color: inherit;
+    transition: padding-left 160ms var(--r-ease-ink), background 120ms var(--r-ease-ink);
+  }
+  .next-steps-list .ns-item:hover {
+    padding-left: 10px;
+    background: rgba(124,144,130,0.04);
+  }
+  .next-steps-list .ns-num {
+    font-family: var(--r-serif);
+    font-style: italic;
+    font-size: 18px;
+    color: var(--r-text-5);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+  .next-steps-list .ns-label {
+    font-family: var(--r-serif);
+    font-style: italic;
+    font-size: 18px;
+    line-height: 1.4;
+    color: var(--r-ink);
+  }
+  .next-steps-list .ns-arrow {
+    font-family: var(--r-serif);
+    font-size: 14px;
+    color: var(--r-text-4);
+    text-align: right;
+  }
+  .next-steps-list .ns-item:hover .ns-arrow { color: var(--r-ink); }
 
   /* PORTRAITS — per-person coverage */
   .portraits-section {
