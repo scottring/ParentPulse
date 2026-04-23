@@ -206,7 +206,14 @@ export default function ManualPage() {
     );
   }
 
-  const familyTitle = (family?.name?.trim() || 'Your family');
+  const familyTitle = (() => {
+    const raw = family?.name?.trim() || '';
+    if (!raw) return 'Your family';
+    const last = raw.toLowerCase();
+    if (/(s|x|z|ch|sh)$/.test(last)) return `The ${raw}es`;
+    if (/y$/.test(last) && !/[aeiou]y$/.test(last)) return `The ${raw.slice(0, -1)}ies`;
+    return `The ${raw}s`;
+  })();
 
   return (
     <main className="mn-app">
@@ -214,7 +221,8 @@ export default function ManualPage() {
         {/* ═══ TITLE ═══ — page headline, newspaper style. */}
         <header className="fs-title-block">
           <h1 className="fs-title">
-            <em>{familyTitle}&rsquo;s</em> Family Summary
+            {familyTitle} <span className="fs-title-dash" aria-hidden>—</span>{' '}
+            <em>Family Summary</em>
           </h1>
         </header>
 
@@ -533,6 +541,7 @@ function CompletenessCell({
       className="masthead-cell mh-complete-cell"
       aria-label={`Overall family completeness ${overallPercent} percent across ${totalKept} ${totalKept === 1 ? 'person' : 'people'}`}
     >
+      <span className="masthead-eyebrow">Overall</span>
       <div className="mh-complete-top">
         <div className="mh-complete-ring-wrap" style={{ width: size, height: size }}>
           <svg
@@ -578,18 +587,28 @@ function CompletenessCell({
           </span>
         </div>
         <ul className="mh-complete-dims">
-          {dims.map((d) => (
-            <li key={d.label} className="mh-complete-dim-row">
-              <span className="mh-complete-dim">{d.label}</span>
-              <span className="mh-complete-dim-pct">
-                {Math.round(Math.min(d.value, 1) * 100)}%
-              </span>
-            </li>
-          ))}
+          {dims.map((d) => {
+            const pct = Math.round(Math.min(d.value, 1) * 100);
+            return (
+              <li key={d.label} className="mh-complete-dim-row">
+                <span className="mh-complete-dim">{d.label}</span>
+                <span
+                  className="mh-complete-bar"
+                  role="img"
+                  aria-label={`${d.label} ${pct} percent`}
+                >
+                  <span
+                    className="mh-complete-bar-fill"
+                    style={{ width: `${pct}%`, background: d.color }}
+                  />
+                </span>
+              </li>
+            );
+          })}
         </ul>
       </div>
       <span className="mh-complete-sub">
-        across {totalKept} {totalKept === 1 ? 'person' : 'people'}
+        (across {totalKept} {totalKept === 1 ? 'person' : 'people'})
       </span>
     </div>
   );
@@ -1212,6 +1231,11 @@ const styles = `
     margin: 0;
   }
   .fs-title em { font-style: italic; }
+  .fs-title-dash {
+    color: var(--r-text-4);
+    font-style: normal;
+    margin: 0 0.1em;
+  }
 
   /* MASTHEAD */
   .manual-masthead { margin: 0; }
@@ -1679,9 +1703,9 @@ const styles = `
   }
   .mh-complete-dim-row {
     display: grid;
-    grid-template-columns: auto auto;
+    grid-template-columns: auto 56px;
     column-gap: 10px;
-    align-items: baseline;
+    align-items: center;
     line-height: 1.15;
     justify-content: start;
   }
@@ -1695,14 +1719,18 @@ const styles = `
     line-height: 1.2;
     white-space: nowrap;
   }
-  .mh-complete-dim-pct {
-    font-family: var(--r-serif);
-    font-style: italic;
-    font-weight: 400;
-    font-size: 14px;
-    color: var(--r-ink);
-    line-height: 1;
-    letter-spacing: -0.005em;
+  .mh-complete-bar {
+    display: block;
+    width: 56px;
+    height: 6px;
+    background: rgba(60,48,28,0.08);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .mh-complete-bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: 2px;
   }
   .mh-complete-sub {
     font-family: var(--r-serif);
