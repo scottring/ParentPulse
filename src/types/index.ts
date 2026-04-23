@@ -15,6 +15,14 @@ export interface User {
   avatarUrl?: string;
   isDemo?: boolean;
   createdAt: Timestamp;
+  // Set when the user registered via a family invite, so the /welcome
+  // page can show a tailored arrival ("Iris invited you") instead of
+  // the generic first-family landing.
+  invitedBy?: {
+    userId: string;
+    name?: string;
+    familyName?: string;
+  };
   settings: {
     notifications: boolean;
     theme: 'light' | 'dark';

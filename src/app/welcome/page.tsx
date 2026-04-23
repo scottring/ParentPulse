@@ -75,45 +75,96 @@ export default function WelcomePage() {
     ? `/people/${selfPersonId}/manual/self-onboard`
     : '/workbook';
 
+  // Tailored arrival for users who joined via a family invite.
+  // Falls back to the generic arrival if inviter lookup failed.
+  const invitedBy = user.invitedBy;
+  const inviterFirstName = invitedBy?.name
+    ? invitedBy.name.trim().split(/\s+/)[0]
+    : null;
+  const isInvitedArrival = !!invitedBy && !!inviterFirstName;
+
   return (
     <div className="welcome-page">
       <Link href="/" className="welcome-wordmark">
         Relish
       </Link>
 
-      <div className="welcome-card" role="main">
-        <span className="press-chapter-label">An introduction</span>
+      {isInvitedArrival ? (
+        <div className="welcome-card" role="main">
+          <span className="press-chapter-label">An invitation</span>
 
-        <h1 className="welcome-title">Welcome, {firstName}.</h1>
+          <h1 className="welcome-title">
+            Welcome, {firstName}. <em>{inviterFirstName}</em> invited you.
+          </h1>
 
-        {familyName && (
-          <p className="welcome-familyline">
-            The <em>{familyName}</em> library is open.
+          {(invitedBy?.familyName || familyName) && (
+            <p className="welcome-familyline">
+              You&rsquo;re now part of the{' '}
+              <em>{invitedBy?.familyName || familyName}</em> family here.
+            </p>
+          )}
+
+          <hr className="press-rule" />
+
+          <p className="welcome-body">
+            {inviterFirstName} has started writing — their own words are
+            already in, and a few pages may be shared with you.
+            Relish is a journal other people help you write, and that
+            writes you back.
           </p>
-        )}
 
-        <hr className="press-rule" />
+          <p className="welcome-body">
+            You can go straight in, or take a few minutes to add your own
+            view first — it&rsquo;s what makes the synthesis of
+            perspectives possible.
+          </p>
 
-        <p className="welcome-body">
-          Relish helps you see the people you love through a few different
-          lenses — yours, theirs, and what becomes visible when they&rsquo;re
-          held together.
-        </p>
+          <div className="welcome-actions welcome-actions-stack">
+            <Link href="/workbook" className="press-link welcome-cta">
+              See what&rsquo;s already here <span className="arrow">⟶</span>
+            </Link>
+            <Link href={startHref} className="press-link-sm">
+              Start my own page first ⟶
+            </Link>
+          </div>
 
-        <p className="welcome-body">
-          Before anyone else, let&rsquo;s start with you. A short set of
-          questions in your own words. You can stop any time — we save as
-          you go.
-        </p>
-
-        <div className="welcome-actions">
-          <Link href={startHref} className="press-link welcome-cta">
-            Start with myself <span className="arrow">⟶</span>
-          </Link>
+          <div className="press-fleuron mt-8">❦</div>
         </div>
+      ) : (
+        <div className="welcome-card" role="main">
+          <span className="press-chapter-label">An introduction</span>
 
-        <div className="press-fleuron mt-8">❦</div>
-      </div>
+          <h1 className="welcome-title">Welcome, {firstName}.</h1>
+
+          {familyName && (
+            <p className="welcome-familyline">
+              The <em>{familyName}</em> library is open.
+            </p>
+          )}
+
+          <hr className="press-rule" />
+
+          <p className="welcome-body">
+            Relish helps you see the people you love through a few different
+            lenses — yours, theirs, and what becomes visible when they&rsquo;re
+            held together.
+          </p>
+
+          <p className="welcome-body">
+            Before anyone else, let&rsquo;s start with you. A short set of
+            questions in your own words. You can stop any time — we save as
+            you go.
+          </p>
+
+          <div className="welcome-actions">
+            <Link href={startHref} className="press-link welcome-cta">
+              Start with myself <span className="arrow">⟶</span>
+            </Link>
+          </div>
+
+          <div className="press-fleuron mt-8">❦</div>
+        </div>
+      )}
 
       <style jsx>{`
         .welcome-page {
@@ -187,6 +238,11 @@ export default function WelcomePage() {
           margin-top: 36px;
           display: flex;
           justify-content: center;
+        }
+        .welcome-actions.welcome-actions-stack {
+          flex-direction: column;
+          align-items: center;
+          gap: 14px;
         }
         :global(.welcome-cta) {
           font-size: 20px;

@@ -60,7 +60,8 @@ _Volumes bookshelf wired, "kept" stripped, empty-state hides stats. Entry-card e
 - Empty state: if zero entries, show a warm "Your archive fills up as you write. The first entry becomes page one." without the masthead stats (hide the 4-cell strip when `entries.length === 0`).
 - Commit: `feat(archive): clarity pass — wire Volumes bookshelf, strip "kept" jargon, warm first-run`.
 
-### 6. [TODO] Mention discovery on workbook
+### 6. [DONE] Mention discovery on workbook
+_Persistent "X things written about you in the last two weeks" dispatch in hero, fallback when sinceSummary is absent. Commit 0d808fd._
 - Currently `sinceSummary` only appears when the user re-enters the app and there are new mentions since last visit. That's good for returning users but weak for the "3 new things written about you" dispatch the audit calls out.
 - Compute a persistent `mentionsAboutMe` count: entries written by others that mention the user, regardless of last-visit timestamp, in the last 14 days.
 - Add a new dispatch card in the workbook (above the feature row): "Written about you · {count} this week". Link to the oldest unread one. Only rendered when count > 0.

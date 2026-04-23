@@ -198,6 +198,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       let familyId: string;
+      // When the user arrived via an invite, capture who invited them
+      // so /welcome can render a tailored arrival moment.
+      let invitedBy:
+        | { userId: string; name?: string; familyName?: string }
+        | undefined;
 
       if (existingFamilyId && pendingInvite) {
         // Join existing family
@@ -209,6 +214,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           members: arrayUnion(userCredential.user.uid),
           pendingInvites: arrayRemove(pendingInvite),
         });
+
+        // Look up inviter name + family name for the welcome page.
+        // Best-effort — if any lookup fails, the welcome page falls
+        // back to the generic first-family arrival.
+        try {
+          const inviterId = pendingInvite?.invitedBy as string | undefined;
+          let inviterName: string | undefined;
+          if (inviterId) {
+            const inviterSnap = await getDoc(
+              doc(firestore, COLLECTIONS.USERS, inviterId),
+            );
+            inviterName = (inviterSnap.data() as User | undefined)?.name;
+          }
+          const familySnap = await getDoc(familyDocRef);
+          const familyName = (familySnap.data() as { name?: string } | undefined)?.name;
+          if (inviterId) {
+            invitedBy = {
+              userId: inviterId,
+              ...(inviterName ? { name: inviterName } : {}),
+              ...(familyName ? { familyName } : {}),
+            };
+          }
+        } catch (inviterLookupErr) {
+          console.warn(
+            'Invite arrival: failed to fetch inviter/family name (non-fatal)',
+            inviterLookupErr,
+          );
+        }
       } else {
         // Create new family document
         familyId = doc(collection(firestore, COLLECTIONS.FAMILIES)).id;
@@ -233,12 +266,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       // Create user document
+      const additionalData: Partial<User> = {
+        ...(data.isDemo ? { isDemo: true } : {}),
+        ...(invitedBy ? { invitedBy } : {}),
+      };
       const userData = await createUserDocument(
         userCredential.user,
         'parent',
         data.name,
         familyId,
-        data.isDemo ? { isDemo: true } : undefined
+        Object.keys(additionalData).length ? additionalData : undefined
       );
 
       // Auto-create the user's own Person + Manual for family collaboration
