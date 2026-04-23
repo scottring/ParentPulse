@@ -170,7 +170,7 @@ export default function ManualPage() {
           </div>
         </div>
 
-        <style jsx global>{firstRunStyles}</style>
+        <style jsx global>{styles}</style>
       </main>
     );
   }
@@ -842,111 +842,6 @@ const heroPillStyle: React.CSSProperties = {
    Styles
    ════════════════════════════════════════════════════════════════ */
 
-const firstRunStyles = `
-  .mn-app { min-height: 100vh; background: var(--r-cream); }
-  .mn-page.first-run {
-    max-width: 1040px;
-    margin: 0 auto;
-    padding: 120px 40px 80px;
-  }
-  .fr-head { text-align: center; max-width: 640px; margin: 0 auto 48px; }
-  .fr-eyebrow {
-    display: block;
-    font-family: var(--font-parent-body);
-    font-size: 12px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: #7A6E5C;
-    margin-bottom: 10px;
-  }
-  .fr-title {
-    font-family: var(--font-parent-display);
-    font-style: italic;
-    font-weight: 400;
-    font-size: clamp(36px, 5vw, 52px);
-    line-height: 1.08;
-    color: #3A3530;
-    margin: 0 0 14px;
-  }
-  .fr-sub {
-    font-family: var(--font-parent-body);
-    font-size: 16px;
-    line-height: 1.6;
-    color: #5A5247;
-    margin: 0 auto;
-    max-width: 480px;
-  }
-  .fr-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    max-width: 760px;
-    margin: 0 auto;
-  }
-  .fr-card {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    min-height: 260px;
-    padding: 28px 28px 32px;
-    background: #FDFBF6;
-    border: 1px solid rgba(200,190,172,0.55);
-    border-radius: 4px;
-    text-decoration: none;
-    color: inherit;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.8) inset,
-      0 1px 2px rgba(60, 48, 28, 0.04),
-      0 6px 24px rgba(60, 48, 28, 0.06);
-  }
-  .fr-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(124,144,130,0.55);
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.8) inset,
-      0 2px 3px rgba(60, 48, 28, 0.05),
-      0 12px 32px rgba(60, 48, 28, 0.10);
-  }
-  .fr-card-eyebrow {
-    font-family: var(--font-parent-body);
-    font-size: 12px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: #7A6E5C;
-    margin-bottom: 6px;
-  }
-  .fr-card-title {
-    font-family: var(--font-parent-display);
-    font-style: italic;
-    font-size: 28px;
-    line-height: 1.1;
-    color: #3A3530;
-    margin: 0 0 10px;
-  }
-  .fr-card-hint {
-    font-family: var(--font-parent-body);
-    font-size: 14px;
-    color: #6B6254;
-    line-height: 1.5;
-  }
-  .fr-add {
-    border-style: dashed;
-    background: transparent;
-    align-items: flex-start;
-  }
-  .fr-cross {
-    font-family: var(--font-parent-display);
-    font-size: 40px;
-    line-height: 1;
-    color: #7C9082;
-    margin-bottom: 12px;
-  }
-  @media (max-width: 640px) {
-    .fr-grid { grid-template-columns: 1fr; }
-    .fr-card { min-height: 180px; }
-  }
-`;
 
 const styles = `
   .mn-app { min-height: 100vh; background: var(--r-cream); }
@@ -1606,4 +1501,109 @@ const styles = `
     .roster { grid-template-columns: 1fr; }
     .masthead-strip { grid-template-columns: 1fr; }
   }
+
+  /* ═══ FIRST-RUN STATE (family of one) ═══ */
+  .mn-page.first-run {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 120px 40px 80px;
+  }
+  .fr-head { text-align: center; max-width: 640px; margin: 0 auto 48px; }
+  .fr-eyebrow {
+    display: block;
+    font-family: var(--font-parent-body);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #7A6E5C;
+    margin-bottom: 10px;
+  }
+  .fr-title {
+    font-family: var(--font-parent-display);
+    font-style: italic;
+    font-weight: 400;
+    font-size: clamp(36px, 5vw, 52px);
+    line-height: 1.08;
+    color: #3A3530;
+    margin: 0 0 14px;
+  }
+  .fr-sub {
+    font-family: var(--font-parent-body);
+    font-size: 16px;
+    line-height: 1.6;
+    color: #5A5247;
+    margin: 0 auto;
+    max-width: 480px;
+  }
+  .fr-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  .fr-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: 260px;
+    padding: 28px 28px 32px;
+    background: #FDFBF6;
+    border: 1px solid rgba(200,190,172,0.55);
+    border-radius: 4px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.8) inset,
+      0 1px 2px rgba(60, 48, 28, 0.04),
+      0 6px 24px rgba(60, 48, 28, 0.06);
+  }
+  .fr-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(124,144,130,0.55);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.8) inset,
+      0 2px 3px rgba(60, 48, 28, 0.05),
+      0 12px 32px rgba(60, 48, 28, 0.10);
+  }
+  .fr-card-eyebrow {
+    font-family: var(--font-parent-body);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #7A6E5C;
+    margin-bottom: 6px;
+  }
+  .fr-card-title {
+    font-family: var(--font-parent-display);
+    font-style: italic;
+    font-size: 28px;
+    line-height: 1.1;
+    color: #3A3530;
+    margin: 0 0 10px;
+  }
+  .fr-card-hint {
+    font-family: var(--font-parent-body);
+    font-size: 14px;
+    color: #6B6254;
+    line-height: 1.5;
+  }
+  .fr-add {
+    border-style: dashed;
+    background: transparent;
+    align-items: flex-start;
+  }
+  .fr-cross {
+    font-family: var(--font-parent-display);
+    font-size: 40px;
+    line-height: 1;
+    color: #7C9082;
+    margin-bottom: 12px;
+  }
+  @media (max-width: 640px) {
+    .fr-grid { grid-template-columns: 1fr; }
+    .fr-card { min-height: 180px; }
+  }
+
 `;

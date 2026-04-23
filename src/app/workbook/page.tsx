@@ -327,14 +327,41 @@ export default function WorkbookPage() {
               <span className="masthead-eyebrow">Today</span>
               <span className="masthead-value big">{dateToday}</span>
             </div>
-            <div className="masthead-divider" />
-            <div className="masthead-cell align-c">
-              <span className="masthead-eyebrow">Season</span>
-              <span className="masthead-value">
-                {seasonLabel(season)}
-                <span className="sub"> · week {weekNumber}</span>
-              </span>
-            </div>
+            {showCompletenessRing && (
+              <>
+                <div className="masthead-divider" />
+                <div className="masthead-cell align-c mh-bars-cell">
+                  <Link
+                    href="/manual"
+                    className="mh-bars-link"
+                    aria-label="Family at a glance — open the per-person breakdown"
+                  >
+                    <span className="masthead-eyebrow">Family, at a glance</span>
+                    <div className="mh-bars">
+                      {[
+                        { key: 'coverage', label: 'Coverage', color: '#7C9082', value: familyCompleteness.coverage },
+                        { key: 'freshness', label: 'Freshness', color: '#D4A574', value: familyCompleteness.freshness },
+                        { key: 'depth', label: 'Depth', color: '#2D5F5D', value: familyCompleteness.depth },
+                      ].map((b) => {
+                        const pct = Math.round(Math.min(b.value, 1) * 100);
+                        return (
+                          <div key={b.key} className="mh-bar-row">
+                            <span className="mh-bar-label">{b.label}</span>
+                            <span className="mh-bar-track">
+                              <span
+                                className="mh-bar-fill"
+                                style={{ width: `${pct}%`, background: b.color }}
+                              />
+                            </span>
+                            <span className="mh-bar-pct">{pct}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Link>
+                </div>
+              </>
+            )}
             <div className="masthead-divider" />
             <div className="masthead-cell align-r">
               <span className="masthead-eyebrow">In your family</span>
@@ -1767,12 +1794,12 @@ const styles = `
     border: 1px solid var(--r-rule-4);
     border-top: none;
     padding: 18px 32px;
-    display: grid;
-    grid-template-columns: 1fr auto 1fr auto 1fr;
-    gap: 0;
+    display: flex;
     align-items: center;
+    justify-content: space-between;
+    gap: 40px;
   }
-  .masthead-cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; justify-self: start; }
+  .masthead-cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 0; }
   .masthead-cell.align-c { align-items: center; text-align: center; justify-self: center; }
   .masthead-cell.align-r { align-items: flex-end; text-align: right; justify-self: end; }
   .masthead-divider { width: 1px; height: 32px; background: var(--r-rule-5); }
@@ -1800,6 +1827,71 @@ const styles = `
     font-weight: 300;
     font-size: 18px;
     color: var(--r-text-4);
+  }
+
+  /* Family-at-a-glance bars — sits in the middle masthead cell when
+     the family has 2+ people. Replaces the old Season/week cell,
+     which was decorative filler. Three compact rows (Coverage,
+     Freshness, Depth) with the same color coding as the dossier
+     ring below. Clickable into /manual. */
+  .mh-bars-cell { flex: 1.4 1 0; }
+  .mh-bars-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    text-decoration: none;
+    color: inherit;
+    transition: opacity 120ms var(--r-ease-ink);
+  }
+  .mh-bars-link:hover { opacity: 0.92; }
+  .mh-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    width: 100%;
+    max-width: 260px;
+  }
+  .mh-bar-row {
+    display: grid;
+    grid-template-columns: 68px 1fr 36px;
+    align-items: center;
+    gap: 10px;
+  }
+  .mh-bar-label {
+    font-family: var(--r-sans);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--r-text-4);
+    line-height: 1;
+  }
+  .mh-bar-track {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 4px;
+    background: rgba(60,48,28,0.06);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .mh-bar-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    border-radius: 999px;
+    transition: width 0.5s ease;
+  }
+  .mh-bar-pct {
+    font-family: var(--r-serif);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--r-ink);
+    line-height: 1;
+    text-align: right;
   }
 
   /* Balance indicator rendered inside the third masthead cell — uses
