@@ -21,7 +21,6 @@ import type { Person, RelationshipType, Contribution } from '@/types/person-manu
 import type { JournalEntry } from '@/types/journal';
 import { entryMentionsPerson } from '@/lib/entry-mentions';
 import PortraitInventory from '@/components/dashboard/PortraitInventory';
-import { FamilyCompletenessRing } from '@/components/dashboard/FamilyCompletenessRing';
 
 export default function ManualPage() {
   const { user, loading } = useAuth();
@@ -211,12 +210,19 @@ export default function ManualPage() {
         {/* ═══ MASTHEAD ═══ */}
         <section className="manual-masthead" aria-label="The Family Summary">
           <div className="masthead-strip">
-            <div className="masthead-cell">
-              <span className="masthead-eyebrow">In your manual</span>
-              <span className="masthead-value big">
-                {totalKept} {totalKept === 1 ? 'person' : 'people'}
-              </span>
-            </div>
+            {showCompletenessSection ? (
+              <CompletenessCell
+                completeness={familyCompleteness}
+                totalKept={totalKept}
+              />
+            ) : (
+              <div className="masthead-cell">
+                <span className="masthead-eyebrow">In your manual</span>
+                <span className="masthead-value big">
+                  {totalKept} {totalKept === 1 ? 'person' : 'people'}
+                </span>
+              </div>
+            )}
             <div className="masthead-divider" />
             <div className="masthead-cell align-c">
               <span className="masthead-eyebrow">Replies waiting</span>
@@ -248,50 +254,6 @@ export default function ManualPage() {
             </div>
           </div>
         </section>
-
-        {/* ═══ FAMILY COMPLETENESS ═══ — the aggregate Ring (coverage,
-             freshness, depth) promoted from the workbook so this page
-             serves as the Family Summary. Hidden when only one active
-             person exists (nothing meaningful to compute). */}
-        {showCompletenessSection && (() => {
-          const dims = [
-            { key: 'coverage' as const, label: 'Coverage', value: familyCompleteness.coverage },
-            { key: 'freshness' as const, label: 'Freshness', value: familyCompleteness.freshness },
-            { key: 'depth' as const, label: 'Depth', value: familyCompleteness.depth },
-          ];
-          const weakest = [...dims].sort((a, b) => a.value - b.value)[0];
-          return (
-            <section className="completeness-section" aria-label="Where your family stands">
-              <div className="completeness-card">
-                <div className="cs-body">
-                  <span className="cs-eyebrow">Where your family stands</span>
-                  <h2 className="cs-title">
-                    <em>{familyCompleteness.overallPercent}% of the picture</em>
-                    {' '}is in.
-                  </h2>
-                  <p className="cs-lede">
-                    {weakest.value < 0.5 ? (
-                      <>
-                        {weakest.label.toLowerCase()} is the thinnest of the
-                        three dimensions today —{' '}
-                        {Math.round(weakest.value * 100)}%. The list below
-                        names what would move it.
-                      </>
-                    ) : (
-                      <>
-                        Coverage, freshness, and depth are all starting to
-                        hold. Keep writing; the list below is what&rsquo;s next.
-                      </>
-                    )}
-                  </p>
-                </div>
-                <div className="cs-ring">
-                  <FamilyCompletenessRing completeness={familyCompleteness} />
-                </div>
-              </div>
-            </section>
-          );
-        })()}
 
         {/* ═══ NEXT STEPS ═══ — prioritized actions across the whole
              family. Hidden when nothing actionable surfaces. */}
@@ -509,6 +471,124 @@ export default function ManualPage() {
 /* ════════════════════════════════════════════════════════════════
    Components
    ════════════════════════════════════════════════════════════════ */
+
+/**
+ * CompletenessCell — replaces the first masthead cell ("In your
+ * manual / N people") with a compact overall-completeness readout.
+ * A tiny three-segment SVG ring sits beside the overall percent
+ * (Cormorant italic, same size as .masthead-value.big). The
+ * per-dimension breakdown (Coverage / Freshness / Depth) lives in
+ * a hover popover so it's discoverable without crowding the strip.
+ *
+ * Ring geometry mirrors FamilyCompletenessRing but shrunk for
+ * in-masthead use (36×36 glyph, 3px stroke, 3 segments with 8°
+ * gaps). Colors match the component's palette exactly.
+ */
+function CompletenessCell({
+  completeness,
+  totalKept,
+}: {
+  completeness: ReturnType<typeof import('@/lib/freshness-engine').computeFamilyCompleteness>;
+  totalKept: number;
+}) {
+  const { overallPercent, coverage, freshness, depth } = completeness;
+
+  // Ring geometry — same 3-segment logic as FamilyCompletenessRing,
+  // sized for masthead.
+  const size = 40;
+  const stroke = 3;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const gapDeg = 8;
+  const segDeg = (360 - gapDeg * 3) / 3;
+  const segLen = (segDeg / 360) * circumference;
+
+  const segments = [
+    { key: 'coverage', color: '#7C9082', value: coverage },
+    { key: 'freshness', color: '#D4A574', value: freshness },
+    { key: 'depth', color: '#2D5F5D', value: depth },
+  ];
+
+  let angle = -90;
+
+  const dims = [
+    { label: 'Coverage', color: '#7C9082', value: coverage },
+    { label: 'Freshness', color: '#D4A574', value: freshness },
+    { label: 'Depth', color: '#2D5F5D', value: depth },
+  ];
+
+  return (
+    <div
+      className="masthead-cell mh-complete-cell"
+      aria-label={`Overall family completeness ${overallPercent} percent`}
+    >
+      <span className="masthead-eyebrow">Overall</span>
+      <span className="mh-complete-row">
+        <svg
+          className="mh-complete-ring"
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          aria-hidden="true"
+        >
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke="rgba(60,48,28,0.06)"
+            strokeWidth={stroke}
+          />
+          {segments.map((s) => {
+            const filled = segLen * Math.min(s.value, 1);
+            const dashArray = `${filled} ${circumference - filled}`;
+            const rotation = angle;
+            angle += segDeg + gapDeg;
+            return (
+              <circle
+                key={s.key}
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke={s.color}
+                strokeWidth={stroke}
+                strokeLinecap="round"
+                strokeDasharray={dashArray}
+                transform={`rotate(${rotation} ${size / 2} ${size / 2})`}
+                style={{ opacity: s.value > 0 ? 1 : 0.22 }}
+              />
+            );
+          })}
+        </svg>
+        <span className="masthead-value big mh-complete-pct">
+          <em>{overallPercent}</em>
+          <span className="mh-complete-pct-mark">%</span>
+        </span>
+      </span>
+      <span className="mh-complete-sub">
+        across {totalKept} {totalKept === 1 ? 'person' : 'people'}
+      </span>
+      <div className="mh-complete-pop" role="tooltip">
+        <ul>
+          {dims.map((d) => (
+            <li key={d.label}>
+              <span
+                className="mh-complete-dot"
+                style={{ background: d.color }}
+                aria-hidden="true"
+              />
+              <span className="mh-complete-dim">{d.label}</span>
+              <span className="mh-complete-dim-pct">
+                {Math.round(Math.min(d.value, 1) * 100)}%
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
 
 function Constellation({
   selfName,
@@ -1515,65 +1595,113 @@ const styles = `
     color: var(--r-text-5);
   }
 
-  /* ═══ COMPLETENESS SECTION (Ring + lede) ═══
-     Hero of the Family Summary page. Lives in a bounded card, same
-     paper/border grammar as .feature cards, sized to be the page's
-     hero rather than a section beat. */
-  .completeness-section {
-    padding: 40px 0 8px;
-    border-top: 1px solid var(--r-rule-4);
-    margin-top: 32px;
-  }
-  .completeness-card {
-    background: var(--r-paper);
-    border: 1px solid var(--r-rule-5);
-    border-radius: 3px;
-    padding: 32px 40px;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 56px;
+  /* ═══ COMPLETENESS CELL (in-masthead) ═══
+     Replaces the "In your manual / N people" cell with a compact
+     overall-completeness readout: tiny three-segment SVG ring
+     beside the percent in Cormorant italic (same treatment as
+     .masthead-value.big). Per-dimension breakdown (Coverage /
+     Freshness / Depth) is revealed in a hover popover so it's
+     discoverable without crowding the strip. */
+  .mh-complete-cell { position: relative; }
+  .mh-complete-row {
+    display: inline-flex;
     align-items: center;
-  }
-  .completeness-card .cs-body {
-    display: flex;
-    flex-direction: column;
     gap: 10px;
-    min-width: 0;
+    line-height: 1;
   }
-  .completeness-card .cs-eyebrow {
+  .mh-complete-ring { flex: none; display: block; }
+  .mh-complete-pct {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 1px;
+    line-height: 1;
+  }
+  .mh-complete-pct em {
+    font-style: italic;
+    font-family: var(--r-serif);
+    font-weight: 400;
+  }
+  .mh-complete-pct-mark {
+    font-family: var(--r-serif);
+    font-style: italic;
+    font-weight: 300;
+    font-size: 20px;
+    color: var(--r-text-4);
+    letter-spacing: -0.02em;
+  }
+  .mh-complete-sub {
+    margin-top: 4px;
+    font-family: var(--r-serif);
+    font-style: italic;
+    font-weight: 300;
+    font-size: 15px;
+    color: var(--r-text-4);
+    letter-spacing: -0.003em;
+  }
+
+  /* Hover popover — three-dimension breakdown. Paper card with a
+     thin border, appears below the cell. CSS-only :hover so it
+     works without JS state. */
+  .mh-complete-pop {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    z-index: 4;
+    min-width: 200px;
+    padding: 14px 16px 12px;
+    background: var(--r-paper);
+    border: 1px solid var(--r-rule-4);
+    border-radius: 3px;
+    box-shadow: var(--r-shadow-card, 0 8px 24px rgba(20, 16, 12, 0.08));
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition:
+      opacity 140ms var(--r-ease-ink, ease),
+      transform 140ms var(--r-ease-ink, ease);
+  }
+  .mh-complete-cell:hover .mh-complete-pop,
+  .mh-complete-cell:focus-within .mh-complete-pop {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+  .mh-complete-pop ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+  }
+  .mh-complete-pop li {
+    display: grid;
+    grid-template-columns: 10px 1fr auto;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .mh-complete-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    align-self: center;
+    justify-self: center;
+  }
+  .mh-complete-dim {
     font-family: var(--r-sans);
     font-size: 10px;
     font-weight: 700;
-    letter-spacing: 0.24em;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
     color: var(--r-text-4);
+    line-height: 1;
   }
-  .completeness-card .cs-title {
+  .mh-complete-dim-pct {
     font-family: var(--r-serif);
-    font-weight: 300;
-    font-size: clamp(28px, 3vw, 36px);
-    line-height: 1.1;
-    letter-spacing: -0.015em;
+    font-style: italic;
+    font-size: 15px;
     color: var(--r-ink);
-    margin: 2px 0 0;
-  }
-  .completeness-card .cs-title em { font-style: italic; }
-  .completeness-card .cs-lede {
-    font-family: var(--r-serif);
-    font-size: 17px;
-    line-height: 1.5;
-    color: var(--r-text-3);
-    margin: 6px 0 0;
-    max-width: 48ch;
-  }
-  .completeness-card .cs-ring { justify-self: end; }
-  @media (max-width: 820px) {
-    .completeness-card {
-      grid-template-columns: 1fr;
-      gap: 28px;
-      padding: 28px 24px 32px;
-    }
-    .completeness-card .cs-ring { justify-self: start; }
+    line-height: 1;
+    letter-spacing: -0.005em;
   }
 
   /* ═══ NEXT STEPS ═══ — prioritized family-wide actions. Compact
