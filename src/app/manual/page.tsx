@@ -13,10 +13,12 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { usePerson } from '@/hooks/usePerson';
 import { useJournalEntries } from '@/hooks/useJournalEntries';
+import { useFamilyContributions } from '@/hooks/useFamilyContributions';
 import { computeAge } from '@/utils/age';
 import type { Person, RelationshipType } from '@/types/person-manual';
 import type { JournalEntry } from '@/types/journal';
 import { entryMentionsPerson } from '@/lib/entry-mentions';
+import PortraitInventory from '@/components/dashboard/PortraitInventory';
 
 export default function ManualPage() {
   const { user, loading } = useAuth();
@@ -32,6 +34,50 @@ export default function ManualPage() {
     () => computePersonMetrics(people, entries),
     [people, entries],
   );
+
+  // Portrait coverage data — who has contributed what across the
+  // whole family. Pairs with the Ring on the workbook (family-level
+  // overall percent) by showing the per-person picture here.
+  const { contributions: familyContributions } = useFamilyContributions();
+  const selfPerson = useMemo(
+    () =>
+      (people ?? []).find(
+        (p) => p.linkedUserId === user?.userId && p.relationshipType === 'self',
+      ) ?? null,
+    [people, user?.userId],
+  );
+  const hasSelfContribution = useMemo(
+    () =>
+      !!selfPerson &&
+      familyContributions.some(
+        (c) =>
+          c.contributorId === user?.userId &&
+          c.personId === selfPerson.personId &&
+          c.perspectiveType === 'self' &&
+          c.status === 'complete',
+      ),
+    [familyContributions, selfPerson, user?.userId],
+  );
+  const portraitRoles = useMemo(() => {
+    return (people ?? [])
+      .filter(
+        (p) =>
+          p.relationshipType !== 'self' &&
+          !p.archived &&
+          p.linkedUserId !== user?.userId,
+      )
+      .map((p) => ({
+        roleLabel: relationLabel(p),
+        otherPerson: p,
+        hasObserverContribution: familyContributions.some(
+          (c) =>
+            c.contributorId === user?.userId &&
+            c.personId === p.personId &&
+            c.perspectiveType === 'observer' &&
+            c.status === 'complete',
+        ),
+      }));
+  }, [people, familyContributions, user?.userId]);
 
   const roster = useMemo(() => {
     return metrics
@@ -287,6 +333,29 @@ export default function ManualPage() {
             members={metrics.filter(byGroup('kept_close'))}
           />
         </section>
+
+        {/* ═══ PORTRAIT INVENTORY ═══ — per-person coverage matrix:
+             who's contributed what perspective, with the next action
+             for each row. Pairs with the FamilyCompletenessRing on
+             the workbook (family-level rollup). */}
+        {portraitRoles.length > 0 && (
+          <section className="portraits-section" aria-label="Portrait coverage">
+            <div className="portraits-head">
+              <h2 className="h2-serif"><em>Who&rsquo;s contributed what.</em></h2>
+              <p className="sub">
+                Each row shows whose perspective is in and what&rsquo;s
+                next.
+              </p>
+            </div>
+            <PortraitInventory
+              selfPerson={selfPerson}
+              hasSelfContribution={hasSelfContribution}
+              roles={portraitRoles}
+              contributions={familyContributions}
+              userId={user.userId}
+            />
+          </section>
+        )}
 
         {/* ═══ ROSTER ═══ */}
         <section className="roster-section" aria-label="Everyone in your manual">
@@ -1290,6 +1359,28 @@ const styles = `
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--r-text-5);
+  }
+
+  /* PORTRAITS — per-person coverage */
+  .portraits-section {
+    padding: 56px 0 8px;
+    border-top: 1px solid var(--r-rule-4);
+  }
+  .portraits-head { margin-bottom: 20px; }
+  .portraits-head .h2-serif {
+    font-family: var(--r-serif);
+    font-weight: 300;
+    font-size: clamp(28px, 3vw, 36px);
+    line-height: 1.1;
+    color: var(--r-ink);
+    letter-spacing: -0.015em;
+    margin: 0 0 6px;
+  }
+  .portraits-head .h2-serif em { font-style: italic; }
+  .portraits-head .sub {
+    font-family: var(--r-sans);
+    font-size: 13px;
+    color: var(--r-text-3);
   }
 
   /* ROSTER */
