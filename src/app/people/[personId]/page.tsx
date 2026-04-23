@@ -153,6 +153,10 @@ export default function PersonPage({
 
   return (
     <main className="pp-app">
+      {/* Plain <style> safety net — styled-jsx global has been dropping
+          on Next 16 + Turbopack, leaving new classes unstyled. Mirror the
+          load-bearing rules here so they render regardless. */}
+      <style dangerouslySetInnerHTML={{ __html: personPageCss }} />
       <div className="pp-page">
         {/* ═══ BREADCRUMBS ═══ */}
         <div className="crumbs">
@@ -954,13 +958,14 @@ const styles = `
   .person-portrait {
     width: 100%;
     aspect-ratio: 4 / 5;
-    border-radius: 3px;
+    border-radius: 14px;
     overflow: hidden;
     position: relative;
     background: ${heroBg};
     background-color: var(--r-cream-warm);
     background-size: cover;
     background-position: center 30%;
+    box-shadow: 0 1px 2px rgba(20,16,12,0.06), 0 8px 30px rgba(20,16,12,0.06);
   }
   .person-portrait::after {
     content: "";
@@ -1699,4 +1704,257 @@ const styles = `
     .pp-page { padding: 88px 20px 40px; }
     .dossier-stats { grid-template-columns: repeat(3, 1fr); gap: 12px; }
   }
+`;
+
+/* ================================================================
+   personPageCss — plain-<style> safety net. styled-jsx global has
+   been dropping these rules silently on Next 16 + Turbopack; until
+   that's fixed at the framework level, duplicate the load-bearing
+   selectors here so the page doesn't render naked. Scoped under
+   .pp-page so nothing leaks.
+   ================================================================ */
+const personPageCss = `
+.pp-page .person-portrait {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+  background-color: var(--r-cream-warm, #EEE8DA);
+  background-size: cover;
+  background-position: center 30%;
+  box-shadow: 0 1px 2px rgba(20,16,12,0.06), 0 8px 30px rgba(20,16,12,0.06);
+}
+.pp-page .person-portrait::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(20,16,12,0) 55%, rgba(20,16,12,0.55) 100%);
+}
+.pp-page .person-plate {
+  position: absolute;
+  left: 28px;
+  bottom: 24px;
+  right: 28px;
+  color: var(--r-paper, #FDFBF6);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pp-page .person-plate .tag {
+  font-family: var(--r-sans, 'DM Sans', system-ui, sans-serif);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+.pp-page .person-plate h1 {
+  font-family: var(--r-serif, 'Cormorant Garamond', Georgia, serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 48px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: #FDFBF6;
+}
+.pp-page .person-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid rgba(253,251,246,0.85);
+  object-fit: cover;
+  margin-bottom: 4px;
+}
+
+.pp-page .dossier-relation {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  margin: 4px 0 18px;
+}
+.pp-page .dossier-relation-label {
+  font-family: var(--r-sans, 'DM Sans', system-ui, sans-serif);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--r-text-5, #8A7B5F);
+}
+.pp-page .dossier-relation-value {
+  font-family: var(--r-serif, 'Cormorant Garamond', Georgia, serif);
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--r-ink, #3A3530);
+}
+
+.pp-page .invite-card {
+  background: rgba(60,48,28,0.04);
+  border: 1px solid rgba(60,48,28,0.08);
+  border-radius: 4px;
+  padding: 32px 36px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 28px;
+}
+.pp-page .invite-card-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(60,48,28,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--r-text-4, #6B6254);
+  flex: none;
+}
+.pp-page .invite-card-body { min-width: 0; }
+.pp-page .invite-card-eyebrow {
+  display: block;
+  font-family: var(--r-sans, 'DM Sans', system-ui, sans-serif);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--r-text-5, #8A7B5F);
+  margin-bottom: 10px;
+}
+.pp-page .invite-card-title {
+  font-family: var(--r-serif, 'Cormorant Garamond', Georgia, serif);
+  font-weight: 400;
+  font-size: 26px;
+  line-height: 1.2;
+  color: var(--r-ink, #3A3530);
+  letter-spacing: -0.01em;
+  margin: 0 0 10px;
+}
+.pp-page .invite-card-copy {
+  font-family: var(--r-serif, 'Cormorant Garamond', Georgia, serif);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--r-text-3, #4a4139);
+  margin: 0 0 18px;
+  max-width: 42ch;
+}
+.pp-page .invite-card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border-radius: 2px;
+  font-family: var(--r-sans, 'DM Sans', system-ui, sans-serif);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #F7F5F0;
+  background: #2B2620;
+  border: 1px solid #2B2620;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 160ms ease;
+}
+.pp-page .invite-card-cta:hover { background: #3A3530; }
+.pp-page .invite-card-cta:disabled { opacity: 0.5; cursor: not-allowed; }
+.pp-page .invite-card-illustration {
+  flex: none;
+  opacity: 0.9;
+  margin-left: 12px;
+}
+.pp-page .invite-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.pp-page .invite-input {
+  flex: 1 1 240px;
+  font-family: var(--r-sans, 'DM Sans', system-ui, sans-serif);
+  font-size: 14px;
+  color: var(--r-ink, #3A3530);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(60,48,28,0.2);
+  padding: 8px 2px 10px;
+}
+.pp-page .invite-input:focus {
+  outline: none;
+  border-bottom-color: #7C9082;
+}
+.pp-page .invite-cancel {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--r-sans, 'DM Sans', system-ui, sans-serif);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--r-text-4, #6B6254);
+  padding: 6px 4px;
+}
+.pp-page .invite-error {
+  margin: 10px 0 0;
+  font-family: var(--r-sans, 'DM Sans', system-ui, sans-serif);
+  font-size: 13px;
+  color: #9E4A38;
+}
+@media (max-width: 720px) {
+  .pp-page .invite-card {
+    grid-template-columns: 1fr;
+    padding: 24px;
+  }
+  .pp-page .invite-card-illustration { display: none; }
+}
+
+.pp-page .balance-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  margin: 4px 0 20px;
+  border-radius: 3px;
+  font-family: var(--r-sans, 'DM Sans', system-ui, sans-serif);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--r-ink, #3A3530);
+  background: rgba(124,144,130,0.14);
+  flex-wrap: wrap;
+}
+.pp-page .balance-line .balance-leaf {
+  flex: none;
+  color: #6C8571;
+}
+.pp-page .balance-line .balance-text {
+  font-family: var(--r-serif, 'Cormorant Garamond', Georgia, serif);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--r-text-2, #2B2620);
+}
+.pp-page .balance-line .balance-inline-link {
+  color: var(--r-ink, #3A3530);
+  font-style: italic;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(60,48,28,0.25);
+}
+.pp-page .balance-line.balance-mostly-in-balance {
+  background: rgba(196,162,101,0.16);
+}
+.pp-page .balance-line.balance-mostly-in-balance .balance-leaf { color: #A07F3E; }
+.pp-page .balance-line.balance-needs-attention {
+  background: rgba(201,104,82,0.14);
+}
+.pp-page .balance-line.balance-needs-attention .balance-leaf { color: #A85438; }
+
+.pp-page .colophon {
+  text-align: center;
+  padding: 64px 0 40px;
+  font-family: var(--r-serif, 'Cormorant Garamond', Georgia, serif);
+  font-style: italic;
+  color: var(--r-text-5, #8A7B5F);
+  font-size: 14px;
+}
 `;
