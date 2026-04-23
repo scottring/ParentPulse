@@ -15,32 +15,40 @@ const SEGMENTS = [
 
 /**
  * SVG donut ring showing family data completeness across 3 dimensions.
+ * Typography matches the editorial language of the rest of the page:
+ * Cormorant italic for the central number and per-segment percents,
+ * DM Sans small-caps eyebrows for the labels and the word "percent".
  */
 export function FamilyCompletenessRing({ completeness, dark }: Props) {
   const { overallPercent, coverage, freshness, depth } = completeness;
   const values = { coverage, freshness, depth };
 
-  const size = 120;
-  const strokeWidth = 8;
+  const size = 132;
+  const strokeWidth = 9;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const gapAngle = 8; // degrees between segments
+  const gapAngle = 10; // degrees between segments
   const totalGap = gapAngle * 3;
   const availableDegrees = 360 - totalGap;
   const segmentDegrees = availableDegrees / 3;
 
   let currentAngle = -90; // start from top
 
-  const textColor = dark ? 'rgba(255,255,255,0.95)' : '#3A3530';
-  const textSecondary = dark ? 'rgba(255,255,255,0.5)' : '#5F564B';
-  const trackColor = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)';
+  const inkColor = dark ? 'rgba(255,255,255,0.95)' : 'var(--r-ink, #3A3530)';
+  const eyebrowColor = dark ? 'rgba(255,255,255,0.55)' : 'var(--r-text-4, #6B6254)';
+  const trackColor = dark ? 'rgba(255,255,255,0.08)' : 'rgba(60,48,28,0.05)';
 
   return (
-    <div className="flex items-center gap-5">
+    <div
+      className="flex items-center"
+      style={{ gap: 28 }}
+    >
       {/* Ring */}
-      <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      <div
+        className="relative flex-shrink-0"
+        style={{ width: size, height: size }}
+      >
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          {/* Background track */}
           <circle
             cx={size / 2}
             cy={size / 2}
@@ -49,8 +57,6 @@ export function FamilyCompletenessRing({ completeness, dark }: Props) {
             stroke={trackColor}
             strokeWidth={strokeWidth}
           />
-
-          {/* Segments */}
           {SEGMENTS.map((seg) => {
             const value = values[seg.key];
             const segLength = (segmentDegrees / 360) * circumference;
@@ -72,35 +78,39 @@ export function FamilyCompletenessRing({ completeness, dark }: Props) {
                 strokeDasharray={dashArray}
                 strokeDashoffset={0}
                 transform={`rotate(${rotation} ${size / 2} ${size / 2})`}
-                style={{ opacity: value > 0 ? 1 : 0.2, transition: 'stroke-dasharray 0.6s ease' }}
+                style={{
+                  opacity: value > 0 ? 1 : 0.18,
+                  transition: 'stroke-dasharray 0.6s ease',
+                }}
               />
             );
           })}
         </svg>
 
-        {/* Center label */}
-        <div
-          className="absolute inset-0 flex flex-col items-center justify-center"
-        >
+        {/* Center label — big numeral in Cormorant italic, eyebrow below. */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span
             style={{
-              fontFamily: 'var(--font-parent-display)',
-              fontSize: '33px',
+              fontFamily: 'var(--r-serif, var(--font-parent-display))',
+              fontStyle: 'italic',
+              fontSize: 38,
               fontWeight: 400,
-              color: textColor,
+              color: inkColor,
               lineHeight: 1,
+              letterSpacing: '-0.02em',
             }}
           >
             {overallPercent}
           </span>
           <span
             style={{
-              fontFamily: 'var(--font-parent-body)',
-              fontSize: '13px',
-              fontWeight: 500,
-              color: textSecondary,
-              letterSpacing: '0.08em',
+              fontFamily: 'var(--r-sans, var(--font-parent-body))',
+              fontSize: 9,
+              fontWeight: 700,
+              color: eyebrowColor,
+              letterSpacing: '0.22em',
               textTransform: 'uppercase',
+              marginTop: 6,
             }}
           >
             percent
@@ -108,32 +118,52 @@ export function FamilyCompletenessRing({ completeness, dark }: Props) {
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="space-y-2">
+      {/* Legend — small-caps eyebrow labels with Cormorant italic
+          percentages, vertically aligned against the ring. */}
+      <div className="flex flex-col" style={{ gap: 10 }}>
         {SEGMENTS.map((seg) => {
           const value = values[seg.key];
           const percent = Math.round(value * 100);
           return (
-            <div key={seg.key} className="flex items-center gap-2">
-              <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ background: seg.color, opacity: value > 0 ? 1 : 0.3 }}
+            <div
+              key={seg.key}
+              className="flex items-baseline"
+              style={{ gap: 12 }}
+            >
+              <span
+                className="flex-shrink-0"
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: seg.color,
+                  opacity: value > 0 ? 1 : 0.3,
+                  transform: 'translateY(-1px)',
+                }}
               />
               <span
                 style={{
-                  fontFamily: 'var(--font-parent-body)',
-                  fontSize: '19px',
-                  color: textSecondary,
+                  fontFamily: 'var(--r-sans, var(--font-parent-body))',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: '0.22em',
+                  textTransform: 'uppercase',
+                  color: eyebrowColor,
+                  flex: 1,
+                  minWidth: 72,
                 }}
               >
                 {seg.label}
               </span>
               <span
                 style={{
-                  fontFamily: 'var(--font-parent-body)',
-                  fontSize: '19px',
-                  fontWeight: 600,
-                  color: textColor,
+                  fontFamily: 'var(--r-serif, var(--font-parent-display))',
+                  fontStyle: 'italic',
+                  fontSize: 17,
+                  fontWeight: 400,
+                  color: inkColor,
+                  lineHeight: 1,
+                  letterSpacing: '-0.01em',
                 }}
               >
                 {percent}%

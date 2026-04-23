@@ -482,9 +482,12 @@ export default function WorkbookPage() {
             <div className="completeness-head">
               <span className="eyebrow">Your family, at a glance</span>
               <h2 className="h2-serif"><em>Where you are.</em></h2>
-              <Link href="/manual" className="completeness-drill">
-                See the per-person breakdown <span aria-hidden>⟶</span>
-              </Link>
+              <p className="completeness-sub">
+                A reading across coverage, freshness, and depth.{' '}
+                <Link href="/manual" className="completeness-drill">
+                  Open the per-person breakdown <span aria-hidden>⟶</span>
+                </Link>
+              </p>
             </div>
             <Link
               href="/manual"
@@ -1948,62 +1951,74 @@ const styles = `
 
   /* ═══ FAMILY COMPLETENESS RING ═══ */
   .completeness-section {
-    padding: 40px 0 8px;
+    padding: 48px 0 16px;
+    border-top: 1px solid var(--r-rule-4);
     display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 40px;
+    grid-template-columns: 1fr auto;
+    gap: 48px;
     align-items: center;
+    margin-top: 24px;
   }
   .completeness-section .completeness-head {
-    min-width: 240px;
+    max-width: 52ch;
   }
   .completeness-section .eyebrow {
     display: block;
     font-family: var(--r-sans);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.22em;
     text-transform: uppercase;
     color: var(--r-text-4);
-    margin-bottom: 10px;
+    margin-bottom: 12px;
   }
   .completeness-section .h2-serif {
     font-family: var(--r-serif);
+    font-style: italic;
     font-weight: 300;
-    font-size: clamp(30px, 3.2vw, 40px);
-    line-height: 1.05;
+    font-size: 44px;
+    line-height: 1;
     color: var(--r-ink);
     letter-spacing: -0.015em;
     margin: 0;
   }
   .completeness-section .h2-serif em { font-style: italic; }
-  .completeness-section .completeness-drill {
-    display: inline-block;
-    margin-top: 14px;
-    font-family: var(--r-sans);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--r-ember);
-    text-decoration: none;
-    border-bottom: 1px solid currentColor;
-    padding-bottom: 2px;
+  .completeness-section .completeness-sub {
+    font-family: var(--r-serif);
+    font-size: 17px;
+    line-height: 1.45;
+    color: var(--r-text-3);
+    margin: 10px 0 0;
   }
-  .completeness-section .completeness-drill:hover { opacity: 0.78; }
+  .completeness-section .completeness-drill {
+    font-family: var(--r-serif);
+    font-style: italic;
+    font-size: 17px;
+    color: var(--r-ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--r-rule-3);
+    padding-bottom: 1px;
+    transition: border-color 120ms var(--r-ease-ink);
+    white-space: nowrap;
+  }
+  .completeness-section .completeness-drill:hover {
+    border-bottom-color: var(--r-ink);
+  }
   .completeness-section .completeness-ring-link {
-    justify-self: start;
+    justify-self: end;
     text-decoration: none;
     color: inherit;
     display: inline-block;
-    transition: opacity 120ms var(--r-ease-ink);
+    transition: transform 260ms var(--r-ease-ink), opacity 120ms var(--r-ease-ink);
   }
-  .completeness-section .completeness-ring-link:hover { opacity: 0.92; }
-  @media (max-width: 720px) {
+  .completeness-section .completeness-ring-link:hover { transform: translateY(-1px); opacity: 0.96; }
+  @media (max-width: 820px) {
     .completeness-section {
       grid-template-columns: 1fr;
-      gap: 20px;
+      gap: 24px;
     }
+    .completeness-section .completeness-ring-link { justify-self: start; }
+    .completeness-section .h2-serif { font-size: 36px; }
   }
 
   /* ═══ FROM YOUR LAST CONVERSATION ═══ */
