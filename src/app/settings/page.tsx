@@ -87,7 +87,7 @@ export default function SettingsPage() {
             }}
           >
             <div className="flex items-start gap-6">
-              <Link href="/journal" className="mt-2 text-3xl transition-colors" style={{ color: '#3A3530' }}>
+              <Link href="/workbook" className="mt-2 text-3xl transition-colors" style={{ color: '#3A3530' }}>
                 &#8592;
               </Link>
 

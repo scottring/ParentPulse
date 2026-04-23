@@ -58,7 +58,7 @@ function getPerformanceMode(type: GrowthItemType): PerformanceMode {
   }
 }
 
-// Readings live in The Journal; practices live in The Workbook.
+// Readings live in the Workbook; practices live in the Family Manual.
 // Same growth system, different shelf.
 function isReadingType(type: GrowthItemType): boolean {
   return type === 'illustrated_story' || type === 'progress_snapshot';
@@ -66,7 +66,7 @@ function isReadingType(type: GrowthItemType): boolean {
 
 function shelfFor(type: GrowthItemType): { name: string; href: string; returnLabel: string } {
   return isReadingType(type)
-    ? { name: 'The Journal', href: '/journal', returnLabel: 'Return to the Journal' }
+    ? { name: 'The Workbook', href: '/workbook', returnLabel: 'Return to the Workbook' }
     : { name: 'The Family Manual', href: '/manual', returnLabel: 'Return to the Manual' };
 }
 

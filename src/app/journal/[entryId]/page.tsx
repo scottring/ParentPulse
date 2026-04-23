@@ -409,8 +409,8 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
     <div className="pt-[64px] pb-24">
       <div className="relish-container">
         <div className="detail-backbar">
-          <Link href="/journal" className="back-link">
-            ← The Journal
+          <Link href="/workbook" className="back-link">
+            ← Back
           </Link>
         </div>
 

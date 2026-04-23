@@ -76,7 +76,7 @@ export default function MomentDetailPage() {
     return (
       <main className="shell">
         <p className="empty">We couldn&apos;t find that moment.</p>
-        <p className="back"><Link href="/journal">← back to the journal</Link></p>
+        <p className="back"><Link href="/workbook">← Back</Link></p>
         <style jsx>{pageStyles}</style>
       </main>
     );
