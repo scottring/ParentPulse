@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useJournal } from '@/hooks/useJournal';
+import { useJournalEntries } from '@/hooks/useJournalEntries';
 import { usePerson } from '@/hooks/usePerson';
 import { useEntryChat } from '@/hooks/useEntryChat';
 import { usePrivacyLock } from '@/hooks/usePrivacyLock';
@@ -47,6 +48,13 @@ export default function CaptureSheet() {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   // Which toolbar picker row is expanded (only one at a time).
   const [openPicker, setOpenPicker] = useState<'category' | 'about' | 'writingAs' | 'privacy' | null>(null);
+  // Toolbar visibility — hidden by default for brand-new users so
+  // their first capture is just textarea + save. Revealed by clicking
+  // "more options", and stays revealed for returning users.
+  const { entries: _allEntriesForToolbar } = useJournalEntries();
+  const firstTimeUser = _allEntriesForToolbar.length === 0;
+  const [toolbarRevealed, setToolbarRevealed] = useState(false);
+  const toolbarVisible = !firstTimeUser || toolbarRevealed;
   const [visibilityPreset, setVisibilityPreset] = useState<'just-me' | 'spouse' | 'family'>('just-me');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -831,39 +839,62 @@ export default function CaptureSheet() {
                 </div>
               )}
 
-              {/* Compact toolbar */}
-              <div className="shrink-0 flex items-center gap-1 px-4 py-2"
-                style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
-                <input ref={fileInputRef} type="file" accept="image/*,audio/*" multiple className="hidden"
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files || []);
-                    setStagedFiles((prev) => [...prev, ...files].slice(0, 5));
-                    e.target.value = '';
-                  }} />
-                <button type="button" onClick={() => fileInputRef.current?.click()}
-                  style={{ ...chipStyle(stagedFiles.length > 0), fontSize: 17, padding: '5px 8px' }}
-                  aria-label="Add photo">
-                  📷{stagedFiles.length > 0 ? ` ${stagedFiles.length}` : ''}
-                </button>
-                <button type="button" onClick={() => setOpenPicker(openPicker === 'category' ? null : 'category')}
-                  style={chipStyle(openPicker === 'category')}>
-                  {catMeta?.emoji} {catMeta?.label || 'Category'}
-                </button>
-                <button type="button" onClick={() => setOpenPicker(openPicker === 'about' ? null : 'about')}
-                  style={chipStyle(openPicker === 'about' || selectedPeople.length > 0)}>
-                  {aboutLabel}
-                </button>
-                {hasChildren && (
-                  <button type="button" onClick={() => setOpenPicker(openPicker === 'writingAs' ? null : 'writingAs')}
-                    style={chipStyle(openPicker === 'writingAs' || !!writingFor)}>
-                    As {writingFor ? writingFor.name : 'me'}
+              {/* Compact toolbar — hidden by default on first capture.
+                  Brand-new users see just the textarea; experienced
+                  users (or anyone who has revealed it once) see it. */}
+              {toolbarVisible ? (
+                <div className="shrink-0 flex items-center gap-1 px-4 py-2"
+                  style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                  <input ref={fileInputRef} type="file" accept="image/*,audio/*" multiple className="hidden"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      setStagedFiles((prev) => [...prev, ...files].slice(0, 5));
+                      e.target.value = '';
+                    }} />
+                  <button type="button" onClick={() => fileInputRef.current?.click()}
+                    style={{ ...chipStyle(stagedFiles.length > 0), fontSize: 17, padding: '5px 8px' }}
+                    aria-label="Add photo">
+                    📷{stagedFiles.length > 0 ? ` ${stagedFiles.length}` : ''}
                   </button>
-                )}
-                <button type="button" onClick={() => setOpenPicker(openPicker === 'privacy' ? null : 'privacy')}
-                  style={chipStyle(openPicker === 'privacy' || sharedWith.length > 0)}>
-                  {sharedWith.length === 0 ? '🔒' : '✦'} Adjust who can see this →
-                </button>
-              </div>
+                  <button type="button" onClick={() => setOpenPicker(openPicker === 'category' ? null : 'category')}
+                    style={chipStyle(openPicker === 'category')}>
+                    {catMeta?.emoji} {catMeta?.label || 'Category'}
+                  </button>
+                  <button type="button" onClick={() => setOpenPicker(openPicker === 'about' ? null : 'about')}
+                    style={chipStyle(openPicker === 'about' || selectedPeople.length > 0)}>
+                    {aboutLabel}
+                  </button>
+                  {hasChildren && (
+                    <button type="button" onClick={() => setOpenPicker(openPicker === 'writingAs' ? null : 'writingAs')}
+                      style={chipStyle(openPicker === 'writingAs' || !!writingFor)}>
+                      As {writingFor ? writingFor.name : 'me'}
+                    </button>
+                  )}
+                  <button type="button" onClick={() => setOpenPicker(openPicker === 'privacy' ? null : 'privacy')}
+                    style={chipStyle(openPicker === 'privacy' || sharedWith.length > 0)}>
+                    {sharedWith.length === 0 ? '🔒' : '✦'} Adjust who can see this →
+                  </button>
+                </div>
+              ) : (
+                <div className="shrink-0 flex items-center justify-end px-4 py-2"
+                  style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                  <button
+                    type="button"
+                    onClick={() => setToolbarRevealed(true)}
+                    style={{
+                      fontFamily: 'var(--font-parent-body)',
+                      fontSize: 13,
+                      color: '#8A7B5F',
+                      background: 'transparent',
+                      border: 0,
+                      cursor: 'pointer',
+                      padding: '4px 6px',
+                    }}
+                  >
+                    + more options
+                  </button>
+                </div>
+              )}
             </div>
           );
         })()}
