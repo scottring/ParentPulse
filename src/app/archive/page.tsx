@@ -17,6 +17,7 @@ import { useJournalEntries } from '@/hooks/useJournalEntries';
 import { useJournal } from '@/hooks/useJournal';
 import { usePrivacyGate } from '@/hooks/usePrivacyGate';
 import type { JournalEntry, JournalCategory } from '@/types/journal';
+import { Volumes, type Volume } from '@/design/manual/Volumes';
 
 export default function ArchivePage() {
   const { user, loading } = useAuth();
@@ -70,6 +71,17 @@ export default function ArchivePage() {
 
   const stats = useMemo(() => computeStats(entries), [entries]);
 
+  const volumes = useMemo<Volume[]>(() => {
+    const currentYear = new Date().getFullYear();
+    const palette: Array<Volume['spineColor']> = ['leather', 'sage', 'burgundy', 'ember'];
+    return years.map((y, i) => ({
+      year: y,
+      entries: Object.values(grouped[y] ?? {}).reduce((n, ms) => n + ms.length, 0),
+      spineColor: palette[i % palette.length],
+      current: y === currentYear,
+    }));
+  }, [years, grouped]);
+
   if (loading || !user) return null;
 
   const currentYear = selectedYear ?? new Date().getFullYear();
@@ -79,7 +91,9 @@ export default function ArchivePage() {
   return (
     <main className="ar-app">
       <div className="ar-page">
-        {/* ═══ MASTHEAD ═══ */}
+        {/* ═══ MASTHEAD ═══ — hidden when the archive is empty so brand-new
+             users don't land on four zeros. */}
+        {hasAny && (
         <section className="manual-masthead" aria-label="The Archive at a glance">
           <div className="masthead-strip">
             <div className="masthead-cell">
@@ -122,11 +136,12 @@ export default function ArchivePage() {
             </div>
           </div>
         </section>
+        )}
 
         {/* ═══ HERO / SEARCH ═══ */}
         <section className="ar-hero">
           <div>
-            <p className="ar-kicker">The Archive · everything kept</p>
+            <p className="ar-kicker">The Archive · everything you&rsquo;ve written</p>
             <h1 className="ar-h1">
               {hasAny
                 ? 'Read back through it.'
@@ -171,7 +186,12 @@ export default function ArchivePage() {
           </div>
         </section>
 
-        {/* ═══ YEAR SELECTOR ═══ */}
+        {/* ═══ VOLUMES BOOKSHELF ═══ */}
+        {volumes.length > 0 && (
+          <Volumes volumes={volumes} onOpen={(y) => setSelectedYear(y)} />
+        )}
+
+        {/* ═══ YEAR SELECTOR — compact tabs below the bookshelf ═══ */}
         {years.length > 0 && (
           <nav className="ar-years" aria-label="Year">
             {years.map((y) => (

@@ -43,7 +43,8 @@ _Toolbar hides until entries.length > 0; "+ more options" button reveals. Commit
 - Check: existing tests shouldn't break. If they do, mark SKIP.
 - Commit: `feat(capture): collapse Pen pickers by default for first-time users`.
 
-### 4. [TODO] Journal entry detail — surface chat-distilled insights
+### 4. [DONE] Journal entry detail — surface chat-distilled insights
+_Surface was already shipped in commit 1065632 (raison audit was wrong). Added "See the conversation →" link for discoverability. Commit f58c3da._
 - `src/app/journal/[entryId]/page.tsx` already receives `entry.chatInsights` from the entry.
 - Verify the field exists on `JournalEntry` type; if not, find where it's written (`distillChatToInsights` callable or similar) and match that shape.
 - Render insights as small "Claude noticed" chips below the entry body (above the chat section).
