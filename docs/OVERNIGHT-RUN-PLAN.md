@@ -34,7 +34,8 @@ _Also caught 3 other "/journal" back-links in moments, settings, growth. Commit 
 - Mirror the existing nav styling exactly.
 - Commit: `feat(nav): surface /therapy as a third destination alongside Workbook/Family/Archive`.
 
-### 3. [TODO] Pen picker density — collapse advanced pickers by default for first-time users
+### 3. [DONE] Pen picker density — collapse advanced pickers by default for first-time users
+_Toolbar hides until entries.length > 0; "+ more options" button reveals. Commit 68ec23f._
 - In `src/components/capture/CaptureSheet.tsx`, find the four pickers above the textarea (category, visibility chips, person mentions, media/voice — verify exact structure first).
 - Add an `expanded` local state that defaults to `false` when `entries.length === 0` (first-time user), `true` otherwise.
 - Add a small "+ more options" button that toggles `expanded`.

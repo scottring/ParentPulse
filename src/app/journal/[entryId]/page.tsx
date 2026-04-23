@@ -685,6 +685,15 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
                   {entry.chatInsights.themes.slice(0, 4).join(' · ')}
                 </p>
               )}
+              {!showChat && (
+                <button
+                  type="button"
+                  className="chat-insight-link"
+                  onClick={() => setShowChat(true)}
+                >
+                  See the conversation <span aria-hidden="true">⟶</span>
+                </button>
+              )}
             </section>
           )}
 
@@ -1301,6 +1310,21 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
           color: var(--r-text-5, #887C68);
           margin: 0;
         }
+        :global(.chat-insight-link) {
+          margin-top: 10px;
+          background: transparent;
+          border: 0;
+          cursor: pointer;
+          font-family: var(--r-sans, -apple-system, sans-serif);
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: var(--r-ember, #C98452);
+          padding: 0;
+          transition: opacity 120ms ease;
+        }
+        :global(.chat-insight-link:hover) { opacity: 0.75; }
         :global(.chat-trigger) {
           display: inline-flex;
           align-items: center;
