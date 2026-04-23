@@ -512,24 +512,6 @@ function CompletenessCell({
 }) {
   const { overallPercent, coverage, freshness, depth } = completeness;
 
-  // Ring geometry — same 3-segment logic as FamilyCompletenessRing,
-  // sized as the hero element in the masthead strip.
-  const size = 84;
-  const stroke = 5;
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const gapDeg = 8;
-  const segDeg = (360 - gapDeg * 3) / 3;
-  const segLen = (segDeg / 360) * circumference;
-
-  const segments = [
-    { key: 'coverage', color: '#7C9082', value: coverage },
-    { key: 'freshness', color: '#D4A574', value: freshness },
-    { key: 'depth', color: '#2D5F5D', value: depth },
-  ];
-
-  let angle = -90;
-
   const dims = [
     { label: 'Coverage', color: '#7C9082', value: coverage },
     { label: 'Freshness', color: '#D4A574', value: freshness },
@@ -542,71 +524,30 @@ function CompletenessCell({
       aria-label={`Overall family completeness ${overallPercent} percent across ${totalKept} ${totalKept === 1 ? 'person' : 'people'}`}
     >
       <span className="masthead-eyebrow">Overall</span>
-      <div className="mh-complete-top">
-        <div className="mh-complete-ring-wrap" style={{ width: size, height: size }}>
-          <svg
-            className="mh-complete-ring"
-            width={size}
-            height={size}
-            viewBox={`0 0 ${size} ${size}`}
-            aria-hidden="true"
-          >
-            <circle
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              fill="none"
-              stroke="rgba(60,48,28,0.06)"
-              strokeWidth={stroke}
-            />
-            {segments.map((s) => {
-              const filled = segLen * Math.min(s.value, 1);
-              const dashArray = `${filled} ${circumference - filled}`;
-              const rotation = angle;
-              angle += segDeg + gapDeg;
-              return (
-                <circle
-                  key={s.key}
-                  cx={size / 2}
-                  cy={size / 2}
-                  r={radius}
-                  fill="none"
-                  stroke={s.color}
-                  strokeWidth={stroke}
-                  strokeLinecap="round"
-                  strokeDasharray={dashArray}
-                  transform={`rotate(${rotation} ${size / 2} ${size / 2})`}
-                  style={{ opacity: s.value > 0 ? 1 : 0.22 }}
-                />
-              );
-            })}
-          </svg>
-          <span className="mh-complete-center" aria-hidden="true">
-            <em>{overallPercent}</em>
-            <span className="mh-complete-center-mark">%</span>
-          </span>
-        </div>
-        <ul className="mh-complete-dims">
-          {dims.map((d) => {
-            const pct = Math.round(Math.min(d.value, 1) * 100);
-            return (
-              <li key={d.label} className="mh-complete-dim-row">
-                <span className="mh-complete-dim">{d.label}</span>
+      <span className="mh-complete-overall">
+        <em>{overallPercent}</em>
+        <span className="mh-complete-overall-mark">%</span>
+      </span>
+      <ul className="mh-complete-dims">
+        {dims.map((d) => {
+          const pct = Math.round(Math.min(d.value, 1) * 100);
+          return (
+            <li key={d.label} className="mh-complete-dim-row">
+              <span className="mh-complete-dim">{d.label}</span>
+              <span
+                className="mh-complete-bar"
+                role="img"
+                aria-label={`${d.label} ${pct} percent`}
+              >
                 <span
-                  className="mh-complete-bar"
-                  role="img"
-                  aria-label={`${d.label} ${pct} percent`}
-                >
-                  <span
-                    className="mh-complete-bar-fill"
-                    style={{ width: `${pct}%`, background: d.color }}
-                  />
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+                  className="mh-complete-bar-fill"
+                  style={{ width: `${pct}%`, background: d.color }}
+                />
+              </span>
+            </li>
+          );
+        })}
+      </ul>
       <span className="mh-complete-sub">
         (across {totalKept} {totalKept === 1 ? 'person' : 'people'})
       </span>
@@ -1644,50 +1585,34 @@ const styles = `
   }
 
   /* ═══ COMPLETENESS CELL (hero in masthead) ═══
-     Two-column interior: ring (with percent in its center) on the
-     left, scrunched Coverage/Freshness/Depth rows on the right.
-     "across N people" sits as a small italic serif line at the
-     bottom of the cell. */
+     Horizontal-bar layout. Eyebrow ("OVERALL") → big italic-serif
+     percent → three Coverage/Freshness/Depth bars → sub-line.
+     Ring chart retired — bars do the work. */
   .mh-complete-cell {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     padding-top: 0;
   }
-  .mh-complete-top {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-  .mh-complete-ring-wrap {
-    position: relative;
-    flex: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .mh-complete-ring { display: block; }
-  .mh-complete-center {
-    position: absolute;
-    inset: 0;
+  .mh-complete-overall {
     display: inline-flex;
     align-items: baseline;
-    justify-content: center;
     gap: 1px;
     font-family: var(--r-serif);
     font-style: italic;
     font-weight: 400;
-    font-size: 30px;
+    font-size: 44px;
     color: var(--r-ink);
     letter-spacing: -0.02em;
     line-height: 1;
+    margin: 2px 0 6px;
   }
-  .mh-complete-center em { font-style: italic; }
-  .mh-complete-center-mark {
+  .mh-complete-overall em { font-style: italic; }
+  .mh-complete-overall-mark {
     font-family: var(--r-serif);
     font-style: italic;
     font-weight: 300;
-    font-size: 15px;
+    font-size: 22px;
     color: var(--r-text-4);
     letter-spacing: -0.02em;
   }
@@ -1698,16 +1623,16 @@ const styles = `
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 6px;
     min-width: 0;
+    max-width: 220px;
   }
   .mh-complete-dim-row {
     display: grid;
-    grid-template-columns: auto 56px;
+    grid-template-columns: 72px 1fr;
     column-gap: 10px;
     align-items: center;
     line-height: 1.15;
-    justify-content: start;
   }
   .mh-complete-dim {
     font-family: var(--r-sans);
@@ -1721,7 +1646,6 @@ const styles = `
   }
   .mh-complete-bar {
     display: block;
-    width: 56px;
     height: 6px;
     background: rgba(60,48,28,0.08);
     border-radius: 2px;
