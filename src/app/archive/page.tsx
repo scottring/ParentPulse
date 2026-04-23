@@ -82,7 +82,18 @@ export default function ArchivePage() {
     }));
   }, [years, grouped]);
 
-  if (loading || !user) return null;
+  if (loading || !user) {
+    // Keep the <main> rendered so styled-jsx global has a mount point
+    // and can inject CSS when the authed render follows. See the
+    // identical fix in src/app/manual/page.tsx for the Next.js 16 +
+    // styled-jsx-global + null-early-return quirk.
+    return (
+      <main className="ar-app">
+        <div className="ar-page" aria-busy="true" />
+        <style jsx global>{styles}</style>
+      </main>
+    );
+  }
 
   const currentYear = selectedYear ?? new Date().getFullYear();
   const monthsForYear = grouped[currentYear] ?? {};

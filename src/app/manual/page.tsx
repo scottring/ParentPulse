@@ -59,7 +59,18 @@ export default function ManualPage() {
     }
   }, [roster, filter]);
 
-  if (loading || !user) return null;
+  if (loading || !user) {
+    // Keep the <main> shell rendered during auth-loading so the
+    // <style jsx global> block has a stable mount point. Returning
+    // null here in Next.js 16 leaves styled-jsx unable to inject the
+    // page's global CSS when the component later renders with content.
+    return (
+      <main className="mn-app">
+        <div className="mn-page" aria-busy="true" />
+        <style jsx global>{styles}</style>
+      </main>
+    );
+  }
 
   const totalKept = roster.length;
   const peopleWithOpenThreads = roster.filter((m) => m.openThreadsCount > 0).length;
