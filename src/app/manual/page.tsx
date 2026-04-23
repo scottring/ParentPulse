@@ -15,6 +15,7 @@ import { usePerson } from '@/hooks/usePerson';
 import { useJournalEntries } from '@/hooks/useJournalEntries';
 import { useFamilyContributions } from '@/hooks/useFamilyContributions';
 import { useFamilyManuals } from '@/hooks/useFamilyManuals';
+import { useFamily } from '@/hooks/useFamily';
 import { useFreshness } from '@/hooks/useFreshness';
 import { computeAge } from '@/utils/age';
 import type { Person, RelationshipType, Contribution } from '@/types/person-manual';
@@ -83,6 +84,7 @@ export default function ManualPage() {
 
   // Family-level completeness for the Ring at the top of this page.
   const { manuals: familyManuals } = useFamilyManuals();
+  const { family } = useFamily();
   const { familyCompleteness } = useFreshness({
     people,
     manuals: familyManuals,
@@ -204,9 +206,17 @@ export default function ManualPage() {
     );
   }
 
+  const familyTitle = (family?.name?.trim() || 'Your family');
+
   return (
     <main className="mn-app">
       <div className="mn-page">
+        {/* ═══ TITLE ═══ — family name as the page headline. */}
+        <header className="fs-title-block">
+          <span className="fs-title-eyebrow">The Family Summary</span>
+          <h1 className="fs-title"><em>{familyTitle}</em></h1>
+        </header>
+
         {/* ═══ MASTHEAD ═══ */}
         <section className="manual-masthead" aria-label="The Family Summary">
           <div className="masthead-strip">
@@ -494,9 +504,9 @@ function CompletenessCell({
   const { overallPercent, coverage, freshness, depth } = completeness;
 
   // Ring geometry — same 3-segment logic as FamilyCompletenessRing,
-  // sized for masthead.
-  const size = 40;
-  const stroke = 3;
+  // sized as the hero element in the masthead strip.
+  const size = 84;
+  const stroke = 5;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const gapDeg = 8;
@@ -566,26 +576,24 @@ function CompletenessCell({
           <span className="mh-complete-pct-mark">%</span>
         </span>
       </span>
-      <span className="mh-complete-sub">
-        across {totalKept} {totalKept === 1 ? 'person' : 'people'}
-      </span>
-      <div className="mh-complete-pop" role="tooltip">
-        <ul>
-          {dims.map((d) => (
-            <li key={d.label}>
-              <span
-                className="mh-complete-dot"
-                style={{ background: d.color }}
-                aria-hidden="true"
-              />
-              <span className="mh-complete-dim">{d.label}</span>
-              <span className="mh-complete-dim-pct">
-                {Math.round(Math.min(d.value, 1) * 100)}%
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <ul className="mh-complete-lines">
+        <li className="mh-complete-line mh-complete-line--sub">
+          across {totalKept} {totalKept === 1 ? 'person' : 'people'}
+        </li>
+        {dims.map((d) => (
+          <li key={d.label} className="mh-complete-line">
+            <span
+              className="mh-complete-dot"
+              style={{ background: d.color }}
+              aria-hidden="true"
+            />
+            <span className="mh-complete-dim">{d.label}</span>
+            <span className="mh-complete-dim-pct">
+              {Math.round(Math.min(d.value, 1) * 100)}%
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -1190,18 +1198,47 @@ const styles = `
     padding: 104px 40px 40px;
   }
 
+  /* PAGE TITLE — family name as the page headline. */
+  .fs-title-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0 0 28px;
+  }
+  .fs-title-eyebrow {
+    font-family: var(--r-sans);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--r-text-5);
+  }
+  .fs-title {
+    font-family: var(--r-serif);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 64px;
+    line-height: 1;
+    letter-spacing: -0.025em;
+    color: var(--r-ink);
+    margin: 0;
+  }
+  .fs-title em { font-style: italic; }
+
   /* MASTHEAD */
   .manual-masthead { margin: 0; }
   .masthead-strip {
     background: var(--r-paper);
     border: 1px solid var(--r-rule-4);
-    padding: 18px 32px;
+    padding: 24px 32px;
     display: grid;
-    grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+    grid-template-columns: minmax(260px, 1.6fr) auto 1fr auto 1fr auto 1fr;
     gap: 0;
-    align-items: center;
+    align-items: start;
     border-radius: 2px;
   }
+  .masthead-cell:not(.mh-complete-cell) { padding-top: 6px; }
   .masthead-cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .masthead-cell.align-c { align-items: center; text-align: center; }
   .masthead-cell.align-r { align-items: flex-end; text-align: right; }
@@ -1595,100 +1632,96 @@ const styles = `
     color: var(--r-text-5);
   }
 
-  /* ═══ COMPLETENESS CELL (in-masthead) ═══
-     Replaces the "In your manual / N people" cell with a compact
-     overall-completeness readout: tiny three-segment SVG ring
-     beside the percent in Cormorant italic (same treatment as
-     .masthead-value.big). Per-dimension breakdown (Coverage /
-     Freshness / Depth) is revealed in a hover popover so it's
-     discoverable without crowding the strip. */
-  .mh-complete-cell { position: relative; }
-  .mh-complete-row {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    line-height: 1;
+  /* ═══ COMPLETENESS CELL (hero in masthead) ═══
+     Replaces the "In your manual / N people" cell with a hero
+     overall-completeness readout: a large three-segment ring
+     beside the overall percent in Cormorant italic, with a small
+     inline breakdown (across N people / Coverage / Freshness /
+     Depth). Sized to dominate the strip so the headline number is
+     the first thing you read. */
+  .mh-complete-cell {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 18px;
+    row-gap: 4px;
+    align-items: start;
   }
-  .mh-complete-ring { flex: none; display: block; }
+  .mh-complete-cell .masthead-eyebrow {
+    grid-column: 1 / -1;
+    margin-bottom: 2px;
+  }
+  .mh-complete-ring {
+    flex: none;
+    display: block;
+    grid-row: span 2;
+    align-self: center;
+  }
   .mh-complete-pct {
     display: inline-flex;
     align-items: baseline;
     gap: 1px;
     line-height: 1;
+    font-size: 52px;
+    letter-spacing: -0.02em;
+    align-self: end;
   }
   .mh-complete-pct em {
     font-style: italic;
     font-family: var(--r-serif);
     font-weight: 400;
+    color: var(--r-ink);
   }
   .mh-complete-pct-mark {
     font-family: var(--r-serif);
     font-style: italic;
     font-weight: 300;
-    font-size: 20px;
+    font-size: 26px;
     color: var(--r-text-4);
     letter-spacing: -0.02em;
   }
-  .mh-complete-sub {
-    margin-top: 4px;
-    font-family: var(--r-serif);
-    font-style: italic;
-    font-weight: 300;
-    font-size: 15px;
-    color: var(--r-text-4);
-    letter-spacing: -0.003em;
-  }
 
-  /* Hover popover — three-dimension breakdown. Paper card with a
-     thin border, appears below the cell. CSS-only :hover so it
-     works without JS state. */
-  .mh-complete-pop {
-    position: absolute;
-    top: calc(100% + 10px);
-    left: 0;
-    z-index: 4;
-    min-width: 200px;
-    padding: 14px 16px 12px;
-    background: var(--r-paper);
-    border: 1px solid var(--r-rule-4);
-    border-radius: 3px;
-    box-shadow: var(--r-shadow-card, 0 8px 24px rgba(20, 16, 12, 0.08));
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(-4px);
-    transition:
-      opacity 140ms var(--r-ease-ink, ease),
-      transform 140ms var(--r-ease-ink, ease);
-  }
-  .mh-complete-cell:hover .mh-complete-pop,
-  .mh-complete-cell:focus-within .mh-complete-pop {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateY(0);
-  }
-  .mh-complete-pop ul {
+  /* Inline breakdown — four small lines sitting under the percent,
+     matching the site's editorial voice. Small DM Sans small-caps
+     labels + Cormorant italic percents; the "across N people" sub
+     line is italic serif in the same cadence. */
+  .mh-complete-lines {
     list-style: none;
     margin: 0;
     padding: 0;
-    display: grid;
-    gap: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    align-self: start;
   }
-  .mh-complete-pop li {
+  .mh-complete-line {
     display: grid;
-    grid-template-columns: 10px 1fr auto;
+    grid-template-columns: 7px auto 1fr auto;
     align-items: baseline;
-    gap: 10px;
+    gap: 8px;
+    line-height: 1.15;
+  }
+  .mh-complete-line--sub {
+    grid-template-columns: 1fr;
+    font-family: var(--r-serif);
+    font-style: italic;
+    font-weight: 300;
+    font-size: 14px;
+    color: var(--r-text-4);
+    letter-spacing: -0.003em;
+    margin-bottom: 2px;
   }
   .mh-complete-dot {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     align-self: center;
     justify-self: center;
+    transform: translateY(1px);
   }
   .mh-complete-dim {
     font-family: var(--r-sans);
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.22em;
     text-transform: uppercase;
@@ -1698,10 +1731,11 @@ const styles = `
   .mh-complete-dim-pct {
     font-family: var(--r-serif);
     font-style: italic;
-    font-size: 15px;
+    font-size: 14px;
     color: var(--r-ink);
     line-height: 1;
     letter-spacing: -0.005em;
+    justify-self: end;
   }
 
   /* ═══ NEXT STEPS ═══ — prioritized family-wide actions. Compact
@@ -2013,13 +2047,17 @@ const styles = `
     .spread-rule { display: none; }
     .groups { grid-template-columns: 1fr; }
     .roster { grid-template-columns: repeat(2, 1fr); }
-    .masthead-strip { grid-template-columns: 1fr 1fr; gap: 16px; }
+    .masthead-strip { grid-template-columns: 1fr 1fr; gap: 16px 24px; }
     .masthead-divider { display: none; }
+    .mh-complete-cell { grid-column: 1 / -1; }
+    .fs-title { font-size: 52px; }
   }
   @media (max-width: 640px) {
     .mn-page { padding: 88px 20px 40px; }
     .roster { grid-template-columns: 1fr; }
     .masthead-strip { grid-template-columns: 1fr; }
+    .fs-title { font-size: 42px; }
+    .mh-complete-pct { font-size: 44px; }
   }
 
   /* ═══ FIRST-RUN STATE (family of one) ═══ */
