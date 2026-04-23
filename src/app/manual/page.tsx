@@ -211,10 +211,11 @@ export default function ManualPage() {
   return (
     <main className="mn-app">
       <div className="mn-page">
-        {/* ═══ TITLE ═══ — family name as the page headline. */}
+        {/* ═══ TITLE ═══ — page headline, newspaper style. */}
         <header className="fs-title-block">
-          <span className="fs-title-eyebrow">The Family Summary</span>
-          <h1 className="fs-title"><em>{familyTitle}</em></h1>
+          <h1 className="fs-title">
+            <em>{familyTitle}&rsquo;s</em> Family Summary
+          </h1>
         </header>
 
         {/* ═══ MASTHEAD ═══ */}
@@ -530,70 +531,66 @@ function CompletenessCell({
   return (
     <div
       className="masthead-cell mh-complete-cell"
-      aria-label={`Overall family completeness ${overallPercent} percent`}
+      aria-label={`Overall family completeness ${overallPercent} percent across ${totalKept} ${totalKept === 1 ? 'person' : 'people'}`}
     >
-      <span className="masthead-eyebrow">Overall</span>
-      <span className="mh-complete-row">
-        <svg
-          className="mh-complete-ring"
-          width={size}
-          height={size}
-          viewBox={`0 0 ${size} ${size}`}
-          aria-hidden="true"
-        >
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke="rgba(60,48,28,0.06)"
-            strokeWidth={stroke}
-          />
-          {segments.map((s) => {
-            const filled = segLen * Math.min(s.value, 1);
-            const dashArray = `${filled} ${circumference - filled}`;
-            const rotation = angle;
-            angle += segDeg + gapDeg;
-            return (
-              <circle
-                key={s.key}
-                cx={size / 2}
-                cy={size / 2}
-                r={radius}
-                fill="none"
-                stroke={s.color}
-                strokeWidth={stroke}
-                strokeLinecap="round"
-                strokeDasharray={dashArray}
-                transform={`rotate(${rotation} ${size / 2} ${size / 2})`}
-                style={{ opacity: s.value > 0 ? 1 : 0.22 }}
-              />
-            );
-          })}
-        </svg>
-        <span className="masthead-value big mh-complete-pct">
-          <em>{overallPercent}</em>
-          <span className="mh-complete-pct-mark">%</span>
-        </span>
-      </span>
-      <ul className="mh-complete-lines">
-        <li className="mh-complete-line mh-complete-line--sub">
-          across {totalKept} {totalKept === 1 ? 'person' : 'people'}
-        </li>
-        {dims.map((d) => (
-          <li key={d.label} className="mh-complete-line">
-            <span
-              className="mh-complete-dot"
-              style={{ background: d.color }}
-              aria-hidden="true"
+      <div className="mh-complete-top">
+        <div className="mh-complete-ring-wrap" style={{ width: size, height: size }}>
+          <svg
+            className="mh-complete-ring"
+            width={size}
+            height={size}
+            viewBox={`0 0 ${size} ${size}`}
+            aria-hidden="true"
+          >
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              fill="none"
+              stroke="rgba(60,48,28,0.06)"
+              strokeWidth={stroke}
             />
-            <span className="mh-complete-dim">{d.label}</span>
-            <span className="mh-complete-dim-pct">
-              {Math.round(Math.min(d.value, 1) * 100)}%
-            </span>
-          </li>
-        ))}
-      </ul>
+            {segments.map((s) => {
+              const filled = segLen * Math.min(s.value, 1);
+              const dashArray = `${filled} ${circumference - filled}`;
+              const rotation = angle;
+              angle += segDeg + gapDeg;
+              return (
+                <circle
+                  key={s.key}
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={radius}
+                  fill="none"
+                  stroke={s.color}
+                  strokeWidth={stroke}
+                  strokeLinecap="round"
+                  strokeDasharray={dashArray}
+                  transform={`rotate(${rotation} ${size / 2} ${size / 2})`}
+                  style={{ opacity: s.value > 0 ? 1 : 0.22 }}
+                />
+              );
+            })}
+          </svg>
+          <span className="mh-complete-center" aria-hidden="true">
+            <em>{overallPercent}</em>
+            <span className="mh-complete-center-mark">%</span>
+          </span>
+        </div>
+        <ul className="mh-complete-dims">
+          {dims.map((d) => (
+            <li key={d.label} className="mh-complete-dim-row">
+              <span className="mh-complete-dim">{d.label}</span>
+              <span className="mh-complete-dim-pct">
+                {Math.round(Math.min(d.value, 1) * 100)}%
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <span className="mh-complete-sub">
+        across {totalKept} {totalKept === 1 ? 'person' : 'people'}
+      </span>
     </div>
   );
 }
@@ -1198,28 +1195,18 @@ const styles = `
     padding: 104px 40px 40px;
   }
 
-  /* PAGE TITLE — family name as the page headline. */
+  /* PAGE TITLE — newspaper headline: "{Family}'s Family Summary". */
   .fs-title-block {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    margin: 0 0 28px;
-  }
-  .fs-title-eyebrow {
-    font-family: var(--r-sans);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.26em;
-    text-transform: uppercase;
-    color: var(--r-text-5);
+    margin: 0 0 32px;
+    padding: 0 0 20px;
+    border-bottom: 1px solid var(--r-rule-5);
   }
   .fs-title {
     font-family: var(--r-serif);
-    font-style: italic;
+    font-style: normal;
     font-weight: 400;
-    font-size: 64px;
-    line-height: 1;
+    font-size: 72px;
+    line-height: 1.02;
     letter-spacing: -0.025em;
     color: var(--r-ink);
     margin: 0;
@@ -1633,91 +1620,70 @@ const styles = `
   }
 
   /* ═══ COMPLETENESS CELL (hero in masthead) ═══
-     Replaces the "In your manual / N people" cell with a hero
-     overall-completeness readout: a large three-segment ring
-     beside the overall percent in Cormorant italic, with a small
-     inline breakdown (across N people / Coverage / Freshness /
-     Depth). Sized to dominate the strip so the headline number is
-     the first thing you read. */
+     Two-column interior: ring (with percent in its center) on the
+     left, scrunched Coverage/Freshness/Depth rows on the right.
+     "across N people" sits as a small italic serif line at the
+     bottom of the cell. */
   .mh-complete-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 0;
+  }
+  .mh-complete-top {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .mh-complete-ring-wrap {
     position: relative;
-    display: grid;
-    grid-template-columns: auto 1fr;
-    column-gap: 18px;
-    row-gap: 4px;
-    align-items: start;
-  }
-  .mh-complete-cell .masthead-eyebrow {
-    grid-column: 1 / -1;
-    margin-bottom: 2px;
-  }
-  .mh-complete-ring {
     flex: none;
-    display: block;
-    grid-row: span 2;
-    align-self: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  .mh-complete-pct {
+  .mh-complete-ring { display: block; }
+  .mh-complete-center {
+    position: absolute;
+    inset: 0;
     display: inline-flex;
     align-items: baseline;
+    justify-content: center;
     gap: 1px;
-    line-height: 1;
-    font-size: 52px;
-    letter-spacing: -0.02em;
-    align-self: end;
-  }
-  .mh-complete-pct em {
-    font-style: italic;
     font-family: var(--r-serif);
+    font-style: italic;
     font-weight: 400;
+    font-size: 30px;
     color: var(--r-ink);
+    letter-spacing: -0.02em;
+    line-height: 1;
   }
-  .mh-complete-pct-mark {
+  .mh-complete-center em { font-style: italic; }
+  .mh-complete-center-mark {
     font-family: var(--r-serif);
     font-style: italic;
     font-weight: 300;
-    font-size: 26px;
+    font-size: 15px;
     color: var(--r-text-4);
     letter-spacing: -0.02em;
   }
 
-  /* Inline breakdown — four small lines sitting under the percent,
-     matching the site's editorial voice. Small DM Sans small-caps
-     labels + Cormorant italic percents; the "across N people" sub
-     line is italic serif in the same cadence. */
-  .mh-complete-lines {
+  .mh-complete-dims {
     list-style: none;
     margin: 0;
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 5px;
-    align-self: start;
+    gap: 3px;
+    min-width: 0;
   }
-  .mh-complete-line {
+  .mh-complete-dim-row {
     display: grid;
-    grid-template-columns: 7px auto 1fr auto;
+    grid-template-columns: auto auto;
+    column-gap: 10px;
     align-items: baseline;
-    gap: 8px;
     line-height: 1.15;
-  }
-  .mh-complete-line--sub {
-    grid-template-columns: 1fr;
-    font-family: var(--r-serif);
-    font-style: italic;
-    font-weight: 300;
-    font-size: 14px;
-    color: var(--r-text-4);
-    letter-spacing: -0.003em;
-    margin-bottom: 2px;
-  }
-  .mh-complete-dot {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    align-self: center;
-    justify-self: center;
-    transform: translateY(1px);
+    justify-content: start;
   }
   .mh-complete-dim {
     font-family: var(--r-sans);
@@ -1726,16 +1692,26 @@ const styles = `
     letter-spacing: 0.22em;
     text-transform: uppercase;
     color: var(--r-text-4);
-    line-height: 1;
+    line-height: 1.2;
+    white-space: nowrap;
   }
   .mh-complete-dim-pct {
     font-family: var(--r-serif);
     font-style: italic;
+    font-weight: 400;
     font-size: 14px;
     color: var(--r-ink);
     line-height: 1;
     letter-spacing: -0.005em;
-    justify-self: end;
+  }
+  .mh-complete-sub {
+    font-family: var(--r-serif);
+    font-style: italic;
+    font-weight: 300;
+    font-size: 13px;
+    color: var(--r-text-4);
+    letter-spacing: -0.003em;
+    line-height: 1;
   }
 
   /* ═══ NEXT STEPS ═══ — prioritized family-wide actions. Compact
@@ -2056,8 +2032,8 @@ const styles = `
     .mn-page { padding: 88px 20px 40px; }
     .roster { grid-template-columns: 1fr; }
     .masthead-strip { grid-template-columns: 1fr; }
-    .fs-title { font-size: 42px; }
-    .mh-complete-pct { font-size: 44px; }
+    .fs-title { font-size: 40px; line-height: 1.08; }
+    .mh-complete-center { font-size: 26px; }
   }
 
   /* ═══ FIRST-RUN STATE (family of one) ═══ */
