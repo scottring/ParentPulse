@@ -1,13 +1,32 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { useCoupleRitual } from '@/hooks/useCoupleRitual';
 import { useSpouse } from '@/hooks/useSpouse';
 import { stockImagery } from '@/config/stock-imagery';
+import { listRecentSessions } from '@/hooks/useRitualSession';
+import type { RitualSession } from '@/types/ritual-session';
 
 export default function ClientPage() {
   const { ritual, loading } = useCoupleRitual();
   const { spouseName, loading: spouseLoading } = useSpouse();
+  const [pastSessions, setPastSessions] = useState<RitualSession[]>([]);
+
+  useEffect(() => {
+    if (!ritual?.id) return;
+    let active = true;
+    listRecentSessions(ritual.id, 5)
+      .then((rows) => {
+        if (active) setPastSessions(rows);
+      })
+      .catch((err) => {
+        console.error('listRecentSessions failed:', err);
+      });
+    return () => {
+      active = false;
+    };
+  }, [ritual?.id]);
 
   if (loading || spouseLoading) {
     return (
@@ -64,6 +83,32 @@ export default function ClientPage() {
           </div>
         )}
 
+        {ritual && pastSessions.length > 0 && (
+          <div className="past-sessions">
+            <p className="past-eyebrow">Past check-ins</p>
+            <ul className="past-list">
+              {pastSessions.map((s) => (
+                <li key={s.sessionId} className="past-item">
+                  <span className="past-date">
+                    {s.completedAt
+                      ? s.completedAt.toDate().toLocaleDateString('en-US', {
+                          month: 'long',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })
+                      : 'Draft'}
+                  </span>
+                  <span className="past-intentions">
+                    {s.intentions.length > 0
+                      ? s.intentions.map((i) => i.text).join(' · ')
+                      : 'No intentions captured.'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {ritual && (
           <div className="active-card">
             <div className="active-image" aria-hidden="true">
@@ -74,9 +119,18 @@ export default function ClientPage() {
               {ritual.intention && (
                 <p className="intention">&ldquo;{ritual.intention}&rdquo;</p>
               )}
-              <Link href="/rituals/couple/manage" className="manage-link">
-                Manage <span aria-hidden="true">&rarr;</span>
-              </Link>
+              <div className="active-actions">
+                <Link
+                  href={`/rituals/couple/session?ritualId=${ritual.id}`}
+                  className="begin-cta"
+                >
+                  Begin today&rsquo;s session
+                  <span className="cta-arrow" aria-hidden="true">&#8599;</span>
+                </Link>
+                <Link href="/rituals/couple/manage" className="manage-link">
+                  Manage <span aria-hidden="true">&rarr;</span>
+                </Link>
+              </div>
             </div>
           </div>
         )}
@@ -230,6 +284,31 @@ export default function ClientPage() {
           line-height: 1.5;
           margin: 0 0 20px;
         }
+        .active-actions {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: baseline;
+          gap: 20px;
+        }
+        .begin-cta {
+          display: inline-flex;
+          align-items: baseline;
+          gap: 6px;
+          font-family: var(--font-parent-body);
+          font-size: 14px;
+          font-weight: 600;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: #F7F5F0;
+          background: #2B2620;
+          text-decoration: none;
+          padding: 12px 20px;
+          border-radius: 2px;
+          transition: background 0.2s ease;
+        }
+        .begin-cta:hover {
+          background: #3A3530;
+        }
         .manage-link {
           display: inline-flex;
           align-items: baseline;
@@ -246,6 +325,53 @@ export default function ClientPage() {
         }
         .manage-link:hover {
           opacity: 0.75;
+        }
+        .past-sessions {
+          margin: 56px 0 0;
+          border-top: 1px solid rgba(120, 100, 70, 0.12);
+          padding-top: 28px;
+        }
+        .past-eyebrow {
+          font-family: var(--font-parent-body);
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          color: #8B7D63;
+          margin: 0 0 14px;
+        }
+        .past-list {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+          display: grid;
+          gap: 10px;
+        }
+        .past-item {
+          display: grid;
+          grid-template-columns: 180px 1fr;
+          gap: 20px;
+          padding: 12px 0;
+          border-bottom: 1px solid rgba(120, 100, 70, 0.08);
+        }
+        .past-date {
+          font-family: var(--font-parent-display);
+          font-style: italic;
+          font-size: 16px;
+          color: #3A3530;
+        }
+        .past-intentions {
+          font-family: var(--font-parent-display);
+          font-style: italic;
+          font-size: 16px;
+          color: #6B6254;
+          line-height: 1.5;
+        }
+        @media (max-width: 560px) {
+          .past-item {
+            grid-template-columns: 1fr;
+            gap: 4px;
+          }
         }
         @media (min-width: 720px) {
           .active-card {

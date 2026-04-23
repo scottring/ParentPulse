@@ -12310,3 +12310,308 @@ exports.generateTherapyBrief = onCall(
     },
 );
 
+// ===================================================================
+// generateRitualScript — produce the guided script for a single
+// couple-ritual sit-down. Reads the last `daysBack` days of the
+// couple's shared journal material (entries both partners can see)
+// plus any active growth arcs, asks Claude to synthesize a 5-section
+// guided flow: Week in Review → What Went Well → What Was Hard →
+// Small Joys → Plan Ahead. Writes a ritual_sessions doc owned by
+// both partners.
+//
+// Input:  { ritualId: string, daysBack?: number (default 7) }
+// Output: { sessionId: string }
+//
+// Client creation of ritual_sessions is blocked by firestore.rules;
+// everything flows through this function so the script is grounded
+// in real data.
+// ===================================================================
+exports.generateRitualScript = onCall(
+    {
+      region: "us-central1",
+      memory: "512MiB",
+      timeoutSeconds: 120,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+      const userId = request.auth.uid;
+      const ritualId = String(request.data?.ritualId || "");
+      if (!ritualId) {
+        throw new Error("ritualId is required");
+      }
+      const daysBack = Math.min(
+          30,
+          Math.max(1, Number(request.data?.daysBack) || 7),
+      );
+
+      const db = admin.firestore();
+
+      // Load the ritual so we can confirm caller is a participant and
+      // get the other partner's UID.
+      const ritualSnap = await db.collection("couple_rituals")
+          .doc(ritualId).get();
+      if (!ritualSnap.exists) {
+        throw new Error("Ritual not found");
+      }
+      const ritual = ritualSnap.data();
+      const participants = Array.isArray(ritual.participantUserIds) ?
+          ritual.participantUserIds : [];
+      if (!participants.includes(userId)) {
+        throw new Error("Not a participant of this ritual");
+      }
+      const familyId = ritual.familyId;
+
+      // Pull display names for both partners so the script can refer
+      // to them by name.
+      const [userA, userB] = await Promise.all(
+          participants.map((uid) =>
+            db.collection("users").doc(uid).get().then((s) => ({
+              uid,
+              name: s.exists ? (s.data().name || "").split(" ")[0] : "",
+            })),
+          ),
+      );
+      const partnerNames = Object.fromEntries(
+          [userA, userB].map((u) => [u.uid, u.name || "your partner"]),
+      );
+
+      const sinceMs = Date.now() - daysBack * 86400000;
+
+      // Pull entries visible to either partner in the window. Using
+      // array-contains-any with both UIDs gives us the union; we
+      // dedupe below. Cap at 200 to keep prompt bounded.
+      const visibleSnap = await db.collection("journal_entries")
+          .where("visibleToUserIds", "array-contains-any", participants)
+          .where("createdAt", ">=",
+              admin.firestore.Timestamp.fromMillis(sinceMs))
+          .orderBy("createdAt", "desc")
+          .limit(200)
+          .get();
+
+      const entries = [];
+      const seen = new Set();
+      for (const d of visibleSnap.docs) {
+        if (seen.has(d.id)) continue;
+        seen.add(d.id);
+        const data = d.data();
+        const text = (data.text || "").trim();
+        if (!text) continue;
+        const visible = Array.isArray(data.visibleToUserIds) ?
+            data.visibleToUserIds : [];
+        // Only include if BOTH partners can see it — this is their
+        // shared material. Entries visible to only one partner are
+        // private and stay out of the session content.
+        if (!participants.every((p) => visible.includes(p))) continue;
+        entries.push({
+          id: d.id,
+          text,
+          authorId: data.authorId || null,
+          authorName: partnerNames[data.authorId] || "",
+          createdAt: data.createdAt,
+        });
+      }
+
+      // Sort newest first + cap at 80.
+      entries.sort((a, b) => {
+        const am = a.createdAt?.toMillis?.() ?? 0;
+        const bm = b.createdAt?.toMillis?.() ?? 0;
+        return bm - am;
+      });
+      const pool = entries.slice(0, 80);
+
+      // Load any currently-active growth arcs tied to this couple so
+      // the "Plan Ahead" section can acknowledge what they're already
+      // working on.
+      let activeArcs = [];
+      try {
+        const arcsSnap = await db.collection("growth_arcs")
+            .where("familyId", "==", familyId)
+            .where("status", "==", "active")
+            .limit(20).get();
+        activeArcs = arcsSnap.docs
+            .map((d) => d.data())
+            .filter((a) => {
+              const parts = Array.isArray(a.participantIds) ?
+                  a.participantIds : [];
+              return parts.length === 0 ||
+                parts.some((p) => participants.includes(p));
+            })
+            .map((a) => ({
+              title: a.title || "",
+              dimension: a.dimensionName || a.dimensionId || "",
+              currentPhase: a.phases?.[a.currentPhase]?.title || "",
+            }))
+            .filter((a) => a.title);
+      } catch (_err) {
+        activeArcs = [];
+      }
+
+      const entriesForPrompt = pool.map((e) => ({
+        id: e.id,
+        author: e.authorName || "one of them",
+        createdAt: e.createdAt?.toDate?.().toISOString() || "",
+        text: e.text.slice(0, 1200),
+      }));
+
+      const nameA = userA.name || "Partner A";
+      const nameB = userB.name || "Partner B";
+
+      const systemPrompt = "You are guiding a couple through their " +
+        "weekly ritual sit-down. Partners: " + nameA + " and " + nameB +
+        ". You have access to journal entries both of them can see " +
+        "from the last " + daysBack + " days. Produce a structured " +
+        "5-section guided script. The tone is warm, specific, and " +
+        "grounded — never generic therapy-speak. Each opener must " +
+        "reference concrete moments from the actual entries when " +
+        "possible (without quoting people out of context). " +
+        "Sections in order, each with these fields: " +
+        "kind (one of: weekInReview, wentWell, wasHard, smallJoys, " +
+        "planAhead), title (3-6 words), opener (2-4 sentences), " +
+        "prompt (one sentence that invites the couple to talk), " +
+        "references (0-3 pulls from real entries, each { entryId, " +
+        "snippet (<=180 chars), authorId }). " +
+        "Do NOT invent entries or quotes — only reference real ones " +
+        "from the input. If no relevant entry exists for a section, " +
+        "return an empty references array. " +
+        "Respond with ONLY a JSON object of the form " +
+        "{\"sections\":[...]}. No prose outside JSON.";
+
+      const userPrompt =
+        "Partners: " + JSON.stringify(
+            participants.map((uid) => ({uid, name: partnerNames[uid]})),
+        ) + "\n" +
+        "Active growth arcs: " + JSON.stringify(activeArcs) + "\n\n" +
+        "Entries (JSON, newest first, both partners can see these):\n" +
+        JSON.stringify(entriesForPrompt);
+
+      const framework = await getFrameworkContext(familyId);
+      const finalSystem = prependFramework(systemPrompt, framework);
+
+      const client = getAnthropic();
+      let sections = [];
+      const modelUsed = "claude-sonnet-4-6";
+      try {
+        const response = await client.messages.create({
+          model: modelUsed,
+          max_tokens: 3000,
+          system: finalSystem,
+          messages: [{role: "user", content: userPrompt}],
+        });
+        logAICall({
+          functionName: "generateRitualScript",
+          model: modelUsed,
+          usage: response.usage,
+          userId,
+        });
+        const raw = response.content[0]?.text || "";
+        const match = raw.match(/\{[\s\S]*\}/);
+        if (match) {
+          const parsed = JSON.parse(match[0]);
+          if (Array.isArray(parsed.sections)) {
+            const allowed = new Set([
+              "weekInReview", "wentWell", "wasHard",
+              "smallJoys", "planAhead",
+            ]);
+            sections = parsed.sections
+                .slice(0, 5)
+                .map((s) => ({
+                  kind: allowed.has(s.kind) ? s.kind : "weekInReview",
+                  title: String(s.title || "").slice(0, 80),
+                  opener: String(s.opener || "").slice(0, 900),
+                  prompt: String(s.prompt || "").slice(0, 280),
+                  references: Array.isArray(s.references) ?
+                    s.references.slice(0, 3).map((r) => {
+                      const srcEntry = pool.find((p) => p.id === r.entryId);
+                      return {
+                        entryId: String(r.entryId || ""),
+                        snippet: String(r.snippet || "").slice(0, 240),
+                        ...(srcEntry?.authorId ?
+                            {authorId: srcEntry.authorId} : {}),
+                        ...(srcEntry?.authorName ?
+                            {authorName: srcEntry.authorName} : {}),
+                        ...(function() {
+                          const iso = srcEntry?.createdAt?.toDate?.()
+                              .toISOString();
+                          return iso ? {sourceDate: iso} : {};
+                        })(),
+                      };
+                    }).filter((r) => r.entryId && r.snippet) :
+                    [],
+                }))
+                .filter((s) => s.title && s.opener && s.prompt);
+          }
+        }
+      } catch (err) {
+        logger.error("generateRitualScript: Claude call failed:", err);
+        throw new Error("Failed to generate session. Please try again.");
+      }
+
+      // Fall back to plain scaffold if the model produced nothing
+      // usable so the couple still has a session to run.
+      if (sections.length < 3) {
+        sections = [
+          {
+            kind: "weekInReview",
+            title: "The week in review",
+            opener: "Sit together and take a minute to settle. " +
+              "What's the shape of the week you just had — even if " +
+              "you haven't written much down?",
+            prompt: "Name one thing from the week that's still with you.",
+            references: [],
+          },
+          {
+            kind: "wentWell",
+            title: "What went well",
+            opener: "Small wins count. A moment you're glad happened.",
+            prompt: "What's something good you want to say out loud?",
+            references: [],
+          },
+          {
+            kind: "wasHard",
+            title: "What was hard",
+            opener: "Where did you feel friction, stuck, or tender?",
+            prompt:
+              "What's one hard thing worth naming — even briefly?",
+            references: [],
+          },
+          {
+            kind: "smallJoys",
+            title: "Small joys",
+            opener: "The easy wins — a laugh, a meal, a look.",
+            prompt: "Name a small joy. Don't overthink it.",
+            references: [],
+          },
+          {
+            kind: "planAhead",
+            title: "Plan the week ahead",
+            opener: "What's one or two things you want to work on " +
+              "together over the next week?",
+            prompt:
+              "Write down 1-2 intentions you'll carry into the week.",
+            references: [],
+          },
+        ];
+      }
+
+      const sessionRef = db.collection("ritual_sessions").doc();
+      await sessionRef.set({
+        sessionId: sessionRef.id,
+        familyId,
+        ritualId,
+        participantUserIds: participants,
+        startedByUserId: userId,
+        sections,
+        intentions: [],
+        model: modelUsed,
+        status: "in_progress",
+        daysBack,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      return {sessionId: sessionRef.id};
+    },
+);
