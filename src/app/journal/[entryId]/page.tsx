@@ -156,6 +156,15 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
       window.alert(`Could not delete this entry: ${message}`);
     }
   };
+  const handleLetItRest = async () => {
+    try {
+      await settle(entry.entryId);
+      router.back();
+    } catch (err) {
+      console.error('[journal] settle failed', err);
+    }
+  };
+  const alreadySettled = isSettled(entry.entryId);
   const { people } = usePerson();
   const { responses } = useEntryResponses(entry.entryId);
   const mentioned = useIsMentionedIn(entry);
@@ -561,6 +570,17 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
             <div className="entry-date">
               <div>{dateLine}</div>
               {timeLine && <div className="entry-time">{timeLine}</div>}
+              {isMine && !alreadySettled && (
+                <button
+                  type="button"
+                  className="entry-rest"
+                  onClick={() => void handleLetItRest()}
+                  aria-label="Let this rest — stop surfacing it as open"
+                  title="Stop surfacing this as an open thread"
+                >
+                  let it rest
+                </button>
+              )}
               {isMine && (
                 <button
                   type="button"
@@ -1095,6 +1115,26 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
         .entry-delete:hover {
           background: rgba(201, 123, 99, 0.1);
           color: #9a5545;
+        }
+        .entry-rest {
+          margin-top: 8px;
+          margin-right: 6px;
+          background: none;
+          border: none;
+          padding: 2px 6px;
+          font-family: var(--font-parent-body);
+          font-size: 10px;
+          font-weight: 500;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          color: #8a7b5f;
+          cursor: pointer;
+          border-radius: 3px;
+          transition: background 0.15s ease, color 0.15s ease;
+        }
+        .entry-rest:hover {
+          background: rgba(138, 123, 95, 0.1);
+          color: #3a3530;
         }
 
         .entry-title {

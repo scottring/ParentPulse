@@ -90,6 +90,7 @@ import { useFamilyContributions } from '@/hooks/useFamilyContributions';
 import { useFreshness } from '@/hooks/useFreshness';
 import { FamilyCompletenessRing } from '@/components/dashboard/FamilyCompletenessRing';
 import { useWorkbookVisit } from '@/hooks/useWorkbookVisit';
+import { useSettledMentions } from '@/hooks/useSettledMentions';
 
 export default function WorkbookPage() {
   const { user, loading, logout } = useAuth();
@@ -127,6 +128,7 @@ export default function WorkbookPage() {
   const { priorLastSeenAt, loaded: visitLoaded } = useWorkbookVisit();
   const { entries: allEntries } = useJournalEntries();
   const { people } = usePerson();
+  const { settledIds } = useSettledMentions();
 
   // Family-wide completeness data for the Ring visualisation.
   // Hidden on the workbook when the user is alone (nothing meaningful
@@ -150,6 +152,7 @@ export default function WorkbookPage() {
     const priorMs = priorLastSeenAt.getTime();
     const newMentions = allEntries.filter((e) => {
       if (e.authorId === user.userId) return false;
+      if (settledIds.has(e.entryId)) return false;
       const ms = e.createdAt?.toMillis?.() ?? 0;
       if (ms <= priorMs) return false;
       const tagged = (e.personMentions ?? []).some((pid) =>
@@ -175,7 +178,7 @@ export default function WorkbookPage() {
       priorLastSeenAt,
       firstNewEntryId: newMentions[0].entryId,
     };
-  }, [allEntries, priorLastSeenAt, visitLoaded, people, user?.userId]);
+  }, [allEntries, priorLastSeenAt, visitLoaded, people, user?.userId, settledIds]);
 
   // Persistent "written about you this week" dispatch — always on
   // when there's something to surface, not just on return from absence.
@@ -190,6 +193,7 @@ export default function WorkbookPage() {
     const fourteenDaysAgoMs = Date.now() - 14 * 86_400_000;
     const recent = allEntries.filter((e) => {
       if (e.authorId === user.userId) return false;
+      if (settledIds.has(e.entryId)) return false;
       const ms = e.createdAt?.toMillis?.() ?? 0;
       if (ms < fourteenDaysAgoMs) return false;
       const tagged = (e.personMentions ?? []).some((pid) =>
@@ -212,7 +216,7 @@ export default function WorkbookPage() {
       count: recent.length,
       oldestEntryId: sorted[0].entryId,
     };
-  }, [allEntries, people, user?.userId]);
+  }, [allEntries, people, user?.userId, settledIds]);
 
   // Family balance rollup — per-person balance state for everyone
   // else in the family, aggregated for the masthead sub-strip. Hidden

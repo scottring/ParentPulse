@@ -23,6 +23,7 @@ import { EditPersonSheet } from '@/components/people/EditPersonSheet';
 import type { JournalEntry } from '@/types/journal';
 import { entryMentionsPerson } from '@/lib/entry-mentions';
 import { computeBalance } from '@/lib/balance';
+import { useSettledMentions } from '@/hooks/useSettledMentions';
 
 export default function PersonPage({
   params,
@@ -39,6 +40,7 @@ export default function PersonPage({
   const { contributions } = useContribution(manual?.manualId, equivalentManualIds);
   const { inviteParent } = useFamily();
   const { entries } = useJournalEntries();
+  const { settledIds, settle } = useSettledMentions();
   const [isEditing, setIsEditing] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -63,13 +65,19 @@ export default function PersonPage({
 
   const openThreads = useMemo(() => {
     // Heuristic: non-response entries that haven't been carried
-    // forward yet (no companion reflection in their wake). Wire up
-    // to useOpenThreads by mention filter once that hook exposes a
-    // per-person selector.
-    return mentions.filter(
-      (e) => !e.respondsToEntryId && e.category !== 'reflection',
-    ).slice(0, 5);
-  }, [mentions]);
+    // forward yet (no companion reflection in their wake), minus
+    // anything the user has explicitly settled. Settled is the
+    // lightweight "I've seen this, stop surfacing it" gesture —
+    // same mechanism as the workbook "written about you" dispatch.
+    return mentions
+      .filter(
+        (e) =>
+          !e.respondsToEntryId &&
+          e.category !== 'reflection' &&
+          !settledIds.has(e.entryId),
+      )
+      .slice(0, 5);
+  }, [mentions, settledIds]);
 
   // Manual-derived content — computed here (before any early return)
   // so the hook order is stable across all render branches.
@@ -256,33 +264,27 @@ export default function PersonPage({
                   const firstWaiting = openThreads[0];
                   if (!isSelf && firstWaiting && openThreads.length === 1) {
                     // The most common "mostly in balance" case — one
-                    // specific entry by this person waiting for the
-                    // user's reply. Name it and link to it.
+                    // open thread about this person. Link it to the
+                    // in-page list (anchor scroll) so the reader sees
+                    // what they're about to open before diving in.
                     const snippet =
                       firstWaiting.title ?? excerptOf(firstWaiting.text, 70);
                     return (
                       <>
-                        <Link
-                          href={`/journal/${firstWaiting.entryId}`}
-                          className="balance-inline-link"
-                        >
+                        <a href="#still-open" className="balance-inline-link">
                           “{snippet}”
-                        </Link>
-                        {' '}from {firstName} is waiting for your reply.
+                        </a>
+                        {' '}is still open about {firstName}.
                       </>
                     );
                   }
                   if (!isSelf && firstWaiting && openThreads.length > 1) {
                     return (
                       <>
-                        {firstName} has{' '}
-                        <Link
-                          href={`/journal/${firstWaiting.entryId}`}
-                          className="balance-inline-link"
-                        >
+                        <a href="#still-open" className="balance-inline-link">
                           {openThreads.length} things
-                        </Link>
-                        {' '}waiting for your reply — start with the oldest.
+                        </a>
+                        {' '}are still open about {firstName} — take them one at a time.
                       </>
                     );
                   }
@@ -399,7 +401,7 @@ export default function PersonPage({
         </section>
 
         {/* ═══ THREADS + TIMELINE ═══ */}
-        <section className="threads-section">
+        <section className="threads-section" id="still-open">
           <div className="threads-col">
             <div className="threads-head">
               <h2 className="h2-serif">
@@ -438,6 +440,9 @@ export default function PersonPage({
                     key={entry.entryId}
                     entry={entry}
                     firstName={firstName}
+                    onSettle={() => {
+                      void settle(entry.entryId);
+                    }}
                   />
                 ))}
               </div>
@@ -698,31 +703,41 @@ export default function PersonPage({
 function ThreadRow({
   entry,
   firstName,
+  onSettle,
 }: {
   entry: JournalEntry;
   firstName: string;
+  onSettle: () => void;
 }) {
   const created = entry.createdAt?.toDate?.();
   const days = created
     ? Math.floor((Date.now() - created.getTime()) / 86_400_000)
     : 0;
   return (
-    <Link href={`/journal/${entry.entryId}`} className="thread">
+    <div className="thread">
       <span className="thread-age">
         <span className="num">{formatDaysShortest(days)}</span>
         since
       </span>
-      <div className="thread-body">
+      <Link href={`/journal/${entry.entryId}`} className="thread-body">
         <h3>{entry.title ?? excerptOf(entry.text, 80)}</h3>
         <p>{excerptOf(entry.text, 160)}</p>
         <div className="cues">
           <span className="pip">About · {firstName}</span>
         </div>
-      </div>
+      </Link>
       <div className="thread-actions">
-        <span className="ta">Open</span>
+        <Link href={`/journal/${entry.entryId}`} className="ta">Open</Link>
+        <button
+          type="button"
+          className="ta ta-rest"
+          onClick={onSettle}
+          aria-label="Let this rest — stop surfacing it"
+        >
+          Let it rest
+        </button>
       </div>
-    </Link>
+    </div>
   );
 }
 
@@ -1094,6 +1109,7 @@ const styles = `
     display: grid;
     grid-template-columns: 1.4fr 1fr;
     gap: 48px;
+    scroll-margin-top: 84px;
   }
   .threads-head {
     display: flex;
@@ -1138,11 +1154,14 @@ const styles = `
     grid-template-columns: 72px 1fr auto;
     gap: 18px;
     align-items: start;
-    text-decoration: none;
-    color: inherit;
   }
   .thread:last-child { border-bottom: none; }
   .thread:hover .thread-body h3 { color: var(--r-ember); }
+  .thread-body {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
 
   .thread-age {
     font-family: var(--r-sans);
@@ -1204,6 +1223,7 @@ const styles = `
     display: flex;
     gap: 6px;
     padding-top: 4px;
+    align-items: center;
   }
   .thread-actions .ta {
     font-family: var(--r-sans);
@@ -1215,6 +1235,19 @@ const styles = `
     padding: 6px 10px;
     border: 1px solid var(--r-rule-5);
     border-radius: 999px;
+    background: transparent;
+  }
+  .thread-actions button.ta {
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+  }
+  .thread-actions button.ta:hover {
+    color: var(--r-ink);
+    border-color: var(--r-rule-3);
+    background: rgba(255,255,255,0.5);
+  }
+  .thread-actions .ta-rest {
+    color: var(--r-text-5);
   }
 
   /* TIMELINE */
