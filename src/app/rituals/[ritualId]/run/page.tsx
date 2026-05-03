@@ -220,19 +220,47 @@ export default function RitualRunPage() {
         <header className="masthead">
           <p className="kicker">{kindLabel} ritual</p>
           <h1 className="title">A quiet moment to take stock</h1>
-          <ol className="steps" aria-label="Progress">
-            <li className={step === 'read' ? 'current' : ''}>Read</li>
-            <li className={step === 'respond' ? 'current' : ''}>Respond</li>
-            <li className={step === 'close' ? 'current' : ''}>Close</li>
-          </ol>
+          <nav className="steps" aria-label="Progress">
+            <button
+              type="button"
+              className={`step ${step === 'read' ? 'current' : ''}`}
+              onClick={() => setStep('read')}
+              aria-current={step === 'read' ? 'step' : undefined}
+            >
+              <span className="step-num">1</span>
+              <span className="step-label">Read</span>
+            </button>
+            <button
+              type="button"
+              className={`step ${step === 'respond' ? 'current' : ''}`}
+              onClick={() => setStep('respond')}
+              aria-current={step === 'respond' ? 'step' : undefined}
+            >
+              <span className="step-num">2</span>
+              <span className="step-label">Respond</span>
+            </button>
+            <button
+              type="button"
+              className={`step ${step === 'close' ? 'current' : ''}`}
+              onClick={() => setStep('close')}
+              aria-current={step === 'close' ? 'step' : undefined}
+            >
+              <span className="step-num">3</span>
+              <span className="step-label">Close</span>
+            </button>
+          </nav>
         </header>
 
         {step === 'read' && (
           <section className="step-card">
-            <h2 className="section-heading">What the book has held since last time</h2>
-            {sinceEntries === null && <p className="muted">Gathering entries…</p>}
+            <h2 className="section-heading">Since your last ritual</h2>
+            <p className="step-help">
+              A few minutes to read back through what you&rsquo;ve written. No
+              pressure to act on any of it — just notice what stands out.
+            </p>
+            {sinceEntries === null && <p className="muted">Loading entries…</p>}
             {sinceEntries && sinceEntries.length === 0 && (
-              <p className="muted">Nothing new has landed since last time.</p>
+              <p className="muted">Nothing new since last time.</p>
             )}
             {sinceEntries && sinceEntries.length > 0 && (
               <ol className="since-list">
@@ -252,7 +280,7 @@ export default function RitualRunPage() {
                 className="btn"
                 onClick={() => setStep('respond')}
               >
-                I&apos;ve read enough →
+                Continue →
               </button>
             </div>
           </section>
@@ -260,17 +288,20 @@ export default function RitualRunPage() {
 
         {step === 'respond' && (
           <section className="step-card">
-            <h2 className="section-heading">What is asking to be said?</h2>
+            <h2 className="section-heading">Anything you want to say?</h2>
+            <p className="step-help">
+              A few sentences in your own words. Pull in any of the prompts
+              below if they help — or just write what&rsquo;s on your mind.
+            </p>
             {ritual.intention && (
               <p className="intention">
-                <em>intention:</em> {ritual.intention}
+                <span className="intention-label">Intention</span>{' '}
+                {ritual.intention}
               </p>
             )}
             {brief && brief.topics.length > 0 && (
               <div className="brief-block">
-                <p className="brief-label">
-                  This week&rsquo;s brief — topics worth bringing here:
-                </p>
+                <p className="brief-label">From this week&rsquo;s brief</p>
                 <ul className="brief-list">
                   {brief.topics.map((t, i) => (
                     <li key={i} className="brief-item">
@@ -292,7 +323,7 @@ export default function RitualRunPage() {
                           });
                         }}
                       >
-                        bring this in →
+                        Add to response
                       </button>
                     </li>
                   ))}
@@ -301,9 +332,7 @@ export default function RitualRunPage() {
             )}
             {divergentMoments && divergentMoments.length > 0 && (
               <div className="divergent-block">
-                <p className="divergent-label">
-                  Moments from the last stretch where your views diverged:
-                </p>
+                <p className="divergent-label">Where views diverged</p>
                 <ul className="divergent-list">
                   {divergentMoments.map((m) => (
                     <li key={m.momentId} className="divergent-item">
@@ -315,7 +344,7 @@ export default function RitualRunPage() {
                           href={`/moments/${m.momentId}`}
                           className="divergent-link"
                         >
-                          open the moment
+                          Open the moment
                         </Link>
                         <button
                           type="button"
@@ -332,7 +361,7 @@ export default function RitualRunPage() {
                             });
                           }}
                         >
-                          bring this in →
+                          Add to response
                         </button>
                       </div>
                     </li>
@@ -413,13 +442,14 @@ export default function RitualRunPage() {
 const pageStyles = `
   .shell {
     min-height: 100vh;
-    background: #f7f3ea;
+    background: var(--r-cream, #f7f3ea);
     padding-bottom: 80px;
   }
   .page {
     max-width: 640px;
     margin: 0 auto;
-    padding: 32px 24px 48px;
+    /* 72px clears the fixed GlobalNav; +32px breathing room. */
+    padding: 104px 24px 48px;
   }
   .masthead {
     margin-bottom: 28px;
@@ -440,21 +470,53 @@ const pageStyles = `
     color: #2d2418;
   }
   .steps {
-    list-style: none;
-    padding: 0;
-    margin: 0;
     display: flex;
-    gap: 20px;
-    font-family: -apple-system, 'Helvetica Neue', sans-serif;
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #a89373;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
   }
-  .steps li.current {
-    color: #2d2418;
-    border-bottom: 2px solid #a89373;
-    padding-bottom: 2px;
+  .step {
+    all: unset;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border: 1px solid var(--r-rule-3, #c0b49f);
+    border-radius: 999px;
+    font-family: var(--r-sans, -apple-system, 'Helvetica Neue', sans-serif);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--r-text-5, #887c68);
+    background: transparent;
+    transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+  }
+  .step:hover {
+    color: var(--r-ink, #2d2418);
+    border-color: var(--r-rule-2, #b5a99a);
+  }
+  .step.current {
+    color: var(--r-ink, #2d2418);
+    background: var(--r-paper, #fbf8f2);
+    border-color: var(--r-rule-2, #b5a99a);
+  }
+  .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--r-rule-4, #d8d3ca);
+    color: var(--r-text-3, #5f564b);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+  .step.current .step-num {
+    background: var(--r-ember, #c9864c);
+    color: var(--r-paper, #fbf8f2);
   }
   .step-card {
     background: #faf7f1;
@@ -465,9 +527,26 @@ const pageStyles = `
   }
   .section-heading {
     margin: 0 0 12px 0;
-    font-family: Georgia, serif;
-    font-size: 17px;
-    color: #2d2418;
+    font-family: var(--r-serif, Georgia, serif);
+    font-size: 22px;
+    line-height: 1.25;
+    color: var(--r-ink, #2d2418);
+  }
+  .step-help {
+    margin: 0 0 16px 0;
+    font-family: var(--r-serif, Georgia, serif);
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--r-text-3, #5f564b);
+    font-style: italic;
+  }
+  .intention-label {
+    font-family: var(--r-sans, -apple-system, sans-serif);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--r-text-5, #887c68);
+    margin-right: 6px;
   }
   .muted {
     color: #a89373;

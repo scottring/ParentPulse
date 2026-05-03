@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Relish · The Pen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="shared.css" />
+<style>
+body{background:#1A1510;}
+
+/* The "stage" — darkened around the Pen, like the world is out of focus */
+.stage{
+  min-height:100vh;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(201,134,76,0.10) 0%, rgba(26,21,16,0.0) 60%),
+    linear-gradient(180deg,#1A1510 0%, #14100C 100%);
+  padding:40px 32px 96px;
+  position:relative;
+  overflow:hidden;
+}
+
+/* Barely-there chrome: tiny crumb showing where you came from, faint close */
+.pen-chrome{
+  max-width:1060px;margin:0 auto 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  color:rgba(245,236,216,0.55);
+}
+.pen-chrome .from{display:flex;align-items:center;gap:10px;font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;}
+.pen-chrome .from .dot{width:5px;height:5px;border-radius:50%;background:var(--r-ember);}
+.pen-chrome .from a{color:var(--r-amber);border-bottom:1px solid rgba(201,168,76,0.3);padding-bottom:1px;}
+.close-x{width:32px;height:32px;border-radius:50%;border:1px solid rgba(245,236,216,0.18);display:flex;align-items:center;justify-content:center;color:rgba(245,236,216,0.55);transition:all 140ms var(--r-ease-ink);}
+.close-x:hover{color:var(--r-paper);border-color:rgba(245,236,216,0.35);}
+.close-x svg{width:12px;height:12px;}
+
+/* THE SHEET — paper with a slight tilt at rest, straightens on focus */
+.sheet{
+  max-width:1060px;margin:0 auto;
+  background:var(--r-paper);
+  border-radius:3px;
+  box-shadow:
+    0 2px 6px rgba(0,0,0,0.3),
+    0 24px 60px rgba(0,0,0,0.45),
+    0 60px 140px rgba(0,0,0,0.35);
+  padding:56px 72px 28px;
+  position:relative;
+  background-image:
+    linear-gradient(180deg,rgba(251,248,242,0) 0%,rgba(251,248,242,0) 100%),
+    repeating-linear-gradient(0deg,rgba(168,152,138,0.04) 0px,rgba(168,152,138,0.04) 1px,transparent 1px,transparent 40px);
+}
+/* Paper texture — subtle */
+.sheet::before{
+  content:"";position:absolute;inset:0;pointer-events:none;border-radius:3px;
+  background:
+    radial-gradient(ellipse at 20% 10%,rgba(201,134,76,0.04) 0%,transparent 50%),
+    radial-gradient(ellipse at 85% 90%,rgba(168,152,138,0.06) 0%,transparent 50%);
+}
+/* Left margin rule (like a notebook) */
+.sheet::after{
+  content:"";position:absolute;left:52px;top:32px;bottom:32px;width:1px;background:var(--r-tint-burgundy);opacity:0.55;pointer-events:none;
+}
+
+/* HEADER: date + mood */
+.sheet-head{display:flex;align-items:baseline;justify-content:space-between;gap:24px;margin-bottom:28px;border-bottom:1px solid var(--r-rule-5);padding-bottom:20px;}
+.sheet-date{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:28px;color:var(--r-ink);letter-spacing:-0.01em;line-height:1;}
+.sheet-date .time{font-family:var(--r-sans);font-style:normal;font-size:11px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-5);display:block;margin-top:8px;}
+.sheet-kind{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.kind-chip{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--r-text-4);padding:7px 12px;border:1px solid var(--r-rule-4);border-radius:999px;background:transparent;cursor:pointer;transition:all 140ms var(--r-ease-ink);}
+.kind-chip:hover{color:var(--r-ink);border-color:var(--r-rule-3);}
+.kind-chip.on{background:var(--r-leather);color:var(--r-paper);border-color:var(--r-leather);}
+
+/* PROMPT LINE above the field — optional, poetic */
+.prompt-cue{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:17px;color:var(--r-text-4);margin:0 0 12px;display:flex;align-items:center;gap:10px;}
+.prompt-cue .q-mark{font-family:var(--r-serif);font-style:italic;font-size:32px;color:var(--r-ember);line-height:0.8;}
+
+/* THE FIELD — a big textarea that looks like writing */
+.field{
+  width:100%;border:none;background:transparent;resize:none;outline:none;
+  font-family:var(--r-serif);font-weight:400;font-size:24px;line-height:1.6;color:var(--r-ink);
+  min-height:320px;padding:0;
+  caret-color:var(--r-ember);
+  letter-spacing:-0.003em;
+}
+.field::placeholder{color:var(--r-text-5);font-style:italic;}
+.field-caret-anim{display:inline-block;width:2px;height:28px;background:var(--r-ember);margin-left:2px;vertical-align:middle;animation:blink 1.1s steps(2,end) infinite;}
+@keyframes blink{50%{opacity:0;}}
+
+/* ENTITIES ROW — @-mentions visualized underneath */
+.entities{margin:28px 0 0;padding-top:20px;border-top:1px solid var(--r-rule-5);display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+.entities-label{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-5);margin-right:4px;}
+.ent{display:inline-flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;background:var(--r-cream);border:1px solid var(--r-rule-5);border-radius:999px;font-family:var(--r-sans);font-size:12px;font-weight:500;color:var(--r-ink);cursor:pointer;transition:all 140ms var(--r-ease-ink);}
+.ent:hover{background:var(--r-cream-warm);}
+.ent .avatar{width:22px;height:22px;border-radius:50%;overflow:hidden;background:var(--r-cream-warm);display:flex;align-items:center;justify-content:center;font-family:var(--r-serif);font-style:italic;font-size:12px;color:var(--r-ink);}
+.ent .avatar img{width:100%;height:100%;object-fit:cover;}
+.ent .tag{font-family:var(--r-sans);font-size:9px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--r-text-5);}
+.ent.new{color:var(--r-ember);border-style:dashed;border-color:var(--r-ember);background:transparent;}
+.ent.new .avatar{background:var(--r-tint-ember);color:var(--r-ember);}
+
+/* MEDIA ATTACH STRIP */
+.media-strip{margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;}
+.media-item{
+  width:140px;height:105px;border-radius:3px;overflow:hidden;position:relative;
+  background:var(--r-cream-warm) center/cover;
+  border:1px solid var(--r-rule-5);
+}
+.media-item.voice{background:var(--r-leather);display:flex;align-items:center;justify-content:center;color:var(--r-paper);padding:14px;border-color:var(--r-leather);}
+.media-item.voice .wave{display:flex;align-items:center;gap:3px;height:32px;}
+.media-item.voice .wave span{width:2px;background:var(--r-amber);border-radius:1px;opacity:0.85;}
+.media-item.voice .dur{position:absolute;bottom:8px;right:10px;font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.14em;color:var(--r-amber);}
+.media-item.voice .kind{position:absolute;top:8px;left:10px;font-family:var(--r-sans);font-size:9px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:rgba(245,236,216,0.5);}
+.media-item .cap{position:absolute;left:8px;bottom:6px;font-family:var(--r-sans);font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--r-paper);background:rgba(20,16,12,0.55);padding:3px 7px;border-radius:2px;}
+.media-item .x{position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:50%;background:rgba(20,16,12,0.6);color:var(--r-paper);display:flex;align-items:center;justify-content:center;font-family:var(--r-sans);font-size:11px;cursor:pointer;}
+.media-add{width:140px;height:105px;border-radius:3px;border:1px dashed var(--r-rule-3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-family:var(--r-sans);font-size:10px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--r-text-5);cursor:pointer;transition:all 140ms var(--r-ease-ink);}
+.media-add:hover{background:var(--r-cream);color:var(--r-ink);border-color:var(--r-rule-2);}
+.media-add .glyph{font-family:var(--r-serif);font-style:italic;font-size:22px;line-height:1;color:var(--r-rule-2);}
+
+/* FOOTER: controls */
+.sheet-foot{
+  display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;
+  margin-top:32px;padding-top:20px;border-top:1px solid var(--r-rule-5);
+}
+.tool-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.tool{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid var(--r-rule-4);border-radius:999px;background:var(--r-paper-soft);font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--r-text-3);cursor:pointer;transition:all 140ms var(--r-ease-ink);}
+.tool:hover{border-color:var(--r-rule-3);color:var(--r-ink);}
+.tool svg{width:13px;height:13px;color:var(--r-ember);}
+.tool.on{background:var(--r-leather);color:var(--r-paper);border-color:var(--r-leather);}
+.tool.on svg{color:var(--r-amber);}
+.privacy-note{font-family:var(--r-serif);font-style:italic;font-size:14px;color:var(--r-text-5);margin-left:6px;}
+
+.primary-actions{display:flex;gap:10px;align-items:center;}
+.keep{
+  font-family:var(--r-sans);font-size:12px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;
+  padding:14px 28px;border-radius:999px;background:var(--r-leather);color:var(--r-paper);
+  display:inline-flex;align-items:center;gap:10px;border:none;cursor:pointer;
+  box-shadow:var(--r-shadow-card);transition:transform 140ms var(--r-ease-ink),background 140ms var(--r-ease-ink);
+}
+.keep:hover{background:var(--r-leather-2);transform:translateY(-1px);}
+.keep .ember-dot{width:7px;height:7px;border-radius:50%;background:var(--r-ember);}
+.later{font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--r-text-4);padding:10px 16px;}
+
+/* HELPERS — beneath the sheet */
+.helpers{max-width:1060px;margin:24px auto 0;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.helper{
+  background:rgba(245,236,216,0.03);border:1px solid rgba(245,236,216,0.08);
+  border-radius:3px;padding:20px 22px;color:rgba(245,236,216,0.7);
+  display:flex;flex-direction:column;gap:10px;
+  transition:all 140ms var(--r-ease-ink);cursor:pointer;
+}
+.helper:hover{background:rgba(245,236,216,0.05);border-color:rgba(245,236,216,0.14);}
+.helper .eyebrow{color:rgba(245,236,216,0.4);font-size:10px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;}
+.helper h4{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:19px;color:var(--r-paper);margin:0;line-height:1.3;letter-spacing:-0.005em;}
+.helper p{font-family:var(--r-serif);font-size:14.5px;line-height:1.5;color:rgba(245,236,216,0.6);margin:0;}
+.helper .foot{font-family:var(--r-sans);font-size:10px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--r-amber);margin-top:auto;}
+
+/* Ambient grain */
+.grain{position:absolute;inset:0;pointer-events:none;opacity:0.35;mix-blend-mode:overlay;background-image:radial-gradient(rgba(255,255,255,0.04) 1px,transparent 1px);background-size:3px 3px;}
+
+@media (max-width:900px){
+  .sheet{padding:40px 28px 24px;}
+  .sheet::after{display:none;}
+  .sheet-foot{grid-template-columns:1fr;}
+  .helpers{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="grain" aria-hidden="true"></div>
+
+  <!-- CHROME -->
+  <div class="pen-chrome">
+    <div class="from">
+      <span class="dot"></span>
+      <span>From <a href="Family Manual.html">Jenny's page</a> — Monday morning</span>
+    </div>
+    <a class="close-x" href="Workbook Home.html" aria-label="Close">
+      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 2l8 8M10 2l-8 8"/></svg>
+    </a>
+  </div>
+
+  <!-- SHEET -->
+  <section class="sheet">
+
+    <div class="sheet-head">
+      <div class="sheet-date">
+        Monday, 20 April 2026
+        <span class="time">8:42 AM · Morning</span>
+      </div>
+      <div class="sheet-kind" id="kinds">
+        <button class="kind-chip on">A line</button>
+        <button class="kind-chip">An entry</button>
+        <button class="kind-chip">A moment</button>
+        <button class="kind-chip">A thread</button>
+      </div>
+    </div>
+
+    <p class="prompt-cue"><span class="q-mark">"</span> A line about Jenny — what did you notice?</p>
+
+    <textarea class="field" id="field" placeholder="Called Jenny on the way back from school drop-off. She sounded tired, but the good kind — she said she'd been up early doing the crossword with her neighbor Ruth…">Called Jenny on the way back from school drop-off. She sounded tired, but the good kind — she said she'd been up early doing the crossword with her neighbor Ruth. I asked about the cardiology follow-up and she said "we'll see," which means it was fine and she doesn't want a fuss. I pressed once and dropped it.
+
+Kaleb asked if Grandma was okay. I said yes, and she is.</textarea>
+
+    <!-- Detected entities -->
+    <div class="entities">
+      <span class="entities-label">In this entry</span>
+      <button class="ent">
+        <span class="avatar"><img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80&auto=format&fit=crop" alt="" /></span>
+        Jenny <span class="tag">your mom</span>
+      </button>
+      <button class="ent">
+        <span class="avatar"><img src="https://images.unsplash.com/photo-1519340333755-56e9c1d04579?w=100&q=80&auto=format&fit=crop" alt="" /></span>
+        Kaleb <span class="tag">your son</span>
+      </button>
+      <button class="ent new">
+        <span class="avatar">R</span>
+        Ruth <span class="tag">add to Manual?</span>
+      </button>
+      <button class="ent" style="background:var(--r-tint-burgundy);border-color:transparent;color:var(--r-burgundy);">
+        <span style="width:8px;height:8px;border-radius:50%;background:currentColor;"></span>
+        Thread · Her cardiology follow-up
+      </button>
+    </div>
+
+    <!-- Media attached -->
+    <div class="media-strip">
+      <div class="media-item" style="background-image:url('https://images.unsplash.com/photo-1529636798458-92182e662485?w=400&q=80&auto=format&fit=crop');background-position:center;">
+        <span class="cap">School drop-off · today</span>
+        <span class="x">×</span>
+      </div>
+      <div class="media-item voice">
+        <span class="kind">Voice · 0:24</span>
+        <div class="wave">
+          <span style="height:30%"></span><span style="height:60%"></span><span style="height:45%"></span>
+          <span style="height:80%"></span><span style="height:70%"></span><span style="height:50%"></span>
+          <span style="height:90%"></span><span style="height:65%"></span><span style="height:40%"></span>
+          <span style="height:55%"></span><span style="height:75%"></span><span style="height:35%"></span>
+          <span style="height:60%"></span><span style="height:45%"></span><span style="height:25%"></span>
+        </div>
+        <span class="dur">0:24</span>
+        <span class="x">×</span>
+      </div>
+      <button class="media-add">
+        <span class="glyph">+</span>
+        <span>Photo · Voice · File</span>
+      </button>
+    </div>
+
+    <!-- Footer controls -->
+    <div class="sheet-foot">
+      <div class="tool-bar">
+        <button class="tool on">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v10M3 8h10"/></svg>
+          Keep open as thread
+        </button>
+        <button class="tool">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l5 5 5-5"/></svg>
+          Morning entry
+        </button>
+        <button class="tool">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="5"/><path d="M8 4v4l2 2"/></svg>
+          Remind me · in 2 weeks
+        </button>
+        <span class="privacy-note">Private — only you can see this page</span>
+      </div>
+
+      <div class="primary-actions">
+        <button class="later">Keep as draft</button>
+        <button class="keep">
+          <span class="ember-dot"></span>
+          Keep this
+        </button>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- HELPERS -->
+  <div class="helpers">
+    <button class="helper">
+      <span class="eyebrow">If you're stuck</span>
+      <h4>What was the weather like where she was?</h4>
+      <p>Small details make an entry stick. Start with weather, smell, or what she was wearing.</p>
+      <span class="foot">Use this prompt →</span>
+    </button>
+    <button class="helper">
+      <span class="eyebrow">Continue a thread</span>
+      <h4>The gutter repair she keeps brushing off.</h4>
+      <p>Last written 26 days ago. You said you'd bring it up again.</p>
+      <span class="foot">Add to this thread →</span>
+    </button>
+    <button class="helper">
+      <span class="eyebrow">From a year ago, today</span>
+      <h4>"She was at the door before we knocked."</h4>
+      <p>April 20, 2025 · a Sunday. You wrote about bringing the kids to her house.</p>
+      <span class="foot">Read it →</span>
+    </button>
+  </div>
+
+</div>
+
+<script>
+// Kind chips
+document.getElementById('kinds').addEventListener('click', e => {
+  const c = e.target.closest('.kind-chip'); if (!c) return;
+  document.querySelectorAll('.kind-chip').forEach(x => x.classList.remove('on'));
+  c.classList.add('on');
+});
+// Auto-grow textarea
+const f = document.getElementById('field');
+function grow(){ f.style.height = 'auto'; f.style.height = Math.max(f.scrollHeight, 320) + 'px'; }
+f.addEventListener('input', grow); grow();
+</script>
+
+</body>
+</html>

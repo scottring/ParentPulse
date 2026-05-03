@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Relish · Archive (Chunk 5)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --r-paper:#FBF8F2; --r-paper-soft:#F7F5F0; --r-cream:#F5F0E8;
+  --r-cream-deep:#ECEAE5;
+  --r-leather:#14100C;
+  --r-ink:#3A3530; --r-ink-reversed:#F5ECD8;
+  --r-text-2:#5C5347; --r-text-3:#5F564B; --r-text-4:#6B6254; --r-text-5:#746856;
+  --r-rule-4:#D8D3CA; --r-rule-5:#E5E0D8;
+  --r-sage:#7C9082; --r-ember:#C9864C; --r-ember-soft:#D4A872;
+  --r-burgundy:#8C4A3E; --r-amber:#C9A84C;
+  --r-serif:'Cormorant Garamond',Georgia,serif;
+  --r-sans:'DM Sans',system-ui,sans-serif;
+  --r-radius-3:6px;
+  --r-shadow-card:0 1px 2px rgba(60,50,40,0.04),0 6px 18px rgba(60,50,40,0.05);
+  --r-page-max:1440px;
+  --r-ease-ink:cubic-bezier(0.4,0.0,0.2,1);
+}
+html,body{margin:0;padding:0;background:#E5E0D8;font-family:var(--r-sans);color:var(--r-ink);}
+.page-wrap{max-width:1360px;margin:0 auto;padding:48px 24px 96px;}
+.page-title{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:40px;letter-spacing:-0.015em;margin:0 0 8px;}
+.page-sub{font-size:14px;color:var(--r-text-3);margin:0 0 40px;max-width:68ch;line-height:1.6;}
+.section-label{font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:var(--r-text-3);margin:48px 0 14px;}
+
+.frame{position:relative;width:100%;border-radius:8px;overflow:hidden;background:var(--r-cream);margin-bottom:32px;box-shadow:var(--r-shadow-card);}
+.nav{position:relative;height:72px;background:var(--r-cream-deep);border-bottom:1px solid rgba(120,100,70,0.12);}
+.nav-inner{height:100%;max-width:var(--r-page-max);margin:0 auto;padding:0 32px;display:flex;align-items:center;justify-content:space-between;gap:32px;}
+.wordmark{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:32px;color:var(--r-ink);text-decoration:none;line-height:1;}
+.rooms{display:flex;gap:40px;align-items:baseline;}
+.room{font-family:var(--r-serif);font-style:italic;font-size:18px;color:var(--r-ink);text-decoration:none;opacity:0.72;padding-bottom:4px;border-bottom:1px solid transparent;}
+.room.active{opacity:1;border-bottom-color:var(--r-ink);}
+.user{display:inline-flex;align-items:center;gap:10px;font-family:var(--r-sans);font-size:13px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--r-text-3);background:none;border:none;}
+.user::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--r-sage);}
+
+.body{max-width:var(--r-page-max);margin:0 auto;padding:0 32px;}
+.eyebrow{font-family:var(--r-sans);font-size:12px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-3);margin:0;}
+
+/* Year selector */
+.years{display:flex;gap:32px;padding:24px 0;border-bottom:1px solid var(--r-rule-5);}
+.yr{background:none;border:none;cursor:pointer;font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:28px;color:var(--r-text-4);opacity:0.65;padding-bottom:4px;border-bottom:1px solid transparent;line-height:1;align-self:flex-end;}
+.yr.active{font-weight:400;font-size:40px;color:var(--r-ink);opacity:1;border-bottom-color:var(--r-ember);}
+
+/* Year summary */
+.summary{padding:48px 0 32px;}
+.epigraph{margin:20px 0 0;padding:0;font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:clamp(32px,4vw,52px);line-height:1.15;letter-spacing:-0.02em;color:var(--r-ink);max-width:22ch;}
+.empty-summary{background:none;border:none;cursor:pointer;margin-top:20px;font-family:var(--r-serif);font-style:italic;font-size:24px;color:var(--r-text-4);padding:0;}
+
+/* Timeline */
+.timeline{padding:48px 0;}
+.month{display:grid;grid-template-columns:180px 1px minmax(0,1fr);gap:40px;padding-bottom:48px;align-items:start;}
+.month-label h3{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:36px;letter-spacing:-0.015em;color:var(--r-ink);margin:0;line-height:1;}
+.month-label .count{font-family:var(--r-sans);font-size:13px;color:var(--r-text-4);margin-top:8px;}
+.spine{background:var(--r-rule-5);}
+
+.entry{background:none;border:none;cursor:pointer;display:block;width:100%;padding:18px 0;text-align:left;border-top:1px solid var(--r-rule-5);}
+.entry:first-of-type{border-top:none;}
+.entry-row{display:flex;align-items:baseline;gap:14px;}
+.dot{width:6px;height:6px;border-radius:50%;flex:none;transform:translateY(-2px);}
+.dot.health{background:var(--r-burgundy);} .dot.home{background:var(--r-sage);}
+.dot.people{background:var(--r-ember);} .dot.plans{background:var(--r-amber);}
+.date{font-family:var(--r-sans);font-size:13px;color:var(--r-text-4);min-width:80px;}
+.title{font-family:var(--r-serif);font-style:italic;font-size:21px;color:var(--r-ink);letter-spacing:-0.005em;flex:1;}
+.preview{margin:4px 0 0 106px;font-family:var(--r-serif);font-size:16px;line-height:1.55;color:var(--r-text-3);}
+.quiet{font-family:var(--r-serif);font-style:italic;font-size:19px;color:var(--r-text-5);padding:8px 0;}
+
+.notes{margin-top:40px;padding:24px 28px;background:var(--r-paper-soft);border-left:3px solid var(--r-ember-soft);border-radius:0 var(--r-radius-3) var(--r-radius-3) 0;}
+.notes h3{font-family:var(--r-serif);font-style:italic;font-size:22px;margin:0 0 10px;}
+.notes ul{margin:0;padding-left:20px;font-size:14px;color:var(--r-text-2);line-height:1.7;}
+.notes li + li{margin-top:6px;}
+.notes code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--r-cream);padding:1px 5px;border-radius:3px;color:var(--r-burgundy);}
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+  <h1 class="page-title">The Archive · Chunk 5</h1>
+  <p class="page-sub">
+    The Archive is the read-only long view. Year selector at the top, an epigraph underneath (the
+    line that characterises the volume), and a month timeline below that. Quiet months show as
+    quiet; dense months expand. Current year has no epigraph yet — it's still being written.
+  </p>
+
+  <!-- STATE 1 — Current year (in progress, no epigraph) -->
+  <p class="section-label">State 1 · /archive — current year, still being written</p>
+
+  <div class="frame">
+    <nav class="nav">
+      <div class="nav-inner">
+        <a class="wordmark" href="Workbook Home.html">Relish</a>
+        <div class="rooms">
+          <a class="room" href="Workbook Home.html">The Workbook</a>
+          <a class="room" href="Family Manual.html">The Family Manual</a>
+          <a class="room active" href="#">The Archive</a>
+        </div>
+        <button class="user">Sarah</button>
+      </div>
+    </nav>
+    <div class="body">
+      <nav class="years">
+        <button class="yr active">2025</button>
+        <button class="yr">2024</button>
+        <button class="yr">2023</button>
+        <button class="yr">2022</button>
+        <button class="yr">2021</button>
+      </nav>
+
+      <section class="summary">
+        <p class="eyebrow">Volume 2025 · 58 entries</p>
+        <button class="empty-summary">Write a line for this year ⟶</button>
+      </section>
+
+      <div class="timeline">
+        <section class="month">
+          <div class="month-label">
+            <h3>March</h3>
+            <div class="count">3 entries</div>
+          </div>
+          <div class="spine"></div>
+          <div>
+            <button class="entry">
+              <div class="entry-row">
+                <span class="dot health"></span>
+                <span class="date">4 Mar</span>
+                <span class="title">Mom's cardiology follow-up</span>
+              </div>
+              <div class="preview">Thursday at 10:15. Parking is tricky — leave by 9:30.</div>
+            </button>
+            <button class="entry">
+              <div class="entry-row">
+                <span class="dot home"></span>
+                <span class="date">2 Mar</span>
+                <span class="title">Bryan came about the tap</span>
+              </div>
+              <div class="preview">Quote was £180. Saturday if we confirm.</div>
+            </button>
+            <button class="entry">
+              <div class="entry-row">
+                <span class="dot people"></span>
+                <span class="date">1 Mar</span>
+                <span class="title">Jamie's reading jump</span>
+              </div>
+              <div class="preview">Teacher said try chapter books. He liked the dragon one.</div>
+            </button>
+          </div>
+        </section>
+
+        <section class="month">
+          <div class="month-label">
+            <h3>February</h3>
+            <div class="count">3 entries</div>
+          </div>
+          <div class="spine"></div>
+          <div>
+            <button class="entry">
+              <div class="entry-row">
+                <span class="dot plans"></span>
+                <span class="date">22 Feb</span>
+                <span class="title">Half-term · the coast</span>
+              </div>
+              <div class="preview">Four days at Mom's. Ellie swam despite the cold.</div>
+            </button>
+            <button class="entry">
+              <div class="entry-row">
+                <span class="dot people"></span>
+                <span class="date">14 Feb</span>
+                <span class="title">Tom made the shortbread</span>
+              </div>
+            </button>
+            <button class="entry">
+              <div class="entry-row">
+                <span class="dot home"></span>
+                <span class="date">8 Feb</span>
+                <span class="title">Boiler service due</span>
+              </div>
+              <div class="preview">Engineer booked for the 19th.</div>
+            </button>
+          </div>
+        </section>
+
+        <section class="month">
+          <div class="month-label">
+            <h3>January</h3>
+            <div class="count">3 entries</div>
+          </div>
+          <div class="spine"></div>
+          <div>
+            <button class="entry">
+              <div class="entry-row">
+                <span class="dot people"></span>
+                <span class="date">28 Jan</span>
+                <span class="title">Ellie's birthday — 12</span>
+              </div>
+              <div class="preview">Small gathering. She wanted a camera, not a phone.</div>
+            </button>
+            <button class="entry">
+              <div class="entry-row">
+                <span class="dot plans"></span>
+                <span class="date">6 Jan</span>
+                <span class="title">Back to school, back to rhythm</span>
+              </div>
+            </button>
+            <button class="entry">
+              <div class="entry-row">
+                <span class="dot plans"></span>
+                <span class="date">1 Jan</span>
+                <span class="title">A list of quiet hopes</span>
+              </div>
+              <div class="preview">Walk more. Say less. Read one book a month.</div>
+            </button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATE 2 — Past year with epigraph + a quiet month -->
+  <p class="section-label">State 2 · /archive?year=2024 — past year, epigraph set, quiet month</p>
+
+  <div class="frame">
+    <nav class="nav">
+      <div class="nav-inner">
+        <a class="wordmark" href="Workbook Home.html">Relish</a>
+        <div class="rooms">
+          <a class="room" href="Workbook Home.html">The Workbook</a>
+          <a class="room" href="Family Manual.html">The Family Manual</a>
+          <a class="room active" href="#">The Archive</a>
+        </div>
+        <button class="user">Sarah</button>
+      </div>
+    </nav>
+    <div class="body">
+      <nav class="years">
+        <button class="yr">2025</button>
+        <button class="yr active">2024</button>
+        <button class="yr">2023</button>
+        <button class="yr">2022</button>
+        <button class="yr">2021</button>
+      </nav>
+
+      <section class="summary">
+        <p class="eyebrow">Volume 2024 · 347 entries</p>
+        <blockquote class="epigraph">&ldquo;Forty-seven threads closed, three rituals kept, two decisions that changed our Sundays.&rdquo;</blockquote>
+      </section>
+
+      <div class="timeline">
+        <section class="month">
+          <div class="month-label">
+            <h3>December</h3>
+            <div class="count">2 entries</div>
+          </div>
+          <div class="spine"></div>
+          <div>
+            <button class="entry">
+              <div class="entry-row">
+                <span class="dot people"></span>
+                <span class="date">24 Dec</span>
+                <span class="title">Everyone home by seven</span>
+              </div>
+              <div class="preview">Mom made it despite the trains.</div>
+            </button>
+            <button class="entry">
+              <div class="entry-row">
+                <span class="dot plans"></span>
+                <span class="date">18 Dec</span>
+                <span class="title">Final school run of the year</span>
+              </div>
+            </button>
+          </div>
+        </section>
+
+        <section class="month">
+          <div class="month-label">
+            <h3>November</h3>
+            <div class="count">0 entries</div>
+          </div>
+          <div class="spine"></div>
+          <div>
+            <div class="quiet">A quiet month.</div>
+          </div>
+        </section>
+
+        <section class="month">
+          <div class="month-label">
+            <h3>October</h3>
+            <div class="count">1 entry</div>
+          </div>
+          <div class="spine"></div>
+          <div>
+            <button class="entry">
+              <div class="entry-row">
+                <span class="dot home"></span>
+                <span class="date">12 Oct</span>
+                <span class="title">The garden, put to bed</span>
+              </div>
+            </button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <h3>What Chunk 5 adds</h3>
+    <ul>
+      <li><code>src/design/archive/YearSelector.tsx</code> — horizontal year scroller; active year is larger and underlined in ember</li>
+      <li><code>src/design/archive/YearSummary.tsx</code> — volume epigraph; shows a "write a line" prompt when empty</li>
+      <li><code>src/design/archive/MonthTimeline.tsx</code> — sticky month labels on the left, entries on the right, quiet months stay quiet</li>
+      <li><code>src/app/archive/page.tsx</code> — reads <code>?year=YYYY</code>, composes the three components; entry taps go to <code>/archive/entry/[id]</code></li>
+    </ul>
+  </div>
+
+  <div class="notes">
+    <h3>Integration — the full migration</h3>
+    <ul>
+      <li>Routes live now: <code>/workbook</code>, <code>/manual</code>, <code>/manual/people/[id]</code>, <code>/archive</code></li>
+      <li><code>/journal</code> permanently redirects to <code>/workbook</code> (Chunk 2)</li>
+      <li>Old routes to retire after integration: <code>/surface</code>, <code>/reports</code>, <code>/family-manual</code> — redirect each to its new home or leave for one release then 410</li>
+      <li>Wrap authenticated layouts with <code>&lt;ShellLayout userName onSignOut&gt;</code> from <code>@/design/shell</code>; remove the old top header</li>
+      <li>Top-level <code>src/app/globals.css</code> needs <code>@import "../design/tokens.css";</code> at the top</li>
+      <li>The existing CaptureSheet import can be deleted once your capture mutation is wired into the new one; in the interim both can coexist — the new sheet listens for <code>relish:pen:open</code> and takes over if present</li>
+    </ul>
+  </div>
+
+  <div class="notes">
+    <h3>The whole system, in five files</h3>
+    <ul>
+      <li><code>Design System.html</code> — tokens, type, surfaces, controls</li>
+      <li><code>Shell.html</code> — TopNav + Pen, paper and leather rooms</li>
+      <li><code>Workbook.html</code> — daily spread, rituals, capture sheet</li>
+      <li><code>Manual.html</code> — people grid, person sheet, volumes shelf</li>
+      <li><code>Archive.html</code> — year selector, epigraph, month timeline</li>
+    </ul>
+    <p style="margin:16px 0 0;font-family:var(--r-serif);font-style:italic;font-size:20px;color:var(--r-ink);">That's the book.</p>
+  </div>
+
+</div>
+
+</body>
+</html>

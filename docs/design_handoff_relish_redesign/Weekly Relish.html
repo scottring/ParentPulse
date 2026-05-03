@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Relish · Weekly Relish — a practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="shared.css" />
+<style>
+.crumbs{margin:32px 0 16px;display:flex;align-items:center;gap:10px;font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:var(--r-text-5);}
+.crumbs a{color:var(--r-text-4);}
+.crumbs .sep{opacity:0.5;}
+
+/* HERO */
+.practice-hero{
+  display:grid;grid-template-columns:1fr 1px 1fr;gap:48px;padding:16px 0 48px;
+}
+.ph-rule{background:var(--r-rule-5);align-self:stretch;}
+.ph-left{display:flex;flex-direction:column;gap:24px;}
+.ph-eyebrow{display:flex;align-items:center;gap:14px;font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-3);}
+.ph-eyebrow .dot{width:5px;height:5px;border-radius:50%;background:var(--r-sage);}
+.ph-left h1{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:clamp(60px,6.5vw,96px);line-height:0.96;letter-spacing:-0.025em;color:var(--r-ink);margin:0;}
+.ph-left .lede{font-family:var(--r-serif);font-size:22px;line-height:1.5;color:var(--r-text-2);margin:0;max-width:40ch;}
+.ph-left .lede em{font-style:italic;color:var(--r-ink);}
+
+/* Cadence / status plate */
+.plate{
+  padding:20px 0;border-top:1px solid var(--r-rule-5);border-bottom:1px solid var(--r-rule-5);
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;
+}
+.plate-cell{display:flex;flex-direction:column;gap:6px;}
+.plate-cell .lbl{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-5);}
+.plate-cell .val{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:26px;color:var(--r-ink);line-height:1;letter-spacing:-0.01em;}
+.plate-cell .val em{font-style:italic;color:var(--r-sage-deep);}
+
+.ph-ctas{display:flex;gap:10px;flex-wrap:wrap;}
+.ph-ctas .g{width:14px;height:14px;color:var(--r-amber);}
+
+/* Right side — streak strip */
+.streak{padding-top:8px;}
+.streak-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px;}
+.streak-head .lbl{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-4);}
+.streak-head .meta{font-family:var(--r-serif);font-style:italic;font-size:16px;color:var(--r-text-5);}
+
+/* 12-week grid */
+.streak-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:6px;}
+.cell{
+  aspect-ratio:1/1;border-radius:2px;background:var(--r-rule-5);position:relative;
+}
+.cell.kept{background:var(--r-sage);}
+.cell.kept.strong{background:var(--r-sage-deep);}
+.cell.skipped{background:transparent;border:1px dashed var(--r-rule-3);}
+.cell.now{background:var(--r-ember);box-shadow:0 0 0 2px var(--r-tint-ember);}
+.streak-legend{margin-top:14px;display:flex;gap:16px;flex-wrap:wrap;font-family:var(--r-sans);font-size:10px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--r-text-4);}
+.streak-legend span{display:inline-flex;align-items:center;gap:6px;}
+.streak-legend .sw{width:10px;height:10px;border-radius:2px;}
+
+.streak-note{margin-top:20px;padding:18px 20px;background:var(--r-paper);border:1px solid var(--r-rule-5);border-radius:3px;font-family:var(--r-serif);font-size:17px;line-height:1.5;color:var(--r-text-2);}
+.streak-note em{font-style:italic;color:var(--r-ink);}
+
+/* THE RITUAL BODY — what it is and when */
+.ritual-body{padding:48px 0;border-top:1px solid var(--r-rule-4);display:grid;grid-template-columns:1.15fr 1fr;gap:48px;}
+.rb h2{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:44px;color:var(--r-ink);margin:0 0 16px;letter-spacing:-0.015em;line-height:1;}
+.rb-lede{font-family:var(--r-serif);font-size:18px;line-height:1.6;color:var(--r-text-2);margin:0 0 28px;max-width:52ch;}
+.rb-lede em{font-style:italic;color:var(--r-ink);}
+
+.step{display:grid;grid-template-columns:38px 1fr;gap:14px;padding:18px 0;border-top:1px solid var(--r-rule-5);}
+.step:first-of-type{border-top:none;padding-top:0;}
+.step .n{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:26px;color:var(--r-ember);line-height:1;padding-top:2px;}
+.step h3{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:22px;line-height:1.2;color:var(--r-ink);margin:0 0 4px;letter-spacing:-0.005em;}
+.step p{font-family:var(--r-serif);font-size:16px;line-height:1.55;color:var(--r-text-3);margin:0;}
+
+/* When & Who side */
+.side{display:flex;flex-direction:column;gap:24px;}
+.side-card{background:var(--r-paper);border:1px solid var(--r-rule-5);border-radius:3px;padding:24px 26px;}
+.side-card .eyebrow{margin-bottom:12px;display:block;}
+.side-card h3{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:32px;letter-spacing:-0.015em;color:var(--r-ink);margin:0 0 10px;line-height:1;}
+.side-card p{font-family:var(--r-serif);font-size:16px;line-height:1.5;color:var(--r-text-3);margin:0;}
+.when-grid{margin-top:14px;display:grid;grid-template-columns:auto 1fr;gap:10px 20px;}
+.when-grid dt{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--r-text-5);padding-top:4px;}
+.when-grid dd{margin:0;font-family:var(--r-serif);font-size:17px;color:var(--r-ink);line-height:1.5;}
+.keepers{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;}
+.keeper{display:inline-flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;background:var(--r-cream);border:1px solid var(--r-rule-5);border-radius:999px;font-family:var(--r-sans);font-size:12px;color:var(--r-ink);}
+.keeper .av{width:22px;height:22px;border-radius:50%;overflow:hidden;background:var(--r-cream-warm);display:flex;align-items:center;justify-content:center;font-family:var(--r-serif);font-style:italic;font-size:12px;}
+.keeper .av img{width:100%;height:100%;object-fit:cover;}
+
+/* LOG — past kept -->
+.log-section{padding:48px 0;border-top:1px solid var(--r-rule-4);}
+.log-head{display:flex;align-items:baseline;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:24px;}
+.log-head h2{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:44px;color:var(--r-ink);margin:0;letter-spacing:-0.015em;line-height:1;}
+.log-head .sub{font-family:var(--r-serif);font-size:16px;color:var(--r-text-4);}
+
+.log-entry{padding:24px 0;border-top:1px solid var(--r-rule-5);display:grid;grid-template-columns:120px 1fr auto;gap:24px;align-items:start;}
+.log-entry:first-of-type{border-top:none;}
+.log-date{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:22px;color:var(--r-ink);letter-spacing:-0.005em;}
+.log-date .sm{display:block;font-family:var(--r-sans);font-style:normal;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--r-text-5);margin-top:4px;}
+.log-body p{font-family:var(--r-serif);font-size:17px;line-height:1.55;color:var(--r-text-2);margin:0;}
+.log-body p em{font-style:italic;color:var(--r-ink);}
+.log-body .quote{font-family:var(--r-serif);font-style:italic;font-size:19px;color:var(--r-ink);border-left:2px solid var(--r-ember);padding-left:16px;margin:10px 0 0;}
+.log-status{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;padding:6px 12px;border-radius:999px;color:var(--r-sage-deep);background:var(--r-tint-sage);white-space:nowrap;}
+.log-status.late{color:var(--r-burgundy);background:var(--r-tint-burgundy);}
+.log-status.skip{color:var(--r-text-5);background:var(--r-cream);}
+
+@media (max-width:1100px){
+  .practice-hero{grid-template-columns:1fr;}
+  .ph-rule{display:none;}
+  .ritual-body{grid-template-columns:1fr;}
+  .log-entry{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a class="wordmark" href="Workbook Home.html">Relish</a>
+    <div class="rooms">
+      <a class="room active" href="Workbook Home.html">The Workbook</a>
+      <a class="room" href="Family Manual.html">The Family Manual</a>
+      <a class="room" href="Archive.html">The Archive</a>
+    </div>
+    <button class="user">Scott</button>
+  </div>
+</nav>
+
+<main class="page">
+
+  <div class="crumbs">
+    <a href="Workbook Home.html">The Workbook</a>
+    <span class="sep">/</span>
+    <span>Practices</span>
+    <span class="sep">/</span>
+    <span>Weekly Relish</span>
+  </div>
+
+  <!-- HERO -->
+  <section class="practice-hero">
+    <div class="ph-left">
+      <div class="ph-eyebrow"><span class="dot"></span><span>A practice · kept every Sunday since 18 February</span></div>
+      <h1>The Weekly Relish.</h1>
+      <p class="lede"><em>Ten minutes on the couch, Sunday evening</em> — a family review of what was good, what was hard, and what wants keeping into next week.</p>
+
+      <div class="plate">
+        <div class="plate-cell"><span class="lbl">Cadence</span><span class="val">Weekly · Sunday</span></div>
+        <div class="plate-cell"><span class="lbl">Kept</span><span class="val"><em>9</em> of 10</span></div>
+        <div class="plate-cell"><span class="lbl">Next</span><span class="val">In 6 days</span></div>
+      </div>
+
+      <div class="ph-ctas">
+        <a class="pill dark" href="#">
+          <svg class="g" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/></svg>
+          Start the Relish now
+        </a>
+        <a class="pill" href="#">Edit practice</a>
+        <a class="pill" href="#">Pause</a>
+      </div>
+    </div>
+
+    <div class="ph-rule" aria-hidden="true"></div>
+
+    <div class="streak">
+      <div class="streak-head">
+        <span class="lbl">Last 12 weeks</span>
+        <span class="meta">9 kept · 1 late · 2 weeks ahead</span>
+      </div>
+      <div class="streak-grid">
+        <div class="cell kept strong"></div>
+        <div class="cell kept strong"></div>
+        <div class="cell kept"></div>
+        <div class="cell kept strong"></div>
+        <div class="cell kept"></div>
+        <div class="cell kept"></div>
+        <div class="cell kept strong"></div>
+        <div class="cell skipped"></div>
+        <div class="cell kept"></div>
+        <div class="cell kept"></div>
+        <div class="cell now"></div>
+        <div class="cell"></div>
+      </div>
+      <div class="streak-legend">
+        <span><span class="sw" style="background:var(--r-sage-deep)"></span>Kept · well</span>
+        <span><span class="sw" style="background:var(--r-sage)"></span>Kept</span>
+        <span><span class="sw" style="background:var(--r-ember)"></span>This week</span>
+        <span><span class="sw" style="background:var(--r-rule-5)"></span>Upcoming</span>
+        <span><span class="sw" style="border:1px dashed var(--r-rule-3)"></span>Skipped</span>
+      </div>
+
+      <div class="streak-note">
+        <em>Ninth Sunday in a row on the couch after dinner.</em> The one you missed was the week of Iris's work trip — you caught it up on Monday.
+      </div>
+    </div>
+  </section>
+
+  <!-- THE RITUAL BODY -->
+  <section class="ritual-body">
+
+    <div class="rb">
+      <h2>What it is.</h2>
+      <p class="rb-lede"><em>Three questions, three people, ten minutes.</em> Started because Sundays were dissolving into laundry and nobody remembered anything on Mondays.</p>
+
+      <div class="step">
+        <span class="n">i.</span>
+        <div>
+          <h3>What was good this week?</h3>
+          <p>Each person answers in turn. Kaleb goes first because he will not wait his turn.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="n">ii.</span>
+        <div>
+          <h3>What was hard?</h3>
+          <p>The honest one. <em>Nobody has to share.</em> A pass counts as an answer.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="n">iii.</span>
+        <div>
+          <h3>What wants keeping into next week?</h3>
+          <p>One thing — a meal, a plan, a feeling — that the family wants to carry forward. This is the line that goes into the book.</p>
+        </div>
+      </div>
+    </div>
+
+    <aside class="side">
+      <div class="side-card">
+        <span class="eyebrow">When</span>
+        <h3>Sunday, 7:30pm.</h3>
+        <p>After dinner, before bath. Ten minutes is enough; fifteen is better.</p>
+        <dl class="when-grid">
+          <dt>Reminder</dt><dd>Sunday 7:00pm · quiet chime on Scott's phone</dd>
+          <dt>If missed</dt><dd>Catch up by Tuesday — otherwise skip clean</dd>
+          <dt>Pair with</dt><dd>Nothing · this is the thing</dd>
+        </dl>
+      </div>
+      <div class="side-card">
+        <span class="eyebrow">Who keeps it</span>
+        <h3>The four of you.</h3>
+        <p>Iris and Scott take turns writing the keeper line in the book afterward.</p>
+        <div class="keepers">
+          <span class="keeper"><span class="av"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=80&auto=format&fit=crop" alt=""/></span>Iris</span>
+          <span class="keeper"><span class="av">S</span>Scott</span>
+          <span class="keeper"><span class="av"><img src="https://images.unsplash.com/photo-1519340333755-56e9c1d04579?w=80&q=80&auto=format&fit=crop" alt=""/></span>Kaleb</span>
+          <span class="keeper"><span class="av"><img src="https://images.unsplash.com/photo-1595152772835-219674b2a8a6?w=80&q=80&auto=format&fit=crop" alt=""/></span>Nell</span>
+        </div>
+      </div>
+    </aside>
+
+  </section>
+
+  <!-- LOG -->
+  <section class="log-section">
+    <div class="log-head">
+      <h2>What you've kept so far.</h2>
+      <span class="sub">Ten weeks · the keeper line from each</span>
+    </div>
+
+    <article class="log-entry">
+      <div class="log-date">Sun, Apr 19<span class="sm">Week 16</span></div>
+      <div class="log-body">
+        <p>Kaleb picked <em>the walk in the park Saturday</em> as the thing to keep. He liked feeding the ducks with Jax.</p>
+        <p class="quote">"The ducks were very serious about their jobs." — Kaleb</p>
+      </div>
+      <span class="log-status">Kept</span>
+    </article>
+
+    <article class="log-entry">
+      <div class="log-date">Sun, Apr 12<span class="sm">Week 15</span></div>
+      <div class="log-body">
+        <p>Iris named <em>the Tuesday-night pasta</em> as the keeper. Nell tried calling it "piss-ghetti" which is apparently going in the book.</p>
+        <p class="quote">"We're keeping the chaos, just — Tuesdays." — Iris</p>
+      </div>
+      <span class="log-status">Kept</span>
+    </article>
+
+    <article class="log-entry">
+      <div class="log-date">Sun, Apr 5<span class="sm">Week 14</span></div>
+      <div class="log-body">
+        <p>Hard week. Scott picked <em>that we did it anyway</em> — meaning the Relish itself. A short one.</p>
+      </div>
+      <span class="log-status late">Caught up · Tuesday</span>
+    </article>
+
+    <article class="log-entry">
+      <div class="log-date">Sun, Mar 29<span class="sm">Week 13</span></div>
+      <div class="log-body">
+        <p>Easter prep. Nell picked <em>painting the eggs with Grandma Jenny</em>.</p>
+      </div>
+      <span class="log-status">Kept</span>
+    </article>
+
+    <article class="log-entry">
+      <div class="log-date">Sun, Mar 22<span class="sm">Week 12</span></div>
+      <div class="log-body">
+        <p>Iris's work trip week. Everyone too tired. <em>Skipped clean, by agreement.</em></p>
+      </div>
+      <span class="log-status skip">Skipped</span>
+    </article>
+
+    <article class="log-entry">
+      <div class="log-date">Sun, Mar 15<span class="sm">Week 11</span></div>
+      <div class="log-body">
+        <p>Kaleb's first time picking something abstract — <em>"the feeling when Dad comes home."</em> Nobody made it through without getting a little wet-eyed.</p>
+        <p class="quote">"Keep the feeling, not the day." — Iris, writing it down</p>
+      </div>
+      <span class="log-status">Kept</span>
+    </article>
+  </section>
+
+  <div class="colophon">
+    <span class="fleuron">❦</span>
+    The Weekly Relish — nine kept, one caught up.
+  </div>
+
+</main>
+
+<button class="pen" aria-label="Open the Pen">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/></svg>
+</button>
+
+</body>
+</html>

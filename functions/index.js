@@ -1279,9 +1279,28 @@ async function retrieveChatContext(familyId, userMessage, personIdOrIds = null, 
     };
   });
 
+  // Authoritative family roster — every person on file for this
+  // family. Loaded on every chat (not just when a person is tagged)
+  // so the model has ground truth for who exists and never invents
+  // a name when no manual is in context.
+  const peopleSnapshot = await admin.firestore()
+      .collection("people")
+      .where("familyId", "==", familyId)
+      .get();
+
+  const familyRoster = peopleSnapshot.docs.map((doc) => {
+    const d = doc.data();
+    return {
+      personId: doc.id,
+      name: d.name,
+      relationshipType: d.relationshipType,
+      birthYear: d.birthYear || null,
+    };
+  });
+
   // Load manuals for all tagged people. The chat is "grounded in"
   // every manual the user tagged, so the model can reason across
-  // siblings (e.g. conflict between Kaleb and Ella needs both).
+  // multiple people at once.
   const personManuals = [];
   for (const pid of personIds) {
     const personDoc = await admin.firestore()
@@ -1387,12 +1406,13 @@ async function retrieveChatContext(familyId, userMessage, personIdOrIds = null, 
   const manualSummary = personManuals.length > 0 ?
     `, ${personManuals.length} manual${personManuals.length === 1 ? "" : "s"} for ${personManuals.map((m) => m.personName).join(" & ")}` :
     "";
-  logger.info(`Context: ${journalEntries.length} journals, ${knowledgeItems.length} knowledge items, ${actions.length} actions${manualSummary}${workbooks.length > 0 ? `, ${workbooks.length} workbooks` : ""}${pastConversations.length > 0 ? `, ${pastConversations.length} past conversations` : ""}`);
+  logger.info(`Context: ${journalEntries.length} journals, ${knowledgeItems.length} knowledge items, ${actions.length} actions, ${familyRoster.length} in roster${manualSummary}${workbooks.length > 0 ? `, ${workbooks.length} workbooks` : ""}${pastConversations.length > 0 ? `, ${pastConversations.length} past conversations` : ""}`);
 
   return {
     journalEntries,
     knowledgeItems,
     actions,
+    familyRoster,      // authoritative: every person on file
     personManual,      // back-compat: first manual
     personManuals,     // new: array of all tagged manuals
     workbooks,
@@ -1515,7 +1535,7 @@ function buildChatSystemMessage(context) {
 
 2. **Ask one real question before giving advice.** A journal conversation is a thinking space, not a Q&A machine. Your first reply should almost always include a single, specific question — something that helps them notice a pattern, see their own role, articulate what's underneath the surface complaint, or tell you what they've already tried. Wait for their answer before pivoting to suggestions. If you find yourself listing "things to try" in your first reply, you're doing it wrong.
 
-3. **Be specific when citing the manual.** Name which manual and which section. "In Kaleb's triggers you noted X." "Ella's 'what works' section mentions Y." Vague references like "the manual's guidance on collaborative approaches" sound hollow — they're the tell of an AI paraphrasing generically. Specificity is the whole point of being grounded.
+3. **Be specific when citing the manual.** Name which manual and which section — e.g. "in [child's name]'s triggers you noted X" or "[partner's name]'s 'what works' section mentions Y." Use real names from the Family Roster below; never echo the bracketed placeholders. Vague references like "the manual's guidance on collaborative approaches" sound hollow — they're the tell of an AI paraphrasing generically. Specificity is the whole point of being grounded.
 
 4. **Have a point of view.** Don't stack hedges. "Could be playing a role," "may feel like," "might possibly be" — pick one hedge per reply at most, and only when you genuinely don't know. If the data supports a claim, state it plainly. Confident grounded observations beat cautious generic ones.
 
@@ -1533,9 +1553,26 @@ function buildChatSystemMessage(context) {
 
 9. **Don't mine your own past responses.** The "Past Coaching Conversations" section below contains things YOU said previously. Use them only to stay consistent and remember context the user shared — never treat them as established facts or "insights from the manual."
 
+10. **Never invent names.** The Family Roster below is authoritative — it lists every person on file in this family. If you refer to someone by name, that name MUST appear in the Family Roster. If the user mentions someone outside the roster (their mother, a coworker, a teacher, a friend), use the role they used ("your mother," "your friend") — do not assign or guess a name. If you're uncertain how many children, siblings, or family members the user has, ASK before answering. Confabulating a name is a serious error; it is always better to ask. This rule overrides any pattern in past conversations: if a name appeared in a prior chat but is not in the Family Roster, treat it as suspect and ask, do not echo it.
+
 === AVAILABLE CONTEXT ===
 
 `;
+
+  // Family roster first — this is the model's source of truth for who
+  // exists in this family. Always present (even if empty) so rule #10
+  // has something concrete to anchor on.
+  const currentYear = new Date().getFullYear();
+  if (context.familyRoster && context.familyRoster.length > 0) {
+    systemMessage += `## Family Roster (authoritative — these are the only people on file in this family):\n`;
+    context.familyRoster.forEach((person) => {
+      const ageBit = person.birthYear ? `, age ${currentYear - person.birthYear}` : "";
+      systemMessage += `- ${person.name} (${person.relationshipType}${ageBit})\n`;
+    });
+    systemMessage += `\nIf the user mentions anyone whose name is not on this list, do not assign or invent a name — refer to them by role ("your mother," "your friend") and ask if you need to know more.\n\n`;
+  } else {
+    systemMessage += `## Family Roster:\n(No people on file yet for this family.) Do not refer to anyone by name. Ask before naming individuals.\n\n`;
+  }
 
   // Add journal entries
   if (context.journalEntries.length > 0) {

@@ -54,7 +54,14 @@ function findEcho(entries: JournalEntry[]): EchoDispatch | null {
   const recentCutoff = new Date(now);
   recentCutoff.setDate(recentCutoff.getDate() - 14);
 
-  const recent = entries.filter((e) => {
+  // Privacy: skip private-to-self entries entirely. They must not be
+  // surfaced as Echo *and* they must not drive the match — letting a
+  // private entry's themes/people count as "what you're writing about
+  // now" would still leak the private content sideways via the choice
+  // of older entry.
+  const sharable = entries.filter((e) => !isPrivateToSelf(e));
+
+  const recent = sharable.filter((e) => {
     const d = e.createdAt?.toDate?.();
     return d && d >= recentCutoff;
   });
@@ -87,7 +94,9 @@ function findEcho(entries: JournalEntry[]): EchoDispatch | null {
   let bestScore = 0;
   let bestOverlap: string | null = null;
 
-  for (const e of entries) {
+  // Iterate over `sharable` (private-to-self already excluded) so the
+  // chosen Echo entry is never a private one.
+  for (const e of sharable) {
     const d = e.createdAt?.toDate?.();
     if (!d || d < start || d > end) continue;
     const len = (e.text ?? '').trim().length;
@@ -214,4 +223,12 @@ function computePattern(entries: JournalEntry[]): PatternDispatch | null {
     windowDays,
     confidence,
   };
+}
+
+// A "private to self" entry has no sharing — only the author can see
+// it. Editorial dashboard surfaces (Echo, Memory of the Day, Lead,
+// Brief) must not quote these even to their own author.
+function isPrivateToSelf(e: JournalEntry): boolean {
+  if (e.isPrivate) return true;
+  return (e.sharedWithUserIds ?? []).length === 0;
 }

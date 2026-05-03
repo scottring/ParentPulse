@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Relish · The Family Manual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="shared.css" />
+<style>
+/* ═══ MANUAL MASTHEAD ═══ */
+.manual-masthead{margin:32px 0 0;}
+.manual-masthead .masthead-strip{grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;}
+@media (max-width:1100px){ .manual-masthead .masthead-strip{grid-template-columns:1fr 1fr;gap:16px;} .manual-masthead .masthead-divider{display:none;}}
+
+/* ═══ HERO SPREAD (editorial portrait + lede) ═══ */
+.spread{
+  display:grid;grid-template-columns:1.1fr 1px 1fr;gap:48px;
+  margin-top:48px;padding-bottom:56px;
+}
+.spread-rule{background:var(--r-rule-5);align-self:stretch;}
+
+.hero-portrait-wrap{position:relative;}
+.hero-portrait{
+  width:100%;aspect-ratio:4/5;border-radius:3px;overflow:hidden;position:relative;
+  background:#C8B894 url('https://images.unsplash.com/photo-1544027993-37dbfe43562a?w=1600&q=80&auto=format&fit=crop') center 25%/cover;
+}
+.hero-portrait::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,12,0) 50%,rgba(20,16,12,0.45) 100%);}
+.hero-portrait-plate{position:absolute;left:24px;bottom:20px;right:24px;color:var(--r-paper);z-index:2;display:flex;align-items:baseline;justify-content:space-between;gap:16px;}
+.hero-portrait-plate .name{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:32px;letter-spacing:-0.01em;line-height:1;}
+.hero-portrait-plate .rel{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;opacity:0.82;}
+
+.hero-text{padding-top:12px;display:flex;flex-direction:column;gap:28px;}
+.hero-dateline{display:flex;align-items:center;gap:14px;}
+.hero-dateline .dot{width:5px;height:5px;border-radius:50%;background:var(--r-ember);}
+.hero-dateline .text{font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-3);}
+.hero-text h1{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:clamp(52px,5.5vw,82px);line-height:0.98;letter-spacing:-0.022em;color:var(--r-ink);margin:0;}
+.hero-lede{font-family:var(--r-serif);font-weight:400;font-size:21px;line-height:1.5;color:var(--r-text-2);margin:0;max-width:40ch;}
+.hero-lede em{font-style:italic;color:var(--r-ink);}
+.hero-stats{display:grid;grid-template-columns:repeat(3,auto);gap:32px;padding:18px 0 0;border-top:1px solid var(--r-rule-5);max-width:420px;}
+.hero-stat .num{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:32px;color:var(--r-ink);line-height:1;letter-spacing:-0.01em;}
+.hero-stat .lbl{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--r-text-5);margin-top:8px;}
+.hero-ctas{display:flex;gap:10px;flex-wrap:wrap;}
+.hero-ctas .pen-glyph{width:14px;height:14px;color:var(--r-amber);}
+.pill.dark .pen-glyph{color:var(--r-amber);}
+
+/* ═══ CONSTELLATION — relationships as a living map ═══ */
+.constellation-section{padding:56px 0 40px;border-top:1px solid var(--r-rule-4);}
+.constellation-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:28px;gap:24px;flex-wrap:wrap;}
+.constellation-head .h2-serif em{font-style:italic;}
+.constellation-head .sub{font-family:var(--r-serif);font-size:17px;color:var(--r-text-3);margin:0;}
+
+.constellation{
+  position:relative;height:520px;background:var(--r-paper);
+  border:1px solid var(--r-rule-5);border-radius:3px;overflow:hidden;
+}
+.constellation svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+.node{
+  position:absolute;transform:translate(-50%,-50%);
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  text-align:center;cursor:pointer;
+}
+.node .dot{
+  background:var(--r-paper);border:1px solid var(--r-rule-3);border-radius:50%;
+  overflow:hidden;transition:transform 160ms var(--r-ease-ink),box-shadow 160ms var(--r-ease-ink);
+  position:relative;
+}
+.node .dot img{width:100%;height:100%;object-fit:cover;display:block;}
+.node:hover .dot{transform:scale(1.06);box-shadow:var(--r-shadow-card);}
+.node .label{font-family:var(--r-serif);font-style:italic;font-size:15px;color:var(--r-ink);line-height:1.1;letter-spacing:-0.005em;}
+.node .label .sub{display:block;font-family:var(--r-sans);font-style:normal;font-size:9px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:var(--r-text-5);margin-top:3px;}
+.node.you .dot{background:var(--r-leather);color:var(--r-paper);display:flex;align-items:center;justify-content:center;font-family:var(--r-serif);font-style:italic;font-size:22px;border-color:var(--r-leather);box-shadow:0 0 0 4px var(--r-tint-ember);}
+.node.you .label{font-weight:500;}
+.node .pip{
+  position:absolute;top:-2px;right:-2px;
+  width:14px;height:14px;border-radius:50%;
+  background:var(--r-ember);border:2px solid var(--r-paper);
+}
+.node.attention .label{color:var(--r-ember);font-weight:500;}
+.constellation-legend{
+  position:absolute;left:24px;bottom:20px;display:flex;gap:20px;flex-wrap:wrap;
+  font-family:var(--r-sans);font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:var(--r-text-4);
+}
+.constellation-legend span{display:inline-flex;align-items:center;gap:6px;}
+.constellation-legend .swatch{width:10px;height:10px;border-radius:50%;border:2px solid var(--r-paper);box-shadow:0 0 0 1px var(--r-rule-3);}
+.constellation-legend .swatch.ember{background:var(--r-ember);box-shadow:0 0 0 1px var(--r-ember);}
+.constellation-legend .swatch.line{width:18px;height:1px;border-radius:0;background:var(--r-rule-2);box-shadow:none;}
+.constellation-legend .swatch.line-weak{width:18px;height:1px;border-radius:0;background:var(--r-rule-5);box-shadow:none;border-top:1px dashed var(--r-rule-3);}
+
+/* ═══ THEMATIC GROUPS — card columns ═══ */
+.groups{padding:56px 0;border-top:1px solid var(--r-rule-4);display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+.group{
+  background:var(--r-paper);border:1px solid var(--r-rule-5);border-radius:3px;
+  padding:28px 26px;display:flex;flex-direction:column;gap:18px;position:relative;
+  transition:box-shadow 180ms var(--r-ease-ink);
+}
+.group:hover{box-shadow:var(--r-shadow-card);}
+.group-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
+.group-head .eyebrow{color:var(--r-text-4);}
+.group-head .count{font-family:var(--r-serif);font-style:italic;font-size:15px;color:var(--r-text-5);}
+.group h3{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:36px;line-height:1;letter-spacing:-0.015em;color:var(--r-ink);margin:0;}
+.group p{font-family:var(--r-serif);font-size:15.5px;line-height:1.5;color:var(--r-text-3);margin:0;}
+.group-rows{display:flex;flex-direction:column;}
+.group-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--r-rule-5);}
+.group-row:first-child{border-top:none;}
+.group-row .avatar{width:34px;height:34px;border-radius:50%;overflow:hidden;flex:none;background:var(--r-cream-warm);border:1px solid var(--r-rule-5);display:flex;align-items:center;justify-content:center;font-family:var(--r-serif);font-style:italic;font-size:16px;color:var(--r-ink);}
+.group-row .avatar img{width:100%;height:100%;object-fit:cover;}
+.group-row .who{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.group-row .who .name{font-family:var(--r-serif);font-style:italic;font-size:18px;color:var(--r-ink);line-height:1.1;}
+.group-row .who .when{font-family:var(--r-sans);font-size:11px;color:var(--r-text-5);letter-spacing:0.04em;}
+.group-row .open{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--r-ember);}
+.group-row .quiet{font-family:var(--r-sans);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--r-text-5);}
+
+/* ═══ ROSTER — the full index ═══ */
+.roster-section{padding:56px 0 0;border-top:1px solid var(--r-rule-4);}
+.roster-head{display:flex;align-items:baseline;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:28px;}
+.roster-filters{display:flex;gap:6px;flex-wrap:wrap;}
+.rf{font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--r-text-4);padding:8px 14px;border:1px solid var(--r-rule-4);border-radius:999px;background:transparent;transition:all 140ms var(--r-ease-ink);cursor:pointer;}
+.rf:hover{color:var(--r-ink);border-color:var(--r-rule-3);}
+.rf.on{background:var(--r-leather);color:var(--r-paper);border-color:var(--r-leather);}
+
+.roster{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;}
+.pc{
+  background:var(--r-paper);border:1px solid var(--r-rule-5);border-radius:3px;
+  overflow:hidden;display:flex;flex-direction:column;
+  transition:transform 180ms var(--r-ease-ink),box-shadow 180ms var(--r-ease-ink);cursor:pointer;text-decoration:none;color:inherit;
+}
+.pc:hover{transform:translateY(-2px);box-shadow:var(--r-shadow-card);}
+.pc .photo{aspect-ratio:5/4;background:var(--r-cream-warm) center/cover;position:relative;}
+.pc .photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,12,0) 55%,rgba(20,16,12,0.25) 100%);}
+.pc .photo .tag{position:absolute;top:14px;left:14px;font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;background:var(--r-paper);color:var(--r-text-3);padding:5px 10px;border-radius:999px;z-index:2;}
+.pc .photo .tag.ember{color:var(--r-ember);}
+.pc .photo .open-pip{position:absolute;top:14px;right:14px;background:var(--r-ember);color:var(--r-paper);font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;padding:4px 9px;border-radius:999px;z-index:2;}
+.pc .body{padding:16px 18px 20px;display:flex;flex-direction:column;gap:6px;flex:1;}
+.pc .name{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:26px;line-height:1.05;letter-spacing:-0.01em;color:var(--r-ink);}
+.pc .meta{font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--r-text-5);}
+.pc .last{margin-top:10px;padding-top:12px;border-top:1px solid var(--r-rule-5);font-family:var(--r-serif);font-size:14.5px;line-height:1.45;color:var(--r-text-3);}
+.pc .last em{font-style:italic;color:var(--r-ink);}
+.pc .last .when{display:block;font-family:var(--r-sans);font-style:normal;font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:var(--r-text-5);margin-top:8px;}
+
+.add-person{
+  border:1px dashed var(--r-rule-3);background:transparent;border-radius:3px;
+  min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px;
+  transition:all 180ms var(--r-ease-ink);
+}
+.add-person:hover{background:var(--r-paper);border-color:var(--r-rule-2);}
+.add-person .cross{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:40px;color:var(--r-rule-2);line-height:1;}
+.add-person .lbl{font-family:var(--r-serif);font-style:italic;font-size:19px;color:var(--r-text-3);}
+.add-person .hint{font-family:var(--r-sans);font-size:11px;color:var(--r-text-5);letter-spacing:0.04em;max-width:22ch;line-height:1.5;}
+
+@media (max-width:1100px){
+  .spread{grid-template-columns:1fr;gap:0;}
+  .spread-rule{display:none;}
+  .groups{grid-template-columns:1fr;}
+  .roster{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a class="wordmark" href="Workbook Home.html">Relish</a>
+    <div class="rooms">
+      <a class="room" href="Workbook Home.html">The Workbook</a>
+      <a class="room active" href="Family Manual.html">The Family Manual</a>
+      <a class="room" href="Archive.html">The Archive</a>
+    </div>
+    <button class="user">Scott</button>
+  </div>
+</nav>
+
+<main class="page">
+
+  <!-- MASTHEAD -->
+  <section class="manual-masthead">
+    <div class="masthead-strip">
+      <div class="masthead-cell">
+        <span class="masthead-eyebrow">The Manual</span>
+        <span class="masthead-value big">Ten kept</span>
+      </div>
+      <div class="masthead-divider"></div>
+      <div class="masthead-cell align-c">
+        <span class="masthead-eyebrow">Open threads</span>
+        <span class="masthead-value"><em>7</em><span class="sub"> · across 4 people</span></span>
+      </div>
+      <div class="masthead-divider"></div>
+      <div class="masthead-cell align-c">
+        <span class="masthead-eyebrow">Written about this week</span>
+        <span class="masthead-value"><em>5</em><span class="sub"> of ten</span></span>
+      </div>
+      <div class="masthead-divider"></div>
+      <div class="masthead-cell align-r">
+        <span class="masthead-eyebrow">Quiet longest</span>
+        <span class="masthead-value">Jenny <span class="sub"> · 18 days</span></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- HERO SPREAD -->
+  <section class="spread">
+    <div class="hero-portrait-wrap">
+      <div class="hero-portrait" role="img" aria-label="Portrait of Jenny"></div>
+      <div class="hero-portrait-plate">
+        <span class="name">Jenny</span>
+        <span class="rel">Your mom · 68</span>
+      </div>
+    </div>
+
+    <div class="spread-rule" aria-hidden="true"></div>
+
+    <div class="hero-text">
+      <div class="hero-dateline">
+        <span class="dot"></span>
+        <span class="text">Who wants thinking about · Monday, 20 April</span>
+      </div>
+      <h1>Eighteen days is a while.</h1>
+      <p class="hero-lede">
+        <em>You haven't written about your mom since her cardiology follow-up.</em>
+        Her birthday is in two weeks. Three open threads are about her — the gutter repair, the cat, and the thing she said on Easter.
+      </p>
+
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="num">12</div>
+          <div class="lbl">Entries</div>
+        </div>
+        <div class="hero-stat">
+          <div class="num">3</div>
+          <div class="lbl">Open threads</div>
+        </div>
+        <div class="hero-stat">
+          <div class="num">18d</div>
+          <div class="lbl">Since last</div>
+        </div>
+      </div>
+
+      <div class="hero-ctas">
+        <a class="pill dark" href="#">
+          <svg class="pen-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/></svg>
+          Write about Jenny
+        </a>
+        <a class="pill" href="#">Open her page</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONSTELLATION -->
+  <section class="constellation-section">
+    <div class="constellation-head">
+      <div>
+        <h2 class="h2-serif">The ones <em>you keep.</em></h2>
+      </div>
+      <p class="sub">Closer means written about more often. An ember pip means someone's waiting.</p>
+    </div>
+
+    <div class="constellation" id="constellation">
+      <!-- connective rules drawn as SVG lines -->
+      <svg viewBox="0 0 1000 520" preserveAspectRatio="none" aria-hidden="true">
+        <!-- You at center (500,260) → ring-1 -->
+        <line x1="500" y1="260" x2="310" y2="220" stroke="#B5A99A" stroke-width="1"/>
+        <line x1="500" y1="260" x2="700" y2="210" stroke="#B5A99A" stroke-width="1"/>
+        <line x1="500" y1="260" x2="410" y2="390" stroke="#B5A99A" stroke-width="1"/>
+        <line x1="500" y1="260" x2="600" y2="400" stroke="#B5A99A" stroke-width="1"/>
+        <!-- Iris—Kaleb (siblings) -->
+        <line x1="410" y1="390" x2="600" y2="400" stroke="#D8D3CA" stroke-width="1" stroke-dasharray="3 4"/>
+        <!-- ring-2 (parents + friends) attenuated -->
+        <line x1="500" y1="260" x2="170" y2="120" stroke="#D8D3CA" stroke-dasharray="3 4"/>
+        <line x1="500" y1="260" x2="820" y2="110" stroke="#D8D3CA" stroke-dasharray="3 4"/>
+        <line x1="500" y1="260" x2="140" y2="420" stroke="#D8D3CA" stroke-dasharray="3 4"/>
+        <line x1="500" y1="260" x2="860" y2="430" stroke="#D8D3CA" stroke-dasharray="3 4"/>
+        <line x1="500" y1="260" x2="880" y2="290" stroke="#D8D3CA" stroke-dasharray="3 4"/>
+      </svg>
+
+      <!-- YOU -->
+      <a class="node you" style="left:50%;top:50%;" href="#">
+        <div class="dot" style="width:78px;height:78px;">S</div>
+        <div class="label">Scott<span class="sub">You</span></div>
+      </a>
+
+      <!-- Inner orbit: partner + kids -->
+      <a class="node" style="left:31%;top:42.3%;" href="#">
+        <div class="dot" style="width:66px;height:66px;">
+          <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&q=80&auto=format&fit=crop" alt="" />
+        </div>
+        <div class="label">Iris<span class="sub">Partner</span></div>
+      </a>
+
+      <a class="node" style="left:70%;top:40.4%;" href="#">
+        <div class="dot" style="width:66px;height:66px;">
+          <img src="https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=400&q=80&auto=format&fit=crop" alt="" />
+        </div>
+        <div class="label">Jax<span class="sub">Partner · 39</span></div>
+      </a>
+
+      <a class="node" style="left:41%;top:75%;" href="#">
+        <div class="dot" style="width:58px;height:58px;">
+          <img src="https://images.unsplash.com/photo-1519340333755-56e9c1d04579?w=400&q=80&auto=format&fit=crop" alt="" />
+        </div>
+        <div class="label">Kaleb<span class="sub">Son · 7</span></div>
+      </a>
+
+      <a class="node" style="left:60%;top:77%;" href="#">
+        <div class="dot" style="width:58px;height:58px;">
+          <img src="https://images.unsplash.com/photo-1595152772835-219674b2a8a6?w=400&q=80&auto=format&fit=crop" alt="" />
+        </div>
+        <div class="label">Nell<span class="sub">Daughter · 4</span></div>
+      </a>
+
+      <!-- Outer orbit -->
+      <a class="node attention" style="left:17%;top:23%;" href="#">
+        <div class="dot" style="width:52px;height:52px;">
+          <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&q=80&auto=format&fit=crop" alt="" />
+          <span class="pip"></span>
+        </div>
+        <div class="label">Jenny<span class="sub">Your mom · 18d</span></div>
+      </a>
+
+      <a class="node" style="left:82%;top:21%;" href="#">
+        <div class="dot" style="width:52px;height:52px;">
+          <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&q=80&auto=format&fit=crop" alt="" />
+        </div>
+        <div class="label">David<span class="sub">Your dad</span></div>
+      </a>
+
+      <a class="node" style="left:14%;top:80%;" href="#">
+        <div class="dot" style="width:50px;height:50px;">
+          <img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&q=80&auto=format&fit=crop" alt="" />
+        </div>
+        <div class="label">Rosa<span class="sub">Iris's mom</span></div>
+      </a>
+
+      <a class="node attention" style="left:86%;top:82%;" href="#">
+        <div class="dot" style="width:50px;height:50px;">
+          <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&q=80&auto=format&fit=crop" alt="" />
+          <span class="pip"></span>
+        </div>
+        <div class="label">Margot<span class="sub">Your sister</span></div>
+      </a>
+
+      <a class="node" style="left:88%;top:55%;" href="#">
+        <div class="dot" style="width:48px;height:48px;">
+          <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80&auto=format&fit=crop" alt="" />
+        </div>
+        <div class="label">Daniel<span class="sub">Oldest friend</span></div>
+      </a>
+
+      <div class="constellation-legend">
+        <span><span class="swatch ember"></span>Someone's waiting</span>
+        <span><span class="swatch line"></span>Written often</span>
+        <span><span class="swatch line-weak"></span>Written occasionally</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- THEMATIC GROUPS -->
+  <section class="groups">
+
+    <article class="group">
+      <div class="group-head">
+        <span class="eyebrow">The ones you share a roof with</span>
+        <span class="count">4</span>
+      </div>
+      <h3>Your household.</h3>
+      <p>Iris, Jax, and the kids. The bulk of the book is here.</p>
+      <div class="group-rows">
+        <div class="group-row">
+          <div class="avatar"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80&auto=format&fit=crop" alt="" /></div>
+          <div class="who"><span class="name">Iris</span><span class="when">Written 2 days ago</span></div>
+          <span class="open">1 open</span>
+        </div>
+        <div class="group-row">
+          <div class="avatar"><img src="https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=200&q=80&auto=format&fit=crop" alt="" /></div>
+          <div class="who"><span class="name">Jax</span><span class="when">Written 5 days ago</span></div>
+          <span class="quiet">Quiet</span>
+        </div>
+        <div class="group-row">
+          <div class="avatar"><img src="https://images.unsplash.com/photo-1519340333755-56e9c1d04579?w=200&q=80&auto=format&fit=crop" alt="" /></div>
+          <div class="who"><span class="name">Kaleb</span><span class="when">Written yesterday</span></div>
+          <span class="open">1 open</span>
+        </div>
+        <div class="group-row">
+          <div class="avatar"><img src="https://images.unsplash.com/photo-1595152772835-219674b2a8a6?w=200&q=80&auto=format&fit=crop" alt="" /></div>
+          <div class="who"><span class="name">Nell</span><span class="when">Written 4 days ago</span></div>
+          <span class="quiet">Quiet</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="group">
+      <div class="group-head">
+        <span class="eyebrow">The ones who made you</span>
+        <span class="count">4</span>
+      </div>
+      <h3>Your parents, and hers.</h3>
+      <p>Jenny and David on your side; Rosa and Tom on Iris's. Written about less often than they deserve.</p>
+      <div class="group-rows">
+        <div class="group-row">
+          <div class="avatar"><img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&q=80&auto=format&fit=crop" alt="" /></div>
+          <div class="who"><span class="name">Jenny</span><span class="when">Written 18 days ago</span></div>
+          <span class="open">3 open</span>
+        </div>
+        <div class="group-row">
+          <div class="avatar"><img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80&auto=format&fit=crop" alt="" /></div>
+          <div class="who"><span class="name">David</span><span class="when">Written 24 days ago</span></div>
+          <span class="quiet">Quiet</span>
+        </div>
+        <div class="group-row">
+          <div class="avatar"><img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&q=80&auto=format&fit=crop" alt="" /></div>
+          <div class="who"><span class="name">Rosa</span><span class="when">Written a week ago</span></div>
+          <span class="quiet">Quiet</span>
+        </div>
+        <div class="group-row">
+          <div class="avatar">T</div>
+          <div class="who"><span class="name">Tom</span><span class="when">Written 31 days ago</span></div>
+          <span class="quiet">Quiet</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="group">
+      <div class="group-head">
+        <span class="eyebrow">The ones who aren't family, but are</span>
+        <span class="count">2</span>
+      </div>
+      <h3>Kept company.</h3>
+      <p>Daniel since high school. Margot next door before she moved, and still.</p>
+      <div class="group-rows">
+        <div class="group-row">
+          <div class="avatar"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80&auto=format&fit=crop" alt="" /></div>
+          <div class="who"><span class="name">Daniel</span><span class="when">Written 9 days ago</span></div>
+          <span class="quiet">Quiet</span>
+        </div>
+        <div class="group-row">
+          <div class="avatar"><img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&q=80&auto=format&fit=crop" alt="" /></div>
+          <div class="who"><span class="name">Margot</span><span class="when">Written 12 days ago</span></div>
+          <span class="open">2 open</span>
+        </div>
+      </div>
+    </article>
+
+  </section>
+
+  <!-- ROSTER -->
+  <section class="roster-section">
+    <div class="roster-head">
+      <div>
+        <h2 class="h2-serif">The full index.</h2>
+      </div>
+      <div class="roster-filters" id="rosterFilters">
+        <button class="rf on" data-filter="all">All · 10</button>
+        <button class="rf" data-filter="open">Has open threads · 4</button>
+        <button class="rf" data-filter="quiet">Quiet longest</button>
+        <button class="rf" data-filter="recent">Written recently</button>
+      </div>
+    </div>
+
+    <div class="roster" id="roster">
+      <a class="pc" href="Person Page.html">
+        <div class="photo" style="background-image:url('https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1200&q=80&auto=format&fit=crop');background-position:center 25%">
+          <span class="tag ember">Needs you</span>
+          <span class="open-pip">3 open</span>
+        </div>
+        <div class="body">
+          <span class="name">Jenny</span>
+          <span class="meta">Your mom · 68</span>
+          <p class="last">Her cardiology follow-up. <em>Has she mentioned how it went?</em>
+            <span class="when">18 days ago</span>
+          </p>
+        </div>
+      </a>
+
+      <a class="pc" href="#">
+        <div class="photo" style="background-image:url('https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&q=80&auto=format&fit=crop');background-position:center 20%">
+          <span class="tag">Household</span>
+          <span class="open-pip">1 open</span>
+        </div>
+        <div class="body">
+          <span class="name">Iris</span>
+          <span class="meta">Partner · 38</span>
+          <p class="last"><em>The argument from yesterday morning.</em> Still unresolved in your own head.
+            <span class="when">2 days ago</span>
+          </p>
+        </div>
+      </a>
+
+      <a class="pc" href="#">
+        <div class="photo" style="background-image:url('https://images.unsplash.com/photo-1519340333755-56e9c1d04579?w=1200&q=80&auto=format&fit=crop');background-position:center 30%">
+          <span class="tag">Household</span>
+          <span class="open-pip">1 open</span>
+        </div>
+        <div class="body">
+          <span class="name">Kaleb</span>
+          <span class="meta">Son · 7</span>
+          <p class="last">Went downstairs to sit with Jax <em>on his own,</em> at bedtime.
+            <span class="when">Yesterday</span>
+          </p>
+        </div>
+      </a>
+
+      <a class="pc" href="#">
+        <div class="photo" style="background-image:url('https://images.unsplash.com/photo-1595152772835-219674b2a8a6?w=1200&q=80&auto=format&fit=crop');background-position:center 25%">
+          <span class="tag">Household</span>
+        </div>
+        <div class="body">
+          <span class="name">Nell</span>
+          <span class="meta">Daughter · 4</span>
+          <p class="last">Learned to spell her own name on the fridge magnets.
+            <span class="when">4 days ago</span>
+          </p>
+        </div>
+      </a>
+
+      <a class="pc" href="#">
+        <div class="photo" style="background-image:url('https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=1200&q=80&auto=format&fit=crop');background-position:center 22%">
+          <span class="tag">Household</span>
+        </div>
+        <div class="body">
+          <span class="name">Jax</span>
+          <span class="meta">Partner · 39</span>
+          <p class="last">Quiet at the table Sunday. <em>You meant to ask why.</em>
+            <span class="when">5 days ago</span>
+          </p>
+        </div>
+      </a>
+
+      <a class="pc" href="#">
+        <div class="photo" style="background-image:url('https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=1200&q=80&auto=format&fit=crop');background-position:center 30%">
+          <span class="tag">Your parents</span>
+        </div>
+        <div class="body">
+          <span class="name">David</span>
+          <span class="meta">Your dad · 72</span>
+          <p class="last">Called about the fishing trip. You didn't write it down.
+            <span class="when">24 days ago</span>
+          </p>
+        </div>
+      </a>
+
+      <a class="pc" href="#">
+        <div class="photo" style="background-image:url('https://images.unsplash.com/photo-1580489944761-15a19d654956?w=1200&q=80&auto=format&fit=crop');background-position:center 30%">
+          <span class="tag">Iris's parents</span>
+        </div>
+        <div class="body">
+          <span class="name">Rosa</span>
+          <span class="meta">Iris's mom · 66</span>
+          <p class="last">Brought that soup over again. She doesn't stop.
+            <span class="when">7 days ago</span>
+          </p>
+        </div>
+      </a>
+
+      <a class="pc" href="#">
+        <div class="photo" style="background:linear-gradient(135deg,var(--r-cream-warm),var(--r-cream));display:flex;align-items:center;justify-content:center;">
+          <span class="tag">Iris's parents</span>
+          <span style="font-family:var(--r-serif);font-style:italic;font-size:60px;color:var(--r-text-5);position:relative;z-index:1;">T</span>
+        </div>
+        <div class="body">
+          <span class="name">Tom</span>
+          <span class="meta">Iris's dad · 70</span>
+          <p class="last">Hasn't come up in a month. Worth a line.
+            <span class="when">31 days ago</span>
+          </p>
+        </div>
+      </a>
+
+      <a class="pc" href="#">
+        <div class="photo" style="background-image:url('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&q=80&auto=format&fit=crop');background-position:center 30%">
+          <span class="tag">Kept close</span>
+        </div>
+        <div class="body">
+          <span class="name">Daniel</span>
+          <span class="meta">Oldest friend · 38</span>
+          <p class="last">His kid started kindergarten. You meant to text.
+            <span class="when">9 days ago</span>
+          </p>
+        </div>
+      </a>
+
+      <a class="pc" href="#">
+        <div class="photo" style="background-image:url('https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=1200&q=80&auto=format&fit=crop');background-position:center 25%">
+          <span class="tag">Kept close</span>
+          <span class="open-pip">2 open</span>
+        </div>
+        <div class="body">
+          <span class="name">Margot</span>
+          <span class="meta">Your sister · 34</span>
+          <p class="last">The thing about her move — and the thing about her ex.
+            <span class="when">12 days ago</span>
+          </p>
+        </div>
+      </a>
+
+      <button class="add-person">
+        <span class="cross">+</span>
+        <span class="lbl">Someone worth keeping</span>
+        <span class="hint">Add a person to the Manual. They'll show up in threads and prompts.</span>
+      </button>
+    </div>
+  </section>
+
+  <div class="colophon">
+    <span class="fleuron">❦</span>
+    The Family Manual — ten kept, seven threads open.
+  </div>
+
+</main>
+
+<!-- PEN -->
+<button class="pen" aria-label="Open the Pen">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/></svg>
+</button>
+
+<script>
+// Filter chips (visual only for design)
+document.getElementById('rosterFilters').addEventListener('click', e => {
+  const b = e.target.closest('.rf');
+  if (!b) return;
+  document.querySelectorAll('.rf').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+});
+</script>
+
+</body>
+</html>

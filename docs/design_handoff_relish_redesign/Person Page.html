@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Relish · Jenny — A page in the Family Manual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="shared.css" />
+<style>
+.crumbs{margin:32px 0 20px;display:flex;align-items:center;gap:10px;font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:var(--r-text-5);}
+.crumbs a{color:var(--r-text-4);border-bottom:1px solid transparent;transition:border-color 120ms var(--r-ease-ink);}
+.crumbs a:hover{border-color:var(--r-text-4);}
+.crumbs .sep{opacity:0.5;}
+
+/* HERO: big portrait left, dossier right */
+.person-hero{
+  display:grid;grid-template-columns:1.2fr 1px 1fr;gap:48px;padding-bottom:56px;
+}
+.person-hero-rule{background:var(--r-rule-5);align-self:stretch;}
+.person-portrait{
+  width:100%;aspect-ratio:4/5;border-radius:3px;overflow:hidden;position:relative;
+  background:#C8B894 url('https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1800&q=80&auto=format&fit=crop') center 30%/cover;
+}
+.person-portrait::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,12,0) 55%,rgba(20,16,12,0.5) 100%);}
+.person-plate{position:absolute;left:28px;bottom:24px;right:28px;color:var(--r-paper);z-index:2;display:flex;flex-direction:column;gap:8px;}
+.person-plate .tag{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;opacity:0.85;}
+.person-plate h1{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:84px;line-height:0.95;letter-spacing:-0.025em;margin:0;}
+
+.dossier{padding-top:12px;display:flex;flex-direction:column;gap:28px;}
+.dossier-dateline{display:flex;align-items:center;gap:14px;font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-3);}
+.dossier-dateline .dot{width:5px;height:5px;border-radius:50%;background:var(--r-ember);}
+.dossier-lede{font-family:var(--r-serif);font-weight:400;font-size:22px;line-height:1.5;color:var(--r-text-2);margin:0;max-width:40ch;}
+.dossier-lede em{font-style:italic;color:var(--r-ink);}
+.dossier-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;padding:20px 0;border-top:1px solid var(--r-rule-5);border-bottom:1px solid var(--r-rule-5);}
+.dossier-stat .num{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:32px;color:var(--r-ink);line-height:1;letter-spacing:-0.01em;}
+.dossier-stat .lbl{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--r-text-5);margin-top:8px;}
+.dossier-facts{display:grid;grid-template-columns:auto 1fr;gap:10px 24px;}
+.dossier-facts dt{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--r-text-5);padding-top:4px;}
+.dossier-facts dd{margin:0;font-family:var(--r-serif);font-size:18px;line-height:1.5;color:var(--r-ink);}
+.dossier-ctas{display:flex;gap:10px;flex-wrap:wrap;}
+.dossier-ctas .pen-glyph{width:14px;height:14px;color:var(--r-amber);}
+
+/* SPREAD: Open threads (big) + timeline (small) */
+.threads-section{padding:48px 0;border-top:1px solid var(--r-rule-4);display:grid;grid-template-columns:1.4fr 1fr;gap:48px;}
+.threads-head{display:flex;align-items:baseline;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:20px;}
+.threads-head h2{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:44px;color:var(--r-ink);margin:0;letter-spacing:-0.015em;line-height:1;}
+.threads-head .sub{font-family:var(--r-serif);font-size:16px;color:var(--r-text-4);}
+
+.thread{padding:22px 0;border-bottom:1px solid var(--r-rule-5);display:grid;grid-template-columns:72px 1fr auto;gap:18px;align-items:start;}
+.thread:last-child{border-bottom:none;}
+.thread-age{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--r-text-5);padding-top:5px;line-height:1.4;}
+.thread-age .num{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:26px;color:var(--r-ink);display:block;letter-spacing:-0.01em;margin-bottom:2px;}
+.thread-body h3{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:24px;line-height:1.2;color:var(--r-ink);margin:0 0 8px;letter-spacing:-0.005em;}
+.thread-body p{font-family:var(--r-serif);font-size:16px;line-height:1.55;color:var(--r-text-3);margin:0;}
+.thread-body p em{font-style:italic;color:var(--r-ink);}
+.thread-body .cues{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;font-family:var(--r-sans);font-size:10px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--r-text-5);}
+.thread-body .cues .pip{padding:3px 10px;border-radius:999px;background:var(--r-cream);color:var(--r-text-4);}
+.thread-body .cues .pip.health{color:var(--r-burgundy);background:var(--r-tint-burgundy);}
+.thread-body .cues .pip.home{color:var(--r-ember);background:var(--r-tint-ember);}
+.thread-actions{display:flex;gap:6px;padding-top:4px;}
+.ta{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--r-text-4);padding:6px 10px;border:1px solid var(--r-rule-5);border-radius:999px;background:transparent;transition:all 140ms var(--r-ease-ink);}
+.ta:hover{color:var(--r-ink);border-color:var(--r-rule-3);}
+.ta.primary{color:var(--r-paper);background:var(--r-leather);border-color:var(--r-leather);}
+
+/* Timeline column */
+.timeline{padding-top:8px;}
+.tl-head{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-4);margin-bottom:16px;}
+.tl-year{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:26px;color:var(--r-ink);margin:28px 0 10px;letter-spacing:-0.01em;}
+.tl-year:first-of-type{margin-top:0;}
+.tl-entry{display:grid;grid-template-columns:56px 1fr;gap:12px;padding:10px 0;border-top:1px solid var(--r-rule-5);}
+.tl-entry:first-of-type{border-top:none;}
+.tl-when{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--r-text-5);padding-top:4px;}
+.tl-body{font-family:var(--r-serif);font-size:16px;line-height:1.45;color:var(--r-ink);}
+.tl-body em{font-style:italic;color:var(--r-text-2);}
+.tl-body .tag{display:inline-block;font-family:var(--r-sans);font-size:9px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--r-text-5);margin-top:4px;padding:2px 8px;background:var(--r-cream);border-radius:999px;}
+
+/* QUIET NOTES row: things Jenny says, dates to remember, etc. */
+.notes-row{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;padding:48px 0;border-top:1px solid var(--r-rule-4);}
+.note-card{background:var(--r-paper);border:1px solid var(--r-rule-5);border-radius:3px;padding:28px 28px 26px;display:flex;flex-direction:column;gap:14px;}
+.note-card .eyebrow{color:var(--r-text-4);}
+.note-card h3{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:32px;line-height:1.05;letter-spacing:-0.015em;color:var(--r-ink);margin:0;}
+.note-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;}
+.note-list li{padding:10px 0;border-top:1px solid var(--r-rule-5);font-family:var(--r-serif);font-size:16px;line-height:1.5;color:var(--r-text-2);display:flex;justify-content:space-between;gap:14px;align-items:baseline;}
+.note-list li:first-child{border-top:none;}
+.note-list li .q{font-style:italic;color:var(--r-ink);}
+.note-list li .meta{font-family:var(--r-sans);font-style:normal;font-size:10px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--r-text-5);white-space:nowrap;}
+.note-card.dark{background:var(--r-leather);color:var(--r-paper);border-color:var(--r-leather);}
+.note-card.dark h3{color:var(--r-paper);}
+.note-card.dark .eyebrow{color:rgba(245,236,216,0.55);}
+.note-card.dark blockquote{margin:0;font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:26px;line-height:1.3;color:var(--r-paper);letter-spacing:-0.01em;}
+.note-card.dark blockquote::before{content:"";display:block;width:24px;height:1px;background:rgba(245,236,216,0.3);margin-bottom:16px;}
+.note-card.dark .attr{font-family:var(--r-sans);font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:rgba(245,236,216,0.55);}
+.note-card.dark .cta{margin-top:auto;padding-top:14px;border-top:1px solid rgba(245,236,216,0.15);font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:var(--r-amber);display:flex;justify-content:space-between;}
+
+@media (max-width:1100px){
+  .person-hero{grid-template-columns:1fr;gap:0;}
+  .person-hero-rule{display:none;}
+  .threads-section{grid-template-columns:1fr;}
+  .notes-row{grid-template-columns:1fr;}
+  .dossier-stats{grid-template-columns:repeat(3,1fr);gap:12px;}
+}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a class="wordmark" href="Workbook Home.html">Relish</a>
+    <div class="rooms">
+      <a class="room" href="Workbook Home.html">The Workbook</a>
+      <a class="room active" href="Family Manual.html">The Family Manual</a>
+      <a class="room" href="Archive.html">The Archive</a>
+    </div>
+    <button class="user">Scott</button>
+  </div>
+</nav>
+
+<main class="page">
+
+  <div class="crumbs">
+    <a href="Family Manual.html">The Family Manual</a>
+    <span class="sep">/</span>
+    <span>Jenny</span>
+  </div>
+
+  <!-- HERO -->
+  <section class="person-hero">
+    <div class="person-portrait">
+      <div class="person-plate">
+        <span class="tag">Your mom · 68 · Columbus, OH</span>
+        <h1>Jenny</h1>
+      </div>
+    </div>
+
+    <div class="person-hero-rule" aria-hidden="true"></div>
+
+    <div class="dossier">
+      <div class="dossier-dateline">
+        <span class="dot"></span>
+        <span>A page in the Family Manual · Updated 18 days ago</span>
+      </div>
+      <p class="dossier-lede">
+        <em>Her cardiology follow-up was the last note.</em>
+        You've been meaning to ask how it went. Her birthday's in two weeks, and three threads are still open.
+      </p>
+
+      <div class="dossier-stats">
+        <div class="dossier-stat"><div class="num">12</div><div class="lbl">Entries</div></div>
+        <div class="dossier-stat"><div class="num">3</div><div class="lbl">Open threads</div></div>
+        <div class="dossier-stat"><div class="num">18d</div><div class="lbl">Since last</div></div>
+      </div>
+
+      <dl class="dossier-facts">
+        <dt>Birthday</dt><dd>May 4 · turning 69</dd>
+        <dt>Lives</dt><dd>Columbus, Ohio — the house on Elm</dd>
+        <dt>Married to</dt><dd><a href="#" style="border-bottom:1px solid var(--r-rule-3);">David</a> · 42 years</dd>
+        <dt>Health</dt><dd>Cardiology — follow-up April 2. Meds: metoprolol, statin.</dd>
+        <dt>Works</dt><dd>Retired from the library · 2019</dd>
+        <dt>Doesn't drink</dt><dd>Since 2014.</dd>
+      </dl>
+
+      <div class="dossier-ctas">
+        <a class="pill dark" href="#">
+          <svg class="pen-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/></svg>
+          Write about Jenny
+        </a>
+        <a class="pill" href="#">Call her</a>
+        <a class="pill" href="#">See all entries</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- THREADS + TIMELINE -->
+  <section class="threads-section">
+    <div>
+      <div class="threads-head">
+        <h2>Still open about her.</h2>
+        <span class="sub">Three threads, oldest first.</span>
+      </div>
+
+      <article class="thread">
+        <div class="thread-age"><span class="num">26</span>days open</div>
+        <div class="thread-body">
+          <h3>The gutter repair she keeps brushing off.</h3>
+          <p>She mentioned it in passing at Easter and changed the subject when you offered to help. <em>You wrote down that you'd bring it up again.</em> You haven't.</p>
+          <div class="cues"><span class="pip home">Home</span><span class="pip">You offered · she demurred</span></div>
+        </div>
+        <div class="thread-actions">
+          <button class="ta primary">Write</button>
+          <button class="ta">Close</button>
+        </div>
+      </article>
+
+      <article class="thread">
+        <div class="thread-age"><span class="num">18</span>days open</div>
+        <div class="thread-body">
+          <h3>How the cardiology follow-up went.</h3>
+          <p>April 2. You wrote it in the book the night before the appointment; you haven't written it since. <em>She hasn't volunteered it.</em></p>
+          <div class="cues"><span class="pip health">Health</span><span class="pip">Waiting for an ask</span></div>
+        </div>
+        <div class="thread-actions">
+          <button class="ta primary">Write</button>
+          <button class="ta">Close</button>
+        </div>
+      </article>
+
+      <article class="thread">
+        <div class="thread-age"><span class="num">9</span>days open</div>
+        <div class="thread-body">
+          <h3>The thing she said about Margot.</h3>
+          <p>She used the word <em>"brittle,"</em> which she's never used before. You want to think about that more before you say anything back.</p>
+          <div class="cues"><span class="pip">Observation</span><span class="pip">Private for now</span></div>
+        </div>
+        <div class="thread-actions">
+          <button class="ta primary">Write</button>
+          <button class="ta">Close</button>
+        </div>
+      </article>
+    </div>
+
+    <aside class="timeline">
+      <div class="tl-head">The timeline</div>
+
+      <h3 class="tl-year">2026</h3>
+      <div class="tl-entry">
+        <div class="tl-when">Apr 2</div>
+        <div class="tl-body">Cardiology follow-up. She was anxious the night before. <span class="tag">Health</span></div>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-when">Mar 30</div>
+        <div class="tl-body">Easter at the house. She made the rolls. <em>Kaleb ate four.</em></div>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-when">Mar 11</div>
+        <div class="tl-body">Said she was thinking about selling the car. You don't think she will.</div>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-when">Feb 14</div>
+        <div class="tl-body">She sent each of the kids a card. Her handwriting is different.</div>
+      </div>
+
+      <h3 class="tl-year">2025</h3>
+      <div class="tl-entry">
+        <div class="tl-when">Dec 25</div>
+        <div class="tl-body">She cried at dinner — the good kind. <span class="tag">Kept forever</span></div>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-when">Oct 12</div>
+        <div class="tl-body">The fall she didn't tell you about for two weeks.</div>
+      </div>
+      <div class="tl-entry">
+        <div class="tl-when">May 4</div>
+        <div class="tl-body">Her 68th. You gave her the framed print. <em>She teared up.</em></div>
+      </div>
+    </aside>
+  </section>
+
+  <!-- QUIET NOTES -->
+  <section class="notes-row">
+
+    <article class="note-card">
+      <span class="eyebrow">Things she says</span>
+      <h3>Her vocabulary.</h3>
+      <ul class="note-list">
+        <li><span class="q">"We'll see."</span><span class="meta">Often</span></li>
+        <li><span class="q">"Don't make a fuss."</span><span class="meta">Mar · Dec</span></li>
+        <li><span class="q">"It's just the weather."</span><span class="meta">When she's not fine</span></li>
+        <li><span class="q">"Oh, honey."</span><span class="meta">Rare · good</span></li>
+      </ul>
+    </article>
+
+    <article class="note-card">
+      <span class="eyebrow">Dates to remember</span>
+      <h3>Her calendar.</h3>
+      <ul class="note-list">
+        <li><span class="q">Her birthday</span><span class="meta">May 4 · in 14 days</span></li>
+        <li><span class="q">Wedding anniversary</span><span class="meta">June 16 · 43 years</span></li>
+        <li><span class="q">Cardiology — follow-up</span><span class="meta">Oct 2</span></li>
+        <li><span class="q">The anniversary of Grampa's</span><span class="meta">Jul 9</span></li>
+      </ul>
+    </article>
+
+    <article class="note-card dark">
+      <span class="eyebrow">Something she told you</span>
+      <blockquote>"You don't have to call every day. Just — don't only call when something's wrong."</blockquote>
+      <span class="attr">— Jenny, on the porch · August 2024</span>
+      <div class="cta"><span>Read the full entry</span><span>→</span></div>
+    </article>
+
+  </section>
+
+  <div class="colophon">
+    <span class="fleuron">❦</span>
+    A page about Jenny, kept in the Family Manual.
+  </div>
+
+</main>
+
+<button class="pen" aria-label="Open the Pen">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/></svg>
+</button>
+
+</body>
+</html>

@@ -1,9 +1,10 @@
 import {
-  addDoc,
   collection,
+  doc,
   getDocs,
   query,
   serverTimestamp,
+  setDoc,
   Timestamp,
   where,
 } from 'firebase/firestore';
@@ -40,6 +41,11 @@ interface SeedArgs {
 // Ensure the user has a solo_weekly ritual. Idempotent — if one
 // already exists, no write. Returns the ritualId of the existing
 // or newly-created ritual.
+//
+// New writes use a deterministic doc id (`solo_weekly_{userId}`) so
+// concurrent calls converge to a single document instead of racing
+// to create duplicates. We still query first to honor any pre-existing
+// auto-id docs from before the deterministic-id switch.
 export async function ensureSoloWeekly(args: SeedArgs): Promise<string> {
   const existing = await getDocs(
     query(
@@ -60,7 +66,9 @@ export async function ensureSoloWeekly(args: SeedArgs): Promise<string> {
     'UTC';
   const nextRun = nextOccurrenceOf(fridayEvening, startTime);
 
-  const docRef = await addDoc(collection(firestore, 'rituals'), {
+  const ritualId = `solo_weekly_${args.userId}`;
+  const ref = doc(firestore, 'rituals', ritualId);
+  await setDoc(ref, {
     familyId: args.familyId,
     kind: 'solo_weekly' as RitualKind,
     cadence: 'weekly',
@@ -76,7 +84,7 @@ export async function ensureSoloWeekly(args: SeedArgs): Promise<string> {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
-  return docRef.id;
+  return ritualId;
 }
 
 // Ensure the partner_biweekly ritual exists. Only called when the
@@ -101,7 +109,12 @@ export async function ensurePartnerBiweekly(args: Required<Pick<SeedArgs, 'famil
     'UTC';
   const nextRun = nextOccurrenceOf(sundayEvening, startTime);
 
-  const docRef = await addDoc(collection(firestore, 'rituals'), {
+  // Deterministic id keyed on the sorted participant pair so two
+  // concurrent calls (one from each partner) converge on one doc.
+  const pair = [args.userId, args.spouseUserId].sort().join('_');
+  const ritualId = `partner_biweekly_${pair}`;
+  const ref = doc(firestore, 'rituals', ritualId);
+  await setDoc(ref, {
     familyId: args.familyId,
     kind: 'partner_biweekly' as RitualKind,
     cadence: 'biweekly',
@@ -117,7 +130,7 @@ export async function ensurePartnerBiweekly(args: Required<Pick<SeedArgs, 'famil
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
-  return docRef.id;
+  return ritualId;
 }
 
 // Seeds the default rituals on first Workbook visit. Idempotent —

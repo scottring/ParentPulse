@@ -461,25 +461,49 @@ export default function WorkbookPage() {
               </p>
             ) : null}
             <p className="hero-lede">{lede}</p>
-            <button type="button" onClick={openPen} style={heroActionStyle}>
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ color: 'var(--r-ember)', flex: 'none' }}
-                aria-hidden="true"
+            {ledeCount > 0 ? (
+              // "Pick up where you left off" must actually pick up
+              // somewhere — route to the first (most urgent) open
+              // thread's closing surface, not a blank pen.
+              <Link
+                href={openThreads[0].closingAction.href}
+                style={heroActionStyle}
               >
-                <path d="M17 3l4 4L8 20l-5 1 1-5L17 3z" />
-              </svg>
-              <span>
-                {ledeCount > 0 ? 'Pick up where you left off' : 'Write a note'}
-              </span>
-            </button>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ color: 'var(--r-ember)', flex: 'none' }}
+                  aria-hidden="true"
+                >
+                  <path d="M17 3l4 4L8 20l-5 1 1-5L17 3z" />
+                </svg>
+                <span>Pick up where you left off</span>
+              </Link>
+            ) : (
+              <button type="button" onClick={openPen} style={heroActionStyle}>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ color: 'var(--r-ember)', flex: 'none' }}
+                  aria-hidden="true"
+                >
+                  <path d="M17 3l4 4L8 20l-5 1 1-5L17 3z" />
+                </svg>
+                <span>Write a note</span>
+              </button>
+            )}
           </div>
 
           <div className="spread-rule" aria-hidden="true" />
@@ -1658,7 +1682,7 @@ function ledeForState(openCount: number): string {
 function threadTitle(t: OpenThread): string {
   switch (t.reason) {
     case 'overdue_ritual':
-      return 'A ritual is due';
+      return ritualThreadTitle(t.ritualKind);
     case 'unclosed_divergence':
       return 'A divergence to sit with';
     case 'pending_invite':
@@ -1667,6 +1691,21 @@ function threadTitle(t: OpenThread): string {
       return 'A practice left unfinished';
     case 'mention_for_me':
       return 'Someone wrote about you';
+  }
+}
+
+function ritualThreadTitle(kind: string | undefined): string {
+  switch (kind) {
+    case 'solo_weekly':
+      return 'Your solo ritual is due';
+    case 'partner_biweekly':
+      return 'Your couple ritual is due';
+    case 'family_monthly':
+      return 'Your family ritual is due';
+    case 'repair':
+      return 'A repair ritual is due';
+    default:
+      return 'A ritual is due';
   }
 }
 

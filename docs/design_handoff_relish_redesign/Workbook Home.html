@@ -1,0 +1,1238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Relish · Workbook (Redesigned Home)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --r-paper:#FBF8F2; --r-paper-soft:#F7F5F0; --r-cream:#F5F0E8;
+  --r-cream-deep:#ECEAE5; --r-cream-warm:#E8DDC8;
+  --r-leather:#14100C; --r-leather-2:#2A2520;
+  --r-ink:#3A3530; --r-ink-2:#2A2522;
+  --r-text-2:#5C5347; --r-text-3:#5F564B; --r-text-4:#6B6254;
+  --r-text-5:#887C68; --r-text-6:#9A8E7A;
+  --r-rule-1:#A8988A; --r-rule-2:#B5A99A; --r-rule-3:#C0B49F;
+  --r-rule-4:#D8D3CA; --r-rule-5:#E5E0D8;
+  --r-sage:#7C9082; --r-sage-deep:#4A5D50;
+  --r-ember:#C9864C; --r-ember-soft:#D4A872;
+  --r-burgundy:#8C4A3E; --r-amber:#C9A84C;
+  --r-tint-sage:rgba(124,144,130,0.18);
+  --r-tint-ember:rgba(201,134,76,0.14);
+  --r-tint-burgundy:rgba(140,74,62,0.16);
+  --r-tint-amber:rgba(201,168,76,0.18);
+  --r-serif:'Cormorant Garamond',Georgia,serif;
+  --r-sans:'DM Sans',system-ui,sans-serif;
+  --r-mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --r-ease-ink:cubic-bezier(0.22,1,0.36,1);
+  --r-shadow-card:0 1px 2px rgba(60,50,40,0.04),0 6px 18px rgba(60,50,40,0.05);
+  --r-shadow-pen:0 2px 6px rgba(20,16,12,0.18),0 12px 28px rgba(20,16,12,0.22);
+  --r-shadow-page:0 1px 0 rgba(60,48,28,0.03),0 2px 6px rgba(60,48,28,0.05),0 12px 44px rgba(60,48,28,0.09),0 36px 80px rgba(60,48,28,0.08);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--r-cream-deep);color:var(--r-ink);font-family:var(--r-sans);-webkit-font-smoothing:antialiased;}
+button{font-family:inherit;color:inherit;border:none;background:none;padding:0;cursor:pointer;}
+a{color:inherit;text-decoration:none;}
+
+/* ═══════════════════ SHELL ═══════════════════ */
+.app{min-height:100vh;background:var(--r-cream);}
+.topnav{height:68px;background:var(--r-cream);border-bottom:1px solid var(--r-rule-5);position:sticky;top:0;z-index:30;}
+.topnav-inner{max-width:1440px;margin:0 auto;padding:0 40px;height:100%;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:40px;}
+.wordmark{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:28px;color:var(--r-ink);line-height:1;justify-self:start;}
+.rooms{display:flex;gap:40px;align-items:baseline;justify-self:center;}
+.room{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:17px;color:var(--r-ink);opacity:0.55;border-bottom:1px solid transparent;padding:0 0 3px;transition:opacity 140ms var(--r-ease-ink);}
+.room:hover{opacity:0.85;}
+.room.active{opacity:1;border-bottom-color:var(--r-ink);}
+.user{justify-self:end;display:inline-flex;align-items:center;gap:10px;font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-3);}
+.user::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--r-sage);}
+
+.page{max-width:1440px;margin:0 auto;padding:0 40px 160px;}
+
+/* ═══════════════════ MASTHEAD ═══════════════════ */
+.masthead{margin:32px 0 0;position:relative;}
+.masthead-photo{
+  height:168px;border-radius:2px;overflow:hidden;position:relative;
+  background:linear-gradient(180deg,rgba(20,16,12,0.18) 0%,rgba(20,16,12,0) 40%,rgba(245,240,232,0.25) 80%,rgba(245,240,232,0.55) 100%),
+             url('https://images.unsplash.com/photo-1466781783364-36c955e42a7f?w=2400&q=80&auto=format&fit=crop') center 38%/cover;
+}
+.masthead-photo[data-season="summer"]{background:linear-gradient(180deg,rgba(20,16,12,0.14) 0%,rgba(20,16,12,0) 40%,rgba(245,240,232,0.3) 80%,rgba(245,240,232,0.6) 100%),url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=2400&q=80&auto=format&fit=crop') center 45%/cover;}
+.masthead-photo[data-season="autumn"]{background:linear-gradient(180deg,rgba(20,16,12,0.2) 0%,rgba(20,16,12,0) 40%,rgba(245,240,232,0.25) 80%,rgba(245,240,232,0.55) 100%),url('https://images.unsplash.com/photo-1507371341162-763b5e419408?w=2400&q=80&auto=format&fit=crop') center 50%/cover;}
+.masthead-photo[data-season="winter"]{background:linear-gradient(180deg,rgba(20,16,12,0.25) 0%,rgba(20,16,12,0) 40%,rgba(245,240,232,0.25) 80%,rgba(245,240,232,0.55) 100%),url('https://images.unsplash.com/photo-1478860409698-8707f313ee8b?w=2400&q=80&auto=format&fit=crop') center 50%/cover;}
+.masthead-strip{
+  background:var(--r-paper);
+  border:1px solid var(--r-rule-4);
+  border-top:none;
+  padding:18px 32px;
+  display:grid;
+  grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;
+  gap:0;align-items:center;
+}
+.masthead-cell{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.masthead-cell.align-c{align-items:center;text-align:center;}
+.masthead-cell.align-r{align-items:flex-end;text-align:right;}
+.masthead-divider{width:1px;height:32px;background:var(--r-rule-5);}
+.masthead-eyebrow{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-5);}
+.masthead-value{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:22px;color:var(--r-ink);line-height:1;letter-spacing:-0.005em;}
+.masthead-value.big{font-size:30px;}
+.masthead-value .sub{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:18px;color:var(--r-text-4);}
+.moon{display:inline-flex;align-items:center;gap:8px;}
+.moon-glyph{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 30% 35%,#F5ECD8 0%,#E8DDC8 45%,#C8B894 100%);box-shadow:inset -3px -1px 3px rgba(60,48,28,0.25);}
+.moon-glyph.waxing{background:radial-gradient(circle at 68% 50%,#F5ECD8 35%,rgba(245,236,216,0) 52%),#2A2520;}
+.moon-glyph.waning{background:radial-gradient(circle at 32% 50%,#F5ECD8 35%,rgba(245,236,216,0) 52%),#2A2520;}
+
+/* ═══════════════════ SPREAD — hero + tending ═══════════════════ */
+.spread{
+  display:grid;grid-template-columns:1.35fr 1px 1fr;gap:48px;
+  margin-top:48px;padding-bottom:56px;
+  position:relative;
+}
+.spread-rule{background:var(--r-rule-5);align-self:stretch;}
+.hero{padding-right:16px;}
+.hero-dateline{display:flex;align-items:center;gap:14px;margin-bottom:28px;}
+.hero-dateline .dot{width:5px;height:5px;border-radius:50%;background:var(--r-ember);}
+.hero-dateline .text{font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-3);}
+.hero h1{
+  font-family:var(--r-serif);font-style:italic;font-weight:300;
+  font-size:clamp(64px,7.5vw,112px);line-height:0.96;letter-spacing:-0.025em;
+  color:var(--r-ink);margin:0;
+}
+.hero-lede{
+  font-family:var(--r-serif);font-weight:400;font-size:22px;line-height:1.5;
+  color:var(--r-text-2);margin:28px 0 0;max-width:38ch;
+}
+.hero-lede em{font-style:italic;color:var(--r-ink);}
+.hero-action{margin-top:36px;display:inline-flex;align-items:center;gap:10px;padding:10px 16px 10px 14px;border:1px solid var(--r-rule-3);border-radius:999px;font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--r-ink);background:var(--r-paper);transition:background 160ms var(--r-ease-ink),transform 160ms var(--r-ease-ink);}
+.hero-action:hover{background:var(--r-cream-warm);transform:translateY(-1px);}
+.hero-action .pen-glyph{width:14px;height:14px;color:var(--r-ember);}
+
+/* Tending column */
+.tending{display:flex;flex-direction:column;gap:20px;padding-top:6px;}
+.tending-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px;}
+.tending-head .eyebrow{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;color:var(--r-text-4);}
+.tending-head .count{font-family:var(--r-serif);font-style:italic;font-size:15px;color:var(--r-text-5);}
+.thread{display:block;padding:18px 2px 20px;border-bottom:1px solid var(--r-rule-5);}
+.thread:last-child{border-bottom:none;}
+.thread-row1{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:6px;}
+.thread-title{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:21px;color:var(--r-ink);line-height:1.25;letter-spacing:-0.005em;}
+.thread-age{font-family:var(--r-sans);font-size:11px;color:var(--r-text-5);letter-spacing:0.04em;white-space:nowrap;}
+.thread-preview{font-family:var(--r-serif);font-size:15.5px;line-height:1.5;color:var(--r-text-3);margin:0;}
+.thread-tag{display:inline-block;margin-top:8px;font-family:var(--r-sans);font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:var(--r-text-5);padding:3px 10px;background:var(--r-cream);border-radius:999px;}
+.thread-tag.health{color:var(--r-burgundy);background:var(--r-tint-burgundy);}
+.thread-tag.home{color:var(--r-ember);background:var(--r-tint-ember);}
+.thread-tag.people{color:var(--r-sage-deep);background:var(--r-tint-sage);}
+.thread-tag.plans{color:#8B6F2B;background:var(--r-tint-amber);}
+
+.quiet-block{padding:32px 8px;text-align:left;}
+.quiet-block .glyph{font-family:var(--r-serif);font-size:28px;color:var(--r-rule-2);margin-bottom:16px;}
+.quiet-block h3{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:26px;line-height:1.25;color:var(--r-ink);margin:0 0 10px;}
+.quiet-block p{font-family:var(--r-serif);font-size:16px;line-height:1.55;color:var(--r-text-3);margin:0;max-width:32ch;}
+.quiet-block .prompt-cta{margin-top:20px;font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:var(--r-ember);border-bottom:1px solid currentColor;padding-bottom:2px;}
+
+/* ═══════════════════ FEATURE ROW — three rhythmic cards ═══════════════════ */
+.feature-row{
+  display:grid;grid-template-columns:1.15fr 1fr 1.05fr;gap:24px;
+  padding:48px 0;border-top:1px solid var(--r-rule-4);
+}
+.feature{
+  background:var(--r-paper);
+  border:1px solid var(--r-rule-5);
+  border-radius:3px;
+  padding:28px 28px 24px;
+  display:flex;flex-direction:column;gap:16px;
+  min-height:280px;position:relative;overflow:hidden;
+  transition:transform 180ms var(--r-ease-ink),box-shadow 180ms var(--r-ease-ink);
+}
+.feature:hover{transform:translateY(-1px);box-shadow:var(--r-shadow-card);}
+.feature-eyebrow{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;color:var(--r-text-4);display:flex;align-items:center;gap:8px;}
+.feature-eyebrow .pip{width:5px;height:5px;border-radius:50%;background:var(--r-ember);}
+
+/* Memory card */
+.memory .photo{
+  height:120px;margin:-28px -28px 0;
+  background:linear-gradient(180deg,rgba(20,16,12,0) 0%,rgba(251,248,242,0) 60%,var(--r-paper) 100%),
+             url('https://images.unsplash.com/photo-1529636798458-92182e662485?w=1600&q=80&auto=format&fit=crop') center 40%/cover;
+  position:relative;
+}
+.memory .photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(251,248,242,0) 60%,var(--r-paper) 100%);}
+.memory-date{font-family:var(--r-serif);font-style:italic;font-size:15px;color:var(--r-text-4);}
+.memory-quote{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:22px;line-height:1.35;color:var(--r-ink);margin:4px 0 0;letter-spacing:-0.005em;}
+.memory-foot{margin-top:auto;padding-top:14px;border-top:1px solid var(--r-rule-5);font-family:var(--r-sans);font-size:11px;color:var(--r-text-5);letter-spacing:0.04em;display:flex;justify-content:space-between;}
+
+/* Person card */
+.person-portrait{
+  width:72px;height:72px;border-radius:50%;
+  background:linear-gradient(135deg,var(--r-cream-warm),var(--r-cream));
+  border:1px solid var(--r-rule-4);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:30px;color:var(--r-ember);
+  overflow:hidden;
+}
+.person-portrait img{width:100%;height:100%;object-fit:cover;}
+.person h3{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:28px;line-height:1.1;color:var(--r-ink);margin:0;letter-spacing:-0.01em;}
+.person-rel{font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:var(--r-text-5);margin-top:6px;}
+.person-note{font-family:var(--r-serif);font-size:16px;line-height:1.5;color:var(--r-text-3);margin:0;}
+.person-note em{font-style:italic;color:var(--r-ink);}
+.person-foot{margin-top:auto;padding-top:14px;display:flex;align-items:center;gap:14px;font-family:var(--r-sans);font-size:11px;color:var(--r-text-5);letter-spacing:0.04em;}
+.person-foot .stat{display:flex;flex-direction:column;gap:2px;}
+.person-foot .stat .num{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:20px;color:var(--r-ink);line-height:1;}
+
+/* Prompt card */
+.prompt{background:var(--r-leather);color:var(--r-paper);border-color:var(--r-leather);}
+.prompt .feature-eyebrow{color:rgba(245,236,216,0.6);}
+.prompt .feature-eyebrow .pip{background:var(--r-amber);}
+.prompt blockquote{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:28px;line-height:1.25;margin:0;letter-spacing:-0.01em;color:var(--r-paper);}
+.prompt blockquote::before{content:"";display:block;width:24px;height:1px;background:rgba(245,236,216,0.3);margin-bottom:18px;}
+.prompt-attr{font-family:var(--r-sans);font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(245,236,216,0.55);margin:0;}
+.prompt-cta-dark{margin-top:auto;padding-top:14px;border-top:1px solid rgba(245,236,216,0.15);display:flex;justify-content:space-between;align-items:center;font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:var(--r-amber);}
+
+/* ═══════════════════ DISPATCHES — what Relish gives back ═══════════════════ */
+.dispatches{padding:48px 0;border-top:1px solid var(--r-rule-4);}
+.dispatches-head{display:flex;align-items:baseline;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:28px;}
+.dispatches-head h2{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:44px;color:var(--r-ink);margin:0;letter-spacing:-0.015em;line-height:1;}
+.dispatches-head h2 em{font-style:italic;}
+.dispatches-head .sub{font-family:var(--r-serif);font-size:17px;color:var(--r-text-3);margin:0;max-width:44ch;}
+
+/* LEAD — a full-width synthesis card, the editorial front-page story */
+.lead{
+  background:var(--r-paper);border:1px solid var(--r-rule-4);border-radius:3px;
+  padding:0;display:grid;grid-template-columns:1.2fr 1fr;gap:0;overflow:hidden;margin-bottom:24px;
+}
+.lead-text{padding:32px 36px 28px;display:flex;flex-direction:column;gap:16px;}
+.lead .eyebrow{display:flex;align-items:center;gap:10px;color:var(--r-text-4);}
+.lead .eyebrow .pip{width:6px;height:6px;border-radius:50%;background:var(--r-burgundy);}
+.lead h3{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:38px;line-height:1.08;letter-spacing:-0.02em;color:var(--r-ink);margin:0;}
+.lead .dek{font-family:var(--r-serif);font-size:18px;line-height:1.55;color:var(--r-text-2);margin:0;}
+.lead .dek em{font-style:italic;color:var(--r-ink);}
+.lead .evidence{margin-top:6px;display:flex;flex-direction:column;gap:0;border-top:1px solid var(--r-rule-5);}
+.lead .ev{padding:12px 0;border-bottom:1px solid var(--r-rule-5);display:grid;grid-template-columns:82px 1fr;gap:14px;align-items:baseline;}
+.lead .ev:last-child{border-bottom:none;}
+.lead .ev .when{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--r-text-5);}
+.lead .ev .line{font-family:var(--r-serif);font-style:italic;font-size:16px;line-height:1.45;color:var(--r-text-2);}
+.lead .ev .line strong{font-weight:500;font-style:normal;color:var(--r-ink);}
+.lead-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;}
+.lead-pill{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border:1px solid var(--r-rule-3);border-radius:999px;font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--r-ink);background:var(--r-paper);}
+.lead-pill.dark{background:var(--r-leather);color:var(--r-paper);border-color:var(--r-leather);}
+.lead-pill.dark .g{color:var(--r-amber);}
+.lead-pill .g{width:11px;height:11px;}
+.lead-art{background:linear-gradient(180deg,rgba(20,16,12,0.12),rgba(20,16,12,0)),url('https://images.unsplash.com/photo-1513346940221-6f673d962e97?w=1600&q=80&auto=format&fit=crop') center 40%/cover;min-height:280px;position:relative;}
+.lead-art::after{content:"A pattern Relish noticed";position:absolute;left:20px;bottom:18px;font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-paper);background:rgba(20,16,12,0.5);padding:5px 10px;border-radius:2px;}
+
+/* SECONDARY ROW — three dispatches with different purposes */
+.dispatch-row{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:24px;}
+.dispatch{
+  background:var(--r-paper);border:1px solid var(--r-rule-5);border-radius:3px;
+  padding:26px 26px 22px;display:flex;flex-direction:column;gap:14px;min-height:300px;
+  transition:transform 180ms var(--r-ease-ink),box-shadow 180ms var(--r-ease-ink);
+}
+.dispatch:hover{transform:translateY(-1px);box-shadow:var(--r-shadow-card);}
+.dispatch .eyebrow{display:flex;align-items:center;gap:10px;color:var(--r-text-4);}
+.dispatch .eyebrow .pip{width:5px;height:5px;border-radius:50%;}
+.dispatch .eyebrow.sage .pip{background:var(--r-sage);}
+.dispatch .eyebrow.ember .pip{background:var(--r-ember);}
+.dispatch .eyebrow.amber .pip{background:var(--r-amber);}
+.dispatch h3{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:24px;line-height:1.2;letter-spacing:-0.005em;color:var(--r-ink);margin:0;}
+.dispatch p{font-family:var(--r-serif);font-size:16px;line-height:1.5;color:var(--r-text-3);margin:0;}
+.dispatch p em{font-style:italic;color:var(--r-ink);}
+.dispatch .foot{margin-top:auto;padding-top:14px;border-top:1px solid var(--r-rule-5);display:flex;justify-content:space-between;align-items:center;font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--r-text-5);}
+.dispatch .foot .arrow{color:var(--r-ember);}
+
+/* Therapist brief — dark, document-like */
+.brief{background:var(--r-leather);color:var(--r-paper);border-color:var(--r-leather);position:relative;overflow:hidden;}
+.brief::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--r-ember),var(--r-amber));}
+.brief .eyebrow{color:rgba(245,236,216,0.6);}
+.brief .eyebrow .pip{background:var(--r-amber)!important;}
+.brief h3{color:var(--r-paper);}
+.brief p{color:rgba(245,236,216,0.75);}
+.brief p em{color:var(--r-paper);}
+.brief .bullets{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
+.brief .bullets li{font-family:var(--r-serif);font-size:15.5px;line-height:1.45;color:rgba(245,236,216,0.78);padding-left:14px;position:relative;}
+.brief .bullets li::before{content:"—";position:absolute;left:0;color:var(--r-amber);}
+.brief .bullets li em{font-style:italic;color:var(--r-paper);}
+.brief .foot{border-top-color:rgba(245,236,216,0.15);color:rgba(245,236,216,0.55);}
+.brief .foot .arrow{color:var(--r-amber);}
+
+/* Pattern card — chart-as-type */
+.pattern-chart{display:flex;align-items:flex-end;gap:6px;height:72px;margin:2px 0 6px;}
+.pattern-chart .bar{flex:1;background:var(--r-rule-4);border-radius:1px;min-height:8%;}
+.pattern-chart .bar.ember{background:var(--r-ember);}
+.pattern-chart .bar.ember-s{background:var(--r-ember-soft);}
+.pattern-legend{display:flex;justify-content:space-between;font-family:var(--r-sans);font-size:10px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--r-text-5);}
+
+/* Echo — a quote + tiny chip back to source */
+.echo-quote{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:22px;line-height:1.3;color:var(--r-ink);border-left:2px solid var(--r-ember);padding-left:16px;margin:0;letter-spacing:-0.005em;}
+.echo-attr{font-family:var(--r-sans);font-size:10px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--r-text-5);}
+
+@media (max-width:1100px){
+  .lead{grid-template-columns:1fr;}
+  .lead-art{min-height:180px;}
+  .dispatch-row{grid-template-columns:1fr;}
+}
+
+/* ═══════════════════ WORKINGS — practical worksheets ═══════════════════ */
+.workings{padding:48px 0 56px;border-top:1px solid var(--r-rule-4);}
+.workings-head{display:flex;align-items:baseline;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:28px;}
+.workings-head h2{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:44px;color:var(--r-ink);margin:0;letter-spacing:-0.015em;line-height:1;}
+.workings-head h2 em{font-style:italic;}
+.workings-head .sub{font-family:var(--r-serif);font-size:17px;color:var(--r-text-3);margin:0;max-width:46ch;}
+.workings-head .sub em{font-style:italic;color:var(--r-ink);}
+
+/* Layout: lead worksheet on the left, two stacked secondaries on the right */
+.workings-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:24px;}
+.workings-col{display:flex;flex-direction:column;gap:24px;}
+
+/* Generic worksheet card — looks like a real document */
+.sheet{
+  background:var(--r-paper);border:1px solid var(--r-rule-4);border-radius:3px;
+  padding:28px 30px 22px;display:flex;flex-direction:column;gap:18px;
+  position:relative;
+}
+.sheet::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:3px;
+  background:var(--r-amber);
+}
+.sheet.calm::before{background:var(--r-sage);}
+.sheet.brief::before{background:var(--r-burgundy);}
+.sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}
+.sheet-eyebrow{display:flex;align-items:center;gap:10px;font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-4);}
+.sheet-eyebrow .pip{width:5px;height:5px;border-radius:50%;background:var(--r-amber);}
+.sheet.calm .sheet-eyebrow .pip{background:var(--r-sage);}
+.sheet.brief .sheet-eyebrow .pip{background:var(--r-burgundy);}
+.sheet-stamp{font-family:var(--r-sans);font-size:9px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--r-text-5);padding:4px 9px;border:1px solid var(--r-rule-4);border-radius:2px;background:var(--r-cream);white-space:nowrap;}
+.sheet-stamp.live{color:var(--r-sage-deep);border-color:var(--r-tint-sage);background:var(--r-tint-sage);}
+
+.sheet h3{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:32px;line-height:1.1;letter-spacing:-0.015em;color:var(--r-ink);margin:0;}
+.sheet h3 .day{font-style:normal;font-family:var(--r-sans);font-size:11px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-5);display:block;margin-bottom:8px;}
+.sheet .why{font-family:var(--r-serif);font-size:16px;line-height:1.5;color:var(--r-text-3);margin:0;}
+.sheet .why em{font-style:italic;color:var(--r-ink);}
+
+/* Day-plan time blocks (Kaleb's Saturday) */
+.plan-key{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--r-sans);font-size:10px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--r-text-5);}
+.plan-key span{display:inline-flex;align-items:center;gap:6px;}
+.plan-key .sw{width:10px;height:10px;border-radius:2px;}
+.plan-key .sw.active{background:var(--r-ember);}
+.plan-key .sw.calm{background:var(--r-sage);}
+.plan-key .sw.together{background:var(--r-burgundy);}
+.plan-key .sw.solo{background:var(--r-amber);}
+
+.plan{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--r-rule-5);}
+.block{
+  display:grid;grid-template-columns:90px 6px 1fr auto;gap:14px;align-items:center;
+  padding:13px 0;border-bottom:1px solid var(--r-rule-5);
+}
+.block .time{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:18px;color:var(--r-ink);letter-spacing:-0.005em;}
+.block .time input.t{font:inherit;color:inherit;border:none;background:transparent;width:64px;padding:1px 4px;border-radius:2px;outline:none;letter-spacing:-0.005em;}
+.block .time input.t:focus{background:var(--r-cream);box-shadow:inset 0 0 0 1px var(--r-rule-3);}
+.block .time .dur{display:block;font-family:var(--r-sans);font-style:normal;font-size:9px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:var(--r-text-5);margin-top:2px;}
+.block .swatch{width:6px;align-self:stretch;border-radius:1px;background:var(--r-rule-3);}
+.block.active .swatch{background:var(--r-ember);}
+.block.calm .swatch{background:var(--r-sage);}
+.block.together .swatch{background:var(--r-burgundy);}
+.block.solo .swatch{background:var(--r-amber);}
+.block .label{font-family:var(--r-serif);font-size:17px;line-height:1.3;color:var(--r-ink);outline:none;border:none;background:transparent;width:100%;padding:2px 4px;border-radius:2px;}
+.block .label:focus{background:var(--r-cream);box-shadow:inset 0 0 0 1px var(--r-rule-3);}
+.block .label .meta{display:block;font-family:var(--r-sans);font-size:10px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--r-text-5);margin-top:3px;}
+.block .kind{font-family:var(--r-sans);font-size:9px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--r-text-5);padding:3px 7px;border:1px solid var(--r-rule-4);border-radius:2px;cursor:pointer;background:transparent;transition:all 140ms var(--r-ease-ink);}
+.block .kind:hover{border-color:var(--r-ink);color:var(--r-ink);}
+.block.active .kind{color:var(--r-ember);border-color:var(--r-tint-ember);}
+.block.calm .kind{color:var(--r-sage-deep);border-color:var(--r-tint-sage);}
+.block.together .kind{color:var(--r-burgundy);border-color:var(--r-tint-burgundy);}
+.block.solo .kind{color:var(--r-text-3);border-color:var(--r-tint-amber);}
+
+.block-add{
+  display:flex;align-items:center;gap:10px;padding:12px 0;
+  font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--r-text-5);
+  cursor:pointer;
+}
+.block-add .cross{width:18px;height:18px;border-radius:50%;border:1px dashed var(--r-rule-3);display:inline-flex;align-items:center;justify-content:center;font-size:14px;color:var(--r-text-5);}
+
+/* Reflection bar at the bottom of the day plan */
+.reflect{
+  margin-top:6px;padding:18px 20px;
+  background:var(--r-cream);border:1px dashed var(--r-rule-3);border-radius:2px;
+  display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;
+}
+.reflect .copy{display:flex;flex-direction:column;gap:4px;}
+.reflect .copy h4{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:18px;color:var(--r-ink);margin:0;}
+.reflect .copy p{font-family:var(--r-serif);font-size:14.5px;color:var(--r-text-3);margin:0;line-height:1.45;}
+.reflect .copy p em{font-style:italic;color:var(--r-ink);}
+.reflect-scale{display:flex;gap:6px;}
+.reflect-scale button{
+  width:32px;height:32px;border-radius:50%;
+  border:1px solid var(--r-rule-3);background:var(--r-paper);
+  font-family:var(--r-serif);font-size:15px;color:var(--r-text-3);cursor:pointer;
+  transition:all 140ms var(--r-ease-ink);
+}
+.reflect-scale button:hover{border-color:var(--r-ink);color:var(--r-ink);}
+.reflect-scale button.on{background:var(--r-leather);color:var(--r-paper);border-color:var(--r-leather);}
+
+.sheet-foot{margin-top:6px;padding-top:14px;border-top:1px solid var(--r-rule-5);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+.sheet-foot .meta{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--r-text-5);}
+.sheet-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.sheet-action{
+  display:inline-flex;align-items:center;gap:6px;padding:7px 12px;
+  border:1px solid var(--r-rule-3);border-radius:999px;background:var(--r-paper);
+  font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--r-ink);
+  cursor:pointer;
+}
+.sheet-action.dark{background:var(--r-leather);color:var(--r-paper);border-color:var(--r-leather);}
+.sheet-action svg{width:11px;height:11px;}
+
+/* Meals sheet — week grid */
+.meals-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0;border-top:1px solid var(--r-rule-5);border-left:1px solid var(--r-rule-5);}
+.meal-cell{border-right:1px solid var(--r-rule-5);border-bottom:1px solid var(--r-rule-5);padding:10px 10px;min-height:78px;display:flex;flex-direction:column;gap:4px;}
+.meal-cell .day{font-family:var(--r-sans);font-size:9px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--r-text-5);}
+.meal-cell .meal{font-family:var(--r-serif);font-style:italic;font-size:14px;line-height:1.3;color:var(--r-ink);}
+.meal-cell.empty .meal{color:var(--r-text-6);font-style:normal;}
+.meal-cell.by-iris{background:var(--r-tint-sage);}
+.meal-cell.today{box-shadow:inset 0 0 0 2px var(--r-ink);}
+
+/* Brief / list sheet (Ask Jenny) */
+.list-sheet{display:flex;flex-direction:column;gap:0;}
+.list-item{
+  display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:flex-start;
+  padding:12px 0;border-bottom:1px solid var(--r-rule-5);
+}
+.list-item:last-child{border-bottom:none;}
+.list-item .check{
+  width:18px;height:18px;border-radius:3px;border:1.5px solid var(--r-rule-2);
+  margin-top:2px;cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.list-item .check.done{background:var(--r-leather);border-color:var(--r-leather);}
+.list-item .check.done::after{content:"";width:8px;height:5px;border-left:1.5px solid var(--r-paper);border-bottom:1.5px solid var(--r-paper);transform:rotate(-45deg) translate(1px,-1px);}
+.list-item .copy{font-family:var(--r-serif);font-size:16px;line-height:1.45;color:var(--r-ink);}
+.list-item.done .copy{color:var(--r-text-5);text-decoration:line-through;text-decoration-thickness:1px;}
+.list-item .copy .src{display:block;font-family:var(--r-sans);font-size:9px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:var(--r-text-5);margin-top:3px;text-decoration:none;}
+.list-item .when{font-family:var(--r-sans);font-size:9px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--r-text-5);white-space:nowrap;padding-top:4px;}
+
+/* "Start a new working" — empty card to add */
+.sheet-new{
+  background:transparent;border:1px dashed var(--r-rule-3);border-radius:3px;
+  padding:24px 28px;display:flex;flex-direction:column;gap:10px;
+  cursor:pointer;transition:all 160ms var(--r-ease-ink);
+}
+.sheet-new:hover{background:var(--r-paper);border-color:var(--r-rule-1);}
+.sheet-new .e{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-5);}
+.sheet-new h4{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:22px;color:var(--r-ink);margin:0;line-height:1.2;letter-spacing:-0.005em;}
+.sheet-new p{font-family:var(--r-serif);font-size:15px;color:var(--r-text-3);margin:0;line-height:1.45;}
+.sheet-new .templates{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+.sheet-new .templates span{font-family:var(--r-sans);font-size:9px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--r-text-3);padding:4px 9px;border:1px solid var(--r-rule-4);border-radius:999px;background:var(--r-paper);}
+
+@media (max-width:1100px){
+  .workings-grid{grid-template-columns:1fr;}
+  .meals-grid{grid-template-columns:repeat(4,1fr);}
+}
+
+/* ═══════════════════ WEEK AHEAD ═══════════════════ */
+.week{padding:40px 0 48px;border-top:1px solid var(--r-rule-4);}
+.week-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:24px;gap:24px;flex-wrap:wrap;}
+.week-title{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:44px;color:var(--r-ink);margin:0;letter-spacing:-0.015em;line-height:1;}
+.week-sub{font-family:var(--r-serif);font-size:17px;color:var(--r-text-3);margin:0;}
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;}
+.day{
+  background:var(--r-paper);border:1px solid var(--r-rule-5);border-radius:3px;
+  padding:16px 14px 18px;min-height:160px;
+  display:flex;flex-direction:column;gap:8px;position:relative;
+  transition:border-color 140ms var(--r-ease-ink);
+}
+.day.past{opacity:0.55;background:transparent;border-style:dashed;}
+.day.today{background:var(--r-paper);border-color:var(--r-ink);border-width:1px;box-shadow:0 0 0 3px var(--r-tint-ember);}
+.day-letter{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-5);}
+.day.today .day-letter{color:var(--r-ember);}
+.day-date{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:26px;color:var(--r-ink);line-height:1;letter-spacing:-0.01em;}
+.day.past .day-date{color:var(--r-text-5);}
+.day-entries{margin-top:auto;display:flex;flex-direction:column;gap:6px;}
+.entry{
+  font-family:var(--r-serif);font-style:italic;font-size:13.5px;line-height:1.3;color:var(--r-ink);
+  padding-left:9px;border-left:2px solid var(--r-ember);
+}
+.entry.sage{border-color:var(--r-sage);}
+.entry.burgundy{border-color:var(--r-burgundy);}
+.entry.amber{border-color:var(--r-amber);}
+.entry-cadence{display:block;font-family:var(--r-sans);font-style:normal;font-size:9px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--r-text-5);margin-top:2px;}
+.day .done{position:absolute;top:14px;right:14px;width:14px;height:14px;border-radius:50%;background:var(--r-tint-sage);border:1px solid var(--r-sage);display:flex;align-items:center;justify-content:center;}
+.day .done svg{width:8px;height:8px;stroke:var(--r-sage-deep);}
+
+/* ═══════════════════ FOOTER: song of the week ═══════════════════ */
+.song-strip{
+  display:grid;grid-template-columns:auto 1fr auto;gap:24px;align-items:center;
+  padding:22px 28px;background:var(--r-leather);color:var(--r-paper);
+  border-radius:3px;margin-top:16px;
+}
+.song-art{width:56px;height:56px;border-radius:2px;background:linear-gradient(135deg,var(--r-ember),var(--r-burgundy));overflow:hidden;flex:none;}
+.song-art img{width:100%;height:100%;object-fit:cover;}
+.song-meta{min-width:0;}
+.song-eyebrow{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;color:var(--r-amber);}
+.song-title{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:22px;color:var(--r-paper);line-height:1.15;margin-top:4px;letter-spacing:-0.005em;}
+.song-attrib{font-family:var(--r-sans);font-size:12px;color:rgba(245,236,216,0.55);margin-top:4px;}
+.song-play{display:inline-flex;align-items:center;gap:10px;font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:var(--r-amber);padding:10px 18px;border:1px solid rgba(201,168,76,0.4);border-radius:999px;}
+
+/* ═══════════════════ PEN (floating) ═══════════════════ */
+.pen{position:fixed;right:36px;bottom:36px;z-index:40;width:60px;height:60px;border-radius:50%;background:var(--r-leather);color:var(--r-paper);box-shadow:var(--r-shadow-pen);display:flex;align-items:center;justify-content:center;transition:transform 140ms var(--r-ease-ink);}
+.pen:hover{transform:translateY(-2px);}
+.pen svg{width:22px;height:22px;}
+
+/* ═══════════════════ TWEAKS DOCK ═══════════════════ */
+.tweaks{position:fixed;right:24px;top:92px;z-index:60;width:284px;background:var(--r-paper);border:1px solid var(--r-rule-3);border-radius:4px;box-shadow:var(--r-shadow-pen);padding:20px 22px 22px;font-family:var(--r-sans);font-size:13px;color:var(--r-ink);display:none;}
+.tweaks.open{display:block;}
+.tweaks h4{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:22px;margin:0 0 4px;color:var(--r-ink);}
+.tweaks .tsub{font-size:11px;color:var(--r-text-4);margin-bottom:16px;line-height:1.5;}
+.tweaks label{display:block;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--r-text-3);margin:14px 0 6px;}
+.tweak-row{display:flex;flex-wrap:wrap;gap:6px;}
+.tbtn{background:var(--r-cream);border:1px solid var(--r-rule-4);padding:6px 10px;border-radius:3px;font-size:11.5px;color:var(--r-ink);line-height:1;}
+.tbtn.on{background:var(--r-leather);color:var(--r-paper);border-color:var(--r-leather);}
+
+/* Footer colophon */
+.colophon{text-align:center;padding:80px 0 40px;font-family:var(--r-serif);font-style:italic;color:var(--r-text-5);font-size:14px;}
+.colophon .fleuron{display:block;font-size:20px;margin-bottom:10px;color:var(--r-rule-2);}
+
+/* Media cue for threads */
+.media-cue{display:inline-flex;align-items:center;gap:4px;margin-left:8px;font-family:var(--r-sans);font-size:10px;color:var(--r-text-5);}
+.media-cue::before{content:"";display:inline-block;width:3px;height:3px;border-radius:50%;background:var(--r-text-5);}
+
+@media (max-width:1100px){
+  .spread{grid-template-columns:1fr;gap:0;}
+  .spread-rule{display:none;}
+  .feature-row{grid-template-columns:1fr;}
+  .week-grid{grid-template-columns:repeat(4,1fr);}
+  .masthead-strip{grid-template-columns:1fr 1fr;gap:16px;}
+  .masthead-divider{display:none;}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- TOP NAV -->
+  <nav class="topnav">
+    <div class="topnav-inner">
+      <a class="wordmark" href="Workbook Home.html">Relish</a>
+      <div class="rooms">
+        <a class="room active" href="Workbook Home.html">The Workbook</a>
+        <a class="room" href="Family Manual.html">The Family Manual</a>
+        <a class="room" href="Archive.html">The Archive</a>
+      </div>
+      <button class="user">Scott</button>
+    </div>
+  </nav>
+
+  <main class="page">
+
+    <!-- ═══ MASTHEAD ═══ -->
+    <section class="masthead" aria-label="Today">
+      <div class="masthead-photo" id="mastheadPhoto" data-season="spring"></div>
+      <div class="masthead-strip">
+        <div class="masthead-cell">
+          <span class="masthead-eyebrow">Today</span>
+          <span class="masthead-value big" id="dateToday">Monday 20 April</span>
+        </div>
+        <div class="masthead-divider"></div>
+        <div class="masthead-cell align-c">
+          <span class="masthead-eyebrow">Season</span>
+          <span class="masthead-value" id="seasonText">Mid-spring<span class="sub"> · week 16</span></span>
+        </div>
+        <div class="masthead-divider"></div>
+        <div class="masthead-cell align-c">
+          <span class="masthead-eyebrow">Weather · Brooklyn</span>
+          <span class="masthead-value">58° <span class="sub">overcast, rain by 3</span></span>
+        </div>
+        <div class="masthead-divider"></div>
+        <div class="masthead-cell align-r">
+          <span class="masthead-eyebrow">Moon</span>
+          <span class="masthead-value moon"><span class="moon-glyph waxing"></span>Waxing crescent</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ WORKINGS — practical worksheets (HEADLINE — top of page) ═══ -->
+    <section class="workings" aria-label="Workings — what you're working on">
+      <div class="workings-head">
+        <div>
+          <h2>Things you're <em>working out.</em></h2>
+        </div>
+        <p class="sub">Worksheets, plans, lists you keep open. <em>Started by you, or suggested by Relish</em> when it noticed something worth planning.</p>
+      </div>
+
+      <div class="workings-grid">
+
+        <!-- LEAD WORKING — Kaleb's Saturday day plan -->
+        <article class="sheet" aria-label="Kaleb's Saturday day plan">
+          <div class="sheet-head">
+            <span class="sheet-eyebrow"><span class="pip"></span>Day plan · started by Relish from a pattern</span>
+            <span class="sheet-stamp live">In progress</span>
+          </div>
+          <h3>
+            <span class="day">Saturday · 25 April</span>
+            Kaleb's Saturday.
+          </h3>
+          <p class="why">You wrote three times this month that <em>he does better when the day has shape.</em> Here's a draft. Adjust anything — it's saved as you go, and Iris sees the same plan.</p>
+
+          <div class="plan-key" aria-hidden="true">
+            <span><span class="sw active"></span>Active</span>
+            <span><span class="sw calm"></span>Calm</span>
+            <span><span class="sw together"></span>Together</span>
+            <span><span class="sw solo"></span>Solo</span>
+          </div>
+
+          <div class="plan" id="plan">
+            <div class="block active">
+              <div class="time"><input class="t" value="7:00" aria-label="Start time" /><span class="dur">30 min</span></div>
+              <div class="swatch"></div>
+              <input class="label" value="Wake-up window — let him pad around" />
+              <button class="kind" type="button">Active</button>
+            </div>
+            <div class="block together">
+              <div class="time"><input class="t" value="7:30" aria-label="Start time" /><span class="dur">45 min</span></div>
+              <div class="swatch"></div>
+              <input class="label" value="Breakfast with Iris and Nell, no screens" />
+              <button class="kind" type="button">Together</button>
+            </div>
+            <div class="block active">
+              <div class="time"><input class="t" value="8:30" aria-label="Start time" /><span class="dur">90 min</span></div>
+              <div class="swatch"></div>
+              <input class="label" value="Outside — bike or playground at Cobble Hill" />
+              <button class="kind" type="button">Active</button>
+            </div>
+            <div class="block calm">
+              <div class="time"><input class="t" value="10:00" aria-label="Start time" /><span class="dur">45 min</span></div>
+              <div class="swatch"></div>
+              <input class="label" value="Quiet activity — Lego or drawing at the table" />
+              <button class="kind" type="button">Calm</button>
+            </div>
+            <div class="block solo">
+              <div class="time"><input class="t" value="10:45" aria-label="Start time" /><span class="dur">30 min</span></div>
+              <div class="swatch"></div>
+              <input class="label" value="Solo time in his room while you reset the kitchen" />
+              <button class="kind" type="button">Solo</button>
+            </div>
+            <div class="block together">
+              <div class="time"><input class="t" value="11:15" aria-label="Start time" /><span class="dur">45 min</span></div>
+              <div class="swatch"></div>
+              <input class="label" value="Lunch — let him pick between two things you've got" />
+              <button class="kind" type="button">Together</button>
+            </div>
+            <div class="block calm">
+              <div class="time"><input class="t" value="12:00" aria-label="Start time" /><span class="dur">60 min</span></div>
+              <div class="swatch"></div>
+              <input class="label" value="Rest / book on the couch (no screen)" />
+              <button class="kind" type="button">Calm</button>
+            </div>
+            <div class="block active">
+              <div class="time"><input class="t" value="1:00" aria-label="Start time" /><span class="dur">120 min</span></div>
+              <div class="swatch"></div>
+              <input class="label" value="Errand or visit — Library, or Margot's if she's around" />
+              <button class="kind" type="button">Active</button>
+            </div>
+            <div class="block solo">
+              <div class="time"><input class="t" value="3:00" aria-label="Start time" /><span class="dur">60 min</span></div>
+              <div class="swatch"></div>
+              <input class="label" value="Screen window — one show or game, timer set" />
+              <button class="kind" type="button">Solo</button>
+            </div>
+            <div class="block together">
+              <div class="time"><input class="t" value="5:30" aria-label="Start time" /><span class="dur">75 min</span></div>
+              <div class="swatch"></div>
+              <input class="label" value="Dinner together — he helps lay the table" />
+              <button class="kind" type="button">Together</button>
+            </div>
+            <div class="block calm">
+              <div class="time"><input class="t" value="7:00" aria-label="Start time" /><span class="dur">60 min</span></div>
+              <div class="swatch"></div>
+              <input class="label" value="Bath, books, lights low. Hallway light on." />
+              <button class="kind" type="button">Calm</button>
+            </div>
+          </div>
+
+          <button class="block-add">
+            <span class="cross">+</span>
+            Add a block
+          </button>
+
+          <!-- Reflection at the bottom feeds back to Relish -->
+          <div class="reflect" id="reflect">
+            <div class="copy">
+              <h4>How did Saturday go?</h4>
+              <p>One tap on Sunday morning. Relish learns what works for him and tunes <em>next weekend's draft</em>.</p>
+            </div>
+            <div class="reflect-scale" data-scale="reflect">
+              <button title="Hard day">1</button>
+              <button title="Rough">2</button>
+              <button title="Mixed">3</button>
+              <button title="Smooth">4</button>
+              <button title="A great day">5</button>
+            </div>
+          </div>
+
+          <div class="sheet-foot">
+            <span class="meta">Saved 11 min ago · Iris viewing</span>
+            <div class="sheet-actions">
+              <button class="sheet-action">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5h12M2 8h12M2 11h8"/></svg>
+                Print for the fridge
+              </button>
+              <button class="sheet-action">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+                Save as template
+              </button>
+              <button class="sheet-action dark">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2l1.5 4.5h4.5l-3.6 2.7 1.4 4.3L8 11l-3.8 2.5 1.4-4.3L2 6.5h4.5L8 2z"/></svg>
+                Pin to Saturday
+              </button>
+            </div>
+          </div>
+        </article>
+
+        <!-- RIGHT COLUMN — two stacked secondary worksheets + a "start new" -->
+        <div class="workings-col">
+
+          <!-- Brief for Sunday call with your mom -->
+          <article class="sheet brief" aria-label="What to ask your mom on Sunday">
+            <div class="sheet-head">
+              <span class="sheet-eyebrow"><span class="pip"></span>Call brief · Sunday 11am with your mom</span>
+              <span class="sheet-stamp">4 to ask</span>
+            </div>
+            <h3>What to ask your mom.</h3>
+            <p class="why">Things you've meant to bring up. <em>Three of these came from Relish</em>; one you added.</p>
+
+            <ul class="list-sheet">
+              <li class="list-item">
+                <span class="check"></span>
+                <span class="copy">How did the cardiology follow-up actually go?<span class="src">From your entry · 2 April</span></span>
+                <span class="when">2 wk</span>
+              </li>
+              <li class="list-item">
+                <span class="check"></span>
+                <span class="copy">The gutter repair — did the guy come back?<span class="src">Open thread · 11 April</span></span>
+                <span class="when">9 d</span>
+              </li>
+              <li class="list-item">
+                <span class="check"></span>
+                <span class="copy">Birthday: dinner here, or take her out?<span class="src">You added · today</span></span>
+                <span class="when">today</span>
+              </li>
+              <li class="list-item done">
+                <span class="check done"></span>
+                <span class="copy">Tell her your son learned to whistle.<span class="src">Done · last call</span></span>
+                <span class="when">1 wk</span>
+              </li>
+            </ul>
+
+            <div class="sheet-foot">
+              <span class="meta">Becomes a journal entry after the call</span>
+              <div class="sheet-actions">
+                <button class="sheet-action">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v12M2 8h12"/></svg>
+                  Add a question
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <!-- Start a new working -->
+          <button class="sheet-new" aria-label="Start a new working">
+            <span class="e">Start a working</span>
+            <h4>What else needs working out?</h4>
+            <p>A worksheet you can fill in and come back to. Pick a template, or start blank.</p>
+            <div class="templates">
+              <span>Bedtime sequence</span>
+              <span>Trip packing list</span>
+              <span>Hard conversation script</span>
+              <span>Birthday plan</span>
+              <span>Blank sheet</span>
+            </div>
+          </button>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ SPREAD — hero + tending ═══ -->
+    <section class="spread" id="spread">
+      <div class="hero">
+        <div class="hero-dateline">
+          <span class="dot"></span>
+          <span class="text" id="heroDateline">Scott's daily · Morning edition</span>
+        </div>
+        <h1 id="heroTitle">Still up, Scott.</h1>
+        <p class="hero-lede" id="heroLede">
+          <em>Two threads are open</em> and the kitchen is quiet. The book is where you left it.
+        </p>
+        <button class="hero-action">
+          <svg class="pen-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/></svg>
+          Pick up where you left off
+        </button>
+      </div>
+
+      <div class="spread-rule" aria-hidden="true"></div>
+
+      <div class="tending" id="tending">
+        <div class="tending-head">
+          <span class="eyebrow">Open threads</span>
+          <span class="count" id="tendingCount">2 kept open</span>
+        </div>
+        <div id="tendingBody">
+          <a class="thread" href="#">
+            <div class="thread-row1">
+              <span class="thread-title">Scott and I had an argument this morning</span>
+              <span class="thread-age">yesterday</span>
+            </div>
+            <p class="thread-preview">…for the first few hours of the day. I can't remember exactly how it started. I do know it escalated when I…</p>
+            <span class="thread-tag people">About · us</span>
+          </a>
+          <a class="thread" href="#">
+            <div class="thread-row1">
+              <span class="thread-title">About Kaleb</span>
+              <span class="thread-age">1w ago</span>
+            </div>
+            <p class="thread-preview">Iris mentioned that Kaleb was misbehaving at bedtime last night and that he independently decided to go downstairs and sit with Jax on the couch and…</p>
+            <span class="thread-tag people">About · Kaleb</span>
+            <span class="media-cue">1 photo</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ FEATURE ROW — memory · person · prompt ═══ -->
+    <section class="feature-row" aria-label="Today's readings">
+
+      <article class="feature memory">
+        <div class="photo" aria-hidden="true"></div>
+        <span class="feature-eyebrow"><span class="pip"></span>From the archive · a year ago</span>
+        <span class="memory-date">20 April, 2025 — a Sunday</span>
+        <p class="memory-quote">"Kaleb tried to teach Iris the word for 'snail' in Spanish and they both dissolved laughing. Keep this one."</p>
+        <div class="memory-foot">
+          <span>Three entries this week</span>
+          <span>Open →</span>
+        </div>
+      </article>
+
+      <article class="feature person">
+        <span class="feature-eyebrow"><span class="pip"></span>Someone you haven't written about in a while</span>
+        <div style="display:flex;gap:18px;align-items:center;">
+          <div class="person-portrait">J</div>
+          <div>
+            <h3>Your mom</h3>
+            <div class="person-rel">Last entry · 18 days ago</div>
+          </div>
+        </div>
+        <p class="person-note">Her cardiology follow-up was the last note. <em>Has she mentioned how it went?</em></p>
+        <div class="person-foot">
+          <div class="stat"><span class="num">12</span>entries</div>
+          <div class="stat"><span class="num">3</span>open</div>
+          <div class="stat"><span class="num">18d</span>since</div>
+        </div>
+      </article>
+
+      <article class="feature prompt">
+        <span class="feature-eyebrow"><span class="pip"></span>A prompt for this morning</span>
+        <blockquote>What did you notice this weekend that you almost didn't write down?</blockquote>
+        <p class="prompt-attr">— Monday prompt · one minute, in the book</p>
+        <div class="prompt-cta-dark">
+          <span>Answer in the book</span>
+          <span>→</span>
+        </div>
+      </article>
+
+    </section>
+
+    <!-- ═══ DISPATCHES — what Relish gives back ═══ -->
+    <section class="dispatches" aria-label="Dispatches from Relish">
+      <div class="dispatches-head">
+        <h2>What Relish is <em>returning</em> to you.</h2>
+        <p class="sub">You write the raw material in. Once a week Relish sends a few things back — patterns it noticed, a brief for Tuesday's therapy, an echo from last winter.</p>
+      </div>
+
+      <!-- LEAD STORY: the weekly synthesis -->
+      <article class="lead">
+        <div class="lead-text">
+          <span class="eyebrow"><span class="pip"></span><span class="feature-eyebrow" style="padding:0;">The weekly synthesis · ready Sunday 9pm</span></span>
+          <h3>You are writing about Kaleb's sleep again.</h3>
+          <p class="dek">Four of your last seven morning entries have opened with some version of <em>"he was up twice"</em> or <em>"rough night."</em> Iris is writing about it too. Before it becomes the only thing you notice — here's what the book has picked up.</p>
+
+          <div class="evidence">
+            <div class="ev">
+              <span class="when">Wed · Apr 16</span>
+              <span class="line"><strong>You:</strong> <em>"Second night in a row he's wandered in at 4. I'm running on fumes."</em></span>
+            </div>
+            <div class="ev">
+              <span class="when">Fri · Apr 18</span>
+              <span class="line"><strong>Iris:</strong> <em>"Kaleb asked me if the hallway is scary at night. I said no but I don't think he believed me."</em></span>
+            </div>
+            <div class="ev">
+              <span class="when">Sun · Apr 19</span>
+              <span class="line"><strong>You:</strong> <em>"Third wake-up. We need to talk about the nightlight thing."</em></span>
+            </div>
+          </div>
+
+          <div class="lead-actions">
+            <button class="lead-pill dark">
+              <svg class="g" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h12v10H2z"/><path d="M2 6h12"/></svg>
+              Read the full dispatch
+            </button>
+            <button class="lead-pill">
+              <svg class="g" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v12M2 8h12"/></svg>
+              Add to Tuesday's brief
+            </button>
+            <button class="lead-pill">
+              <svg class="g" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12v8H2z"/><path d="M2 7h12"/><circle cx="5" cy="10" r="0.8" fill="currentColor"/><circle cx="8" cy="10" r="0.8" fill="currentColor"/><circle cx="11" cy="10" r="0.8" fill="currentColor"/></svg>
+              Make a working plan
+            </button>
+            <button class="lead-pill">
+              <svg class="g" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l3 3 7-7"/></svg>
+              Already discussed
+            </button>
+          </div>
+        </div>
+        <div class="lead-art" aria-hidden="true"></div>
+      </article>
+
+      <!-- THREE SECONDARY DISPATCHES -->
+      <div class="dispatch-row">
+
+        <!-- Therapist brief — the killer use case -->
+        <article class="dispatch brief">
+          <span class="eyebrow"><span class="pip"></span>Brief for Dr. Mehta · Tuesday 10am</span>
+          <h3>Three things worth bringing in.</h3>
+          <ul class="bullets">
+            <li><em>Sleep — Kaleb.</em> Four night-wakings in nine days. He mentioned the hallway being "scary" to Iris.</li>
+            <li><em>Mom's cardiology follow-up.</em> Hasn't come up in 18 days. You meant to ask.</li>
+            <li><em>The argument about Easter.</em> Unresolved since the 12th. Iris still references it sideways.</li>
+          </ul>
+          <div class="foot">
+            <span>6 entries · 2 people</span>
+            <span class="arrow">Open brief →</span>
+          </div>
+        </article>
+
+        <!-- Pattern card — Relish sees a rhythm you can't -->
+        <article class="dispatch">
+          <span class="eyebrow amber"><span class="pip"></span>A pattern Relish is watching</span>
+          <h3>Your mornings run hot on Wednesdays.</h3>
+          <p>Five of the last six "rough morning" entries land midweek. <em>Piano on Tuesday night</em> is in all of them.</p>
+          <div class="pattern-chart" aria-hidden="true">
+            <div class="bar ember-s" style="height:32%"></div>
+            <div class="bar ember-s" style="height:44%"></div>
+            <div class="bar ember" style="height:88%"></div>
+            <div class="bar ember-s" style="height:28%"></div>
+            <div class="bar ember-s" style="height:38%"></div>
+            <div class="bar ember-s" style="height:22%"></div>
+            <div class="bar ember-s" style="height:18%"></div>
+          </div>
+          <div class="pattern-legend"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+          <div class="foot">
+            <span>6 weeks · confidence moderate</span>
+            <span class="arrow">Look closer →</span>
+          </div>
+        </article>
+
+        <!-- Echo — a resurfaced entry that matters now -->
+        <article class="dispatch">
+          <span class="eyebrow sage"><span class="pip"></span>An echo · from one year ago</span>
+          <blockquote class="echo-quote">"Kaleb woke up twice last night asking about the dark. I told him the hallway was just the hallway. He didn't buy it."</blockquote>
+          <span class="echo-attr">You · 21 April, 2025 — Tuesday morning</span>
+          <p style="font-size:15px;color:var(--r-text-4);margin:0;">Same child, same hallway, same week in April. Relish thought you'd want to see it next to what you wrote Friday.</p>
+          <div class="foot">
+            <span>Surfaced because Kaleb · sleep</span>
+            <span class="arrow">Read both →</span>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ═══ WEEK AHEAD ═══ -->
+    <section class="week" aria-label="The week ahead">
+      <div class="week-head">
+        <div>
+          <h2 class="week-title">The week, plotted.</h2>
+        </div>
+        <p class="week-sub">Practices you've kept, and the ones coming up.</p>
+      </div>
+      <div class="week-grid">
+        <div class="day past">
+          <span class="day-letter">Sun</span>
+          <span class="day-date">19</span>
+          <div class="day-entries">
+            <div class="entry sage">Weekly Relish<span class="entry-cadence">Weekly · kept</span></div>
+          </div>
+          <div class="done"><svg viewBox="0 0 16 16" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg></div>
+        </div>
+        <div class="day today">
+          <span class="day-letter">Mon · Today</span>
+          <span class="day-date">20</span>
+          <div class="day-entries">
+            <div class="entry">Morning prompt<span class="entry-cadence">Daily</span></div>
+          </div>
+        </div>
+        <div class="day">
+          <span class="day-letter">Tue</span>
+          <span class="day-date">21</span>
+        </div>
+        <div class="day">
+          <span class="day-letter">Wed</span>
+          <span class="day-date">22</span>
+          <div class="day-entries">
+            <div class="entry amber">Pantry inventory<span class="entry-cadence">Every other</span></div>
+          </div>
+        </div>
+        <div class="day">
+          <span class="day-letter">Thu</span>
+          <span class="day-date">23</span>
+        </div>
+        <div class="day">
+          <span class="day-letter">Fri</span>
+          <span class="day-date">24</span>
+          <div class="day-entries">
+            <div class="entry burgundy">Your solo week<span class="entry-cadence">Monthly</span></div>
+          </div>
+        </div>
+        <div class="day">
+          <span class="day-letter">Sat</span>
+          <span class="day-date">25</span>
+        </div>
+      </div>
+
+      <!-- SONG STRIP -->
+      <div class="song-strip">
+        <div class="song-art"><img src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200&q=80&auto=format&fit=crop" alt="" /></div>
+        <div class="song-meta">
+          <div class="song-eyebrow">On the family's record · this week</div>
+          <div class="song-title">Iris has been humming "Clair de lune" all week</div>
+          <div class="song-attrib">Debussy · from Kaleb's bedtime playlist · added by Iris, Tuesday</div>
+        </div>
+        <a class="song-play" href="#">Listen →</a>
+      </div>
+    </section>
+
+    <div class="colophon">
+      <span class="fleuron">❦</span>
+      The Workbook, Monday edition.
+    </div>
+
+  </main>
+
+  <!-- PEN (floating) -->
+  <button class="pen" aria-label="Open the Pen">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/></svg>
+  </button>
+
+  <!-- TWEAKS (design-only, host toggles) -->
+  <div class="tweaks" id="tweaks">
+    <h4>Tweaks</h4>
+    <p class="tsub">Preview how the Workbook breathes across the day and across the seasons.</p>
+
+    <label>Day state</label>
+    <div class="tweak-row" data-tweak="state">
+      <button class="tbtn on" data-val="full">Full</button>
+      <button class="tbtn" data-val="quiet">Quiet</button>
+      <button class="tbtn" data-val="empty">Empty</button>
+    </div>
+
+    <label>Time of day</label>
+    <div class="tweak-row" data-tweak="time">
+      <button class="tbtn on" data-val="morning">Morning</button>
+      <button class="tbtn" data-val="afternoon">Afternoon</button>
+      <button class="tbtn" data-val="evening">Evening</button>
+    </div>
+
+    <label>Season</label>
+    <div class="tweak-row" data-tweak="season">
+      <button class="tbtn on" data-val="spring">Spring</button>
+      <button class="tbtn" data-val="summer">Summer</button>
+      <button class="tbtn" data-val="autumn">Autumn</button>
+      <button class="tbtn" data-val="winter">Winter</button>
+    </div>
+
+    <label>Masthead photo</label>
+    <div class="tweak-row" data-tweak="photo">
+      <button class="tbtn on" data-val="show">Show</button>
+      <button class="tbtn" data-val="hide">Hide</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* =================================================================
+   TWEAKS — not wired to real data, just to illustrate day-variations
+   ================================================================= */
+const STATES = {
+  full: {
+    title: "Still up, Scott.",
+    dateline: "Scott's daily · Morning edition",
+    lede: `<em>Two threads are open</em> and the kitchen is quiet. The book is where you left it.`,
+    threadCount: "2 kept open",
+    tending: "threads"
+  },
+  quiet: {
+    title: "Quiet morning.",
+    dateline: "Scott's daily · Morning edition",
+    lede: `<em>One thread</em> is open. Nothing is asking for you yet.`,
+    threadCount: "1 kept open",
+    tending: "one"
+  },
+  empty: {
+    title: "Good morning, Scott.",
+    dateline: "Scott's daily · Morning edition",
+    lede: `<em>Nothing is asking for you.</em> The book is quiet. A prompt is waiting when you want one.`,
+    threadCount: "Nothing open",
+    tending: "prompt"
+  }
+};
+
+const TIME_VARIANTS = {
+  morning: { hero: "Still up, Scott.", dateline: "Morning edition" },
+  afternoon: { hero: "Midday, Scott.", dateline: "Afternoon edition" },
+  evening: { hero: "Settling in, Scott.", dateline: "Evening edition" }
+};
+
+const SEASON_DATES = {
+  spring: { date: "Monday 20 April", text: `Mid-spring<span class="sub"> · week 16</span>` },
+  summer: { date: "Wednesday 9 July",   text: `High summer<span class="sub"> · week 28</span>` },
+  autumn: { date: "Saturday 18 October",text: `Late autumn<span class="sub"> · week 42</span>` },
+  winter: { date: "Tuesday 16 December",text: `Deep winter<span class="sub"> · week 51</span>` }
+};
+
+const tendingBody = document.getElementById('tendingBody');
+const heroTitle = document.getElementById('heroTitle');
+const heroLede = document.getElementById('heroLede');
+const heroDateline = document.getElementById('heroDateline');
+const tendingCount = document.getElementById('tendingCount');
+const mastheadPhoto = document.getElementById('mastheadPhoto');
+const dateToday = document.getElementById('dateToday');
+const seasonText = document.getElementById('seasonText');
+
+const THREADS_FULL = tendingBody.innerHTML;
+const THREADS_QUIET = `
+  <a class="thread" href="#">
+    <div class="thread-row1">
+      <span class="thread-title">About Kaleb</span>
+      <span class="thread-age">1w ago</span>
+    </div>
+    <p class="thread-preview">Iris mentioned that Kaleb was misbehaving at bedtime last night and that he independently decided to go downstairs and sit with Jax on the couch…</p>
+    <span class="thread-tag people">About · Kaleb</span>
+    <span class="media-cue">1 photo</span>
+  </a>`;
+const THREADS_PROMPT = `
+  <div class="quiet-block">
+    <div class="glyph">❦</div>
+    <h3>Nothing needs you this morning.</h3>
+    <p>The book is quiet. When you want a line, a prompt is waiting — or pick up the Pen.</p>
+    <a href="#" class="prompt-cta">Take today's prompt →</a>
+  </div>`;
+
+let current = { state: 'full', time: 'morning', season: 'spring', photo: 'show' };
+
+function render(){
+  const s = STATES[current.state];
+  const t = TIME_VARIANTS[current.time];
+  const sd = SEASON_DATES[current.season];
+
+  // Hero title: combine state+time
+  heroTitle.textContent = current.state === 'full' ? t.hero : s.title;
+  heroLede.innerHTML = s.lede;
+  heroDateline.textContent = `Scott's daily · ${t.dateline}`;
+  tendingCount.textContent = s.threadCount;
+
+  if (s.tending === 'threads') tendingBody.innerHTML = THREADS_FULL;
+  else if (s.tending === 'one') tendingBody.innerHTML = THREADS_QUIET;
+  else tendingBody.innerHTML = THREADS_PROMPT;
+
+  // Season / masthead
+  mastheadPhoto.dataset.season = current.season;
+  mastheadPhoto.style.display = current.photo === 'hide' ? 'none' : 'block';
+  dateToday.textContent = sd.date;
+  seasonText.innerHTML = sd.text;
+}
+
+document.querySelectorAll('.tweak-row').forEach(row => {
+  const key = row.dataset.tweak;
+  row.addEventListener('click', e => {
+    const btn = e.target.closest('.tbtn');
+    if (!btn) return;
+    row.querySelectorAll('.tbtn').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    current[key] = btn.dataset.val;
+    render();
+  });
+});
+render();
+
+/* ------ Host Tweaks integration ------ */
+window.addEventListener('message', (e) => {
+  if (!e.data) return;
+  if (e.data.type === '__activate_edit_mode') {
+    document.getElementById('tweaks').classList.add('open');
+  } else if (e.data.type === '__deactivate_edit_mode') {
+    document.getElementById('tweaks').classList.remove('open');
+  }
+});
+try { window.parent.postMessage({type: '__edit_mode_available'}, '*'); } catch(e){}
+
+/* =================================================================
+   WORKINGS — small interactivity for the reflection scale + plan inputs
+   ================================================================= */
+document.querySelectorAll('[data-scale]').forEach(scale => {
+  scale.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    scale.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+  });
+});
+
+const KINDS = ['active', 'calm', 'together', 'solo'];
+const KIND_LABELS = { active: 'Active', calm: 'Calm', together: 'Together', solo: 'Solo' };
+
+// Cycle a block through Active → Calm → Together → Solo → Active…
+function cycleBlockKind(block) {
+  const current = KINDS.find(k => block.classList.contains(k)) || 'active';
+  const next = KINDS[(KINDS.indexOf(current) + 1) % KINDS.length];
+  KINDS.forEach(k => block.classList.remove(k));
+  block.classList.add(next);
+  const btn = block.querySelector('.kind');
+  if (btn) btn.textContent = KIND_LABELS[next];
+}
+
+// Wire all existing kind buttons + delegate for future-added rows
+document.getElementById('plan').addEventListener('click', e => {
+  const btn = e.target.closest('.kind');
+  if (!btn) return;
+  cycleBlockKind(btn.closest('.block'));
+});
+
+// Plan label inputs: Enter to commit (blur)
+function wireBlockInputs(block) {
+  block.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); inp.blur(); }
+    });
+  });
+}
+document.querySelectorAll('#plan .block').forEach(wireBlockInputs);
+
+// "Add a block" appends a new editable row
+document.querySelector('.block-add').addEventListener('click', () => {
+  const plan = document.getElementById('plan');
+  const last = plan.querySelector('.block:last-child');
+  const newBlock = document.createElement('div');
+  newBlock.className = 'block calm';
+  newBlock.innerHTML = `
+    <div class="time"><input class="t" value="—:—" aria-label="Start time" /><span class="dur">— min</span></div>
+    <div class="swatch"></div>
+    <input class="label" value="" placeholder="What's this block?" />
+    <button class="kind" type="button">Calm</button>
+  `;
+  plan.appendChild(newBlock);
+  wireBlockInputs(newBlock);
+  // Focus the new label so the user can type immediately
+  newBlock.querySelector('.label').focus();
+});
+</script>
+
+</body>
+</html>

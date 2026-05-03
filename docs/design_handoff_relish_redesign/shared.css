@@ -1,0 +1,85 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Relish — shared styles across all rooms
+   Broadsheet / dashboard / paper-and-ink
+   ═══════════════════════════════════════════════════════════════════ */
+:root{
+  --r-paper:#FBF8F2; --r-paper-soft:#F7F5F0; --r-cream:#F5F0E8;
+  --r-cream-deep:#ECEAE5; --r-cream-warm:#E8DDC8;
+  --r-leather:#14100C; --r-leather-2:#2A2520;
+  --r-ink:#3A3530; --r-ink-2:#2A2522;
+  --r-text-2:#5C5347; --r-text-3:#5F564B; --r-text-4:#6B6254;
+  --r-text-5:#887C68; --r-text-6:#9A8E7A;
+  --r-rule-1:#A8988A; --r-rule-2:#B5A99A; --r-rule-3:#C0B49F;
+  --r-rule-4:#D8D3CA; --r-rule-5:#E5E0D8;
+  --r-sage:#7C9082; --r-sage-deep:#4A5D50;
+  --r-ember:#C9864C; --r-ember-soft:#D4A872;
+  --r-burgundy:#8C4A3E; --r-amber:#C9A84C;
+  --r-tint-sage:rgba(124,144,130,0.18);
+  --r-tint-ember:rgba(201,134,76,0.14);
+  --r-tint-burgundy:rgba(140,74,62,0.16);
+  --r-tint-amber:rgba(201,168,76,0.18);
+  --r-tint-ink:rgba(58,53,48,0.08);
+  --r-serif:'Cormorant Garamond',Georgia,serif;
+  --r-sans:'DM Sans',system-ui,sans-serif;
+  --r-mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --r-ease-ink:cubic-bezier(0.22,1,0.36,1);
+  --r-shadow-card:0 1px 2px rgba(60,50,40,0.04),0 6px 18px rgba(60,50,40,0.05);
+  --r-shadow-pen:0 2px 6px rgba(20,16,12,0.18),0 12px 28px rgba(20,16,12,0.22);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--r-cream);color:var(--r-ink);font-family:var(--r-sans);-webkit-font-smoothing:antialiased;}
+button{font-family:inherit;color:inherit;border:none;background:none;padding:0;cursor:pointer;}
+a{color:inherit;text-decoration:none;}
+
+/* ═══ SHELL ═══ */
+.topnav{height:68px;background:var(--r-cream);border-bottom:1px solid var(--r-rule-5);position:sticky;top:0;z-index:30;}
+.topnav-inner{max-width:1440px;margin:0 auto;padding:0 40px;height:100%;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:40px;}
+.wordmark{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:28px;color:var(--r-ink);line-height:1;justify-self:start;}
+.rooms{display:flex;gap:40px;align-items:baseline;justify-self:center;}
+.room{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:17px;color:var(--r-ink);opacity:0.55;border-bottom:1px solid transparent;padding:0 0 3px;transition:opacity 140ms var(--r-ease-ink);}
+.room:hover{opacity:0.85;}
+.room.active{opacity:1;border-bottom-color:var(--r-ink);}
+.user{justify-self:end;display:inline-flex;align-items:center;gap:10px;font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-3);}
+.user::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--r-sage);}
+
+.page{max-width:1440px;margin:0 auto;padding:0 40px 160px;}
+
+/* ═══ TYPOGRAPHY ═══ */
+.eyebrow{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;color:var(--r-text-4);}
+.eyebrow-sm{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-5);}
+.display{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:clamp(56px,7vw,104px);line-height:0.96;letter-spacing:-0.025em;color:var(--r-ink);margin:0;}
+.h1-serif{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:clamp(40px,4.5vw,60px);line-height:1.02;letter-spacing:-0.02em;color:var(--r-ink);margin:0;}
+.h2-serif{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:44px;color:var(--r-ink);margin:0;letter-spacing:-0.015em;line-height:1;}
+.h3-serif{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:28px;line-height:1.15;color:var(--r-ink);margin:0;letter-spacing:-0.01em;}
+.lede{font-family:var(--r-serif);font-weight:400;font-size:22px;line-height:1.5;color:var(--r-text-2);margin:0;}
+.lede em{font-style:italic;color:var(--r-ink);}
+
+/* ═══ PILL CTA ═══ */
+.pill{display:inline-flex;align-items:center;gap:10px;padding:10px 18px 10px 16px;border:1px solid var(--r-rule-3);border-radius:999px;font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--r-ink);background:var(--r-paper);transition:background 160ms var(--r-ease-ink),transform 160ms var(--r-ease-ink);}
+.pill:hover{background:var(--r-cream-warm);transform:translateY(-1px);}
+.pill.dark{background:var(--r-leather);color:var(--r-paper);border-color:var(--r-leather);}
+.pill.dark:hover{background:var(--r-leather-2);}
+.pill.ember{color:var(--r-ember);border-color:var(--r-ember);}
+
+/* ═══ PEN (floating) ═══ */
+.pen{position:fixed;right:36px;bottom:36px;z-index:40;width:60px;height:60px;border-radius:50%;background:var(--r-leather);color:var(--r-paper);box-shadow:var(--r-shadow-pen);display:flex;align-items:center;justify-content:center;transition:transform 140ms var(--r-ease-ink);}
+.pen:hover{transform:translateY(-2px);}
+.pen svg{width:22px;height:22px;}
+
+/* ═══ COLOPHON FOOTER ═══ */
+.colophon{text-align:center;padding:80px 0 40px;font-family:var(--r-serif);font-style:italic;color:var(--r-text-5);font-size:14px;}
+.colophon .fleuron{display:block;font-size:20px;margin-bottom:10px;color:var(--r-rule-2);}
+
+/* ═══ MASTHEAD STRIP (for pages that use one) ═══ */
+.masthead-strip{
+  background:var(--r-paper);border:1px solid var(--r-rule-4);
+  padding:18px 32px;display:grid;align-items:center;gap:0;
+}
+.masthead-cell{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.masthead-cell.align-c{align-items:center;text-align:center;}
+.masthead-cell.align-r{align-items:flex-end;text-align:right;}
+.masthead-divider{width:1px;height:32px;background:var(--r-rule-5);justify-self:center;}
+.masthead-eyebrow{font-family:var(--r-sans);font-size:10px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-5);}
+.masthead-value{font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:22px;color:var(--r-ink);line-height:1;letter-spacing:-0.005em;}
+.masthead-value.big{font-size:30px;}
+.masthead-value .sub{font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:18px;color:var(--r-text-4);}

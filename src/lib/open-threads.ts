@@ -86,6 +86,10 @@ export interface OpenThread {
   // When the thread was opened (for sorting — newest open first).
   openedAt?: Date;
   closingAction: ClosingAction;
+  // For reason === 'overdue_ritual', the kind of ritual (solo_weekly /
+  // partner_biweekly / family_monthly / repair). Lets the cover render
+  // a differentiating title when the user has more than one ritual due.
+  ritualKind?: string;
 }
 
 // Precedence when the same underlying object matches more than one
@@ -143,6 +147,7 @@ export function listOpenThreads(sources: Sources): OpenThread[] {
         label: 'Open the ritual',
         href: `/rituals/${r.ritualId}/run`,
       },
+      ritualKind: r.kind,
     });
   }
 

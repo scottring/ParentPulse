@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Relish · Design System (Chunk 1)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+
+<!-- Canonical tokens — mirrors src/design/tokens.css -->
+<style>
+:root {
+  /* paper & ink */
+  --r-paper:#FBF8F2; --r-paper-soft:#F7F5F0; --r-cream:#F5F0E8;
+  --r-cream-deep:#ECEAE5; --r-cream-warm:#E8DDC8;
+  --r-leather:#14100C; --r-leather-2:#2A2520;
+  --r-ink:#3A3530; --r-ink-2:#2A2522;
+  --r-text-2:#5C5347; --r-text-3:#5F564B; --r-text-4:#6B6254;
+  --r-text-5:#746856; --r-text-6:#7A6E5C;
+  --r-ink-reversed:#F5ECD8; --r-text-reversed-2:#D4C5A8;
+  --r-text-reversed-3:#C8B894; --r-text-reversed-4:#8B7D64;
+  /* rules */
+  --r-rule-1:#A8988A; --r-rule-2:#B5A99A; --r-rule-3:#C0B49F;
+  --r-rule-4:#D8D3CA; --r-rule-5:#E5E0D8;
+  --r-rule-reversed:rgba(200,184,148,0.22);
+  /* accents */
+  --r-sage:#7C9082; --r-sage-2:#8BAF8E;
+  --r-ember:#C9864C; --r-ember-soft:#D4A872;
+  --r-burgundy:#8C4A3E; --r-amber:#C9A84C; --r-warn:#D07070;
+  --r-tint-sage:rgba(124,144,130,0.18);
+  --r-tint-ember:rgba(201,134,76,0.16);
+  --r-tint-burgundy:rgba(140,74,62,0.16);
+  --r-tint-amber:rgba(201,168,76,0.18);
+  --r-tint-ink:rgba(58,53,48,0.08);
+  /* type */
+  --r-serif:'Cormorant Garamond',Georgia,serif;
+  --r-sans:'DM Sans',system-ui,sans-serif;
+  --r-mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --r-type-wordmark:34px;
+  --r-type-display-1:clamp(56px,7vw,96px);
+  --r-type-display-2:clamp(40px,5vw,64px);
+  --r-type-h1:clamp(32px,3.2vw,44px);
+  --r-type-h2:clamp(24px,2.2vw,30px);
+  --r-type-lede:clamp(20px,1.8vw,26px);
+  --r-type-body:17px; --r-type-body-sm:15px;
+  --r-type-small:14px; --r-type-caption:13px; --r-type-micro:12px;
+  --r-leading-tight:1.1; --r-leading-snug:1.3;
+  --r-leading-body:1.6; --r-leading-loose:1.75;
+  /* space */
+  --r-space-1:4px; --r-space-2:8px; --r-space-3:16px;
+  --r-space-4:24px; --r-space-5:40px; --r-space-6:64px; --r-space-7:96px;
+  --r-gutter:32px; --r-page-max:1440px; --r-column-max:68ch;
+  /* radii */
+  --r-radius-1:2px; --r-radius-2:3px; --r-radius-3:6px; --r-radius-pill:999px;
+  /* shadows */
+  --r-shadow-page:0 1px 0 rgba(60,48,28,0.03),0 2px 6px rgba(60,48,28,0.05),0 12px 44px rgba(60,48,28,0.09),0 36px 80px rgba(60,48,28,0.08);
+  --r-shadow-card:0 1px 2px rgba(60,50,40,0.04),0 6px 18px rgba(60,50,40,0.05);
+  --r-shadow-pen:0 2px 6px rgba(20,16,12,0.18),0 12px 28px rgba(20,16,12,0.22);
+  /* motion */
+  --r-ease-ink:cubic-bezier(0.22,1,0.36,1);
+  --r-dur-quick:140ms; --r-dur-page:260ms; --r-dur-settle:420ms;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--r-cream);color:var(--r-ink);font-family:var(--r-sans);}
+a{color:inherit;}
+.r-link:hover{border-bottom-color:currentColor!important;}
+.r-drop-cap::first-letter{
+  font-family:var(--r-serif);font-size:5.2em;font-weight:400;font-style:italic;
+  float:left;line-height:0.88;padding:4px 10px 0 0;color:var(--r-ink);
+}
+/* Page layout */
+.ds-page{max-width:1200px;margin:0 auto;padding:80px 48px 120px;}
+.ds-hero{border-bottom:1px solid var(--r-rule-3);padding-bottom:40px;margin-bottom:80px;}
+.ds-section{margin-bottom:80px;scroll-margin-top:80px;}
+.ds-section-head{
+  display:grid;grid-template-columns:200px 1fr;gap:32px;
+  margin-bottom:32px;padding-bottom:16px;border-bottom:1px dotted var(--r-rule-3);
+}
+.ds-section-num{
+  font-family:var(--r-serif);font-style:italic;font-size:42px;
+  color:var(--r-text-5);line-height:1;
+}
+.ds-section-title{
+  font-family:var(--r-serif);font-style:italic;font-size:36px;
+  color:var(--r-ink);margin:0;line-height:1;
+}
+.ds-section-desc{
+  font-family:var(--r-sans);font-size:14px;color:var(--r-text-3);
+  line-height:1.6;margin-top:8px;max-width:60ch;
+}
+.ds-specimen{
+  border:1px solid var(--r-rule-5);border-radius:var(--r-radius-2);
+  background:var(--r-paper);margin-bottom:24px;overflow:hidden;
+}
+.ds-specimen-label{
+  padding:10px 20px;background:var(--r-cream);border-bottom:1px solid var(--r-rule-5);
+  display:flex;justify-content:space-between;align-items:baseline;gap:16px;
+}
+.ds-specimen-label .name{
+  font-family:var(--r-sans);font-size:12px;font-weight:600;
+  letter-spacing:0.18em;text-transform:uppercase;color:var(--r-text-3);
+}
+.ds-specimen-label .usage{
+  font-family:var(--r-serif);font-style:italic;font-size:13px;color:var(--r-text-5);
+}
+.ds-specimen-body{padding:32px;}
+.ds-specimen-body.compact{padding:20px 32px;}
+.ds-specimen-body.dark{background:var(--r-leather);color:var(--r-ink-reversed);}
+.ds-row{display:flex;flex-wrap:wrap;gap:16px;align-items:center;}
+.ds-col{display:flex;flex-direction:column;gap:16px;align-items:flex-start;}
+.ds-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+.ds-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.ds-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+.ds-swatch{
+  height:80px;border-radius:var(--r-radius-2);
+  border:1px solid var(--r-rule-5);position:relative;
+}
+.ds-swatch-label{
+  padding:10px 4px 2px;font-family:var(--r-sans);font-size:11px;
+  display:flex;justify-content:space-between;gap:8px;color:var(--r-text-4);
+}
+.ds-swatch-label .tok{font-weight:600;color:var(--r-text-2);letter-spacing:0.04em;}
+.ds-swatch-label .hex{font-family:var(--r-mono);}
+.ds-type-specimen{
+  display:grid;grid-template-columns:140px 1fr;gap:24px;align-items:baseline;
+  padding:16px 0;border-bottom:1px dotted var(--r-rule-5);
+}
+.ds-type-specimen:last-child{border-bottom:none;}
+.ds-type-meta{
+  font-family:var(--r-sans);font-size:11px;color:var(--r-text-4);
+  letter-spacing:0.12em;text-transform:uppercase;padding-top:8px;
+}
+.ds-type-meta code{
+  font-family:var(--r-mono);font-size:10px;color:var(--r-text-5);
+  display:block;margin-top:4px;letter-spacing:0;text-transform:none;
+}
+/* toc */
+.ds-toc{
+  position:sticky;top:0;
+  background:var(--r-cream);
+  border-bottom:1px solid var(--r-rule-4);
+  padding:16px 48px;
+  z-index:5;
+  display:flex;gap:24px;align-items:baseline;flex-wrap:wrap;
+  font-family:var(--r-sans);font-size:12px;font-weight:600;
+  letter-spacing:0.18em;text-transform:uppercase;
+}
+.ds-toc .mark{font-family:var(--r-serif);font-style:italic;font-size:20px;text-transform:none;letter-spacing:-0.01em;font-weight:300;color:var(--r-ink);margin-right:12px;}
+.ds-toc a{color:var(--r-text-4);text-decoration:none;padding:2px 0;border-bottom:1px solid transparent;}
+.ds-toc a:hover{color:var(--r-ink);border-bottom-color:currentColor;}
+</style>
+</head>
+<body>
+
+<nav class="ds-toc" aria-label="Design system contents">
+  <span class="mark">Relish</span>
+  <a href="#tokens-color">I · Color</a>
+  <a href="#tokens-type">II · Type</a>
+  <a href="#tokens-space">III · Space</a>
+  <a href="#tokens-rules">IV · Rules</a>
+  <a href="#comp-surfaces">V · Surfaces</a>
+  <a href="#comp-controls">VI · Controls</a>
+  <a href="#comp-spread">VII · Spread</a>
+  <a href="#notes">Notes</a>
+</nav>
+
+<main class="ds-page">
+
+  <!-- HERO -->
+  <header class="ds-hero">
+    <div style="font-family:var(--r-sans);font-size:13px;font-weight:700;letter-spacing:0.28em;text-transform:uppercase;color:var(--r-text-4);margin-bottom:24px;">Chunk 1 of 5 · Foundation</div>
+    <h1 style="font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:clamp(56px,7vw,96px);line-height:0.98;letter-spacing:-0.015em;margin:0;max-width:18ch;">The Relish design system.</h1>
+    <p style="font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:clamp(20px,1.8vw,26px);line-height:1.35;color:var(--r-text-2);max-width:56ch;margin:24px 0 0;">Tokens and primitives, rendered from the canonical files in <code style="font-family:var(--r-mono);font-style:normal;font-size:0.85em;color:var(--r-text-5);">src/design/</code>. Every decision the deck made, now in code.</p>
+    <div style="margin-top:40px;display:flex;gap:40px;flex-wrap:wrap;font-family:var(--r-sans);font-size:13px;color:var(--r-text-4);">
+      <div><span style="font-weight:600;color:var(--r-text-2);display:block;letter-spacing:0.08em;text-transform:uppercase;font-size:11px;margin-bottom:4px;">Fonts</span>Cormorant Garamond · DM Sans</div>
+      <div><span style="font-weight:600;color:var(--r-text-2);display:block;letter-spacing:0.08em;text-transform:uppercase;font-size:11px;margin-bottom:4px;">Paper</span>#FBF8F2 on #F5F0E8</div>
+      <div><span style="font-weight:600;color:var(--r-text-2);display:block;letter-spacing:0.08em;text-transform:uppercase;font-size:11px;margin-bottom:4px;">Stack</span>16 · 24 · 40 · 64</div>
+      <div><span style="font-weight:600;color:var(--r-text-2);display:block;letter-spacing:0.08em;text-transform:uppercase;font-size:11px;margin-bottom:4px;">Radii</span>2 · 3 · 6 (pills only otherwise)</div>
+    </div>
+  </header>
+
+  <!-- ═══════ I · COLOR ═══════ -->
+  <section class="ds-section" id="tokens-color">
+    <div class="ds-section-head">
+      <div class="ds-section-num">I.</div>
+      <div>
+        <h2 class="ds-section-title">Color</h2>
+        <p class="ds-section-desc">Paper, ink, and restrained accents. Rules are part of the color system — a page without hairlines isn't a page.</p>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">Paper &amp; surface</span><span class="usage">rooms and cards</span></div>
+      <div class="ds-specimen-body">
+        <div class="ds-grid-4">
+          <div><div class="ds-swatch" style="background:var(--r-paper);"></div><div class="ds-swatch-label"><span class="tok">paper</span><span class="hex">#FBF8F2</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-paper-soft);"></div><div class="ds-swatch-label"><span class="tok">paper-soft</span><span class="hex">#F7F5F0</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-cream);"></div><div class="ds-swatch-label"><span class="tok">cream</span><span class="hex">#F5F0E8</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-cream-deep);"></div><div class="ds-swatch-label"><span class="tok">cream-deep</span><span class="hex">#ECEAE5</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-cream-warm);"></div><div class="ds-swatch-label"><span class="tok">cream-warm</span><span class="hex">#E8DDC8</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-leather-2);border-color:var(--r-leather);"></div><div class="ds-swatch-label"><span class="tok">leather-2</span><span class="hex">#2A2520</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-leather);border-color:var(--r-leather);"></div><div class="ds-swatch-label"><span class="tok">leather</span><span class="hex">#14100C</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">Ink (text)</span><span class="usage">primary, muted, quietest</span></div>
+      <div class="ds-specimen-body">
+        <div class="ds-grid-4">
+          <div><div class="ds-swatch" style="background:var(--r-ink);"></div><div class="ds-swatch-label"><span class="tok">ink</span><span class="hex">#3A3530</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-ink-2);"></div><div class="ds-swatch-label"><span class="tok">ink-2</span><span class="hex">#2A2522</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-text-2);"></div><div class="ds-swatch-label"><span class="tok">text-2</span><span class="hex">#5C5347</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-text-3);"></div><div class="ds-swatch-label"><span class="tok">text-3</span><span class="hex">#5F564B</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-text-4);"></div><div class="ds-swatch-label"><span class="tok">text-4</span><span class="hex">#6B6254</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-text-5);"></div><div class="ds-swatch-label"><span class="tok">text-5</span><span class="hex">#746856</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-text-6);"></div><div class="ds-swatch-label"><span class="tok">text-6</span><span class="hex">#7A6E5C</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">Reversed (on leather)</span><span class="usage">dark-room contexts</span></div>
+      <div class="ds-specimen-body dark">
+        <div class="ds-grid-4">
+          <div><div class="ds-swatch" style="background:var(--r-ink-reversed);border-color:var(--r-rule-reversed);"></div><div class="ds-swatch-label" style="color:var(--r-text-reversed-3);"><span class="tok" style="color:var(--r-text-reversed-2);">ink-reversed</span><span class="hex">#F5ECD8</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-text-reversed-2);border-color:var(--r-rule-reversed);"></div><div class="ds-swatch-label" style="color:var(--r-text-reversed-3);"><span class="tok" style="color:var(--r-text-reversed-2);">reversed-2</span><span class="hex">#D4C5A8</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-text-reversed-3);border-color:var(--r-rule-reversed);"></div><div class="ds-swatch-label" style="color:var(--r-text-reversed-3);"><span class="tok" style="color:var(--r-text-reversed-2);">reversed-3</span><span class="hex">#C8B894</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-text-reversed-4);border-color:var(--r-rule-reversed);"></div><div class="ds-swatch-label" style="color:var(--r-text-reversed-3);"><span class="tok" style="color:var(--r-text-reversed-2);">reversed-4</span><span class="hex">#8B7D64</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">Accents</span><span class="usage">used sparingly — mostly as ink</span></div>
+      <div class="ds-specimen-body">
+        <div class="ds-grid-4">
+          <div><div class="ds-swatch" style="background:var(--r-sage);"></div><div class="ds-swatch-label"><span class="tok">sage</span><span class="hex">#7C9082</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-sage-2);"></div><div class="ds-swatch-label"><span class="tok">sage-2</span><span class="hex">#8BAF8E</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-ember);"></div><div class="ds-swatch-label"><span class="tok">ember</span><span class="hex">#C9864C</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-ember-soft);"></div><div class="ds-swatch-label"><span class="tok">ember-soft</span><span class="hex">#D4A872</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-burgundy);"></div><div class="ds-swatch-label"><span class="tok">burgundy</span><span class="hex">#8C4A3E</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-amber);"></div><div class="ds-swatch-label"><span class="tok">amber</span><span class="hex">#C9A84C</span></div></div>
+          <div><div class="ds-swatch" style="background:var(--r-warn);"></div><div class="ds-swatch-label"><span class="tok">warn</span><span class="hex">#D07070</span></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ II · TYPE ═══════ -->
+  <section class="ds-section" id="tokens-type">
+    <div class="ds-section-head">
+      <div class="ds-section-num">II.</div>
+      <div>
+        <h2 class="ds-section-title">Type</h2>
+        <p class="ds-section-desc">Two families. Cormorant Garamond for all display and editorial voice; DM Sans for labels, buttons, UI, and body where the sans voice is needed. Italic serif at display sizes carries the app's character.</p>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">Display scale</span><span class="usage">chapters &amp; titles</span></div>
+      <div class="ds-specimen-body">
+        <div class="ds-type-specimen">
+          <div class="ds-type-meta">Display 1<code>--r-type-display-1<br/>56→96px · 0.98</code></div>
+          <div style="font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:clamp(56px,7vw,96px);line-height:0.98;letter-spacing:-0.015em;color:var(--r-ink);">The room is the answer.</div>
+        </div>
+        <div class="ds-type-specimen">
+          <div class="ds-type-meta">Display 2<code>--r-type-display-2<br/>40→64px · 1.02</code></div>
+          <div style="font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:clamp(40px,5vw,64px);line-height:1.02;letter-spacing:-0.01em;color:var(--r-ink);">A volume — the manual, legible.</div>
+        </div>
+        <div class="ds-type-specimen">
+          <div class="ds-type-meta">H1<code>--r-type-h1<br/>32→44px · 1.08</code></div>
+          <div style="font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:clamp(32px,3.2vw,44px);line-height:1.08;color:var(--r-ink);">Three rooms, three questions.</div>
+        </div>
+        <div class="ds-type-specimen">
+          <div class="ds-type-meta">H2<code>--r-type-h2<br/>24→30px · 1.15</code></div>
+          <div style="font-family:var(--r-serif);font-style:italic;font-weight:400;font-size:clamp(24px,2.2vw,30px);line-height:1.15;color:var(--r-ink);">Today's practice · fifteen minutes</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">Lede &amp; body</span><span class="usage">the reading experience</span></div>
+      <div class="ds-specimen-body">
+        <div class="ds-type-specimen">
+          <div class="ds-type-meta">Lede<code>--r-type-lede<br/>20→26px · 1.35</code></div>
+          <div style="font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:clamp(20px,1.8vw,26px);line-height:1.35;color:var(--r-text-2);max-width:48ch;">A warm, tangible, unhurried place to understand the people you love.</div>
+        </div>
+        <div class="ds-type-specimen">
+          <div class="ds-type-meta">Body<code>--r-type-body<br/>17px · 1.6</code></div>
+          <div style="font-family:var(--r-sans);font-size:17px;line-height:1.6;color:var(--r-text-2);max-width:62ch;">The Workbook is where the work happens — one practice at a time, drop-capped and italicized like a reading, not a form. The Family Manual is a rare-book index: one tap opens a volume in place. The Archive is a single quiet room for the record.</div>
+        </div>
+        <div class="ds-type-specimen">
+          <div class="ds-type-meta">Body sm<code>--r-type-body-sm<br/>15px · 1.55</code></div>
+          <div style="font-family:var(--r-sans);font-size:15px;line-height:1.55;color:var(--r-text-3);max-width:62ch;">Smaller body size for dense passages — spec sheets, inline help, table cells. Still comfortable at arm's length.</div>
+        </div>
+        <div class="ds-type-specimen">
+          <div class="ds-type-meta">Small<code>--r-type-small<br/>14px · 1.55</code></div>
+          <div style="font-family:var(--r-sans);font-size:14px;line-height:1.55;color:var(--r-text-4);">Captions, meta, footnotes. Never primary copy.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">Labels</span><span class="usage">eyebrow · chapter · folio · wordmark</span></div>
+      <div class="ds-specimen-body">
+        <div class="ds-type-specimen">
+          <div class="ds-type-meta">Wordmark<code>Italic 300 · 34px</code></div>
+          <div style="font-family:var(--r-serif);font-style:italic;font-weight:300;font-size:34px;letter-spacing:-0.015em;color:var(--r-ink);line-height:1;">Relish</div>
+        </div>
+        <div class="ds-type-specimen">
+          <div class="ds-type-meta">Eyebrow<code>Sans 700 · 13px · 0.28em</code></div>
+          <div style="font-family:var(--r-sans);font-size:13px;font-weight:700;letter-spacing:0.28em;text-transform:uppercase;color:var(--r-text-4);display:flex;align-items:center;gap:14px;"><span style="width:36px;height:1px;background:var(--r-text-4);"></span>Part two · the diagnosis</div>
+        </div>
+        <div class="ds-type-specimen">
+          <div class="ds-type-meta">Chapter<code>Sans 700 · 14px · 0.22em</code></div>
+          <div style="font-family:var(--r-sans);font-size:14px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-3);">I. In Progress</div>
+        </div>
+        <div class="ds-type-specimen">
+          <div class="ds-type-meta">Folio<code>Italic 400 · 16px</code></div>
+          <div style="font-family:var(--r-serif);font-style:italic;font-size:16px;color:var(--r-text-5);">p. 14</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ III · SPACE ═══════ -->
+  <section class="ds-section" id="tokens-space">
+    <div class="ds-section-head">
+      <div class="ds-section-num">III.</div>
+      <div>
+        <h2 class="ds-section-title">Space</h2>
+        <p class="ds-section-desc">One vertical stack: 16 · 24 · 40 · 64. Never anything else. The gutter is 32. The page maxes at 1440.</p>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">Stack</span><span class="usage">use only these four values</span></div>
+      <div class="ds-specimen-body">
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="display:grid;grid-template-columns:80px 1fr;gap:16px;align-items:center;">
+            <span style="font-family:var(--r-sans);font-size:12px;color:var(--r-text-3);font-weight:600;letter-spacing:0.08em;text-transform:uppercase;">16 · sp-3</span>
+            <div style="height:16px;background:var(--r-ink);width:16px;"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:80px 1fr;gap:16px;align-items:center;">
+            <span style="font-family:var(--r-sans);font-size:12px;color:var(--r-text-3);font-weight:600;letter-spacing:0.08em;text-transform:uppercase;">24 · sp-4</span>
+            <div style="height:16px;background:var(--r-ink);width:24px;"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:80px 1fr;gap:16px;align-items:center;">
+            <span style="font-family:var(--r-sans);font-size:12px;color:var(--r-text-3);font-weight:600;letter-spacing:0.08em;text-transform:uppercase;">40 · sp-5</span>
+            <div style="height:16px;background:var(--r-ink);width:40px;"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:80px 1fr;gap:16px;align-items:center;">
+            <span style="font-family:var(--r-sans);font-size:12px;color:var(--r-text-3);font-weight:600;letter-spacing:0.08em;text-transform:uppercase;">64 · sp-6</span>
+            <div style="height:16px;background:var(--r-ink);width:64px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">Radii</span><span class="usage">books don't have pill corners</span></div>
+      <div class="ds-specimen-body">
+        <div class="ds-row" style="gap:24px;">
+          <div style="text-align:center;"><div style="width:80px;height:80px;background:var(--r-paper-soft);border:1px solid var(--r-rule-4);border-radius:2px;"></div><div style="font-family:var(--r-sans);font-size:11px;color:var(--r-text-4);letter-spacing:0.08em;text-transform:uppercase;margin-top:8px;">r-1 · 2px</div></div>
+          <div style="text-align:center;"><div style="width:80px;height:80px;background:var(--r-paper-soft);border:1px solid var(--r-rule-4);border-radius:3px;"></div><div style="font-family:var(--r-sans);font-size:11px;color:var(--r-text-4);letter-spacing:0.08em;text-transform:uppercase;margin-top:8px;">r-2 · 3px <em style="font-style:italic;text-transform:none;letter-spacing:0;">default</em></div></div>
+          <div style="text-align:center;"><div style="width:80px;height:80px;background:var(--r-paper-soft);border:1px solid var(--r-rule-4);border-radius:6px;"></div><div style="font-family:var(--r-sans);font-size:11px;color:var(--r-text-4);letter-spacing:0.08em;text-transform:uppercase;margin-top:8px;">r-3 · 6px</div></div>
+          <div style="text-align:center;"><div style="width:120px;height:40px;background:var(--r-paper-soft);border:1px solid var(--r-rule-4);border-radius:999px;"></div><div style="font-family:var(--r-sans);font-size:11px;color:var(--r-text-4);letter-spacing:0.08em;text-transform:uppercase;margin-top:8px;">pill · 999 <em style="font-style:italic;text-transform:none;letter-spacing:0;">pills only</em></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ IV · RULES ═══════ -->
+  <section class="ds-section" id="tokens-rules">
+    <div class="ds-section-head">
+      <div class="ds-section-num">IV.</div>
+      <div>
+        <h2 class="ds-section-title">Rules</h2>
+        <p class="ds-section-desc">Rules are the primary divider. Hairlines for default separation; triple rule for section starts; fleuron or asterism when a rule would feel too mechanical. Dotted rules only in the Archive.</p>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">Variants</span><span class="usage">hairline · triple · asterism · fleuron</span></div>
+      <div class="ds-specimen-body">
+        <div style="display:flex;flex-direction:column;gap:40px;">
+          <div>
+            <div style="font-family:var(--r-sans);font-size:11px;color:var(--r-text-4);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:12px;">Hairline · default weight</div>
+            <hr style="border:0;height:1px;background:var(--r-rule-3);margin:0;"/>
+          </div>
+          <div>
+            <div style="font-family:var(--r-sans);font-size:11px;color:var(--r-text-4);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:12px;">Triple rule · opens a section</div>
+            <div style="position:relative;height:11px;"><div style="position:absolute;left:0;right:0;top:0;height:1px;background:var(--r-rule-1);"></div><div style="position:absolute;left:0;right:0;top:5px;height:3px;background:var(--r-rule-1);"></div><div style="position:absolute;left:0;right:0;top:10px;height:1px;background:var(--r-rule-1);"></div></div>
+          </div>
+          <div>
+            <div style="font-family:var(--r-sans);font-size:11px;color:var(--r-text-4);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:12px;">Asterism · soft pause in prose</div>
+            <div style="text-align:center;font-family:var(--r-serif);color:var(--r-rule-1);font-size:18px;letter-spacing:0.4em;">⁂</div>
+          </div>
+          <div>
+            <div style="font-family:var(--r-sans);font-size:11px;color:var(--r-text-4);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:12px;">Fleuron · chapter ornament</div>
+            <div style="text-align:center;font-family:var(--r-serif);color:var(--r-rule-1);font-size:22px;">❦</div>
+          </div>
+          <div>
+            <div style="font-family:var(--r-sans);font-size:11px;color:var(--r-text-4);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:12px;">Dotted · Archive index only</div>
+            <div style="border-bottom:1px dotted var(--r-rule-4);padding-bottom:4px;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:baseline;font-family:var(--r-serif);font-size:19px;"><em style="font-style:italic;color:var(--r-text-5);">i.</em><span>Therapist report — thirty days</span><em style="font-style:italic;color:var(--r-text-5);font-size:15px;">Apr 5</em></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ V · SURFACES ═══════ -->
+  <section class="ds-section" id="comp-surfaces">
+    <div class="ds-section-head">
+      <div class="ds-section-num">V.</div>
+      <div>
+        <h2 class="ds-section-title">Surfaces</h2>
+        <p class="ds-section-desc">Cards are paper on cream. Lift is rare — only used when a card is being actively interacted with. Bands are how we divide vertical sections without a rule doing the work alone.</p>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">Card</span><span class="usage">paper · cream · warm · leather</span></div>
+      <div class="ds-specimen-body" style="background:var(--r-cream);">
+        <div class="ds-grid-2">
+          <div style="background:var(--r-paper);border:1px solid var(--r-rule-4);border-radius:3px;padding:24px;">
+            <div style="font-family:var(--r-sans);font-size:11px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-3);margin-bottom:8px;">Paper · default</div>
+            <div style="font-family:var(--r-serif);font-style:italic;font-size:22px;color:var(--r-ink);line-height:1.2;">A card on cream, with paper inside.</div>
+            <p style="font-family:var(--r-sans);font-size:14px;color:var(--r-text-3);line-height:1.55;margin:12px 0 0;">Used for most content blocks — one practice, one volume preview, one report row.</p>
+          </div>
+          <div style="background:var(--r-paper-soft);border:1px solid var(--r-rule-4);border-radius:3px;padding:24px;">
+            <div style="font-family:var(--r-sans);font-size:11px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-3);margin-bottom:8px;">Cream · inset panel</div>
+            <div style="font-family:var(--r-serif);font-style:italic;font-size:22px;color:var(--r-ink);line-height:1.2;">A slightly warmer inset.</div>
+            <p style="font-family:var(--r-sans);font-size:14px;color:var(--r-text-3);line-height:1.55;margin:12px 0 0;">For the "right page" of a spread, or nested content where the reader is going deeper.</p>
+          </div>
+          <div style="background:var(--r-cream-warm);border:1px solid var(--r-rule-3);border-radius:3px;padding:24px;">
+            <div style="font-family:var(--r-sans);font-size:11px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-3);margin-bottom:8px;">Warm · accent block</div>
+            <div style="font-family:var(--r-serif);font-style:italic;font-size:22px;color:var(--r-ink);line-height:1.2;">For moments that want warmth.</div>
+            <p style="font-family:var(--r-sans);font-size:14px;color:var(--r-text-3);line-height:1.55;margin:12px 0 0;">A quote card, a today-practice banner, a rare celebration.</p>
+          </div>
+          <div style="background:var(--r-leather);border:1px solid var(--r-rule-reversed);border-radius:3px;padding:24px;color:var(--r-ink-reversed);">
+            <div style="font-family:var(--r-sans);font-size:11px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-reversed-3);margin-bottom:8px;">Leather · reversed</div>
+            <div style="font-family:var(--r-serif);font-style:italic;font-size:22px;color:var(--r-ink-reversed);line-height:1.2;">The Archive's quiet room.</div>
+            <p style="font-family:var(--r-sans);font-size:14px;color:var(--r-text-reversed-3);line-height:1.55;margin:12px 0 0;">Used for the Archive only, and for the pen when floating over light content.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ═══════ VI · CONTROLS ═══════ -->
+  <section class="ds-section" id="comp-controls">
+    <div class="ds-section-head">
+      <div class="ds-section-num">VI.</div>
+      <div>
+        <h2 class="ds-section-title">Controls</h2>
+        <p class="ds-section-desc">Buttons are rare. Most actions are italic-serif text links with an arrow. Pills are tags, not buttons. The Pen is the global capture — one floating circle, always on the right.</p>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">Button</span><span class="usage">default · primary · quiet · sizes</span></div>
+      <div class="ds-specimen-body">
+        <div class="ds-row" style="margin-bottom:24px;">
+          <button style="display:inline-flex;align-items:center;gap:8px;font-family:var(--r-sans);font-size:13px;font-weight:500;border-radius:6px;padding:6px 14px;border:1px solid var(--r-rule-3);background:var(--r-paper);color:var(--r-ink);cursor:pointer;">Small</button>
+          <button style="display:inline-flex;align-items:center;gap:8px;font-family:var(--r-sans);font-size:15px;font-weight:500;border-radius:6px;padding:10px 20px;border:1px solid var(--r-rule-3);background:var(--r-paper);color:var(--r-ink);cursor:pointer;">Default</button>
+          <button style="display:inline-flex;align-items:center;gap:8px;font-family:var(--r-sans);font-size:17px;font-weight:500;border-radius:6px;padding:14px 26px;border:1px solid var(--r-rule-3);background:var(--r-paper);color:var(--r-ink);cursor:pointer;">Large</button>
+        </div>
+        <div class="ds-row" style="margin-bottom:24px;">
+          <button style="display:inline-flex;align-items:center;gap:8px;font-family:var(--r-sans);font-size:15px;font-weight:500;border-radius:6px;padding:10px 20px;border:1px solid var(--r-rule-3);background:var(--r-paper);color:var(--r-ink);cursor:pointer;">Default</button>
+          <button style="display:inline-flex;align-items:center;gap:8px;font-family:var(--r-sans);font-size:15px;font-weight:500;border-radius:6px;padding:10px 20px;border:1px solid var(--r-ink);background:var(--r-ink);color:var(--r-paper);cursor:pointer;">Primary</button>
+          <button style="display:inline-flex;align-items:center;gap:8px;font-family:var(--r-sans);font-size:15px;font-weight:500;border-radius:6px;padding:10px 20px;border:1px solid transparent;background:transparent;color:var(--r-text-2);cursor:pointer;">Quiet</button>
+          <button style="display:inline-flex;align-items:center;gap:8px;font-family:var(--r-sans);font-size:15px;font-weight:500;border-radius:6px;padding:10px 20px;border:1px solid var(--r-rule-3);background:var(--r-paper);color:var(--r-ink);cursor:pointer;opacity:0.5;">Disabled</button>
+        </div>
+        <div style="background:var(--r-leather);padding:24px;margin:0 -32px -32px;border-top:1px solid var(--r-rule-reversed);">
+          <div style="font-family:var(--r-sans);font-size:11px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-reversed-3);margin-bottom:16px;">On leather</div>
+          <div class="ds-row">
+            <button style="display:inline-flex;align-items:center;gap:8px;font-family:var(--r-sans);font-size:15px;font-weight:500;border-radius:6px;padding:10px 20px;border:1px solid var(--r-rule-reversed);background:transparent;color:var(--r-ink-reversed);cursor:pointer;">Default</button>
+            <button style="display:inline-flex;align-items:center;gap:8px;font-family:var(--r-sans);font-size:15px;font-weight:500;border-radius:6px;padding:10px 20px;border:1px solid var(--r-ember-soft);background:var(--r-ember-soft);color:var(--r-leather);cursor:pointer;">Primary</button>
+            <button style="display:inline-flex;align-items:center;gap:8px;font-family:var(--r-sans);font-size:15px;font-weight:500;border-radius:6px;padding:10px 20px;border:1px solid transparent;background:transparent;color:var(--r-text-reversed-2);cursor:pointer;">Quiet</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">Pill</span><span class="usage">tag · never a button</span></div>
+      <div class="ds-specimen-body">
+        <div class="ds-row">
+          <span style="display:inline-flex;align-items:center;gap:6px;font-family:var(--r-sans);font-size:12px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;padding:6px 12px;border-radius:999px;background:var(--r-tint-ink);color:var(--r-text-3);">Ink</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;font-family:var(--r-sans);font-size:12px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;padding:6px 12px;border-radius:999px;background:var(--r-tint-sage);color:#4F6554;">Sage</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;font-family:var(--r-sans);font-size:12px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;padding:6px 12px;border-radius:999px;background:var(--r-tint-ember);color:#7E4516;">Ember</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;font-family:var(--r-sans);font-size:12px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;padding:6px 12px;border-radius:999px;background:var(--r-tint-burgundy);color:#6D2F24;">Burgundy</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;font-family:var(--r-sans);font-size:12px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;padding:6px 12px;border-radius:999px;background:var(--r-tint-amber);color:#6A5410;">Amber</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">Text link</span><span class="usage">primary action in most contexts</span></div>
+      <div class="ds-specimen-body">
+        <div class="ds-col">
+          <a href="#" class="r-link" style="font-family:var(--r-serif);font-style:italic;font-size:19px;color:var(--r-text-2);text-decoration:none;border-bottom:1px solid transparent;">Open Kaleb's volume</a>
+          <a href="#" class="r-link" style="font-family:var(--r-serif);font-style:italic;font-size:19px;color:var(--r-text-2);text-decoration:none;border-bottom:1px solid transparent;">Read the full synthesis <span style="margin-left:4px;">⟶</span></a>
+          <a href="#" class="r-link" style="font-family:var(--r-sans);font-size:15px;font-weight:500;color:var(--r-text-2);text-decoration:none;border-bottom:1px solid transparent;">Sans variant · 15px</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">The Pen</span><span class="usage">global capture · bottom-right, always</span></div>
+      <div class="ds-specimen-body" style="background:var(--r-cream);min-height:200px;position:relative;">
+        <p style="font-family:var(--r-sans);font-size:14px;color:var(--r-text-3);margin:0;">Hover the Pen to see the scale feedback. Click it to capture anywhere — a journal entry, an observation, a question. The Pen is the only element that persists across all rooms.</p>
+        <button aria-label="Capture" style="position:absolute;right:24px;bottom:24px;width:64px;height:64px;border-radius:50%;background:var(--r-leather);color:var(--r-ember-soft);border:1px solid var(--r-rule-reversed);box-shadow:var(--r-shadow-pen);font-family:var(--r-serif);font-style:italic;font-size:28px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform var(--r-dur-quick) var(--r-ease-ink);" onmouseover="this.style.transform='scale(1.04)';" onmouseout="this.style.transform='scale(1)';">✎</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ VII · SPREAD ═══════ -->
+  <section class="ds-section" id="comp-spread">
+    <div class="ds-section-head">
+      <div class="ds-section-num">VII.</div>
+      <div>
+        <h2 class="ds-section-title">The Page Spread</h2>
+        <p class="ds-section-desc">The page is the primary layout. Two pages side-by-side, a gutter between them, one page warmer than the other. Used by the Workbook (today) and the Manual (atlas). The Archive is a single open page.</p>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">Even spread (1:1)</span><span class="usage">The Family Manual · atlas + index</span></div>
+      <div class="ds-specimen-body" style="background:var(--r-cream);padding:40px;">
+        <div style="position:relative;display:grid;grid-template-columns:1fr 1fr;background:var(--r-paper);border:1px solid var(--r-rule-5);border-radius:3px;box-shadow:var(--r-shadow-page);overflow:hidden;min-height:320px;">
+          <div style="padding:32px;">
+            <div style="font-family:var(--r-sans);font-size:13px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-3);margin-bottom:16px;">The Family · at a glance</div>
+            <div style="font-family:var(--r-serif);font-style:italic;font-size:32px;color:var(--r-ink);line-height:1.1;">Four people, one constellation.</div>
+          </div>
+          <div style="padding:32px;background:var(--r-paper-soft);">
+            <div style="font-family:var(--r-sans);font-size:13px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-3);margin-bottom:16px;">Index of volumes</div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:12px;border-bottom:1px dotted var(--r-rule-4);padding:8px 0;font-family:var(--r-serif);font-size:18px;"><span>Kaleb</span><em style="color:var(--r-text-5);font-size:13px;">Vol. II</em></div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:12px;border-bottom:1px dotted var(--r-rule-4);padding:8px 0;font-family:var(--r-serif);font-size:18px;"><span>Iris</span><em style="color:var(--r-text-5);font-size:13px;">Vol. III</em></div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:12px;border-bottom:1px dotted var(--r-rule-4);padding:8px 0;font-family:var(--r-serif);font-size:18px;"><span>Nora</span><em style="color:var(--r-text-5);font-size:13px;">Vol. IV</em></div>
+          </div>
+          <div aria-hidden style="position:absolute;top:0;bottom:0;left:50%;width:48px;transform:translateX(-50%);pointer-events:none;background:linear-gradient(to right,transparent 0%,rgba(90,70,40,0.025) 40%,rgba(90,70,40,0.05) 50%,rgba(90,70,40,0.025) 60%,transparent 100%);"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">Narrow-left spread (1:2)</span><span class="usage">The Workbook · arc over time + today</span></div>
+      <div class="ds-specimen-body" style="background:var(--r-cream);padding:40px;">
+        <div style="position:relative;display:grid;grid-template-columns:1fr 2fr;background:var(--r-paper);border:1px solid var(--r-rule-5);border-radius:3px;box-shadow:var(--r-shadow-page);overflow:hidden;min-height:320px;">
+          <div style="padding:32px;">
+            <div style="font-family:var(--r-sans);font-size:13px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-3);margin-bottom:16px;">The arc · April</div>
+            <div style="font-family:var(--r-serif);font-style:italic;font-size:20px;color:var(--r-text-2);line-height:1.3;">You are working on <em>staying regulated during transitions</em>.</div>
+          </div>
+          <div style="padding:40px;background:var(--r-paper-soft);">
+            <div style="font-family:var(--r-sans);font-size:13px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--r-text-3);margin-bottom:16px;">Today · fifteen minutes</div>
+            <p class="r-drop-cap" style="font-family:var(--r-serif);font-style:italic;font-size:24px;line-height:1.45;color:var(--r-ink);margin:0;max-width:36ch;">Before pickup today, take three slow breaths in the car. Name what you're bringing into the house — and what you'd like to leave outside.</p>
+          </div>
+          <div aria-hidden style="position:absolute;top:0;bottom:0;left:33.333%;width:48px;transform:translateX(-50%);pointer-events:none;background:linear-gradient(to right,transparent 0%,rgba(90,70,40,0.025) 40%,rgba(90,70,40,0.05) 50%,rgba(90,70,40,0.025) 60%,transparent 100%);"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ NOTES ═══════ -->
+  <section class="ds-section" id="notes">
+    <div class="ds-section-head">
+      <div class="ds-section-num">✎</div>
+      <div>
+        <h2 class="ds-section-title">Notes on the hand-off</h2>
+        <p class="ds-section-desc">This chunk is additive. Nothing in your codebase breaks if you drop these files in today.</p>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">Files to copy into parentpulse-web</span><span class="usage">all net-new paths under src/design/</span></div>
+      <div class="ds-specimen-body" style="font-family:var(--r-mono);font-size:13px;line-height:1.9;color:var(--r-text-2);">
+        <div style="display:grid;grid-template-columns:1fr auto;gap:16px;border-bottom:1px dotted var(--r-rule-4);padding:8px 0;"><span>src/design/tokens.css</span><span style="font-family:var(--r-sans);font-size:12px;color:var(--r-text-5);letter-spacing:0.08em;text-transform:uppercase;">canonical CSS vars</span></div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:16px;border-bottom:1px dotted var(--r-rule-4);padding:8px 0;"><span>src/design/tokens.ts</span><span style="font-family:var(--r-sans);font-size:12px;color:var(--r-text-5);letter-spacing:0.08em;text-transform:uppercase;">TS mirror</span></div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:16px;border-bottom:1px dotted var(--r-rule-4);padding:8px 0;"><span>src/design/type.tsx</span><span style="font-family:var(--r-sans);font-size:12px;color:var(--r-text-5);letter-spacing:0.08em;text-transform:uppercase;">Display1 · H1 · Lede · Body · Eyebrow</span></div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:16px;border-bottom:1px dotted var(--r-rule-4);padding:8px 0;"><span>src/design/surfaces.tsx</span><span style="font-family:var(--r-sans);font-size:12px;color:var(--r-text-5);letter-spacing:0.08em;text-transform:uppercase;">Card · Band · Rule · DottedList · PageSpread · Room</span></div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:16px;border-bottom:1px dotted var(--r-rule-4);padding:8px 0;"><span>src/design/controls.tsx</span><span style="font-family:var(--r-sans);font-size:12px;color:var(--r-text-5);letter-spacing:0.08em;text-transform:uppercase;">Button · Pill · TextLink · Pen</span></div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:16px;padding:8px 0;"><span>src/design/index.ts</span><span style="font-family:var(--r-sans);font-size:12px;color:var(--r-text-5);letter-spacing:0.08em;text-transform:uppercase;">barrel</span></div>
+        <div style="margin-top:24px;padding:16px 20px;background:var(--r-cream-warm);border-radius:3px;font-family:var(--r-sans);font-size:14px;line-height:1.6;color:var(--r-text-2);">
+          <strong style="color:var(--r-ink);">One edit to existing file:</strong><br/>
+          At the top of <code style="font-family:var(--r-mono);font-size:0.9em;color:var(--r-ink);">src/app/globals.css</code>, add:<br/>
+          <code style="font-family:var(--r-mono);font-size:13px;color:var(--r-ink);display:block;margin-top:8px;">@import "../design/tokens.css";</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">What this does not touch</span><span class="usage">zero-risk rollout</span></div>
+      <div class="ds-specimen-body" style="font-family:var(--r-sans);font-size:15px;line-height:1.7;color:var(--r-text-2);">
+        <ul style="padding-left:20px;margin:0;">
+          <li>No existing routes are changed.</li>
+          <li>No existing CSS classes are modified — <code style="font-family:var(--r-mono);font-size:13px;">.parent-*</code>, <code style="font-family:var(--r-mono);font-size:13px;">.relish-*</code>, <code style="font-family:var(--r-mono);font-size:13px;">.press-*</code>, <code style="font-family:var(--r-mono);font-size:13px;">.book-card-*</code>, AURA phase classes, weather animations all stay alive.</li>
+          <li>The <code style="font-family:var(--r-mono);font-size:13px;">components/relish-theme/</code> folder stays put — it will be replaced in Chunk 5.</li>
+          <li>Fonts are unchanged: the new tokens alias your existing <code style="font-family:var(--r-mono);font-size:13px;">--font-parent-display</code> / <code style="font-family:var(--r-mono);font-size:13px;">--font-parent-body</code>.</li>
+          <li>New tokens are all prefixed <code style="font-family:var(--r-mono);font-size:13px;">--r-*</code> — no collisions with anything existing.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="ds-specimen">
+      <div class="ds-specimen-label"><span class="name">Up next</span><span class="usage">chunks 2–5</span></div>
+      <div class="ds-specimen-body">
+        <ol style="font-family:var(--r-serif);font-size:19px;list-style:none;padding:0;margin:0;">
+          <li style="display:grid;grid-template-columns:auto 1fr;gap:16px;padding:12px 0;border-bottom:1px dotted var(--r-rule-4);"><em style="font-style:italic;color:var(--r-text-5);">ii.</em><span>The shell — new top nav (Workbook · Manual · Archive), global Pen, <code style="font-family:var(--r-mono);font-size:0.75em;">/journal</code> → <code style="font-family:var(--r-mono);font-size:0.75em;">/workbook</code> redirect</span></li>
+          <li style="display:grid;grid-template-columns:auto 1fr;gap:16px;padding:12px 0;border-bottom:1px dotted var(--r-rule-4);"><em style="font-style:italic;color:var(--r-text-5);">iii.</em><span>The Workbook — two-page spread, today's one practice</span></li>
+          <li style="display:grid;grid-template-columns:auto 1fr;gap:16px;padding:12px 0;border-bottom:1px dotted var(--r-rule-4);"><em style="font-style:italic;color:var(--r-text-5);">iv.</em><span>The Family Manual + Volumes — atlas, index, per-person synthesis</span></li>
+          <li style="display:grid;grid-template-columns:auto 1fr;gap:16px;padding:12px 0;"><em style="font-style:italic;color:var(--r-text-5);">v.</em><span>The Archive + dead-CSS cleanup — delete <code style="font-family:var(--r-mono);font-size:0.75em;">.parent-*</code>, <code style="font-family:var(--r-mono);font-size:0.75em;">.press-*</code>, weather, glass, legacy relish-theme</span></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+</body>
+</html>
