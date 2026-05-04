@@ -447,6 +447,23 @@ export default function PersonPage({
                 ))}
               </div>
             )}
+
+            {/* Outbound CTA — Phase 3 of the journal-first reframe.
+                The person page used to dead-end at "what's open?". Now it
+                offers an obvious next step: build a tool to do something
+                about it. Hidden when this is the user's own page (planning
+                "with yourself" doesn't read right). Pre-tagging the new
+                Working with personId is a follow-up. */}
+            {!isSelf && (
+              <Link href="/tools/new" className="plan-cta">
+                <span className="plan-cta-eye">Plan</span>
+                <span className="plan-cta-h">Plan something with <em>{firstName}</em>.</span>
+                <span className="plan-cta-p">
+                  Draft a day plan, a call brief, or a script — saved in Tools, ready when you need it.
+                </span>
+                <span className="plan-cta-arrow">Open the toolshelf →</span>
+              </Link>
+            )}
           </div>
 
           <aside className="timeline">
@@ -1145,6 +1162,36 @@ const styles = `
     font-size: 17px;
     color: var(--r-text-4);
     margin: 0;
+  }
+
+  .plan-cta {
+    display: flex; flex-direction: column; gap: 8px;
+    margin-top: 24px; padding: 22px 24px;
+    background: var(--r-paper); border: 1px dashed var(--r-rule-3);
+    border-radius: 3px; text-decoration: none; color: inherit;
+    transition: all 160ms var(--r-ease-ink);
+  }
+  .plan-cta:hover {
+    border-color: var(--r-rule-1); background: var(--r-paper-soft);
+  }
+  .plan-cta-eye {
+    font-family: var(--r-sans); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.22em; text-transform: uppercase; color: var(--r-text-5);
+  }
+  .plan-cta-h {
+    font-family: var(--r-serif); font-style: italic; font-weight: 400;
+    font-size: 26px; line-height: 1.15; letter-spacing: -0.01em;
+    color: var(--r-ink);
+  }
+  .plan-cta-h em { font-style: italic; }
+  .plan-cta-p {
+    font-family: var(--r-serif); font-size: 15px; line-height: 1.5;
+    color: var(--r-text-3);
+  }
+  .plan-cta-arrow {
+    margin-top: 6px;
+    font-family: var(--r-sans); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--r-ink);
   }
 
   .thread {

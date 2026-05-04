@@ -22,6 +22,15 @@ import type { Person, RelationshipType, Contribution } from '@/types/person-manu
 import type { JournalEntry } from '@/types/journal';
 import { entryMentionsPerson } from '@/lib/entry-mentions';
 import PortraitInventory from '@/components/dashboard/PortraitInventory';
+import { mastheadImageFor } from '@/config/stock-imagery';
+
+function seasonOf(d: Date): 'spring' | 'summer' | 'autumn' | 'winter' {
+  const m = d.getMonth();
+  if (m >= 2 && m <= 4) return 'spring';
+  if (m >= 5 && m <= 7) return 'summer';
+  if (m >= 8 && m <= 10) return 'autumn';
+  return 'winter';
+}
 
 export default function ManualPage() {
   const { user, loading } = useAuth();
@@ -227,6 +236,23 @@ export default function ManualPage() {
           even if styled-jsx drops its global block. */}
       <style dangerouslySetInnerHTML={{ __html: familySummaryCss }} />
       <div className="mn-page">
+        {/* Seasonal banner — matches the home (/) so /manual feels like
+            part of the same app family. In-flow, sits above the page
+            title; the simplified TopNav above it stays unchanged. */}
+        <div
+          aria-hidden="true"
+          style={{
+            height: 140,
+            marginBottom: 24,
+            backgroundImage: `linear-gradient(180deg, rgba(20,16,12,0.15) 0%, rgba(20,16,12,0) 40%, rgba(245,240,232,0.35) 82%, rgba(245,240,232,0.62) 100%), url('${mastheadImageFor(seasonOf(new Date()))}')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center 38%',
+            backgroundRepeat: 'no-repeat',
+            border: '1px solid var(--r-rule-soft, #E8E0D0)',
+            borderRadius: 4,
+          }}
+        />
+
         {/* ═══ TITLE ═══ — page headline, newspaper style. */}
         <header className="fs-title-block">
           <h1 className="fs-title">

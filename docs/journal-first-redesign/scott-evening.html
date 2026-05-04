@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scott — evening v2.1 (journal-first redesign)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* ───────────────────────────────────────────────────────────────
+     Same palette as Iris's morning v2.1. Warm-only.
+     ─────────────────────────────────────────────────────────────── */
+  :root {
+    --paper:       #FBF8F2;
+    --paper-warm:  #F2E9D6;
+    --cream:       #F5F0E8;
+    --ink:         #3A3530;
+    --ink-soft:    #4D4640;
+    --text-3:      #5F564B;
+    --text-4:      #6B6254;
+    --text-5:      #887C68;
+    --text-6:      #9A8E7A;
+    --rule:        #DCD3C2;
+    --rule-strong: #C8B79D;
+    --rule-soft:   #E8E0D0;
+    --leather:     #14100C;
+    --leather-2:   #2A2520;
+    --sage:        #7C9082;
+    --sage-deep:   #4A5D50;
+    --warm-tint:   rgba(201, 168, 76, 0.22);
+    --warm-row:    rgba(201, 168, 76, 0.07);
+    --warm-row-2:  rgba(201, 168, 76, 0.13);
+    --ember:       #C9864C;
+    --amber:       #C9A84C;
+
+    --serif: 'Cormorant Garamond', Georgia, serif;
+    --sans:  'DM Sans', system-ui, -apple-system, sans-serif;
+    --ease:  cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--cream);
+    color: var(--ink);
+    font-family: var(--serif);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── Page shell — slightly wider than Iris's morning since writing is the centerpiece ─── */
+  .page { max-width: 680px; margin: 0 auto; padding: 24px 28px 80px; }
+
+  .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  .wordmark {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 300;
+    font-size: 22px;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .who {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-4);
+  }
+  .who .pip { width: 6px; height: 6px; border-radius: 50%; background: var(--sage); }
+
+  /* ─── Greeting block ─── */
+  .greeting-block {
+    padding-top: 80px;
+    padding-bottom: 32px;
+  }
+  .greeting {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(32px, 5vw, 36px);
+    line-height: 1.05;
+    letter-spacing: -0.018em;
+    color: var(--ink);
+    margin: 0 0 12px;
+  }
+  .greeting em { font-style: italic; }
+  .dateline {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-4);
+    opacity: 0.78;
+    margin: 0;
+  }
+
+  /* ─── Section primitives ─── */
+  .section { margin-top: 32px; }
+  .s-checkin   { margin-top: 28px; }
+  .s-write     { margin-top: 56px; }
+  .s-happened  { margin-top: 48px; }
+  .s-nudge     { margin-top: 32px; }
+
+  .eyebrow {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-5);
+    opacity: 0.85;
+    margin: 0 0 12px;
+  }
+
+  /* ─── Unified check-in card — one continuous flow ─── */
+  .checkin-card {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 24px 24px 20px;
+    transition: box-shadow 200ms var(--ease), background 240ms var(--ease);
+  }
+  .checkin-card.warmth {
+    box-shadow: 0 1px 2px rgba(60,50,40,0.04), 0 8px 24px rgba(201,168,76,0.08);
+  }
+
+  .ck-prompt {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 0 0 10px;
+  }
+  .ck-prompt em { font-style: italic; }
+
+  .with-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 16px 0 10px;
+  }
+  .with-label {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-5);
+    flex-shrink: 0;
+  }
+  .person-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .person-tab {
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--rule-soft);
+    background: transparent;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-3);
+    cursor: pointer;
+    transition: all 140ms var(--ease);
+  }
+  .person-tab:hover { border-color: var(--rule); color: var(--ink); background: var(--cream); }
+  .person-tab.on {
+    background: var(--leather);
+    border-color: var(--leather);
+    color: var(--paper);
+  }
+
+  /* ─── Emoji pills (v2.2: text-primary, core-5 + More, selection-gravity) ─── */
+  .pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .pills .pill.more-only { display: none; }
+  .pills.expanded .pill.more-only { display: inline-flex; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: var(--cream);
+    border: 1px solid var(--rule-soft);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-3);
+    cursor: pointer;
+    transition: opacity 200ms ease-out, transform 140ms ease-out, background 140ms ease-out, border-color 140ms ease-out, color 140ms ease-out;
+  }
+  .pill:hover {
+    background: #EFE7D6;
+    border-color: var(--rule);
+  }
+  .pill.on {
+    background: var(--warm-tint);
+    border-color: var(--amber);
+    color: var(--ink);
+    transform: scale(1.02);
+  }
+  .pills.has-on .pill:not(.on) { opacity: 0.45; }
+  .pill .face { font-size: 13px; line-height: 1; opacity: 0.7; margin-left: 2px; }
+  .pill.on .face { opacity: 1; }
+  .pills-more {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-5);
+    padding: 8px;
+  }
+
+  .extra-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .extra {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--ink);
+    padding: 6px 0;
+    border-bottom: 1px solid var(--rule-soft);
+    transition: border-color 140ms var(--ease);
+  }
+  .extra:focus { border-bottom-color: var(--rule); }
+  .extra::placeholder { color: var(--text-6); }
+  .mic-mini {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ember);
+    flex-shrink: 0;
+  }
+  .mic-mini svg { width: 14px; height: 14px; }
+
+  /* ─── Writing area — the centerpiece of the evening ─── */
+  .write {
+    padding: 28px 28px 18px;
+    background: var(--paper);
+    border: 1px solid var(--rule-strong);
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(60,50,40,0.04), 0 4px 16px rgba(60,50,40,0.05);
+    transition: border-color 160ms var(--ease), box-shadow 160ms var(--ease);
+  }
+  .write:focus-within {
+    border-color: #B5A684;
+    box-shadow: 0 1px 2px rgba(60,50,40,0.04), 0 0 0 3px rgba(201, 168, 76, 0.10);
+  }
+  .write-prompt {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 17px;
+    color: var(--text-4);
+    margin: 0 0 8px;
+  }
+  .write-prompt em { color: var(--ink); font-style: italic; }
+  .write-nudge {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--text-5);
+    margin: 0 0 12px;
+  }
+  .write-nudge em { color: var(--text-3); font-style: italic; }
+  .write textarea {
+    width: 100%;
+    min-height: 320px;
+    border: none;
+    background: transparent;
+    outline: none;
+    resize: none;
+    overflow: hidden;
+    font-family: var(--serif);
+    font-size: 19px;
+    line-height: 1.65;
+    color: var(--ink);
+    display: block;
+  }
+  .write textarea::placeholder { color: var(--text-6); font-style: italic; }
+  .write-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--rule-soft);
+  }
+  .meta-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border: 1px solid var(--rule-soft);
+    background: transparent;
+    border-radius: 999px;
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-4);
+    cursor: pointer;
+    transition: all 140ms var(--ease);
+  }
+  .chip:hover { border-color: var(--rule); color: var(--ink); }
+  .chip-eye {
+    color: var(--text-5);
+    font-weight: 600;
+    letter-spacing: 0.14em;
+  }
+
+  /* ─── Save button ─── */
+  .save {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--paper);
+    background: var(--leather);
+    border: 1px solid var(--leather);
+    padding: 10px 22px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: transform 140ms var(--ease), background 140ms var(--ease), filter 140ms var(--ease);
+  }
+  .save:hover { transform: translateY(-1px); filter: brightness(1.1); }
+  .save:active { transform: scale(0.98); }
+  .save.saved { background: var(--sage-deep); border-color: var(--sage-deep); }
+
+  /* ─── What happened today (recency-weighted timeline, can highlight selected person) ─── */
+  .timeline { margin: 0; padding: 0; list-style: none; }
+  .tl-item {
+    display: block;
+    padding: 0;
+    margin-bottom: 14px;
+    text-decoration: none;
+    color: inherit;
+    transition: opacity 200ms var(--ease);
+  }
+  .tl-item:last-child { margin-bottom: 0; }
+  .tl-item.recent { opacity: 1.00; }
+  .tl-item.middle { opacity: 0.85; }
+  .tl-item.old    { opacity: 0.70; }
+  .tl-item.featured {
+    opacity: 1;
+    padding: 12px 12px;
+    margin: 0 -12px 14px;
+    background: var(--warm-row-2);
+    border-radius: 4px;
+  }
+  .tl-item.dim { opacity: 0.55 !important; }
+  .tl-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-5);
+    margin-bottom: 6px;
+  }
+  .tl-meta .bullet {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--ember);
+  }
+  .tl-item.kaleb .tl-meta .bullet { background: var(--amber); }
+  .tl-item.iris  .tl-meta .bullet { background: var(--sage); }
+  .tl-quote {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--ink);
+    margin: 0;
+  }
+  .tl-emoji { font-style: normal; font-size: 19px; margin-right: 4px; }
+
+  /* ─── Nudge — only when warranted ─── */
+  .nudge {
+    padding: 14px 18px;
+    background: var(--paper-warm);
+    border: 1px solid rgba(201,134,76,0.18);
+    border-left: 2px solid var(--ember);
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .nudge .body {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--ink-soft);
+    flex: 1;
+    min-width: 240px;
+  }
+  .nudge .body em { color: var(--ink); }
+  .nudge .cta {
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 9px 16px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: 999px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: border-color 140ms var(--ease);
+  }
+  .nudge .cta:hover { border-color: var(--ink); }
+
+  /* ─── Tail link ─── */
+  .tail {
+    margin-top: 56px;
+    text-align: center;
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-5);
+  }
+  .tail a {
+    color: var(--text-4);
+    text-decoration: none;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 2px;
+    transition: color 140ms var(--ease), border-color 140ms var(--ease);
+  }
+  .tail a:hover { color: var(--ink); border-color: var(--ink); }
+
+  .designer-note {
+    max-width: 680px;
+    margin: 32px auto;
+    padding: 16px 28px 0;
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--text-5);
+    line-height: 1.6;
+    border-top: 1px solid var(--rule-soft);
+    opacity: 0.85;
+  }
+  .designer-note strong {
+    color: var(--text-3);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 10px;
+    display: block;
+    margin-bottom: 6px;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- Top strip -->
+  <div class="top">
+    <a class="wordmark" href="#">Relish</a>
+    <span class="who"><span class="pip"></span>Scott</span>
+  </div>
+
+  <!-- ─── Greeting block ─── -->
+  <section class="greeting-block" aria-label="Greeting">
+    <h1 class="greeting">Good evening, <em>Scott.</em></h1>
+    <p class="dateline">Monday · May 4 · Evening</p>
+  </section>
+
+  <!-- ─── Unified check-in card — one continuous flow ─── -->
+  <section class="section s-checkin" aria-label="Check-in">
+    <p class="eyebrow">Your check-in</p>
+    <div class="checkin-card" id="checkin">
+
+      <p class="ck-prompt">How is the day landing?</p>
+      <div class="pills" data-group="self">
+        <button class="pill" type="button">good<span class="face">🙂</span></button>
+        <button class="pill" type="button">settled<span class="face">😌</span></button>
+        <button class="pill on" type="button">tired<span class="face">😴</span></button>
+        <button class="pill" type="button">worried<span class="face">😟</span></button>
+        <button class="pill" type="button">low<span class="face">😞</span></button>
+        <button class="pill more-only" type="button">grateful<span class="face">🙏</span></button>
+        <button class="pill more-only" type="button">heavy<span class="face">😔</span></button>
+        <button class="pill more-only" type="button">stressed<span class="face">😫</span></button>
+        <button class="pill more-only" type="button">frustrated<span class="face">😠</span></button>
+        <button class="pill more-only" type="button">thinking<span class="face">🤔</span></button>
+        <button class="pills-more" type="button" data-toggle="more">More…</button>
+      </div>
+
+      <div class="with-row">
+        <span class="with-label">With:</span>
+        <div class="person-tabs" role="group">
+          <button class="person-tab on" type="button" data-name="Iris">Iris</button>
+          <button class="person-tab" type="button" data-name="Kaleb">Kaleb</button>
+          <button class="person-tab" type="button" data-name="Nell">Nell</button>
+          <button class="person-tab" type="button" data-name="Liam">Liam</button>
+          <button class="person-tab" type="button" data-name="the kids">the kids</button>
+          <button class="person-tab" type="button" data-name="the family">the family</button>
+        </div>
+      </div>
+
+      <p class="ck-prompt" id="rel-prompt">How are things with <em>Iris</em>?</p>
+      <div class="pills" data-group="rel">
+        <button class="pill" type="button">good<span class="face">🙂</span></button>
+        <button class="pill on" type="button">steady<span class="face">😌</span></button>
+        <button class="pill" type="button">tired<span class="face">😴</span></button>
+        <button class="pill" type="button">worried<span class="face">😟</span></button>
+        <button class="pill" type="button">distant<span class="face">😔</span></button>
+        <button class="pill more-only" type="button">tender<span class="face">💛</span></button>
+        <button class="pill more-only" type="button">stressed<span class="face">😫</span></button>
+        <button class="pill more-only" type="button">frustrated<span class="face">😠</span></button>
+        <button class="pill more-only" type="button">unsure<span class="face">🤔</span></button>
+        <button class="pills-more" type="button" data-toggle="more">More…</button>
+      </div>
+
+      <div class="extra-row">
+        <input class="extra" type="text" placeholder="A line, if there is one — or skip" />
+        <button class="mic-mini" type="button" aria-label="Voice">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="22" />
+          </svg>
+        </button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ─── Writing area — the centerpiece ─── -->
+  <section class="section s-write" aria-label="Write">
+    <p class="eyebrow">Write</p>
+    <div class="write" id="writeBox">
+      <p class="write-prompt"><em>What's worth keeping from today?</em></p>
+      <p class="write-nudge" id="writeNudge">About <em>Iris</em>, maybe.</p>
+      <textarea id="writeText" placeholder="The cursor is here. Write whatever — a line, a paragraph, a thing that happened, a thing you wish you'd said."></textarea>
+      <div class="write-foot">
+        <div class="meta-row">
+          <button class="chip" type="button"><span class="chip-eye">As</span>· You ▾</button>
+          <button class="chip" type="button"><span class="chip-eye">About</span>· Iris ▾</button>
+          <button class="chip" type="button"><span class="chip-eye">Visible to</span>· Just you ▾</button>
+        </div>
+        <button class="save" id="saveBtn" type="button">Save</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── What happened today — timeline; selected person bubbles up ─── -->
+  <section class="section s-happened" aria-label="What happened today">
+    <p class="eyebrow">What happened today</p>
+    <ul class="timeline" id="timeline">
+      <li><a class="tl-item kaleb recent" href="#" data-about="Kaleb">
+        <span class="tl-meta"><span class="bullet"></span>Kaleb · two check-ins today</span>
+        <p class="tl-quote">
+          <span class="tl-emoji">😴</span>this morning · <em>"I had a bad dream."</em>
+          &nbsp;·&nbsp;
+          <span class="tl-emoji">😀</span>after school · <em>"Soccer was fun."</em>
+        </p>
+      </a></li>
+      <li><a class="tl-item iris middle" href="#" data-about="Iris">
+        <span class="tl-meta"><span class="bullet"></span>Iris · two things written · one shared with you</span>
+        <p class="tl-quote">"Long morning with Liam. He's been clingier than usual since the weekend at my mom's, and I keep wondering if..."</p>
+      </a></li>
+      <li><a class="tl-item old" href="#" data-about="Kaleb">
+        <span class="tl-meta"><span class="bullet"></span>This week · about Kaleb</span>
+        <p class="tl-quote">Three new entries about him. Mornings have come up twice; sleep once.</p>
+      </a></li>
+    </ul>
+  </section>
+
+  <!-- ─── Nudge — only when warranted ─── -->
+  <section class="section s-nudge" aria-label="A small thing">
+    <p class="eyebrow">A small thing</p>
+    <div class="nudge">
+      <span class="body">You and <em>Iris</em> both wrote about Saturday. Want to compare?</span>
+      <a href="#" class="cta">See together →</a>
+    </div>
+  </section>
+
+  <!-- ─── Tail ─── -->
+  <p class="tail">
+    <a href="#">Everything written ↗</a>
+  </p>
+
+</div>
+
+<p class="designer-note">
+  <strong>Designer note (not shown to user)</strong>
+  Scott's evening v2.1 — same surgical edits as Iris's morning. Unified check-in (one card, no internal headers, no dividers). "With:" + person tabs inline between self pills and relationship pills. Section spacing 28/56/48/32. Writing space is the centerpiece (320px min, auto-grow, contextual nudge "About [name], maybe." + "About" chip both update with selection). Selecting a person tab in the check-in: updates relationship prompt copy, updates writing nudge, updates the "About" chip on the write footer, AND highlights any matching items in "What happened today" (warm featured tint; non-matching items dim). Pills warm-tint + scale 1.02 on select; card warmth shift on first selection.
+</p>
+
+<script>
+  // ────────── Pill toggles + card warmth + selection-gravity (v2.2) ──────────
+  document.querySelectorAll('.pill').forEach((p) => {
+    p.addEventListener('click', () => {
+      p.classList.toggle('on');
+      const group = p.closest('.pills');
+      if (group) {
+        const anyOn = group.querySelectorAll('.pill.on').length > 0;
+        group.classList.toggle('has-on', anyOn);
+      }
+      const card = document.getElementById('checkin');
+      if (card) {
+        const anyOnAnywhere = document.querySelectorAll('.pill.on').length > 0;
+        card.classList.toggle('warmth', anyOnAnywhere);
+      }
+    });
+  });
+  document.querySelectorAll('.pills').forEach((group) => {
+    if (group.querySelector('.pill.on')) group.classList.add('has-on');
+  });
+
+  // ────────── More… toggle ──────────
+  document.querySelectorAll('.pills-more').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const group = btn.closest('.pills');
+      if (!group) return;
+      const expanded = group.classList.toggle('expanded');
+      btn.textContent = expanded ? 'Show fewer' : 'More…';
+    });
+  });
+
+  // ────────── Person selection (multi-select) ──────────
+  // Real moments are rarely "with one person." A family dinner, bedtime
+  // with Iris and Kaleb, a Saturday morning with the kids — all have
+  // multiple targets. The "With:" strip is a multi-select; relationship
+  // prompt + writing nudge + About chip + timeline highlighting all
+  // update with the joined name list.
+  const relPromptEl  = document.getElementById('rel-prompt');
+  const writeNudgeEl = document.getElementById('writeNudge');
+  const aboutChipEl  = document.querySelector('.write-foot .chip:nth-child(2)');
+  const timelineEl   = document.getElementById('timeline');
+
+  function joinNames(names) {
+    if (names.length === 0) return '';
+    if (names.length === 1) return names[0];
+    if (names.length === 2) return names[0] + ' and ' + names[1];
+    return names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1];
+  }
+
+  function getSelectedNames() {
+    return Array.from(document.querySelectorAll('.person-tab.on'))
+      .map((t) => t.dataset.name || t.textContent.trim());
+  }
+
+  function updateForSelection() {
+    const names = getSelectedNames();
+    const joined = joinNames(names);
+
+    // 1) Relationship prompt — handles 0/1/2/3+ gracefully
+    if (relPromptEl) {
+      if (names.length === 0) {
+        relPromptEl.innerHTML = '<span style="color:var(--text-5)">Pick who, above.</span>';
+      } else {
+        relPromptEl.innerHTML = 'How are things with <em>' + joined + '</em>?';
+      }
+    }
+    // 2) Writing nudge
+    if (writeNudgeEl) {
+      writeNudgeEl.innerHTML = names.length === 0
+        ? '<em>Whoever’s on your mind.</em>'
+        : 'About <em>' + joined + '</em>, maybe.';
+    }
+    // 3) About chip — comma-joined names (compact for the chip)
+    if (aboutChipEl) {
+      const chipNames = names.length === 0 ? 'no one' : names.join(', ');
+      aboutChipEl.innerHTML = '<span class="chip-eye">About</span>· ' + chipNames + ' ▾';
+    }
+    // 4) Timeline — any item whose subject matches ANY selected name
+    //    is featured; non-matching items dim. With zero selected, baseline.
+    if (timelineEl) {
+      const items = Array.from(timelineEl.querySelectorAll('.tl-item'));
+      items.forEach((it) => it.classList.remove('featured', 'dim'));
+      if (names.length > 0) {
+        const matches = items.filter((it) => names.includes(it.dataset.about || ''));
+        if (matches.length > 0) {
+          items.forEach((it) => {
+            if (matches.includes(it)) it.classList.add('featured');
+            else it.classList.add('dim');
+          });
+        }
+      }
+    }
+  }
+
+  document.querySelectorAll('.person-tab').forEach((c) => {
+    c.addEventListener('click', () => {
+      // Toggle this chip's state. Allow zero selected — placeholder copy
+      // takes over.
+      c.classList.toggle('on');
+      updateForSelection();
+    });
+  });
+  // Initial state — Iris is pre-selected in markup.
+  updateForSelection();
+
+  // ────────── Auto-grow textarea ──────────
+  function autoGrow(el) {
+    el.style.height = 'auto';
+    el.style.height = (el.scrollHeight + 2) + 'px';
+  }
+  const ta = document.getElementById('writeText');
+  if (ta) {
+    autoGrow(ta);
+    ta.addEventListener('input', () => autoGrow(ta));
+  }
+
+  // ────────── Save ──────────
+  const saveBtn = document.getElementById('saveBtn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      const orig = saveBtn.textContent;
+      saveBtn.textContent = 'Saved';
+      saveBtn.classList.add('saved');
+      setTimeout(() => {
+        saveBtn.textContent = orig;
+        saveBtn.classList.remove('saved');
+      }, 1100);
+    });
+  }
+</script>
+
+</body>
+</html>

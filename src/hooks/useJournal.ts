@@ -17,6 +17,7 @@ import { firestore } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import type {
   JournalCategory,
+  JournalCheckIn,
   JournalMedia,
   UpdateEntryInput,
 } from '@/types/journal';
@@ -43,6 +44,9 @@ interface CreateEntryInput {
   // Optional media attachments (images, songs, links). When set,
   // it's written onto the entry at create time.
   media?: JournalMedia[];
+  // Structured check-in payload — set when the entry came through
+  // the journal-first home or kid mode. See JournalCheckIn type.
+  checkIn?: JournalCheckIn;
 }
 
 interface UseJournalReturn {
@@ -125,6 +129,29 @@ export function useJournal(): UseJournalReturn {
       // Media attachments — images, songs, links (Feature A).
       if (input.media && input.media.length > 0) {
         docData.media = input.media;
+      }
+
+      // Structured check-in — only written when present. Strip any
+      // undefined values so Firestore doesn't reject the doc.
+      if (input.checkIn) {
+        const ci: Record<string, unknown> = {
+          kind: input.checkIn.kind,
+          timeOfDay: input.checkIn.timeOfDay,
+          selfFeelings: input.checkIn.selfFeelings ?? [],
+        };
+        if (input.checkIn.relFeelings && input.checkIn.relFeelings.length > 0) {
+          ci.relFeelings = input.checkIn.relFeelings;
+        }
+        if (input.checkIn.withPersonIds && input.checkIn.withPersonIds.length > 0) {
+          ci.withPersonIds = input.checkIn.withPersonIds;
+        }
+        if (input.checkIn.withGroupKey) {
+          ci.withGroupKey = input.checkIn.withGroupKey;
+        }
+        if (input.checkIn.bodySpots && input.checkIn.bodySpots.length > 0) {
+          ci.bodySpots = input.checkIn.bodySpots;
+        }
+        docData.checkIn = ci;
       }
 
       // Set legacy childId if exactly one person is mentioned

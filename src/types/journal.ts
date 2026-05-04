@@ -1,5 +1,30 @@
 import { Timestamp } from 'firebase/firestore';
 
+/* ────────────────────────────────────────────────────────────────
+   Check-in payload — the structured form of a journal-first or kid-
+   mode entry. Stored alongside the entry's free-text body so the
+   synthesis layer can query feelings + targets cleanly.
+
+   `selfFeelings` are the feeling-words the author tapped about
+   themselves (e.g. ['tired', 'low']). `relFeelings` are the words
+   tapped about a relationship target. `withPersonIds` are the
+   person IDs the relationship feelings reference; `withGroupKey`
+   distinguishes ad-hoc groupings ('the kids' / 'the family') from
+   per-person multi-select.
+   ──────────────────────────────────────────────────────────────── */
+export type CheckInKind = 'self' | 'self+rel' | 'child';
+
+export interface JournalCheckIn {
+  kind: CheckInKind;
+  timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night';
+  selfFeelings: string[];
+  relFeelings?: string[];
+  withPersonIds?: string[];
+  withGroupKey?: 'kids' | 'family' | null;
+  /** Body-map spots the author tapped (kid mode only). */
+  bodySpots?: string[];
+}
+
 export type JournalCategory =
   | 'moment'        // Something that just happened
   | 'reflection'    // Thinking about a pattern or feeling
@@ -120,6 +145,16 @@ export interface JournalEntry {
     stressLevel?: number;   // 1-5, used by daily analysis
     timeOfDay?: string;     // auto-set from client
   };
+
+  // Structured check-in payload — present when this entry was made
+  // through the journal-first home or kid mode. Captures the picked
+  // feelings + body spots + targets cleanly so synthesis can query
+  // without parsing tag strings (which were the v1 carrier).
+  //
+  // `kind: 'self'`         — adult check-in for themselves
+  // `kind: 'self+rel'`     — adult check-in including a relationship feeling
+  // `kind: 'child'`        — kid mode (parent-led, attributed via subjectType=child_proxy)
+  checkIn?: JournalCheckIn;
 
   // AI enrichment — written by Cloud Functions `enrichJournalEntry`
   // (on create) and `reEnrichJournalEntry` (on text edit). Contains

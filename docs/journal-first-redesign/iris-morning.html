@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Iris — morning v2.1 (journal-first redesign)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* ───────────────────────────────────────────────────────────────
+     Palette — warm-only. Selected states warmer, not darker. No blue.
+     ─────────────────────────────────────────────────────────────── */
+  :root {
+    --paper:       #FBF8F2;   /* card surfaces */
+    --paper-warm:  #F2E9D6;   /* nudges, slightly warmer than page */
+    --cream:       #F5F0E8;   /* page background */
+    --ink:         #3A3530;
+    --ink-soft:    #4D4640;
+    --text-3:      #5F564B;
+    --text-4:      #6B6254;
+    --text-5:      #887C68;
+    --text-6:      #9A8E7A;
+    --rule:        #DCD3C2;
+    --rule-strong: #C8B79D;   /* writing area gets a slightly stronger border */
+    --rule-soft:   #E8E0D0;
+    --leather:     #14100C;
+    --leather-2:   #2A2520;
+    --sage:        #7C9082;
+    --sage-deep:   #4A5D50;
+    --warm-tint:   rgba(201, 168, 76, 0.22);  /* selected feeling pill */
+    --warm-row:    rgba(201, 168, 76, 0.07);  /* hovered moment row */
+    --warm-row-2:  rgba(201, 168, 76, 0.13);  /* featured moment row */
+    --ember:       #C9864C;
+    --amber:       #C9A84C;
+
+    --serif: 'Cormorant Garamond', Georgia, serif;
+    --sans:  'DM Sans', system-ui, -apple-system, sans-serif;
+    --ease:  cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--cream);
+    color: var(--ink);
+    font-family: var(--serif);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ───────────────────────── Page shell ───────────────────────── */
+  .page { max-width: 640px; margin: 0 auto; padding: 24px 28px 80px; }
+
+  /* Top strip — wordmark + name pip. Quiet. */
+  .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  .wordmark {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 300;
+    font-size: 22px;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .who {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-4);
+  }
+  .who .pip { width: 6px; height: 6px; border-radius: 50%; background: var(--sage); }
+
+  /* ───────────────────────── 12. Greeting block ─────────────────────────
+     +20-30% top space, slightly tighter letter spacing, dateline more visible. */
+  .greeting-block {
+    padding-top: 80px;
+    padding-bottom: 32px;
+  }
+  .greeting {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(32px, 5vw, 36px);
+    line-height: 1.05;
+    letter-spacing: -0.018em;
+    color: var(--ink);
+    margin: 0 0 12px;
+  }
+  .greeting em { font-style: italic; }
+  .dateline {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-4);
+    opacity: 0.78;
+    margin: 0;
+  }
+
+  /* ───────────────────────── Section primitives ─────────────────────────
+     Targeted spacing — flow is uneven on purpose. */
+  .section { margin-top: 32px; }
+  .s-checkin   { margin-top: 28px; }   /* under greeting */
+  .s-moments   { margin-top: 48px; }   /* after check-in card */
+  .s-camein    { margin-top: 40px; }   /* after a moment is there */
+  .s-small     { margin-top: 32px; }   /* after what came in */
+  .s-write     { margin-top: 56px; }   /* before writing area */
+
+  .eyebrow {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-5);
+    opacity: 0.85;
+    margin: 0 0 12px;
+  }
+
+  /* ───────────────────────── 1-3. Unified check-in card ─────────────────────────
+     One continuous flow inside one card. NO subsection headers, NO dividers.
+     Just: prompt → pills → "With:" + person tabs → prompt → pills → optional line.
+     ───────────────────────────────────────────────────────────── */
+  .checkin-card {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 24px 24px 20px;
+    transition: box-shadow 200ms var(--ease), background 240ms var(--ease);
+  }
+  .checkin-card.warmth {
+    box-shadow: 0 1px 2px rgba(60,50,40,0.04), 0 8px 24px rgba(201,168,76,0.08);
+  }
+
+  .ck-prompt {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 0 0 10px;
+  }
+  .ck-prompt em { font-style: italic; }
+
+  /* "With:" inline label + person tabs sit together as a single line */
+  .with-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 16px 0 10px;
+  }
+  .with-label {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-5);
+    flex-shrink: 0;
+  }
+  .person-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .person-tab {
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--rule-soft);
+    background: transparent;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-3);
+    cursor: pointer;
+    transition: all 140ms var(--ease);
+  }
+  .person-tab:hover { border-color: var(--rule); color: var(--ink); background: var(--cream); }
+  .person-tab.on {
+    background: var(--leather);
+    border-color: var(--leather);
+    color: var(--paper);
+  }
+
+  /* ───────────────────────── 11. Emoji pills ───────────────────────── */
+  /* v2.2: text-primary, emoji as accent. Core-5 + More toggle.
+     Selection-gravity dims unselected pills once anything is on. */
+  .pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .pills .pill.more-only { display: none; }
+  .pills.expanded .pill.more-only { display: inline-flex; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: var(--cream);
+    border: 1px solid var(--rule-soft);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-3);
+    cursor: pointer;
+    transition: opacity 200ms ease-out, transform 140ms ease-out, background 140ms ease-out, border-color 140ms ease-out, color 140ms ease-out;
+  }
+  .pill:hover {
+    background: #EFE7D6;
+    border-color: var(--rule);
+  }
+  .pill.on {
+    background: var(--warm-tint);
+    border-color: var(--amber);
+    color: var(--ink);
+    transform: scale(1.02);
+  }
+  /* Selection gravity — dims unselected pills the moment anything is on */
+  .pills.has-on .pill:not(.on) { opacity: 0.45; }
+  .pill .face {
+    font-size: 13px;
+    line-height: 1;
+    opacity: 0.7;
+    margin-left: 2px;
+  }
+  .pill.on .face { opacity: 1; }
+  .pills-more {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-5);
+    padding: 8px;
+  }
+
+  /* Optional inline text/voice row — sits under the relationship pills */
+  .extra-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .extra {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--ink);
+    padding: 6px 0;
+    border-bottom: 1px solid var(--rule-soft);
+    transition: border-color 140ms var(--ease);
+  }
+  .extra:focus { border-bottom-color: var(--rule); }
+  .extra::placeholder { color: var(--text-6); }
+  .mic-mini {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ember);
+    flex-shrink: 0;
+  }
+  .mic-mini svg { width: 14px; height: 14px; }
+
+  /* ───────────────────────── 5/6. A moment is there ─────────────────────────
+     Bigger row padding. Hover warms row + shifts arrow. Selected person's
+     moment is featured (warm bg + slightly darker text), reordered to top;
+     others dim. */
+  .moments { margin: 0; padding: 0; list-style: none; }
+  .moment {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 12px;
+    margin: 0 -12px;
+    border-bottom: 1px solid var(--rule-soft);
+    border-radius: 4px;
+    text-decoration: none;
+    color: inherit;
+    transition: background 160ms var(--ease), opacity 200ms var(--ease);
+  }
+  .moment:last-child { border-bottom: none; }
+  .moment .body {
+    font-family: var(--serif);
+    font-size: 17px;
+    color: var(--ink-soft);
+    transition: color 140ms var(--ease);
+  }
+  .moment .body em { font-style: italic; color: var(--ink); }
+  .moment .arrow {
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-5);
+    transition: transform 160ms var(--ease), color 140ms var(--ease);
+  }
+  .moment:hover { background: var(--warm-row); }
+  .moment:hover .body { color: var(--ink); }
+  .moment:hover .arrow { color: var(--ink); transform: translateX(4px); }
+  .moment.featured {
+    background: var(--warm-row-2);
+  }
+  .moment.featured .body { color: var(--ink); }
+  .moment.dim { opacity: 0.78; }
+
+  /* ───────────────────────── 7. What came in (timeline) ─────────────────────────
+     Recency hierarchy via opacity decay; tighter spacing between entries. */
+  .timeline { margin: 0; padding: 0; list-style: none; }
+  .tl-item {
+    display: block;
+    padding: 0;
+    margin-bottom: 14px;
+    text-decoration: none;
+    color: inherit;
+    transition: opacity 140ms var(--ease);
+  }
+  .tl-item:last-child { margin-bottom: 0; }
+  .tl-item.recent  { opacity: 1.00; }
+  .tl-item.middle  { opacity: 0.85; }
+  .tl-item.old     { opacity: 0.70; }
+  .tl-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-5);
+    margin-bottom: 6px;
+  }
+  .tl-meta .bullet {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--ember);
+  }
+  .tl-item.kaleb .tl-meta .bullet { background: var(--amber); }
+  .tl-item:hover { opacity: 1; }
+  .tl-quote {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--ink);
+    margin: 0;
+  }
+  .tl-emoji { font-style: normal; font-size: 19px; margin-right: 4px; }
+
+  /* ───────────────────────── 8. A small thing (nudge) ─────────────────────────
+     Slightly warmer bg, 2px ember left border, slightly darker text. */
+  .nudge {
+    padding: 14px 18px;
+    background: var(--paper-warm);
+    border: 1px solid rgba(201,134,76,0.18);
+    border-left: 2px solid var(--ember);
+    border-radius: 6px;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--ink-soft);
+  }
+  .nudge em { color: var(--ink); }
+
+  /* ───────────────────────── 9. Writing area (the destination) ─────────────────────────
+     Stronger border, more presence. Contextual nudge above textarea
+     based on selected person. Auto-grow textarea. */
+  .write {
+    padding: 24px 22px 18px;
+    background: var(--paper);
+    border: 1px solid var(--rule-strong);
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(60,50,40,0.04), 0 4px 14px rgba(60,50,40,0.04);
+    transition: border-color 160ms var(--ease), box-shadow 160ms var(--ease);
+  }
+  .write:focus-within {
+    border-color: #B5A684;
+    box-shadow: 0 1px 2px rgba(60,50,40,0.04), 0 0 0 3px rgba(201, 168, 76, 0.10);
+  }
+  .write-nudge {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--text-4);
+    margin: 0 0 10px;
+  }
+  .write-nudge em { color: var(--text-3); font-style: italic; }
+  .write textarea {
+    width: 100%;
+    min-height: 160px;
+    border: none;
+    background: transparent;
+    outline: none;
+    resize: none;
+    overflow: hidden;
+    font-family: var(--serif);
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--ink);
+    display: block;
+  }
+  .write textarea::placeholder { color: var(--text-6); font-style: italic; }
+  .write-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--rule-soft);
+  }
+
+  .who-sees {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-4);
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--rule-soft);
+    background: transparent;
+    transition: all 140ms var(--ease);
+  }
+  .who-sees:hover { border-color: var(--rule); color: var(--ink); }
+
+  /* ───────────────────────── 10. Save button ─────────────────────────
+     Slightly bigger padding, lift on hover, label change on click. */
+  .save {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--paper);
+    background: var(--leather);
+    border: 1px solid var(--leather);
+    padding: 10px 20px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: transform 140ms var(--ease), background 140ms var(--ease), filter 140ms var(--ease);
+  }
+  .save:hover { transform: translateY(-1px); filter: brightness(1.1); }
+  .save:active { transform: scale(0.98); }
+  .save.saved { background: var(--sage-deep); border-color: var(--sage-deep); }
+
+  /* ───────────────────────── Footer link ───────────────────────── */
+  .tail {
+    margin-top: 56px;
+    text-align: center;
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-5);
+  }
+  .tail a {
+    color: var(--text-4);
+    text-decoration: none;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 2px;
+    transition: color 140ms var(--ease), border-color 140ms var(--ease);
+  }
+  .tail a:hover { color: var(--ink); border-color: var(--ink); }
+
+  /* ───────────────────────── Designer note (off-canvas) ───────────────────────── */
+  .designer-note {
+    max-width: 640px;
+    margin: 32px auto;
+    padding: 16px 28px 0;
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--text-5);
+    line-height: 1.6;
+    border-top: 1px solid var(--rule-soft);
+    opacity: 0.85;
+  }
+  .designer-note strong {
+    color: var(--text-3);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 10px;
+    display: block;
+    margin-bottom: 6px;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- Top strip -->
+  <div class="top">
+    <a class="wordmark" href="#">Relish</a>
+    <span class="who"><span class="pip"></span>Iris</span>
+  </div>
+
+  <!-- ─── Greeting block ─── -->
+  <section class="greeting-block" aria-label="Greeting">
+    <h1 class="greeting">Good morning, <em>Iris.</em></h1>
+    <p class="dateline">Monday · May 4 · Morning</p>
+  </section>
+
+  <!-- ─── Unified check-in card — one continuous flow, no internal headers ─── -->
+  <section class="section s-checkin" aria-label="Check-in">
+    <p class="eyebrow">Your check-in</p>
+    <div class="checkin-card" id="checkin">
+
+      <!-- Self prompt + pills -->
+      <p class="ck-prompt">How are you arriving?</p>
+      <div class="pills" data-group="self">
+        <button class="pill" type="button">good<span class="face">🙂</span></button>
+        <button class="pill" type="button">calm<span class="face">😌</span></button>
+        <button class="pill on" type="button">tired<span class="face">😴</span></button>
+        <button class="pill" type="button">worried<span class="face">😟</span></button>
+        <button class="pill" type="button">low<span class="face">😞</span></button>
+        <button class="pill more-only" type="button">steady<span class="face">😎</span></button>
+        <button class="pill more-only" type="button">sad<span class="face">😢</span></button>
+        <button class="pill more-only" type="button">stressed<span class="face">😫</span></button>
+        <button class="pill more-only" type="button">frustrated<span class="face">😠</span></button>
+        <button class="pill more-only" type="button">unsure<span class="face">🤔</span></button>
+        <button class="pills-more" type="button" data-toggle="more">More…</button>
+      </div>
+
+      <!-- "With:" + person tabs (inline, part of the same flow) -->
+      <div class="with-row">
+        <span class="with-label">With:</span>
+        <div class="person-tabs" role="group">
+          <button class="person-tab" type="button" data-name="Scott">Scott</button>
+          <button class="person-tab on" type="button" data-name="Kaleb">Kaleb</button>
+          <button class="person-tab" type="button" data-name="Nell">Nell</button>
+          <button class="person-tab" type="button" data-name="Liam">Liam</button>
+          <button class="person-tab" type="button" data-name="the kids">the kids</button>
+          <button class="person-tab" type="button" data-name="the family">the family</button>
+        </div>
+      </div>
+
+      <!-- Relationship prompt + pills -->
+      <p class="ck-prompt" id="rel-prompt">How are things with <em>Kaleb</em>?</p>
+      <div class="pills" data-group="rel">
+        <button class="pill" type="button">good<span class="face">🙂</span></button>
+        <button class="pill" type="button">steady<span class="face">😌</span></button>
+        <button class="pill" type="button">tired<span class="face">😴</span></button>
+        <button class="pill on" type="button">worried<span class="face">😟</span></button>
+        <button class="pill" type="button">distant<span class="face">😔</span></button>
+        <button class="pill more-only" type="button">tender<span class="face">💛</span></button>
+        <button class="pill more-only" type="button">stressed<span class="face">😫</span></button>
+        <button class="pill more-only" type="button">frustrated<span class="face">😠</span></button>
+        <button class="pill more-only" type="button">unsure<span class="face">🤔</span></button>
+        <button class="pills-more" type="button" data-toggle="more">More…</button>
+      </div>
+
+      <!-- Optional inline line + voice -->
+      <div class="extra-row">
+        <input class="extra" type="text" placeholder="A line, if there is one — or skip" />
+        <button class="mic-mini" type="button" aria-label="Voice">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="22" />
+          </svg>
+        </button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ─── A moment is there — reorders + emphasizes based on selected person ─── -->
+  <section class="section s-moments" aria-label="A moment is there">
+    <p class="eyebrow">A moment is there</p>
+    <ul class="moments" id="moments">
+      <li data-name="Kaleb"><a class="moment" href="#">
+        <span class="body">A moment with <em>Kaleb</em></span>
+        <span class="arrow">Open →</span>
+      </a></li>
+      <li data-name="Nell"><a class="moment" href="#">
+        <span class="body">A moment with <em>Nell</em></span>
+        <span class="arrow">Open →</span>
+      </a></li>
+      <li data-name="Liam"><a class="moment" href="#">
+        <span class="body">A moment with <em>Liam</em></span>
+        <span class="arrow">Open →</span>
+      </a></li>
+    </ul>
+  </section>
+
+  <!-- ─── What came in (timeline, recency-weighted) ─── -->
+  <section class="section s-camein" aria-label="What came in">
+    <p class="eyebrow">What came in</p>
+    <ul class="timeline">
+      <li><a class="tl-item recent" href="#">
+        <span class="tl-meta"><span class="bullet"></span>Scott · last night · for you</span>
+        <p class="tl-quote">"I noticed something at bedtime with Kaleb tonight — he asked me to leave the hallway light on, and then quietly..."</p>
+      </a></li>
+      <li><a class="tl-item kaleb middle" href="#">
+        <span class="tl-meta"><span class="bullet"></span>Kaleb · yesterday evening</span>
+        <p class="tl-quote"><span class="tl-emoji">😢</span><em>"Liam wouldn't share."</em></p>
+      </a></li>
+      <li><a class="tl-item old" href="#">
+        <span class="tl-meta"><span class="bullet"></span>Scott · two days ago · shared with you</span>
+        <p class="tl-quote">"Saturday went better than I expected. Kaleb asked for a turn at the playground without screaming first..."</p>
+      </a></li>
+    </ul>
+  </section>
+
+  <!-- ─── A small thing — relational nudge ─── -->
+  <section class="section s-small" aria-label="A small thing">
+    <p class="eyebrow">A small thing</p>
+    <div class="nudge">
+      <em>Nell</em> hasn't had a moment in a while.
+    </div>
+  </section>
+
+  <!-- ─── Writing area — the destination. Contextual nudge above textarea. ─── -->
+  <section class="section s-write" aria-label="Write">
+    <p class="eyebrow">If you want to put something down</p>
+    <div class="write" id="writeBox">
+      <p class="write-nudge" id="writeNudge">About <em>Kaleb</em>, maybe.</p>
+      <textarea id="writeText" placeholder="Just a line, if it's there."></textarea>
+      <div class="write-foot">
+        <button class="who-sees" type="button">Visible to · Just you ▾</button>
+        <button class="save" id="saveBtn" type="button">Save</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Tail link ─── -->
+  <p class="tail">
+    <a href="#">Everything written ↗</a>
+  </p>
+
+</div>
+
+<p class="designer-note">
+  <strong>Designer note (not shown to user)</strong>
+  v2.1 — surgical edits applied. (1-3) Check-in is one continuous flow inside one card; no internal headers, no dividers. (4) Vertical rhythm: 48 / 40 / 32 / 56px between sections. (5-6) "A moment is there" rows have 16px padding, hover warms the row + arrow shifts 4px right; the selected person's moment is reordered to top with a featured warm tint, others dim to 78%. (7) Timeline has recency opacity decay (1.0 / 0.85 / 0.70). (8) Nudge has warmer bg + 2px ember left border + darker italic text. (9) Writing area gets stronger border + a contextual nudge above the textarea — "About [name], maybe." — that updates as the person tab changes. (10) Save button is bigger; click → "Saved" + sage-deep tint, then reverts. (11) Pills use warm amber tint when selected + scale(1.02). (12) Greeting has 80px top padding, tighter letter-spacing, dateline at 78% opacity.
+</p>
+
+<script>
+  // ────────── Pill toggles + selection-gravity (v2.2) ──────────
+  // - Toggling a pill flips .on
+  // - The parent .pills container gets .has-on whenever any of its
+  //   children is on, which dims the unselected siblings to 0.45
+  // - The check-in card gets a faint warmth shadow when ANY pill on
+  document.querySelectorAll('.pill').forEach((p) => {
+    p.addEventListener('click', () => {
+      p.classList.toggle('on');
+      const group = p.closest('.pills');
+      if (group) {
+        const anyOn = group.querySelectorAll('.pill.on').length > 0;
+        group.classList.toggle('has-on', anyOn);
+      }
+      const card = document.getElementById('checkin');
+      if (card) {
+        const anyOnAnywhere = document.querySelectorAll('.pill.on').length > 0;
+        card.classList.toggle('warmth', anyOnAnywhere);
+      }
+    });
+  });
+  // Initialize .has-on on any group with a pre-selected pill (the
+  // markup demonstrates 'tired' and 'worried' on by default)
+  document.querySelectorAll('.pills').forEach((group) => {
+    if (group.querySelector('.pill.on')) group.classList.add('has-on');
+  });
+
+  // ────────── More… toggle ──────────
+  document.querySelectorAll('.pills-more').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const group = btn.closest('.pills');
+      if (!group) return;
+      const expanded = group.classList.toggle('expanded');
+      btn.textContent = expanded ? 'Show fewer' : 'More…';
+    });
+  });
+
+  // ────────── Person selection (multi-select) ──────────
+  // Real moments rarely have only one person. The "With:" strip is a
+  // multi-select; relationship prompt + writing nudge + moments list
+  // all update with the joined name list. With zero selected, the
+  // section gracefully shows a placeholder.
+  const KIDS = ['Kaleb', 'Nell', 'Liam'];
+  const momentsEl    = document.getElementById('moments');
+  const writeNudgeEl = document.getElementById('writeNudge');
+  const relPromptEl  = document.getElementById('rel-prompt');
+
+  function joinNames(names) {
+    if (names.length === 0) return '';
+    if (names.length === 1) return names[0];
+    if (names.length === 2) return names[0] + ' and ' + names[1];
+    return names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1];
+  }
+
+  function getSelectedNames() {
+    return Array.from(document.querySelectorAll('.person-tab.on'))
+      .map((t) => t.dataset.name || t.textContent.trim());
+  }
+
+  function updateForSelection() {
+    const names = getSelectedNames();
+    const joined = joinNames(names);
+
+    // 1) Relationship prompt
+    if (relPromptEl) {
+      relPromptEl.innerHTML = names.length === 0
+        ? '<span style="color:var(--text-5)">Pick who, above.</span>'
+        : 'How are things with <em>' + joined + '</em>?';
+    }
+    // 2) Moments list — features rows for ANY selected kid; non-matching
+    //    rows dim. Featured rows reorder to the top in markup order.
+    if (momentsEl) {
+      const items = Array.from(momentsEl.querySelectorAll('li'));
+      // Reset
+      items.forEach((li) => {
+        const a = li.querySelector('.moment');
+        if (a) a.classList.remove('featured', 'dim');
+      });
+      const selectedKids = names.filter((n) => KIDS.includes(n));
+      if (selectedKids.length > 0) {
+        // Featured = items whose data-name is in selectedKids
+        const featured = items.filter((li) => selectedKids.includes(li.dataset.name));
+        const others   = items.filter((li) => !featured.includes(li));
+        featured.forEach((li) => {
+          const a = li.querySelector('.moment');
+          if (a) a.classList.add('featured');
+        });
+        others.forEach((li) => {
+          const a = li.querySelector('.moment');
+          if (a) a.classList.add('dim');
+        });
+        // Reorder: featured first (markup order), then others
+        [...featured, ...others].forEach((li) => momentsEl.appendChild(li));
+      }
+    }
+    // 3) Writing nudge
+    if (writeNudgeEl) {
+      writeNudgeEl.innerHTML = names.length === 0
+        ? '<em>Whoever’s on your mind.</em>'
+        : 'About <em>' + joined + '</em>, maybe.';
+    }
+  }
+
+  document.querySelectorAll('.person-tab').forEach((c) => {
+    c.addEventListener('click', () => {
+      c.classList.toggle('on');
+      updateForSelection();
+    });
+  });
+  // Initial state (Kaleb is pre-selected in markup)
+  updateForSelection();
+
+  // ────────── Auto-grow textarea ──────────
+  function autoGrow(el) {
+    el.style.height = 'auto';
+    el.style.height = (el.scrollHeight + 2) + 'px';
+  }
+  const ta = document.getElementById('writeText');
+  if (ta) {
+    autoGrow(ta);
+    ta.addEventListener('input', () => autoGrow(ta));
+  }
+
+  // ────────── Save: brief label change, no toast ──────────
+  const saveBtn = document.getElementById('saveBtn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      const orig = saveBtn.textContent;
+      saveBtn.textContent = 'Saved';
+      saveBtn.classList.add('saved');
+      setTimeout(() => {
+        saveBtn.textContent = orig;
+        saveBtn.classList.remove('saved');
+      }, 1100);
+    });
+  }
+</script>
+
+</body>
+</html>

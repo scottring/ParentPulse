@@ -2176,6 +2176,7 @@ function CompleteView({
   onReturn: () => void;
 }) {
   const { user } = useAuth();
+  const router = useRouter();
 
   // Pull the reflection text — prefer the per-user entry, fall back
   // to the legacy single feedback field.
@@ -2318,6 +2319,69 @@ function CompleteView({
               : 'Small keepings accumulate. Come back tomorrow for the next page.'}
           </p>
         )}
+
+        {/* Outbound CTA — Phase 3 of the journal-first reframe. The
+            growth-completion view used to dead-end at "Return to shelf";
+            now it offers an obvious next step: write down what came up.
+            The minute after a practice is when reflection lands best. */}
+        <div
+          style={{
+            margin: '36px auto 0',
+            maxWidth: 560,
+            padding: '20px 26px',
+            background: 'rgba(255,255,255,0.55)',
+            border: '1px dashed rgba(168, 152, 138, 0.5)',
+            borderRadius: 3,
+            textAlign: 'left',
+          }}
+        >
+          <p
+            style={{
+              fontFamily: 'var(--font-parent-body)',
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.22em',
+              textTransform: 'uppercase',
+              color: '#8A7B5F',
+              margin: 0,
+            }}
+          >
+            What came up for you?
+          </p>
+          <p
+            style={{
+              fontFamily: 'var(--font-parent-display)',
+              fontStyle: 'italic',
+              fontSize: 19,
+              lineHeight: 1.45,
+              color: '#3A3530',
+              margin: '8px 0 14px',
+            }}
+          >
+            One line in the journal — the practice will show back up
+            differently next time.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push('/')}
+            style={{
+              cursor: 'pointer',
+              fontFamily: 'var(--font-parent-body)',
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              padding: '10px 20px',
+              borderRadius: 999,
+              border: '1px solid #14100C',
+              background: '#14100C',
+              color: '#FBF8F2',
+              transition: 'background 140ms ease',
+            }}
+          >
+            Write a reflection
+          </button>
+        </div>
 
         <hr
           className="press-rule"

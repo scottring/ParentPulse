@@ -1,9 +1,11 @@
 'use client';
 /* ================================================================
    Relish · Shell — TopNav
-   The persistent top chrome. Three rooms (Workbook · Manual ·
-   Archive), wordmark home link, user menu. Settings lives in the
-   user menu. The Pen is rendered separately by PenHost.
+   Phase 2 of the journal-first IA reframe (May 2026):
+   Four destinations — Write (/) · Read (/workbook for now) ·
+   People (/manual) · Tools (/tools). Therapy moved to the user
+   menu. Wordmark routes home. The Pen is rendered separately by
+   PenHost.
    ================================================================ */
 
 import Link from 'next/link';
@@ -11,14 +13,28 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 
-type Room = 'workbook' | 'manual' | 'archive' | 'therapy';
+type Room = 'write' | 'read' | 'people' | 'tools';
 
 function useActiveRoom(): Room | null {
   const pathname = usePathname() ?? '';
-  if (pathname.startsWith('/workbook') || pathname.startsWith('/journal')) return 'workbook';
-  if (pathname.startsWith('/manual') || pathname.startsWith('/family-manual') || /^\/people\//.test(pathname)) return 'manual';
-  if (pathname.startsWith('/archive') || pathname.startsWith('/reports') || pathname.startsWith('/surface')) return 'archive';
-  if (pathname.startsWith('/therapy')) return 'therapy';
+  // Write = the cold-open journal home at /
+  if (pathname === '/') return 'write';
+  // Read = the magazine surface (workbook) + chronological log (archive) +
+  // entry detail pages (journal/*)
+  if (
+    pathname.startsWith('/workbook') ||
+    pathname.startsWith('/journal') ||
+    pathname.startsWith('/archive') ||
+    pathname.startsWith('/reports')
+  ) return 'read';
+  // People = manuals index + person detail
+  if (
+    pathname.startsWith('/manual') ||
+    pathname.startsWith('/family-manual') ||
+    /^\/people\//.test(pathname)
+  ) return 'people';
+  // Tools = workings shelf + individual workings
+  if (pathname.startsWith('/tools') || pathname.startsWith('/workings')) return 'tools';
   return null;
 }
 
@@ -29,6 +45,9 @@ export interface TopNavProps {
   hideOnRoutes?: string[]; // e.g. ['/', '/login', '/register']
 }
 
+// '/' is hidden because the journal-first Home component renders its own
+// minimal banner. Other authed routes (/workbook, /manual, etc.) still
+// receive this TopNav until they're rebuilt.
 export function TopNav({ userName, onSignOut, reversed = false, hideOnRoutes = ['/', '/login', '/register'] }: TopNavProps) {
   const pathname = usePathname() ?? '';
   const router = useRouter();
@@ -98,21 +117,11 @@ export function TopNav({ userName, onSignOut, reversed = false, hideOnRoutes = [
           Relish
         </Link>
 
-        {/* Room tabs */}
-        <div style={{ display: 'flex', gap: 32, alignItems: 'baseline' }}>
-          <RoomLink room="workbook" href="/workbook" active={active === 'workbook'} reversed={reversed}>
-            The Workbook
-          </RoomLink>
-          <RoomLink room="manual" href="/manual" active={active === 'manual'} reversed={reversed}>
-            The Family Manual
-          </RoomLink>
-          <RoomLink room="archive" href="/archive" active={active === 'archive'} reversed={reversed}>
-            The Archive
-          </RoomLink>
-          <RoomLink room="therapy" href="/therapy" active={active === 'therapy'} reversed={reversed}>
-            Therapy
-          </RoomLink>
-        </div>
+        {/* Room tabs removed (May 2026) — the journal-first reframe
+            collapsed Write/Read/People/Tools into the home page itself,
+            with destinations reachable from inside entries or via the
+            user menu. The TopNav stays a quiet anchor: wordmark + user. */}
+        <span style={{ flex: 1 }} aria-hidden />
 
         {/* User */}
         {userName ? (
@@ -158,9 +167,14 @@ export function TopNav({ userName, onSignOut, reversed = false, hideOnRoutes = [
                   fontFamily: 'var(--r-sans)',
                 }}
               >
-                <MenuItem reversed={reversed} onClick={() => { setMenuOpen(false); router.push('/settings'); }}>Settings</MenuItem>
+                <MenuItem reversed={reversed} onClick={() => { setMenuOpen(false); router.push('/'); }}>Write</MenuItem>
+                <MenuItem reversed={reversed} onClick={() => { setMenuOpen(false); router.push('/manual'); }}>People</MenuItem>
+                <MenuItem reversed={reversed} onClick={() => { setMenuOpen(false); router.push('/archive'); }}>Everything written</MenuItem>
+                <MenuSep reversed={reversed} />
+                <MenuItem reversed={reversed} onClick={() => { setMenuOpen(false); router.push('/therapy'); }}>Therapy</MenuItem>
                 <MenuItem reversed={reversed} onClick={() => { setMenuOpen(false); router.push('/rituals'); }}>Rituals</MenuItem>
                 <MenuItem reversed={reversed} onClick={() => { setMenuOpen(false); router.push('/growth'); }}>Growth</MenuItem>
+                <MenuItem reversed={reversed} onClick={() => { setMenuOpen(false); router.push('/settings'); }}>Settings</MenuItem>
                 <MenuSep reversed={reversed} />
                 <MenuItem reversed={reversed} onClick={() => { setMenuOpen(false); onSignOut?.(); }}>Log out</MenuItem>
               </div>

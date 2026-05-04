@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kid mode v2.1 — emotion check-in (Kaleb, 8)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* ─── Same palette tokens as adult views, kid mode adds rounder/warmer feel. ─── */
+  :root {
+    --paper:       #FBF8F2;
+    --cream:       #F5F0E8;
+    --cream-warm:  #EFE7D6;
+    --ink:         #3A3530;
+    --ink-soft:    #4D4640;
+    --text-3:      #5F564B;
+    --text-4:      #6B6254;
+    --text-5:      #887C68;
+    --rule:        #DCD3C2;
+    --rule-soft:   #E8E0D0;
+    --sage:        #7C9082;
+    --sage-deep:   #4A5D50;
+    --sage-tint:   #DCE5DD;
+    --warm-tint:   rgba(201, 168, 76, 0.24);
+    --ember:       #C9864C;
+    --ember-tint:  #F0DCC4;
+    --amber:       #C9A84C;
+
+    --serif: 'Cormorant Garamond', Georgia, serif;
+    --sans:  'DM Sans', system-ui, -apple-system, sans-serif;
+    --ease:  cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--cream);
+    color: var(--ink);
+    font-family: var(--serif);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── Top strip — minimal chrome. Just name + time-of-day glyph. ─── */
+  .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 28px 28px 0;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .top .name {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 26px;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+  .top .glyph {
+    width: 28px;
+    height: 28px;
+    color: var(--ember);
+    opacity: 0.85;
+  }
+
+  /* ─── The card that holds the whole experience ─── */
+  .card {
+    max-width: 720px;
+    margin: 28px auto 0;
+    padding: 40px 36px 32px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    transition: box-shadow 240ms var(--ease);
+  }
+  .card.warmth {
+    box-shadow: 0 1px 2px rgba(60,50,40,0.04), 0 8px 28px rgba(201,168,76,0.10);
+  }
+
+  .greet {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 38px;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin: 0 0 6px;
+  }
+  .greet em { font-style: italic; }
+  .question {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 28px;
+    line-height: 1.2;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+
+  /* ─── Section primitives ─── */
+  .section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .section .label {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-5);
+  }
+
+  /* ─── Feeling buttons — bigger, softer than the adult pills ─── */
+  .feelings {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .feel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 18px 6px 14px;
+    background: var(--cream);
+    border: 1.5px solid var(--rule-soft);
+    border-radius: 16px;
+    cursor: pointer;
+    transition: transform 140ms var(--ease), background 140ms var(--ease), border-color 140ms var(--ease);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .feel:hover { border-color: var(--rule); transform: translateY(-1px); }
+  .feel.on {
+    background: var(--warm-tint);
+    border-color: var(--amber);
+    transform: scale(1.03);
+  }
+  .feel .face { font-size: 44px; line-height: 1; }
+  .feel .word {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--text-4);
+  }
+  .feel.on .word { color: var(--ink); }
+
+  /* ─── Voice ─── */
+  .voice-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .mic {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    background: var(--ember);
+    color: var(--paper);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(201, 134, 76, 0.25);
+    transition: transform 160ms var(--ease), box-shadow 160ms var(--ease);
+    flex-shrink: 0;
+  }
+  .mic:hover { transform: translateY(-2px); box-shadow: 0 6px 22px rgba(201, 134, 76, 0.32); }
+  .mic:active { transform: translateY(0); }
+  .mic svg { width: 28px; height: 28px; }
+  .voice-row .copy {
+    font-family: var(--serif);
+    font-size: 20px;
+    color: var(--text-3);
+    margin: 0;
+  }
+  .voice-row .copy em { font-style: italic; color: var(--ink); }
+
+  /* ─── Body map ─── */
+  .body-row {
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+  }
+  .body-row .copy {
+    flex: 1;
+    padding-top: 8px;
+  }
+  .body-row .copy h3 {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 22px;
+    color: var(--ink);
+    margin: 0 0 4px;
+  }
+  .body-row .copy p {
+    font-family: var(--serif);
+    font-size: 15px;
+    line-height: 1.4;
+    color: var(--text-4);
+    margin: 0;
+  }
+  .body {
+    width: 140px;
+    height: 200px;
+    flex-shrink: 0;
+  }
+  .body .part {
+    fill: var(--rule-soft);
+    stroke: var(--rule);
+    stroke-width: 1.2;
+    cursor: pointer;
+    transition: fill 160ms var(--ease);
+  }
+  .body .part:hover { fill: var(--cream-warm); }
+  .body .part.on { fill: var(--ember-tint); stroke: var(--ember); }
+
+  /* ─── Soft divider before relationship section ─── */
+  .rel-divider {
+    height: 1px;
+    background: var(--rule-soft);
+    margin: 8px 0;
+  }
+
+  /* ─── Relationship step (parent-led; kid sees) ─── */
+  .rel-step {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .rel-step .small-eye {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-5);
+  }
+  .rel-targets {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .rel-chip {
+    padding: 9px 16px;
+    border-radius: 999px;
+    border: 1.5px solid var(--rule-soft);
+    background: var(--paper);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-3);
+    cursor: pointer;
+    transition: all 140ms var(--ease);
+  }
+  .rel-chip:hover { border-color: var(--rule); color: var(--ink); }
+  .rel-chip.on {
+    background: var(--sage-tint);
+    border-color: var(--sage);
+    color: var(--sage-deep);
+  }
+  .rel-question {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 22px;
+    line-height: 1.2;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+  .rel-question em { font-style: italic; color: var(--ink); }
+  .rel-skip {
+    align-self: flex-start;
+    background: transparent;
+    border: none;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-5);
+    cursor: pointer;
+    padding: 6px 0;
+    transition: color 140ms var(--ease);
+  }
+  .rel-skip:hover { color: var(--text-3); }
+
+  /* ─── Done ─── */
+  .done-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+  }
+  .done {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--paper);
+    background: var(--ink);
+    border: 1px solid var(--ink);
+    padding: 16px 36px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: transform 160ms var(--ease), background 160ms var(--ease), filter 160ms var(--ease);
+  }
+  .done:hover { transform: translateY(-1px); filter: brightness(1.08); }
+  .done:active { transform: scale(0.98); }
+  .done.saved { background: var(--sage-deep); border-color: var(--sage-deep); }
+
+  .designer-note {
+    max-width: 720px;
+    margin: 32px auto 32px;
+    padding: 16px 32px 0;
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--text-5);
+    line-height: 1.6;
+    border-top: 1px solid var(--rule-soft);
+    opacity: 0.85;
+  }
+  .designer-note strong {
+    color: var(--text-3);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 10px;
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  @media (max-width: 520px) {
+    .feelings { grid-template-columns: repeat(3, 1fr); }
+    .greet { font-size: 30px; }
+    .question { font-size: 22px; }
+    .feel .face { font-size: 38px; }
+    .body { width: 120px; height: 170px; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- Minimal chrome — name + sun glyph. No nav, no menu, no back. -->
+  <div class="top">
+    <span class="name">Kaleb</span>
+    <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-label="Morning">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+    </svg>
+  </div>
+
+  <main class="card" id="card" role="main">
+
+    <header>
+      <h1 class="greet">Hi <em>Kaleb.</em></h1>
+      <p class="question">How are you feeling this morning?</p>
+    </header>
+
+    <!-- Feelings — multi-select, big and tactile. -->
+    <section class="section" aria-label="Pick how you feel">
+      <span class="label">Pick what fits</span>
+      <div class="feelings" data-group="self">
+        <button class="feel" type="button" aria-pressed="false">
+          <span class="face">😀</span><span class="word">happy</span>
+        </button>
+        <button class="feel" type="button" aria-pressed="false">
+          <span class="face">😌</span><span class="word">calm</span>
+        </button>
+        <button class="feel on" type="button" aria-pressed="true">
+          <span class="face">😴</span><span class="word">tired</span>
+        </button>
+        <button class="feel" type="button" aria-pressed="false">
+          <span class="face">😟</span><span class="word">worried</span>
+        </button>
+        <button class="feel" type="button" aria-pressed="false">
+          <span class="face">😢</span><span class="word">sad</span>
+        </button>
+        <button class="feel" type="button" aria-pressed="false">
+          <span class="face">😠</span><span class="word">mad</span>
+        </button>
+        <button class="feel" type="button" aria-pressed="false">
+          <span class="face">🤔</span><span class="word">unsure</span>
+        </button>
+        <button class="feel" type="button" aria-pressed="false">
+          <span class="face">😎</span><span class="word">good</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Voice — always present. -->
+    <section class="section" aria-label="Talk if you want">
+      <span class="label">or talk</span>
+      <div class="voice-row">
+        <button class="mic" type="button" aria-label="Tap to talk">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="22" />
+          </svg>
+        </button>
+        <p class="copy"><em>Tap and tell me about your morning.</em></p>
+      </div>
+    </section>
+
+    <!-- Body map — totally optional. -->
+    <section class="section" aria-label="Where do you feel it">
+      <span class="label">Where do you feel it? (you can skip)</span>
+      <div class="body-row">
+        <svg class="body" viewBox="0 0 140 200" role="img" aria-label="Body map">
+          <circle class="part" cx="70" cy="28" r="20" data-part="head" />
+          <rect  class="part" x="62" y="46" width="16" height="14" rx="3" data-part="throat" />
+          <rect  class="part on" x="46" y="60" width="48" height="40" rx="8" data-part="chest" />
+          <rect  class="part" x="48" y="100" width="44" height="36" rx="8" data-part="tummy" />
+          <rect  class="part" x="22" y="64" width="20" height="58" rx="9" data-part="arm-left" />
+          <rect  class="part" x="98" y="64" width="20" height="58" rx="9" data-part="arm-right" />
+          <circle class="part" cx="32" cy="132" r="9" data-part="hand-left" />
+          <circle class="part" cx="108" cy="132" r="9" data-part="hand-right" />
+          <rect  class="part" x="52" y="138" width="16" height="50" rx="7" data-part="leg-left" />
+          <rect  class="part" x="72" y="138" width="16" height="50" rx="7" data-part="leg-right" />
+        </svg>
+        <div class="copy">
+          <h3>Anywhere?</h3>
+          <p>Tap a part of the body if a feeling lives there. Or skip — that's okay too.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Soft divider — visual breath before the relationship step. -->
+    <div class="rel-divider" aria-hidden="true"></div>
+
+    <!-- Relationship step. Optional. Parent picks the target. -->
+    <section class="section rel-step" aria-label="About someone in your family">
+      <span class="small-eye">If you want — about someone</span>
+      <div class="rel-targets" role="group">
+        <button class="rel-chip on" type="button" data-name="Mom">Mom</button>
+        <button class="rel-chip" type="button" data-name="Dad">Dad</button>
+        <button class="rel-chip" type="button" data-name="Nell">Nell</button>
+        <button class="rel-chip" type="button" data-name="Liam">Liam</button>
+      </div>
+      <p class="rel-question">How are you feeling about <em>Mom</em>?</p>
+      <div class="feelings" data-group="rel">
+        <button class="feel on" type="button" aria-pressed="true">
+          <span class="face">😀</span><span class="word">happy</span>
+        </button>
+        <button class="feel" type="button" aria-pressed="false">
+          <span class="face">💛</span><span class="word">love</span>
+        </button>
+        <button class="feel" type="button" aria-pressed="false">
+          <span class="face">🤗</span><span class="word">close</span>
+        </button>
+        <button class="feel" type="button" aria-pressed="false">
+          <span class="face">😟</span><span class="word">worried</span>
+        </button>
+        <button class="feel" type="button" aria-pressed="false">
+          <span class="face">😢</span><span class="word">sad</span>
+        </button>
+        <button class="feel" type="button" aria-pressed="false">
+          <span class="face">😠</span><span class="word">mad</span>
+        </button>
+        <button class="feel" type="button" aria-pressed="false">
+          <span class="face">😴</span><span class="word">far</span>
+        </button>
+        <button class="feel" type="button" aria-pressed="false">
+          <span class="face">🤔</span><span class="word">unsure</span>
+        </button>
+      </div>
+      <div class="voice-row">
+        <button class="mic" type="button" aria-label="Tap to talk">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="22" />
+          </svg>
+        </button>
+        <p class="copy"><em>Tap and tell me about Mom if you want.</em></p>
+      </div>
+      <button class="rel-skip" type="button">Skip this part</button>
+    </section>
+
+    <div class="done-row">
+      <button class="done" id="doneBtn" type="button">All done</button>
+    </div>
+
+  </main>
+
+  <p class="designer-note">
+    <strong>Designer note (not shown to kid)</strong>
+    Kid mode v2.1 — same palette tokens as adult views; rounder shapes (16px radius), bigger touch targets, warmer accent (amber/ember). Selected feeling tile uses warm-tint + scale(1.03). Card gets a faint warmth shadow once any feeling is chosen, mirroring the adult check-in card. The relationship step keeps sage-tint for the parent-controlled target chip — gentler than the adult-side leather pill, which fits a kid surface. The whole screen still ends with one Done button; "All done" briefly turns sage on save, then resets.
+  </p>
+
+  <script>
+    // Feeling tiles — multi-select within each group + card warmth on first pick.
+    document.querySelectorAll('.feel').forEach((b) => {
+      b.addEventListener('click', () => {
+        const on = b.classList.toggle('on');
+        b.setAttribute('aria-pressed', on);
+        const card = document.getElementById('card');
+        if (card && document.querySelectorAll('.feel.on').length > 0) {
+          card.classList.add('warmth');
+        } else if (card) {
+          card.classList.remove('warmth');
+        }
+      });
+    });
+    // Body map taps
+    document.querySelectorAll('.body .part').forEach((p) => {
+      p.addEventListener('click', () => p.classList.toggle('on'));
+    });
+    // Relationship target — single-select; updates question + voice copy
+    // (scoped to .rel-step so the personal section's voice copy isn't touched).
+    document.querySelectorAll('.rel-chip').forEach((c) => {
+      c.addEventListener('click', () => {
+        document.querySelectorAll('.rel-chip').forEach((x) => x.classList.remove('on'));
+        c.classList.add('on');
+        const relStep = document.querySelector('.rel-step');
+        if (!relStep) return;
+        const q = relStep.querySelector('.rel-question');
+        const v = relStep.querySelector('.voice-row .copy em');
+        const name = c.dataset.name || c.textContent.trim();
+        if (q) q.innerHTML = 'How are you feeling about <em>' + name + '</em>?';
+        if (v) v.textContent = 'Tap and tell me about ' + name + ' if you want.';
+      });
+    });
+    // Done — brief confirmation before fading back.
+    const done = document.getElementById('doneBtn');
+    if (done) {
+      done.addEventListener('click', () => {
+        const orig = done.textContent;
+        done.textContent = 'Saved';
+        done.classList.add('saved');
+        setTimeout(() => {
+          done.textContent = orig;
+          done.classList.remove('saved');
+        }, 1100);
+      });
+    }
+  </script>
+
+</body>
+</html>

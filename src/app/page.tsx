@@ -1,28 +1,23 @@
 'use client';
 
-import { useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
 import { stockImagery } from '@/config/stock-imagery';
+import { Home as JournalFirstHome } from '@/components/journal-first/Home';
 
 // ================================================================
-// Home — editorial broadsheet splash.
+// Home — the cold-open writing surface.
 //
-// Signed-in visitors are redirected to /workbook (their room).
-// Signed-out visitors see a typographic landing that matches the
-// redesign's voice — no stock photography, paper + ink only.
+// Phase 1 of the journal-first IA reframe (see project_journal_
+// first_vision memory). Authed users land directly on the writing
+// surface (JournalHome). Signed-out visitors see the editorial
+// broadsheet splash below — unchanged.
 // ================================================================
 
 export default function HomePage() {
   const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
 
-  useEffect(() => {
-    if (!authLoading && user) router.replace('/workbook');
-  }, [authLoading, user, router]);
-
-  if (authLoading || user) {
+  if (authLoading) {
     return (
       <div className="home-boot">
         <span>Opening…</span>
@@ -41,6 +36,10 @@ export default function HomePage() {
         `}</style>
       </div>
     );
+  }
+
+  if (user) {
+    return <JournalFirstHome />;
   }
 
   return (
