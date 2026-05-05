@@ -695,7 +695,7 @@ function MomentRow({
    Main component
    ─────────────────────────────────────────────────────────────── */
 export function Home() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
   const { createEntry, saving } = useJournal();
   const { entries: allEntries } = useJournalEntries();
@@ -749,6 +749,12 @@ export function Home() {
   const asRef = useRef<HTMLDivElement>(null);
   const [aboutOpen, setAboutOpen] = useState(false);
   const aboutRef = useRef<HTMLDivElement>(null);
+
+  // User-menu dropdown in the banner — replaces what the old TopNav
+  // exposed. Critical for log-out so a different family member can
+  // sign in to contribute in their own voice.
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const writingAsLabel = useMemo(() => {
     if (!writingAsId) return 'You';
@@ -815,12 +821,13 @@ export function Home() {
       if (visOpen && visRef.current && !visRef.current.contains(t)) setVisOpen(false);
       if (asOpen && asRef.current && !asRef.current.contains(t)) setAsOpen(false);
       if (aboutOpen && aboutRef.current && !aboutRef.current.contains(t)) setAboutOpen(false);
+      if (userMenuOpen && userMenuRef.current && !userMenuRef.current.contains(t)) setUserMenuOpen(false);
     };
-    if (visOpen || asOpen || aboutOpen) {
+    if (visOpen || asOpen || aboutOpen || userMenuOpen) {
       document.addEventListener('mousedown', onDown);
       return () => document.removeEventListener('mousedown', onDown);
     }
-  }, [visOpen, asOpen, aboutOpen]);
+  }, [visOpen, asOpen, aboutOpen, userMenuOpen]);
 
   // Hydrate any in-progress draft from localStorage on first mount.
   // This MUST run before the "pre-select default person" effect, so
@@ -1091,10 +1098,131 @@ export function Home() {
         <div style={sx.bannerStrip}>
           <div style={sx.bannerInner}>
             <Link href="/" style={sx.wordmark}>Relish</Link>
-            <span style={sx.who}>
-              <span style={sx.whoPip} />
-              {firstName}
-            </span>
+
+            {/* User menu — clickable pip + name → dropdown with the
+                key destinations + Log out. Replaces what the old
+                TopNav used to expose. */}
+            <div ref={userMenuRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setUserMenuOpen((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={userMenuOpen}
+                style={{
+                  ...sx.who,
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px 6px',
+                  margin: '-4px -6px',
+                  borderRadius: 999,
+                }}
+              >
+                <span style={sx.whoPip} />
+                {firstName}
+              </button>
+              {userMenuOpen && (
+                <div
+                  role="menu"
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: 'calc(100% + 8px)',
+                    minWidth: 200,
+                    background: T.paper,
+                    border: `1px solid ${T.rule}`,
+                    borderRadius: 8,
+                    boxShadow: '0 4px 18px rgba(60,50,40,0.12)',
+                    padding: 4,
+                    zIndex: 70,
+                  }}
+                >
+                  {[
+                    { label: 'People', href: '/manual' },
+                    { label: 'Everything written', href: '/archive' },
+                    { label: 'Coach', href: '/coach' },
+                    null, // separator
+                    { label: 'Therapy', href: '/therapy' },
+                    { label: 'Rituals', href: '/rituals' },
+                    { label: 'Growth', href: '/growth' },
+                    { label: 'Settings', href: '/settings' },
+                  ].map((item, i) =>
+                    item === null ? (
+                      <div
+                        key={`sep-${i}`}
+                        style={{
+                          height: 1,
+                          background: T.ruleSoft,
+                          margin: '4px 8px',
+                        }}
+                      />
+                    ) : (
+                      <button
+                        key={item.href}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          router.push(item.href);
+                        }}
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          textAlign: 'left',
+                          padding: '10px 12px',
+                          border: 'none',
+                          background: 'transparent',
+                          borderRadius: 6,
+                          cursor: 'pointer',
+                          fontFamily: T.sans,
+                          fontSize: 13,
+                          fontWeight: 500,
+                          color: T.text3,
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    ),
+                  )}
+                  <div
+                    style={{
+                      height: 1,
+                      background: T.ruleSoft,
+                      margin: '4px 8px',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={async () => {
+                      setUserMenuOpen(false);
+                      try {
+                        await logout();
+                      } catch (e) {
+                        console.warn('logout failed', e);
+                      }
+                      router.push('/login');
+                    }}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '10px 12px',
+                      border: 'none',
+                      background: 'transparent',
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                      fontFamily: T.sans,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: T.burgundy,
+                    }}
+                  >
+                    Log out
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
