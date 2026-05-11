@@ -17,8 +17,10 @@ export function IntersectionOfTruths({ insight }: { insight: SynthesisInsight | 
         <span style={badgeStyle}>✦ Relish AI Synthesis</span>
       </div>
       <h2 style={titleStyle}>The Intersection of Truths</h2>
-      <h3 style={headlineStyle}>{insight.headline}</h3>
-      <p style={narrativeStyle}>{insight.narrative}</p>
+      <div style={calloutStyle}>
+        <h3 style={calloutHeadlineStyle}>{insight.headline}</h3>
+        <p style={calloutNarrativeStyle}>{insight.narrative}</p>
+      </div>
       <div style={columnsStyle}>
         <Column heading="Alignments" items={insight.alignments} />
         <Column heading="Divergences" items={insight.divergences} />
@@ -65,22 +67,29 @@ const titleStyle: CSSProperties = {
   margin: '0 0 28px',
   textAlign: 'center',
 };
-const headlineStyle: CSSProperties = {
+const calloutStyle: CSSProperties = {
+  background: 'rgba(212, 168, 168, 0.10)',
+  border: '1px solid rgba(212, 168, 168, 0.28)',
+  borderRadius: 8,
+  padding: '24px 28px',
+  margin: '0 auto 36px',
+  maxWidth: 520,
+  textAlign: 'center',
+};
+const calloutHeadlineStyle: CSSProperties = {
   fontFamily: 'var(--r-serif, Georgia, serif)',
   fontStyle: 'italic',
   fontWeight: 400,
-  fontSize: 26,
-  letterSpacing: '-0.01em',
+  fontSize: 22,
   color: 'var(--r-ink, #2B2620)',
   margin: '0 0 10px',
 };
-const narrativeStyle: CSSProperties = {
+const calloutNarrativeStyle: CSSProperties = {
   fontFamily: 'var(--r-serif, Georgia, serif)',
-  fontSize: 16,
-  lineHeight: 1.6,
+  fontSize: 15,
+  lineHeight: 1.55,
   color: 'var(--r-text-3, #5C5347)',
-  margin: '0 0 24px',
-  maxWidth: '60ch',
+  margin: 0,
 };
 const columnsStyle: CSSProperties = {
   display: 'grid',
