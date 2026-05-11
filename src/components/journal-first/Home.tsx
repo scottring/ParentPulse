@@ -71,6 +71,21 @@ function dateShort(d: Date): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+/* Deterministic fallback illustration per kid when no avatarUrl is set —
+   different kids get different images so the cards don't all look the same. */
+const KID_FALLBACK_IMAGES = [
+  '/illustrations/02-Parent-kid-eye-level.png',
+  '/illustrations/06-child-journaling.png',
+  '/illustrations/08-child-in-bed.png',
+  '/illustrations/14-heart-speech-bubble.png',
+] as const;
+
+function kidFallbackImage(personId: string): string {
+  let hash = 0;
+  for (let i = 0; i < personId.length; i++) hash = (hash * 31 + personId.charCodeAt(i)) | 0;
+  return KID_FALLBACK_IMAGES[Math.abs(hash) % KID_FALLBACK_IMAGES.length];
+}
+
 /* ───────────────────────────────────────────────────────────────
    Style objects (typed CSSProperties so TS catches typos)
    ─────────────────────────────────────────────────────────────── */
@@ -989,7 +1004,7 @@ export function Home() {
                       style={{
                         height: 140,
                         margin: '0 -22px',
-                        backgroundImage: `url('${k.avatarUrl ?? '/illustrations/02-Parent-kid-eye-level.png'}')`,
+                        backgroundImage: `url('${k.avatarUrl ?? kidFallbackImage(k.personId)}')`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                       }}
