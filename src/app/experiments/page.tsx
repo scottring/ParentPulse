@@ -133,13 +133,23 @@ export function ArcCard({
   const next = activeItems[0];
   const phaseLabel = PHASE_LABEL[arc.currentPhase] || '';
   const phaseDef = arc.phases?.find((p) => p.phase === arc.currentPhase);
+  // The detail page is a per-item workspace (provenance → brief → doing →
+  // reflect → complete). Link to the next active item if one exists; if
+  // not, render the card as a non-clickable div (graceful — visible but
+  // there's nothing to "open" when no active items are queued).
+  const Wrapper: React.ElementType = next ? Link : 'div';
+  const wrapperProps = next
+    ? {
+        href: `/experiments/${next.growthItemId}`,
+        style: { display: 'block', color: 'inherit', textDecoration: 'none' },
+        'aria-label': `Open the next moment in ${arc.title}`,
+      }
+    : {
+        style: { display: 'block', color: 'inherit', opacity: 0.85 },
+      };
   return (
     <li className="arc-card">
-      <Link
-        href={`/experiments/${arc.arcId}`}
-        style={{ display: 'block', color: 'inherit', textDecoration: 'none' }}
-        aria-label={`Open the ${arc.title} experiment`}
-      >
+      <Wrapper {...wrapperProps}>
         <div className="arc-card-head">
           <div className="arc-card-head-left">
             {arc.emoji && <span className="arc-emoji" aria-hidden>{arc.emoji}</span>}
@@ -188,7 +198,7 @@ export function ArcCard({
             When this experiment graduates: <em>{arc.outcomeStatement}</em>
           </p>
         )}
-      </Link>
+      </Wrapper>
     </li>
   );
 }
