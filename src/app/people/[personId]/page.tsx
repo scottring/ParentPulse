@@ -24,6 +24,9 @@ import type { JournalEntry } from '@/types/journal';
 import { entryMentionsPerson } from '@/lib/entry-mentions';
 import { computeBalance } from '@/lib/balance';
 import { useSettledMentions } from '@/hooks/useSettledMentions';
+import { PerspectiveLayers, type Perspective } from '@/components/manual/PerspectiveLayers';
+import { IntersectionOfTruths, type SynthesisInsight } from '@/components/manual/IntersectionOfTruths';
+import { AskCoachCTA } from '@/components/manual/AskCoachCTA';
 
 export default function PersonPage({
   params,
@@ -96,6 +99,62 @@ export default function PersonPage({
       .sort((a, b) => (order[a.severity] ?? 3) - (order[b.severity] ?? 3))
       .slice(0, 3);
   }, [manual?.triggers]);
+
+  // Build perspectives from contributions (for PerspectiveLayers section).
+  // Each completed contribution becomes a layer; pull-quote = first answer >40 chars.
+  const perspectives: Perspective[] = useMemo(() => {
+    if (!contributions || contributions.length === 0) return [];
+    const tints: Perspective['tint'][] = ['rose', 'sage', 'azure', 'neutral'];
+    return contributions
+      .filter((c) => c.status === 'complete')
+      .map((c, i) => {
+        const tint = tints[i % tints.length];
+        const contributorPerson = people.find((p) => p.linkedUserId === c.contributorId);
+        const label =
+          c.perspectiveType === 'self'
+            ? 'Self View'
+            : contributorPerson?.name
+              ? `${contributorPerson.name}'s Observation`
+              : c.contributorName
+                ? `${c.contributorName}'s Observation`
+                : 'An Observer';
+        // answers are keyed flat as "sectionId.questionId" → string|other; pick first long string.
+        const answerValues = Object.values(c.answers ?? {});
+        const pullQuoteRaw = answerValues.find(
+          (a) => typeof a === 'string' && (a as string).length > 40,
+        ) as string | undefined;
+        const pullQuote = (pullQuoteRaw ?? '').slice(0, 240);
+        return { id: c.contributionId, label, pullQuote, tint };
+      });
+  }, [contributions, people]);
+
+  // Build the synthesis insight from manual.synthesizedContent.
+  // Data model: SynthesizedContent has { overview, alignments[], gaps[], blindSpots[] }
+  // where each insight is SynthesizedInsight { topic, synthesis, ... }.
+  // We adapt to the component's shape: { headline, narrative, alignments: string[], divergences: string[] }.
+  const insight: SynthesisInsight | null = useMemo(() => {
+    const sc = manual?.synthesizedContent;
+    if (!sc) return null;
+    const alignments = (sc.alignments ?? []).map((a) => a.synthesis || a.topic).filter(Boolean);
+    const divergences = (sc.gaps ?? []).map((g) => g.synthesis || g.topic).filter(Boolean);
+    // Derive a headline + narrative from overview. Overview is a paragraph; split off
+    // the first sentence as the headline, the remainder as the narrative.
+    const overview = (sc.overview ?? '').trim();
+    if (!overview && alignments.length === 0 && divergences.length === 0) return null;
+    let headline = overview;
+    let narrative = '';
+    const sentenceMatch = overview.match(/^([\s\S]+?[.!?])\s+([\s\S]*)$/);
+    if (sentenceMatch) {
+      headline = sentenceMatch[1].trim();
+      narrative = sentenceMatch[2].trim();
+    }
+    if (!headline) return null;
+    return { headline, narrative, alignments, divergences };
+  }, [manual?.synthesizedContent]);
+
+  // Counts for AskCoachCTA. Reuse the `mentions` array already computed above.
+  const entryCount = mentions.length;
+  const contributionCount = (contributions ?? []).length;
 
   const loading = authLoading || personLoading;
   if (loading || !user) return null;
@@ -399,6 +458,16 @@ export default function PersonPage({
             </div>
           </div>
         </section>
+
+        {/* ═══ MULTI-PERSPECTIVE MANUAL SECTIONS ═══ */}
+        <PerspectiveLayers perspectives={perspectives} />
+        <IntersectionOfTruths insight={insight} />
+        <AskCoachCTA
+          personId={person.personId}
+          firstName={firstName}
+          entryCount={entryCount}
+          contributionCount={contributionCount}
+        />
 
         {/* ═══ THREADS + TIMELINE ═══ */}
         <section className="threads-section" id="still-open">
