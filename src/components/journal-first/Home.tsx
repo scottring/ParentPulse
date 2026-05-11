@@ -1454,7 +1454,7 @@ export function Home() {
                   cursor: !hasAnyContent || saving ? 'default' : 'pointer',
                 }}
               >
-                {showSaved ? 'Saved' : saving ? 'Saving…' : 'Save'}
+                {showSaved ? 'Kept' : saving ? 'Keeping…' : 'Keep →'}
               </button>
             </div>
             {/* Plain-language explainer + draft indicator. The
