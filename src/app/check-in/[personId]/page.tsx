@@ -12,14 +12,17 @@
    ================================================================ */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { useJournal } from '@/hooks/useJournal';
 import { usePerson } from '@/hooks/usePerson';
 import { MicButton } from '@/components/voice/MicButton';
 import { T } from '@/components/journal-first/tokens';
+import { firestore } from '@/lib/firebase';
+import type { CoupleRitual } from '@/types/couple-ritual';
 
 /* ─── Vocabularies ─── */
 const KID_FEELINGS_SELF = [
@@ -75,6 +78,14 @@ function partOfDay(d: Date): 'morning' | 'afternoon' | 'evening' | 'night' {
   if (h < 17) return 'afternoon';
   if (h < 21) return 'evening';
   return 'night';
+}
+
+function ritualNameFor(r: CoupleRitual): string {
+  if (r.cadence === 'weekly' && typeof r.dayOfWeek === 'number') {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return `${days[r.dayOfWeek]} Ritual`;
+  }
+  return 'Scheduled Ritual';
 }
 
 /* ─── Style objects ─── */
@@ -297,15 +308,45 @@ const sx = {
     display: 'inline-flex',
     alignItems: 'center',
   } as CSSProperties,
+  ritualChip: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '6px 12px',
+    borderRadius: 999,
+    background: 'rgba(120, 100, 70, 0.08)',
+    fontFamily: 'var(--r-sans, -apple-system, sans-serif)',
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: '0.06em',
+    color: 'var(--r-text-3, #5C5347)',
+    marginTop: 12,
+  } as CSSProperties,
 };
 
 export default function KidModePage() {
   const params = useParams<{ personId: string }>();
   const personId = params?.personId;
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const ritualId = searchParams?.get('ritualId') ?? null;
   const { user } = useAuth();
   const { people } = usePerson();
   const { createEntry, saving } = useJournal();
+
+  // When the page is launched from a scheduled ritual, surface a small
+  // chip with the ritual's name so the kid + parent know which sit-down
+  // this check-in belongs to. Absent for ad-hoc check-ins.
+  const [ritualDoc, setRitualDoc] = useState<CoupleRitual | null>(null);
+  useEffect(() => {
+    if (!ritualId) {
+      setRitualDoc(null);
+      return;
+    }
+    const unsub = onSnapshot(doc(firestore, 'couple_rituals', ritualId), (snap) => {
+      if (snap.exists()) setRitualDoc({ ...(snap.data() as CoupleRitual), id: snap.id });
+    });
+    return () => unsub();
+  }, [ritualId]);
 
   const kid = useMemo(
     () => people.find((p) => p.personId === personId),
@@ -689,6 +730,12 @@ export default function KidModePage() {
           <h1 style={sx.greet}>
             Hi <em style={{ fontStyle: 'italic' }}>{kid.name}.</em>
           </h1>
+          {ritualDoc && (
+            <div style={sx.ritualChip}>
+              <span aria-hidden style={{ marginRight: 6 }}>📅</span>
+              {ritualNameFor(ritualDoc)}
+            </div>
+          )}
           <p style={sx.question}>
             {morning ? 'How are you feeling this morning?' : 'How are you feeling?'}
           </p>
