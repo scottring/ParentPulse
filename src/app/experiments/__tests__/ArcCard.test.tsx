@@ -56,7 +56,7 @@ describe('ArcCard', () => {
   } as GrowthArc;
 
   it('renders the whole card as a link to /experiments/[arcId] when there are no active items', async () => {
-    const { ArcCard } = await import('@/app/growth/page');
+    const { ArcCard } = await import('@/app/experiments/page');
     render(<ArcCard arc={arc} progress={0} activeItems={[] as GrowthItem[]} />);
     const link = screen.getByRole('link', { name: /Test arc/i });
     expect(link).toHaveAttribute('href', '/experiments/arc-1');

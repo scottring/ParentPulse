@@ -354,7 +354,7 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
                         {cs.kind === 'done' && (
                           <a
                             className="turn-cta turn-cta-done"
-                            href={`/growth/${cs.growthItemId}`}
+                            href={`/experiments/${cs.growthItemId}`}
                           >
                             Saved · {cs.title} <span aria-hidden>↗</span>
                           </a>

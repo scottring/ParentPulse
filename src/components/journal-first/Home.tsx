@@ -1139,7 +1139,7 @@ export function Home() {
                     null, // separator
                     { label: 'Therapy', href: '/therapy' },
                     { label: 'Rituals', href: '/rituals' },
-                    { label: 'Growth', href: '/growth' },
+                    { label: 'Growth', href: '/experiments' },
                     { label: 'Settings', href: '/settings' },
                   ].map((item, i) =>
                     item === null ? (

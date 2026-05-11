@@ -173,7 +173,7 @@ export function TopNav({ userName, onSignOut, reversed = false, hideOnRoutes = [
                 <MenuSep reversed={reversed} />
                 <MenuItem reversed={reversed} onClick={() => { setMenuOpen(false); router.push('/therapy'); }}>Therapy</MenuItem>
                 <MenuItem reversed={reversed} onClick={() => { setMenuOpen(false); router.push('/rituals'); }}>Rituals</MenuItem>
-                <MenuItem reversed={reversed} onClick={() => { setMenuOpen(false); router.push('/growth'); }}>Growth</MenuItem>
+                <MenuItem reversed={reversed} onClick={() => { setMenuOpen(false); router.push('/experiments'); }}>Growth</MenuItem>
                 <MenuItem reversed={reversed} onClick={() => { setMenuOpen(false); router.push('/settings'); }}>Settings</MenuItem>
                 <MenuSep reversed={reversed} />
                 <MenuItem reversed={reversed} onClick={() => { setMenuOpen(false); onSignOut?.(); }}>Log out</MenuItem>

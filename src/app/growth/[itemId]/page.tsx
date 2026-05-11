@@ -1,5 +1,10 @@
-import GrowthItemWorkspace from './ClientPage';
+import { redirect } from 'next/navigation';
 
-export default function Page(props: { params: Promise<{ itemId: string }> }) {
-  return <GrowthItemWorkspace {...props} />;
+export default async function GrowthDetailLegacyRedirect({
+  params,
+}: {
+  params: Promise<{ itemId: string }>;
+}) {
+  const { itemId } = await params;
+  redirect(`/experiments/${itemId}`);
 }

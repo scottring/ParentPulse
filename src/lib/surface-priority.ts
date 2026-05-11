@@ -161,7 +161,7 @@ function growthItemToLead(item: GrowthItem, eyebrow: string): LeadItem {
     title: item.title,
     body: item.body,
     ctaLabel: 'Begin this practice',
-    ctaHref: `/growth/${item.growthItemId}`,
+    ctaHref: `/experiments/${item.growthItemId}`,
     glyph: item.emoji || '✦',
     glyphColor: '#5C8064',
   };
@@ -231,7 +231,7 @@ function pickPractice(
   // If the lead is already a practice, pick a different one
   if (lead.type === 'practice') {
     const different = items.find(
-      (i) => `/growth/${i.growthItemId}` !== lead.ctaHref,
+      (i) => `/experiments/${i.growthItemId}` !== lead.ctaHref,
     );
     return different || null;
   }

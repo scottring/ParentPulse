@@ -677,7 +677,7 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
           {entry.activitySpawnedItemId && (
             <div className="entry-provenance">
               <Link
-                href={`/growth/${entry.activitySpawnedItemId}`}
+                href={`/experiments/${entry.activitySpawnedItemId}`}
                 className="provenance-link"
               >
                 <span className="provenance-glyph" aria-hidden="true">◆</span>
