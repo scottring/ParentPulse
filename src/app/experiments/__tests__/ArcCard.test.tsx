@@ -55,7 +55,14 @@ describe('ArcCard', () => {
     phases: [],
   } as unknown as GrowthArc;
 
-  it('renders the whole card as a link to /experiments/[growthItemId] when an active item exists', async () => {
+  it('renders the whole card as a link to /experiments/arc/[arcId]', async () => {
+    const { ArcCard } = await import('@/app/experiments/page');
+    render(<ArcCard arc={arc} progress={0} activeItems={[] as GrowthItem[]} />);
+    const link = screen.getByRole('link', { name: /Test arc/i });
+    expect(link).toHaveAttribute('href', '/experiments/arc/arc-1');
+  });
+
+  it('renders an inner Next line when an active item exists (item label, not a separate link)', async () => {
     const { ArcCard } = await import('@/app/experiments/page');
     const activeItem = {
       growthItemId: 'item-7',
@@ -63,16 +70,9 @@ describe('ArcCard', () => {
       title: 'A small thing',
     } as unknown as GrowthItem;
     render(<ArcCard arc={arc} progress={0} activeItems={[activeItem]} />);
-    const link = screen.getByRole('link', { name: /next moment in Test arc/i });
-    expect(link).toHaveAttribute('href', '/experiments/item-7');
-  });
-
-  it('renders the card as a non-clickable div when no active items exist', async () => {
-    const { ArcCard } = await import('@/app/experiments/page');
-    render(<ArcCard arc={arc} progress={0} activeItems={[] as GrowthItem[]} />);
-    // No link role — the card is visible but inert.
-    expect(screen.queryByRole('link')).toBeNull();
-    // The title still renders.
-    expect(screen.getByText(/Test arc/i)).toBeInTheDocument();
+    // Outer link is to arc overview, NOT to the item.
+    expect(screen.getByRole('link', { name: /Test arc/i })).toHaveAttribute('href', '/experiments/arc/arc-1');
+    // The item title still renders as visual text inside the card.
+    expect(screen.getByText(/A small thing/i)).toBeInTheDocument();
   });
 });

@@ -133,20 +133,16 @@ export function ArcCard({
   const next = activeItems[0];
   const phaseLabel = PHASE_LABEL[arc.currentPhase] || '';
   const phaseDef = arc.phases?.find((p) => p.phase === arc.currentPhase);
-  // The detail page is a per-item workspace (provenance → brief → doing →
-  // reflect → complete). Link to the next active item if one exists; if
-  // not, render the card as a non-clickable div (graceful — visible but
-  // there's nothing to "open" when no active items are queued).
-  const Wrapper: React.ElementType = next ? Link : 'div';
-  const wrapperProps = next
-    ? {
-        href: `/experiments/${next.growthItemId}`,
-        style: { display: 'block', color: 'inherit', textDecoration: 'none' },
-        'aria-label': `Open the next moment in ${arc.title}`,
-      }
-    : {
-        style: { display: 'block', color: 'inherit', opacity: 0.85 },
-      };
+  // The card always links to the arc overview at /experiments/arc/[arcId].
+  // The overview is the reading surface — hypothesis, phase, progress, item
+  // list. From there the user drills into a specific item workspace to
+  // actually do/record the practice.
+  const Wrapper: React.ElementType = Link;
+  const wrapperProps = {
+    href: `/experiments/arc/${arc.arcId}`,
+    style: { display: 'block', color: 'inherit', textDecoration: 'none' },
+    'aria-label': `Open the ${arc.title} experiment`,
+  };
   return (
     <li className="arc-card">
       <Wrapper {...wrapperProps}>
