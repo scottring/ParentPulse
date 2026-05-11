@@ -871,6 +871,31 @@ export function Home() {
   // Recent entries for the timeline (top 3 visible at decreasing opacity)
   const recent = useMemo(() => allEntries.slice(0, 3), [allEntries]);
 
+  // Group recent entries into Recent Echoes — by subject: child → Self → Relationships.
+  type EchoGroup = { label: string; entries: typeof recent };
+  const echoGroups = useMemo<EchoGroup[]>(() => {
+    const groups: Record<string, typeof recent> = {};
+    for (const entry of recent) {
+      const mentions = entry.personMentions ?? [];
+      const firstChildMention = mentions.find((id) =>
+        kids.some((k) => k.personId === id),
+      );
+      let key: string | null = null;
+      if (firstChildMention) {
+        const kid = kids.find((k) => k.personId === firstChildMention);
+        key = `About ${kid?.name ?? 'a child'}`;
+      } else if ((entry.subjectType ?? 'self') === 'self' && mentions.length === 0) {
+        key = 'Self';
+      } else if (mentions.length > 0) {
+        key = 'Relationships';
+      }
+      if (!key) continue;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(entry);
+    }
+    return Object.entries(groups).map(([label, entries]) => ({ label, entries }));
+  }, [recent, kids]);
+
   // ────────── "Small thing" nudge ──────────
   // Quietest possible pattern-driven suggestion. v1 picks the kid who's
   // had the longest gap since the last entry mentioning them — only
@@ -1134,40 +1159,53 @@ export function Home() {
           </section>
         )}
 
-        {/* Timeline of recent entries */}
-        {recent.length > 0 && (
+        {/* Recent Echoes — recent entries grouped by subject. */}
+        {echoGroups.length > 0 && (
           <section style={{ marginTop: 40 }}>
-            <p style={sx.eyebrow}>{evening ? 'What happened today' : 'What came in'}</p>
-            <ul style={sx.timeline}>
-              {recent.map((entry, i) => {
-                const opacity = i === 0 ? 1 : i === 1 ? 0.85 : 0.7;
-                const when = entry.createdAt?.toDate?.() ?? null;
-                const author = entry.authorId === user?.userId
-                  ? 'You'
-                  : people.find((p) => p.linkedUserId === entry.authorId)?.name ?? 'Someone';
-                return (
-                  <li key={entry.entryId} style={{ marginBottom: 14, opacity }}>
-                    <Link
-                      href={`/journal/${entry.entryId}`}
-                      style={{
-                        display: 'block',
-                        textDecoration: 'none',
-                        color: 'inherit',
-                      }}
-                    >
-                      <span style={sx.tlMeta}>
-                        <span style={sx.tlBullet} />
-                        {author} · {relativeWhen(when)}
-                      </span>
-                      <p style={sx.tlQuote}>
-                        &ldquo;{(entry.text || '').slice(0, 180)}
-                        {(entry.text || '').length > 180 ? '…' : ''}&rdquo;
-                      </p>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+            <p style={sx.eyebrow}>Recent Echoes</p>
+            {echoGroups.map((group) => (
+              <div key={group.label} style={{ marginBottom: 28 }}>
+                <p style={{
+                  fontFamily: T.sans,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: '0.18em',
+                  textTransform: 'uppercase',
+                  color: T.text5,
+                  marginBottom: 10,
+                }}>
+                  {group.label}
+                </p>
+                <ul style={sx.timeline}>
+                  {group.entries.map((entry) => {
+                    const when = entry.createdAt?.toDate?.() ?? null;
+                    const author = entry.authorId === user?.userId
+                      ? 'You'
+                      : people.find((p) => p.linkedUserId === entry.authorId)?.name ?? 'Someone';
+                    return (
+                      <li key={entry.entryId} style={{ marginBottom: 10 }}>
+                        <Link
+                          href={`/journal/${entry.entryId}`}
+                          style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}
+                        >
+                          <span style={sx.tlMeta}>
+                            <span style={sx.tlBullet} />
+                            {author} · {relativeWhen(when)}
+                          </span>
+                          <p style={sx.tlQuote}>
+                            &ldquo;{(entry.text || '').slice(0, 180)}
+                            {(entry.text || '').length > 180 ? '…' : ''}&rdquo;
+                          </p>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+            <p style={{ ...sx.tail, marginTop: 24 }}>
+              <Link href="/archive" style={sx.tailLink}>View all ↗</Link>
+            </p>
           </section>
         )}
 
@@ -1502,11 +1540,6 @@ export function Home() {
             )}
           </div>
         </section>
-
-        {/* Tail link */}
-        <p style={sx.tail}>
-          <Link href="/archive" style={sx.tailLink}>Everything written ↗</Link>
-        </p>
 
       </div>
 
