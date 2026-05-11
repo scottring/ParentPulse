@@ -133,7 +133,7 @@ function BuildingLegacyCard() {
         </p>
       </div>
       <div style={legacyActionsColStyle}>
-        <Link href="/settings#people" style={legacyActionStyle}>
+        <Link href="/settings?invite=1#family-members" style={legacyActionStyle}>
           Invite New Member <span aria-hidden style={{ marginLeft: 6 }}>+</span>
         </Link>
         <button type="button" disabled style={legacyActionDisabledStyle} title="Coming soon">
