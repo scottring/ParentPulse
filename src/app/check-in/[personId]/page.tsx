@@ -654,7 +654,7 @@ export default function KidModePage() {
             <textarea
               value={voiceText}
               onChange={(e) => setVoiceText(e.target.value)}
-              placeholder="Tap and tell me about your morning."
+              placeholder="Tap and tell me something."
               rows={3}
               style={{
                 flex: 1,
