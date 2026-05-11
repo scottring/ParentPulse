@@ -23,13 +23,17 @@ import { T } from '@/components/journal-first/tokens';
 /* ─── Vocabularies ─── */
 const KID_FEELINGS_SELF = [
   { face: '😀', word: 'happy' },
-  { face: '😌', word: 'calm' },
-  { face: '😴', word: 'tired' },
-  { face: '😟', word: 'worried' },
   { face: '😢', word: 'sad' },
   { face: '😠', word: 'mad' },
-  { face: '🤔', word: 'unsure' },
-  { face: '😎', word: 'good' },
+  { face: '😟', word: 'worried' },
+  { face: '😴', word: 'tired' },
+  { face: '😌', word: 'calm' },
+  { face: '🦁', word: 'brave' },
+  { face: '🤪', word: 'silly' },
+  { face: '🤫', word: 'quiet' },
+  { face: '🤔', word: 'thinking' },
+  { face: '🎉', word: 'excited' },
+  { face: '💛', word: 'loved' },
 ];
 const KID_FEELINGS_REL = [
   { face: '😀', word: 'happy' },
@@ -148,7 +152,7 @@ const sx = {
   } as CSSProperties,
   feelings: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
+    gridTemplateColumns: 'repeat(3, 1fr)',
     gap: 10,
   } as CSSProperties,
   feelBase: {
