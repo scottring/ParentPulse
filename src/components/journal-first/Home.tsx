@@ -156,15 +156,13 @@ const sx = {
   page: {
     maxWidth: 680,
     margin: '0 auto',
-    padding: '212px 28px 80px',
+    padding: '28px 28px 80px',
   } as CSSProperties,
-  /* Fixed banner — seasonal image band + paper strip with wordmark/name. */
+  /* Seasonal banner — image band only. The wordmark + user-menu
+     strip moved to the global TopChrome (root layout), so this is
+     now a static in-flow visual anchor at the top of the page. */
   banner: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 50,
+    position: 'relative',
   } as CSSProperties,
   bannerImage: {
     height: 140,
@@ -172,45 +170,6 @@ const sx = {
     backgroundPosition: 'center 38%',
     backgroundRepeat: 'no-repeat',
     borderBottom: `1px solid ${T.ruleSoft}`,
-  } as CSSProperties,
-  bannerStrip: {
-    background: T.paper,
-    borderBottom: `1px solid ${T.ruleSoft}`,
-    display: 'flex',
-    alignItems: 'center',
-  } as CSSProperties,
-  bannerInner: {
-    width: '100%',
-    padding: '12px 20px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-  } as CSSProperties,
-  wordmark: {
-    fontFamily: T.serif,
-    fontStyle: 'italic',
-    fontWeight: 300,
-    fontSize: 22,
-    letterSpacing: '-0.01em',
-    color: T.ink,
-    textDecoration: 'none',
-  } as CSSProperties,
-  who: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 8,
-    fontFamily: T.sans,
-    fontSize: 11,
-    fontWeight: 600,
-    letterSpacing: '0.16em',
-    textTransform: 'uppercase',
-    color: T.text4,
-  } as CSSProperties,
-  whoPip: {
-    width: 6,
-    height: 6,
-    borderRadius: '50%',
-    background: T.sage,
   } as CSSProperties,
 
   greetingBlock: {
@@ -695,7 +654,7 @@ function MomentRow({
    Main component
    ─────────────────────────────────────────────────────────────── */
 export function Home() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
   const { createEntry, saving } = useJournal();
   const { entries: allEntries } = useJournalEntries();
@@ -749,12 +708,6 @@ export function Home() {
   const asRef = useRef<HTMLDivElement>(null);
   const [aboutOpen, setAboutOpen] = useState(false);
   const aboutRef = useRef<HTMLDivElement>(null);
-
-  // User-menu dropdown in the banner — replaces what the old TopNav
-  // exposed. Critical for log-out so a different family member can
-  // sign in to contribute in their own voice.
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const writingAsLabel = useMemo(() => {
     if (!writingAsId) return 'You';
@@ -821,13 +774,12 @@ export function Home() {
       if (visOpen && visRef.current && !visRef.current.contains(t)) setVisOpen(false);
       if (asOpen && asRef.current && !asRef.current.contains(t)) setAsOpen(false);
       if (aboutOpen && aboutRef.current && !aboutRef.current.contains(t)) setAboutOpen(false);
-      if (userMenuOpen && userMenuRef.current && !userMenuRef.current.contains(t)) setUserMenuOpen(false);
     };
-    if (visOpen || asOpen || aboutOpen || userMenuOpen) {
+    if (visOpen || asOpen || aboutOpen) {
       document.addEventListener('mousedown', onDown);
       return () => document.removeEventListener('mousedown', onDown);
     }
-  }, [visOpen, asOpen, aboutOpen, userMenuOpen]);
+  }, [visOpen, asOpen, aboutOpen]);
 
   // Hydrate any in-progress draft from localStorage on first mount.
   // This MUST run before the "pre-select default person" effect, so
@@ -1080,8 +1032,10 @@ export function Home() {
   return (
     <main style={sx.app}>
 
-      {/* Fixed banner — seasonal image band + thin paper strip. No
-          functionality; visual anchor only. */}
+      {/* Seasonal image band — visual anchor at the top of the journal.
+          TopChrome (mounted in the root layout) now provides the
+          wordmark + user-menu pip, so the in-page banner strip and its
+          contents have been removed. */}
       <header style={sx.banner}>
         <div
           style={{
@@ -1090,136 +1044,6 @@ export function Home() {
           }}
           aria-hidden="true"
         />
-        <div style={sx.bannerStrip}>
-          <div style={sx.bannerInner}>
-            <Link href="/" style={sx.wordmark}>Relish</Link>
-
-            {/* User menu — clickable pip + name → dropdown with the
-                key destinations + Log out. Replaces what the old
-                TopNav used to expose. */}
-            <div ref={userMenuRef} style={{ position: 'relative' }}>
-              <button
-                type="button"
-                onClick={() => setUserMenuOpen((v) => !v)}
-                aria-haspopup="menu"
-                aria-expanded={userMenuOpen}
-                style={{
-                  ...sx.who,
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '4px 6px',
-                  margin: '-4px -6px',
-                  borderRadius: 999,
-                }}
-              >
-                <span style={sx.whoPip} />
-                {firstName}
-              </button>
-              {userMenuOpen && (
-                <div
-                  role="menu"
-                  style={{
-                    position: 'absolute',
-                    right: 0,
-                    top: 'calc(100% + 8px)',
-                    minWidth: 200,
-                    background: T.paper,
-                    border: `1px solid ${T.rule}`,
-                    borderRadius: 8,
-                    boxShadow: '0 4px 18px rgba(60,50,40,0.12)',
-                    padding: 4,
-                    zIndex: 70,
-                  }}
-                >
-                  {[
-                    { label: 'People', href: '/manual' },
-                    { label: 'Everything written', href: '/archive' },
-                    { label: 'Coach', href: '/coach' },
-                    null, // separator
-                    { label: 'Therapy', href: '/therapy' },
-                    { label: 'Rituals', href: '/rituals' },
-                    { label: 'Growth', href: '/experiments' },
-                    { label: 'Settings', href: '/settings' },
-                  ].map((item, i) =>
-                    item === null ? (
-                      <div
-                        key={`sep-${i}`}
-                        style={{
-                          height: 1,
-                          background: T.ruleSoft,
-                          margin: '4px 8px',
-                        }}
-                      />
-                    ) : (
-                      <button
-                        key={item.href}
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setUserMenuOpen(false);
-                          router.push(item.href);
-                        }}
-                        style={{
-                          display: 'block',
-                          width: '100%',
-                          textAlign: 'left',
-                          padding: '10px 12px',
-                          border: 'none',
-                          background: 'transparent',
-                          borderRadius: 6,
-                          cursor: 'pointer',
-                          fontFamily: T.sans,
-                          fontSize: 13,
-                          fontWeight: 500,
-                          color: T.text3,
-                        }}
-                      >
-                        {item.label}
-                      </button>
-                    ),
-                  )}
-                  <div
-                    style={{
-                      height: 1,
-                      background: T.ruleSoft,
-                      margin: '4px 8px',
-                    }}
-                  />
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={async () => {
-                      setUserMenuOpen(false);
-                      try {
-                        await logout();
-                      } catch (e) {
-                        console.warn('logout failed', e);
-                      }
-                      router.push('/login');
-                    }}
-                    style={{
-                      display: 'block',
-                      width: '100%',
-                      textAlign: 'left',
-                      padding: '10px 12px',
-                      border: 'none',
-                      background: 'transparent',
-                      borderRadius: 6,
-                      cursor: 'pointer',
-                      fontFamily: T.sans,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: T.burgundy,
-                    }}
-                  >
-                    Log out
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
       </header>
 
       <div style={sx.page}>

@@ -114,6 +114,17 @@
   --r-dur-quick:  140ms;
   --r-dur-page:   260ms;
   --r-dur-settle: 420ms;
+
+  /* Layout chrome offsets — consumed by LayoutChrome to pad children
+     so TopChrome (top) and LeftRail (left) don't overlap content. */
+  --relish-rail-offset: 200px;
+  --relish-chrome-offset: 60px;
+}
+
+@media (max-width: 859px) {
+  :root {
+    --relish-rail-offset: 56px;
+  }
 }
 
 .r-dark,
