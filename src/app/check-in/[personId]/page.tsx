@@ -23,6 +23,7 @@ import { MicButton } from '@/components/voice/MicButton';
 import { T } from '@/components/journal-first/tokens';
 import { firestore } from '@/lib/firebase';
 import type { CoupleRitual } from '@/types/couple-ritual';
+import type { Person } from '@/types/person-manual';
 
 /* ─── Vocabularies ─── */
 const KID_FEELINGS_SELF = [
@@ -86,6 +87,17 @@ function ritualNameFor(r: CoupleRitual): string {
     return `${days[r.dayOfWeek]} Ritual`;
   }
   return 'Scheduled Ritual';
+}
+
+// v1 fallback for the 3-avatar share picker. Proper Mama Stacy / Papa
+// labels will come from a future settings flow that lets parents
+// customize `relationshipRole` per person.
+function roleLabelFor(p: Person): string {
+  if ((p as unknown as { relationshipRole?: string }).relationshipRole) {
+    return ((p as unknown as { relationshipRole: string }).relationshipRole).toUpperCase();
+  }
+  if (p.relationshipType === 'spouse') return 'PARENT';
+  return (p.relationshipType ?? 'PERSON').toUpperCase();
 }
 
 /* ─── Style objects ─── */
@@ -321,7 +333,77 @@ const sx = {
     color: 'var(--r-text-3, #5C5347)',
     marginTop: 12,
   } as CSSProperties,
+  shareSection: { marginTop: 36, marginBottom: 24 } as CSSProperties,
+  shareLabel: {
+    fontFamily: 'var(--r-sans, -apple-system, sans-serif)',
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase' as const,
+    color: 'var(--r-text-4, #6B6254)',
+    margin: '0 0 14px',
+  } as CSSProperties,
+  shareRow: {
+    display: 'flex',
+    gap: 18,
+    justifyContent: 'center',
+    flexWrap: 'wrap' as const,
+  } as CSSProperties,
+  avatarWrap: {
+    position: 'relative' as const,
+    width: 56,
+    height: 56,
+    borderRadius: '50%',
+    overflow: 'hidden',
+    background: 'rgba(120, 100, 70, 0.10)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as CSSProperties,
+  avatarImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover' as const,
+  } as CSSProperties,
+  avatarFallback: {
+    fontFamily: 'var(--r-serif, Georgia, serif)',
+    fontSize: 22,
+    color: 'var(--r-text-3, #5C5347)',
+  } as CSSProperties,
+  avatarLabel: {
+    fontFamily: 'var(--r-sans, -apple-system, sans-serif)',
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: '0.18em',
+    color: 'var(--r-text-3, #5C5347)',
+  } as CSSProperties,
+  selectedDot: {
+    position: 'absolute' as const,
+    bottom: 0,
+    right: 0,
+    width: 18,
+    height: 18,
+    borderRadius: '50%',
+    background: 'var(--r-sage, #7C9082)',
+    color: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 12,
+    border: '2px solid var(--r-cream, #F7F5F0)',
+  } as CSSProperties,
 };
+
+const avatarChipStyle = (selected: boolean): CSSProperties => ({
+  all: 'unset',
+  cursor: 'pointer',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 8,
+  opacity: selected ? 1 : 0.6,
+  transition: 'opacity 140ms ease',
+});
 
 export default function KidModePage() {
   const params = useParams<{ personId: string }>();
@@ -376,6 +458,26 @@ export default function KidModePage() {
       });
   }, [people, kid, user]);
 
+  // Adults in the household — the audience options for the share
+  // picker below. We exclude the kid themselves and anyone without a
+  // linkedUserId (since they can't actually see the entry yet).
+  const adults = useMemo(() => {
+    return people
+      .filter(
+        (p) =>
+          p.linkedUserId &&
+          p.relationshipType !== 'child' &&
+          p.personId !== kid?.personId,
+      )
+      .map((p) => ({
+        personId: p.personId,
+        userId: p.linkedUserId!,
+        name: p.name,
+        avatarUrl: p.avatarUrl,
+        role: roleLabelFor(p),
+      }));
+  }, [people, kid?.personId]);
+
   // ─── State ───
   const [selfFeelings, setSelfFeelings] = useState<string[]>([]);
   const [bodySpots, setBodySpots] = useState<string[]>([]);
@@ -395,6 +497,29 @@ export default function KidModePage() {
   // Letting the parent batch sibling check-ins without bouncing home.
   const [phase, setPhase] = useState<'editing' | 'saved'>('editing');
   const [doneIds, setDoneIds] = useState<string[]>([]);
+
+  // Share picker — which adults will see this kid's check-in. Defaults
+  // to every linked adult in the family; the kid (or the parent helping)
+  // can deselect individuals or toggle Everyone.
+  const [sharedWithUserIds, setSharedWithUserIds] = useState<string[]>([]);
+  useEffect(() => {
+    if (sharedWithUserIds.length === 0 && adults.length > 0) {
+      setSharedWithUserIds(adults.map((a) => a.userId));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adults]);
+  const toggleShared = (userId: string) => {
+    setSharedWithUserIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
+    );
+  };
+  const toggleEveryone = () => {
+    const allUserIds = adults.map((a) => a.userId);
+    const allSelected = allUserIds.every((id) => sharedWithUserIds.includes(id));
+    setSharedWithUserIds(allSelected ? [] : allUserIds);
+  };
+  const everyoneSelected =
+    adults.length > 0 && adults.every((a) => sharedWithUserIds.includes(a.userId));
 
   // Read the session list of already-done kids on mount + after save.
   useEffect(() => {
@@ -602,11 +727,10 @@ export default function KidModePage() {
         text: body,
         category: 'moment',
         personMentions: mentions,
-        // Default: visible to whole family for kid contributions, since
-        // the parent is sitting with the kid and the entry is the kid's
-        // voice — sharing it broadly is the spirit of the multi-perspective
-        // model. (Adults can change visibility later from the entry page.)
-        sharedWithUserIds: [],
+        // Visibility comes from the share picker (Mama / Papa /
+        // Everyone). Defaults to every linked adult; the kid + parent
+        // can narrow before saving.
+        sharedWithUserIds: sharedWithUserIds,
         subjectType: 'child_proxy',
         subjectPersonId: kid.personId,
         tags,
@@ -1024,17 +1148,63 @@ export default function KidModePage() {
           </>
         )}
 
+        {/* Share picker — choose which adults see this check-in. */}
+        {adults.length > 0 && (
+          <section style={sx.shareSection}>
+            <p style={sx.shareLabel}>Share with…</p>
+            <div style={sx.shareRow}>
+              {adults.map((a) => {
+                const selected = sharedWithUserIds.includes(a.userId);
+                return (
+                  <button
+                    key={a.userId}
+                    type="button"
+                    onClick={() => toggleShared(a.userId)}
+                    style={avatarChipStyle(selected)}
+                    aria-pressed={selected}
+                  >
+                    <span style={sx.avatarWrap}>
+                      {a.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={a.avatarUrl} alt="" style={sx.avatarImg} />
+                      ) : (
+                        <span style={sx.avatarFallback}>{(a.name[0] ?? '?').toUpperCase()}</span>
+                      )}
+                      {selected && (
+                        <span aria-hidden style={sx.selectedDot}>✓</span>
+                      )}
+                    </span>
+                    <span style={sx.avatarLabel}>{a.role}</span>
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={toggleEveryone}
+                style={avatarChipStyle(everyoneSelected)}
+                aria-pressed={everyoneSelected}
+              >
+                <span style={{ ...sx.avatarWrap, background: 'rgba(120, 100, 70, 0.18)' }}>
+                  <span aria-hidden style={{ fontSize: 18 }}>👥</span>
+                </span>
+                <span style={sx.avatarLabel}>EVERYONE</span>
+              </button>
+            </div>
+          </section>
+        )}
+
         {/* Done */}
         <div style={sx.doneRow}>
           <button
             type="button"
             onClick={handleDone}
-            disabled={saving}
+            disabled={saving || (adults.length > 0 && sharedWithUserIds.length === 0)}
             style={{
               ...sx.done,
               background: T.ink,
               borderColor: T.ink,
-              opacity: saving ? 0.6 : 1,
+              opacity:
+                saving || (adults.length > 0 && sharedWithUserIds.length === 0) ? 0.6 : 1,
             }}
           >
             {saving ? 'Saving…' : 'All done'}
