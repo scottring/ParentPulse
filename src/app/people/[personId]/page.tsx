@@ -469,6 +469,12 @@ export default function PersonPage({
           contributionCount={contributionCount}
         />
 
+        {/* DOSSIER (threads / timeline / details / their-side / colophon)
+            — hidden per Plan 2 polish. The Stitch design ends after
+            AskCoachCTA. Restore by removing the `false &&` guard if you
+            want the dossier back. */}
+        {false && (
+        <>
         {/* ═══ THREADS + TIMELINE ═══ */}
         <section className="threads-section" id="still-open">
           <div className="threads-col">
@@ -765,6 +771,8 @@ export default function PersonPage({
         <footer className="colophon">
           <span>A safe place for honest words and stronger relationships.</span>
         </footer>
+        </>
+        )}
       </div>
 
       {isEditing && person && (
