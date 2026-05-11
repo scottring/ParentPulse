@@ -13,6 +13,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { CSSProperties } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useJournal } from '@/hooks/useJournal';
@@ -274,6 +275,27 @@ const sx = {
     borderRadius: 999,
     cursor: 'pointer',
     transition: `transform 160ms ${T.ease}, background 160ms ${T.ease}`,
+  } as CSSProperties,
+  exitBar: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '18px 28px',
+    borderBottom: '1px solid rgba(120, 100, 70, 0.10)',
+    background: 'var(--r-cream-deep, #F1EDEB)',
+    position: 'sticky',
+    top: 0,
+    zIndex: 10,
+  } as CSSProperties,
+  exitButton: {
+    fontFamily: 'var(--r-sans, -apple-system, sans-serif)',
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase' as const,
+    color: 'var(--r-text-3, #5C5347)',
+    textDecoration: 'none',
+    display: 'inline-flex',
+    alignItems: 'center',
   } as CSSProperties,
 };
 
@@ -570,6 +592,14 @@ export default function KidModePage() {
   // ─── Render ───
   return (
     <main style={sx.app}>
+      {/* Exit affordance — only adult-visible chrome on the kid page,
+          replaces the previously-hidden global rail. */}
+      <div style={sx.exitBar}>
+        <Link href="/" style={sx.exitButton}>
+          <span aria-hidden style={{ marginRight: 8 }}>✕</span>
+          Exit to parent journal
+        </Link>
+      </div>
       {/* Top strip — name + sun glyph; intentionally minimal so the
           kid sees one clear thing on screen. */}
       <div style={sx.top}>
