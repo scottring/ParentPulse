@@ -257,6 +257,15 @@
       ]
     },
     {
+      "collectionGroup": "couple_rituals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "targetType", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "daily_actions",
       "queryScope": "COLLECTION",
       "fields": [
