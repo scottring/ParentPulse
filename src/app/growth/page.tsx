@@ -121,7 +121,7 @@ export default function Page() {
   );
 }
 
-function ArcCard({
+export function ArcCard({
   arc,
   progress,
   activeItems,
@@ -135,57 +135,60 @@ function ArcCard({
   const phaseDef = arc.phases?.find((p) => p.phase === arc.currentPhase);
   return (
     <li className="arc-card">
-      <div className="arc-card-head">
-        <div className="arc-card-head-left">
-          {arc.emoji && <span className="arc-emoji" aria-hidden>{arc.emoji}</span>}
-          <div>
-            <h3 className="arc-title">{arc.title}</h3>
-            {arc.subtitle && <p className="arc-subtitle">{arc.subtitle}</p>}
+      <Link
+        href={`/experiments/${arc.arcId}`}
+        style={{ display: 'block', color: 'inherit', textDecoration: 'none' }}
+        aria-label={`Open the ${arc.title} experiment`}
+      >
+        <div className="arc-card-head">
+          <div className="arc-card-head-left">
+            {arc.emoji && <span className="arc-emoji" aria-hidden>{arc.emoji}</span>}
+            <div>
+              <h3 className="arc-title">{arc.title}</h3>
+              {arc.subtitle && <p className="arc-subtitle">{arc.subtitle}</p>}
+            </div>
           </div>
+          <span className="arc-phase-chip">
+            {phaseLabel}
+            {typeof arc.currentWeek === 'number' && arc.durationWeeks
+              ? ` · week ${arc.currentWeek} of ${arc.durationWeeks}`
+              : ''}
+          </span>
         </div>
-        <span className="arc-phase-chip">
-          {phaseLabel}
-          {typeof arc.currentWeek === 'number' && arc.durationWeeks
-            ? ` · week ${arc.currentWeek} of ${arc.durationWeeks}`
-            : ''}
-        </span>
-      </div>
 
-      <div className="arc-progress" aria-hidden="true">
-        <div
-          className="arc-progress-fill"
-          style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
-        />
-      </div>
-      <p className="arc-progress-text">
-        {progress}% — {arc.completedItemCount || 0} of{' '}
-        {arc.totalItemCount || 0} moments completed
-      </p>
-
-      {phaseDef?.description && (
-        <p className="arc-phase-desc">
-          <em>{phaseDef.description}</em>
-        </p>
-      )}
-
-      {next && (
-        <div className="arc-next">
-          <span className="arc-next-eyebrow">Next</span>
-          <Link
-            href={`/growth/${next.growthItemId}`}
-            className="arc-next-link"
-          >
-            {next.title || 'Continue the arc'}{' '}
-            <span aria-hidden>⟶</span>
-          </Link>
+        <div className="arc-progress" aria-hidden="true">
+          <div
+            className="arc-progress-fill"
+            style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+          />
         </div>
-      )}
-
-      {arc.outcomeStatement && (
-        <p className="arc-outcome">
-          When this arc graduates: <em>{arc.outcomeStatement}</em>
+        <p className="arc-progress-text">
+          {progress}% — {arc.completedItemCount || 0} of{' '}
+          {arc.totalItemCount || 0} moments completed
         </p>
-      )}
+
+        {phaseDef?.description && (
+          <p className="arc-phase-desc">
+            <em>{phaseDef.description}</em>
+          </p>
+        )}
+
+        {next && (
+          <div className="arc-next">
+            <span className="arc-next-eyebrow">Next</span>
+            <span className="arc-next-link">
+              {next.title || 'Continue the arc'}{' '}
+              <span aria-hidden>⟶</span>
+            </span>
+          </div>
+        )}
+
+        {arc.outcomeStatement && (
+          <p className="arc-outcome">
+            When this arc graduates: <em>{arc.outcomeStatement}</em>
+          </p>
+        )}
+      </Link>
     </li>
   );
 }
