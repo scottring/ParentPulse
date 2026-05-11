@@ -10,9 +10,12 @@ import { listRecentSessions } from '@/hooks/useRitualSession';
 import type { RitualSession } from '@/types/ritual-session';
 import { CurrentFocusCard, type CurrentFocus } from '@/components/rituals/CurrentFocusCard';
 import { ExperimentsColumn } from '@/components/rituals/ExperimentsColumn';
+import { FamilyCheckInsSection } from '@/components/rituals/FamilyCheckInsSection';
 import { InspiredByJournalCard, type JournalSuggestion } from '@/components/rituals/InspiredByJournalCard';
+import { useFamilyCheckIns } from '@/hooks/useFamilyCheckIns';
 import { useGrowthFeed } from '@/hooks/useGrowthFeed';
 import { useJournalEntries } from '@/hooks/useJournalEntries';
+import { usePerson } from '@/hooks/usePerson';
 
 const twoColStyle: CSSProperties = {
   display: 'grid',
@@ -30,6 +33,14 @@ export default function ClientPage() {
   const [pastSessions, setPastSessions] = useState<RitualSession[]>([]);
   const { arcGroups } = useGrowthFeed();
   const { entries: allEntries } = useJournalEntries();
+  const { checkIns: familyCheckIns } = useFamilyCheckIns();
+  const { people } = usePerson();
+
+  const kidNames = useMemo<Record<string, string>>(() => {
+    const m: Record<string, string> = {};
+    for (const p of people) m[p.personId] = p.name;
+    return m;
+  }, [people]);
 
   useEffect(() => {
     if (!ritual?.id || !user?.userId) return;
@@ -180,6 +191,8 @@ export default function ClientPage() {
             </div>
           </div>
         )}
+
+        <FamilyCheckInsSection checkIns={familyCheckIns} kidNames={kidNames} />
         </div>
 
         <ExperimentsColumn />
