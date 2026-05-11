@@ -101,19 +101,35 @@ export default function PersonPage({
   }, [manual?.triggers]);
 
   // Build perspectives from contributions (for PerspectiveLayers section).
-  // Dedupe by (perspectiveType, contributorId) — keep the most recent completed
-  // contribution per perspective so we don't render 3 "Self View" cards.
-  // Pull-quote: prefer longer answers (>40 chars), fall back to any non-empty
-  // string answer, and finally to a placeholder if the contribution has only
-  // structured/short data.
+  //
+  // - Self-on-self contributions (contributor === subject) collapse into the
+  //   Self View, regardless of how perspectiveType was set. A subject can't
+  //   "observe" themselves — that's the Self View by definition.
+  // - Dedupe by perspective key (self vs each distinct contributor), keeping
+  //   the most recent completed contribution.
+  // - Pull-quote: prefer the longest answer that ends at a sentence boundary.
+  //   Truncate at sentence boundaries (period/question/exclamation), not mid-
+  //   word. Fall back to any non-empty answer, then a placeholder.
   const perspectives: Perspective[] = useMemo(() => {
     if (!contributions || contributions.length === 0) return [];
-    const completed = contributions.filter((c) => c.status === 'complete');
+    const subjectUserId = person?.linkedUserId ?? null;
 
-    // Dedupe — keep most recent per perspectiveKey.
+    const completed = contributions
+      .filter((c) => c.status === 'complete')
+      .map((c) => {
+        // Self-on-self normalization: if the contributor IS the subject, treat as self.
+        const isSelf =
+          c.perspectiveType === 'self' ||
+          (subjectUserId && c.contributorId === subjectUserId);
+        return { ...c, _effectiveType: isSelf ? 'self' : 'observer' };
+      });
+
+    // Dedupe — collapse to one card per perspective key.
     const byKey = new Map<string, typeof completed[number]>();
     for (const c of completed) {
-      const key = `${c.perspectiveType ?? 'unknown'}::${c.contributorId ?? c.contributorName ?? ''}`;
+      const key = c._effectiveType === 'self'
+        ? 'self'
+        : `observer::${c.contributorId ?? c.contributorName ?? ''}`;
       const existing = byKey.get(key);
       const cTime = c.updatedAt?.toMillis?.() ?? c.createdAt?.toMillis?.() ?? 0;
       const eTime = existing?.updatedAt?.toMillis?.() ?? existing?.createdAt?.toMillis?.() ?? 0;
@@ -126,7 +142,7 @@ export default function PersonPage({
       const tint = tints[i % tints.length];
       const contributorPerson = people.find((p) => p.linkedUserId === c.contributorId);
       const label =
-        c.perspectiveType === 'self'
+        c._effectiveType === 'self'
           ? 'Self View'
           : contributorPerson?.name
             ? `${contributorPerson.name}'s Observation`
@@ -134,9 +150,7 @@ export default function PersonPage({
               ? `${c.contributorName}'s Observation`
               : 'An Observer';
 
-      // Find a pull quote: walk answers (which may be flat strings or nested
-      // objects/arrays), collect every string value, prefer the longest, fall
-      // back to the first non-empty one. If still nothing, show a placeholder.
+      // Walk answers (flat or nested) to collect every non-empty string.
       const strings: string[] = [];
       const walk = (v: unknown) => {
         if (typeof v === 'string') {
@@ -149,14 +163,15 @@ export default function PersonPage({
         }
       };
       walk(c.answers ?? {});
+
+      // Truncate at a sentence boundary near 240 chars. If the longest answer
+      // is < 40 chars we keep it as-is (no need to truncate).
       strings.sort((a, b) => b.length - a.length);
-      const pullQuoteRaw = strings.find((s) => s.length > 40) ?? strings[0] ?? '';
-      const pullQuote = pullQuoteRaw
-        ? pullQuoteRaw.slice(0, 240)
-        : '(no notes captured yet — open the manual to add details)';
+      const raw = strings[0] ?? '';
+      const pullQuote = raw ? truncateAtSentence(raw, 240) : '(no notes captured yet — open the manual to add details)';
       return { id: c.contributionId, label, pullQuote, tint };
     });
-  }, [contributions, people]);
+  }, [contributions, people, person?.linkedUserId]);
 
   // Build the synthesis insight from manual.synthesizedContent.
   // Data model: SynthesizedContent has { overview, alignments[], gaps[], blindSpots[] }
@@ -974,6 +989,25 @@ function formatWhen(d?: Date): string {
 function spellCount(n: number): string {
   const names = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven'];
   return n >= 0 && n < names.length ? names[n] : String(n);
+}
+
+/** Truncate at a sentence boundary near `softMax` chars. If the string is
+ * shorter than `softMax`, return as-is. Else find the last `.`, `!`, or `?`
+ * within `softMax` chars and cut there. Falls back to hard truncation with
+ * an ellipsis if no sentence-ender is near the cut point. */
+function truncateAtSentence(text: string, softMax: number): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= softMax) return trimmed;
+  const head = trimmed.slice(0, softMax);
+  const lastEnd = Math.max(
+    head.lastIndexOf('.'),
+    head.lastIndexOf('!'),
+    head.lastIndexOf('?'),
+  );
+  // Require the sentence ender to be at least 60% of the way in, otherwise
+  // we'd return too-short blurbs. If too early, hard-truncate with ellipsis.
+  if (lastEnd >= softMax * 0.6) return head.slice(0, lastEnd + 1).trim();
+  return head.replace(/\s+\S*$/, '').trim() + '…';
 }
 
 function openPen() {
