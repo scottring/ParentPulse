@@ -1,11 +1,11 @@
 'use client';
 
 /* ================================================================
-   Relish · /growth — the Growth Hub front door.
-   Lists active growth arcs (grouped by domain), shows phase +
-   progress, and links into the existing /growth/[itemId] detail
-   route. Empty state invites the user to start an arc from their
-   next assessment.
+   Relish · /experiments — the Experiments Hub front door.
+   Lists active experiments (grouped by domain), shows phase +
+   progress, and links into the existing /experiments/[itemId]
+   detail route. Empty state invites the user to start an
+   experiment from their next assessment.
    ================================================================ */
 
 import { useEffect, useMemo } from 'react';
@@ -66,10 +66,10 @@ export default function Page() {
       <div className="growth-page">
         <header className="growth-head">
           <h1 className="growth-title">
-            <em>Growth.</em>
+            <em>Experiments.</em>
           </h1>
           <p className="growth-lede">
-            A <em>growth arc</em> is a short, structured stretch of work — a
+            An <em>experiment</em> is a short, structured stretch of work — a
             handful of weeks aimed at one part of your relationship, informed
             by what you and your family have already written.
           </p>
@@ -83,9 +83,9 @@ export default function Page() {
               <em>Nothing active yet.</em>
             </p>
             <p className="growth-empty-body">
-              Arcs are born from assessments — the 20 relationship
+              Experiments are born from assessments — the 20 relationship
               dimensions Relish tracks quietly in the background. When one
-              dimension has enough signal to work on, a new arc will appear
+              dimension has enough signal to work on, a new experiment will appear
               here. In the meantime, keep writing.
             </p>
             <div className="growth-empty-ctas">
@@ -177,7 +177,7 @@ export function ArcCard({
           <div className="arc-next">
             <span className="arc-next-eyebrow">Next</span>
             <span className="arc-next-link">
-              {next.title || 'Continue the arc'}{' '}
+              {next.title || 'Continue the experiment'}{' '}
               <span aria-hidden>⟶</span>
             </span>
           </div>
@@ -185,7 +185,7 @@ export function ArcCard({
 
         {arc.outcomeStatement && (
           <p className="arc-outcome">
-            When this arc graduates: <em>{arc.outcomeStatement}</em>
+            When this experiment graduates: <em>{arc.outcomeStatement}</em>
           </p>
         )}
       </Link>

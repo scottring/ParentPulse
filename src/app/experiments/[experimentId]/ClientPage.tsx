@@ -96,7 +96,7 @@ const EXERCISE_LABELS: Record<string, string> = {
   repair_ritual: 'A repair',
   gratitude_practice: 'A gratitude',
   illustrated_story: 'A story',
-  weekly_arc: 'A weekly arc',
+  weekly_arc: 'A weekly experiment',
   progress_snapshot: 'A progress note',
 };
 

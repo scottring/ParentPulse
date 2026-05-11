@@ -38,7 +38,7 @@ export function GrowthArcCard({ arc, todayItem, onReact }: GrowthArcCardProps) {
             className="text-xs font-medium tracking-wide uppercase mb-1"
             style={{ fontFamily: 'var(--font-parent-body)', color: 'var(--parent-text-light)', letterSpacing: '0.08em' }}
           >
-            Growth arc
+            Experiment
           </p>
           <h3
             className="text-base font-semibold"

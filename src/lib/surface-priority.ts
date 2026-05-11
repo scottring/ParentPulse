@@ -108,7 +108,7 @@ function computeLead(input: SurfacePriorityInput, dismissed: Set<string>): LeadI
 
   // 5. Growth arc next step
   if (arcGroups.length > 0 && arcGroups[0].activeItems.length > 0) {
-    return growthItemToLead(arcGroups[0].activeItems[0], 'This week in your arc');
+    return growthItemToLead(arcGroups[0].activeItems[0], 'This week in your experiment');
   }
 
   // 5b. Any active growth item
