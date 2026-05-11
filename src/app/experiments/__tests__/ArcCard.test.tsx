@@ -53,7 +53,7 @@ describe('ArcCard', () => {
     completedItemCount: 0,
     totalItemCount: 4,
     phases: [],
-  } as GrowthArc;
+  } as unknown as GrowthArc;
 
   it('renders the whole card as a link to /experiments/[arcId] when there are no active items', async () => {
     const { ArcCard } = await import('@/app/experiments/page');
