@@ -22,6 +22,10 @@ export function LeftRail() {
   return (
     <>
       <nav style={railStyle} aria-label="Primary destinations">
+        <div style={headerStyle} className="rail-header">
+          <p style={headerTitleStyle} className="rail-label">Collections</p>
+          <p style={headerSubtitleStyle} className="rail-label">Private Sanctuary</p>
+        </div>
         <ul style={listStyle}>
           {LEFT_RAIL_ITEMS.map((item) => {
             const active = isActive(pathname, item.href);
@@ -44,6 +48,16 @@ export function LeftRail() {
             );
           })}
         </ul>
+        <div style={footerStyle}>
+          <Link
+            href="/?focus=write"
+            style={newEntryStyle}
+            data-rail-action="new-entry"
+            aria-label="New entry"
+          >
+            <span className="rail-label">New Entry</span>
+          </Link>
+        </div>
       </nav>
       <style>{`
         @media (max-width: ${MOBILE_BREAKPOINT - 1}px) {
@@ -53,6 +67,10 @@ export function LeftRail() {
           nav[aria-label="Primary destinations"] .rail-label {
             font-size: 9px !important;
             letter-spacing: 0.06em !important;
+          }
+          nav[aria-label="Primary destinations"] .rail-header {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
           }
         }
       `}</style>
@@ -71,9 +89,60 @@ const railStyle: CSSProperties = {
   padding: '24px 0',
   zIndex: 40,
   overflowY: 'auto',
+  display: 'flex',
+  flexDirection: 'column',
 };
 
-const listStyle: CSSProperties = { listStyle: 'none', margin: 0, padding: 0 };
+const headerStyle: CSSProperties = {
+  padding: '0 20px 16px',
+  borderBottom: '1px solid rgba(120, 100, 70, 0.12)',
+  marginBottom: 12,
+};
+
+const headerTitleStyle: CSSProperties = {
+  fontFamily: "'Cormorant Garamond', Georgia, serif",
+  fontSize: 20,
+  fontWeight: 500,
+  letterSpacing: '-0.01em',
+  color: 'var(--r-ink, #2B2620)',
+  margin: 0,
+  lineHeight: 1.1,
+};
+
+const headerSubtitleStyle: CSSProperties = {
+  fontFamily: 'var(--r-sans, -apple-system, sans-serif)',
+  fontSize: 10,
+  fontWeight: 600,
+  letterSpacing: '0.18em',
+  textTransform: 'uppercase',
+  color: 'var(--r-text-5, #887C68)',
+  margin: '4px 0 0',
+};
+
+const listStyle: CSSProperties = { listStyle: 'none', margin: 0, padding: 0, flex: 1 };
+
+const footerStyle: CSSProperties = {
+  padding: '20px 20px 8px',
+  marginTop: 'auto',
+};
+
+const newEntryStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '12px 16px',
+  fontFamily: 'var(--r-sans, -apple-system, sans-serif)',
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: '0.18em',
+  textTransform: 'uppercase',
+  color: '#FBF8F2',
+  background: '#14100C',
+  border: '1px solid #14100C',
+  borderRadius: 999,
+  textDecoration: 'none',
+  textAlign: 'center',
+};
 
 const sepStyle: CSSProperties = {
   border: 0,

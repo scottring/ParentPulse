@@ -18,6 +18,7 @@ vi.mock('next/link', () => ({
     'aria-current': ariaCurrent,
     'aria-label': ariaLabel,
     'data-rail-item': dataRailItem,
+    'data-rail-action': dataRailAction,
   }: {
     href: string;
     style?: React.CSSProperties;
@@ -25,6 +26,7 @@ vi.mock('next/link', () => ({
     'aria-current'?: 'page' | undefined;
     'aria-label'?: string;
     'data-rail-item'?: string;
+    'data-rail-action'?: string;
   }) => (
     <a
       href={href}
@@ -32,6 +34,7 @@ vi.mock('next/link', () => ({
       aria-current={ariaCurrent}
       aria-label={ariaLabel}
       data-rail-item={dataRailItem}
+      data-rail-action={dataRailAction}
     >
       {children}
     </a>
@@ -51,6 +54,23 @@ describe('LeftRail', () => {
     ['Journal', 'People', 'Therapy', 'Rituals', 'Experiments', 'Unspoken', 'Archive'].forEach((label) => {
       expect(screen.getByRole('link', { name: new RegExp(label, 'i') })).toBeInTheDocument();
     });
+  });
+
+  it('renders a Collections / Private Sanctuary header at the top', async () => {
+    mockPathname.mockReturnValue('/manual');
+    const { LeftRail } = await import('@/components/layout/LeftRail');
+    render(<LeftRail />);
+    expect(screen.getByText(/Collections/i)).toBeInTheDocument();
+    expect(screen.getByText(/Private Sanctuary/i)).toBeInTheDocument();
+  });
+
+  it('renders a New Entry button that routes to /?focus=write', async () => {
+    mockPathname.mockReturnValue('/manual');
+    const { LeftRail } = await import('@/components/layout/LeftRail');
+    render(<LeftRail />);
+    const newEntry = screen.getByRole('link', { name: /new entry/i });
+    expect(newEntry).toBeInTheDocument();
+    expect(newEntry).toHaveAttribute('href', '/?focus=write');
   });
 
   it('marks the active route link with aria-current=page', async () => {
