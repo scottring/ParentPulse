@@ -108,15 +108,6 @@ function isEveningish(t: TimeOfDay): boolean {
   return t === 'evening' || t === 'night' || t === 'afternoon';
 }
 
-function greetingFor(t: TimeOfDay, name: string): string {
-  switch (t) {
-    case 'morning': return `Good morning, ${name}.`;
-    case 'afternoon': return `Good afternoon, ${name}.`;
-    case 'evening': return `Good evening, ${name}.`;
-    case 'night': return `Still up, ${name}.`;
-  }
-}
-
 function dateLine(d: Date, t: TimeOfDay): string {
   const wk = d.toLocaleDateString('en-US', { weekday: 'long' });
   const md = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
@@ -666,7 +657,6 @@ export function Home() {
   const evening = isEveningish(tod);
 
   const firstName = user?.name?.split(' ')[0] ?? 'friend';
-  const greeting = greetingFor(tod, firstName);
 
   // Family roster (excluding self)
   const family = useMemo(
@@ -1051,7 +1041,7 @@ export function Home() {
         {/* Greeting */}
         <section style={sx.greetingBlock}>
           <h1 style={sx.greeting}>
-            {greeting.split(', ')[0]}, <em style={sx.greetingEm}>{firstName}.</em>
+            <em style={sx.greetingEm}>{user?.name ?? firstName}</em>
           </h1>
           <p style={sx.dateline}>{dateLine(today, tod)}</p>
         </section>
