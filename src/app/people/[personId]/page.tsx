@@ -101,31 +101,61 @@ export default function PersonPage({
   }, [manual?.triggers]);
 
   // Build perspectives from contributions (for PerspectiveLayers section).
-  // Each completed contribution becomes a layer; pull-quote = first answer >40 chars.
+  // Dedupe by (perspectiveType, contributorId) — keep the most recent completed
+  // contribution per perspective so we don't render 3 "Self View" cards.
+  // Pull-quote: prefer longer answers (>40 chars), fall back to any non-empty
+  // string answer, and finally to a placeholder if the contribution has only
+  // structured/short data.
   const perspectives: Perspective[] = useMemo(() => {
     if (!contributions || contributions.length === 0) return [];
+    const completed = contributions.filter((c) => c.status === 'complete');
+
+    // Dedupe — keep most recent per perspectiveKey.
+    const byKey = new Map<string, typeof completed[number]>();
+    for (const c of completed) {
+      const key = `${c.perspectiveType ?? 'unknown'}::${c.contributorId ?? c.contributorName ?? ''}`;
+      const existing = byKey.get(key);
+      const cTime = c.updatedAt?.toMillis?.() ?? c.createdAt?.toMillis?.() ?? 0;
+      const eTime = existing?.updatedAt?.toMillis?.() ?? existing?.createdAt?.toMillis?.() ?? 0;
+      if (!existing || cTime > eTime) byKey.set(key, c);
+    }
+    const deduped = Array.from(byKey.values());
+
     const tints: Perspective['tint'][] = ['rose', 'sage', 'azure', 'neutral'];
-    return contributions
-      .filter((c) => c.status === 'complete')
-      .map((c, i) => {
-        const tint = tints[i % tints.length];
-        const contributorPerson = people.find((p) => p.linkedUserId === c.contributorId);
-        const label =
-          c.perspectiveType === 'self'
-            ? 'Self View'
-            : contributorPerson?.name
-              ? `${contributorPerson.name}'s Observation`
-              : c.contributorName
-                ? `${c.contributorName}'s Observation`
-                : 'An Observer';
-        // answers are keyed flat as "sectionId.questionId" → string|other; pick first long string.
-        const answerValues = Object.values(c.answers ?? {});
-        const pullQuoteRaw = answerValues.find(
-          (a) => typeof a === 'string' && (a as string).length > 40,
-        ) as string | undefined;
-        const pullQuote = (pullQuoteRaw ?? '').slice(0, 240);
-        return { id: c.contributionId, label, pullQuote, tint };
-      });
+    return deduped.map((c, i) => {
+      const tint = tints[i % tints.length];
+      const contributorPerson = people.find((p) => p.linkedUserId === c.contributorId);
+      const label =
+        c.perspectiveType === 'self'
+          ? 'Self View'
+          : contributorPerson?.name
+            ? `${contributorPerson.name}'s Observation`
+            : c.contributorName
+              ? `${c.contributorName}'s Observation`
+              : 'An Observer';
+
+      // Find a pull quote: walk answers (which may be flat strings or nested
+      // objects/arrays), collect every string value, prefer the longest, fall
+      // back to the first non-empty one. If still nothing, show a placeholder.
+      const strings: string[] = [];
+      const walk = (v: unknown) => {
+        if (typeof v === 'string') {
+          const t = v.trim();
+          if (t) strings.push(t);
+        } else if (Array.isArray(v)) {
+          for (const x of v) walk(x);
+        } else if (v && typeof v === 'object') {
+          for (const x of Object.values(v as Record<string, unknown>)) walk(x);
+        }
+      };
+      walk(c.answers ?? {});
+      strings.sort((a, b) => b.length - a.length);
+      const pullQuoteRaw = strings.find((s) => s.length > 40) ?? strings[0] ?? '';
+      const pullQuote = pullQuoteRaw
+        ? pullQuoteRaw.slice(0, 240)
+        : '(no notes captured yet — open the manual to add details)';
+      return { id: c.contributionId, label, pullQuote, tint };
+    });
   }, [contributions, people]);
 
   // Build the synthesis insight from manual.synthesizedContent.
