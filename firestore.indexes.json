@@ -649,6 +649,10 @@
           "order": "ASCENDING"
         },
         {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "embedding",
           "vectorConfig": {
             "dimension": 1536,
@@ -783,6 +787,10 @@
         {
           "fieldPath": "visibleToUserIds",
           "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
         }
       ]
     },
@@ -922,6 +930,10 @@
         {
           "fieldPath": "participantIds",
           "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
         }
       ]
     },
@@ -1285,6 +1297,16 @@
           "fieldPath": "weekStartDate",
           "order": "DESCENDING"
         }
+      ]
+    },
+    {
+      "collectionGroup": "ritual_sessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ritualId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "participantUserIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "completedAt", "order": "DESCENDING" }
       ]
     }
   ],

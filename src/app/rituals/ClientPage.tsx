@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { useCoupleRitual } from '@/hooks/useCoupleRitual';
 import { useSpouse } from '@/hooks/useSpouse';
 import { stockImagery } from '@/config/stock-imagery';
@@ -9,14 +10,15 @@ import { listRecentSessions } from '@/hooks/useRitualSession';
 import type { RitualSession } from '@/types/ritual-session';
 
 export default function ClientPage() {
+  const { user } = useAuth();
   const { ritual, loading } = useCoupleRitual();
   const { spouseName, loading: spouseLoading } = useSpouse();
   const [pastSessions, setPastSessions] = useState<RitualSession[]>([]);
 
   useEffect(() => {
-    if (!ritual?.id) return;
+    if (!ritual?.id || !user?.userId) return;
     let active = true;
-    listRecentSessions(ritual.id, 5)
+    listRecentSessions(ritual.id, user.userId, 5)
       .then((rows) => {
         if (active) setPastSessions(rows);
       })
@@ -26,7 +28,7 @@ export default function ClientPage() {
     return () => {
       active = false;
     };
-  }, [ritual?.id]);
+  }, [ritual?.id, user?.userId]);
 
   if (loading || spouseLoading) {
     return (
