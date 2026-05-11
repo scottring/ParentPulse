@@ -12050,6 +12050,7 @@ exports.distillCoachConversation = onCall(
       secrets: ["ANTHROPIC_API_KEY"],
     },
     async (request) => {
+      const logger = require("firebase-functions/logger");
       if (!request.auth) {
         throw new Error("Authentication required");
       }
@@ -12401,6 +12402,7 @@ exports.generateRitualScript = onCall(
       secrets: ["ANTHROPIC_API_KEY"],
     },
     async (request) => {
+      const logger = require("firebase-functions/logger");
       if (!request.auth) {
         throw new Error("Authentication required");
       }
