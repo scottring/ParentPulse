@@ -143,6 +143,9 @@ export interface JournalEntry {
   // as a fallback during migration.
   isPrivate?: boolean;
 
+  /** When true, this entry is in the Unspoken queue — written but not yet released for synthesis/rituals/therapy. Default false / undefined = published. */
+  unspoken?: boolean;
+
   // Subject type — who is "speaking" in this entry.
   // 'self' = the logged-in author writing for themselves (default).
   // 'child_proxy' = a parent writing on behalf of a child in a
