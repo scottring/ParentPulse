@@ -48,7 +48,7 @@ describe('LeftRail', () => {
   });
 
   it('renders every canonical rail item as a link when on an authed route', async () => {
-    mockPathname.mockReturnValue('/manual');
+    mockPathname.mockReturnValue('/people');
     const { LeftRail } = await import('@/components/layout/LeftRail');
     render(<LeftRail />);
     ['Journal', 'People', 'Therapy', 'Rituals', 'Experiments', 'Unspoken', 'Archive'].forEach((label) => {
@@ -57,7 +57,7 @@ describe('LeftRail', () => {
   });
 
   it('renders a Collections / Private Sanctuary header at the top', async () => {
-    mockPathname.mockReturnValue('/manual');
+    mockPathname.mockReturnValue('/people');
     const { LeftRail } = await import('@/components/layout/LeftRail');
     render(<LeftRail />);
     expect(screen.getByText(/Collections/i)).toBeInTheDocument();
@@ -65,7 +65,7 @@ describe('LeftRail', () => {
   });
 
   it('renders a New Entry button that routes to /?focus=write', async () => {
-    mockPathname.mockReturnValue('/manual');
+    mockPathname.mockReturnValue('/people');
     const { LeftRail } = await import('@/components/layout/LeftRail');
     render(<LeftRail />);
     const newEntry = screen.getByRole('link', { name: /new entry/i });
@@ -74,7 +74,7 @@ describe('LeftRail', () => {
   });
 
   it('marks the active route link with aria-current=page', async () => {
-    mockPathname.mockReturnValue('/manual');
+    mockPathname.mockReturnValue('/people');
     const { LeftRail } = await import('@/components/layout/LeftRail');
     render(<LeftRail />);
     const peopleLink = screen.getByRole('link', { name: /People/i });

@@ -10,7 +10,7 @@ export type LeftRailItem = {
 
 export const LEFT_RAIL_ITEMS: readonly LeftRailItem[] = [
   { key: 'journal',     label: 'Journal',     href: '/' },
-  { key: 'people',      label: 'People',      href: '/manual' },
+  { key: 'people',      label: 'People',      href: '/people' },
   { key: 'therapy',     label: 'Therapy',     href: '/therapy', pinGated: true },
   { key: 'rituals',     label: 'Rituals',     href: '/rituals' },
   { key: 'experiments', label: 'Experiments', href: '/experiments' },
