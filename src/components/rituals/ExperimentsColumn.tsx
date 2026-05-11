@@ -35,14 +35,14 @@ export function ExperimentsColumn() {
           Day {arc.currentWeek ?? '?'} of {arc.durationWeeks ?? '?'}
         </p>
         {next && (
-          <Link href={`/experiments/${arc.arcId}`} style={recordCtaStyle}>
+          <Link href={`/experiments/${next.growthItemId}`} style={recordCtaStyle}>
             Record Observation
           </Link>
         )}
       </article>
 
       <p style={discoveryEyebrowStyle}>Recent Discovery</p>
-      <Link href={`/experiments/${arc.arcId}`} style={discoveryRowStyle}>
+      <Link href={`/experiments/arc/${arc.arcId}`} style={discoveryRowStyle}>
         {next?.title ?? arc.title}
         <span aria-hidden style={{ marginLeft: 8 }}>›</span>
       </Link>
