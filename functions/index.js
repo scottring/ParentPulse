@@ -172,6 +172,35 @@ async function logAIUsage(db, ctx) {
 }
 
 /**
+ * Fire-and-forget AI usage logger used by several callables (referenced
+ * but previously undefined, which made those callables throw). Looks up
+ * the caller's familyId from /users/{userId} when not provided, then
+ * delegates to logAIUsage. Never throws — analytics failure must not
+ * break the AI call.
+ */
+function logAICall(ctx) {
+  const logger = require("firebase-functions/logger");
+  // Fire-and-forget — return without awaiting so the caller can continue.
+  (async () => {
+    try {
+      const db = admin.firestore();
+      let familyId = ctx.familyId;
+      if (!familyId && ctx.userId) {
+        try {
+          const userSnap = await db.collection("users").doc(ctx.userId).get();
+          familyId = userSnap.exists ? userSnap.data()?.familyId : null;
+        } catch (lookupErr) {
+          logger.warn("logAICall: familyId lookup failed (non-critical):", lookupErr.message);
+        }
+      }
+      await logAIUsage(db, {...ctx, familyId: familyId || "unknown"});
+    } catch (err) {
+      logger.warn("logAICall failed (non-critical):", err.message);
+    }
+  })();
+}
+
+/**
  * Check if an email has a pending invite in any family.
  * Called during registration to match invited users to their family.
  * Uses Admin SDK so it bypasses security rules.
