@@ -14,10 +14,26 @@ import { Timestamp } from 'firebase/firestore';
    ──────────────────────────────────────────────────────────────── */
 export type CheckInKind = 'self' | 'self+rel' | 'child';
 
+/** A single per-target relationship-feeling block. Used inside
+ *  `JournalCheckIn.relTargets` when a session captures feelings about
+ *  multiple people at once (e.g. a kid checks in about Mom AND Dad in
+ *  the same session, with different feelings for each). */
+export interface JournalCheckInRelTarget {
+  personId: string;
+  feelings: string[];
+  /** Optional voice transcript or note specific to this target. */
+  voice?: string;
+}
+
 export interface JournalCheckIn {
   kind: CheckInKind;
   timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night';
   selfFeelings: string[];
+  /** Per-target relationship feelings — preferred over the legacy
+   *  flat fields below when a session has multiple targets. */
+  relTargets?: JournalCheckInRelTarget[];
+  /** Legacy flat fields. Set for single-target sessions to keep older
+   *  consumers working; null when relTargets is the canonical source. */
   relFeelings?: string[];
   withPersonIds?: string[];
   withGroupKey?: 'kids' | 'family' | null;

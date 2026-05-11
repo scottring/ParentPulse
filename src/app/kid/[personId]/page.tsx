@@ -306,9 +306,12 @@ export default function KidModePage() {
   const [selfFeelings, setSelfFeelings] = useState<string[]>([]);
   const [bodySpots, setBodySpots] = useState<string[]>([]);
   const [voiceText, setVoiceText] = useState('');
-  const [relTargetId, setRelTargetId] = useState<string | null>(null);
-  const [relFeelings, setRelFeelings] = useState<string[]>([]);
-  const [relVoice, setRelVoice] = useState('');
+  // Multi-target relationship state — per-person feelings + voice
+  // held in memory so the kid can move between people during one
+  // session. `activeRelId` is the chip currently being edited.
+  type RelState = { feelings: string[]; voice: string };
+  const [relTargetMap, setRelTargetMap] = useState<Record<string, RelState>>({});
+  const [activeRelId, setActiveRelId] = useState<string | null>(null);
   const [showRel, setShowRel] = useState(true);
   // 'editing' = the input form, 'saved' = the "anyone else?" picker.
   // Letting the parent batch sibling check-ins without bouncing home.
@@ -326,20 +329,21 @@ export default function KidModePage() {
     }
   }, [phase]);
 
-  // Pre-select relationship target as the first sibling if there is one,
-  // else the first family member.
+  // Default the active editor to the first family member once the
+  // roster loads. This is purely focus — it doesn't claim the kid has
+  // feelings about that person until they actually pick something.
   useEffect(() => {
-    if (relTargetId === null && familyForRel.length > 0) {
-      setRelTargetId(familyForRel[0].id);
+    if (activeRelId === null && familyForRel.length > 0) {
+      setActiveRelId(familyForRel[0].id);
     }
-  }, [familyForRel, relTargetId]);
+  }, [familyForRel, activeRelId]);
 
   // All hooks must run unconditionally and in the same order on every
   // render — so these useMemos sit above the early loading-return.
-  const relTargetName = useMemo(() => {
-    const t = familyForRel.find((p) => p.id === relTargetId);
+  const activeRelName = useMemo(() => {
+    const t = familyForRel.find((p) => p.id === activeRelId);
     return t?.label ?? '';
-  }, [familyForRel, relTargetId]);
+  }, [familyForRel, activeRelId]);
 
   const otherKidsMemo = useMemo(() => {
     if (!kid) return [] as Array<{ personId: string; name: string; done: boolean }>;
@@ -382,51 +386,94 @@ export default function KidModePage() {
   const otherKids = otherKidsMemo;
   const remainingKids = remainingKidsMemo;
 
+  // Helpers for the active relationship target.
+  const activeRelState: RelState =
+    (activeRelId && relTargetMap[activeRelId]) || { feelings: [], voice: '' };
+  const setActiveRelFeelings = (next: string[]) => {
+    if (!activeRelId) return;
+    setRelTargetMap((prev) => ({
+      ...prev,
+      [activeRelId]: { ...(prev[activeRelId] ?? { feelings: [], voice: '' }), feelings: next },
+    }));
+  };
+  const setActiveRelVoice = (next: string) => {
+    if (!activeRelId) return;
+    setRelTargetMap((prev) => ({
+      ...prev,
+      [activeRelId]: { ...(prev[activeRelId] ?? { feelings: [], voice: '' }), voice: next },
+    }));
+  };
+  const targetHasContent = (id: string): boolean => {
+    const s = relTargetMap[id];
+    return Boolean(s && (s.feelings.length > 0 || s.voice.trim().length > 0));
+  };
+  // All targets the kid actually said something about (for save).
+  const populatedRelTargets = familyForRel
+    .filter((t) => targetHasContent(t.id))
+    .map((t) => ({
+      personId: t.id,
+      feelings: relTargetMap[t.id]?.feelings ?? [],
+      voice: relTargetMap[t.id]?.voice ?? '',
+    }));
+
   const handleDone = async () => {
     if (saving) return;
     if (!user?.familyId) return;
     try {
+      // Body = only what was actually spoken or written. Per-target
+      // voice transcripts are tagged with the target's name so a
+      // future reader can tell whose feelings the line belongs to.
       const parts: string[] = [];
       if (voiceText.trim()) parts.push(voiceText.trim());
-      if (selfFeelings.length > 0) {
-        parts.push(`[${kid.name}: ${selfFeelings.join(', ')}]`);
+      if (showRel) {
+        for (const t of populatedRelTargets) {
+          if (t.voice && t.voice.trim()) {
+            const label = familyForRel.find((p) => p.id === t.personId)?.label ?? 'them';
+            parts.push(`About ${label}: ${t.voice.trim()}`);
+          }
+        }
       }
-      if (bodySpots.length > 0) {
-        parts.push(`[felt in: ${bodySpots.join(', ')}]`);
-      }
-      if (showRel && relTargetId && relFeelings.length > 0) {
-        parts.push(`[about ${relTargetName}: ${relFeelings.join(', ')}]`);
-      }
-      if (showRel && relTargetId && relVoice.trim()) {
-        parts.push(relVoice.trim());
-      }
+      const body = parts.join('\n\n') || `${kid.name} did a check-in.`;
 
-      const body = parts.join('\n\n') || `[${kid.name} did a check-in]`;
+      // Mentions: the kid plus every target the kid said something about.
+      const targetIds = showRel ? populatedRelTargets.map((t) => t.personId) : [];
+      const mentions: string[] = Array.from(new Set([kid.personId, ...targetIds]));
 
-      // Mentions: the kid themselves, plus the rel target if present
-      const mentions: string[] = [kid.personId];
-      if (showRel && relTargetId) mentions.push(relTargetId);
+      const allRelFeelings = showRel
+        ? Array.from(new Set(populatedRelTargets.flatMap((t) => t.feelings)))
+        : [];
 
       const tags = [
         'kid-mode',
         'check-in',
         ...(selfFeelings.length ? [`feel-self:${selfFeelings.join(',')}`] : []),
         ...(bodySpots.length ? [`body:${bodySpots.join(',')}`] : []),
-        ...(showRel && relTargetId && relFeelings.length
-          ? [`feel-rel:${relFeelings.join(',')}`]
-          : []),
+        ...(allRelFeelings.length ? [`feel-rel:${allRelFeelings.join(',')}`] : []),
       ];
 
-      // Structured kid check-in payload — same shape as adult, with
-      // `kind: 'child'` and the body-map spots if any.
-      const checkIn = (selfFeelings.length > 0 || bodySpots.length > 0 || relFeelings.length > 0)
+      // Structured kid check-in. relTargets carries per-person feelings;
+      // legacy single-target fields (relFeelings, withPersonIds) are
+      // populated only when there's exactly one target so older readers
+      // still see the data they expect.
+      const hasAnything =
+        selfFeelings.length > 0 ||
+        bodySpots.length > 0 ||
+        (showRel && populatedRelTargets.length > 0);
+      const checkIn = hasAnything
         ? {
             kind: 'child' as const,
             timeOfDay: partOfDay(today),
             selfFeelings,
             ...(bodySpots.length > 0 ? { bodySpots } : {}),
-            ...(showRel && relTargetId && relFeelings.length > 0
-              ? { relFeelings, withPersonIds: [relTargetId] }
+            ...(showRel && populatedRelTargets.length > 0
+              ? { relTargets: populatedRelTargets }
+              : {}),
+            // Back-compat: legacy single-target shape when exactly one target
+            ...(showRel && populatedRelTargets.length === 1
+              ? {
+                  relFeelings: populatedRelTargets[0].feelings,
+                  withPersonIds: [populatedRelTargets[0].personId],
+                }
               : {}),
           }
         : undefined;
@@ -591,7 +638,8 @@ export default function KidModePage() {
           </div>
         </section>
 
-        {/* Voice */}
+        {/* Voice — editable transcript so the parent can trim their
+            own prompting out before saving. */}
         <section style={sx.section}>
           <span style={sx.label}>or talk</span>
           <div style={sx.voiceRow}>
@@ -603,12 +651,42 @@ export default function KidModePage() {
                 setVoiceText((prev) => (prev.trim() ? `${prev.trim()} ${trimmed}` : trimmed));
               }}
             />
-            <p style={sx.voiceCopy}>
-              {voiceText
-                ? <em style={{ fontStyle: 'italic', color: T.ink }}>&ldquo;{voiceText}&rdquo;</em>
-                : <em style={{ fontStyle: 'italic' }}>Tap and tell me about your morning.</em>}
-            </p>
+            <textarea
+              value={voiceText}
+              onChange={(e) => setVoiceText(e.target.value)}
+              placeholder="Tap and tell me about your morning."
+              rows={3}
+              style={{
+                flex: 1,
+                fontFamily: T.serif,
+                fontStyle: 'italic',
+                fontSize: 18,
+                lineHeight: 1.4,
+                color: T.ink,
+                background: T.cream,
+                border: `1px solid ${T.ruleSoft}`,
+                borderRadius: 8,
+                padding: '10px 12px',
+                resize: 'none',
+                outline: 'none',
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = T.rule; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = T.ruleSoft; }}
+            />
           </div>
+          {voiceText.trim().length > 0 && (
+            <p
+              style={{
+                margin: '6px 0 0',
+                fontFamily: T.sans,
+                fontSize: 11,
+                fontWeight: 500,
+                color: T.text5,
+              }}
+            >
+              You can edit what was heard — trim out anything that wasn't <em style={{ fontStyle: 'italic' }}>{kid.name}</em>.
+            </p>
+          )}
         </section>
 
         {/* Body map */}
@@ -662,38 +740,60 @@ export default function KidModePage() {
           </div>
         </section>
 
-        {/* Relationship step — optional, parent-led */}
+        {/* Relationship step — multi-target. Each chip holds its own
+            feelings + voice in memory; tap a chip to switch which one
+            the editor below applies to. Chips with logged content
+            show a small sage dot. */}
         {showRel && familyForRel.length > 0 && (
           <>
             <div style={sx.divider} aria-hidden="true" />
             <section style={sx.section}>
-              <span style={sx.label}>If you want — about someone</span>
+              <span style={sx.label}>If you want — about someone (you can do more than one)</span>
               <div style={sx.relTargets}>
                 {familyForRel.map((p) => {
-                  const on = relTargetId === p.id;
+                  const isActive = activeRelId === p.id;
+                  const hasContent = targetHasContent(p.id);
                   return (
                     <button
                       key={p.id}
                       type="button"
-                      onClick={() => setRelTargetId(p.id)}
-                      style={{ ...sx.relChipBase, ...(on ? sx.relChipOn : null) }}
+                      onClick={() => setActiveRelId(p.id)}
+                      style={{
+                        ...sx.relChipBase,
+                        ...(isActive ? sx.relChipOn : null),
+                        position: 'relative',
+                      }}
                     >
                       {p.label}
+                      {hasContent && !isActive && (
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            display: 'inline-block',
+                            width: 6,
+                            height: 6,
+                            borderRadius: '50%',
+                            background: T.sage,
+                            marginLeft: 6,
+                            verticalAlign: 'middle',
+                          }}
+                        />
+                      )}
                     </button>
                   );
                 })}
               </div>
               <p style={sx.relQuestion}>
-                How are you feeling about <em style={{ fontStyle: 'italic', color: T.ink }}>{relTargetName}</em>?
+                How are you feeling about <em style={{ fontStyle: 'italic', color: T.ink }}>{activeRelName}</em>?
               </p>
               <div style={sx.feelings}>
                 {KID_FEELINGS_REL.map((f) => {
-                  const on = relFeelings.includes(f.word);
+                  const on = activeRelState.feelings.includes(f.word);
                   return (
                     <button
                       key={f.word}
                       type="button"
-                      onClick={() => setRelFeelings((prev) => toggle(prev, f.word))}
+                      onClick={() => setActiveRelFeelings(toggle(activeRelState.feelings, f.word))}
                       style={{ ...sx.feelBase, ...(on ? sx.feelOn : null) }}
                     >
                       <span style={sx.feelFace}>{f.face}</span>
@@ -708,22 +808,60 @@ export default function KidModePage() {
                   onTranscript={(t) => {
                     const trimmed = t.trim();
                     if (!trimmed) return;
-                    setRelVoice((prev) => (prev.trim() ? `${prev.trim()} ${trimmed}` : trimmed));
+                    setActiveRelVoice(
+                      activeRelState.voice.trim()
+                        ? `${activeRelState.voice.trim()} ${trimmed}`
+                        : trimmed,
+                    );
                   }}
                 />
-                <p style={sx.voiceCopy}>
-                  {relVoice
-                    ? <em style={{ fontStyle: 'italic', color: T.ink }}>&ldquo;{relVoice}&rdquo;</em>
-                    : <em style={{ fontStyle: 'italic' }}>Tap and tell me about {relTargetName} if you want.</em>}
-                </p>
+                <textarea
+                  value={activeRelState.voice}
+                  onChange={(e) => setActiveRelVoice(e.target.value)}
+                  placeholder={`Tap and tell me about ${activeRelName} if you want.`}
+                  rows={3}
+                  style={{
+                    flex: 1,
+                    fontFamily: T.serif,
+                    fontStyle: 'italic',
+                    fontSize: 18,
+                    lineHeight: 1.4,
+                    color: T.ink,
+                    background: T.cream,
+                    border: `1px solid ${T.ruleSoft}`,
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    resize: 'none',
+                    outline: 'none',
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = T.rule; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = T.ruleSoft; }}
+                />
               </div>
+              {populatedRelTargets.length > 1 && (
+                <p
+                  style={{
+                    margin: '6px 0 0',
+                    fontFamily: T.sans,
+                    fontSize: 11,
+                    fontWeight: 500,
+                    color: T.text5,
+                  }}
+                >
+                  You&rsquo;ve said something about{' '}
+                  {populatedRelTargets
+                    .map((t) => familyForRel.find((p) => p.id === t.personId)?.label)
+                    .filter(Boolean)
+                    .join(', ')}
+                  . Tap any chip to add more or change what you said.
+                </p>
+              )}
               <button
                 type="button"
                 style={sx.relSkip}
                 onClick={() => {
                   setShowRel(false);
-                  setRelFeelings([]);
-                  setRelVoice('');
+                  setRelTargetMap({});
                 }}
               >
                 Skip this part

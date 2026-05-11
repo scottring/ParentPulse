@@ -981,17 +981,6 @@ export function Home() {
         .map((n) => family.find((p) => p.name === n)?.personId)
         .filter((id): id is string => Boolean(id));
 
-      const parts: string[] = [];
-      if (text.trim()) parts.push(text.trim());
-      if (selfFeelings.length > 0) {
-        parts.push(`[${tod} check-in: ${selfFeelings.join(', ')}]`);
-      }
-      if (relFeelings.length > 0 && selectedNames.length > 0) {
-        parts.push(`[about ${joinNames(selectedNames)}: ${relFeelings.join(', ')}]`);
-      }
-      const body = parts.join('\n\n');
-      if (!body) return;
-
       const tags = [
         'journal-first',
         ...(selfFeelings.length ? [`feel-self:${selfFeelings.join(',')}`] : []),
@@ -999,8 +988,9 @@ export function Home() {
         ...(selectedNames.length ? [`with:${selectedNames.join(',')}`] : []),
       ];
 
-      // Structured payload — duplicates what's in tags, but shaped so
-      // the synthesis layer can query without parsing strings.
+      // Structured payload — feelings + targets live here. The body
+      // text holds only what the user wrote; no need to mirror these
+      // as bracket annotations.
       const groupKey: 'kids' | 'family' | null =
         selectedNames.includes('the family')
           ? 'family'
@@ -1024,6 +1014,11 @@ export function Home() {
             ...(groupKey ? { withGroupKey: groupKey } : {}),
           }
         : undefined;
+
+      // Body = user-written text only. Empty is fine if feelings are
+      // picked — the structured checkIn alone is a valid entry.
+      const body = text.trim();
+      if (!body && !checkIn) return;
 
       // If "writing as" is set to a child, the entry is a parent
       // proxy (same model CaptureSheet uses for kid entries from
