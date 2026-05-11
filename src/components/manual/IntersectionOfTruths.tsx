@@ -13,7 +13,10 @@ export function IntersectionOfTruths({ insight }: { insight: SynthesisInsight | 
   if (!insight) return null;
   return (
     <section style={sectionStyle} aria-label="Intersection of truths">
-      <p style={eyebrowStyle}>Intersection of Truths</p>
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+        <span style={badgeStyle}>✦ Relish AI Synthesis</span>
+      </div>
+      <h2 style={titleStyle}>The Intersection of Truths</h2>
       <h3 style={headlineStyle}>{insight.headline}</h3>
       <p style={narrativeStyle}>{insight.narrative}</p>
       <div style={columnsStyle}>
@@ -37,14 +40,30 @@ function Column({ heading, items }: { heading: string; items: string[] }) {
 }
 
 const sectionStyle: CSSProperties = { padding: '32px 0', maxWidth: 720, margin: '0 auto' };
-const eyebrowStyle: CSSProperties = {
+const badgeStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  padding: '5px 12px',
+  border: '1px solid rgba(120, 100, 70, 0.24)',
+  borderRadius: 999,
   fontFamily: 'var(--r-sans, -apple-system, sans-serif)',
-  fontSize: 11,
-  fontWeight: 700,
-  letterSpacing: '0.22em',
+  fontSize: 10,
+  fontWeight: 600,
+  letterSpacing: '0.16em',
   textTransform: 'uppercase',
   color: 'var(--r-text-4, #6B6254)',
-  margin: '0 0 18px',
+  background: 'transparent',
+};
+const titleStyle: CSSProperties = {
+  fontFamily: 'var(--r-serif, Georgia, serif)',
+  fontStyle: 'italic',
+  fontWeight: 400,
+  fontSize: 30,
+  letterSpacing: '-0.01em',
+  color: 'var(--r-ink, #2B2620)',
+  margin: '0 0 28px',
+  textAlign: 'center',
 };
 const headlineStyle: CSSProperties = {
   fontFamily: 'var(--r-serif, Georgia, serif)',

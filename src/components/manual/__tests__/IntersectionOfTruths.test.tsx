@@ -12,6 +12,8 @@ describe('IntersectionOfTruths', () => {
   it('renders headline, narrative, and both columns', async () => {
     const { IntersectionOfTruths } = await import('@/components/manual/IntersectionOfTruths');
     render(<IntersectionOfTruths insight={insight} />);
+    expect(screen.getByText(/Relish AI Synthesis/i)).toBeInTheDocument();
+    expect(screen.getByText(/Intersection of Truths/i)).toBeInTheDocument();
     expect(screen.getByText(/The Silence Gap/i)).toBeInTheDocument();
     expect(screen.getByText(/40% divergence/i)).toBeInTheDocument();
     expect(screen.getByText(/Legacy as the primary motivation/i)).toBeInTheDocument();
