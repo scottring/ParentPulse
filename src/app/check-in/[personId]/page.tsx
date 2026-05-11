@@ -56,6 +56,13 @@ const BODY_PARTS = [
   { id: 'leg-r',  shape: 'rect',   attrs: { x: 72, y: 138, width: 16, height: 50, rx: 7 } },
 ] as const;
 
+function joinNames(names: string[]): string {
+  if (names.length === 0) return '';
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
+}
+
 function partOfDay(d: Date): 'morning' | 'afternoon' | 'evening' | 'night' {
   const h = d.getHours();
   if (h < 6) return 'night';
@@ -308,10 +315,14 @@ export default function KidModePage() {
   const [voiceText, setVoiceText] = useState('');
   // Multi-target relationship state — per-person feelings + voice
   // held in memory so the kid can move between people during one
-  // session. `activeRelId` is the chip currently being edited.
+  // session. `selectedRelIds` is the set of chips currently selected;
+  // feelings/voice the kid enters fan out to every selected person
+  // simultaneously. Per-person data still persists in relTargetMap so
+  // earlier-round answers stick around when a person is deselected.
   type RelState = { feelings: string[]; voice: string };
   const [relTargetMap, setRelTargetMap] = useState<Record<string, RelState>>({});
-  const [activeRelId, setActiveRelId] = useState<string | null>(null);
+  const [selectedRelIds, setSelectedRelIds] = useState<string[]>([]);
+  const [groupVoice, setGroupVoice] = useState('');
   const [showRel, setShowRel] = useState(true);
   // 'editing' = the input form, 'saved' = the "anyone else?" picker.
   // Letting the parent batch sibling check-ins without bouncing home.
@@ -329,21 +340,41 @@ export default function KidModePage() {
     }
   }, [phase]);
 
-  // Default the active editor to the first family member once the
-  // roster loads. This is purely focus — it doesn't claim the kid has
-  // feelings about that person until they actually pick something.
+  // Start with no chips selected — the kid taps to pick. Empty-state
+  // copy below invites them in.
+
+  // When the selection changes, seed groupVoice from the new selection
+  // if every selected person has the same stored voice text. If they
+  // diverge, keep whatever the kid was just typing — anything they
+  // type next will overwrite all selected persons.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (activeRelId === null && familyForRel.length > 0) {
-      setActiveRelId(familyForRel[0].id);
+    if (selectedRelIds.length === 0) {
+      setGroupVoice('');
+      return;
     }
-  }, [familyForRel, activeRelId]);
+    const voices = selectedRelIds.map((id) => relTargetMap[id]?.voice ?? '');
+    const allSame = voices.every((v) => v === voices[0]);
+    if (allSame) setGroupVoice(voices[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRelIds.join(',')]);
 
   // All hooks must run unconditionally and in the same order on every
   // render — so these useMemos sit above the early loading-return.
-  const activeRelName = useMemo(() => {
-    const t = familyForRel.find((p) => p.id === activeRelId);
-    return t?.label ?? '';
-  }, [familyForRel, activeRelId]);
+  const selectedRelNames = useMemo(() => {
+    return selectedRelIds
+      .map((id) => familyForRel.find((p) => p.id === id)?.label)
+      .filter((x): x is string => Boolean(x));
+  }, [familyForRel, selectedRelIds]);
+
+  // Feeling is "active" iff every currently-selected person has it set.
+  const sharedFeelings = useMemo(() => {
+    if (selectedRelIds.length === 0) return [] as string[];
+    const sets = selectedRelIds.map((id) => new Set(relTargetMap[id]?.feelings ?? []));
+    return KID_FEELINGS_REL
+      .map((f) => f.word)
+      .filter((word) => sets.every((s) => s.has(word)));
+  }, [selectedRelIds, relTargetMap]);
 
   const otherKidsMemo = useMemo(() => {
     if (!kid) return [] as Array<{ personId: string; name: string; done: boolean }>;
@@ -386,22 +417,44 @@ export default function KidModePage() {
   const otherKids = otherKidsMemo;
   const remainingKids = remainingKidsMemo;
 
-  // Helpers for the active relationship target.
-  const activeRelState: RelState =
-    (activeRelId && relTargetMap[activeRelId]) || { feelings: [], voice: '' };
-  const setActiveRelFeelings = (next: string[]) => {
-    if (!activeRelId) return;
-    setRelTargetMap((prev) => ({
-      ...prev,
-      [activeRelId]: { ...(prev[activeRelId] ?? { feelings: [], voice: '' }), feelings: next },
-    }));
+  // Helpers for the multi-selected relationship targets.
+  const toggleRelTarget = (id: string) => {
+    setSelectedRelIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
   };
-  const setActiveRelVoice = (next: string) => {
-    if (!activeRelId) return;
-    setRelTargetMap((prev) => ({
-      ...prev,
-      [activeRelId]: { ...(prev[activeRelId] ?? { feelings: [], voice: '' }), voice: next },
-    }));
+  // Toggling a feeling fans out across every currently-selected person:
+  // if the feeling is in the intersection (shown active), strip it from
+  // each; otherwise add it to each.
+  const toggleRelFeeling = (word: string) => {
+    if (selectedRelIds.length === 0) return;
+    const isActive = sharedFeelings.includes(word);
+    setRelTargetMap((prev) => {
+      const next = { ...prev };
+      for (const id of selectedRelIds) {
+        const existing = next[id] ?? { feelings: [], voice: '' };
+        const feelings = isActive
+          ? existing.feelings.filter((w) => w !== word)
+          : Array.from(new Set([...existing.feelings, word]));
+        next[id] = { ...existing, feelings };
+      }
+      return next;
+    });
+  };
+  // Voice text is shared across the current selection during the
+  // current edit — typing fans the same text into every selected
+  // person's row.
+  const setGroupVoiceAndFanOut = (text: string) => {
+    setGroupVoice(text);
+    if (selectedRelIds.length === 0) return;
+    setRelTargetMap((prev) => {
+      const next = { ...prev };
+      for (const id of selectedRelIds) {
+        const existing = next[id] ?? { feelings: [], voice: '' };
+        next[id] = { ...existing, voice: text };
+      }
+      return next;
+    });
   };
   const targetHasContent = (id: string): boolean => {
     const s = relTargetMap[id];
@@ -748,16 +801,16 @@ export default function KidModePage() {
           <>
             <div style={sx.divider} aria-hidden="true" />
             <section style={sx.section}>
-              <span style={sx.label}>If you want — about someone (you can do more than one)</span>
+              <span style={sx.label}>If you want — about someone (you can pick more than one)</span>
               <div style={sx.relTargets}>
                 {familyForRel.map((p) => {
-                  const isActive = activeRelId === p.id;
+                  const isActive = selectedRelIds.includes(p.id);
                   const hasContent = targetHasContent(p.id);
                   return (
                     <button
                       key={p.id}
                       type="button"
-                      onClick={() => setActiveRelId(p.id)}
+                      onClick={() => toggleRelTarget(p.id)}
                       style={{
                         ...sx.relChipBase,
                         ...(isActive ? sx.relChipOn : null),
@@ -783,61 +836,79 @@ export default function KidModePage() {
                   );
                 })}
               </div>
-              <p style={sx.relQuestion}>
-                How are you feeling about <em style={{ fontStyle: 'italic', color: T.ink }}>{activeRelName}</em>?
-              </p>
-              <div style={sx.feelings}>
-                {KID_FEELINGS_REL.map((f) => {
-                  const on = activeRelState.feelings.includes(f.word);
-                  return (
-                    <button
-                      key={f.word}
-                      type="button"
-                      onClick={() => setActiveRelFeelings(toggle(activeRelState.feelings, f.word))}
-                      style={{ ...sx.feelBase, ...(on ? sx.feelOn : null) }}
-                    >
-                      <span style={sx.feelFace}>{f.face}</span>
-                      <span style={{ ...sx.feelWord, color: on ? T.ink : T.text4 }}>{f.word}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              <div style={sx.voiceRow}>
-                <MicButton
-                  size="md"
-                  onTranscript={(t) => {
-                    const trimmed = t.trim();
-                    if (!trimmed) return;
-                    setActiveRelVoice(
-                      activeRelState.voice.trim()
-                        ? `${activeRelState.voice.trim()} ${trimmed}`
-                        : trimmed,
-                    );
-                  }}
-                />
-                <textarea
-                  value={activeRelState.voice}
-                  onChange={(e) => setActiveRelVoice(e.target.value)}
-                  placeholder={`Tap and tell me about ${activeRelName} if you want.`}
-                  rows={3}
+              {selectedRelIds.length === 0 ? (
+                <p
                   style={{
-                    flex: 1,
-                    fontFamily: T.serif,
+                    ...sx.relQuestion,
                     fontStyle: 'italic',
-                    fontSize: 18,
-                    lineHeight: 1.4,
-                    color: T.ink,
-                    background: T.cream,
-                    border: `1px solid ${T.ruleSoft}`,
-                    borderRadius: 8,
-                    padding: '10px 12px',
-                    resize: 'none',
-                    outline: 'none',
+                    color: T.text4,
                   }}
-                  onFocus={(e) => { e.currentTarget.style.borderColor = T.rule; }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = T.ruleSoft; }}
-                />
-              </div>
+                >
+                  Tap a name above to get started — you can tap more than one.
+                </p>
+              ) : (
+                <>
+                  <p style={sx.relQuestion}>
+                    How are you feeling about{' '}
+                    <em style={{ fontStyle: 'italic', color: T.ink }}>{joinNames(selectedRelNames)}</em>?
+                  </p>
+                  <div style={sx.feelings}>
+                    {KID_FEELINGS_REL.map((f) => {
+                      const on = sharedFeelings.includes(f.word);
+                      return (
+                        <button
+                          key={f.word}
+                          type="button"
+                          onClick={() => toggleRelFeeling(f.word)}
+                          style={{ ...sx.feelBase, ...(on ? sx.feelOn : null) }}
+                        >
+                          <span style={sx.feelFace}>{f.face}</span>
+                          <span style={{ ...sx.feelWord, color: on ? T.ink : T.text4 }}>{f.word}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div style={sx.voiceRow}>
+                    <MicButton
+                      size="md"
+                      onTranscript={(t) => {
+                        const trimmed = t.trim();
+                        if (!trimmed) return;
+                        const nextVoice = groupVoice.trim()
+                          ? `${groupVoice.trim()} ${trimmed}`
+                          : trimmed;
+                        setGroupVoiceAndFanOut(nextVoice);
+                      }}
+                    />
+                    <textarea
+                      value={groupVoice}
+                      onChange={(e) => setGroupVoiceAndFanOut(e.target.value)}
+                      placeholder={
+                        selectedRelNames.length === 1
+                          ? `Tap and tell me about ${selectedRelNames[0]} if you want.`
+                          : 'Tap and tell me something.'
+                      }
+                      rows={3}
+                      style={{
+                        flex: 1,
+                        fontFamily: T.serif,
+                        fontStyle: 'italic',
+                        fontSize: 18,
+                        lineHeight: 1.4,
+                        color: T.ink,
+                        background: T.cream,
+                        border: `1px solid ${T.ruleSoft}`,
+                        borderRadius: 8,
+                        padding: '10px 12px',
+                        resize: 'none',
+                        outline: 'none',
+                      }}
+                      onFocus={(e) => { e.currentTarget.style.borderColor = T.rule; }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = T.ruleSoft; }}
+                    />
+                  </div>
+                </>
+              )}
               {populatedRelTargets.length > 1 && (
                 <p
                   style={{
@@ -862,6 +933,8 @@ export default function KidModePage() {
                 onClick={() => {
                   setShowRel(false);
                   setRelTargetMap({});
+                  setSelectedRelIds([]);
+                  setGroupVoice('');
                 }}
               >
                 Skip this part
