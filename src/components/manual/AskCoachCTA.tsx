@@ -28,11 +28,17 @@ export function AskCoachCTA({
         <p style={statStyle}>
           The Coach has synthesized {entryCount} {entryCount === 1 ? 'entry' : 'entries'} and {contributionCount} {contributionCount === 1 ? 'contribution' : 'contributions'} to help you navigate your relationship with {firstName}.
         </p>
-        <ul style={qListStyle}>
+        <div style={qPillRowStyle}>
           {sampleQuestions.map((q, i) => (
-            <li key={i} style={qLiStyle}>&ldquo;{q}&rdquo;</li>
+            <Link
+              key={i}
+              href={`/coach?personId=${personId}&name=${encodeURIComponent(firstName)}&q=${encodeURIComponent(q)}`}
+              style={qPillStyle}
+            >
+              {q}
+            </Link>
           ))}
-        </ul>
+        </div>
         <Link
           href={`/coach?personId=${personId}&name=${encodeURIComponent(firstName)}`}
           style={ctaStyle}
@@ -66,13 +72,24 @@ const statStyle: CSSProperties = {
   margin: '0 0 18px',
   maxWidth: '52ch',
 };
-const qListStyle: CSSProperties = { margin: '0 0 22px', padding: 0, listStyle: 'none' };
-const qLiStyle: CSSProperties = {
-  fontFamily: 'var(--r-serif, Georgia, serif)',
-  fontStyle: 'italic',
-  fontSize: 16,
-  color: 'rgba(250, 248, 243, 0.88)',
-  marginBottom: 6,
+const qPillRowStyle: CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 8,
+  margin: '0 0 22px',
+};
+const qPillStyle: CSSProperties = {
+  display: 'inline-block',
+  padding: '8px 14px',
+  border: '1px solid rgba(250, 248, 243, 0.32)',
+  borderRadius: 999,
+  fontFamily: 'var(--r-sans, -apple-system, sans-serif)',
+  fontSize: 12,
+  fontWeight: 500,
+  letterSpacing: '0.04em',
+  color: 'rgba(250, 248, 243, 0.92)',
+  background: 'rgba(250, 248, 243, 0.06)',
+  textDecoration: 'none',
 };
 const ctaStyle: CSSProperties = {
   display: 'inline-flex',
