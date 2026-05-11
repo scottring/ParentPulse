@@ -1181,55 +1181,6 @@ export function Home() {
           </section>
         )}
 
-        {/* Ask the book — one chip per family member. Routes into the
-            existing /coach surface with personId so the AI is scoped
-            to that person's entries + manual. */}
-        {family.length > 0 && (
-          <section style={{ marginTop: 40 }}>
-            <p style={sx.eyebrow}>Ask the book</p>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {family.map((p) => {
-                const first = p.name.split(' ')[0];
-                return (
-                  <Link
-                    key={p.personId}
-                    href={`/coach?personId=${p.personId}&name=${encodeURIComponent(first)}`}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: '10px 16px',
-                      borderRadius: 999,
-                      border: `1px solid ${T.ruleSoft}`,
-                      background: T.paper,
-                      textDecoration: 'none',
-                      color: T.ink,
-                      fontFamily: T.serif,
-                      fontSize: 16,
-                      transition: `border-color 140ms ${T.ease}, background 140ms ${T.ease}`,
-                    }}
-                  >
-                    About <em style={{ fontStyle: 'italic' }}>{first}</em>
-                    <span
-                      style={{
-                        fontFamily: T.sans,
-                        fontSize: 10,
-                        fontWeight: 700,
-                        letterSpacing: '0.18em',
-                        textTransform: 'uppercase',
-                        color: T.text5,
-                        marginLeft: 2,
-                      }}
-                    >
-                      Ask →
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
         {/* Writing area */}
         <section style={{ marginTop: 56 }}>
           <p style={sx.eyebrow}>
