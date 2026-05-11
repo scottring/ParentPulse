@@ -61,12 +61,12 @@ export default function ClientPage() {
               <h2 className="card-heading">
                 {spouseName
                   ? `A weekly moment with ${spouseName}.`
-                  : `Add your partner first.`}
+                  : `Couple rituals need a partner first.`}
               </h2>
               <p className="card-copy">
                 {spouseName
                   ? `Pick a day and time together, on one device. A small ceremony that keeps the big conversations current.`
-                  : `Couple rituals need both of you in the family. Once your partner is here, set it up together.`}
+                  : `Add your partner in Settings → People — once they're in the family, you can set up a recurring check-in together.`}
               </p>
               {spouseName ? (
                 <Link href="/rituals/couple/setup" className="cta">
