@@ -98,10 +98,10 @@ describe('LeftRail', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('returns null on /check-in/[personId]', async () => {
+  it('renders on /check-in/[personId] (chrome restored — Plan 3 will replace with Exit-to-parent)', async () => {
     mockPathname.mockReturnValue('/check-in/abc');
     const { LeftRail } = await import('@/components/layout/LeftRail');
-    const { container } = render(<LeftRail />);
-    expect(container.firstChild).toBeNull();
+    render(<LeftRail />);
+    expect(screen.getByRole('link', { name: /Journal/i })).toBeInTheDocument();
   });
 });
