@@ -782,7 +782,7 @@ export function Home() {
 
   // Kids who've already had a check-in this browser session — read
   // from sessionStorage. Refreshes when the tab regains focus so
-  // returning from /kid/[id] picks up the new state without a manual
+  // returning from /check-in/[id] picks up the new state without a manual
   // reload.
   const [kidsDoneThisSession, setKidsDoneThisSession] = useState<string[]>([]);
   useEffect(() => {
@@ -1313,7 +1313,7 @@ export function Home() {
                   featured={selectedKidNames.includes(k.name)}
                   dim={selectedKidNames.length > 0 && !selectedKidNames.includes(k.name)}
                   done={kidsDoneThisSession.includes(k.personId)}
-                  href={`/kid/${k.personId}`}
+                  href={`/check-in/${k.personId}`}
                 />
               ))}
             </ul>
