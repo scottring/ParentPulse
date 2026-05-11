@@ -72,12 +72,12 @@ describe('TopChrome', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('renders on /check-in/[personId] (chrome restored — Plan 3 will replace with Exit-to-parent)', async () => {
+  it('returns null on /check-in/[personId] (kid mode has its own Exit-to-parent button)', async () => {
     mockPathname.mockReturnValue('/check-in/abc');
     mockUser.mockReturnValue({ userId: 'u1', name: 'Scott Kaufman' });
     const { TopChrome } = await import('@/components/layout/TopChrome');
-    render(<TopChrome />);
-    expect(screen.getByRole('link', { name: /relish/i })).toBeInTheDocument();
+    const { container } = render(<TopChrome />);
+    expect(container.firstChild).toBeNull();
   });
 
   it('returns null when there is no signed-in user', async () => {
