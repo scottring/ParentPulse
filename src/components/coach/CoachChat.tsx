@@ -4,6 +4,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useCoach, ChatMessage } from '@/hooks/useCoach';
 import { MicButton } from '@/components/voice/MicButton';
 import { ChatClosureKept } from '@/components/chat/ChatClosureKept';
+import { MessageActionPill } from '@/components/chat/MessageActionPill';
+import { FlagComposerSheet } from '@/components/chat/FlagComposerSheet';
+import { useAuth } from '@/context/AuthContext';
+import { useConnectedPartner } from '@/hooks/useConnectedPartner';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
 
@@ -15,6 +19,13 @@ interface CoachChatProps {
 
 export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
   const { messages, loading, error, context, sendMessage, clearConversation, conversationId } = useCoach();
+  const { user } = useAuth();
+  const partner = useConnectedPartner();
+  const [flagTarget, setFlagTarget] = useState<{
+    messageId: string;
+    quote: string;
+    senderRole: 'user' | 'assistant';
+  } | null>(null);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -242,36 +253,52 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
 
         {messages.map((message, index) => (
           <div
-            key={index}
+            key={message.messageId ?? message.timestamp ?? index}
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className="max-w-[80%] p-4 rounded-xl text-sm"
-              style={{
-                fontFamily: 'var(--font-parent-body)',
-                ...(message.role === 'user'
-                  ? {
-                      background: '#3A3530',
-                      color: '#FFFFFF',
-                    }
-                  : {
-                      background: 'rgba(124,144,130,0.08)',
-                      border: '1px solid rgba(124,144,130,0.15)',
-                      color: '#3A3530',
-                    }),
-                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-              }}
+              className="bubble-wrap max-w-[80%]"
+              style={{ position: 'relative' }}
             >
-              {message.role === 'assistant' && (
-                <div
-                  className="inline-block px-2 py-0.5 rounded-full text-xs text-white mb-2"
-                  style={{ background: '#7C9082' }}
-                >
-                  Coach
-                </div>
+              {message.messageId && partner && (
+                <MessageActionPill
+                  onFlag={() =>
+                    setFlagTarget({
+                      messageId: message.messageId!,
+                      quote: message.content,
+                      senderRole: message.role,
+                    })
+                  }
+                />
               )}
-              <div className="whitespace-pre-wrap leading-relaxed">
-                {message.content}
+              <div
+                className="p-4 rounded-xl text-sm"
+                style={{
+                  fontFamily: 'var(--font-parent-body)',
+                  ...(message.role === 'user'
+                    ? {
+                        background: '#3A3530',
+                        color: '#FFFFFF',
+                      }
+                    : {
+                        background: 'rgba(124,144,130,0.08)',
+                        border: '1px solid rgba(124,144,130,0.15)',
+                        color: '#3A3530',
+                      }),
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                }}
+              >
+                {message.role === 'assistant' && (
+                  <div
+                    className="inline-block px-2 py-0.5 rounded-full text-xs text-white mb-2"
+                    style={{ background: '#7C9082' }}
+                  >
+                    Coach
+                  </div>
+                )}
+                <div className="whitespace-pre-wrap leading-relaxed">
+                  {message.content}
+                </div>
               </div>
             </div>
           </div>
@@ -405,6 +432,37 @@ export function CoachChat({ personId, personName, onClose }: CoachChatProps) {
           }}
         />
       )}
+
+      {flagTarget && user?.userId && partner && conversationId && (
+        <FlagComposerSheet
+          open
+          fromUserId={user.userId}
+          defaultRecipient={partner}
+          chatKind="coach"
+          chatId={conversationId}
+          messageId={flagTarget.messageId}
+          senderRole={flagTarget.senderRole}
+          quoteText={flagTarget.quote}
+          onClose={() => setFlagTarget(null)}
+        />
+      )}
+
+      {/*
+        Reveal the flag pill only on hover/focus-within of its bubble wrapper.
+        Uses :global() because MessageActionPill is a child Client Component
+        with its own styled-jsx scope (parent styled-jsx would otherwise be
+        dropped under Turbopack — see project memory).
+      */}
+      <style jsx>{`
+        :global(.bubble-wrap .action-pill) {
+          opacity: 0;
+          transition: opacity 0.15s ease;
+        }
+        :global(.bubble-wrap:hover .action-pill),
+        :global(.bubble-wrap:focus-within .action-pill) {
+          opacity: 1;
+        }
+      `}</style>
     </div>
   );
 }

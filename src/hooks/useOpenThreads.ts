@@ -13,6 +13,7 @@ import { useJournalEntries } from '@/hooks/useJournalEntries';
 import { useMomentInvite } from '@/hooks/useMomentInvite';
 import { usePerson } from '@/hooks/usePerson';
 import { useSettledMentions } from '@/hooks/useSettledMentions';
+import { useIncomingFlags } from '@/hooks/useIncomingFlags';
 import { listOpenThreads, type OpenThread } from '@/lib/open-threads';
 import type { Moment } from '@/types/moment';
 import type { Ritual } from '@/types/ritual';
@@ -33,6 +34,7 @@ export function useOpenThreads(): UseOpenThreadsReturn {
   const { pendingForMe, loading: invitesLoading } = useMomentInvite();
   const { people } = usePerson();
   const { settledIds } = useSettledMentions();
+  const { flags } = useIncomingFlags();
   const [moments, setMoments] = useState<Moment[]>([]);
   const [rituals, setRituals] = useState<Ritual[]>([]);
   const [momentsReady, setMomentsReady] = useState(false);
@@ -101,9 +103,10 @@ export function useOpenThreads(): UseOpenThreadsReturn {
         rituals,
         entries,
         pendingInvitesForMe: pendingForMe,
+        flagsForMe: flags,
         me,
       }),
-    [moments, rituals, entries, pendingForMe, me],
+    [moments, rituals, entries, pendingForMe, flags, me],
   );
 
   return {

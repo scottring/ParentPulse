@@ -6,14 +6,17 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useIncomingFlags } from '@/hooks/useIncomingFlags';
 import { shouldHideChrome } from './leftRailItems';
 
 export function TopChrome() {
   const pathname = usePathname() ?? '';
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { flags } = useIncomingFlags();
   const [menuOpen, setMenuOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const openFlagCount = flags.length;
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -38,6 +41,17 @@ export function TopChrome() {
     <header style={chromeStyle} aria-label="Top chrome">
       <Link href="/" style={wordmarkStyle} aria-label="Relish — home">Relish</Link>
       <span style={{ flex: 1 }} aria-hidden />
+      {openFlagCount > 0 && (
+        <Link
+          href="/"
+          style={flagBellStyle}
+          aria-label={`${openFlagCount} flagged for you`}
+        >
+          <span aria-hidden style={flagGlyphStyle}>⚑</span>
+          <span aria-hidden style={dotStyle} />
+          {openFlagCount > 1 && <span style={countStyle}>{openFlagCount}</span>}
+        </Link>
+      )}
       <div ref={ref} style={{ position: 'relative' }}>
         <button
           type="button"
@@ -145,4 +159,48 @@ const menuItemStyle: CSSProperties = {
   fontFamily: 'var(--r-sans, -apple-system, sans-serif)',
   fontSize: 13,
   color: 'var(--r-text-2, #3A3530)',
+};
+
+const flagBellStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  position: 'relative',
+  width: 32,
+  height: 32,
+  marginRight: 12,
+  textDecoration: 'none',
+  cursor: 'pointer',
+};
+
+const flagGlyphStyle: CSSProperties = {
+  fontSize: 20,
+  color: 'var(--r-accent, #6a4b2a)',
+  lineHeight: 1,
+};
+
+const dotStyle: CSSProperties = {
+  position: 'absolute',
+  top: 6,
+  right: 2,
+  width: 8,
+  height: 8,
+  borderRadius: '50%',
+  background: 'var(--r-coral, #b65f3a)',
+};
+
+const countStyle: CSSProperties = {
+  position: 'absolute',
+  bottom: 0,
+  right: -4,
+  fontSize: 10,
+  fontWeight: 600,
+  color: 'var(--r-paper, #FDFBF6)',
+  background: 'var(--r-coral, #b65f3a)',
+  borderRadius: '50%',
+  width: 16,
+  height: 16,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
 };

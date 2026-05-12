@@ -52,15 +52,17 @@ import type { Moment } from '@/types/moment';
 import type { Ritual } from '@/types/ritual';
 import type { JournalEntry } from '@/types/journal';
 import type { MomentInvite } from '@/types/moment-invite';
+import type { MessageFlag } from '@/types/flag';
 
 export type OpenThreadReason =
   | 'pending_invite'
   | 'unclosed_divergence'
   | 'incomplete_practice'
   | 'overdue_ritual'
-  | 'mention_for_me';
+  | 'mention_for_me'
+  | 'flagged_for_me';
 
-export type OpenThreadKind = 'moment' | 'entry' | 'ritual' | 'practice';
+export type OpenThreadKind = 'moment' | 'entry' | 'ritual' | 'practice' | 'flag';
 
 export interface ClosingAction {
   // Short imperative the Cover renders on the row.
@@ -98,9 +100,10 @@ export interface OpenThread {
 const REASON_PRECEDENCE: Record<OpenThreadReason, number> = {
   overdue_ritual: 0,
   pending_invite: 1,
-  incomplete_practice: 2,
-  unclosed_divergence: 3,
-  mention_for_me: 4,
+  flagged_for_me: 2,
+  incomplete_practice: 3,
+  unclosed_divergence: 4,
+  mention_for_me: 5,
 };
 
 interface Sources {
@@ -112,6 +115,9 @@ interface Sources {
   // Pending moment_invites where the current user is the recipient.
   // Omit for unauthenticated contexts; empty array is fine.
   pendingInvitesForMe?: MomentInvite[];
+  // Open/seen message flags addressed to the current user. Omit for
+  // unauthenticated contexts; empty array is fine.
+  flagsForMe?: MessageFlag[];
   // Identity of the current user, used to detect "mention_for_me"
   // open threads — recent entries written by someone else that are
   // about this user. Omit for unauthenticated contexts.
@@ -252,6 +258,26 @@ export function listOpenThreads(sources: Sources): OpenThread[] {
         },
       });
     }
+  }
+
+  // Reason 6: flagged_for_me — a message flag (coach or entry chat)
+  // where the current user is the recipient and the flag is still
+  // open or seen but not yet closed/retracted.
+  for (const f of sources.flagsForMe ?? []) {
+    if (f.status !== 'open' && f.status !== 'seen') continue;
+    open.push({
+      id: f.flagId,
+      kind: 'flag',
+      reason: 'flagged_for_me',
+      subtitle: `"${f.quoteText}"`,
+      openedAt: f.createdAt?.toDate?.(),
+      closingAction: {
+        label: 'Open',
+        // Flag threads expand in-place inside FlaggedForMeCard on Home.
+        // No deep-link surface yet; href falls back to the Home page.
+        href: '/',
+      },
+    });
   }
 
   // Dedupe by (kind,id), keeping the strongest reason.

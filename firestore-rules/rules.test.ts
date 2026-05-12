@@ -1140,3 +1140,294 @@ describe.skipIf(!emulatorAvailable)('couple_rituals', () => {
     await assertFails(getDoc(doc(strangerDb, 'couple_rituals', 'r2')));
   });
 });
+
+// ====================================================================
+// message_flags — "flag this message for my partner"
+//
+// Two-party doc keyed by fromUserId (sender) / toUserId (recipient).
+// Rules surface:
+//   read   — participants only (from OR to)
+//   create — sender writes a doc whose fromUserId == auth.uid,
+//            toUserId != auth.uid, status == 'open'
+//   update (recipient) — toUserId == auth.uid; identity fields immutable
+//                        (fromUserId, toUserId, chatId, messageId,
+//                         quoteText, needsRealReply); allowed
+//                        transitions are open->seen and any->closed
+//                        (with response payload)
+//   update (sender)   — fromUserId == auth.uid; only allowed to flip
+//                       status to 'retracted' AND only if no response
+//                       has been recorded yet
+//   delete — denied for everyone
+// ====================================================================
+describe.skipIf(!emulatorAvailable)('message_flags', () => {
+  const U1 = 'flag-user-1'; // sender
+  const U2 = 'flag-user-2'; // recipient
+  const U3 = 'flag-user-3'; // non-participant
+
+  // Helper: a minimal valid open flag doc (for seeding).
+  const baseFlag = () => ({
+    fromUserId: U1,
+    toUserId: U2,
+    chatKind: 'coach',
+    chatId: 'chat-1',
+    messageId: 'msg-1',
+    senderRole: 'assistant',
+    quoteText: 'Hey, look at this.',
+    needsRealReply: false,
+    status: 'open',
+    createdAt: new Date(),
+  });
+
+  beforeEach(async () => {
+    await testEnv!.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      // All three users live in the same family for these tests —
+      // the rules don't care about family membership for message_flags
+      // (it's a 2-party doc gated by from/to), but we still set up
+      // user docs so getUserData() works if anything probes it.
+      await setDoc(doc(db, 'users', U1), { familyId: FAMILY_ID, role: 'parent' });
+      await setDoc(doc(db, 'users', U2), { familyId: FAMILY_ID, role: 'parent' });
+      await setDoc(doc(db, 'users', U3), { familyId: FAMILY_ID, role: 'parent' });
+    });
+  });
+
+  // ----- create ------------------------------------------------------
+
+  it('sender can create an open flag addressed to another user', async () => {
+    const db = getAuthContext(U1).firestore();
+    await assertSucceeds(
+      addDoc(collection(db, 'message_flags'), baseFlag())
+    );
+  });
+
+  it('cannot create a flag with fromUserId != auth.uid (spoofed sender)', async () => {
+    // U2 tries to create a flag claiming U1 is the sender.
+    const db = getAuthContext(U2).firestore();
+    await assertFails(
+      addDoc(collection(db, 'message_flags'), baseFlag())
+    );
+  });
+
+  it('cannot create a flag with status != open', async () => {
+    const db = getAuthContext(U1).firestore();
+    await assertFails(
+      addDoc(collection(db, 'message_flags'), {
+        ...baseFlag(),
+        status: 'closed',
+      })
+    );
+  });
+
+  it('cannot create a flag addressed to yourself (toUserId == auth.uid)', async () => {
+    const db = getAuthContext(U1).firestore();
+    await assertFails(
+      addDoc(collection(db, 'message_flags'), {
+        ...baseFlag(),
+        toUserId: U1,
+      })
+    );
+  });
+
+  // ----- read --------------------------------------------------------
+
+  it('non-participant cannot read', async () => {
+    await testEnv!.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'message_flags', 'f1'), baseFlag());
+    });
+    const db = getAuthContext(U3).firestore();
+    await assertFails(getDoc(doc(db, 'message_flags', 'f1')));
+  });
+
+  it('recipient can read', async () => {
+    await testEnv!.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'message_flags', 'f1'), baseFlag());
+    });
+    const db = getAuthContext(U2).firestore();
+    await assertSucceeds(getDoc(doc(db, 'message_flags', 'f1')));
+  });
+
+  it('sender can read their own flag', async () => {
+    await testEnv!.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'message_flags', 'f1'), baseFlag());
+    });
+    const db = getAuthContext(U1).firestore();
+    await assertSucceeds(getDoc(doc(db, 'message_flags', 'f1')));
+  });
+
+  // ----- update by recipient ----------------------------------------
+
+  it('recipient can transition open -> seen and set seenAt', async () => {
+    await testEnv!.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'message_flags', 'f1'), baseFlag());
+    });
+    const db = getAuthContext(U2).firestore();
+    await assertSucceeds(
+      updateDoc(doc(db, 'message_flags', 'f1'), {
+        status: 'seen',
+        seenAt: new Date(),
+      })
+    );
+  });
+
+  it('recipient cannot mutate identity fields (fromUserId/toUserId/chatId/messageId/quoteText/needsRealReply)', async () => {
+    await testEnv!.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'message_flags', 'f1'), baseFlag());
+    });
+    const db = getAuthContext(U2).firestore();
+
+    // chatId tampering — one representative case; the rule guards all
+    // identity fields the same way.
+    await assertFails(
+      updateDoc(doc(db, 'message_flags', 'f1'), {
+        status: 'seen',
+        seenAt: new Date(),
+        chatId: 'chat-evil',
+      })
+    );
+
+    // messageId tampering
+    await assertFails(
+      updateDoc(doc(db, 'message_flags', 'f1'), {
+        status: 'seen',
+        seenAt: new Date(),
+        messageId: 'msg-evil',
+      })
+    );
+
+    // quoteText tampering — recipient must not be able to rewrite the
+    // quoted content of the original message.
+    await assertFails(
+      updateDoc(doc(db, 'message_flags', 'f1'), {
+        status: 'seen',
+        seenAt: new Date(),
+        quoteText: 'rewritten quote',
+      })
+    );
+
+    // needsRealReply tampering — recipient cannot escalate/de-escalate.
+    await assertFails(
+      updateDoc(doc(db, 'message_flags', 'f1'), {
+        status: 'seen',
+        seenAt: new Date(),
+        needsRealReply: true,
+      })
+    );
+
+    // fromUserId tampering — would also break the read rule afterward.
+    await assertFails(
+      updateDoc(doc(db, 'message_flags', 'f1'), {
+        status: 'seen',
+        seenAt: new Date(),
+        fromUserId: U3,
+      })
+    );
+
+    // toUserId tampering — would let the recipient hand the flag off.
+    await assertFails(
+      updateDoc(doc(db, 'message_flags', 'f1'), {
+        status: 'seen',
+        seenAt: new Date(),
+        toUserId: U3,
+      })
+    );
+  });
+
+  it('recipient cannot mutate the sender-authored note', async () => {
+    // Seed a flag that already has a note from the sender — recipient
+    // must not be able to rewrite it on their seen/close update.
+    await testEnv!.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'message_flags', 'f1'), {
+        ...baseFlag(),
+        note: 'sender wrote this',
+      });
+    });
+    const db = getAuthContext(U2).firestore();
+
+    // note tampering (rewrite) — should fail.
+    await assertFails(
+      updateDoc(doc(db, 'message_flags', 'f1'), {
+        status: 'seen',
+        seenAt: new Date(),
+        note: 'recipient rewrote this',
+      })
+    );
+  });
+
+  it('recipient can write a response + status=closed + closedAt', async () => {
+    await testEnv!.withSecurityRulesDisabled(async (ctx) => {
+      // Start from a seen flag (closing is allowed from any status by
+      // the rule, but real flow is open -> seen -> closed).
+      await setDoc(doc(ctx.firestore(), 'message_flags', 'f1'), {
+        ...baseFlag(),
+        status: 'seen',
+        seenAt: new Date(),
+      });
+    });
+    const db = getAuthContext(U2).firestore();
+    await assertSucceeds(
+      updateDoc(doc(db, 'message_flags', 'f1'), {
+        status: 'closed',
+        closedAt: new Date(),
+        response: {
+          kind: 'emoji',
+          value: '❤️',
+          at: new Date(),
+        },
+      })
+    );
+  });
+
+  // ----- update by sender (retract) ---------------------------------
+
+  it('sender can retract while no response exists', async () => {
+    await testEnv!.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'message_flags', 'f1'), baseFlag());
+    });
+    const db = getAuthContext(U1).firestore();
+    await assertSucceeds(
+      updateDoc(doc(db, 'message_flags', 'f1'), {
+        status: 'retracted',
+      })
+    );
+  });
+
+  it('sender cannot retract after recipient has written a response', async () => {
+    await testEnv!.withSecurityRulesDisabled(async (ctx) => {
+      // Recipient already closed it with a response.
+      await setDoc(doc(ctx.firestore(), 'message_flags', 'f1'), {
+        ...baseFlag(),
+        status: 'closed',
+        closedAt: new Date(),
+        response: {
+          kind: 'emoji',
+          value: '❤️',
+          at: new Date(),
+        },
+      });
+    });
+    const db = getAuthContext(U1).firestore();
+    await assertFails(
+      updateDoc(doc(db, 'message_flags', 'f1'), {
+        status: 'retracted',
+      })
+    );
+  });
+
+  // ----- delete ------------------------------------------------------
+
+  it('nobody can delete a flag (sender)', async () => {
+    await testEnv!.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'message_flags', 'f1'), baseFlag());
+    });
+    const db = getAuthContext(U1).firestore();
+    await assertFails(deleteDoc(doc(db, 'message_flags', 'f1')));
+  });
+
+  it('nobody can delete a flag (recipient)', async () => {
+    await testEnv!.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'message_flags', 'f1'), baseFlag());
+    });
+    const db = getAuthContext(U2).firestore();
+    await assertFails(deleteDoc(doc(db, 'message_flags', 'f1')));
+  });
+});

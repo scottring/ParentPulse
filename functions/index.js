@@ -7,8 +7,17 @@ const {
 const admin = require("firebase-admin");
 const Anthropic = require("@anthropic-ai/sdk");
 const {GoogleGenerativeAI} = require("@google/generative-ai");
+const crypto = require("crypto");
 
 admin.initializeApp();
+
+// Stable per-message UUIDs so the client can hydrate immediately
+// after a callable returns and so flag/delete operations have a
+// deterministic key. Existing stored messages without `messageId`
+// remain readable — we do not backfill.
+function newMessageId() {
+  return crypto.randomUUID();
+}
 
 // Email handlers — Resend-backed transactional mail.
 // See functions/sendMail.js for the shared client and
@@ -956,7 +965,11 @@ exports.chatWithCoach = onCall(
         // as excluded so bad responses don't pollute the current turn.
         // We keep the excluded entries in Firestore (the user can still
         // see them in history), we just don't feed them to the model.
-        const newUserMessage = {role: "user", content: message};
+        const newUserMessage = {
+          messageId: newMessageId(),
+          role: "user",
+          content: message,
+        };
         const messagesForClaude = [
           ...conversation.messages.filter((m) => !m.excluded),
           newUserMessage,
@@ -970,7 +983,11 @@ exports.chatWithCoach = onCall(
           personIds: effectivePersonIds,
         });
 
-        const newAssistantMessage = {role: "assistant", content: response};
+        const newAssistantMessage = {
+          messageId: newMessageId(),
+          role: "assistant",
+          content: response,
+        };
 
         // Persist: append both new messages to the full history
         // (preserving any excluded entries already stored).
@@ -991,6 +1008,8 @@ exports.chatWithCoach = onCall(
           success: true,
           conversationId: conversationRef.id,
           response,
+          userMessageId: newUserMessage.messageId,
+          assistantMessageId: newAssistantMessage.messageId,
           context: {
             journalEntriesFound: context.journalEntries.length,
             knowledgeItemsFound: context.knowledgeItems.length,

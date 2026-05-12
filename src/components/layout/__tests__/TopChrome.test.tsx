@@ -5,6 +5,7 @@ const mockPathname = vi.fn();
 const mockPush = vi.fn();
 const mockLogout = vi.fn();
 const mockUser = vi.fn();
+const mockUseIncomingFlags = vi.fn();
 
 vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname(),
@@ -24,6 +25,10 @@ vi.mock('@/context/AuthContext', () => ({
   }),
 }));
 
+vi.mock('@/hooks/useIncomingFlags', () => ({
+  useIncomingFlags: () => mockUseIncomingFlags(),
+}));
+
 describe('TopChrome', () => {
   beforeEach(() => {
     cleanup();
@@ -31,6 +36,8 @@ describe('TopChrome', () => {
     mockPush.mockReset();
     mockLogout.mockReset();
     mockUser.mockReset();
+    mockUseIncomingFlags.mockReset();
+    mockUseIncomingFlags.mockReturnValue({ flags: [], loading: false });
   });
 
   it('renders the Relish wordmark routing to home on an authed route', async () => {
@@ -86,5 +93,17 @@ describe('TopChrome', () => {
     const { TopChrome } = await import('@/components/layout/TopChrome');
     const { container } = render(<TopChrome />);
     expect(container.firstChild).toBeNull();
+  });
+
+  it('renders a flag indicator when there is at least one open flag', async () => {
+    mockPathname.mockReturnValue('/');
+    mockUser.mockReturnValue({ userId: 'u1', name: 'Scott Kaufman' });
+    mockUseIncomingFlags.mockReturnValue({
+      flags: [{ flagId: 'f1', status: 'open' }],
+      loading: false,
+    });
+    const { TopChrome } = await import('@/components/layout/TopChrome');
+    render(<TopChrome />);
+    expect(screen.getByLabelText(/flagged for you/i)).toBeInTheDocument();
   });
 });
