@@ -18,6 +18,7 @@ const REASON_KICKER: Record<OpenThread['reason'], string> = {
   incomplete_practice: 'Practice unfinished',
   unclosed_divergence: 'Divergence to respond to',
   mention_for_me: 'Someone wrote about you',
+  flagged_for_me: 'Message flagged for you',
 };
 
 /**
@@ -67,6 +68,12 @@ export function ClosingActionCard({ thread, inline, onAction }: ClosingActionCar
         }
         .closing-incomplete_practice {
           border-left-color: #c89b3b;
+        }
+        .closing-flagged_for_me {
+          border-left-color: #d97a6a;
+        }
+        .closing-mention_for_me {
+          border-left-color: #6a8a9a;
         }
         .kicker {
           margin: 0 0 4px 0;
