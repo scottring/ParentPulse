@@ -25,13 +25,13 @@ const RELATIONSHIP_LABEL: Record<string, string> = {
 };
 
 /**
- * Compact person pills showing who's in the library.
+ * Compact person pills showing who's been added.
  */
 export default function TheFamily({ people }: TheFamilyProps) {
   if (people.length === 0) return null;
 
   return (
-    <Section eyebrow="The library" title="Your people">
+    <Section eyebrow="Your family" title="Your people">
       <div className="family-pills">
         {people.map((person) => (
           <Link

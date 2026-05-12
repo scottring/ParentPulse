@@ -112,7 +112,7 @@ export default function RegisterPage() {
             fontSize: 20,
           }}
         >
-          Opening the library&hellip;
+          Just a moment&hellip;
         </p>
       </div>
     );
@@ -124,7 +124,7 @@ export default function RegisterPage() {
       <Link
         href="/"
         className="register-back"
-        aria-label="Back to the library"
+        aria-label="Back to home"
       >
         <span className="arrow">⟵</span> Back
       </Link>
@@ -139,7 +139,7 @@ export default function RegisterPage() {
           <span className="press-chapter-label">
             {isDemo ? 'A demonstration' : 'Create an account'}
           </span>
-          <h1 className="register-title">Create your library</h1>
+          <h1 className="register-title">Create your account</h1>
           <p className="register-subtitle">
             A handful of details to get you started. You can change
             any of them later.

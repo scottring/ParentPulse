@@ -129,7 +129,7 @@ function BuildingLegacyCard() {
         <span aria-hidden style={legacyGlyphStyle}>📖</span>
         <h2 style={legacyTitleStyle}>Building the Legacy</h2>
         <p style={legacyBodyStyle}>
-          Manuals are collaborative volumes. Share questions with family members to deepen the record of their lives.
+          Manuals are collaborative. Share questions with family members to deepen the record of their lives.
         </p>
       </div>
       <div style={legacyActionsColStyle}>

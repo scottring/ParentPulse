@@ -38,7 +38,7 @@ export default function PersonVolumePage({
           />
         ) : (
           <p style={{ padding: 48, color: 'var(--r-text-4)', fontStyle: 'italic' }}>
-            This volume is not yet written.
+            This manual is not yet written.
           </p>
         )}
         <div style={{ height: 96 }} aria-hidden />

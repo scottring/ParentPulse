@@ -10,7 +10,7 @@ interface StageBeginManualProps {
 export default function StageBeginManual({ person }: StageBeginManualProps) {
   return (
     <StageCTA
-      eyebrow="The library"
+      eyebrow="Your family"
       title={`Begin writing ${person.name}\u2019s manual.`}
       body={`Share what you know \u2014 their triggers, what works, what doesn\u2019t, the patterns you\u2019ve noticed. The synthesis engine takes it from there.`}
       ctaLabel="Start the onboarding"

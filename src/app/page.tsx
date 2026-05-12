@@ -46,7 +46,6 @@ export default function HomePage() {
     <main className="home-stage">
       <div className="home-inner">
         <header className="home-header">
-          <p className="home-kicker">Vol. I — No. 01 · A family broadsheet</p>
           <h1 className="home-wordmark">Relish</h1>
           <p className="home-subwordmark">
             <em>Operating manuals</em> for the people you love.
@@ -57,36 +56,46 @@ export default function HomePage() {
           <p className="lede-text">
             A private, long-running family journal. You (and your partner)
             write about the people in your life — kids, parents, friends —
-            and the book gives you back patterns, prompts, briefs, and
+            and the journal gives you back patterns, prompts, briefs, and
             memories that help you <em>pay attention</em>.
           </p>
         </section>
 
-        <section className="home-rooms" aria-label="The three rooms">
-          <p className="rooms-eyebrow">Three rooms inside</p>
-          <div className="rooms-grid">
+        <section className="home-rooms" aria-label="What grows from the page">
+          <p className="rooms-eyebrow">What grows from the page</p>
+
+          <article className="room-hub">
+            <p className="room-name"><em>The Journal.</em></p>
+            <p className="room-blurb">
+              A private place to write a little, with a gentle reader
+              on the other side of the page.
+            </p>
+          </article>
+
+          <div className="rooms-pair">
             <article className="room-card">
-              <p className="room-name"><em>The Workbook.</em></p>
+              <p className="room-name"><em>The People.</em></p>
               <p className="room-blurb">
-                The daily entry point. What&apos;s open, what&apos;s kept,
-                what&apos;s waiting.
+                A living portrait of someone you love, written
+                together — their voice next to yours, the children&apos;s
+                in their own hand.
               </p>
             </article>
             <article className="room-card">
-              <p className="room-name"><em>The Family Manual.</em></p>
+              <p className="room-name"><em>The Practice.</em></p>
               <p className="room-blurb">
-                The people view. Who&apos;s here, who&apos;s waiting, how
-                they relate.
-              </p>
-            </article>
-            <article className="room-card">
-              <p className="room-name"><em>The Archive.</em></p>
-              <p className="room-blurb">
-                Every line the book has kept. Searchable, readable,
-                yours.
+                Small experiments, drawn from what the page has been
+                saying. Try one for a week. Notice what changes.
               </p>
             </article>
           </div>
+
+          <p className="rooms-footnote">
+            A few quieter things sit nearby — a paired ritual when two
+            people want to be on the same page on the same evening,
+            and a small compile when you want to bring some of this to
+            a therapist.
+          </p>
         </section>
 
         <nav className="home-auth" aria-label="Enter">
@@ -95,13 +104,13 @@ export default function HomePage() {
           </Link>
           <span className="home-auth-sep" aria-hidden="true">·</span>
           <Link href="/register" className="home-auth-link home-auth-primary">
-            Begin a volume <span aria-hidden="true">⟶</span>
+            Create your account <span aria-hidden="true">⟶</span>
           </Link>
         </nav>
 
         <footer className="home-colophon">
           <span aria-hidden="true" className="fleuron">❦</span>
-          <span>The Workbook, a family broadsheet.</span>
+          <span>Relish, a family journal.</span>
         </footer>
       </div>
 
@@ -224,17 +233,42 @@ export default function HomePage() {
           text-align: center;
           margin: 0 0 32px 0;
         }
-        .rooms-grid {
+        .room-hub {
+          padding: 8px 28px 28px;
+          border-bottom: 1px solid var(--r-rule-5, #E5E0D8);
+          text-align: center;
+        }
+        .room-hub .room-name {
+          font-size: 28px;
+          margin-bottom: 12px;
+        }
+        .room-hub .room-blurb {
+          max-width: 44ch;
+          margin: 0 auto;
+          font-size: 16px;
+        }
+        .rooms-pair {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          grid-template-columns: 1fr 1fr;
           gap: 0;
         }
         .room-card {
           padding: 24px 28px;
           border-right: 1px solid var(--r-rule-5, #E5E0D8);
         }
-        .room-card:last-child {
+        .rooms-pair .room-card:last-child {
           border-right: none;
+        }
+        .rooms-footnote {
+          max-width: 52ch;
+          margin: 28px auto 0;
+          padding: 0 16px;
+          font-family: var(--r-serif, Georgia, serif);
+          font-style: italic;
+          font-size: 14px;
+          line-height: 1.65;
+          color: var(--r-text-5, #887C68);
+          text-align: center;
         }
         .room-name {
           font-family: var(--r-serif, Georgia, serif);
@@ -307,14 +341,14 @@ export default function HomePage() {
             padding: 48px 24px 32px;
             border-radius: 0;
           }
-          .rooms-grid {
+          .rooms-pair {
             grid-template-columns: 1fr;
           }
-          .room-card {
+          .rooms-pair .room-card {
             border-right: none;
             border-bottom: 1px solid var(--r-rule-5, #E5E0D8);
           }
-          .room-card:last-child {
+          .rooms-pair .room-card:last-child {
             border-bottom: none;
           }
         }

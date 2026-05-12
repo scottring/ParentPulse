@@ -29,7 +29,7 @@ const steps: WalkthroughStep[] = [
     target: null,
     title: 'Welcome to Relish',
     description:
-      'Your library of volumes kept on behalf of the people under your roof. Let us show you around.',
+      'Manuals kept on behalf of the people under your roof. Let us show you around.',
     placement: 'center',
   },
 
@@ -50,7 +50,7 @@ const steps: WalkthroughStep[] = [
     target: 'nav.fixed',
     title: 'Getting Around',
     description:
-      'Three rooms in the library. You\u2019ll always find your way back.',
+      'A few places to land\u2009\u2014\u2009you\u2019ll always find your way back.',
     placement: 'bottom',
   },
 
@@ -85,18 +85,18 @@ const steps: WalkthroughStep[] = [
   {
     id: 'volumes',
     target: '[data-walkthrough="volumes"]',
-    title: 'The Volumes',
+    title: 'The Manuals',
     description:
-      'Every person has a volume. Roman numerals, italic titles, and a quiet health indicator. Tap to read.',
+      'Every person has a manual. Roman numerals, italic titles, and a quiet health indicator. Tap to read.',
     placement: 'top',
     route: "/manual",
   },
   {
     id: 'new-volume',
     target: '[data-walkthrough="add-person"]',
-    title: 'Begin a New Volume',
+    title: 'Add Someone',
     description:
-      'Add someone new to the library\u2009\u2014\u2009a partner, child, friend, parent.',
+      'Add someone new to your family\u2009\u2014\u2009a partner, child, friend, parent.',
     placement: 'left',
     route: "/manual",
   },

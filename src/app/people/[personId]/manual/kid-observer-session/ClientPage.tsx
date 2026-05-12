@@ -292,7 +292,7 @@ export function KidObserverSessionPage({ params }: { params: Promise<{ personId:
                 className="press-link"
                 style={{ background: 'transparent', cursor: 'pointer' }}
               >
-                Return to the volume
+                Return to the manual
                 <span className="arrow">⟶</span>
               </button>
             </div>

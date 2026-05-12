@@ -480,7 +480,7 @@ export default function GrowthItemWorkspace({ params }: { params: Promise<{ item
         <div className="pt-[64px]">
           <div className="press-binder">
             <div className="press-empty" style={{ padding: '80px 20px' }}>
-              <p className="press-empty-title">This page is missing from the volume.</p>
+              <p className="press-empty-title">This page is missing from the manual.</p>
               <p className="press-empty-body">The practice may have been removed or expired.</p>
               <button
                 onClick={() => router.push('/manual')}
@@ -1905,7 +1905,7 @@ function StoryReactionView({
           className="press-marginalia"
           style={{ fontSize: 11, marginTop: 10, color: '#7A6E5C' }}
         >
-          {childName}&rsquo;s reaction becomes part of their volume.
+          {childName}&rsquo;s reaction becomes part of their manual.
         </p>
       </div>
 

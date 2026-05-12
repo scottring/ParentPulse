@@ -63,7 +63,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
       <div className="relish-page">
 
         <div className="pt-[64px]">
-          <div className="press-loading">Opening the volume&hellip;</div>
+          <div className="press-loading">Just a moment&hellip;</div>
         </div>
       </div>
     );
@@ -76,7 +76,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
         <div className="pt-[64px]">
           <div className="press-binder">
             <div className="press-empty" style={{ padding: '80px 20px' }}>
-              <p className="press-empty-title">This volume is missing.</p>
+              <p className="press-empty-title">This manual is missing.</p>
               <p className="press-empty-body">
                 The manual may have been archived or is still being prepared.
               </p>
@@ -241,7 +241,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                   <div className="mt-6">
                     <p className="press-body-italic" style={{ fontSize: 16 }}>
                       No overview yet. The synthesis gathers as
-                      perspectives are added to this volume.
+                      perspectives are added to this manual.
                     </p>
                   </div>
                 )}
@@ -486,7 +486,7 @@ export function ManualPage({ params }: { params: Promise<{ personId: string }> }
                     style={{ fontSize: 13, textAlign: 'center' }}
                   >
                     A companion grounded in everything above. Your own
-                    words feed back into the volume.
+                    words feed back into the manual.
                   </p>
                 </div>
               ) : (

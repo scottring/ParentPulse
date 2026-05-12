@@ -533,7 +533,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   if (authLoading || personLoading || manualLoading || !draftLoaded) {
     return (
       <div className="relish-page">
-        <div className="press-loading">Opening your volume&hellip;</div>
+        <div className="press-loading">Just a moment&hellip;</div>
       </div>
     );
   }
@@ -541,7 +541,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
   if (!user || !person || !manual) {
     return (
       <div className="relish-page">
-        <div className="press-loading">Unable to open the volume.</div>
+        <div className="press-loading">Unable to open the manual.</div>
       </div>
     );
   }
@@ -680,7 +680,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
 
             {/* Running header */}
             <div className="press-running-header" style={{ paddingTop: 28 }}>
-              <span>{person?.name ? `${person.name}'s volume` : 'Your volume'}</span>
+              <span>{person?.name ? `${person.name}'s manual` : 'Your manual'}</span>
               <span className="sep">·</span>
               <span>Your own perspective</span>
             </div>
@@ -692,7 +692,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
                 className="press-link-sm"
                 style={{ background: 'transparent', cursor: 'pointer' }}
               >
-                ⟵ Return to the volume
+                ⟵ Return to the manual
               </button>
             </div>
 
@@ -703,7 +703,7 @@ export function SelfOnboardPage({ params }: { params: Promise<{ personId: string
                 How would you like to begin?
               </h1>
               <p className="press-binder-sub">
-                Two ways to bring your perspective into the volume.
+                Two ways to bring your perspective into the manual.
               </p>
             </div>
 

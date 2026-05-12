@@ -77,7 +77,7 @@ function computeLead(input: SurfacePriorityInput, dismissed: Set<string>): LeadI
       return {
         id: `contrib-${c.contributionId}`,
         type: 'contribution_new',
-        eyebrow: 'New in the library',
+        eyebrow: 'Newly added',
         title: `${firstName} added a new perspective`,
         body: `A fresh contribution has been added${c.personId ? '' : ''}. The manual is richer for it.`,
         ctaLabel: 'Read what changed',

@@ -14,9 +14,9 @@ export default function StageNewUser({ selfPerson }: StageNewUserProps) {
 
   return (
     <StageCTA
-      eyebrow="The library"
+      eyebrow="Your family"
       title="Welcome. Begin by telling us about yourself."
-      body="Every volume in this library starts with the author. A few minutes of reflection gives the manual something to work with."
+      body="Every manual starts with the author. A few minutes of reflection gives it something to work with."
       ctaLabel="Begin your self-portrait"
       ctaHref={href}
     />

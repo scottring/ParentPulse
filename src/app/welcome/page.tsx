@@ -65,7 +65,7 @@ export default function WelcomePage() {
   if (authLoading || !user || resolving) {
     return (
       <div className="relish-page">
-        <div className="press-loading">Opening the library&hellip;</div>
+        <div className="press-loading">Just a moment&hellip;</div>
       </div>
     );
   }
@@ -138,7 +138,7 @@ export default function WelcomePage() {
 
           {familyName && (
             <p className="welcome-familyline">
-              The <em>{familyName}</em> library is open.
+              The <em>{familyName}</em> family is here.
             </p>
           )}
 

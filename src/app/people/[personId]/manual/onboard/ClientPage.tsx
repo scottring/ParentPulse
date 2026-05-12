@@ -304,7 +304,7 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
     return loadingShell('Preparing the page…');
   }
   if (!user || !person || !manual) {
-    return loadingShell('Unable to open the volume.');
+    return loadingShell('Unable to open the manual.');
   }
 
   if (isComplete) {
@@ -347,7 +347,7 @@ export function ObserverOnboardPage({ params }: { params: Promise<{ personId: st
             Your observations are kept.
           </h1>
           <p style={{ fontSize: 16, color: '#3d3d39', margin: 0 }}>
-            Returning to {person.name}&rsquo;s volume&hellip;
+            Returning to {person.name}&rsquo;s manual&hellip;
           </p>
         </div>
       </main>

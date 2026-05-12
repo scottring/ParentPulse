@@ -69,7 +69,7 @@ export default function LoginPage() {
             fontSize: 20,
           }}
         >
-          Opening the library&hellip;
+          Just a moment&hellip;
         </p>
       </div>
     );
@@ -78,7 +78,7 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       {/* Return link */}
-      <Link href="/" className="login-back" aria-label="Back to the library">
+      <Link href="/" className="login-back" aria-label="Back to home">
         <span className="arrow">⟵</span> Back
       </Link>
 
@@ -153,7 +153,7 @@ export default function LoginPage() {
                 border: 0,
               }}
             >
-              {loading ? 'Opening the library…' : 'Open the library'}
+              {loading ? 'Signing in…' : 'Sign in'}
               {!loading && <span className="arrow">⟶</span>}
             </button>
           </div>

@@ -111,16 +111,16 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
 
             {/* Running header */}
             <div className="press-running-header" style={{ paddingTop: 28 }}>
-              <span>A new volume</span>
+              <span>A new manual</span>
               <span className="sep">·</span>
-              <span>Welcomed into the library</span>
+              <span>Welcomed in</span>
             </div>
 
             {/* Title */}
             <div className="press-binder-head">
-              <span className="press-chapter-label">The volume is open</span>
+              <span className="press-chapter-label">The manual is open</span>
               <h1 className="press-binder-title mt-2" style={{ fontSize: 'clamp(42px, 5vw, 56px)' }}>
-                {person.name}&rsquo;s volume
+                {person.name}&rsquo;s manual
               </h1>
               <p className="press-binder-sub">
                 The pages are blank. They fill as perspectives are
@@ -182,7 +182,7 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
               <WizardAction
                 number="III"
                 title="Set it aside for later"
-                body="The volume waits. You can return anytime to add perspectives and begin filling the pages."
+                body="The manual waits. You can return anytime to add perspectives and begin filling the pages."
                 href="/manual"
                 muted
               />
@@ -194,7 +194,7 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
               className="press-marginalia mt-6"
               style={{ textAlign: 'center', fontSize: 14, color: '#7A6E5C' }}
             >
-              A volume is a living document. Pages can always be
+              A manual is a living document. Pages can always be
               added, revised, or contributed to by others.
             </p>
           </div>
@@ -215,7 +215,7 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
 
           {/* Running header */}
           <div className="press-running-header" style={{ paddingTop: 28 }}>
-            <span>Begin a new volume</span>
+            <span>Add someone</span>
             <span className="sep">·</span>
             <span>Chapter 1: the relationship</span>
           </div>
@@ -229,12 +229,12 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
 
           {/* Title */}
           <div className="press-binder-head">
-            <span className="press-chapter-label">A volume for</span>
+            <span className="press-chapter-label">A manual for</span>
             <h1 className="press-binder-title mt-2" style={{ fontSize: 'clamp(40px, 5vw, 54px)' }}>
               {person.name}
             </h1>
             <p className="press-binder-sub">
-              Who are they to you? This tells the volume what kinds
+              Who are they to you? This tells the manual what kinds
               of questions to ask.
             </p>
           </div>
@@ -336,7 +336,7 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
                 opacity: isCreating || !selectedType ? 0.4 : 1,
               }}
             >
-              {isCreating ? 'Opening the volume…' : 'Open the volume'}
+              {isCreating ? 'Just a moment…' : 'Open the manual'}
               {!isCreating && <span className="arrow">⟶</span>}
             </button>
           </div>
