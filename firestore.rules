@@ -206,6 +206,65 @@ service cloud.firestore {
       }
     }
 
+    // ==================== Message flags ====================
+    //
+    // "Flag this message for my partner" — a two-party doc that
+    // points back to a specific assistant turn in a coach or
+    // entry-chat thread. The flag is sender→recipient; both can see
+    // it, recipient can mark it seen / write a response, sender can
+    // retract it before the recipient has responded. Nobody can
+    // delete (we want an audit trail of what was flagged).
+    //
+    // Identity fields (fromUserId, toUserId, chatId, messageId,
+    // quoteText, needsRealReply) are write-once at create. `note`
+    // is intentionally not enforced as immutable here — it's an
+    // optional sender-authored field and adding `note` post-create
+    // would complicate the diff check for a field that nobody
+    // currently has a use case to mutate.
+    match /message_flags/{flagId} {
+      // Read: participants only.
+      allow read: if isSignedIn()
+                  && (resource.data.fromUserId == request.auth.uid
+                      || resource.data.toUserId == request.auth.uid);
+
+      // Create: sender writes a doc whose fromUserId is themselves,
+      // toUserId is a different signed-in user, status is 'open'.
+      allow create: if isSignedIn()
+                    && request.resource.data.fromUserId == request.auth.uid
+                    && request.resource.data.toUserId != request.auth.uid
+                    && request.resource.data.status == 'open';
+
+      // Update by recipient: open -> seen, or any -> closed (with a
+      // response payload). Identity fields must not change.
+      allow update: if isSignedIn()
+                    && resource.data.toUserId == request.auth.uid
+                    && request.resource.data.fromUserId == resource.data.fromUserId
+                    && request.resource.data.toUserId == resource.data.toUserId
+                    && request.resource.data.chatId == resource.data.chatId
+                    && request.resource.data.messageId == resource.data.messageId
+                    && request.resource.data.quoteText == resource.data.quoteText
+                    && request.resource.data.needsRealReply == resource.data.needsRealReply
+                    && (
+                      // open -> seen
+                      (resource.data.status == 'open'
+                       && request.resource.data.status == 'seen')
+                      ||
+                      // any -> closed (with response payload)
+                      (request.resource.data.status == 'closed'
+                       && request.resource.data.response.size() > 0)
+                    );
+
+      // Update by sender: only to retract, and only if recipient
+      // hasn't responded yet.
+      allow update: if isSignedIn()
+                    && resource.data.fromUserId == request.auth.uid
+                    && !('response' in resource.data)
+                    && request.resource.data.status == 'retracted';
+
+      // No client deletes — flags are an audit trail.
+      allow delete: if false;
+    }
+
     // ==================== Moments ====================
     //
     // A moment holds 1..N views of the same lived event. Each view is
