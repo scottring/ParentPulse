@@ -74,7 +74,7 @@ Inherit visibility from the parent journal entry's `sharedWithUserIds`. The chat
 
 ### Extension: `open-threads.ts`
 
-Add a new reason and source:
+Add a new reason and a new kind:
 
 ```ts
 export type OpenThreadReason =
@@ -84,15 +84,13 @@ export type OpenThreadReason =
   | 'overdue_ritual'
   | 'mention_for_me'
   | 'flagged_for_me';   // NEW
+
+export type OpenThreadKind =
+  | 'moment' | 'entry' | 'ritual' | 'practice'
+  | 'flag';             // NEW
 ```
 
-`listOpenThreads` gains a new source: `flagsForMe: MessageFlag[]`. For each flag where `status` is `open` or `seen`, emit an OpenThread row:
-
-```
-kind: 'flag'         // new OpenThreadKind
-subtitle: quoteText (truncated)
-closingAction: { label: 'Open', href: '/cover?flag={flagId}' }
-```
+`listOpenThreads` gains a new source: `flagsForMe: MessageFlag[]`. For each flag where `status` is `open` or `seen`, emit an OpenThread row with `kind: 'flag'`, `subtitle` = truncated quoteText, and `closingAction` whose href opens the Cover with the flag row auto-expanded. The exact href pattern is an implementation detail of the Cover surface.
 
 Reason precedence inserts `flagged_for_me` at position 2 (between `pending_invite` and `incomplete_practice`) — it's more direct than a divergence but less time-critical than a pending invite.
 
@@ -111,7 +109,7 @@ Reason precedence inserts `flagged_for_me` at position 2 (between `pending_invit
   - If chat is shared: *"Iris can already see this conversation. Flagging just points her at this part."*
 - Buttons: Cancel · Flag for [name]
 
-**Sent flags list.** Small "Sent" tab in Scott's Cover area showing his own outbound flags + their status (waiting / seen / closed / retracted). Retract action available on flags that haven't been replied to yet.
+**Sent flags list.** A small "Sent" surface for Scott showing his own outbound flags + their status (waiting / seen / closed / retracted), with a Retract action on any flag where `response` is not yet set. Placement (Cover sub-tab vs. Settings sub-page) is an open question for the implementation plan.
 
 ## UX — recipient side
 
@@ -163,8 +161,8 @@ Three states only:
 - **Recipient opens the row** → `seenAt` set, status becomes `seen`. The Cover row shifts visually (clay border softens) but remains visible.
 - **Recipient sends an emoji** (only allowed when `needsRealReply` is false) → `response` written, status becomes `closed`, row removed from Cover.
 - **Recipient sends a note** → same as above; works on both variants.
-- **Recipient defers via "Save for the ritual"** → status stays `seen`. Row reappears in the active ritual's prep list (existing ritual session flow surfaces open-threads).
-- **Sender retracts** (allowed pre-reply) → status `retracted`. Row disappears from recipient's Cover. Sender sees "Retracted" in their Sent list.
+- **Recipient closes the row without replying** → status stays `seen`. Because `seen` flags are still emitted as open-threads, the row will naturally appear in the next ritual's prep list — no separate "Save for ritual" action needed.
+- **Sender retracts** (allowed only before `response` is set) → status `retracted`. Row disappears from recipient's Cover. Sender sees "Retracted" in their Sent list.
 
 ## Soft cap on "Needs a real reply"
 
