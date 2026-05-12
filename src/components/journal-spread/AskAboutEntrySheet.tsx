@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, Sparkles, Share2 } from 'lucide-react';
 import { MicButton } from '@/components/voice/MicButton';
+import { MessageActionPill } from '@/components/chat/MessageActionPill';
+import { FlagComposerSheet } from '@/components/chat/FlagComposerSheet';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
@@ -10,6 +12,7 @@ import { useCoach } from '@/hooks/useCoach';
 import { useEntryChat } from '@/hooks/useEntryChat';
 import { useJournal } from '@/hooks/useJournal';
 import { usePerson } from '@/hooks/usePerson';
+import { useConnectedPartner } from '@/hooks/useConnectedPartner';
 import type { Entry } from '@/types/entry';
 
 interface AskAboutEntrySheetProps {
@@ -92,6 +95,16 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
   const { user } = useAuth();
   const { people } = usePerson();
   const { createEntry } = useJournal();
+  const partner = useConnectedPartner();
+
+  // Target turn for the flag composer — null when composer is closed.
+  // `role` here is the chat-turn role (user/assistant), which the
+  // composer stores as `senderRole` on the resulting flag.
+  const [flagTarget, setFlagTarget] = useState<{
+    turnId: string;
+    quote: string;
+    role: 'user' | 'assistant';
+  } | null>(null);
 
   // Persisted per-entry chat (user-authored entries only).
   const entryChat = useEntryChat(journalBacked ? entry.id : null);
@@ -334,8 +347,28 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
               {displayTurns.map((t) => {
                 const canCommit = journalBacked && t.role === 'assistant';
                 const cs = commitState[t.key] ?? { kind: 'idle' };
+                // Flag pill is only meaningful when we have a stable
+                // turnId to reference — i.e. journal-backed entries.
+                // For the ephemeral coach fallback there's no
+                // persisted turn the partner can navigate to.
+                const canFlag = journalBacked && Boolean(partner);
                 return (
-                  <div key={t.key} className={`msg msg-${t.role}`}>
+                  <div
+                    key={t.key}
+                    className={`bubble-wrap msg msg-${t.role}`}
+                    style={{ position: 'relative' }}
+                  >
+                    {canFlag && (
+                      <MessageActionPill
+                        onFlag={() =>
+                          setFlagTarget({
+                            turnId: t.key,
+                            quote: t.content,
+                            role: t.role,
+                          })
+                        }
+                      />
+                    )}
                     {t.content}
                     {canCommit && (
                       <div className="turn-actions">
@@ -884,8 +917,37 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
               width: 100vw;
             }
           }
+          /*
+            Reveal the flag pill only on hover/focus-within of its
+            bubble wrapper. Uses :global() because MessageActionPill
+            is a child Client Component with its own styled-jsx
+            scope (parent styled-jsx would otherwise be dropped under
+            Turbopack — see project memory).
+          */
+          :global(.bubble-wrap .action-pill) {
+            opacity: 0;
+            transition: opacity 0.15s ease;
+          }
+          :global(.bubble-wrap:hover .action-pill),
+          :global(.bubble-wrap:focus-within .action-pill) {
+            opacity: 1;
+          }
         `}</style>
       </aside>
+
+      {flagTarget && user?.userId && partner && journalBacked && (
+        <FlagComposerSheet
+          open
+          fromUserId={user.userId}
+          defaultRecipient={partner}
+          chatKind="entry_chat"
+          chatId={entry.id}
+          messageId={flagTarget.turnId}
+          senderRole={flagTarget.role}
+          quoteText={flagTarget.quote}
+          onClose={() => setFlagTarget(null)}
+        />
+      )}
     </>
   );
 }
