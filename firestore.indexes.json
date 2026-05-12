@@ -883,6 +883,17 @@
       ]
     },
     {
+      "collectionGroup": "message_flags",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "fromUserId", "order": "ASCENDING" },
+        { "fieldPath": "toUserId", "order": "ASCENDING" },
+        { "fieldPath": "chatId", "order": "ASCENDING" },
+        { "fieldPath": "messageId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "parent_workbooks",
       "queryScope": "COLLECTION",
       "fields": [

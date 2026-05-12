@@ -35,12 +35,14 @@ export function FlagComposerSheet({
   const [note, setNote] = useState('');
   const [needsRealReply, setNeedsRealReply] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!open) return null;
 
   const handleSubmit = async () => {
     if (submitting) return;
     setSubmitting(true);
+    setError(null);
     try {
       await createFlag({
         fromUserId,
@@ -54,6 +56,11 @@ export function FlagComposerSheet({
         needsRealReply,
       });
       onClose();
+    } catch (err) {
+      // Surface a friendly message instead of closing the sheet so the user
+      // sees what happened (e.g. duplicate flag from another tab).
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
     } finally {
       setSubmitting(false);
     }
@@ -102,6 +109,12 @@ export function FlagComposerSheet({
             </span>
           </span>
         </button>
+
+        {error ? (
+          <p className="error" role="alert" aria-live="polite">
+            {error}
+          </p>
+        ) : null}
 
         <div className="footer">
           <button type="button" className="ghost" onClick={onClose}>Cancel</button>
@@ -189,6 +202,16 @@ export function FlagComposerSheet({
           .toggle-body { font-size: 12px; line-height: 1.4; }
           .toggle-body strong { display: block; font-size: 13px; color: #2a2a2a; }
           .toggle-body span { color: #6a6055; }
+          .error {
+            margin: 0 0 8px;
+            padding: 7px 10px;
+            border: 1px solid #e9bdb0;
+            background: #fbecea;
+            color: #8c2f1c;
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1.4;
+          }
           .footer { display: flex; gap: 9px; justify-content: flex-end; margin-top: 10px; }
           .primary {
             background: #b65f3a; color: white; border: none;

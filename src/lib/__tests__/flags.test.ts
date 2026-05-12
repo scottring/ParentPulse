@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 // Mock firestore module BEFORE importing flags
 const addDocMock = vi.fn();
 const updateDocMock = vi.fn();
+const getDocsMock = vi.fn();
 const serverTimestampMock = vi.fn(() => ({ __server: true }));
 vi.mock('firebase/firestore', async () => {
   const mod = await vi.importActual<typeof import('firebase/firestore')>(
@@ -14,6 +15,10 @@ vi.mock('firebase/firestore', async () => {
     addDoc: (...args: unknown[]) => addDocMock(...args),
     doc: vi.fn((_db, coll, id) => ({ __doc: `${coll}/${id}` })),
     updateDoc: (...args: unknown[]) => updateDocMock(...args),
+    getDocs: (...args: unknown[]) => getDocsMock(...args),
+    query: vi.fn((..._args: unknown[]) => ({ __query: true })),
+    where: vi.fn((field, op, value) => ({ __where: { field, op, value } })),
+    limit: vi.fn((n) => ({ __limit: n })),
     serverTimestamp: () => serverTimestampMock(),
     Timestamp: { now: () => ({ __ts: true }) },
   };
@@ -26,6 +31,9 @@ describe('createFlag', () => {
   beforeEach(() => {
     addDocMock.mockReset();
     addDocMock.mockResolvedValue({ id: 'flag-abc' });
+    getDocsMock.mockReset();
+    // Default: no pre-existing open flag for the same (fromUser, toUser, chat, message).
+    getDocsMock.mockResolvedValue({ empty: true, docs: [] });
   });
 
   it('writes a flag doc with status=open, truncated quote, and a server timestamp', async () => {
@@ -67,6 +75,26 @@ describe('createFlag', () => {
     });
     const [, payload] = addDocMock.mock.calls[0];
     expect('note' in payload).toBe(false);
+  });
+
+  it('throws when an open flag already exists for the same (chatId, messageId, toUserId)', async () => {
+    getDocsMock.mockResolvedValueOnce({
+      empty: false,
+      docs: [{ id: 'existing-flag' }],
+    });
+    await expect(
+      createFlag({
+        fromUserId: 'u1',
+        toUserId: 'u2',
+        chatKind: 'coach',
+        chatId: 'conv-1',
+        messageId: 'msg-1',
+        senderRole: 'assistant',
+        quoteText: 'duplicate attempt',
+        needsRealReply: false,
+      }),
+    ).rejects.toThrow(/Already flagged/);
+    expect(addDocMock).not.toHaveBeenCalled();
   });
 });
 
