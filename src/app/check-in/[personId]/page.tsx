@@ -65,12 +65,6 @@ const BODY_PARTS = [
   { id: 'leg-r',  shape: 'rect',   attrs: { x: 72, y: 138, width: 16, height: 50, rx: 7 } },
 ] as const;
 
-function joinNames(names: string[]): string {
-  if (names.length === 0) return '';
-  if (names.length === 1) return names[0];
-  if (names.length === 2) return `${names[0]} and ${names[1]}`;
-  return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
-}
 
 function partOfDay(d: Date): 'morning' | 'afternoon' | 'evening' | 'night' {
   const h = d.getHours();
@@ -482,16 +476,15 @@ export default function KidModePage() {
   const [selfFeelings, setSelfFeelings] = useState<string[]>([]);
   const [bodySpots, setBodySpots] = useState<string[]>([]);
   const [voiceText, setVoiceText] = useState('');
-  // Multi-target relationship state — per-person feelings + voice
+  // Single-target relationship state — per-person feelings + voice
   // held in memory so the kid can move between people during one
-  // session. `selectedRelIds` is the set of chips currently selected;
-  // feelings/voice the kid enters fan out to every selected person
-  // simultaneously. Per-person data still persists in relTargetMap so
-  // earlier-round answers stick around when a person is deselected.
+  // session like a shopping basket. `activeRelId` is the chip the
+  // editor below is currently bound to; tapping a different chip
+  // switches the focus, and earlier answers persist in relTargetMap
+  // so a chip can be revisited later.
   type RelState = { feelings: string[]; voice: string };
   const [relTargetMap, setRelTargetMap] = useState<Record<string, RelState>>({});
-  const [selectedRelIds, setSelectedRelIds] = useState<string[]>([]);
-  const [groupVoice, setGroupVoice] = useState('');
+  const [activeRelId, setActiveRelId] = useState<string | null>(null);
   const [showRel, setShowRel] = useState(true);
   // 'editing' = the input form, 'saved' = the "anyone else?" picker.
   // Letting the parent batch sibling check-ins without bouncing home.
@@ -535,38 +528,19 @@ export default function KidModePage() {
   // Start with no chips selected — the kid taps to pick. Empty-state
   // copy below invites them in.
 
-  // When the selection changes, seed groupVoice from the new selection
-  // if every selected person has the same stored voice text. If they
-  // diverge, keep whatever the kid was just typing — anything they
-  // type next will overwrite all selected persons.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (selectedRelIds.length === 0) {
-      setGroupVoice('');
-      return;
-    }
-    const voices = selectedRelIds.map((id) => relTargetMap[id]?.voice ?? '');
-    const allSame = voices.every((v) => v === voices[0]);
-    if (allSame) setGroupVoice(voices[0]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRelIds.join(',')]);
-
   // All hooks must run unconditionally and in the same order on every
   // render — so these useMemos sit above the early loading-return.
-  const selectedRelNames = useMemo(() => {
-    return selectedRelIds
-      .map((id) => familyForRel.find((p) => p.id === id)?.label)
-      .filter((x): x is string => Boolean(x));
-  }, [familyForRel, selectedRelIds]);
+  const activeRelName = useMemo(() => {
+    if (!activeRelId) return '';
+    return familyForRel.find((p) => p.id === activeRelId)?.label ?? '';
+  }, [familyForRel, activeRelId]);
 
-  // Feeling is "active" iff every currently-selected person has it set.
-  const sharedFeelings = useMemo(() => {
-    if (selectedRelIds.length === 0) return [] as string[];
-    const sets = selectedRelIds.map((id) => new Set(relTargetMap[id]?.feelings ?? []));
-    return KID_FEELINGS_REL
-      .map((f) => f.word)
-      .filter((word) => sets.every((s) => s.has(word)));
-  }, [selectedRelIds, relTargetMap]);
+  const activeFeelings = useMemo(() => {
+    if (!activeRelId) return [] as string[];
+    return relTargetMap[activeRelId]?.feelings ?? [];
+  }, [activeRelId, relTargetMap]);
+
+  const activeVoice = activeRelId ? (relTargetMap[activeRelId]?.voice ?? '') : '';
 
   const otherKidsMemo = useMemo(() => {
     if (!kid) return [] as Array<{ personId: string; name: string; done: boolean }>;
@@ -609,49 +583,46 @@ export default function KidModePage() {
   const otherKids = otherKidsMemo;
   const remainingKids = remainingKidsMemo;
 
-  // Helpers for the multi-selected relationship targets.
+  // Helpers for the single-active relationship target. The kid taps
+  // one chip at a time ("shopping basket" model). Per-person data
+  // persists in relTargetMap so the kid can pop between chips.
   const toggleRelTarget = (id: string) => {
-    setSelectedRelIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
+    setActiveRelId((prev) => (prev === id ? null : id));
   };
-  // Toggling a feeling fans out across every currently-selected person:
-  // if the feeling is in the intersection (shown active), strip it from
-  // each; otherwise add it to each.
+  // Toggling a feeling applies only to the active person.
   const toggleRelFeeling = (word: string) => {
-    if (selectedRelIds.length === 0) return;
-    const isActive = sharedFeelings.includes(word);
+    if (!activeRelId) return;
     setRelTargetMap((prev) => {
-      const next = { ...prev };
-      for (const id of selectedRelIds) {
-        const existing = next[id] ?? { feelings: [], voice: '' };
-        const feelings = isActive
-          ? existing.feelings.filter((w) => w !== word)
-          : Array.from(new Set([...existing.feelings, word]));
-        next[id] = { ...existing, feelings };
-      }
-      return next;
+      const existing = prev[activeRelId] ?? { feelings: [], voice: '' };
+      const has = existing.feelings.includes(word);
+      return {
+        ...prev,
+        [activeRelId]: {
+          ...existing,
+          feelings: has
+            ? existing.feelings.filter((w) => w !== word)
+            : [...existing.feelings, word],
+        },
+      };
     });
   };
-  // Voice text is shared across the current selection during the
-  // current edit — typing fans the same text into every selected
-  // person's row.
-  const setGroupVoiceAndFanOut = (text: string) => {
-    setGroupVoice(text);
-    if (selectedRelIds.length === 0) return;
+  // Voice text is owned by the active person's row.
+  const setActiveVoice = (text: string) => {
+    if (!activeRelId) return;
     setRelTargetMap((prev) => {
-      const next = { ...prev };
-      for (const id of selectedRelIds) {
-        const existing = next[id] ?? { feelings: [], voice: '' };
-        next[id] = { ...existing, voice: text };
-      }
-      return next;
+      const existing = prev[activeRelId] ?? { feelings: [], voice: '' };
+      return { ...prev, [activeRelId]: { ...existing, voice: text } };
     });
   };
   const targetHasContent = (id: string): boolean => {
     const s = relTargetMap[id];
     return Boolean(s && (s.feelings.length > 0 || s.voice.trim().length > 0));
   };
+  // Count chips with any data — drives the "Done · N check-ins ready"
+  // basket label.
+  const basketCount = Object.values(relTargetMap).filter(
+    (v) => (v.feelings?.length ?? 0) > 0 || (v.voice ?? '').trim().length > 0,
+  ).length;
   // All targets the kid actually said something about (for save).
   const populatedRelTargets = familyForRel
     .filter((t) => targetHasContent(t.id))
@@ -1006,11 +977,11 @@ export default function KidModePage() {
           <>
             <div style={sx.divider} aria-hidden="true" />
             <section style={sx.section}>
-              <span style={sx.label}>If you want — about someone (you can pick more than one)</span>
+              <span style={sx.label}>If you want — about someone (one at a time)</span>
               <div style={sx.relTargets}>
                 {familyForRel.map((p) => {
-                  const isActive = selectedRelIds.includes(p.id);
-                  const hasContent = targetHasContent(p.id);
+                  const isActive = activeRelId === p.id;
+                  const hasBasket = targetHasContent(p.id);
                   return (
                     <button
                       key={p.id}
@@ -1023,9 +994,10 @@ export default function KidModePage() {
                       }}
                     >
                       {p.label}
-                      {hasContent && !isActive && (
+                      {hasBasket && (
                         <span
                           aria-hidden="true"
+                          title="In your basket"
                           style={{
                             display: 'inline-block',
                             width: 6,
@@ -1041,7 +1013,7 @@ export default function KidModePage() {
                   );
                 })}
               </div>
-              {selectedRelIds.length === 0 ? (
+              {!activeRelId ? (
                 <p
                   style={{
                     ...sx.relQuestion,
@@ -1049,17 +1021,17 @@ export default function KidModePage() {
                     color: T.text4,
                   }}
                 >
-                  Tap a name above to get started — you can tap more than one.
+                  Tap a family member to start, then move to the next one when you&rsquo;re ready.
                 </p>
               ) : (
                 <>
                   <p style={sx.relQuestion}>
                     How are you feeling about{' '}
-                    <em style={{ fontStyle: 'italic', color: T.ink }}>{joinNames(selectedRelNames)}</em>?
+                    <em style={{ fontStyle: 'italic', color: T.ink }}>{activeRelName}</em>?
                   </p>
                   <div style={sx.feelings}>
                     {KID_FEELINGS_REL.map((f) => {
-                      const on = sharedFeelings.includes(f.word);
+                      const on = activeFeelings.includes(f.word);
                       return (
                         <button
                           key={f.word}
@@ -1079,20 +1051,16 @@ export default function KidModePage() {
                       onTranscript={(t) => {
                         const trimmed = t.trim();
                         if (!trimmed) return;
-                        const nextVoice = groupVoice.trim()
-                          ? `${groupVoice.trim()} ${trimmed}`
+                        const nextVoice = activeVoice.trim()
+                          ? `${activeVoice.trim()} ${trimmed}`
                           : trimmed;
-                        setGroupVoiceAndFanOut(nextVoice);
+                        setActiveVoice(nextVoice);
                       }}
                     />
                     <textarea
-                      value={groupVoice}
-                      onChange={(e) => setGroupVoiceAndFanOut(e.target.value)}
-                      placeholder={
-                        selectedRelNames.length === 1
-                          ? `Tap and tell me about ${selectedRelNames[0]} if you want.`
-                          : 'Tap and tell me something.'
-                      }
+                      value={activeVoice}
+                      onChange={(e) => setActiveVoice(e.target.value)}
+                      placeholder={`Tap and tell me about ${activeRelName} if you want.`}
                       rows={3}
                       style={{
                         flex: 1,
@@ -1138,8 +1106,7 @@ export default function KidModePage() {
                 onClick={() => {
                   setShowRel(false);
                   setRelTargetMap({});
-                  setSelectedRelIds([]);
-                  setGroupVoice('');
+                  setActiveRelId(null);
                 }}
               >
                 Skip this part
@@ -1207,7 +1174,11 @@ export default function KidModePage() {
                 saving || (adults.length > 0 && sharedWithUserIds.length === 0) ? 0.6 : 1,
             }}
           >
-            {saving ? 'Saving…' : 'All done'}
+            {saving
+              ? 'Saving…'
+              : basketCount > 0
+                ? `Done · ${basketCount} check-in${basketCount === 1 ? '' : 's'} ready`
+                : 'Done'}
           </button>
         </div>
       </main>
