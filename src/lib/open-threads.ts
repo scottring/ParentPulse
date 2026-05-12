@@ -273,7 +273,9 @@ export function listOpenThreads(sources: Sources): OpenThread[] {
       openedAt: f.createdAt?.toDate?.(),
       closingAction: {
         label: 'Open',
-        href: `?flag=${f.flagId}`,
+        // Flag threads expand in-place inside FlaggedForMeCard on Home.
+        // No deep-link surface yet; href falls back to the Home page.
+        href: '/',
       },
     });
   }
