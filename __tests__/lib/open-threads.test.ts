@@ -239,3 +239,71 @@ describe('listOpenThreads — entries without open-thread reasons', () => {
     expect(threads).toHaveLength(0);
   });
 });
+
+describe('flagged_for_me', () => {
+  it('emits a flag thread for each open/seen flag addressed to me', () => {
+    const flags = [
+      {
+        flagId: 'f1',
+        fromUserId: 'scott',
+        toUserId: 'me',
+        chatKind: 'coach',
+        chatId: 'c1',
+        messageId: 'm1',
+        senderRole: 'assistant',
+        quoteText: 'an important line',
+        needsRealReply: false,
+        status: 'open',
+        createdAt: { toDate: () => new Date(), toMillis: () => Date.now() },
+      },
+    ] as const;
+    const out = listOpenThreads({
+      moments: [], rituals: [], entries: [],
+      flagsForMe: flags as unknown as never,
+      me: { userId: 'me', personIds: [] },
+    } as never);
+    const flagged = out.filter((t) => t.reason === 'flagged_for_me');
+    expect(flagged).toHaveLength(1);
+    expect(flagged[0].kind).toBe('flag');
+    expect(flagged[0].subtitle).toContain('an important line');
+  });
+
+  it('orders flagged_for_me before mention_for_me but after pending_invite', () => {
+    const now = new Date();
+    const makeTs = (d: Date) => ({ toDate: () => d, toMillis: () => d.getTime() });
+    const out = listOpenThreads({
+      moments: [],
+      rituals: [],
+      entries: [
+        {
+          entryId: 'e1', authorId: 'scott',
+          text: 'something about iris',
+          personMentions: ['p-iris'],
+          createdAt: makeTs(now),
+        } as never,
+      ],
+      pendingInvitesForMe: [
+        { momentId: 'mo1', status: 'pending', createdAt: makeTs(now), prompt: 'p' } as never,
+      ],
+      flagsForMe: [
+        {
+          flagId: 'f1', fromUserId: 'scott', toUserId: 'me',
+          chatKind: 'coach', chatId: 'c1', messageId: 'm1',
+          senderRole: 'assistant', quoteText: 'q',
+          needsRealReply: false, status: 'open',
+          createdAt: makeTs(now),
+        } as never,
+      ],
+      me: { userId: 'me', personIds: ['p-iris'] },
+    } as never);
+    const reasons = out.map((t) => t.reason);
+    const flagIdx = reasons.indexOf('flagged_for_me');
+    const invIdx = reasons.indexOf('pending_invite');
+    const mentionIdx = reasons.indexOf('mention_for_me');
+    expect(invIdx).toBeGreaterThanOrEqual(0);
+    expect(flagIdx).toBeGreaterThanOrEqual(0);
+    expect(mentionIdx).toBeGreaterThanOrEqual(0);
+    expect(invIdx).toBeLessThan(flagIdx);
+    expect(flagIdx).toBeLessThan(mentionIdx);
+  });
+});
