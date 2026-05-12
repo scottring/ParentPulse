@@ -31,8 +31,10 @@ import { useJournal } from '@/hooks/useJournal';
 import { useJournalEntries } from '@/hooks/useJournalEntries';
 import { usePerson } from '@/hooks/usePerson';
 import { usePrivacyLock } from '@/hooks/usePrivacyLock';
+import { useIncomingFlags } from '@/hooks/useIncomingFlags';
 import { MicButton } from '@/components/voice/MicButton';
 import { PinSetupModal } from '@/components/privacy/PinSetupModal';
+import { FlaggedForMeCard } from '@/components/open-threads/FlaggedForMeCard';
 import { mastheadImageFor } from '@/config/stock-imagery';
 import { T } from './tokens';
 
@@ -204,6 +206,18 @@ export function Home() {
   const { people } = usePerson();
   const privacyLock = usePrivacyLock();
   const searchParams = useSearchParams();
+  const { flags: incomingFlags } = useIncomingFlags();
+
+  // Map linked userId → person display name, used to label incoming
+  // flags with who sent them. Falls back to "Someone" when the sender
+  // isn't in the current user's people list.
+  const displayNameByUserId = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const p of people) {
+      if (p.linkedUserId && p.name) m[p.linkedUserId] = p.name;
+    }
+    return m;
+  }, [people]);
 
   const today = useMemo(() => new Date(), []);
   const tod = partOfDay(today);
@@ -588,6 +602,34 @@ export function Home() {
             </p>
           )}
         </section>
+
+        {/* Waiting on you — incoming flags from partner/family. Hidden
+            entirely when there are zero flags so the surface stays quiet.
+            FlaggedForMeCard brings its own scoped styles; the wrapping
+            section keeps inline styles only (per Home.tsx convention) to
+            avoid the styled-jsx scoping pitfall. */}
+        {incomingFlags.length > 0 && (
+          <section style={{ margin: '0 0 24px', maxWidth: 600 }}>
+            <h2 style={{
+              fontFamily: T.sans,
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: '#8a7a55',
+              margin: '0 0 10px',
+            }}>
+              Waiting on you
+            </h2>
+            {incomingFlags.map((f) => (
+              <FlaggedForMeCard
+                key={f.flagId}
+                flag={f}
+                senderDisplayName={displayNameByUserId[f.fromUserId] ?? 'Someone'}
+              />
+            ))}
+          </section>
+        )}
 
         {/* Writing card — the only card on this page. */}
         <section style={{ marginTop: 28 }}>
