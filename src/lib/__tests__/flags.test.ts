@@ -2,16 +2,25 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock firestore module BEFORE importing flags
 const addDocMock = vi.fn();
+const updateDocMock = vi.fn();
 const serverTimestampMock = vi.fn(() => ({ __server: true }));
-vi.mock('firebase/firestore', () => ({
-  collection: vi.fn((_db, name) => ({ __collection: name })),
-  addDoc: (...args: unknown[]) => addDocMock(...args),
-  serverTimestamp: () => serverTimestampMock(),
-  Timestamp: { now: () => ({ __ts: true }) },
-}));
+vi.mock('firebase/firestore', async () => {
+  const mod = await vi.importActual<typeof import('firebase/firestore')>(
+    'firebase/firestore',
+  );
+  return {
+    ...mod,
+    collection: vi.fn((_db, name) => ({ __collection: name })),
+    addDoc: (...args: unknown[]) => addDocMock(...args),
+    doc: vi.fn((_db, coll, id) => ({ __doc: `${coll}/${id}` })),
+    updateDoc: (...args: unknown[]) => updateDocMock(...args),
+    serverTimestamp: () => serverTimestampMock(),
+    Timestamp: { now: () => ({ __ts: true }) },
+  };
+});
 vi.mock('@/lib/firebase', () => ({ firestore: { __firestore: true } }));
 
-import { createFlag } from '../flags';
+import { createFlag, markFlagSeen, respondToFlag } from '../flags';
 
 describe('createFlag', () => {
   beforeEach(() => {
@@ -58,5 +67,49 @@ describe('createFlag', () => {
     });
     const [, payload] = addDocMock.mock.calls[0];
     expect('note' in payload).toBe(false);
+  });
+});
+
+describe('markFlagSeen', () => {
+  beforeEach(() => {
+    updateDocMock.mockReset();
+  });
+
+  it('sets status=seen and seenAt only when status is currently open (idempotent)', async () => {
+    await markFlagSeen('flag-1', { currentStatus: 'open' });
+    expect(updateDocMock).toHaveBeenCalledWith(
+      { __doc: 'message_flags/flag-1' },
+      expect.objectContaining({ status: 'seen', seenAt: { __server: true } }),
+    );
+  });
+
+  it('no-ops if already seen or closed', async () => {
+    await markFlagSeen('flag-1', { currentStatus: 'seen' });
+    await markFlagSeen('flag-1', { currentStatus: 'closed' });
+    expect(updateDocMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('respondToFlag', () => {
+  beforeEach(() => {
+    updateDocMock.mockReset();
+  });
+
+  it('writes response + status=closed for an emoji reply', async () => {
+    await respondToFlag('flag-1', { kind: 'emoji', value: '🫶' });
+    expect(updateDocMock).toHaveBeenCalledWith(
+      { __doc: 'message_flags/flag-1' },
+      expect.objectContaining({
+        status: 'closed',
+        response: expect.objectContaining({ kind: 'emoji', value: '🫶' }),
+        closedAt: { __server: true },
+      }),
+    );
+  });
+
+  it('rejects empty text for a "reply" closure', async () => {
+    await expect(
+      respondToFlag('flag-1', { kind: 'reply', value: '   ' }),
+    ).rejects.toThrow(/non-empty/);
   });
 });

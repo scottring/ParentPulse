@@ -1,10 +1,12 @@
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import {
   MESSAGE_FLAGS_COLLECTION,
   truncateQuote,
   type FlagChatKind,
+  type FlagResponseKind,
   type FlagSenderRole,
+  type FlagStatus,
 } from '@/types/flag';
 
 export interface CreateFlagInput {
@@ -40,4 +42,40 @@ export async function createFlag(input: CreateFlagInput): Promise<string> {
     payload,
   );
   return ref.id;
+}
+
+export async function markFlagSeen(
+  flagId: string,
+  ctx: { currentStatus: FlagStatus },
+): Promise<void> {
+  // Idempotent: only transition open → seen.
+  if (ctx.currentStatus !== 'open') return;
+  await updateDoc(doc(firestore, MESSAGE_FLAGS_COLLECTION, flagId), {
+    status: 'seen',
+    seenAt: serverTimestamp(),
+  });
+}
+
+export interface RespondInput {
+  kind: FlagResponseKind;
+  value: string;
+}
+
+export async function respondToFlag(
+  flagId: string,
+  input: RespondInput,
+): Promise<void> {
+  const trimmed = (input.value ?? '').trim();
+  if (input.kind !== 'emoji' && trimmed.length === 0) {
+    throw new Error('respondToFlag: a non-empty value is required for note/reply.');
+  }
+  await updateDoc(doc(firestore, MESSAGE_FLAGS_COLLECTION, flagId), {
+    status: 'closed',
+    response: {
+      kind: input.kind,
+      value: input.kind === 'emoji' ? input.value : trimmed,
+      at: serverTimestamp(),
+    },
+    closedAt: serverTimestamp(),
+  });
 }
