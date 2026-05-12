@@ -13,6 +13,7 @@ import { functions } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 
 export interface ChatMessage {
+  messageId?: string;  // server-assigned uuid; absent on optimistic pre-send and legacy messages
   role: 'user' | 'assistant';
   content: string;
   timestamp?: number;
@@ -83,7 +84,7 @@ export function useCoach(): UseCoachReturn {
     try {
       const chatWithCoach = httpsCallable<
         { message: string; conversationId?: string; personId?: string; personIds?: string[] },
-        { success: boolean; conversationId: string; response: string; context: ChatContext; error?: string }
+        { success: boolean; conversationId: string; response: string; context: ChatContext; userMessageId?: string; assistantMessageId?: string; error?: string }
       >(functions, 'chatWithCoach');
 
       const effectiveIds = (personIds || []).filter(Boolean);
@@ -98,7 +99,23 @@ export function useCoach(): UseCoachReturn {
       });
 
       if (result.data.success) {
+        // Patch the optimistic user message with its server-assigned messageId
+        if (result.data.userMessageId) {
+          setMessages((prev) => {
+            const updated = [...prev];
+            // Find the last user message (the one we just added optimistically)
+            for (let i = updated.length - 1; i >= 0; i--) {
+              if (updated[i].role === 'user' && !updated[i].messageId) {
+                updated[i] = { ...updated[i], messageId: result.data.userMessageId };
+                break;
+              }
+            }
+            return updated;
+          });
+        }
+
         const assistantMessage: ChatMessage = {
+          messageId: result.data.assistantMessageId,
           role: 'assistant',
           content: result.data.response,
           timestamp: Date.now()
