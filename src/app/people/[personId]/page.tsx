@@ -375,7 +375,10 @@ export default function PersonPage({
                       firstWaiting.title ?? excerptOf(firstWaiting.text, 70);
                     return (
                       <>
-                        <a href="#still-open" className="balance-inline-link">
+                        <a
+                          href={`/journal/${firstWaiting.entryId}`}
+                          className="balance-inline-link"
+                        >
                           “{snippet}”
                         </a>
                         {' '}is still open about {firstName}.
@@ -385,10 +388,13 @@ export default function PersonPage({
                   if (!isSelf && firstWaiting && openThreads.length > 1) {
                     return (
                       <>
-                        <a href="#still-open" className="balance-inline-link">
+                        <a
+                          href={`/journal/${firstWaiting.entryId}`}
+                          className="balance-inline-link"
+                        >
                           {openThreads.length} things
                         </a>
-                        {' '}are still open about {firstName} — take them one at a time.
+                        {' '}are still open about {firstName} — start with the latest.
                       </>
                     );
                   }
