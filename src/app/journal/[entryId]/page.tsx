@@ -152,7 +152,6 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
       await deleteEntry(entry.entryId);
       router.push('/journal');
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('[journal] delete failed', err);
       const message = err instanceof Error ? err.message : String(err);
       window.alert(`Could not delete this entry: ${message}`);
@@ -209,6 +208,10 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
   // Auto-open the chat panel if the entry already has a thread
   const hasExistingThread = chatReady && chatTurns.length > 0;
   useEffect(() => {
+    // Auto-open chat once a thread exists. Intentional one-shot
+    // sync: showChat stays user-controlled afterward (close still
+    // works because we don't reopen on re-renders).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (hasExistingThread) setShowChat(true);
   }, [hasExistingThread]);
   const [saveStatus, setSaveStatus] = useState<
@@ -719,7 +722,7 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
             />
           )}
 
-          {/* Provenance: this entry spawned a Workbook activity */}
+          {/* Provenance: this entry spawned a practice in Experiments */}
           {entry.activitySpawnedItemId && (
             <div className="entry-provenance">
               <Link
@@ -727,7 +730,7 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
                 className="provenance-link"
               >
                 <span className="provenance-glyph" aria-hidden="true">◆</span>
-                This led to a practice in the Workbook
+                This led to a practice in Experiments
                 <span className="arrow">⟶</span>
               </Link>
             </div>
@@ -1646,11 +1649,14 @@ function MentionSettleBar({
   onReply: () => void;
   onSettle: () => void;
 }) {
+  // Capture "now" once at mount so re-renders don't re-evaluate
+  // Date.now() during render (React Compiler purity rule).
+  const [nowAtMount] = useState(() => Date.now());
   if (entry.authorId === currentUserId) return null; // mine — not a mention
   if (isSettled) return null; // already settled
   const created = entry.createdAt?.toDate?.();
   if (!created) return null;
-  const ms = Date.now() - created.getTime();
+  const ms = nowAtMount - created.getTime();
   if (ms > 7 * 24 * 60 * 60 * 1000) return null; // older than 7 days
   const firstName = authorName.split(' ')[0] || 'Someone';
   const whenLabel = created.toLocaleDateString('en-GB', {

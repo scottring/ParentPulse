@@ -36,7 +36,15 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
   const { user, loading: authLoading } = useAuth();
   const { person, loading: personLoading, updatePerson } = usePersonById(personId);
   const { manual, createManual, loading: manualLoading } = usePersonManual(personId);
-  const [selectedType, setSelectedType] = useState<RelationshipType | null>(null);
+  const [userSelectedType, setUserSelectedType] = useState<RelationshipType | null>(null);
+  // Derive selectedType from user pick OR the person's already-set
+  // relationshipType (when re-entering the flow for an existing
+  // person). Avoids a setState-in-effect.
+  const personDefaultType: RelationshipType | null =
+    person?.relationshipType && person.relationshipType !== 'self'
+      ? (person.relationshipType as RelationshipType)
+      : null;
+  const selectedType = userSelectedType ?? personDefaultType;
   const [isCreating, setIsCreating] = useState(false);
   const [showWhatsNext, setShowWhatsNext] = useState(false);
 
@@ -45,13 +53,6 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
       router.push('/login');
     }
   }, [user, authLoading, router]);
-
-  // Pre-select relationship type if already set
-  useEffect(() => {
-    if (person?.relationshipType && person.relationshipType !== 'self' && selectedType === null) {
-      setSelectedType(person.relationshipType);
-    }
-  }, [person, selectedType]);
 
   // If manual already exists, redirect to manual view
   useEffect(() => {
@@ -246,7 +247,7 @@ export function CreateManualPage({ params }: { params: Promise<{ personId: strin
             {RELATIONSHIP_OPTIONS.map((option, idx) => (
               <button
                 key={option.type}
-                onClick={() => setSelectedType(option.type)}
+                onClick={() => setUserSelectedType(option.type)}
                 className="w-full text-left py-5"
                 style={{
                   background: 'transparent',

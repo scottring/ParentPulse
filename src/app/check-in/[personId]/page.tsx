@@ -11,7 +11,7 @@
    Mock: docs/journal-first-redesign/kid-mode.html v2.1
    ================================================================ */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
@@ -923,7 +923,7 @@ export default function KidModePage() {
                 color: T.text5,
               }}
             >
-              You can edit what was heard — trim out anything that wasn't <em style={{ fontStyle: 'italic' }}>{kid.name}</em>.
+              You can edit what was heard — trim out anything that wasn&rsquo;t <em style={{ fontStyle: 'italic' }}>{kid.name}</em>.
             </p>
           )}
         </section>

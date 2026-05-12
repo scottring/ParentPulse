@@ -21,7 +21,7 @@ import type {
 } from '@/types/surface';
 import type { ActionItem } from '@/types/action-items';
 import type { GrowthItem } from '@/types/growth';
-import type { PersonManual, SynthesizedInsight } from '@/types/person-manual';
+import type { PersonManual } from '@/types/person-manual';
 import { computeFreshness } from '@/lib/freshness-engine';
 
 // ─── Main Entry Point ──────────────────────────────────────
@@ -32,7 +32,7 @@ export function computeSurfaceSections(input: SurfacePriorityInput): SurfaceSect
   const recentCaptures = input.journalEntries
     .filter((e) => !dismissed.has(e.entryId))
     .slice(0, 3);
-  const manualInsight = pickManualInsight(input.manuals, lead, dismissed);
+  const manualInsight = pickManualInsight(input.manuals, lead);
   const practiceToTry = pickPractice(input.activeGrowthItems, lead, dismissed);
   const familyPeople = buildFamilyPills(input);
   const echo = input.echo && !dismissed.has(input.echo.entryId) ? input.echo : null;
@@ -191,7 +191,6 @@ function findTopInsight(
 function pickManualInsight(
   manuals: PersonManual[],
   lead: LeadItem,
-  dismissed: Set<string>,
 ): ManualInsightItem | null {
   // Don't duplicate the lead if it's already an insight
   if (lead.type === 'insight') {
