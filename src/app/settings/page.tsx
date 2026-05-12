@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -10,7 +10,18 @@ import { usePerson } from '@/hooks/usePerson';
 import MainLayout from '@/components/layout/MainLayout';
 import AIUsageSection from '@/components/settings/AIUsageSection';
 
+// Next.js requires useSearchParams to be inside a Suspense boundary
+// during static generation. Wrap the inner component in Suspense at
+// the page level.
 export default function SettingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <SettingsPageInner />
+    </Suspense>
+  );
+}
+
+function SettingsPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
