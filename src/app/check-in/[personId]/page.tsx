@@ -636,15 +636,25 @@ export default function KidModePage() {
     if (saving) return;
     if (!user?.familyId) return;
     try {
-      // Body = only what was actually spoken or written. Per-target
-      // voice transcripts are tagged with the target's name so a
-      // future reader can tell whose feelings the line belongs to.
+      // Body = voice transcripts plus bracketed feeling markers, so
+      // the entry is self-describing even when no voice was recorded
+      // (Ella often only taps chips). Bracket pattern matches older
+      // entries that AI enrichment already knows how to summarize.
       const parts: string[] = [];
       if (voiceText.trim()) parts.push(voiceText.trim());
+      if (selfFeelings.length > 0) {
+        parts.push(`[${kid.name}: ${selfFeelings.join(', ')}]`);
+      }
+      if (bodySpots.length > 0) {
+        parts.push(`[felt in: ${bodySpots.join(', ')}]`);
+      }
       if (showRel) {
         for (const t of populatedRelTargets) {
+          const label = familyForRel.find((p) => p.id === t.personId)?.label ?? 'them';
+          if (t.feelings && t.feelings.length > 0) {
+            parts.push(`[about ${label}: ${t.feelings.join(', ')}]`);
+          }
           if (t.voice && t.voice.trim()) {
-            const label = familyForRel.find((p) => p.id === t.personId)?.label ?? 'them';
             parts.push(`About ${label}: ${t.voice.trim()}`);
           }
         }

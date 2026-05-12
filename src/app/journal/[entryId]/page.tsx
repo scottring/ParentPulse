@@ -697,6 +697,18 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
           {/* Song attachments (Spotify / Apple Music / YouTube / link) */}
           <EntryMedia media={entry.media?.filter((m) => m.type === 'song')} />
 
+          {/* Structured check-in readout — feeling chips Ella/the kid
+              tapped, body-map spots, per-person relationship feelings.
+              Renders below the body, above the AI enrichment, only
+              when entry.checkIn has data. */}
+          {entry.checkIn && (
+            <CheckInReadout
+              checkIn={entry.checkIn}
+              subjectPersonId={entry.subjectPersonId}
+              people={people}
+            />
+          )}
+
           {/* AI enrichment markers — quiet read-only display of what
               the Cloud Function extracted. Only render once the
               enrichment object exists on the doc. */}
@@ -1719,6 +1731,137 @@ function MentionSettleBar({
           Let it settle
         </button>
       </div>
+    </div>
+  );
+}
+
+// ================================================================
+// CheckInReadout — structured display of feeling chips, body-map
+// spots, and per-person relationship feelings tapped during a kid-
+// mode (or self) check-in. The data lives on entry.checkIn; without
+// this component it would only be visible to AI summarization, not
+// to humans reading the entry.
+// ================================================================
+interface CheckInReadoutProps {
+  checkIn: NonNullable<JournalEntry['checkIn']>;
+  subjectPersonId?: string;
+  people: Array<{ personId: string; name: string }>;
+}
+
+function CheckInReadout({ checkIn, subjectPersonId, people }: CheckInReadoutProps) {
+  const subjectName =
+    people.find((p) => p.personId === subjectPersonId)?.name?.split(/\s+/)[0] ??
+    'They';
+
+  // Reconcile relTargets (preferred, multi-target) with legacy flat
+  // relFeelings + withPersonIds (single-target). Both produce the
+  // same row shape so rendering is uniform.
+  const relRows: Array<{ name: string; feelings: string[] }> = [];
+  if (checkIn.relTargets && checkIn.relTargets.length > 0) {
+    for (const t of checkIn.relTargets) {
+      if (!t.feelings || t.feelings.length === 0) continue;
+      const name =
+        people.find((p) => p.personId === t.personId)?.name?.split(/\s+/)[0] ??
+        'them';
+      relRows.push({ name, feelings: t.feelings });
+    }
+  } else if (
+    checkIn.relFeelings &&
+    checkIn.relFeelings.length > 0 &&
+    checkIn.withPersonIds &&
+    checkIn.withPersonIds.length > 0
+  ) {
+    const name =
+      people.find((p) => p.personId === checkIn.withPersonIds![0])?.name?.split(/\s+/)[0] ??
+      'them';
+    relRows.push({ name, feelings: checkIn.relFeelings });
+  }
+
+  const hasSelf = (checkIn.selfFeelings ?? []).length > 0;
+  const hasBody = (checkIn.bodySpots ?? []).length > 0;
+  const hasRel = relRows.length > 0;
+
+  if (!hasSelf && !hasBody && !hasRel) return null;
+
+  return (
+    <div className="checkin-readout">
+      <div className="checkin-label">
+        <span className="checkin-label-glyph" aria-hidden="true">✦</span>
+        What was chosen
+      </div>
+
+      {hasSelf && (
+        <p className="checkin-row">
+          <span className="checkin-row-label">{subjectName} felt</span>
+          <span className="checkin-row-sep" aria-hidden="true"> · </span>
+          <span className="checkin-row-words">
+            {checkIn.selfFeelings.join(' · ')}
+          </span>
+        </p>
+      )}
+
+      {relRows.map((r) => (
+        <p key={r.name} className="checkin-row">
+          <span className="checkin-row-label">About {r.name}</span>
+          <span className="checkin-row-sep" aria-hidden="true"> · </span>
+          <span className="checkin-row-words">{r.feelings.join(' · ')}</span>
+        </p>
+      ))}
+
+      {hasBody && (
+        <p className="checkin-row">
+          <span className="checkin-row-label">Felt in</span>
+          <span className="checkin-row-sep" aria-hidden="true"> · </span>
+          <span className="checkin-row-words">
+            {checkIn.bodySpots!.join(' · ')}
+          </span>
+        </p>
+      )}
+
+      <style jsx>{`
+        .checkin-readout {
+          margin-top: 36px;
+          padding-top: 20px;
+          border-top: 1px dashed rgba(200, 190, 172, 0.4);
+        }
+        .checkin-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-family: var(--font-parent-body);
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: 0.24em;
+          text-transform: uppercase;
+          color: #a8997d;
+          margin-bottom: 14px;
+        }
+        .checkin-label-glyph {
+          font-size: 12px;
+          color: #b2a487;
+        }
+        .checkin-row {
+          font-family: var(--font-parent-display);
+          font-size: 17px;
+          line-height: 1.5;
+          color: #3d3a35;
+          margin: 0 0 6px 0;
+        }
+        .checkin-row:last-child {
+          margin-bottom: 0;
+        }
+        .checkin-row-label {
+          font-style: italic;
+          color: #6b6254;
+        }
+        .checkin-row-sep {
+          color: #c0b69e;
+          margin: 0 4px;
+        }
+        .checkin-row-words {
+          color: #2e2c28;
+        }
+      `}</style>
     </div>
   );
 }
