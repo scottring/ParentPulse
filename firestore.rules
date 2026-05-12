@@ -216,11 +216,12 @@ service cloud.firestore {
     // delete (we want an audit trail of what was flagged).
     //
     // Identity fields (fromUserId, toUserId, chatId, messageId,
-    // quoteText, needsRealReply) are write-once at create. `note`
-    // is intentionally not enforced as immutable here — it's an
-    // optional sender-authored field and adding `note` post-create
-    // would complicate the diff check for a field that nobody
-    // currently has a use case to mutate.
+    // quoteText, needsRealReply) and the sender-authored `note` are
+    // write-once at create. `note` is optional, so we enforce its
+    // immutability via diff().affectedKeys() — that handles the
+    // "missing on one side" case (the field equals itself whether
+    // both sides omit it, but adding/removing/changing it flips a key
+    // into affectedKeys).
     match /message_flags/{flagId} {
       // Read: participants only.
       allow read: if isSignedIn()
@@ -235,7 +236,9 @@ service cloud.firestore {
                     && request.resource.data.status == 'open';
 
       // Update by recipient: open -> seen, or any -> closed (with a
-      // response payload). Identity fields must not change.
+      // response payload). Identity fields must not change, and the
+      // sender-authored `note` is locked too (recipient can't rewrite
+      // what was sent to them).
       allow update: if isSignedIn()
                     && resource.data.toUserId == request.auth.uid
                     && request.resource.data.fromUserId == resource.data.fromUserId
@@ -244,6 +247,8 @@ service cloud.firestore {
                     && request.resource.data.messageId == resource.data.messageId
                     && request.resource.data.quoteText == resource.data.quoteText
                     && request.resource.data.needsRealReply == resource.data.needsRealReply
+                    && !request.resource.data.diff(resource.data).affectedKeys()
+                        .hasAny(['note'])
                     && (
                       // open -> seen
                       (resource.data.status == 'open'

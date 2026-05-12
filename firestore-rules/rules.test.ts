@@ -1332,6 +1332,27 @@ describe.skipIf(!emulatorAvailable)('message_flags', () => {
     );
   });
 
+  it('recipient cannot mutate the sender-authored note', async () => {
+    // Seed a flag that already has a note from the sender — recipient
+    // must not be able to rewrite it on their seen/close update.
+    await testEnv!.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'message_flags', 'f1'), {
+        ...baseFlag(),
+        note: 'sender wrote this',
+      });
+    });
+    const db = getAuthContext(U2).firestore();
+
+    // note tampering (rewrite) — should fail.
+    await assertFails(
+      updateDoc(doc(db, 'message_flags', 'f1'), {
+        status: 'seen',
+        seenAt: new Date(),
+        note: 'recipient rewrote this',
+      })
+    );
+  });
+
   it('recipient can write a response + status=closed + closedAt', async () => {
     await testEnv!.withSecurityRulesDisabled(async (ctx) => {
       // Start from a seen flag (closing is allowed from any status by
