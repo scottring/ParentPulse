@@ -9,6 +9,10 @@
 import { useMemo } from 'react';
 import { PageSpread } from '../surfaces';
 import { Display, Lede, Eyebrow, BodySerif, Caption } from '../type';
+import { useIncomingFlags } from '@/hooks/useIncomingFlags';
+import { usePerson } from '@/hooks/usePerson';
+import { FlaggedForMeCard } from '@/components/open-threads/FlaggedForMeCard';
+import type { OpenThread } from '@/lib/open-threads';
 
 export interface Thread {
   id: string;
@@ -16,6 +20,10 @@ export interface Thread {
   lastTouched: string;   // humanised: "3 days ago"
   preview?: string;
   tag?: 'health' | 'home' | 'people' | 'work' | 'plans';
+  // When this thread comes from useOpenThreads (kind === 'flag'),
+  // the rendering branches to FlaggedForMeCard instead of the
+  // default editorial row.
+  kind?: OpenThread['kind'];
 }
 
 export interface TodaySpreadProps {
@@ -48,6 +56,24 @@ export function TodaySpread({ firstName, date = new Date(), season, threads = []
   const greeting = useMemo(() => greet(date, firstName), [date, firstName]);
   const longDate = useMemo(() => formatLongDate(date), [date]);
 
+  const { flags } = useIncomingFlags();
+  const { people } = usePerson();
+  const flagsById = useMemo(
+    () => Object.fromEntries(flags.map((f) => [f.flagId, f])),
+    [flags],
+  );
+  const displayNameByUserId = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const p of people) {
+      if (p.linkedUserId && p.name) {
+        map[p.linkedUserId] = p.name;
+      }
+    }
+    return map;
+  }, [people]);
+  const lookupDisplayName = (userId: string | undefined): string =>
+    (userId && displayNameByUserId[userId]) || 'Someone';
+
   const left = (
     <>
       <Eyebrow>{longDate}{season ? ` · ${season}` : ''}</Eyebrow>
@@ -66,14 +92,27 @@ export function TodaySpread({ firstName, date = new Date(), season, threads = []
     <>
       <Eyebrow>Open threads</Eyebrow>
       <div style={{ marginTop: 16 }}>
-        {threads.map((t, i) => (
-          <ThreadRow
-            key={t.id}
-            thread={t}
-            first={i === 0}
-            onOpen={() => onOpenThread?.(t.id)}
-          />
-        ))}
+        {threads.map((t, i) => {
+          if (t.kind === 'flag') {
+            const flag = flagsById[t.id];
+            if (!flag) return null;
+            return (
+              <FlaggedForMeCard
+                key={t.id}
+                flag={flag}
+                senderDisplayName={lookupDisplayName(flag.fromUserId)}
+              />
+            );
+          }
+          return (
+            <ThreadRow
+              key={t.id}
+              thread={t}
+              first={i === 0}
+              onOpen={() => onOpenThread?.(t.id)}
+            />
+          );
+        })}
         {threads.length === 0 && (
           <BodySerif style={{ color: 'var(--r-text-4)', fontStyle: 'italic', marginTop: 8 }}>
             Nothing to pick up. Enjoy the morning.

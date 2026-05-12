@@ -6,8 +6,13 @@
    Recent threads, and Quiet facts (free-form lines).
    ================================================================ */
 
+import { useMemo } from 'react';
 import { Eyebrow, H2, BodySerif, Caption } from '../type';
 import { Rule } from '../surfaces';
+import { useIncomingFlags } from '@/hooks/useIncomingFlags';
+import { usePerson } from '@/hooks/usePerson';
+import { FlaggedForMeCard } from '@/components/open-threads/FlaggedForMeCard';
+import type { OpenThread } from '@/lib/open-threads';
 
 export interface PersonFact {
   label: string;
@@ -22,6 +27,9 @@ export interface PersonThread {
   id: string;
   title: string;
   date: string;
+  // When this thread comes from useOpenThreads (kind === 'flag'),
+  // rendering branches to FlaggedForMeCard instead of the default row.
+  kind?: OpenThread['kind'];
 }
 export interface PersonSheetProps {
   name: string;
@@ -48,6 +56,24 @@ export function PersonSheet({
   essentials = [], rituals = [], threads = [], quietFacts = [], onEdit,
 }: PersonSheetProps) {
   const inits = initials ?? name.split(' ').map((s) => s[0]).slice(0, 2).join('');
+
+  const { flags } = useIncomingFlags();
+  const { people } = usePerson();
+  const flagsById = useMemo(
+    () => Object.fromEntries(flags.map((f) => [f.flagId, f])),
+    [flags],
+  );
+  const displayNameByUserId = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const p of people) {
+      if (p.linkedUserId && p.name) {
+        map[p.linkedUserId] = p.name;
+      }
+    }
+    return map;
+  }, [people]);
+  const lookupDisplayName = (userId: string | undefined): string =>
+    (userId && displayNameByUserId[userId]) || 'Someone';
   return (
     <article style={{ maxWidth: 880, margin: '0 auto', padding: '48px 0 96px' }}>
       {/* Portrait band */}
@@ -112,12 +138,25 @@ export function PersonSheet({
       {/* Recent threads */}
       {threads.length > 0 && (
         <Section title="Recent threads">
-          {threads.map((t) => (
-            <div key={t.id} style={{ padding: '14px 0', borderTop: '1px solid var(--r-rule-5)', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <BodySerif style={{ fontSize: 19, fontStyle: 'italic' }}>{t.title}</BodySerif>
-              <Caption style={{ color: 'var(--r-text-4)' }}>{t.date}</Caption>
-            </div>
-          ))}
+          {threads.map((t) => {
+            if (t.kind === 'flag') {
+              const flag = flagsById[t.id];
+              if (!flag) return null;
+              return (
+                <FlaggedForMeCard
+                  key={t.id}
+                  flag={flag}
+                  senderDisplayName={lookupDisplayName(flag.fromUserId)}
+                />
+              );
+            }
+            return (
+              <div key={t.id} style={{ padding: '14px 0', borderTop: '1px solid var(--r-rule-5)', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <BodySerif style={{ fontSize: 19, fontStyle: 'italic' }}>{t.title}</BodySerif>
+                <Caption style={{ color: 'var(--r-text-4)' }}>{t.date}</Caption>
+              </div>
+            );
+          })}
         </Section>
       )}
 
