@@ -1,22 +1,51 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { useCoupleRitual } from '@/hooks/useCoupleRitual';
 import { useSpouse } from '@/hooks/useSpouse';
 import { stockImagery } from '@/config/stock-imagery';
 import { listRecentSessions } from '@/hooks/useRitualSession';
 import type { RitualSession } from '@/types/ritual-session';
+import { CurrentFocusCard, type CurrentFocus } from '@/components/rituals/CurrentFocusCard';
+import { ExperimentsColumn } from '@/components/rituals/ExperimentsColumn';
+import { FamilyCheckInsSection } from '@/components/rituals/FamilyCheckInsSection';
+import { InspiredByJournalCard, type JournalSuggestion } from '@/components/rituals/InspiredByJournalCard';
+import { useFamilyCheckIns } from '@/hooks/useFamilyCheckIns';
+import { useGrowthFeed } from '@/hooks/useGrowthFeed';
+import { useJournalEntries } from '@/hooks/useJournalEntries';
+import { usePerson } from '@/hooks/usePerson';
+
+const twoColStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr) minmax(280px, 360px)',
+  gap: 40,
+  margin: '0 auto',
+  maxWidth: 1080,
+};
+const leftColStyle: CSSProperties = {};
 
 export default function ClientPage() {
+  const { user } = useAuth();
   const { ritual, loading } = useCoupleRitual();
   const { spouseName, loading: spouseLoading } = useSpouse();
   const [pastSessions, setPastSessions] = useState<RitualSession[]>([]);
+  const { arcGroups } = useGrowthFeed();
+  const { entries: allEntries } = useJournalEntries();
+  const { checkIns: familyCheckIns } = useFamilyCheckIns();
+  const { people } = usePerson();
+
+  const kidNames = useMemo<Record<string, string>>(() => {
+    const m: Record<string, string> = {};
+    for (const p of people) m[p.personId] = p.name;
+    return m;
+  }, [people]);
 
   useEffect(() => {
-    if (!ritual?.id) return;
+    if (!ritual?.id || !user?.userId) return;
     let active = true;
-    listRecentSessions(ritual.id, 5)
+    listRecentSessions(ritual.id, user.userId, 5)
       .then((rows) => {
         if (active) setPastSessions(rows);
       })
@@ -26,7 +55,32 @@ export default function ClientPage() {
     return () => {
       active = false;
     };
-  }, [ritual?.id]);
+  }, [ritual?.id, user?.userId]);
+
+  const currentFocus: CurrentFocus | null = useMemo(() => {
+    const firstWithItem = arcGroups.find((g) => g.activeItems.length > 0);
+    if (!firstWithItem) return null;
+    const item = firstWithItem.activeItems[0];
+    return {
+      title: item.title ?? firstWithItem.arc.title,
+      body: item.body ?? 'A small step from your current experiment.',
+      experimentLabel: firstWithItem.arc.title,
+      actionHref: `/experiments/${firstWithItem.arc.arcId}`,
+    };
+  }, [arcGroups]);
+
+  const inspiredSuggestion: JournalSuggestion | null = useMemo(() => {
+    const recent = allEntries[0];
+    if (!recent) return null;
+    const when = recent.createdAt?.toDate?.();
+    return {
+      excerpt: (recent.text ?? '').slice(0, 80),
+      excerptDate: when ? when.toLocaleDateString('en-US', { weekday: 'long' }) : 'recently',
+      suggestion: 'Want to bring this into your next ritual?',
+      ctaLabel: 'Refine Ritual',
+      ctaHref: '/rituals/couple/manage',
+    };
+  }, [allEntries]);
 
   if (loading || spouseLoading) {
     return (
@@ -47,10 +101,13 @@ export default function ClientPage() {
         Relish stays out of your way.
       </p>
 
-      <section className="ritual-section">
-        <div className="section-head">
-          <p className="section-eyebrow">Your couple check-in</p>
-        </div>
+      <CurrentFocusCard focus={currentFocus} />
+
+      <section className="rituals-two-col" style={twoColStyle}>
+        <div style={leftColStyle}>
+          <div className="section-head">
+            <p className="section-eyebrow">Your couple check-in</p>
+          </div>
 
         {!ritual && (
           <div className="empty-card">
@@ -61,12 +118,12 @@ export default function ClientPage() {
               <h2 className="card-heading">
                 {spouseName
                   ? `A weekly moment with ${spouseName}.`
-                  : `Add your partner first.`}
+                  : `Couple rituals need a partner first.`}
               </h2>
               <p className="card-copy">
                 {spouseName
                   ? `Pick a day and time together, on one device. A small ceremony that keeps the big conversations current.`
-                  : `Couple rituals need both of you in the family. Once your partner is here, set it up together.`}
+                  : `Add your partner in Settings → People — once they're in the family, you can set up a recurring check-in together.`}
               </p>
               {spouseName ? (
                 <Link href="/rituals/couple/setup" className="cta">
@@ -134,7 +191,22 @@ export default function ClientPage() {
             </div>
           </div>
         )}
+
+        <FamilyCheckInsSection checkIns={familyCheckIns} kidNames={kidNames} />
+        </div>
+
+        <ExperimentsColumn />
       </section>
+
+      <InspiredByJournalCard suggestion={inspiredSuggestion} />
+
+      <style>{`
+        @media (max-width: 859px) {
+          .rituals-two-col {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
 
       <style jsx>{`
         .eyebrow {

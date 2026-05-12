@@ -125,14 +125,23 @@ export async function createRitualSession(
   return res.data.sessionId;
 }
 
-/* List recent complete sessions for a given ritual. Used on /rituals. */
+/* List recent complete sessions for a given ritual. Used on /rituals.
+ *
+ * Why userId is required: the Firestore rule on `ritual_sessions` allows
+ * read only if the caller is in `resource.data.participantUserIds`. For
+ * collection queries Firestore must statically prove the query is safe,
+ * so we add `participantUserIds array-contains <userId>` to the query —
+ * matching the rule. Without it, the entire list operation is denied.
+ */
 export async function listRecentSessions(
   ritualId: string,
+  userId: string,
   max = 10,
 ): Promise<RitualSession[]> {
   const col = collection(firestore, SESSION_COLLECTION);
   const q = query(
     col,
+    where('participantUserIds', 'array-contains', userId),
     where('ritualId', '==', ritualId),
     where('status', '==', 'complete'),
     orderBy('completedAt', 'desc'),

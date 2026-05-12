@@ -12,7 +12,7 @@ export function MicroActivityTile({ item }: MicroActivityTileProps) {
 
   return (
     <Link
-      href={`/growth/${item.growthItemId}`}
+      href={`/experiments/${item.growthItemId}`}
       className="bg-white rounded-xl p-4 hover:shadow-sm transition-shadow block"
     >
       <p className="text-[10px] uppercase tracking-[0.12em] mb-1" style={{ color: '#8B7E6A' }}>

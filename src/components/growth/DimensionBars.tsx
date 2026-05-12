@@ -33,7 +33,7 @@ export default function DimensionBars({ assessments, activeArcDimensionId }: Dim
         className="text-xs italic"
         style={{ fontFamily: 'var(--font-parent-body)', color: '#6B6254' }}
       >
-        No portraits yet — start a growth arc to begin measuring
+        No portraits yet — start an experiment to begin measuring
       </p>
     );
   }
@@ -91,7 +91,7 @@ export default function DimensionBars({ assessments, activeArcDimensionId }: Dim
             {/* Active arc indicator */}
             {isActiveArc && (
               <div className="w-4 flex-shrink-0">
-                <span className="text-[14px]" title="Active Growth Arc">&#9654;</span>
+                <span className="text-[14px]" title="Active Experiment">&#9654;</span>
               </div>
             )}
           </div>

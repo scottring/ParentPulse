@@ -24,7 +24,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import type { CSSProperties } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useJournal } from '@/hooks/useJournal';
@@ -36,51 +36,8 @@ import { PinSetupModal } from '@/components/privacy/PinSetupModal';
 import { mastheadImageFor } from '@/config/stock-imagery';
 import { T } from './tokens';
 
-/* ───────────────────────────────────────────────────────────────
-   Feeling vocabularies — different for personal vs. relationship.
-   ─────────────────────────────────────────────────────────────── */
-// Core-five up front + the rest behind a "More…" toggle. Keeps the
-// surface calm while preserving the full vocabulary. The first five
-// items in each list are core; the rest are revealed on expand.
-type Feeling = { face: string; word: string };
-const FEELINGS_SELF_MORNING: Feeling[] = [
-  // Core
-  { face: '🙂', word: 'good' },
-  { face: '😌', word: 'calm' },
-  { face: '😴', word: 'tired' },
-  { face: '😟', word: 'worried' },
-  { face: '😞', word: 'low' },
-  // More
-  { face: '😎', word: 'steady' },
-  { face: '😢', word: 'sad' },
-  { face: '😫', word: 'stressed' },
-  { face: '😠', word: 'frustrated' },
-  { face: '🤔', word: 'unsure' },
-];
-const FEELINGS_SELF_EVENING: Feeling[] = [
-  { face: '🙂', word: 'good' },
-  { face: '😌', word: 'settled' },
-  { face: '😴', word: 'tired' },
-  { face: '😟', word: 'worried' },
-  { face: '😞', word: 'low' },
-  { face: '🙏', word: 'grateful' },
-  { face: '😔', word: 'heavy' },
-  { face: '😫', word: 'stressed' },
-  { face: '😠', word: 'frustrated' },
-  { face: '🤔', word: 'thinking' },
-];
-const FEELINGS_REL: Feeling[] = [
-  { face: '🙂', word: 'good' },
-  { face: '😌', word: 'steady' },
-  { face: '😴', word: 'tired' },
-  { face: '😟', word: 'worried' },
-  { face: '😔', word: 'distant' },
-  { face: '💛', word: 'tender' },
-  { face: '😫', word: 'stressed' },
-  { face: '😠', word: 'frustrated' },
-  { face: '🤔', word: 'unsure' },
-];
-const CORE_COUNT = 5;
+/* Simplified single feeling vocabulary used on the journal home. */
+const SIMPLE_FEELINGS = ['Grateful', 'Quiet', 'Tired', 'Connected', 'Reflective'] as const;
 
 /* ───────────────────────────────────────────────────────────────
    Helpers
@@ -104,43 +61,29 @@ function seasonOf(d: Date): 'spring' | 'summer' | 'autumn' | 'winter' {
   return 'winter';
 }
 
-function isEveningish(t: TimeOfDay): boolean {
-  return t === 'evening' || t === 'night' || t === 'afternoon';
-}
-
-function greetingFor(t: TimeOfDay, name: string): string {
-  switch (t) {
-    case 'morning': return `Good morning, ${name}.`;
-    case 'afternoon': return `Good afternoon, ${name}.`;
-    case 'evening': return `Good evening, ${name}.`;
-    case 'night': return `Still up, ${name}.`;
-  }
-}
-
-function dateLine(d: Date, t: TimeOfDay): string {
+function dateLine(d: Date): string {
   const wk = d.toLocaleDateString('en-US', { weekday: 'long' });
-  const md = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-  const tod = t.charAt(0).toUpperCase() + t.slice(1);
-  return `${wk} · ${md} · ${tod}`;
+  const md = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  return `${wk}, ${md}`;
 }
 
-function joinNames(names: string[]): string {
-  if (names.length === 0) return '';
-  if (names.length === 1) return names[0];
-  if (names.length === 2) return `${names[0]} and ${names[1]}`;
-  return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
-}
-
-function relativeWhen(d: Date | null): string {
-  if (!d) return '';
-  const now = Date.now();
-  const diffMs = now - d.getTime();
-  const day = 86400000;
-  if (diffMs < day) return 'today';
-  if (diffMs < 2 * day) return 'yesterday';
-  if (diffMs < 7 * day) return `${Math.floor(diffMs / day)} days ago`;
-  if (diffMs < 30 * day) return `${Math.floor(diffMs / (7 * day))} weeks ago`;
+function dateShort(d: Date): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+/* Deterministic fallback illustration per kid when no avatarUrl is set —
+   different kids get different images so the cards don't all look the same. */
+const KID_FALLBACK_IMAGES = [
+  '/illustrations/02-Parent-kid-eye-level.png',
+  '/illustrations/06-child-journaling.png',
+  '/illustrations/08-child-in-bed.png',
+  '/illustrations/14-heart-speech-bubble.png',
+] as const;
+
+function kidFallbackImage(personId: string): string {
+  let hash = 0;
+  for (let i = 0; i < personId.length; i++) hash = (hash * 31 + personId.charCodeAt(i)) | 0;
+  return KID_FALLBACK_IMAGES[Math.abs(hash) % KID_FALLBACK_IMAGES.length];
 }
 
 /* ───────────────────────────────────────────────────────────────
@@ -156,15 +99,13 @@ const sx = {
   page: {
     maxWidth: 680,
     margin: '0 auto',
-    padding: '212px 28px 80px',
+    padding: '28px 28px 80px',
   } as CSSProperties,
-  /* Fixed banner — seasonal image band + paper strip with wordmark/name. */
+  /* Seasonal banner — image band only. The wordmark + user-menu
+     strip moved to the global TopChrome (root layout), so this is
+     now a static in-flow visual anchor at the top of the page. */
   banner: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 50,
+    position: 'relative',
   } as CSSProperties,
   bannerImage: {
     height: 140,
@@ -172,45 +113,6 @@ const sx = {
     backgroundPosition: 'center 38%',
     backgroundRepeat: 'no-repeat',
     borderBottom: `1px solid ${T.ruleSoft}`,
-  } as CSSProperties,
-  bannerStrip: {
-    background: T.paper,
-    borderBottom: `1px solid ${T.ruleSoft}`,
-    display: 'flex',
-    alignItems: 'center',
-  } as CSSProperties,
-  bannerInner: {
-    width: '100%',
-    padding: '12px 20px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-  } as CSSProperties,
-  wordmark: {
-    fontFamily: T.serif,
-    fontStyle: 'italic',
-    fontWeight: 300,
-    fontSize: 22,
-    letterSpacing: '-0.01em',
-    color: T.ink,
-    textDecoration: 'none',
-  } as CSSProperties,
-  who: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 8,
-    fontFamily: T.sans,
-    fontSize: 11,
-    fontWeight: 600,
-    letterSpacing: '0.16em',
-    textTransform: 'uppercase',
-    color: T.text4,
-  } as CSSProperties,
-  whoPip: {
-    width: 6,
-    height: 6,
-    borderRadius: '50%',
-    background: T.sage,
   } as CSSProperties,
 
   greetingBlock: {
@@ -226,7 +128,6 @@ const sx = {
     color: T.ink,
     margin: '0 0 12px',
   } as CSSProperties,
-  greetingEm: { fontStyle: 'italic' } as CSSProperties,
   dateline: {
     fontFamily: T.sans,
     fontSize: 12,
@@ -238,130 +139,6 @@ const sx = {
     margin: 0,
   } as CSSProperties,
 
-  eyebrow: {
-    fontFamily: T.sans,
-    fontSize: 11,
-    fontWeight: 600,
-    letterSpacing: '0.14em',
-    textTransform: 'uppercase',
-    color: T.text5,
-    opacity: 0.85,
-    margin: '0 0 12px',
-  } as CSSProperties,
-
-  card: {
-    background: T.paper,
-    border: `1px solid ${T.rule}`,
-    borderRadius: 12,
-    padding: '24px 24px 20px',
-    transition: `box-shadow 200ms ${T.ease}, background 240ms ${T.ease}`,
-  } as CSSProperties,
-  cardWarm: {
-    boxShadow: '0 1px 2px rgba(60,50,40,0.04), 0 8px 24px rgba(201,168,76,0.08)',
-  } as CSSProperties,
-
-  ckPrompt: {
-    fontFamily: T.serif,
-    fontStyle: 'italic',
-    fontWeight: 400,
-    fontSize: 17,
-    color: T.ink,
-    margin: '0 0 10px',
-  } as CSSProperties,
-
-  withRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    flexWrap: 'wrap',
-    margin: '16px 0 10px',
-  } as CSSProperties,
-  withLabel: {
-    fontFamily: T.sans,
-    fontSize: 11,
-    fontWeight: 600,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    color: T.text5,
-    flexShrink: 0,
-  } as CSSProperties,
-  personTabs: {
-    display: 'flex',
-    gap: 6,
-    flexWrap: 'wrap',
-  } as CSSProperties,
-
-  pills: {
-    display: 'flex',
-    gap: 8,
-    flexWrap: 'wrap',
-  } as CSSProperties,
-
-  extraRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 14,
-  } as CSSProperties,
-  extra: {
-    flex: 1,
-    border: 'none',
-    background: 'transparent',
-    outline: 'none',
-    fontFamily: T.serif,
-    fontStyle: 'italic',
-    fontSize: 16,
-    color: T.ink,
-    padding: '6px 0',
-    borderBottom: `1px solid ${T.ruleSoft}`,
-    transition: `border-color 140ms ${T.ease}`,
-  } as CSSProperties,
-
-  moments: { margin: 0, padding: 0, listStyle: 'none' } as CSSProperties,
-  momentBody: {
-    fontFamily: T.serif,
-    fontSize: 17,
-    color: T.inkSoft,
-    transition: `color 140ms ${T.ease}`,
-  } as CSSProperties,
-  momentArrow: {
-    fontFamily: T.sans,
-    fontSize: 10,
-    fontWeight: 700,
-    letterSpacing: '0.18em',
-    textTransform: 'uppercase',
-    color: T.text5,
-    transition: `transform 160ms ${T.ease}, color 140ms ${T.ease}`,
-  } as CSSProperties,
-
-  timeline: { margin: 0, padding: 0, listStyle: 'none' } as CSSProperties,
-  tlMeta: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 8,
-    fontFamily: T.sans,
-    fontSize: 10,
-    fontWeight: 700,
-    letterSpacing: '0.2em',
-    textTransform: 'uppercase',
-    color: T.text5,
-    marginBottom: 6,
-  } as CSSProperties,
-  tlBullet: {
-    width: 5,
-    height: 5,
-    borderRadius: '50%',
-    background: T.ember,
-  } as CSSProperties,
-  tlQuote: {
-    fontFamily: T.serif,
-    fontStyle: 'italic',
-    fontSize: 17,
-    lineHeight: 1.5,
-    color: T.ink,
-    margin: 0,
-  } as CSSProperties,
-
   write: {
     padding: '24px 22px 18px',
     background: T.paper,
@@ -369,13 +146,6 @@ const sx = {
     borderRadius: 12,
     boxShadow: '0 1px 2px rgba(60,50,40,0.04), 0 4px 14px rgba(60,50,40,0.04)',
     transition: `border-color 160ms ${T.ease}, box-shadow 160ms ${T.ease}`,
-  } as CSSProperties,
-  writeNudge: {
-    fontFamily: T.serif,
-    fontStyle: 'italic',
-    fontSize: 14,
-    color: T.text4,
-    margin: '0 0 10px',
   } as CSSProperties,
   writeTextarea: {
     width: '100%',
@@ -390,14 +160,6 @@ const sx = {
     lineHeight: 1.6,
     color: T.ink,
     display: 'block',
-  } as CSSProperties,
-  writeFoot: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 14,
-    paddingTop: 12,
-    borderTop: `1px solid ${T.ruleSoft}`,
   } as CSSProperties,
   whoSees: {
     display: 'inline-flex',
@@ -430,284 +192,23 @@ const sx = {
     cursor: 'pointer',
     transition: `transform 140ms ${T.ease}, background 140ms ${T.ease}, filter 140ms ${T.ease}`,
   } as CSSProperties,
-
-  tail: {
-    marginTop: 56,
-    textAlign: 'center' as const,
-    fontFamily: T.sans,
-    fontSize: 10,
-    fontWeight: 600,
-    letterSpacing: '0.18em',
-    textTransform: 'uppercase',
-    color: T.text5,
-  } as CSSProperties,
-  tailLink: {
-    color: T.text4,
-    textDecoration: 'none',
-    borderBottom: `1px solid ${T.rule}`,
-    paddingBottom: 2,
-  } as CSSProperties,
 };
-
-/* ───────────────────────────────────────────────────────────────
-   Sub-components
-   ─────────────────────────────────────────────────────────────── */
-
-function PersonTab({
-  name,
-  on,
-  onClick,
-}: {
-  name: string;
-  on: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        padding: '6px 14px',
-        borderRadius: 999,
-        border: `1px solid ${on ? T.leather : T.ruleSoft}`,
-        background: on ? T.leather : 'transparent',
-        fontFamily: T.sans,
-        fontSize: 12,
-        fontWeight: 500,
-        color: on ? T.paper : T.text3,
-        cursor: 'pointer',
-        transition: `all 140ms ${T.ease}`,
-      }}
-    >
-      {name}
-    </button>
-  );
-}
-
-/* ─── Pill: text primary, emoji a quiet accent. Dims when something
-       else is selected and this one isn't (selection-gravity). ─── */
-function Pill({
-  face,
-  word,
-  on,
-  dim,
-  onClick,
-}: {
-  face: string;
-  word: string;
-  on: boolean;
-  dim: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '8px 14px',
-        borderRadius: 999,
-        background: on ? T.warmTint : T.cream,
-        border: `1px solid ${on ? T.amber : T.ruleSoft}`,
-        fontFamily: T.sans,
-        fontSize: 13,
-        fontWeight: 500,
-        color: on ? T.ink : T.text3,
-        cursor: 'pointer',
-        opacity: dim ? 0.45 : 1,
-        transform: on ? 'scale(1.02)' : 'scale(1)',
-        transition: 'opacity 200ms ease-out, transform 140ms ease-out, background 140ms ease-out, border-color 140ms ease-out, color 140ms ease-out',
-      }}
-    >
-      <span>{word}</span>
-      <span
-        aria-hidden="true"
-        style={{
-          fontSize: 13,
-          lineHeight: 1,
-          opacity: on ? 1 : 0.7,
-          marginLeft: 2,
-        }}
-      >
-        {face}
-      </span>
-    </button>
-  );
-}
-
-/* ─── PillGroup: core-five up front, "More…" reveals the rest inline.
-       Selection-gravity applied to unselected pills once any are on. ─── */
-function PillGroup({
-  options,
-  selected,
-  onToggle,
-  ariaLabel,
-}: {
-  options: Feeling[];
-  selected: string[];
-  onToggle: (word: string) => void;
-  ariaLabel: string;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const core = options.slice(0, CORE_COUNT);
-  const more = options.slice(CORE_COUNT);
-  const visible = expanded ? options : core;
-  const anySelected = selected.length > 0;
-
-  // If any selected feeling lives in the "more" set, auto-expand so the
-  // user sees their selection without hunting for it.
-  useEffect(() => {
-    if (!expanded && selected.some((w) => more.some((o) => o.word === w))) {
-      setExpanded(true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected]);
-
-  return (
-    <div
-      role="group"
-      aria-label={ariaLabel}
-      style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}
-    >
-      {visible.map((f) => {
-        const on = selected.includes(f.word);
-        return (
-          <Pill
-            key={f.word}
-            face={f.face}
-            word={f.word}
-            on={on}
-            dim={anySelected && !on}
-            onClick={() => onToggle(f.word)}
-          />
-        );
-      })}
-      {more.length > 0 && (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            fontFamily: T.sans,
-            fontSize: 11,
-            fontWeight: 500,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: T.text5,
-            padding: '8px 8px',
-          }}
-        >
-          {expanded ? 'Show fewer' : 'More…'}
-        </button>
-      )}
-    </div>
-  );
-}
-
-function MomentRow({
-  name,
-  featured,
-  dim,
-  done,
-  href,
-}: {
-  name: string;
-  featured: boolean;
-  dim: boolean;
-  done: boolean;
-  href: string;
-}) {
-  const [hover, setHover] = useState(false);
-  return (
-    <li>
-      <Link
-        href={href}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '16px 12px',
-          margin: '0 -12px',
-          borderBottom: `1px solid ${T.ruleSoft}`,
-          borderRadius: 4,
-          textDecoration: 'none',
-          color: 'inherit',
-          background: featured
-            ? T.warmRow2
-            : hover
-              ? T.warmRow
-              : 'transparent',
-          opacity: done ? 0.55 : dim ? 0.78 : 1,
-          transition: `background 160ms ${T.ease}, opacity 200ms ${T.ease}`,
-        }}
-      >
-        <span style={{ ...sx.momentBody, color: hover || featured ? T.ink : T.inkSoft }}>
-          {done && (
-            <span
-              aria-hidden="true"
-              style={{
-                color: T.sageDeep,
-                marginRight: 8,
-                fontSize: 14,
-              }}
-            >
-              ✓
-            </span>
-          )}
-          A moment with <em style={{ color: T.ink, fontStyle: 'italic' }}>{name}</em>
-          {done && (
-            <span
-              style={{
-                marginLeft: 10,
-                fontFamily: T.sans,
-                fontSize: 10,
-                fontWeight: 600,
-                letterSpacing: '0.18em',
-                textTransform: 'uppercase',
-                color: T.sageDeep,
-              }}
-            >
-              done
-            </span>
-          )}
-        </span>
-        <span
-          style={{
-            ...sx.momentArrow,
-            color: hover ? T.ink : T.text5,
-            transform: hover ? 'translateX(4px)' : 'translateX(0)',
-          }}
-        >
-          {done ? 'Open again →' : 'Open →'}
-        </span>
-      </Link>
-    </li>
-  );
-}
 
 /* ───────────────────────────────────────────────────────────────
    Main component
    ─────────────────────────────────────────────────────────────── */
 export function Home() {
-  const { user, logout } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth();
   const { createEntry, saving } = useJournal();
   const { entries: allEntries } = useJournalEntries();
   const { people } = usePerson();
   const privacyLock = usePrivacyLock();
+  const searchParams = useSearchParams();
 
   const today = useMemo(() => new Date(), []);
   const tod = partOfDay(today);
-  const evening = isEveningish(tod);
 
   const firstName = user?.name?.split(' ')[0] ?? 'friend';
-  const greeting = greetingFor(tod, firstName);
 
   // Family roster (excluding self)
   const family = useMemo(
@@ -718,7 +219,7 @@ export function Home() {
     () => family.filter((p) => p.relationshipType === 'child'),
     [family],
   );
-  // Person tabs include all family + group options
+  // About-picker options — family members + group shortcuts.
   const tabNames = useMemo(() => {
     const names = family.map((p) => p.name);
     return [...names, 'the kids', 'the family'];
@@ -727,10 +228,10 @@ export function Home() {
   // Selection state — multi-select
   const [selectedNames, setSelectedNames] = useState<string[]>([]);
   const [selfFeelings, setSelfFeelings] = useState<string[]>([]);
-  const [relFeelings, setRelFeelings] = useState<string[]>([]);
   const [text, setText] = useState('');
   const [showSaved, setShowSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [feelingsOpen, setFeelingsOpen] = useState(true);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   // Visibility picker — same presets as CaptureSheet (just-me / partner / family).
@@ -749,12 +250,6 @@ export function Home() {
   const asRef = useRef<HTMLDivElement>(null);
   const [aboutOpen, setAboutOpen] = useState(false);
   const aboutRef = useRef<HTMLDivElement>(null);
-
-  // User-menu dropdown in the banner — replaces what the old TopNav
-  // exposed. Critical for log-out so a different family member can
-  // sign in to contribute in their own voice.
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const writingAsLabel = useMemo(() => {
     if (!writingAsId) return 'You';
@@ -782,7 +277,7 @@ export function Home() {
 
   // Kids who've already had a check-in this browser session — read
   // from sessionStorage. Refreshes when the tab regains focus so
-  // returning from /kid/[id] picks up the new state without a manual
+  // returning from /check-in/[id] picks up the new state without a manual
   // reload.
   const [kidsDoneThisSession, setKidsDoneThisSession] = useState<string[]>([]);
   useEffect(() => {
@@ -821,17 +316,14 @@ export function Home() {
       if (visOpen && visRef.current && !visRef.current.contains(t)) setVisOpen(false);
       if (asOpen && asRef.current && !asRef.current.contains(t)) setAsOpen(false);
       if (aboutOpen && aboutRef.current && !aboutRef.current.contains(t)) setAboutOpen(false);
-      if (userMenuOpen && userMenuRef.current && !userMenuRef.current.contains(t)) setUserMenuOpen(false);
     };
-    if (visOpen || asOpen || aboutOpen || userMenuOpen) {
+    if (visOpen || asOpen || aboutOpen) {
       document.addEventListener('mousedown', onDown);
       return () => document.removeEventListener('mousedown', onDown);
     }
-  }, [visOpen, asOpen, aboutOpen, userMenuOpen]);
+  }, [visOpen, asOpen, aboutOpen]);
 
   // Hydrate any in-progress draft from localStorage on first mount.
-  // This MUST run before the "pre-select default person" effect, so
-  // any saved selectedNames in the draft win over the default.
   useEffect(() => {
     if (draftHydrated.current) return;
     draftHydrated.current = true;
@@ -841,12 +333,10 @@ export function Home() {
       const draft = JSON.parse(raw) as {
         text?: string;
         selfFeelings?: string[];
-        relFeelings?: string[];
         selectedNames?: string[];
       };
       if (typeof draft.text === 'string') setText(draft.text);
       if (Array.isArray(draft.selfFeelings)) setSelfFeelings(draft.selfFeelings);
-      if (Array.isArray(draft.relFeelings)) setRelFeelings(draft.relFeelings);
       if (Array.isArray(draft.selectedNames)) setSelectedNames(draft.selectedNames);
     } catch {
       // localStorage disabled or corrupted; not fatal.
@@ -860,13 +350,8 @@ export function Home() {
     if (!draftHydrated.current) return;
     const t = setTimeout(() => {
       try {
-        const draft = { text, selfFeelings, relFeelings, selectedNames };
-        // Skip the write entirely if the draft is empty — keeps
-        // localStorage clean for fresh-load users.
-        const empty =
-          !text.trim() &&
-          selfFeelings.length === 0 &&
-          relFeelings.length === 0;
+        const draft = { text, selfFeelings, selectedNames };
+        const empty = !text.trim() && selfFeelings.length === 0;
         if (empty) {
           window.localStorage?.removeItem(DRAFT_KEY);
           setDraftIndicator('idle');
@@ -879,19 +364,7 @@ export function Home() {
       }
     }, 400);
     return () => clearTimeout(t);
-  }, [text, selfFeelings, relFeelings, selectedNames]);
-
-  // Pre-select a default person if none picked once family loads.
-  // Morning → first kid (if any). Evening → first non-kid adult (partner).
-  useEffect(() => {
-    if (selectedNames.length === 0 && family.length > 0) {
-      const candidate = evening
-        ? family.find((p) => p.relationshipType !== 'child')?.name
-        : kids[0]?.name;
-      if (candidate) setSelectedNames([candidate]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [family.length]);
+  }, [text, selfFeelings, selectedNames]);
 
   const toggleSelected = (name: string) => {
     setSelectedNames((prev) =>
@@ -903,20 +376,6 @@ export function Home() {
       prev.includes(word) ? prev.filter((w) => w !== word) : [...prev, word],
     );
   };
-  const toggleRelFeel = (word: string) => {
-    setRelFeelings((prev) =>
-      prev.includes(word) ? prev.filter((w) => w !== word) : [...prev, word],
-    );
-  };
-
-  // Joined names for prompt copy
-  const joined = joinNames(selectedNames);
-
-  // Selected kids → which moment rows feature, in markup order
-  const selectedKidNames = useMemo(
-    () => selectedNames.filter((n) => kids.some((k) => k.name === n)),
-    [selectedNames, kids],
-  );
 
   // Auto-grow textarea
   useEffect(() => {
@@ -926,8 +385,43 @@ export function Home() {
     ta.style.height = `${ta.scrollHeight + 2}px`;
   }, [text]);
 
+  // NEW ENTRY button (rail) routes here with ?focus=write. Focus the
+  // textarea, then strip the query param so subsequent loads stay clean.
+  useEffect(() => {
+    if (searchParams?.get('focus') === 'write') {
+      taRef.current?.focus();
+      taRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      window.history.replaceState({}, '', '/');
+    }
+  }, [searchParams]);
+
   // Recent entries for the timeline (top 3 visible at decreasing opacity)
   const recent = useMemo(() => allEntries.slice(0, 3), [allEntries]);
+
+  // Group recent entries into Recent Echoes — by subject: child → Self → Relationships.
+  type EchoGroup = { label: string; entries: typeof recent };
+  const echoGroups = useMemo<EchoGroup[]>(() => {
+    const groups: Record<string, typeof recent> = {};
+    for (const entry of recent) {
+      const mentions = entry.personMentions ?? [];
+      const firstChildMention = mentions.find((id) =>
+        kids.some((k) => k.personId === id),
+      );
+      let key: string | null = null;
+      if (firstChildMention) {
+        const kid = kids.find((k) => k.personId === firstChildMention);
+        key = `About ${kid?.name ?? 'a child'}`;
+      } else if ((entry.subjectType ?? 'self') === 'self' && mentions.length === 0) {
+        key = 'Self';
+      } else if (mentions.length > 0) {
+        key = 'Relationships';
+      }
+      if (!key) continue;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(entry);
+    }
+    return Object.entries(groups).map(([label, entries]) => ({ label, entries }));
+  }, [recent, kids]);
 
   // ────────── "Small thing" nudge ──────────
   // Quietest possible pattern-driven suggestion. v1 picks the kid who's
@@ -952,9 +446,7 @@ export function Home() {
   }, [kids, allEntries]);
 
   const hasAnyContent =
-    text.trim().length > 0 ||
-    selfFeelings.length > 0 ||
-    (relFeelings.length > 0 && selectedNames.length > 0);
+    text.trim().length > 0 || selfFeelings.length > 0;
 
   // Resolve visibility preset → sharedWithUserIds
   const resolveSharedWithUserIds = (): string[] => {
@@ -981,26 +473,15 @@ export function Home() {
         .map((n) => family.find((p) => p.name === n)?.personId)
         .filter((id): id is string => Boolean(id));
 
-      const parts: string[] = [];
-      if (text.trim()) parts.push(text.trim());
-      if (selfFeelings.length > 0) {
-        parts.push(`[${tod} check-in: ${selfFeelings.join(', ')}]`);
-      }
-      if (relFeelings.length > 0 && selectedNames.length > 0) {
-        parts.push(`[about ${joinNames(selectedNames)}: ${relFeelings.join(', ')}]`);
-      }
-      const body = parts.join('\n\n');
-      if (!body) return;
-
       const tags = [
         'journal-first',
         ...(selfFeelings.length ? [`feel-self:${selfFeelings.join(',')}`] : []),
-        ...(relFeelings.length ? [`feel-rel:${relFeelings.join(',')}`] : []),
         ...(selectedNames.length ? [`with:${selectedNames.join(',')}`] : []),
       ];
 
-      // Structured payload — duplicates what's in tags, but shaped so
-      // the synthesis layer can query without parsing strings.
+      // Structured payload — feelings + targets live here. The body
+      // text holds only what the user wrote; no need to mirror these
+      // as bracket annotations.
       const groupKey: 'kids' | 'family' | null =
         selectedNames.includes('the family')
           ? 'family'
@@ -1014,16 +495,20 @@ export function Home() {
         .map((n) => family.find((p) => p.name === n)?.personId)
         .filter((id): id is string => Boolean(id));
 
-      const checkIn = (selfFeelings.length > 0 || relFeelings.length > 0)
+      const checkIn = selfFeelings.length > 0
         ? {
-            kind: (relFeelings.length > 0 ? 'self+rel' : 'self') as 'self' | 'self+rel',
+            kind: 'self' as const,
             timeOfDay: tod,
             selfFeelings,
-            ...(relFeelings.length > 0 ? { relFeelings } : {}),
             ...(realPersonIds.length > 0 ? { withPersonIds: realPersonIds } : {}),
             ...(groupKey ? { withGroupKey: groupKey } : {}),
           }
         : undefined;
+
+      // Body = user-written text only. Empty is fine if feelings are
+      // picked — the structured checkIn alone is a valid entry.
+      const body = text.trim();
+      if (!body && !checkIn) return;
 
       // If "writing as" is set to a child, the entry is a parent
       // proxy (same model CaptureSheet uses for kid entries from
@@ -1049,7 +534,6 @@ export function Home() {
       // Reset state but stay on page — user can keep going
       setText('');
       setSelfFeelings([]);
-      setRelFeelings([]);
       // Saved → draft is no longer needed.
       try { window.localStorage?.removeItem(DRAFT_KEY); } catch {}
       setDraftIndicator('idle');
@@ -1069,24 +553,11 @@ export function Home() {
   };
 
   // ─── Render ───
-  const selfFeelings_def = evening ? FEELINGS_SELF_EVENING : FEELINGS_SELF_MORNING;
-  const writeNudgeText =
-    selectedNames.length === 0
-      ? <em>Whoever&rsquo;s on your mind.</em>
-      : <>About <em style={{ color: T.text3, fontStyle: 'italic' }}>{joined}</em>, maybe.</>;
-  const relPromptText =
-    selectedNames.length === 0
-      ? <span style={{ color: T.text5 }}>Pick who, above.</span>
-      : <>How are things with <em style={{ fontStyle: 'italic' }}>{joined}</em>?</>;
-  const writePrompt = evening
-    ? <em style={{ color: T.ink, fontStyle: 'italic' }}>What&rsquo;s worth keeping from today?</em>
-    : null;
 
   return (
     <main style={sx.app}>
 
-      {/* Fixed banner — seasonal image band + thin paper strip. No
-          functionality; visual anchor only. */}
+      {/* Seasonal image band — visual anchor at the top of the journal. */}
       <header style={sx.banner}>
         <div
           style={{
@@ -1095,342 +566,42 @@ export function Home() {
           }}
           aria-hidden="true"
         />
-        <div style={sx.bannerStrip}>
-          <div style={sx.bannerInner}>
-            <Link href="/" style={sx.wordmark}>Relish</Link>
-
-            {/* User menu — clickable pip + name → dropdown with the
-                key destinations + Log out. Replaces what the old
-                TopNav used to expose. */}
-            <div ref={userMenuRef} style={{ position: 'relative' }}>
-              <button
-                type="button"
-                onClick={() => setUserMenuOpen((v) => !v)}
-                aria-haspopup="menu"
-                aria-expanded={userMenuOpen}
-                style={{
-                  ...sx.who,
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '4px 6px',
-                  margin: '-4px -6px',
-                  borderRadius: 999,
-                }}
-              >
-                <span style={sx.whoPip} />
-                {firstName}
-              </button>
-              {userMenuOpen && (
-                <div
-                  role="menu"
-                  style={{
-                    position: 'absolute',
-                    right: 0,
-                    top: 'calc(100% + 8px)',
-                    minWidth: 200,
-                    background: T.paper,
-                    border: `1px solid ${T.rule}`,
-                    borderRadius: 8,
-                    boxShadow: '0 4px 18px rgba(60,50,40,0.12)',
-                    padding: 4,
-                    zIndex: 70,
-                  }}
-                >
-                  {[
-                    { label: 'People', href: '/manual' },
-                    { label: 'Everything written', href: '/archive' },
-                    { label: 'Coach', href: '/coach' },
-                    null, // separator
-                    { label: 'Therapy', href: '/therapy' },
-                    { label: 'Rituals', href: '/rituals' },
-                    { label: 'Growth', href: '/growth' },
-                    { label: 'Settings', href: '/settings' },
-                  ].map((item, i) =>
-                    item === null ? (
-                      <div
-                        key={`sep-${i}`}
-                        style={{
-                          height: 1,
-                          background: T.ruleSoft,
-                          margin: '4px 8px',
-                        }}
-                      />
-                    ) : (
-                      <button
-                        key={item.href}
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setUserMenuOpen(false);
-                          router.push(item.href);
-                        }}
-                        style={{
-                          display: 'block',
-                          width: '100%',
-                          textAlign: 'left',
-                          padding: '10px 12px',
-                          border: 'none',
-                          background: 'transparent',
-                          borderRadius: 6,
-                          cursor: 'pointer',
-                          fontFamily: T.sans,
-                          fontSize: 13,
-                          fontWeight: 500,
-                          color: T.text3,
-                        }}
-                      >
-                        {item.label}
-                      </button>
-                    ),
-                  )}
-                  <div
-                    style={{
-                      height: 1,
-                      background: T.ruleSoft,
-                      margin: '4px 8px',
-                    }}
-                  />
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={async () => {
-                      setUserMenuOpen(false);
-                      try {
-                        await logout();
-                      } catch (e) {
-                        console.warn('logout failed', e);
-                      }
-                      router.push('/login');
-                    }}
-                    style={{
-                      display: 'block',
-                      width: '100%',
-                      textAlign: 'left',
-                      padding: '10px 12px',
-                      border: 'none',
-                      background: 'transparent',
-                      borderRadius: 6,
-                      cursor: 'pointer',
-                      fontFamily: T.sans,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: T.burgundy,
-                    }}
-                  >
-                    Log out
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
       </header>
 
       <div style={sx.page}>
 
-        {/* Greeting */}
+        {/* Masthead — dateline · name · optional nudge subtitle. */}
         <section style={sx.greetingBlock}>
-          <h1 style={sx.greeting}>
-            {greeting.split(', ')[0]}, <em style={sx.greetingEm}>{firstName}.</em>
+          <p style={sx.dateline}>{dateLine(today).toUpperCase()}</p>
+          <h1 style={{ ...sx.greeting, fontStyle: 'normal', marginTop: 8 }}>
+            {user?.name ?? firstName}
           </h1>
-          <p style={sx.dateline}>{dateLine(today, tod)}</p>
-        </section>
-
-        {/* Unified check-in card */}
-        <section style={{ marginTop: 28 }}>
-          <p style={sx.eyebrow}>Your check-in</p>
-          <div style={{ ...sx.card, ...((selfFeelings.length + relFeelings.length) > 0 ? sx.cardWarm : {}) }}>
-            <p style={sx.ckPrompt}>
-              {evening ? 'How is the day landing?' : 'How are you arriving?'}
+          {nudge && (
+            <p style={{
+              fontFamily: T.serif,
+              fontStyle: 'italic',
+              fontSize: 16,
+              color: T.text4,
+              margin: '6px 0 0',
+            }}>
+              {nudge.name} hasn&rsquo;t had a moment in a while
             </p>
-            <PillGroup
-              ariaLabel="How you're arriving"
-              options={selfFeelings_def}
-              selected={selfFeelings}
-              onToggle={toggleSelfFeel}
-            />
-
-            {tabNames.length > 0 && (
-              <div style={sx.withRow}>
-                <span style={sx.withLabel}>With:</span>
-                <div style={sx.personTabs}>
-                  {tabNames.map((n) => (
-                    <PersonTab
-                      key={n}
-                      name={n}
-                      on={selectedNames.includes(n)}
-                      onClick={() => toggleSelected(n)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <p style={sx.ckPrompt}>{relPromptText}</p>
-            <PillGroup
-              ariaLabel="How the relationship feels"
-              options={FEELINGS_REL}
-              selected={relFeelings}
-              onToggle={toggleRelFeel}
-            />
-
-          </div>
+          )}
         </section>
 
-        {/* "Small thing" nudge — only when warranted, never streaks/guilt. */}
-        {nudge && (
-          <section style={{ marginTop: 32 }}>
-            <p style={sx.eyebrow}>A small thing</p>
-            <div
-              style={{
-                padding: '14px 18px',
-                background: T.paperWarm,
-                border: `1px solid rgba(201,134,76,0.18)`,
-                borderLeft: `2px solid ${T.ember}`,
-                borderRadius: 6,
-                fontFamily: T.serif,
-                fontStyle: 'italic',
-                fontSize: 16,
-                color: T.inkSoft,
-              }}
-            >
-              <em style={{ color: T.ink, fontStyle: 'italic' }}>{nudge.name}</em> hasn&rsquo;t had a moment in a while.
-            </div>
-          </section>
-        )}
-
-        {/* "A moment is there" — visible at all times of day so kid
-            mode is reachable in evening too. The moment-with-X rows
-            are the primary way to enter kid mode for a child. */}
-        {kids.length > 0 && (
-          <section style={{ marginTop: 48 }}>
-            <p style={sx.eyebrow}>A moment is there</p>
-            <ul style={sx.moments}>
-              {/* Featured kids (in markup order), then non-featured */}
-              {[
-                ...kids.filter((k) => selectedKidNames.includes(k.name)),
-                ...kids.filter((k) => !selectedKidNames.includes(k.name)),
-              ].map((k) => (
-                <MomentRow
-                  key={k.personId}
-                  name={k.name}
-                  featured={selectedKidNames.includes(k.name)}
-                  dim={selectedKidNames.length > 0 && !selectedKidNames.includes(k.name)}
-                  done={kidsDoneThisSession.includes(k.personId)}
-                  href={`/kid/${k.personId}`}
-                />
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {/* Timeline of recent entries */}
-        {recent.length > 0 && (
-          <section style={{ marginTop: 40 }}>
-            <p style={sx.eyebrow}>{evening ? 'What happened today' : 'What came in'}</p>
-            <ul style={sx.timeline}>
-              {recent.map((entry, i) => {
-                const opacity = i === 0 ? 1 : i === 1 ? 0.85 : 0.7;
-                const when = entry.createdAt?.toDate?.() ?? null;
-                const author = entry.authorId === user?.userId
-                  ? 'You'
-                  : people.find((p) => p.linkedUserId === entry.authorId)?.name ?? 'Someone';
-                return (
-                  <li key={entry.entryId} style={{ marginBottom: 14, opacity }}>
-                    <Link
-                      href={`/journal/${entry.entryId}`}
-                      style={{
-                        display: 'block',
-                        textDecoration: 'none',
-                        color: 'inherit',
-                      }}
-                    >
-                      <span style={sx.tlMeta}>
-                        <span style={sx.tlBullet} />
-                        {author} · {relativeWhen(when)}
-                      </span>
-                      <p style={sx.tlQuote}>
-                        &ldquo;{(entry.text || '').slice(0, 180)}
-                        {(entry.text || '').length > 180 ? '…' : ''}&rdquo;
-                      </p>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
-
-        {/* Ask the book — one chip per family member. Routes into the
-            existing /coach surface with personId so the AI is scoped
-            to that person's entries + manual. */}
-        {family.length > 0 && (
-          <section style={{ marginTop: 40 }}>
-            <p style={sx.eyebrow}>Ask the book</p>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {family.map((p) => {
-                const first = p.name.split(' ')[0];
-                return (
-                  <Link
-                    key={p.personId}
-                    href={`/coach?personId=${p.personId}&name=${encodeURIComponent(first)}`}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: '10px 16px',
-                      borderRadius: 999,
-                      border: `1px solid ${T.ruleSoft}`,
-                      background: T.paper,
-                      textDecoration: 'none',
-                      color: T.ink,
-                      fontFamily: T.serif,
-                      fontSize: 16,
-                      transition: `border-color 140ms ${T.ease}, background 140ms ${T.ease}`,
-                    }}
-                  >
-                    About <em style={{ fontStyle: 'italic' }}>{first}</em>
-                    <span
-                      style={{
-                        fontFamily: T.sans,
-                        fontSize: 10,
-                        fontWeight: 700,
-                        letterSpacing: '0.18em',
-                        textTransform: 'uppercase',
-                        color: T.text5,
-                        marginLeft: 2,
-                      }}
-                    >
-                      Ask →
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* Writing area */}
-        <section style={{ marginTop: 56 }}>
-          <p style={sx.eyebrow}>
-            {evening ? 'Write' : 'If you want to put something down'}
-          </p>
+        {/* Writing card — the only card on this page. */}
+        <section style={{ marginTop: 28 }}>
           <div style={sx.write}>
-            {writePrompt && (
-              <p
-                style={{
-                  fontFamily: T.serif,
-                  fontStyle: 'italic',
-                  fontSize: 17,
-                  color: T.text4,
-                  margin: '0 0 8px',
-                }}
-              >
-                {writePrompt}
-              </p>
-            )}
-            <p style={sx.writeNudge}>{writeNudgeText}</p>
+            <p style={{
+              fontFamily: T.serif,
+              fontStyle: 'italic',
+              fontSize: 17,
+              color: T.text4,
+              margin: '0 0 12px',
+            }}>
+              What remains from today?
+            </p>
+
             <div style={{ position: 'relative' }}>
               <textarea
                 ref={taRef}
@@ -1438,13 +609,8 @@ export function Home() {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={evening
-                  ? "The cursor is here. Write whatever — a line, a paragraph, a thing that happened."
-                  : "Just a line, if it's there."}
+                placeholder=""
               />
-              {/* Voice mic — sits in the bottom-right of the textarea so
-                  it doesn't crowd the writing surface but is always within
-                  reach. Tap, speak, the transcript appends to the text. */}
               <div
                 style={{
                   position: 'absolute',
@@ -1459,18 +625,21 @@ export function Home() {
                   <MicButton
                     size="sm"
                     onTranscript={(transcript) => {
-                      const t = transcript.trim();
-                      if (!t) return;
-                      setText((prev) => (prev.trim() ? `${prev.trim()} ${t}` : t));
+                      const tx = transcript.trim();
+                      if (!tx) return;
+                      setText((prev) => (prev.trim() ? `${prev.trim()} ${tx}` : tx));
                       taRef.current?.focus();
                     }}
                   />
                 </div>
               </div>
             </div>
-            <div style={{ ...sx.writeFoot, gap: 8, flexWrap: 'wrap' }}>
-              {/* As — defaults to "You". Switch to a child for parent-
-                  on-behalf-of-kid entries (CaptureSheet's child-proxy). */}
+
+            <hr style={{ border: 0, borderTop: `1px solid ${T.ruleSoft}`, margin: '20px 0' }} aria-hidden />
+
+            {/* Three pickers inline */}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              {/* Writing-as picker */}
               <div ref={asRef} style={{ position: 'relative' }}>
                 <button
                   type="button"
@@ -1479,14 +648,14 @@ export function Home() {
                   aria-expanded={asOpen}
                   aria-haspopup="menu"
                 >
-                  As · {writingAsLabel} ▾
+                  Writing as · {writingAsLabel} ▾
                 </button>
                 {asOpen && (
                   <div
                     role="menu"
                     style={{
                       position: 'absolute',
-                      bottom: 'calc(100% + 6px)',
+                      top: 'calc(100% + 6px)',
                       left: 0,
                       minWidth: 200,
                       background: T.paper,
@@ -1541,8 +710,7 @@ export function Home() {
                 )}
               </div>
 
-              {/* About — same multi-select as the With: tabs above; this
-                  chip is just a second access point for the same state. */}
+              {/* About picker */}
               <div ref={aboutRef} style={{ position: 'relative' }}>
                 <button
                   type="button"
@@ -1558,7 +726,7 @@ export function Home() {
                     role="menu"
                     style={{
                       position: 'absolute',
-                      bottom: 'calc(100% + 6px)',
+                      top: 'calc(100% + 6px)',
                       left: 0,
                       minWidth: 200,
                       background: T.paper,
@@ -1604,7 +772,7 @@ export function Home() {
                 )}
               </div>
 
-              {/* Visibility picker — opens a small popover with the three presets. */}
+              {/* Visibility picker */}
               <div ref={visRef} style={{ position: 'relative' }}>
                 <button
                   type="button"
@@ -1613,14 +781,14 @@ export function Home() {
                   aria-expanded={visOpen}
                   aria-haspopup="menu"
                 >
-                  Visible to ·{' '}
+                  Who can see ·{' '}
                   {visibility === 'just-me'
-                    ? 'Just you'
+                    ? 'Just me'
                     : visibility === 'partner' && partner
-                      ? `You and ${partner.name.split(' ')[0]}`
+                      ? partner.name.split(' ')[0]
                       : visibility === 'family'
                         ? `Family (${shareCandidates.length})`
-                        : 'Just you'}
+                        : 'Just me'}
                   {' '}▾
                 </button>
                 {visOpen && (
@@ -1628,7 +796,7 @@ export function Home() {
                     role="menu"
                     style={{
                       position: 'absolute',
-                      bottom: 'calc(100% + 6px)',
+                      top: 'calc(100% + 6px)',
                       left: 0,
                       minWidth: 220,
                       background: T.paper,
@@ -1640,7 +808,7 @@ export function Home() {
                     }}
                   >
                     {[
-                      { key: 'just-me' as const, label: 'Just you', meta: 'private — only you read this' },
+                      { key: 'just-me' as const, label: 'Just me', meta: 'private — only you read this' },
                       ...(partner ? [{ key: 'partner' as const, label: `You and ${partner.name.split(' ')[0]}`, meta: 'both of you read it' }] : []),
                       ...(shareCandidates.length > 0 ? [{ key: 'family' as const, label: `Family (${shareCandidates.length})`, meta: shareCandidates.map((c) => c.name.split(' ')[0]).join(', ') }] : []),
                     ].map((opt) => (
@@ -1682,58 +850,99 @@ export function Home() {
                   </div>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={!hasAnyContent || saving}
-                style={{
-                  ...sx.save,
-                  background: showSaved ? T.sageDeep : T.leather,
-                  borderColor: showSaved ? T.sageDeep : T.leather,
-                  opacity: !hasAnyContent || saving ? 0.5 : 1,
-                  cursor: !hasAnyContent || saving ? 'default' : 'pointer',
-                }}
-              >
-                {showSaved ? 'Saved' : saving ? 'Saving…' : 'Save'}
-              </button>
             </div>
-            {/* Plain-language explainer + draft indicator. The
-                explainer makes the unified-card behavior obvious
-                (everything saves together); the indicator tells the
-                user their work is safe across reloads. */}
-            <div
+
+            <hr style={{ border: 0, borderTop: `1px solid ${T.ruleSoft}`, margin: '20px 0' }} aria-hidden />
+
+            {/* Collapsible feelings */}
+            <button
+              type="button"
+              onClick={() => setFeelingsOpen((v) => !v)}
               style={{
-                marginTop: 10,
-                display: 'flex',
-                justifyContent: 'space-between',
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                display: 'inline-flex',
                 alignItems: 'center',
-                fontFamily: T.serif,
-                fontStyle: 'italic',
-                fontSize: 13,
+                gap: 6,
+                fontFamily: T.sans,
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
                 color: T.text5,
               }}
+              aria-expanded={feelingsOpen}
             >
-              <span>
-                Your check-in, this line, and the writing all save together.
-              </span>
+              How are you feeling?
+              <span aria-hidden style={{ marginLeft: 2 }}>{feelingsOpen ? '▾' : '▸'}</span>
+            </button>
+            {feelingsOpen && (
+              <div
+                role="group"
+                aria-label="How are you feeling?"
+                style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}
+              >
+                {SIMPLE_FEELINGS.map((f) => {
+                  const on = selfFeelings.includes(f);
+                  return (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => toggleSelfFeel(f)}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: 999,
+                        background: on ? T.warmTint : 'transparent',
+                        border: `1px solid ${on ? T.amber : T.ruleSoft}`,
+                        fontFamily: T.sans,
+                        fontSize: 13,
+                        fontWeight: 500,
+                        color: on ? T.ink : T.text3,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {f}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Bottom-right Keep button */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 20, gap: 12 }}>
               {draftIndicator === 'saved' && !showSaved && (
                 <span
                   style={{
                     fontFamily: T.sans,
-                    fontStyle: 'normal',
                     fontSize: 10,
                     fontWeight: 700,
                     letterSpacing: '0.2em',
                     textTransform: 'uppercase',
                     color: T.sage,
-                    paddingLeft: 12,
-                    flexShrink: 0,
                   }}
                   title="Your draft is kept on this device until you save."
                 >
                   Draft kept
                 </span>
               )}
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={!hasAnyContent || saving}
+                style={{
+                  ...sx.save,
+                  padding: '10px 22px',
+                  fontSize: 11,
+                  background: showSaved ? T.sageDeep : T.leather,
+                  borderColor: showSaved ? T.sageDeep : T.leather,
+                  opacity: !hasAnyContent || saving ? 0.5 : 1,
+                  cursor: !hasAnyContent || saving ? 'default' : 'pointer',
+                }}
+              >
+                {showSaved ? 'KEPT' : saving ? 'KEEPING…' : 'KEEP'}
+              </button>
             </div>
             {error && (
               <p style={{ marginTop: 8, fontFamily: T.serif, fontStyle: 'italic', fontSize: 14, color: '#8C4A3E' }}>
@@ -1743,10 +952,157 @@ export function Home() {
           </div>
         </section>
 
-        {/* Tail link */}
-        <p style={sx.tail}>
-          <Link href="/archive" style={sx.tailLink}>Everything written ↗</Link>
-        </p>
+        {/* Focusing On — one card per child, side-by-side. */}
+        {kids.length > 0 && (
+          <section style={{ marginTop: 28 }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: kids.length > 1 ? 'repeat(auto-fit, minmax(280px, 1fr))' : '1fr',
+              gap: 20,
+            }}>
+              {kids.map((k) => {
+                const done = kidsDoneThisSession.includes(k.personId);
+                return (
+                  <Link
+                    key={k.personId}
+                    href={`/check-in/${k.personId}`}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      padding: '20px 22px 0',
+                      background: T.paper,
+                      border: `1px solid ${T.ruleSoft}`,
+                      borderRadius: 8,
+                      textDecoration: 'none',
+                      color: 'inherit',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      opacity: done ? 0.72 : 1,
+                    }}
+                  >
+                    <span style={{
+                      fontFamily: T.sans,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: '0.22em',
+                      textTransform: 'uppercase',
+                      color: T.text5,
+                      marginBottom: 6,
+                    }}>
+                      Focusing on
+                    </span>
+                    <h3 style={{
+                      fontFamily: T.serif,
+                      fontSize: 22,
+                      fontWeight: 500,
+                      color: T.ink,
+                      margin: '0 0 14px',
+                    }}>
+                      {k.name}
+                    </h3>
+                    <div
+                      style={{
+                        height: 140,
+                        margin: '0 -22px',
+                        backgroundImage: `url('${k.avatarUrl ?? kidFallbackImage(k.personId)}')`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                      }}
+                      aria-hidden
+                    />
+                    <span
+                      aria-hidden
+                      style={{
+                        position: 'absolute',
+                        top: 18,
+                        right: 22,
+                        fontFamily: T.sans,
+                        fontSize: 14,
+                        color: T.text5,
+                      }}
+                    >
+                      →
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Recent Echoes — flat list, no per-group headings. */}
+        {echoGroups.length > 0 && (
+          <section style={{ marginTop: 48 }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              marginBottom: 18,
+            }}>
+              <h2 style={{
+                fontFamily: T.serif,
+                fontStyle: 'italic',
+                fontSize: 22,
+                fontWeight: 500,
+                color: T.ink,
+                margin: 0,
+              }}>
+                Recent Echoes
+              </h2>
+              <Link
+                href="/archive"
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  color: T.text4,
+                  textDecoration: 'none',
+                }}
+              >
+                View All
+              </Link>
+            </div>
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+              {echoGroups.flatMap((group) =>
+                group.entries.map((entry) => {
+                  const when = entry.createdAt?.toDate?.() ?? null;
+                  const body = entry.text || '';
+                  return (
+                    <li key={entry.entryId} style={{ marginBottom: 22 }}>
+                      <Link
+                        href={`/journal/${entry.entryId}`}
+                        style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}
+                      >
+                        <p style={{
+                          fontFamily: T.sans,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          letterSpacing: '0.18em',
+                          textTransform: 'uppercase',
+                          color: T.text5,
+                          margin: '0 0 6px',
+                        }}>
+                          {when ? dateShort(when) : ''} · {group.label}
+                        </p>
+                        <p style={{
+                          fontFamily: T.serif,
+                          fontSize: 16,
+                          lineHeight: 1.5,
+                          color: T.ink,
+                          margin: 0,
+                        }}>
+                          {body.slice(0, 140)}{body.length > 140 ? '…' : ''}
+                        </p>
+                      </Link>
+                    </li>
+                  );
+                }),
+              )}
+            </ul>
+          </section>
+        )}
 
       </div>
 

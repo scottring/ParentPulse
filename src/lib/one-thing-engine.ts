@@ -29,7 +29,7 @@ export interface OneThing {
 const CALM_STATE: OneThing = {
   type: 'nothing',
   title: 'Everything\u2019s steady',
-  description: 'Your family\u2019s manuals are current and your growth is on track. Open a manual and read.',
+  description: 'Your family\u2019s manuals are current and your experiments are on track. Open a manual and read.',
   actionRoute: '/people',
   actionLabel: 'Browse manuals',
   priority: 999,
@@ -105,7 +105,7 @@ export function computeOneThing(params: {
     candidates.push({
       type: 'time_sensitive',
       title: 'Today\u2019s practice',
-      description: item.title || item.body?.slice(0, 80) || 'A growth activity is waiting for you.',
+      description: item.title || item.body?.slice(0, 80) || 'An experiment activity is waiting for you.',
       actionRoute: '/journal',
       actionLabel: 'Do it now',
       priority: 1,
@@ -187,7 +187,7 @@ export function computeOneThing(params: {
     const person = targetPerson ? people.find((p) => p.personId === targetPerson) : null;
     candidates.push({
       type: 'growth_step',
-      title: item.title || 'Today\u2019s growth practice',
+      title: item.title || 'Today\u2019s experiment practice',
       description: item.body?.slice(0, 100) || 'A new activity is ready for you.',
       actionRoute: '/journal',
       actionLabel: 'Start',

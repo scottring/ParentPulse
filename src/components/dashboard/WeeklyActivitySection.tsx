@@ -142,7 +142,7 @@ export function WeeklyActivitySection({ textColor, textSecondary, textTertiary }
                     {data.pending.map((item) => (
                       <Link
                         key={item.growthItemId}
-                        href={`/growth/${item.growthItemId}`}
+                        href={`/experiments/${item.growthItemId}`}
                         className="flex items-start gap-2.5 group hover:opacity-80 transition-opacity"
                       >
                         <span style={{ color: textTertiary, fontSize: '19px', marginTop: '1px' }}>&#9675;</span>

@@ -257,6 +257,15 @@
       ]
     },
     {
+      "collectionGroup": "couple_rituals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "targetType", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "daily_actions",
       "queryScope": "COLLECTION",
       "fields": [
@@ -572,6 +581,14 @@
       "collectionGroup": "journal_entries",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "authorId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "journal_entries",
+      "queryScope": "COLLECTION",
+      "fields": [
         {
           "fieldPath": "familyId",
           "order": "ASCENDING"
@@ -638,6 +655,10 @@
       "fields": [
         {
           "fieldPath": "familyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
           "order": "ASCENDING"
         },
         {
@@ -729,6 +750,15 @@
       ]
     },
     {
+      "collectionGroup": "journal_entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "unspoken", "order": "ASCENDING" },
+        { "fieldPath": "visibleToUserIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "knowledge_base",
       "queryScope": "COLLECTION",
       "fields": [
@@ -775,6 +805,10 @@
         {
           "fieldPath": "visibleToUserIds",
           "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
         }
       ]
     },
@@ -784,6 +818,23 @@
       "fields": [
         { "fieldPath": "familyId", "order": "ASCENDING" },
         { "fieldPath": "lastViewAddedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "moments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "participantUserIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "therapy_briefs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "generatedAt", "order": "DESCENDING" }
       ]
     },
     {
@@ -897,6 +948,10 @@
         {
           "fieldPath": "participantIds",
           "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
         }
       ]
     },
@@ -1260,6 +1315,16 @@
           "fieldPath": "weekStartDate",
           "order": "DESCENDING"
         }
+      ]
+    },
+    {
+      "collectionGroup": "ritual_sessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ritualId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "participantUserIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "completedAt", "order": "DESCENDING" }
       ]
     }
   ],

@@ -45,13 +45,36 @@ export function usePrivacyLock(
   const hashRef = useRef<{ pinHash: string; pinSalt: string } | null>(null);
   const inactivityTimerRef = useRef<number | null>(null);
 
+  // sessionStorage key for cross-route unlock persistence within a tab session.
+  const sessionKey = user?.userId ? `relish:privacy:unlocked:${user.userId}` : null;
+
   const lockRef = useCallback(() => {
     setUnlocked(false);
+    try {
+      if (sessionKey && typeof window !== 'undefined') {
+        window.sessionStorage?.removeItem(sessionKey);
+      }
+    } catch {
+      // sessionStorage may be disabled; non-fatal.
+    }
     if (inactivityTimerRef.current !== null) {
       window.clearTimeout(inactivityTimerRef.current);
       inactivityTimerRef.current = null;
     }
-  }, []);
+  }, [sessionKey]);
+
+  // Restore unlocked state from sessionStorage on mount / user change so
+  // navigation between routes within a session preserves the unlock.
+  // Inactivity timeout still clears it via lockRef().
+  useEffect(() => {
+    if (!sessionKey || typeof window === 'undefined') return;
+    try {
+      const raw = window.sessionStorage?.getItem(sessionKey);
+      if (raw === '1') setUnlocked(true);
+    } catch {
+      // ignore
+    }
+  }, [sessionKey]);
 
   const startInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current !== null) {
@@ -125,6 +148,16 @@ export function usePrivacyLock(
     };
   }, [user?.userId]);
 
+  const persistUnlock = useCallback(() => {
+    try {
+      if (sessionKey && typeof window !== 'undefined') {
+        window.sessionStorage?.setItem(sessionKey, '1');
+      }
+    } catch {
+      // ignore
+    }
+  }, [sessionKey]);
+
   const setupPin = useCallback(
     async (pin: string) => {
       if (!user?.userId) throw new Error('Not signed in');
@@ -135,8 +168,9 @@ export function usePrivacyLock(
       hashRef.current = { pinHash, pinSalt };
       setPinIsSet(true);
       setUnlocked(true);
+      persistUnlock();
     },
-    [user?.userId]
+    [user?.userId, persistUnlock]
   );
 
   const verify = useCallback(async (pin: string): Promise<boolean> => {
@@ -145,12 +179,13 @@ export function usePrivacyLock(
     const ok = await verifyPin(pin, cached.pinHash, cached.pinSalt);
     if (ok) {
       setUnlocked(true);
+      persistUnlock();
       setError(null);
     } else {
       setError('Incorrect PIN');
     }
     return ok;
-  }, []);
+  }, [persistUnlock]);
 
   return {
     loading,

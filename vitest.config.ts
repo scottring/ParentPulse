@@ -10,6 +10,7 @@ export default defineConfig({
     setupFiles: ['./__tests__/setup/vitest.setup.ts'],
     include: [
       '__tests__/**/*.test.{ts,tsx}',
+      'src/**/__tests__/**/*.test.{ts,tsx}',
       'firestore-rules/**/*.test.ts'
     ],
     exclude: [

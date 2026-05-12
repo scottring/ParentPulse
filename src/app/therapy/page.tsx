@@ -49,7 +49,14 @@ export default function TherapyIndexPage() {
       }
     } catch (err) {
       console.error('generateTherapyBrief failed:', err);
-      alert('Could not prepare a brief. Please try again in a minute.');
+      const msg = err instanceof Error ? err.message : '';
+      if (/no entries|empty/i.test(msg)) {
+        alert('No journal entries in the last 14 days to compile from.');
+      } else if (/permission-denied|failed-precondition|index/i.test(msg)) {
+        alert('Therapy isn\'t quite ready yet — please try again in a few minutes.');
+      } else {
+        alert('Could not prepare a brief. Please try again in a minute.');
+      }
     } finally {
       setGenerating(false);
     }

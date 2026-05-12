@@ -1,24 +1,44 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useFamily } from '@/hooks/useFamily';
+import { usePerson } from '@/hooks/usePerson';
 import MainLayout from '@/components/layout/MainLayout';
 import AIUsageSection from '@/components/settings/AIUsageSection';
 
+// Next.js requires useSearchParams to be inside a Suspense boundary
+// during static generation. Wrap the inner component in Suspense at
+// the page level.
 export default function SettingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <SettingsPageInner />
+    </Suspense>
+  );
+}
+
+function SettingsPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const { family, inviteParent, removeInvite, updateFrameworkContext } = useFamily();
+  const { people } = usePerson();
 
-  // Invitation state
+  // Invitation state — auto-open via ?invite=1 (from People page).
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (searchParams?.get('invite') === '1') {
+      setShowInviteForm(true);
+    }
+  }, [searchParams]);
 
   // Framework-context state — see useFamily.updateFrameworkContext.
   const [frameworkDraft, setFrameworkDraft] = useState<string | null>(null);
@@ -361,14 +381,21 @@ export default function SettingsPage() {
             </div>
 
             {/* Family Members Section */}
-            <div className="pt-2">
+            <div id="family-members" className="pt-2" style={{ scrollMarginTop: 80 }}>
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <div className="font-semibold" style={{ color: 'var(--parent-text)' }}>
                     Family Members
                   </div>
                   <div className="text-sm" style={{ color: 'var(--parent-text-light)' }}>
-                    {family?.members?.length || 1} member{(family?.members?.length || 1) !== 1 ? 's' : ''}
+                    {people.length} {people.length === 1 ? 'person' : 'people'}
+                    {(() => {
+                      const accountCount = family?.members?.length ?? 0;
+                      if (accountCount > 0 && accountCount < people.length) {
+                        return ` · ${accountCount} with sign-in`;
+                      }
+                      return '';
+                    })()}
                   </div>
                 </div>
                 <button

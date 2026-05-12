@@ -9,6 +9,8 @@ import {
 } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { doc, updateDoc } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { useJournalEntry } from '@/hooks/useJournalEntry';
 import { useJournal } from '@/hooks/useJournal';
@@ -162,6 +164,16 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
       router.back();
     } catch (err) {
       console.error('[journal] settle failed', err);
+    }
+  };
+  const moveToUnspoken = async () => {
+    if (!entry?.entryId) return;
+    try {
+      await updateDoc(doc(firestore, 'journal_entries', entry.entryId), { unspoken: true });
+      router.push('/unspoken');
+    } catch (err) {
+      console.error('moveToUnspoken failed:', err);
+      alert('Could not move this entry to Unspoken right now.');
     }
   };
   const alreadySettled = isSettled(entry.entryId);
@@ -581,6 +593,28 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
                   let it rest
                 </button>
               )}
+              {isMine && entry.unspoken !== true && (
+                <button
+                  type="button"
+                  onClick={() => void moveToUnspoken()}
+                  style={{
+                    marginTop: 10,
+                    fontFamily: 'var(--r-sans, -apple-system, sans-serif)',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    letterSpacing: '0.14em',
+                    textTransform: 'uppercase',
+                    color: 'var(--r-ink, #2B2620)',
+                    background: 'transparent',
+                    border: '1px solid var(--r-ink, #2B2620)',
+                    borderRadius: 4,
+                    padding: '8px 14px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Hold this for later
+                </button>
+              )}
               {isMine && (
                 <button
                   type="button"
@@ -677,7 +711,7 @@ function EntryEditor({ entry, currentUserId }: EntryEditorProps) {
           {entry.activitySpawnedItemId && (
             <div className="entry-provenance">
               <Link
-                href={`/growth/${entry.activitySpawnedItemId}`}
+                href={`/experiments/${entry.activitySpawnedItemId}`}
                 className="provenance-link"
               >
                 <span className="provenance-glyph" aria-hidden="true">◆</span>

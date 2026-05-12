@@ -24,6 +24,9 @@ import type { JournalEntry } from '@/types/journal';
 import { entryMentionsPerson } from '@/lib/entry-mentions';
 import { computeBalance } from '@/lib/balance';
 import { useSettledMentions } from '@/hooks/useSettledMentions';
+import { PerspectiveLayers, type Perspective } from '@/components/manual/PerspectiveLayers';
+import { IntersectionOfTruths, type SynthesisInsight } from '@/components/manual/IntersectionOfTruths';
+import { AskCoachCTA } from '@/components/manual/AskCoachCTA';
 
 export default function PersonPage({
   params,
@@ -96,6 +99,107 @@ export default function PersonPage({
       .sort((a, b) => (order[a.severity] ?? 3) - (order[b.severity] ?? 3))
       .slice(0, 3);
   }, [manual?.triggers]);
+
+  // Build perspectives from contributions (for PerspectiveLayers section).
+  //
+  // - Self-on-self contributions (contributor === subject) collapse into the
+  //   Self View, regardless of how perspectiveType was set. A subject can't
+  //   "observe" themselves — that's the Self View by definition.
+  // - Dedupe by perspective key (self vs each distinct contributor), keeping
+  //   the most recent completed contribution.
+  // - Pull-quote: prefer the longest answer that ends at a sentence boundary.
+  //   Truncate at sentence boundaries (period/question/exclamation), not mid-
+  //   word. Fall back to any non-empty answer, then a placeholder.
+  const perspectives: Perspective[] = useMemo(() => {
+    if (!contributions || contributions.length === 0) return [];
+    const subjectUserId = person?.linkedUserId ?? null;
+
+    const completed = contributions
+      .filter((c) => c.status === 'complete')
+      .map((c) => {
+        // Self-on-self normalization: if the contributor IS the subject, treat as self.
+        const isSelf =
+          c.perspectiveType === 'self' ||
+          (subjectUserId && c.contributorId === subjectUserId);
+        return { ...c, _effectiveType: isSelf ? 'self' : 'observer' };
+      });
+
+    // Dedupe — collapse to one card per perspective key.
+    const byKey = new Map<string, typeof completed[number]>();
+    for (const c of completed) {
+      const key = c._effectiveType === 'self'
+        ? 'self'
+        : `observer::${c.contributorId ?? c.contributorName ?? ''}`;
+      const existing = byKey.get(key);
+      const cTime = c.updatedAt?.toMillis?.() ?? c.createdAt?.toMillis?.() ?? 0;
+      const eTime = existing?.updatedAt?.toMillis?.() ?? existing?.createdAt?.toMillis?.() ?? 0;
+      if (!existing || cTime > eTime) byKey.set(key, c);
+    }
+    const deduped = Array.from(byKey.values());
+
+    const tints: Perspective['tint'][] = ['rose', 'sage', 'azure', 'neutral'];
+    return deduped.map((c, i) => {
+      const tint = tints[i % tints.length];
+      const contributorPerson = people.find((p) => p.linkedUserId === c.contributorId);
+      const label =
+        c._effectiveType === 'self'
+          ? 'Self View'
+          : contributorPerson?.name
+            ? `${contributorPerson.name}'s Observation`
+            : c.contributorName
+              ? `${c.contributorName}'s Observation`
+              : 'An Observer';
+
+      // Walk answers (flat or nested) to collect every non-empty string.
+      const strings: string[] = [];
+      const walk = (v: unknown) => {
+        if (typeof v === 'string') {
+          const t = v.trim();
+          if (t) strings.push(t);
+        } else if (Array.isArray(v)) {
+          for (const x of v) walk(x);
+        } else if (v && typeof v === 'object') {
+          for (const x of Object.values(v as Record<string, unknown>)) walk(x);
+        }
+      };
+      walk(c.answers ?? {});
+
+      // Truncate at a sentence boundary near 240 chars. If the longest answer
+      // is < 40 chars we keep it as-is (no need to truncate).
+      strings.sort((a, b) => b.length - a.length);
+      const raw = strings[0] ?? '';
+      const pullQuote = raw ? truncateAtSentence(raw, 240) : '(no notes captured yet — open the manual to add details)';
+      return { id: c.contributionId, label, pullQuote, tint };
+    });
+  }, [contributions, people, person?.linkedUserId]);
+
+  // Build the synthesis insight from manual.synthesizedContent.
+  // Data model: SynthesizedContent has { overview, alignments[], gaps[], blindSpots[] }
+  // where each insight is SynthesizedInsight { topic, synthesis, ... }.
+  // We adapt to the component's shape: { headline, narrative, alignments: string[], divergences: string[] }.
+  const insight: SynthesisInsight | null = useMemo(() => {
+    const sc = manual?.synthesizedContent;
+    if (!sc) return null;
+    const alignments = (sc.alignments ?? []).map((a) => a.synthesis || a.topic).filter(Boolean);
+    const divergences = (sc.gaps ?? []).map((g) => g.synthesis || g.topic).filter(Boolean);
+    // Derive a headline + narrative from overview. Overview is a paragraph; split off
+    // the first sentence as the headline, the remainder as the narrative.
+    const overview = (sc.overview ?? '').trim();
+    if (!overview && alignments.length === 0 && divergences.length === 0) return null;
+    let headline = overview;
+    let narrative = '';
+    const sentenceMatch = overview.match(/^([\s\S]+?[.!?])\s+([\s\S]*)$/);
+    if (sentenceMatch) {
+      headline = sentenceMatch[1].trim();
+      narrative = sentenceMatch[2].trim();
+    }
+    if (!headline) return null;
+    return { headline, narrative, alignments, divergences };
+  }, [manual?.synthesizedContent]);
+
+  // Counts for AskCoachCTA. Reuse the `mentions` array already computed above.
+  const entryCount = mentions.length;
+  const contributionCount = (contributions ?? []).length;
 
   const loading = authLoading || personLoading;
   if (loading || !user) return null;
@@ -400,6 +504,22 @@ export default function PersonPage({
           </div>
         </section>
 
+        {/* ═══ MULTI-PERSPECTIVE MANUAL SECTIONS ═══ */}
+        <PerspectiveLayers perspectives={perspectives} />
+        <IntersectionOfTruths insight={insight} />
+        <AskCoachCTA
+          personId={person.personId}
+          firstName={firstName}
+          entryCount={entryCount}
+          contributionCount={contributionCount}
+        />
+
+        {/* DOSSIER (threads / timeline / details / their-side / colophon)
+            — hidden per Plan 2 polish. The Stitch design ends after
+            AskCoachCTA. Restore by removing the `false &&` guard if you
+            want the dossier back. */}
+        {false && (
+        <>
         {/* ═══ THREADS + TIMELINE ═══ */}
         <section className="threads-section" id="still-open">
           <div className="threads-col">
@@ -696,6 +816,8 @@ export default function PersonPage({
         <footer className="colophon">
           <span>A safe place for honest words and stronger relationships.</span>
         </footer>
+        </>
+        )}
       </div>
 
       {isEditing && person && (
@@ -867,6 +989,25 @@ function formatWhen(d?: Date): string {
 function spellCount(n: number): string {
   const names = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven'];
   return n >= 0 && n < names.length ? names[n] : String(n);
+}
+
+/** Truncate at a sentence boundary near `softMax` chars. If the string is
+ * shorter than `softMax`, return as-is. Else find the last `.`, `!`, or `?`
+ * within `softMax` chars and cut there. Falls back to hard truncation with
+ * an ellipsis if no sentence-ender is near the cut point. */
+function truncateAtSentence(text: string, softMax: number): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= softMax) return trimmed;
+  const head = trimmed.slice(0, softMax);
+  const lastEnd = Math.max(
+    head.lastIndexOf('.'),
+    head.lastIndexOf('!'),
+    head.lastIndexOf('?'),
+  );
+  // Require the sentence ender to be at least 60% of the way in, otherwise
+  // we'd return too-short blurbs. If too early, hard-truncate with ellipsis.
+  if (lastEnd >= softMax * 0.6) return head.slice(0, lastEnd + 1).trim();
+  return head.replace(/\s+\S*$/, '').trim() + '…';
 }
 
 function openPen() {

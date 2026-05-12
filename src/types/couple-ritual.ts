@@ -32,6 +32,11 @@ export interface CoupleRitual {
 
   /** Optional human-friendly note. <=140 chars. */
   intention?: string;
+
+  /** Discriminator: 'couple' (default) or 'family-checkin'. */
+  targetType?: 'couple' | 'family-checkin';
+  /** When targetType='family-checkin', the personId of the kid being checked in with. */
+  targetPersonId?: string;
 }
 
 export const MAX_INTENTION_LENGTH = 140;

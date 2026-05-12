@@ -139,6 +139,19 @@ export function useJournal(): UseJournalReturn {
           timeOfDay: input.checkIn.timeOfDay,
           selfFeelings: input.checkIn.selfFeelings ?? [],
         };
+        if (input.checkIn.relTargets && input.checkIn.relTargets.length > 0) {
+          // Strip empty per-target voice fields so Firestore is clean.
+          ci.relTargets = input.checkIn.relTargets.map((t) => {
+            const out: Record<string, unknown> = {
+              personId: t.personId,
+              feelings: t.feelings,
+            };
+            if (t.voice && t.voice.trim().length > 0) {
+              out.voice = t.voice.trim();
+            }
+            return out;
+          });
+        }
         if (input.checkIn.relFeelings && input.checkIn.relFeelings.length > 0) {
           ci.relFeelings = input.checkIn.relFeelings;
         }

@@ -39,7 +39,7 @@ const steps: WalkthroughStep[] = [
     target: null,
     title: 'Today\u2019s Page',
     description:
-      'This is home. One page that draws from your journal, your family\u2019s manuals, and the growth practices \u2014 showing what matters most right now.',
+      'This is home. One page that draws from your journal, your family\u2019s manuals, and the experiments \u2014 showing what matters most right now.',
     placement: 'center',
     route: '/',
   },
@@ -136,7 +136,7 @@ const steps: WalkthroughStep[] = [
     target: '[data-walkthrough="arcs"]',
     title: 'Chapters in Progress',
     description:
-      'Longer growth arcs you\u2019re walking through\u2009\u2014\u2009multi-week practices with phases.',
+      'Longer experiments you\u2019re walking through\u2009\u2014\u2009multi-week practices with phases.',
     placement: 'right',
     route: '/manual',
   },

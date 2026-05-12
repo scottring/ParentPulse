@@ -84,7 +84,7 @@ export function getAdvancementRequirements(
   if (thresholds.dimensionsAtLevel !== undefined &&
       criteria.dimensionsAtLevel < thresholds.dimensionsAtLevel) {
     const needed = thresholds.dimensionsAtLevel - criteria.dimensionsAtLevel;
-    remaining.push(`Complete ${needed} more growth arc${needed > 1 ? 's' : ''}`);
+    remaining.push(`Complete ${needed} more experiment${needed > 1 ? 's' : ''}`);
   }
   if (thresholds.averageDomainScore !== undefined &&
       criteria.averageDomainScore < thresholds.averageDomainScore) {

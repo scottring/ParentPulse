@@ -32,7 +32,7 @@ export default function ArcHeader({ arc, progress }: ArcHeaderProps) {
           className="text-[14px] font-medium px-2.5 py-0.5 rounded-full text-white"
           style={{ fontFamily: 'var(--font-parent-body)', background: '#3A3530' }}
         >
-          Growth Arc
+          Experiment
         </span>
         <span
           className="text-[14px]"

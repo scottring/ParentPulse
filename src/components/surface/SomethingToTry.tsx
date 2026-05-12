@@ -47,7 +47,7 @@ export default function SomethingToTry({ item }: SomethingToTryProps) {
         <p className="try-body">{item.body}</p>
 
         <div className="try-actions">
-          <Link href={`/growth/${item.growthItemId}`} className="try-primary">
+          <Link href={`/experiments/${item.growthItemId}`} className="try-primary">
             <span>Begin this practice</span>
             <span className="arrow" aria-hidden="true">→</span>
           </Link>
