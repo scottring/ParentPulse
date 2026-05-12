@@ -874,6 +874,15 @@
       ]
     },
     {
+      "collectionGroup": "message_flags",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "toUserId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "parent_workbooks",
       "queryScope": "COLLECTION",
       "fields": [
