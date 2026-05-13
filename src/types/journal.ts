@@ -12,7 +12,7 @@ import { Timestamp } from 'firebase/firestore';
    distinguishes ad-hoc groupings ('the kids' / 'the family') from
    per-person multi-select.
    ──────────────────────────────────────────────────────────────── */
-export type CheckInKind = 'self' | 'self+rel' | 'child';
+export type CheckInKind = 'self' | 'self+rel' | 'child' | 'child-bedtime';
 
 /** A single per-target relationship-feeling block. Used inside
  *  `JournalCheckIn.relTargets` when a session captures feelings about
@@ -23,6 +23,37 @@ export interface JournalCheckInRelTarget {
   feelings: string[];
   /** Optional voice transcript or note specific to this target. */
   voice?: string;
+}
+
+/** Which prompt card the bedtime check-in is running. */
+export type BedtimeCardKind =
+  | 'parent-reflection'
+  | 'high-low-buffalo'
+  | 'externalized-worry';
+
+/** The leading parent's structured input for a bedtime check-in.
+ *  `observation` is set for `parent-reflection`; `high`/`low`/`buffalo`
+ *  are set for `high-low-buffalo`. `voiceText` is the raw mic
+ *  transcript when the parent used the mic. */
+export interface BedtimeParentTurn {
+  userId: string;
+  observation?: string;
+  high?: string;
+  low?: string;
+  buffalo?: string;
+  voiceText?: string;
+}
+
+/** The kid's structured response for a bedtime check-in. Mirrors the
+ *  parent's shape across the two cards. May be entirely empty when the
+ *  kid didn't respond — parent's observation alone is still a valid
+ *  save. */
+export interface BedtimeKidTurn {
+  response?: string;
+  high?: string;
+  low?: string;
+  buffalo?: string;
+  voiceText?: string;
 }
 
 export interface JournalCheckIn {
@@ -39,6 +70,10 @@ export interface JournalCheckIn {
   withGroupKey?: 'kids' | 'family' | null;
   /** Body-map spots the author tapped (kid mode only). */
   bodySpots?: string[];
+  /** Bedtime-card fields. Set only when `kind === 'child-bedtime'`. */
+  card?: BedtimeCardKind;
+  parentTurn?: BedtimeParentTurn;
+  kidTurn?: BedtimeKidTurn;
 }
 
 export type JournalCategory =
