@@ -164,6 +164,27 @@ export function useJournal(): UseJournalReturn {
         if (input.checkIn.bodySpots && input.checkIn.bodySpots.length > 0) {
           ci.bodySpots = input.checkIn.bodySpots;
         }
+        if (input.checkIn.card) {
+          ci.card = input.checkIn.card;
+        }
+        if (input.checkIn.parentTurn) {
+          const pt: Record<string, unknown> = { userId: input.checkIn.parentTurn.userId };
+          if (input.checkIn.parentTurn.observation?.trim()) pt.observation = input.checkIn.parentTurn.observation.trim();
+          if (input.checkIn.parentTurn.high?.trim()) pt.high = input.checkIn.parentTurn.high.trim();
+          if (input.checkIn.parentTurn.low?.trim()) pt.low = input.checkIn.parentTurn.low.trim();
+          if (input.checkIn.parentTurn.buffalo?.trim()) pt.buffalo = input.checkIn.parentTurn.buffalo.trim();
+          if (input.checkIn.parentTurn.voiceText?.trim()) pt.voiceText = input.checkIn.parentTurn.voiceText.trim();
+          ci.parentTurn = pt;
+        }
+        if (input.checkIn.kidTurn) {
+          const kt: Record<string, unknown> = {};
+          if (input.checkIn.kidTurn.response?.trim()) kt.response = input.checkIn.kidTurn.response.trim();
+          if (input.checkIn.kidTurn.high?.trim()) kt.high = input.checkIn.kidTurn.high.trim();
+          if (input.checkIn.kidTurn.low?.trim()) kt.low = input.checkIn.kidTurn.low.trim();
+          if (input.checkIn.kidTurn.buffalo?.trim()) kt.buffalo = input.checkIn.kidTurn.buffalo.trim();
+          if (input.checkIn.kidTurn.voiceText?.trim()) kt.voiceText = input.checkIn.kidTurn.voiceText.trim();
+          ci.kidTurn = kt;
+        }
         docData.checkIn = ci;
       }
 
