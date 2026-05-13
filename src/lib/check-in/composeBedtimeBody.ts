@@ -18,14 +18,20 @@ interface ComposeInput {
  *  side said anything. */
 export function composeBedtimeBody(input: ComposeInput): string {
   if (input.card === 'parent-reflection') {
-    return composeParentReflection(input);
+    return composeSingleSlot(input, '[Parent Reflection]');
+  }
+  if (input.card === 'externalized-worry') {
+    return composeSingleSlot(input, '[Worry Visited]');
   }
   return composeHighLowBuffalo(input);
 }
 
-function composeParentReflection(input: ComposeInput): string {
+/** Shared composition for one-slot cards (Parent Reflection +
+ *  Externalized Worry). The parent's observation goes in their
+ *  `observation` slot; the kid's reply goes in their `response` slot. */
+function composeSingleSlot(input: ComposeInput, header: string): string {
   const { kidName, parentName, parentTurn, kidTurn } = input;
-  const lines: string[] = ['[Parent Reflection]'];
+  const lines: string[] = [header];
   if (parentTurn.observation && parentTurn.observation.trim()) {
     lines.push(`${parentName}: "${parentTurn.observation.trim()}"`);
   }

@@ -26,7 +26,10 @@ export interface JournalCheckInRelTarget {
 }
 
 /** Which prompt card the bedtime check-in is running. */
-export type BedtimeCardKind = 'parent-reflection' | 'high-low-buffalo';
+export type BedtimeCardKind =
+  | 'parent-reflection'
+  | 'high-low-buffalo'
+  | 'externalized-worry';
 
 /** The leading parent's structured input for a bedtime check-in.
  *  `observation` is set for `parent-reflection`; `high`/`low`/`buffalo`

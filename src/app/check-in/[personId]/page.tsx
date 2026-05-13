@@ -35,7 +35,7 @@ import type {
   BedtimeParentTurn,
   BedtimeKidTurn,
 } from '@/types/journal';
-import { pickCard } from '@/lib/check-in/pickCard';
+import { pickCard, CARD_ROTATION } from '@/lib/check-in/pickCard';
 import { getLastBedtimeCard } from '@/lib/check-in/getLastBedtimeCard';
 import { composeBedtimeBody } from '@/lib/check-in/composeBedtimeBody';
 import { CARD_BY_KIND, renderPlaceholder } from '@/lib/check-in/cards';
@@ -584,10 +584,13 @@ export default function KidModePage() {
 
   const kidFirstName = kid.name.split(' ')[0];
 
-  // Change-card handler with confirmation.
+  // Change-card handler with confirmation. Cycles to the next card in
+  // the rotation; with three cards a single click is enough most of
+  // the time. If the parent wants the third option, click twice.
   const handleChangeCard = () => {
+    const idx = CARD_ROTATION.indexOf(card);
     const other: BedtimeCardKind =
-      card === 'parent-reflection' ? 'high-low-buffalo' : 'parent-reflection';
+      CARD_ROTATION[(idx + 1) % CARD_ROTATION.length];
     const hasContent =
       Object.values(parentTurn).some(
         (v) => typeof v === 'string' && v.trim().length > 0,
@@ -597,11 +600,7 @@ export default function KidModePage() {
       );
     if (hasContent) {
       const ok = window.confirm(
-        `Switch to ${
-          other === 'parent-reflection'
-            ? 'Parent Reflection'
-            : 'High / Low / Buffalo'
-        }? You'll start over.`,
+        `Switch to ${CARD_BY_KIND[other].title}? You'll start over.`,
       );
       if (!ok) return;
       setParentTurn({ userId: user?.userId ?? '' });
@@ -770,7 +769,7 @@ export default function KidModePage() {
       </div>
 
       {/* Parent turn — Parent Reflection card. H/L/B is added in the next commit. */}
-      {card === 'parent-reflection' && (
+      {(card === 'parent-reflection' || card === 'externalized-worry') && (
         <div style={sx.turnSection}>
           <div style={{ ...sx.turnLabel, color: T.sageDeep }}>
             {parentFirstName}&rsquo;s turn
@@ -870,7 +869,7 @@ export default function KidModePage() {
       <div style={sx.divider} aria-hidden="true" />
 
       {/* Kid turn — appears when phase is 'kid' */}
-      {card === 'parent-reflection' && phase === 'kid' && (
+      {(card === 'parent-reflection' || card === 'externalized-worry') && phase === 'kid' && (
         <div style={sx.turnSection}>
           <div style={{ ...sx.turnLabel, color: T.text5 }}>
             {kidFirstName}&rsquo;s turn

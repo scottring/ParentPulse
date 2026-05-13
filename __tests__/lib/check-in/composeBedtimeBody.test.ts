@@ -105,4 +105,54 @@ describe('composeBedtimeBody', () => {
       expect(body).toContain('Liam did a bedtime check-in.');
     });
   });
+
+  describe('externalized-worry card', () => {
+    it('composes both turns under the Worry Visited header', () => {
+      const body = composeBedtimeBody({
+        kidName: 'Liam',
+        parentName: 'Mama',
+        card: 'externalized-worry',
+        parentTurn: {
+          userId: 'u1',
+          observation: 'I think Worry visited when you wouldn\'t eat dinner.',
+        },
+        kidTurn: {
+          response:
+            'Yeah — Worry kept whispering about the spelling test tomorrow.',
+        },
+      });
+      expect(body).toContain('[Worry Visited]');
+      expect(body).toContain(
+        'Mama: "I think Worry visited when you wouldn\'t eat dinner."',
+      );
+      expect(body).toContain(
+        'Liam: "Yeah — Worry kept whispering about the spelling test tomorrow."',
+      );
+    });
+
+    it('omits the kid line when kidTurn is empty', () => {
+      const body = composeBedtimeBody({
+        kidName: 'Liam',
+        parentName: 'Mama',
+        card: 'externalized-worry',
+        parentTurn: { userId: 'u1', observation: 'Worry came at bedtime.' },
+        kidTurn: {},
+      });
+      expect(body).toContain('[Worry Visited]');
+      expect(body).toContain('Mama: "Worry came at bedtime."');
+      expect(body).not.toContain('Liam:');
+    });
+
+    it('returns a fallback when both turns are empty', () => {
+      const body = composeBedtimeBody({
+        kidName: 'Liam',
+        parentName: 'Mama',
+        card: 'externalized-worry',
+        parentTurn: { userId: 'u1' },
+        kidTurn: {},
+      });
+      expect(body).toContain('[Worry Visited]');
+      expect(body).toContain('Liam did a bedtime check-in.');
+    });
+  });
 });

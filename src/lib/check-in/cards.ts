@@ -61,9 +61,35 @@ export const HIGH_LOW_BUFFALO_CARD: CardDefinition = {
   },
 };
 
+export const EXTERNALIZED_WORRY_CARD: CardDefinition = {
+  kind: 'externalized-worry',
+  label: "Tonight's card",
+  title: 'Did Worry come to visit?',
+  subtitle:
+    'Worry is a visitor, not who you are. Parent goes first — when did you notice Worry stop by today?',
+  parent: {
+    slots: [
+      {
+        key: 'observation',
+        placeholder: 'I think Worry visited {kid} when…',
+      },
+    ],
+  },
+  kid: {
+    slots: [
+      {
+        key: 'response',
+        placeholder: 'What did Worry want? Or was that someone else?',
+        modeledFromParentKey: 'observation',
+      },
+    ],
+  },
+};
+
 export const CARD_BY_KIND: Record<BedtimeCardKind, CardDefinition> = {
   'parent-reflection': PARENT_REFLECTION_CARD,
   'high-low-buffalo': HIGH_LOW_BUFFALO_CARD,
+  'externalized-worry': EXTERNALIZED_WORRY_CARD,
 };
 
 /** Replace `{kid}` token in placeholder strings with the kid's first name. */
