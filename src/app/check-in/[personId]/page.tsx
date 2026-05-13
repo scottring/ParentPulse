@@ -245,6 +245,47 @@ const sx = {
     color: T.text3,
     marginTop: 8,
   } as CSSProperties,
+  hlbStack: { display: 'flex', flexDirection: 'column' as const, gap: 10 } as CSSProperties,
+  hlbSlotLabel: {
+    fontFamily: T.sans,
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: '0.18em',
+    color: T.text5,
+    textTransform: 'uppercase' as const,
+    marginBottom: 4,
+  } as CSSProperties,
+  hlbInputRow: {
+    display: 'flex',
+    gap: 12,
+    alignItems: 'flex-start',
+  } as CSSProperties,
+  hlbTextarea: {
+    flex: 1,
+    fontFamily: T.serif,
+    fontStyle: 'italic',
+    fontSize: 15,
+    lineHeight: 1.4,
+    color: T.ink,
+    background: T.paper,
+    border: `1px solid ${T.ruleSoft}`,
+    borderRadius: 8,
+    padding: '10px 12px',
+    resize: 'none',
+    outline: 'none',
+    minHeight: 48,
+  } as CSSProperties,
+  hlbQuote: {
+    padding: '8px 12px',
+    background: 'rgba(120, 100, 70, 0.06)',
+    borderLeft: `2px solid ${T.ruleStrong}`,
+    borderRadius: 4,
+    fontFamily: T.serif,
+    fontStyle: 'italic' as const,
+    fontSize: 13,
+    color: T.text4,
+    marginBottom: 4,
+  } as CSSProperties,
 };
 
 export default function KidModePage() {
@@ -625,6 +666,57 @@ export default function KidModePage() {
         </div>
       )}
 
+      {card === 'high-low-buffalo' && (
+        <div style={sx.turnSection}>
+          <div style={{ ...sx.turnLabel, color: T.sageDeep }}>
+            {parentFirstName}&rsquo;s turn
+          </div>
+          <div style={sx.hlbStack}>
+            {(['high', 'low', 'buffalo'] as const).map((slot) => (
+              <div key={`p-${slot}`}>
+                <div style={sx.hlbSlotLabel}>
+                  {slot === 'high' ? 'High' : slot === 'low' ? 'Low' : 'Buffalo'}
+                </div>
+                <div style={sx.hlbInputRow}>
+                  <MicButton
+                    size="sm"
+                    onTranscript={(t) => {
+                      const trimmed = t.trim();
+                      if (!trimmed) return;
+                      setParentTurn((prev) => ({
+                        ...prev,
+                        [slot]: prev[slot]?.trim()
+                          ? `${prev[slot]?.trim()} ${trimmed}`
+                          : trimmed,
+                      }));
+                    }}
+                  />
+                  <textarea
+                    value={parentTurn[slot] ?? ''}
+                    onChange={(e) =>
+                      setParentTurn((prev) => ({ ...prev, [slot]: e.target.value }))
+                    }
+                    placeholder={
+                      cardDef.parent.slots.find((s) => s.key === slot)?.placeholder ?? ''
+                    }
+                    rows={2}
+                    style={sx.hlbTextarea}
+                    disabled={phase !== 'parent'}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          {phase === 'parent' && (
+            <div style={sx.passRow}>
+              <button type="button" onClick={handlePass} style={sx.passButton}>
+                ↓ Pass to {kidFirstName}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={sx.divider} aria-hidden="true" />
 
       {/* Kid turn — appears when phase is 'kid' */}
@@ -667,6 +759,54 @@ export default function KidModePage() {
               rows={3}
               style={sx.textarea}
             />
+          </div>
+        </div>
+      )}
+
+      {card === 'high-low-buffalo' && phase === 'kid' && (
+        <div style={sx.turnSection}>
+          <div style={{ ...sx.turnLabel, color: T.text5 }}>
+            {kidFirstName}&rsquo;s turn
+          </div>
+          <div style={sx.hlbStack}>
+            {(['high', 'low', 'buffalo'] as const).map((slot) => (
+              <div key={`k-${slot}`}>
+                <div style={sx.hlbSlotLabel}>
+                  {slot === 'high' ? 'High' : slot === 'low' ? 'Low' : 'Buffalo'}
+                </div>
+                {parentTurn[slot]?.trim() && (
+                  <div style={sx.hlbQuote}>
+                    {parentFirstName}: &ldquo;{parentTurn[slot]?.trim()}&rdquo;
+                  </div>
+                )}
+                <div style={sx.hlbInputRow}>
+                  <MicButton
+                    size="sm"
+                    onTranscript={(t) => {
+                      const trimmed = t.trim();
+                      if (!trimmed) return;
+                      setKidTurn((prev) => ({
+                        ...prev,
+                        [slot]: prev[slot]?.trim()
+                          ? `${prev[slot]?.trim()} ${trimmed}`
+                          : trimmed,
+                      }));
+                    }}
+                  />
+                  <textarea
+                    value={kidTurn[slot] ?? ''}
+                    onChange={(e) =>
+                      setKidTurn((prev) => ({ ...prev, [slot]: e.target.value }))
+                    }
+                    placeholder={
+                      cardDef.kid.slots.find((s) => s.key === slot)?.placeholder ?? ''
+                    }
+                    rows={2}
+                    style={sx.hlbTextarea}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
