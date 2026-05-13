@@ -40,6 +40,21 @@ import { getLastBedtimeCard } from '@/lib/check-in/getLastBedtimeCard';
 import { composeBedtimeBody } from '@/lib/check-in/composeBedtimeBody';
 import { CARD_BY_KIND, renderPlaceholder } from '@/lib/check-in/cards';
 
+const SELF_FEELINGS = [
+  { face: '😀', word: 'happy' },
+  { face: '😢', word: 'sad' },
+  { face: '😠', word: 'mad' },
+  { face: '😟', word: 'worried' },
+  { face: '😴', word: 'tired' },
+  { face: '😌', word: 'calm' },
+  { face: '🦁', word: 'brave' },
+  { face: '🤪', word: 'silly' },
+  { face: '🤫', word: 'quiet' },
+  { face: '🤔', word: 'thinking' },
+  { face: '🎉', word: 'excited' },
+  { face: '💛', word: 'loved' },
+] as const;
+
 const sx = {
   app: {
     minHeight: '100vh',
@@ -286,6 +301,120 @@ const sx = {
     color: T.text4,
     marginBottom: 4,
   } as CSSProperties,
+  sprinkleSection: {
+    maxWidth: 720,
+    margin: '0 auto 14px',
+    padding: '14px 24px',
+    background: 'rgba(120, 100, 70, 0.04)',
+    borderRadius: 10,
+  } as CSSProperties,
+  sprinkleLabel: {
+    fontFamily: T.sans,
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: '0.22em',
+    color: T.text5,
+    textTransform: 'uppercase' as const,
+    marginBottom: 8,
+  } as CSSProperties,
+  chipRow: {
+    display: 'flex',
+    gap: 8,
+    flexWrap: 'wrap' as const,
+  } as CSSProperties,
+  chipBase: {
+    padding: '8px 14px',
+    borderRadius: 999,
+    background: T.paper,
+    border: `1px solid ${T.ruleSoft}`,
+    fontFamily: T.serif,
+    fontSize: 14,
+    color: T.text3,
+    cursor: 'pointer',
+  } as CSSProperties,
+  chipOn: {
+    background: T.warmRow2,
+    borderColor: T.amber,
+    color: T.ink,
+  } as CSSProperties,
+  emojiGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: 8,
+    marginTop: 12,
+  } as CSSProperties,
+  emojiTile: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    gap: 4,
+    padding: '12px 4px',
+    borderRadius: 12,
+    background: T.cream,
+    border: `1px solid ${T.ruleSoft}`,
+    cursor: 'pointer',
+    fontFamily: T.sans,
+    fontSize: 11,
+    color: T.text4,
+  } as CSSProperties,
+  emojiTileOn: {
+    background: T.warmRow2,
+    borderColor: T.amber,
+    color: T.ink,
+  } as CSSProperties,
+  emojiFace: { fontSize: 28, lineHeight: 1 } as CSSProperties,
+  shareRow: {
+    display: 'flex',
+    gap: 14,
+    flexWrap: 'wrap' as const,
+    marginTop: 12,
+  } as CSSProperties,
+  avatarChip: {
+    all: 'unset',
+    cursor: 'pointer',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    gap: 6,
+  } as CSSProperties,
+  avatarCircle: {
+    position: 'relative' as const,
+    width: 44,
+    height: 44,
+    borderRadius: '50%',
+    background: 'rgba(120, 100, 70, 0.12)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  } as CSSProperties,
+  avatarFallback: {
+    fontFamily: T.serif,
+    fontSize: 18,
+    color: T.text3,
+  } as CSSProperties,
+  avatarLabel: {
+    fontFamily: T.sans,
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: '0.14em',
+    color: T.text4,
+  } as CSSProperties,
+  selectedDot: {
+    position: 'absolute' as const,
+    bottom: 0,
+    right: 0,
+    width: 14,
+    height: 14,
+    borderRadius: '50%',
+    background: T.sage,
+    color: 'white',
+    fontSize: 10,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: `2px solid ${T.paper}`,
+  } as CSSProperties,
 };
 
 export default function KidModePage() {
@@ -414,6 +543,26 @@ export default function KidModePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adults]);
 
+  // Optional sprinkles — emoji feelings, body spots, and the share
+  // picker, accessed via collapsed chips below the card.
+  const [selfFeelings, setSelfFeelings] = useState<string[]>([]);
+  const [bodySpots, setBodySpots] = useState<string[]>([]);
+  const [openSprinkle, setOpenSprinkle] = useState<
+    'feelings' | 'body' | 'share' | null
+  >(null);
+  const toggleSelfFeeling = (word: string) =>
+    setSelfFeelings((prev) =>
+      prev.includes(word) ? prev.filter((w) => w !== word) : [...prev, word],
+    );
+  const toggleBodySpot = (id: string) =>
+    setBodySpots((prev) =>
+      prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id],
+    );
+  const toggleShared = (userId: string) =>
+    setSharedWithUserIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
+    );
+
   if (!kid || !lastCardLoaded) {
     return (
       <main style={sx.app}>
@@ -498,7 +647,8 @@ export default function KidModePage() {
         checkIn: {
           kind: 'child-bedtime',
           timeOfDay: 'night',
-          selfFeelings: [],
+          selfFeelings,
+          ...(bodySpots.length > 0 ? { bodySpots } : {}),
           card,
           parentTurn,
           kidTurn,
@@ -810,6 +960,132 @@ export default function KidModePage() {
           </div>
         </div>
       )}
+
+      {/* Optional sprinkles — feelings / body / share */}
+      <div style={sx.sprinkleSection}>
+        <div style={sx.sprinkleLabel}>
+          Want to add?{' '}
+          <span style={{ fontWeight: 500, letterSpacing: '0.06em' }}>
+            (skip if you want)
+          </span>
+        </div>
+        <div style={sx.chipRow}>
+          <button
+            type="button"
+            onClick={() =>
+              setOpenSprinkle(openSprinkle === 'feelings' ? null : 'feelings')
+            }
+            style={{
+              ...sx.chipBase,
+              ...(selfFeelings.length > 0 ? sx.chipOn : null),
+            }}
+          >
+            + a feeling
+            {selfFeelings.length > 0 ? ` · ${selfFeelings.length}` : ''}
+          </button>
+          <button
+            type="button"
+            onClick={() => setOpenSprinkle(openSprinkle === 'body' ? null : 'body')}
+            style={{
+              ...sx.chipBase,
+              ...(bodySpots.length > 0 ? sx.chipOn : null),
+            }}
+          >
+            + where in your body
+            {bodySpots.length > 0 ? ` · ${bodySpots.length}` : ''}
+          </button>
+          {adults.length > 0 && (
+            <button
+              type="button"
+              onClick={() =>
+                setOpenSprinkle(openSprinkle === 'share' ? null : 'share')
+              }
+              style={sx.chipBase}
+            >
+              Share with…
+            </button>
+          )}
+        </div>
+
+        {openSprinkle === 'feelings' && (
+          <div style={sx.emojiGrid}>
+            {SELF_FEELINGS.map((f) => {
+              const on = selfFeelings.includes(f.word);
+              return (
+                <button
+                  key={f.word}
+                  type="button"
+                  onClick={() => toggleSelfFeeling(f.word)}
+                  style={{ ...sx.emojiTile, ...(on ? sx.emojiTileOn : null) }}
+                >
+                  <span style={sx.emojiFace}>{f.face}</span>
+                  <span>{f.word}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {openSprinkle === 'body' && (
+          <div
+            style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}
+          >
+            {['head', 'throat', 'chest', 'tummy', 'arms', 'legs'].map((id) => {
+              const on = bodySpots.includes(id);
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => toggleBodySpot(id)}
+                  style={{ ...sx.chipBase, ...(on ? sx.chipOn : null) }}
+                >
+                  {id}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {openSprinkle === 'share' && adults.length > 0 && (
+          <div style={sx.shareRow}>
+            {adults.map((a) => {
+              const selected = sharedWithUserIds.includes(a.userId);
+              return (
+                <button
+                  key={a.userId}
+                  type="button"
+                  onClick={() => toggleShared(a.userId)}
+                  style={sx.avatarChip}
+                  aria-pressed={selected}
+                >
+                  <span style={sx.avatarCircle}>
+                    {a.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={a.avatarUrl}
+                        alt=""
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <span style={sx.avatarFallback}>
+                        {(a.name[0] ?? '?').toUpperCase()}
+                      </span>
+                    )}
+                    {selected && (
+                      <span aria-hidden style={sx.selectedDot}>
+                        ✓
+                      </span>
+                    )}
+                  </span>
+                  <span style={sx.avatarLabel}>
+                    {a.name.split(' ')[0].toUpperCase()}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Done — always available when in parent or kid phase. Soft-confirm on empty parent is handled in handlePass. */}
       {(phase === 'kid' || phase === 'parent') && (
