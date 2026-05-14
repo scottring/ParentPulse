@@ -1544,12 +1544,19 @@ async function generateChatResponse(messages, context, usageCtx = null) {
 
   try {
     const anthropicClient = getAnthropic();
+    // Anthropic's API only accepts {role, content} per message — strip
+    // any of our internal fields (messageId, excluded, createdAt, etc.)
+    // before sending or the SDK throws "Extra inputs are not permitted".
+    const anthropicMessages = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
     const response = await anthropicClient.messages.create({
       model,
       max_tokens: 1500,
       temperature: 0.7,
       system: systemMessage,
-      messages: messages,
+      messages: anthropicMessages,
     });
 
     // Log usage if we have the context
