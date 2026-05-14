@@ -260,6 +260,45 @@ const sx = {
     color: T.text3,
     marginTop: 8,
   } as CSSProperties,
+  banner: {
+    maxWidth: 720,
+    margin: '0 auto 14px',
+    padding: '12px 16px',
+    background: '#FBEEE6',
+    border: `1px solid ${T.ember}`,
+    borderRadius: 10,
+    fontFamily: T.sans,
+    fontSize: 13,
+    color: T.text3,
+    lineHeight: 1.4,
+  } as CSSProperties,
+  bannerInfo: {
+    maxWidth: 720,
+    margin: '0 auto 14px',
+    padding: '10px 14px',
+    background: T.warmRow,
+    border: `1px solid ${T.ruleSoft}`,
+    borderRadius: 10,
+    fontFamily: T.sans,
+    fontSize: 12,
+    color: T.text4,
+    lineHeight: 1.4,
+  } as CSSProperties,
+  copyButton: {
+    display: 'inline-block',
+    marginLeft: 10,
+    padding: '6px 14px',
+    borderRadius: 999,
+    background: 'transparent',
+    border: `1.5px solid ${T.ember}`,
+    fontFamily: T.sans,
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: '0.14em',
+    color: T.ember,
+    textTransform: 'uppercase' as const,
+    cursor: 'pointer',
+  } as CSSProperties,
   hlbStack: { display: 'flex', flexDirection: 'column' as const, gap: 10 } as CSSProperties,
   hlbSlotLabel: {
     fontFamily: T.sans,
@@ -486,6 +525,12 @@ export default function KidModePage() {
   const [kidTurn, setKidTurn] = useState<BedtimeKidTurn>({});
   const [phase, setPhase] = useState<'parent' | 'kid' | 'saved'>('parent');
 
+  // Save errors surface visibly in-page so a failed Firestore write
+  // never looks like the Done button is broken. Cleared on retry.
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
+  const [draftRestoredAt, setDraftRestoredAt] = useState<number | null>(null);
+
   // Dynamic parent name from the auth user, falling back to "Parent".
   const parentFirstName = useMemo(() => {
     const n = user?.name?.trim();
@@ -547,6 +592,55 @@ export default function KidModePage() {
   // picker, accessed via collapsed chips below the card.
   const [selfFeelings, setSelfFeelings] = useState<string[]>([]);
   const [bodySpots, setBodySpots] = useState<string[]>([]);
+
+  // Restore an in-progress draft for this kid (saved locally before
+  // any successful Firestore write). Runs once after kid loads. Drafts
+  // older than 24h are ignored — bedtime sessions don't span days.
+  useEffect(() => {
+    if (!kid?.personId || hasRestoredDraft) return;
+    try {
+      const raw = localStorage.getItem(`bedtime-draft:${kid.personId}`);
+      if (!raw) {
+        setHasRestoredDraft(true);
+        return;
+      }
+      const draft = JSON.parse(raw) as {
+        savedAt?: number;
+        card?: BedtimeCardKind;
+        parentTurn?: BedtimeParentTurn;
+        kidTurn?: BedtimeKidTurn;
+        selfFeelings?: string[];
+        bodySpots?: string[];
+        sharedWithUserIds?: string[];
+      };
+      if (
+        typeof draft.savedAt !== 'number' ||
+        Date.now() - draft.savedAt > 24 * 60 * 60 * 1000
+      ) {
+        try { localStorage.removeItem(`bedtime-draft:${kid.personId}`); } catch {}
+        setHasRestoredDraft(true);
+        return;
+      }
+      if (draft.card) setCardOverride(draft.card);
+      if (draft.parentTurn) setParentTurn(draft.parentTurn);
+      if (draft.kidTurn) {
+        setKidTurn(draft.kidTurn);
+        // If the kid already wrote anything, advance past the parent gate.
+        const kidHasAny = Object.values(draft.kidTurn).some(
+          (v) => typeof v === 'string' && v.trim().length > 0,
+        );
+        if (kidHasAny) setPhase('kid');
+      }
+      if (draft.selfFeelings) setSelfFeelings(draft.selfFeelings);
+      if (draft.bodySpots) setBodySpots(draft.bodySpots);
+      if (draft.sharedWithUserIds) setSharedWithUserIds(draft.sharedWithUserIds);
+      setDraftRestoredAt(draft.savedAt);
+    } catch {
+      // Corrupted draft — drop it.
+      try { localStorage.removeItem(`bedtime-draft:${kid.personId}`); } catch {}
+    }
+    setHasRestoredDraft(true);
+  }, [kid?.personId, hasRestoredDraft]);
   const [openSprinkle, setOpenSprinkle] = useState<
     'feelings' | 'body' | 'share' | null
   >(null);
@@ -562,6 +656,51 @@ export default function KidModePage() {
     setSharedWithUserIds((prev) =>
       prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
     );
+
+  // Autosave the in-progress check-in to localStorage every ~600ms of
+  // idle, so a save failure or tab loss never costs us the data. Only
+  // writes when there's actually content to preserve.
+  useEffect(() => {
+    if (!kid?.personId || !hasRestoredDraft) return;
+    const hasAny =
+      Object.values(parentTurn).some(
+        (v) => typeof v === 'string' && v.trim().length > 0,
+      ) ||
+      Object.values(kidTurn).some(
+        (v) => typeof v === 'string' && v.trim().length > 0,
+      ) ||
+      selfFeelings.length > 0 ||
+      bodySpots.length > 0;
+    if (!hasAny) return;
+    const handle = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          `bedtime-draft:${kid.personId}`,
+          JSON.stringify({
+            savedAt: Date.now(),
+            card,
+            parentTurn,
+            kidTurn,
+            selfFeelings,
+            bodySpots,
+            sharedWithUserIds,
+          }),
+        );
+      } catch {
+        // Storage full / private mode — don't block typing.
+      }
+    }, 600);
+    return () => clearTimeout(handle);
+  }, [
+    kid?.personId,
+    hasRestoredDraft,
+    card,
+    parentTurn,
+    kidTurn,
+    selfFeelings,
+    bodySpots,
+    sharedWithUserIds,
+  ]);
 
   if (!kid || !lastCardLoaded) {
     return (
@@ -625,7 +764,14 @@ export default function KidModePage() {
   };
 
   const handleDone = async () => {
-    if (saving || !user?.familyId || !user?.userId) return;
+    if (saving) return;
+    setSaveError(null);
+    if (!user?.familyId || !user?.userId) {
+      setSaveError(
+        'Not signed in (or session expired). Refresh the page and try again — your work is saved locally.',
+      );
+      return;
+    }
     try {
       const body = composeBedtimeBody({
         kidName: kidFirstName,
@@ -661,9 +807,38 @@ export default function KidModePage() {
       } catch {
         // sessionStorage disabled; not fatal.
       }
+      // Successful write — clear the local draft.
+      try {
+        localStorage.removeItem(`bedtime-draft:${kid.personId}`);
+      } catch {
+        // ignore
+      }
       setPhase('saved');
     } catch (e) {
       console.error('Bedtime check-in save failed:', e);
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      setSaveError(
+        `Save failed: ${msg}. Your work is saved on this device — try again, or use Copy text below to save manually.`,
+      );
+    }
+  };
+
+  // Copy the composed body to clipboard so the user has a manual
+  // recovery path when Firestore saves are failing.
+  const handleCopyText = async () => {
+    const body = composeBedtimeBody({
+      kidName: kidFirstName,
+      parentName: parentFirstName,
+      card,
+      parentTurn,
+      kidTurn,
+    });
+    try {
+      await navigator.clipboard.writeText(body);
+      setSaveError(`Copied to clipboard. Paste it into a desktop journal entry.`);
+    } catch {
+      // Clipboard blocked — fall back to a prompt the user can copy from.
+      window.prompt('Copy this text:', body);
     }
   };
 
@@ -1085,6 +1260,20 @@ export default function KidModePage() {
           </div>
         )}
       </div>
+
+      {draftRestoredAt !== null && !saveError && (
+        <div style={sx.bannerInfo}>
+          ↻ Restored your in-progress check-in from earlier. Edit if you want, then tap Done.
+        </div>
+      )}
+      {saveError && (
+        <div style={sx.banner}>
+          {saveError}
+          <button type="button" onClick={handleCopyText} style={sx.copyButton}>
+            Copy text
+          </button>
+        </div>
+      )}
 
       {/* Done — always available when in parent or kid phase. Soft-confirm on empty parent is handled in handlePass. */}
       {(phase === 'kid' || phase === 'parent') && (
