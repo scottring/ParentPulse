@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const setDocMock = vi.fn().mockResolvedValue(undefined);
 const addDocMock = vi.fn().mockResolvedValue({ id: 'entry-1' });
-const docMock = vi.fn((_db, _col, id) => ({ id }));
-const collectionMock = vi.fn((_db, name) => ({ name }));
+const docMock = vi.fn((...args: unknown[]) => ({ id: args[2] as string }));
+const collectionMock = vi.fn((...args: unknown[]) => ({ name: args[1] as string }));
 
 vi.mock('@/lib/firebase', () => ({ firestore: {} }));
 vi.mock('firebase/firestore', () => ({
