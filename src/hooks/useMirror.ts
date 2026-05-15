@@ -27,8 +27,10 @@ export async function runMirror(
 ): Promise<{ mirrorLine: string; dyadKey: string }> {
   const { familyId, stewardUserId, prompt, answers } = params;
   const request = buildSynthesisRequest(prompt, answers);
-  const dyadKey = dyadKeyFromParticipantIds(answers.map((a) => a.participantId));
-  const participantIds = dyadKey.split('__');
+  const participantIds = Array.from(
+    new Set(answers.map((a) => a.participantId.trim()).filter(Boolean)),
+  ).sort();
+  const dyadKey = dyadKeyFromParticipantIds(participantIds);
 
   const mirrorLine = await synthesizeMirror(request);
 

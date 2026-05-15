@@ -55,6 +55,15 @@ describe('runMirror', () => {
       stewardUserId: 'scott',
       mirrorLine: 'A puppy and a porcupine, same second.',
     });
+    const entryPayload = addDocMock.mock.calls[0][1] as {
+      prompt: string;
+      answers: { participantId: string; label: string; text: string }[];
+    };
+    expect(entryPayload.prompt).toBe('If today between you and X was an animal...');
+    expect(entryPayload.answers).toEqual([
+      { participantId: 'scott', label: 'Dad', text: 'A porcupine' },
+      { participantId: 'kaleb', label: 'Kaleb', text: 'A puppy' },
+    ]);
   });
 
   it('throws if a chair is blank (does not write)', async () => {
@@ -63,5 +72,20 @@ describe('runMirror', () => {
     ).rejects.toThrow(/both/i);
     expect(setDocMock).not.toHaveBeenCalled();
     expect(addDocMock).not.toHaveBeenCalled();
+  });
+
+  it('trims answer text in the saved entry', async () => {
+    await runMirror({
+      ...params,
+      answers: [
+        { ...params.answers[0], text: '  A porcupine  ' },
+        { ...params.answers[1], text: '  A puppy  ' },
+      ],
+    });
+    const entryPayload = addDocMock.mock.calls[0][1] as {
+      answers: { text: string }[];
+    };
+    expect(entryPayload.answers[0].text).toBe('A porcupine');
+    expect(entryPayload.answers[1].text).toBe('A puppy');
   });
 });
