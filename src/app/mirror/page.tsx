@@ -104,9 +104,9 @@ export default function MirrorPage() {
       )}
 
       {phase === 'error' && (
-        <div style={{ padding: 24, textAlign: 'center' }}>
+        <div style={{ padding: 24, textAlign: 'center' }} role="alert">
           <p>{errMsg}</p>
-          <button onClick={() => setPhase('pick')} style={{ marginTop: 16 }}>
+          <button onClick={() => { setErrMsg(''); setPhase('pick'); }} style={{ marginTop: 16 }}>
             Start over
           </button>
         </div>
