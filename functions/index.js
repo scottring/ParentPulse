@@ -1188,6 +1188,81 @@ exports.chatWithEntry = onCall(
     },
 );
 
+exports.synthesizeMirror = onCall(
+    {
+      region: "us-central1",
+      memory: "256MiB",
+      timeoutSeconds: 30,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new Error("Authentication required");
+      }
+      const {prompt, answers} = request.data || {};
+      if (!prompt || !Array.isArray(answers) || answers.length < 2) {
+        throw new Error("prompt and at least two answers are required");
+      }
+      for (const a of answers) {
+        if (!a || !a.label || !a.text || !String(a.text).trim()) {
+          throw new Error("each answer needs a label and non-empty text");
+        }
+      }
+
+      const userDoc = await admin.firestore()
+          .collection("users").doc(request.auth.uid).get();
+      const userData = userDoc.data();
+      if (!userData || userData.role !== "parent") {
+        throw new Error("Only parents can use the mirror");
+      }
+
+      const answerBlock = answers
+          .map((a) => `${a.label} answered: "${String(a.text).trim()}"`)
+          .join("\n");
+
+      const system =
+        "You reflect a relationship back to two people who just answered " +
+        "the SAME projective prompt about the space between them, from " +
+        "their own chair. Output EXACTLY one or two short sentences that " +
+        "name the alignment, the gap, or the tension between their two " +
+        "answers. Be warm, concrete, specific to what they said. " +
+        "ABSOLUTELY NO ADVICE, no suggestions, no 'try', no coaching, no " +
+        "questions, no fixing. Only reflect what is there. Do not exceed " +
+        "two sentences.";
+
+      const client = getAnthropic();
+      const response = await client.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 160,
+        temperature: 0.6,
+        system,
+        messages: [{
+          role: "user",
+          content: `Prompt they both answered: "${prompt}"\n\n${answerBlock}\n\nReflect their two answers back in one or two sentences.`,
+        }],
+      });
+
+      const mirrorLine = (response.content[0] && response.content[0].text || "").trim();
+      if (!mirrorLine) {
+        throw new Error("Synthesis returned empty");
+      }
+
+      try {
+        await logAIUsage(admin.firestore(), {
+          familyId: userData.familyId,
+          userId: request.auth.uid,
+          functionName: "synthesizeMirror",
+          model: "claude-sonnet-4-6",
+          usage: response.usage,
+        });
+      } catch (_e) {
+        // non-critical
+      }
+
+      return {mirrorLine};
+    },
+);
+
 /**
  * Mark a chat message as excluded so it no longer feeds into future
  * coaching context. Soft delete — the message stays in Firestore so
