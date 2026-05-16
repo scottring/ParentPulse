@@ -1172,6 +1172,29 @@ service cloud.firestore {
         && request.auth.uid in resource.data.participantUserIds;
     }
 
+    // Dyad records — per-relationship, family-scoped. Doc id is the deterministic dyadKey.
+    match /dyads/{dyadKey} {
+      allow read: if isSignedIn() && (
+        resource == null || (
+          isParent() && belongsToFamily(resource.data.familyId)
+        )
+      );
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+      allow update: if isParent() && belongsToFamily(resource.data.familyId);
+      allow delete: if false;
+    }
+
+    // Mirror entries — silent deposits, append-only in v1.
+    match /mirror_entries/{entryId} {
+      allow read: if isSignedIn() && (
+        resource == null || (
+          isParent() && belongsToFamily(resource.data.familyId)
+        )
+      );
+      allow create: if isParent() && belongsToFamily(request.resource.data.familyId);
+      allow update, delete: if false;
+    }
+
     // Therapy briefs — owner-only. A brief is a read-only compile
     // over the owner's recent Relish material, taken to therapy.
     // Nobody else — not even family members — can see someone else's
