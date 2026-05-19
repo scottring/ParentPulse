@@ -1,6 +1,12 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentSingleTabManager } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentSingleTabManager,
+  memoryLocalCache,
+} from 'firebase/firestore';
+import { isIOS, selectFirestoreCacheMode } from './firestore-cache-mode';
 import { getStorage } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
 
@@ -35,16 +41,31 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Firebase services
 const auth = getAuth(app);
-// Initialize Firestore with offline persistence — writes queue
-// locally and sync when online. Uses SINGLE-tab mode: Firebase
-// 12.8.0's multi-tab coordinator races with HMR / StrictMode's
-// rapid subscribe-unsubscribe cycles and throws
-// "INTERNAL ASSERTION FAILED (ca9)" cascades. Single-tab retains
-// offline writes without the state-machine bug.
+// Cache strategy is environment- and platform-aware — see
+// ./firestore-cache-mode for the full rationale. Summary:
+//  - dev: persistent + forceOwnership (dodges the HMR "ca9" cascade)
+//  - prod on iOS/iPadOS: memory cache (WebKit IndexedDB wedges the
+//    app — "spinner forever" after login; reliability > offline)
+//  - prod elsewhere: persistent cache, no forceOwnership
+const isDev = process.env.NODE_ENV !== 'production';
+const onIOS =
+  typeof navigator !== 'undefined' &&
+  isIOS({
+    ua: navigator.userAgent,
+    platform: navigator.platform,
+    maxTouchPoints: navigator.maxTouchPoints,
+  });
+const cacheMode = selectFirestoreCacheMode({ isDev, isIOS: onIOS });
+
 const firestore = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentSingleTabManager({ forceOwnership: true }),
-  }),
+  localCache:
+    cacheMode === 'memory'
+      ? memoryLocalCache()
+      : persistentLocalCache({
+          tabManager: persistentSingleTabManager({
+            forceOwnership: cacheMode === 'persistent-force-ownership',
+          }),
+        }),
 });
 
 const storage = getStorage(app);
