@@ -20,6 +20,7 @@ import {
   arrayRemove,
 } from 'firebase/firestore';
 import { auth, firestore, functions } from '../lib/firebase';
+import { withTimeout, TimeoutError } from '../lib/with-timeout';
 import { httpsCallable } from 'firebase/functions';
 import {
   User,
@@ -51,6 +52,17 @@ interface AuthContextType extends AuthState {
 // ==================== Context ====================
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Hard ceiling on the post-login bootstrap read. On iPad/iOS Safari
+// the Firestore IndexedDB cache can wedge and a cache-routed getDoc
+// then never settles — without this the loading gate spins forever.
+// Tunable via env for slow beta networks.
+const DEFAULT_AUTH_BOOTSTRAP_TIMEOUT_MS = 12000;
+const authBootstrapTimeoutMs = (): number => {
+  const raw = process.env.NEXT_PUBLIC_AUTH_BOOTSTRAP_TIMEOUT_MS;
+  const n = raw ? Number(raw) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_AUTH_BOOTSTRAP_TIMEOUT_MS;
+};
 
 // ==================== Provider ====================
 
@@ -123,7 +135,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
         if (firebaseUser) {
-          const userData = await fetchUserData(firebaseUser);
+          const userData = await withTimeout(
+            fetchUserData(firebaseUser),
+            authBootstrapTimeoutMs(),
+            'auth bootstrap: load user profile',
+          );
 
           // Handle orphaned auth users (auth user exists but no Firestore document)
           // BUT skip this check if we're currently in the registration process
@@ -148,8 +164,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(null);
         }
       } catch (err: any) {
-        console.error('Auth state change error:', err);
-        setError(err.message);
+        if (err instanceof TimeoutError) {
+          console.error('Auth bootstrap timed out:', err.message);
+          setError(
+            "We couldn't reach your account — this is usually a flaky connection. Check your network and reload to try again.",
+          );
+        } else {
+          console.error('Auth state change error:', err);
+          setError(err.message);
+        }
         setUser(null);
       } finally {
         setLoading(false);
