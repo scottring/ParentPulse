@@ -125,6 +125,23 @@ describe('runClaritySessionTurn', () => {
     expect(err.message).to.match(/Access denied/);
   });
 
+  it("throws when user's familyId does not match obstacle's familyId", async () => {
+    const { db } = makeFakeDb({
+      obstacle: { ...baseObstacle },  // familyId: 'fam-1'
+      userData: { familyId: 'fam-DIFFERENT', role: 'parent' },
+    });
+    const anthropic = makeMockAnthropic('{}');
+    let err;
+    try {
+      await runClaritySessionTurn(
+        { db, anthropic, logger: silentLogger },
+        { uid: 'uid-1', data: { obstacleId: 'ob1', message: 'hi' } },
+      );
+    } catch (e) { err = e; }
+    expect(err).to.be.an('error');
+    expect(err.message).to.match(/Access denied/);
+  });
+
   it('on fresh obstacle: transitions to clarifying, drafts title, writes both moves', async () => {
     const { db, written } = makeFakeDb({
       obstacle: { ...baseObstacle },
