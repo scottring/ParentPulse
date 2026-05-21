@@ -34,4 +34,22 @@ describe('TurnInput', () => {
     fireEvent.click(screen.getByRole('button', { name: /send/i }));
     expect(onSend).not.toHaveBeenCalled();
   });
+
+  it('sends on Cmd/Ctrl+Enter', () => {
+    const onSend = vi.fn();
+    render(<TurnInput status="clarifying" sending={false} onSend={onSend} />);
+    const ta = screen.getByRole('textbox');
+    fireEvent.change(ta, { target: { value: 'hello' } });
+    fireEvent.keyDown(ta, { key: 'Enter', metaKey: true });
+    expect(onSend).toHaveBeenCalledWith('hello');
+  });
+
+  it('does not send on plain Enter', () => {
+    const onSend = vi.fn();
+    render(<TurnInput status="clarifying" sending={false} onSend={onSend} />);
+    const ta = screen.getByRole('textbox');
+    fireEvent.change(ta, { target: { value: 'hello' } });
+    fireEvent.keyDown(ta, { key: 'Enter' });
+    expect(onSend).not.toHaveBeenCalled();
+  });
 });

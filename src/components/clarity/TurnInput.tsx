@@ -33,6 +33,12 @@ export function TurnInput({ status, sending, onSend }: TurnInputProps) {
       <textarea
         value={value}
         onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+            e.preventDefault();
+            handleSend();
+          }
+        }}
         placeholder={placeholder}
         rows={4}
         disabled={sending}
