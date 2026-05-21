@@ -1263,6 +1263,76 @@ exports.synthesizeMirror = onCall(
     },
 );
 
+const {
+  runWeeklyFocusSynthesis,
+} = require("./synthesizeWeeklyFocus.handler.js");
+
+// Closes the couple ritual: turns the just-finished session into ONE
+// concrete shared thing to try this week. Sibling of synthesizeMirror;
+// core logic lives in synthesizeWeeklyFocus.handler.js so it is unit
+// tested with anthropic + db injected.
+exports.synthesizeWeeklyFocus = onCall(
+    {
+      region: "us-central1",
+      memory: "256MiB",
+      timeoutSeconds: 30,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+      return await runWeeklyFocusSynthesis(
+          {
+            db: admin.firestore(),
+            anthropic: getAnthropic(),
+            logger,
+            logAIUsage,
+          },
+          {
+            uid: request.auth && request.auth.uid,
+            data: request.data || {},
+          },
+      );
+    },
+);
+
+// ================================================================
+// claritySessionTurn — one turn of the obstacle clarity loop.
+//
+// Core logic lives in claritySessionTurn.handler.js so it is unit
+// tested without booting Firebase. This onCall wraps the handler
+// with the real db + Anthropic client.
+// ================================================================
+const {
+  runClaritySessionTurn,
+} = require("./claritySessionTurn.handler.js");
+
+exports.claritySessionTurn = onCall(
+    {
+      region: "us-central1",
+      memory: "512MiB",
+      timeoutSeconds: 60,
+      secrets: ["ANTHROPIC_API_KEY"],
+    },
+    async (request) => {
+      const logger = require("firebase-functions/logger");
+      const Anthropic = require("@anthropic-ai/sdk");
+      const anthropic = new Anthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY,
+      });
+      const db = admin.firestore();
+      try {
+        const result = await runClaritySessionTurn(
+            { db, anthropic, logger, logAIUsage },
+            { uid: request.auth && request.auth.uid, data: request.data },
+        );
+        return result;
+      } catch (err) {
+        logger.error("claritySessionTurn failed:", err.message);
+        throw new Error(err.message);
+      }
+    },
+);
+
 /**
  * Mark a chat message as excluded so it no longer feeds into future
  * coaching context. Soft delete — the message stays in Firestore so
