@@ -101,22 +101,41 @@ vi.mock('next/navigation', () => ({
   useParams: vi.fn(() => ({}))
 }));
 
-// Mock localStorage
-const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-  length: 0,
-  key: vi.fn()
+// Mock localStorage with in-memory storage
+const createStorage = () => {
+  const store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => {
+      store[key] = value;
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      for (const key in store) {
+        delete store[key];
+      }
+    },
+    get length() {
+      return Object.keys(store).length;
+    },
+    key: (index: number) => {
+      const keys = Object.keys(store);
+      return keys[index] ?? null;
+    }
+  };
 };
+
 Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock
+  value: createStorage(),
+  configurable: true
 });
 
 // Mock sessionStorage
 Object.defineProperty(window, 'sessionStorage', {
-  value: localStorageMock
+  value: createStorage(),
+  configurable: true
 });
 
 // Mock ResizeObserver
@@ -140,4 +159,6 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
 // Clean up after each test
 afterEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
+  sessionStorage.clear();
 });
