@@ -73,7 +73,7 @@ export function ClientPage({ obstacleId }: ClientPageProps) {
           />
         )}
 
-        {inSession && !pendingPrescriptionDraft && (
+        {inSession && (
           <TurnInput status={obstacle.status} sending={sending || movesLoading} onSend={sendTurn} />
         )}
 
