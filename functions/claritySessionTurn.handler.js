@@ -154,7 +154,7 @@ function parseEnvelope(rawText) {
 // ---------------------------------------------------------------------------
 
 async function runClaritySessionTurn(deps, payload) {
-  const { db, anthropic, logger = console, logAIUsage } = deps;
+  const { db, anthropic, logger = console, logAIUsage, FieldValue } = deps;
   const { uid, data } = payload || {};
 
   // 1. Auth guard.
@@ -195,7 +195,8 @@ async function runClaritySessionTurn(deps, payload) {
   const fullTranscript = [...priorTranscript, { role: "user", content: message }];
 
   // 6. Write the user move (before calling the model so it's persisted even on LLM failure).
-  const nowValue = new Date(); // fallback timestamp (FieldValue.serverTimestamp() used in prod wrapper)
+  // FieldValue is injected by the prod onCall wrapper; tests pass undefined and fall back to new Date().
+  const nowValue = FieldValue ? FieldValue.serverTimestamp() : new Date();
   await obstacleRef.collection("moves").add({
     type: "clarity-session",
     at: nowValue,

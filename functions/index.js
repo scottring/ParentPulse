@@ -1322,7 +1322,7 @@ exports.claritySessionTurn = onCall(
       const db = admin.firestore();
       try {
         const result = await runClaritySessionTurn(
-            { db, anthropic, logger, logAIUsage },
+            { db, anthropic, logger, logAIUsage, FieldValue: admin.firestore.FieldValue },
             { uid: request.auth && request.auth.uid, data: request.data },
         );
         return result;
