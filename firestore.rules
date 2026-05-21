@@ -1264,6 +1264,9 @@ service cloud.firestore {
     //   Sensitive flag is NOT enforced at the rules layer — it gates
     //   UI display only. Rules-level privacy comes from visibility.
     match /obstacles/{obstacleId} {
+      // Note: uses isSignedIn() rather than isParent() — deliberate.
+      // The obstacle loop applies to any adult in a household (spec §13).
+      // Multi-tenant family scoping is enforced via the familyId check.
       allow read: if isSignedIn()
         && request.auth.uid in resource.data.visibleToUserIds
         && resource.data.familyId == getUserData().familyId;
