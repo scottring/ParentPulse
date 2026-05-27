@@ -30,6 +30,12 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# firebase emulator logs
+firebase-debug.log
+firestore-debug.log
+*-debug.log
+ui-debug.log
+
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
@@ -50,3 +56,4 @@ service-account.json
 
 # git worktrees (isolated feature branches)
 .worktrees/
+.claude/worktrees/
