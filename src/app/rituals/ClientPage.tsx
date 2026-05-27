@@ -7,6 +7,7 @@ import { useCoupleRitual } from '@/hooks/useCoupleRitual';
 import { useSpouse } from '@/hooks/useSpouse';
 import { stockImagery } from '@/config/stock-imagery';
 import { listRecentSessions } from '@/hooks/useRitualSession';
+import { getActiveDyadFocus } from '@/hooks/useWeeklyFocus';
 import type { RitualSession } from '@/types/ritual-session';
 import { CurrentFocusCard, type CurrentFocus } from '@/components/rituals/CurrentFocusCard';
 import { ExperimentsColumn } from '@/components/rituals/ExperimentsColumn';
@@ -29,8 +30,9 @@ const leftColStyle: CSSProperties = {};
 export default function ClientPage() {
   const { user } = useAuth();
   const { ritual, loading } = useCoupleRitual();
-  const { spouseName, loading: spouseLoading } = useSpouse();
+  const { spouseUserId, spouseName, loading: spouseLoading } = useSpouse();
   const [pastSessions, setPastSessions] = useState<RitualSession[]>([]);
+  const [weeklyFocus, setWeeklyFocus] = useState<string | null>(null);
   const { arcGroups } = useGrowthFeed();
   const { entries: allEntries } = useJournalEntries();
   const { checkIns: familyCheckIns } = useFamilyCheckIns();
@@ -56,6 +58,21 @@ export default function ClientPage() {
       active = false;
     };
   }, [ritual?.id, user?.userId]);
+
+  useEffect(() => {
+    if (!user?.userId || !spouseUserId) return;
+    let active = true;
+    getActiveDyadFocus([user.userId, spouseUserId])
+      .then((f) => {
+        if (active) setWeeklyFocus(f?.text ?? null);
+      })
+      .catch(() => {
+        /* quiet line is best-effort */
+      });
+    return () => {
+      active = false;
+    };
+  }, [user?.userId, spouseUserId]);
 
   const currentFocus: CurrentFocus | null = useMemo(() => {
     const firstWithItem = arcGroups.find((g) => g.activeItems.length > 0);
@@ -100,6 +117,13 @@ export default function ClientPage() {
         A ritual is a recurring moment you set aside on purpose. Between rituals,
         Relish stays out of your way.
       </p>
+
+      {weeklyFocus && (
+        <p className="weekly-focus-line">
+          <span className="wf-label">This week, you &amp; {spouseName ?? 'your partner'}:</span>{' '}
+          <span className="wf-text">{weeklyFocus}</span>
+        </p>
+      )}
 
       <CurrentFocusCard focus={currentFocus} />
 
@@ -242,6 +266,29 @@ export default function ClientPage() {
         .muted {
           font-family: var(--font-parent-body);
           color: #8B7D63;
+        }
+        .weekly-focus-line {
+          margin: -32px 0 48px;
+          padding: 16px 20px;
+          border-left: 2px solid #7C9082;
+          background: rgba(124, 144, 130, 0.07);
+          max-width: 56ch;
+          font-family: var(--font-parent-display);
+          font-style: italic;
+          font-size: 18px;
+          line-height: 1.5;
+          color: #3A3530;
+        }
+        .weekly-focus-line .wf-label {
+          font-family: var(--font-parent-body);
+          font-style: normal;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: #7C9082;
+          display: block;
+          margin-bottom: 6px;
         }
         .ritual-section {
           margin-bottom: 64px;
@@ -446,11 +493,8 @@ export default function ClientPage() {
           }
         }
         @media (min-width: 720px) {
-          .active-card {
-            grid-template-columns: 240px 1fr;
-          }
           .active-image {
-            height: auto;
+            height: 180px;
           }
         }
       `}</style>
@@ -476,7 +520,7 @@ function Chrome({ children }: { children: React.ReactNode }) {
           padding: 112px 24px 96px;
         }
         .page-inner {
-          max-width: 760px;
+          max-width: 1080px;
           margin: 0 auto;
         }
       `}</style>

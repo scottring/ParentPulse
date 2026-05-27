@@ -19,8 +19,19 @@ import {
 } from '@/hooks/useRitualSession';
 import type {
   RitualIntention,
+  RitualSession,
   SessionSection,
 } from '@/types/ritual-session';
+import { buildWeeklyFocusInput } from '@/lib/ritual-focus/buildWeeklyFocusInput';
+import { resolveWeeklyFocus } from '@/lib/ritual-focus/resolveWeeklyFocus';
+import { fallbackFocusText } from '@/lib/ritual-focus/fallbackFocusText';
+import {
+  requestWeeklyFocus,
+  saveWeeklyFocus,
+  recordFocusOutcome,
+  getActiveDyadFocus,
+} from '@/hooks/useWeeklyFocus';
+import type { WeeklyFocus, FocusWentWell } from '@/types/ritual-focus';
 
 function SessionStage({ children }: { children: React.ReactNode }) {
   return (
@@ -115,44 +126,215 @@ function Session({ sessionId }: { sessionId: string }) {
   }
 
   return (
-    <SessionFlow
-      sections={session.sections}
-      initialIntentions={session.intentions || []}
-      onSaveNote={saveSectionNote}
-      onSaveIntentions={saveIntentions}
-      onComplete={markComplete}
-    />
+    <RevisitGate
+      participantIds={session.participantUserIds}
+      familyId={session.familyId}
+    >
+      <SessionFlow
+        sections={session.sections}
+        initialIntentions={session.intentions || []}
+        familyId={session.familyId}
+        participantIds={session.participantUserIds}
+        ritualSessionId={sessionId}
+        onSaveNote={saveSectionNote}
+        onSaveIntentions={saveIntentions}
+        onComplete={markComplete}
+      />
+    </RevisitGate>
+  );
+}
+
+/* ---------------- Revisit gate (close last week's loop) ---------------- */
+function RevisitGate({
+  participantIds,
+  familyId,
+  children,
+}: {
+  participantIds: string[];
+  familyId: string;
+  children: React.ReactNode;
+}) {
+  const [phase, setPhase] = useState<'loading' | 'card' | 'done'>('loading');
+  const [focus, setFocus] = useState<WeeklyFocus | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getActiveDyadFocus(participantIds)
+      .then((f) => {
+        if (cancelled) return;
+        if (f) {
+          setFocus(f);
+          setPhase('card');
+        } else {
+          setPhase('done');
+        }
+      })
+      .catch(() => {
+        // Reading the prior focus must never block the ritual.
+        if (!cancelled) setPhase('done');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [participantIds]);
+
+  if (phase === 'loading') return <LoadingState message="Opening…" />;
+  if (phase === 'card' && focus) {
+    return (
+      <RevisitCard
+        focus={focus}
+        participantIds={participantIds}
+        familyId={familyId}
+        onDone={() => setPhase('done')}
+      />
+    );
+  }
+  return <>{children}</>;
+}
+
+function RevisitCard({
+  focus,
+  participantIds,
+  familyId,
+  onDone,
+}: {
+  focus: WeeklyFocus;
+  participantIds: string[];
+  familyId: string;
+  onDone: () => void;
+}) {
+  const [wentWell, setWentWell] = useState<FocusWentWell | null>(null);
+  const [reflection, setReflection] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const choices: { value: FocusWentWell; label: string }[] = [
+    { value: 'yes', label: 'Went well' },
+    { value: 'partly', label: 'Partly' },
+    { value: 'no', label: 'Not really' },
+  ];
+
+  const handleContinue = async () => {
+    if (!wentWell) return;
+    setSaving(true);
+    try {
+      await recordFocusOutcome({
+        familyId,
+        participantIds,
+        focusText: focus.text,
+        wentWell,
+        reflection,
+      });
+    } catch (e) {
+      // Closing the loop is best-effort — never trap the couple here.
+      console.error('recordFocusOutcome failed:', e);
+    }
+    onDone();
+  };
+
+  return (
+    <SessionStage>
+      <p className="eyebrow">Last week, you set out to</p>
+      <h1 className="title">
+        <span className="accent">{focus.text}</span>
+      </h1>
+      <p className="prompt">
+        <em>How did that go?</em>
+      </p>
+      <div className="revisit-choices">
+        {choices.map((c) => (
+          <button
+            key={c.value}
+            type="button"
+            className={`revisit-choice ${wentWell === c.value ? 'selected' : ''}`}
+            onClick={() => setWentWell(c.value)}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+      <div className="note-wrap">
+        <textarea
+          className="note-field"
+          placeholder="A line about how it went (optional)…"
+          value={reflection}
+          onChange={(e) => setReflection(e.target.value)}
+          rows={2}
+        />
+      </div>
+      <div className="nav">
+        <span />
+        <button
+          type="button"
+          className="nav-btn primary"
+          onClick={handleContinue}
+          disabled={!wentWell || saving}
+        >
+          {saving ? 'Saving…' : 'Continue →'}
+        </button>
+      </div>
+    </SessionStage>
   );
 }
 
 /* ---------------- Completed ---------------- */
-function CompletedScreen({
-  session,
-}: {
-  session: { intentions: RitualIntention[] };
-}) {
+function CompletedScreen({ session }: { session: RitualSession }) {
+  const [focusText, setFocusText] = useState<string | null>(null);
+  const [resolved, setResolved] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getActiveDyadFocus(session.participantUserIds)
+      .then((f) => {
+        if (cancelled) return;
+        setFocusText(f?.text ?? null);
+        setResolved(true);
+      })
+      .catch(() => {
+        if (!cancelled) setResolved(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [session.participantUserIds]);
+
   return (
     <SessionStage>
       <p className="eyebrow">Session complete</p>
       <h1 className="title">
         You finished <span className="accent">together</span>.
       </h1>
-      <p className="lede muted">Carrying forward:</p>
-      <ul className="intentions-recap">
-        {session.intentions.length === 0 && (
-          <li className="muted">
-            <em>No intentions recorded.</em>
-          </li>
-        )}
-        {session.intentions.map((it, i) => (
-          <li key={i}>
-            <span className="bullet" aria-hidden="true">
-              &#10070;
-            </span>
-            {it.text}
-          </li>
-        ))}
-      </ul>
+      {focusText ? (
+        <>
+          <p className="lede muted">Carrying forward this week:</p>
+          <p className="focus-recap">{focusText}</p>
+          <p className="prompt">
+            <em>We&rsquo;ll start here next time.</em>
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="lede muted">Carrying forward:</p>
+          <ul className="intentions-recap">
+            {(!resolved || session.intentions.length === 0) && (
+              <li className="muted">
+                <em>
+                  {resolved
+                    ? 'No focus recorded.'
+                    : 'Gathering your focus…'}
+                </em>
+              </li>
+            )}
+            {session.intentions.map((it, i) => (
+              <li key={i}>
+                <span className="bullet" aria-hidden="true">
+                  &#10070;
+                </span>
+                {it.text}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <Link href="/rituals" className="back-link">
         <span aria-hidden="true">&larr;</span> Back to rituals
       </Link>
@@ -164,19 +346,25 @@ function CompletedScreen({
 function SessionFlow({
   sections,
   initialIntentions,
+  familyId,
+  participantIds,
+  ritualSessionId,
   onSaveNote,
   onSaveIntentions,
   onComplete,
 }: {
   sections: SessionSection[];
   initialIntentions: RitualIntention[];
+  familyId: string;
+  participantIds: string[];
+  ritualSessionId: string;
   onSaveNote: (sectionIndex: number, note: string) => Promise<void>;
   onSaveIntentions: (intentions: RitualIntention[]) => Promise<void>;
   onComplete: () => Promise<void>;
 }) {
   const router = useRouter();
   const [idx, setIdx] = useState(0);
-  const [finishing, setFinishing] = useState(false);
+  const [phase, setPhase] = useState<'sections' | 'focus'>('sections');
   const [intentions, setIntentions] = useState<RitualIntention[]>(
     () =>
       initialIntentions.length > 0
@@ -188,19 +376,20 @@ function SessionFlow({
   const atLast = idx === lastIdx;
   const section = sections[idx];
 
-  const handleFinish = useCallback(async () => {
-    setFinishing(true);
-    const cleaned = intentions
-      .map((i) => ({ ...i, text: i.text.trim() }))
-      .filter((i) => i.text.length > 0);
-    try {
-      await onSaveIntentions(cleaned);
-      await onComplete();
-    } catch (err) {
-      console.error('session finish failed:', err);
-      setFinishing(false);
-    }
-  }, [intentions, onSaveIntentions, onComplete]);
+  if (phase === 'focus') {
+    return (
+      <FocusStep
+        sections={sections}
+        intentions={intentions}
+        familyId={familyId}
+        participantIds={participantIds}
+        ritualSessionId={ritualSessionId}
+        onSaveIntentions={onSaveIntentions}
+        onComplete={onComplete}
+        onBack={() => setPhase('sections')}
+      />
+    );
+  }
 
   return (
     <SessionStage>
@@ -268,10 +457,9 @@ function SessionFlow({
           <button
             type="button"
             className="nav-btn primary"
-            onClick={handleFinish}
-            disabled={finishing}
+            onClick={() => setPhase('focus')}
           >
-            {finishing ? 'Saving…' : 'Complete session'}
+            Find our focus &rarr;
           </button>
         ) : (
           <button
@@ -283,6 +471,200 @@ function SessionFlow({
           </button>
         )}
       </div>
+    </SessionStage>
+  );
+}
+
+/* ---------------- Focus step (the prescription) ---------------- */
+function FocusStep({
+  sections,
+  intentions,
+  familyId,
+  participantIds,
+  ritualSessionId,
+  onSaveIntentions,
+  onComplete,
+  onBack,
+}: {
+  sections: SessionSection[];
+  intentions: RitualIntention[];
+  familyId: string;
+  participantIds: string[];
+  ritualSessionId: string;
+  onSaveIntentions: (intentions: RitualIntention[]) => Promise<void>;
+  onComplete: () => Promise<void>;
+  onBack: () => void;
+}) {
+  const [mode, setMode] = useState<'loading' | 'proposal' | 'ownWords'>(
+    'loading',
+  );
+  const [proposal, setProposal] = useState<string | null>(null);
+  const [draft, setDraft] = useState('');
+  const [saving, setSaving] = useState(false);
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    const input = buildWeeklyFocusInput(sections, intentions);
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('focus-timeout')), 6000),
+    );
+    Promise.race([requestWeeklyFocus(input), timeout])
+      .then((p) => {
+        const text = String(p).trim();
+        if (!text) throw new Error('empty');
+        setProposal(text);
+        setDraft(text);
+        setMode('proposal');
+      })
+      .catch(() => {
+        // Never block the close on AI — fall back to their own words.
+        setProposal(null);
+        setDraft(fallbackFocusText(intentions));
+        setMode('ownWords');
+      });
+  }, [sections, intentions]);
+
+  const commit = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      setSaving(true);
+      try {
+        const { text: finalText, source } = resolveWeeklyFocus({
+          aiProposal: proposal,
+          confirmedText: trimmed,
+        });
+        const cleaned = intentions
+          .map((i) => ({ ...i, text: i.text.trim() }))
+          .filter((i) => i.text.length > 0);
+        await onSaveIntentions(cleaned);
+        await saveWeeklyFocus({
+          familyId,
+          participantIds,
+          ritualSessionId,
+          text: finalText,
+          source,
+        });
+        await onComplete();
+      } catch (err) {
+        console.error('focus save failed:', err);
+        setSaving(false);
+      }
+    },
+    [
+      proposal,
+      intentions,
+      familyId,
+      participantIds,
+      ritualSessionId,
+      onSaveIntentions,
+      onComplete,
+    ],
+  );
+
+  if (mode === 'loading') {
+    return (
+      <SessionStage>
+        <p className="eyebrow">Your focus for the week</p>
+        <h1 className="title">
+          One thing, <span className="accent">together</span>.
+        </h1>
+        <p className="lede muted">
+          Relish is reading what you just shared&hellip;
+        </p>
+      </SessionStage>
+    );
+  }
+
+  return (
+    <SessionStage>
+      <p className="eyebrow">Your focus for the week</p>
+      {mode === 'proposal' ? (
+        <>
+          <h1 className="title">
+            Try <span className="accent">this</span>.
+          </h1>
+          <p className="focus-recap">{proposal}</p>
+          <div className="nav">
+            <button
+              type="button"
+              className="nav-btn ghost"
+              onClick={onBack}
+              disabled={saving}
+            >
+              &larr; Back
+            </button>
+            <div className="focus-actions">
+              <button
+                type="button"
+                className="nav-btn ghost"
+                onClick={() => {
+                  setDraft(
+                    fallbackFocusText(intentions) || proposal || '',
+                  );
+                  setMode('ownWords');
+                }}
+                disabled={saving}
+              >
+                Use our own words
+              </button>
+              <button
+                type="button"
+                className="nav-btn primary"
+                onClick={() => commit(proposal ?? '')}
+                disabled={saving}
+              >
+                {saving ? 'Saving…' : 'Use this →'}
+              </button>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <h1 className="title">
+            In <span className="accent">your</span> words.
+          </h1>
+          <p className="prompt">
+            <em>One thing the two of you will carry into the week.</em>
+          </p>
+          <div className="note-wrap">
+            <textarea
+              className="note-field"
+              placeholder="The one thing we&rsquo;ll try this week…"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              rows={3}
+              autoFocus
+            />
+          </div>
+          <div className="nav">
+            <button
+              type="button"
+              className="nav-btn ghost"
+              onClick={() => {
+                if (proposal) {
+                  setMode('proposal');
+                } else {
+                  onBack();
+                }
+              }}
+              disabled={saving}
+            >
+              &larr; Back
+            </button>
+            <button
+              type="button"
+              className="nav-btn primary"
+              onClick={() => commit(draft)}
+              disabled={saving || draft.trim().length === 0}
+            >
+              {saving ? 'Saving…' : 'Carry this forward →'}
+            </button>
+          </div>
+        </>
+      )}
     </SessionStage>
   );
 }
@@ -641,6 +1023,55 @@ const stageStyles = `
     cursor: progress;
   }
 
+  .session-content .focus-recap {
+    font-family: var(--r-serif, 'Cormorant Garamond', Georgia, serif);
+    font-style: italic;
+    font-size: clamp(22px, 3.4vw, 30px);
+    line-height: 1.4;
+    color: #f5ecd8;
+    margin: 0 0 28px;
+    max-width: 48ch;
+    padding: 18px 22px;
+    border-left: 2px solid #d4a574;
+    background: rgba(212, 165, 116, 0.08);
+    text-shadow: 0 1px 8px rgba(0,0,0,0.8);
+  }
+  .session-content .focus-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .session-content .revisit-choices {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 0 0 22px;
+  }
+  .session-content .revisit-choice {
+    font-family: var(--r-sans, 'DM Sans', system-ui, sans-serif);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #c8b894;
+    background: transparent;
+    border: 1px solid rgba(168, 150, 118, 0.4);
+    padding: 12px 20px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+  }
+  .session-content .revisit-choice:hover {
+    color: #f5ecd8;
+    border-color: rgba(245, 236, 216, 0.55);
+  }
+  .session-content .revisit-choice.selected {
+    background: #d4a574;
+    color: #1c1410;
+    border-color: #d4a574;
+  }
   .session-content .intentions-recap {
     list-style: none;
     margin: 0 0 40px;
