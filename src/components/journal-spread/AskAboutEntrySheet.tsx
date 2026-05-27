@@ -26,6 +26,7 @@ interface DisplayTurn {
   key: string;
   role: 'user' | 'assistant';
   content: string;
+  authorId?: string;
 }
 
 function entryKicker(entry: Entry): string {
@@ -141,11 +142,24 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
     [entry.subjects]
   );
 
+  // Resolve a first name for a chat turn's author so the partner's turns
+  // read as theirs, not an anonymous "you". Returns null when we can't
+  // attribute (e.g. ephemeral coach turns with no authorId).
+  const nameForAuthor = (authorId?: string): string | null => {
+    if (!authorId) return null;
+    if (authorId === user?.userId) {
+      return user?.name?.split(' ')[0] || 'You';
+    }
+    const p = people.find((pp) => pp.linkedUserId === authorId);
+    if (p?.name) return p.name.split(' ')[0];
+    return 'Partner';
+  };
+
   // Normalize both sources into a common display shape.
   const displayTurns: DisplayTurn[] = journalBacked
     ? entryChat.turns
         .filter((t) => !t.excluded)
-        .map((t) => ({ key: t.turnId, role: t.role, content: t.content }))
+        .map((t) => ({ key: t.turnId, role: t.role, content: t.content, authorId: t.authorId }))
     : coach.messages.map((m, i) => ({
         // Hide the synthetic context preamble on the very first user message.
         key: `${i}`,
@@ -352,6 +366,8 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
                 // For the ephemeral coach fallback there's no
                 // persisted turn the partner can navigate to.
                 const canFlag = journalBacked && Boolean(partner);
+                const authorName =
+                  t.role === 'user' ? nameForAuthor(t.authorId) : null;
                 return (
                   <div
                     key={t.key}
@@ -369,6 +385,7 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
                         }
                       />
                     )}
+                    {authorName && <span className="msg-author">{authorName}</span>}
                     {t.content}
                     {canCommit && (
                       <div className="turn-actions">
@@ -677,6 +694,15 @@ export function AskAboutEntrySheet({ entry, side, nameOf, onClose }: AskAboutEnt
             align-self: flex-end;
             background: #2a1f14;
             color: #f5ecd8;
+          }
+          .msg-author {
+            display: block;
+            font-family: -apple-system, 'Helvetica Neue', sans-serif;
+            font-size: 9px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            opacity: 0.6;
+            margin-bottom: 4px;
           }
           .msg-assistant {
             align-self: flex-start;

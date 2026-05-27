@@ -1,7 +1,10 @@
 // functions/__tests__/claritySessionTurn.test.js
 const { expect } = require('chai');
 const sinon = require('sinon');
-const { runClaritySessionTurn } = require('../claritySessionTurn.handler.js');
+const {
+  runClaritySessionTurn,
+  buildPerTurnUserMessage,
+} = require('../claritySessionTurn.handler.js');
 
 // Tiny in-memory firestore fake — only the operations the handler uses.
 function makeFakeDb({ obstacle, moves = [], userData }) {
@@ -257,5 +260,21 @@ describe('runClaritySessionTurn', () => {
     } catch (e) { err = e; }
     expect(err).to.be.an('error');
     expect(err.message).to.match(/parsed/i);
+  });
+});
+
+describe('buildPerTurnUserMessage', () => {
+  const transcript = [{ role: 'user', content: 'I keep avoiding the talk.' }];
+
+  it('names the user when a userName is provided', () => {
+    const out = buildPerTurnUserMessage('A hard talk', transcript, 'Scott');
+    expect(out).to.contain('Scott');
+  });
+
+  it('omits a name line when no userName is given', () => {
+    const out = buildPerTurnUserMessage('A hard talk', transcript);
+    // Still includes the obstacle + transcript, just no speaker identity.
+    expect(out).to.contain('A hard talk');
+    expect(out).to.contain('I keep avoiding the talk.');
   });
 });

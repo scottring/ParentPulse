@@ -100,8 +100,12 @@ function buildTranscript(docs) {
  * Build the single user-facing message that carries obstacle context +
  * full transcript (including the new user turn already appended).
  */
-function buildPerTurnUserMessage(obstacleTitle, transcript) {
+function buildPerTurnUserMessage(obstacleTitle, transcript, userName) {
   const parts = [];
+  if (userName && String(userName).trim()) {
+    parts.push(`The user you're talking with is ${String(userName).trim()}.`);
+    parts.push("");
+  }
   if (obstacleTitle && obstacleTitle.trim()) {
     parts.push(`Obstacle: ${obstacleTitle.trim()}`);
     parts.push("");
@@ -220,7 +224,8 @@ async function runClaritySessionTurn(deps, payload) {
       : obstacle.title || "";
 
   // 9. Call Anthropic.
-  const userMessage = buildPerTurnUserMessage(activeTitle, fullTranscript);
+  const userMessage = buildPerTurnUserMessage(
+      activeTitle, fullTranscript, userData && userData.name);
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
