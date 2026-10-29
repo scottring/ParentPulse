@@ -26,6 +26,7 @@ import {
   LogOut,
   Menu,
   Sun,
+  Sprout,
   Quote,
   CornerDownRight,
   Monitor,
@@ -35,10 +36,21 @@ import {
 import { type Book, type Person, type Moment } from "@/lib/relish/model";
 import { useLocalBook } from "./useLocalBook";
 import Image from "next/image";
+import {
+  SensoryProvider,
+  SoundControl,
+  SoundSettings,
+  KeptToast,
+  useSensory,
+} from "./Sensory";
+import { RhythmStrip, RhythmPage, WeeklyReflection } from "./Rhythm";
+import { keepReview } from "@/lib/relish/rhythm";
 import "./relish.css";
-type Page = "home" | "people" | "moments";
+import "./experience.css";
+type Page = "home" | "people" | "moments" | "rhythm";
 type Modal = {
-  type: "create" | "person" | "moment" | "settings" | "learn" | "edit";
+  type:
+    "create" | "person" | "moment" | "settings" | "learn" | "edit" | "review";
   personId?: string;
   momentId?: string;
 } | null;
@@ -47,11 +59,12 @@ const art: Record<string, string> = {
   leo: "/illustrations/02-Parent-kid-eye-level.png",
   june: "/illustrations/07-letter-in-hands.png",
 };
-const icons = { home: Sun, people: BookOpen, moments: Feather };
+const icons = { home: Sun, people: BookOpen, moments: Feather, rhythm: Sprout };
 const labels: Record<Page, string> = {
   home: "The everyday",
   people: "Your people",
   moments: "Moments & learning",
+  rhythm: "Your rhythm",
 };
 function Dialog({
   title,
@@ -283,6 +296,13 @@ const subscribeToDate = (onChange: () => void) => {
   return () => clearInterval(timer);
 };
 export default function RelishApp() {
+  return (
+    <SensoryProvider>
+      <BookGate />
+    </SensoryProvider>
+  );
+}
+function BookGate() {
   const vault = useLocalBook();
   const { mode, busy, error } = vault;
   if (mode === "loading")
@@ -323,6 +343,8 @@ export default function RelishApp() {
 }
 function OpenBook({ vault }: { vault: ReturnType<typeof useLocalBook> }) {
   const { book, mode, busy, error } = vault;
+  const sensory = useSensory();
+  const now = new Date();
   const [page, setPage] = useState<Page>("home"),
     [personId, setPersonId] = useState<string | null>(null),
     [modal, setModal] = useState<Modal>(null),
@@ -360,6 +382,7 @@ function OpenBook({ vault }: { vault: ReturnType<typeof useLocalBook> }) {
   };
   const save = async (next: Book, message: string) => {
     await vault.save(next);
+    sensory.play("place");
     setToast(sample ? "Added to the sample book for this visit." : message);
   };
   const moments = book.moments.filter(
@@ -398,7 +421,7 @@ function OpenBook({ vault }: { vault: ReturnType<typeof useLocalBook> }) {
         <div className="r-sidebar-rule" />
         <p className="r-eyebrow">YOUR BOOK</p>
         <nav aria-label="Main navigation">
-          {(["home", "people", "moments"] as Page[]).map((item) => {
+          {(["home", "people", "moments", "rhythm"] as Page[]).map((item) => {
             const Icon = icons[item];
             return (
               <button
@@ -497,6 +520,7 @@ function OpenBook({ vault }: { vault: ReturnType<typeof useLocalBook> }) {
             Your book <span>/</span> {person ? person.name : labels[page]}
           </span>
           <div className="r-top-actions">
+            <SoundControl />
             {searchOpen && (
               <input
                 autoFocus
@@ -529,7 +553,10 @@ function OpenBook({ vault }: { vault: ReturnType<typeof useLocalBook> }) {
             </button>
           </div>
         </header>
-        <main className="r-content">
+        <main
+          className="r-content r-page-arrive"
+          key={`${page}-${personId ?? "all"}`}
+        >
           {page === "home" && !person && (
             <>
               <div className="r-date">
@@ -567,6 +594,15 @@ function OpenBook({ vault }: { vault: ReturnType<typeof useLocalBook> }) {
                   <Leaf size={17} />
                 </div>
               </section>
+              <RhythmStrip
+                book={book}
+                now={now}
+                onOpen={() => changePage("rhythm")}
+                onNotice={() => openMoment()}
+                onReflect={(id) => setModal({ type: "learn", momentId: id })}
+                onReview={() => setModal({ type: "review" })}
+                onPerson={() => setModal({ type: "person" })}
+              />
               <section className="r-section">
                 <div className="r-section-title">
                   <div>
@@ -907,6 +943,23 @@ function OpenBook({ vault }: { vault: ReturnType<typeof useLocalBook> }) {
               )}
             </>
           )}
+          {page === "rhythm" && !person && (
+            <RhythmPage
+              book={book}
+              now={now}
+              busy={busy}
+              onSettings={async (rhythm) => {
+                await save(
+                  { ...book, rhythm },
+                  "A rhythm that feels like you.",
+                );
+              }}
+              onNotice={() => openMoment()}
+              onReflect={(id) => setModal({ type: "learn", momentId: id })}
+              onReview={() => setModal({ type: "review" })}
+              onPerson={() => setModal({ type: "person" })}
+            />
+          )}
           <footer className="r-footer">
             <span className="r-wordmark">
               relish<span>✳</span>
@@ -920,12 +973,7 @@ function OpenBook({ vault }: { vault: ReturnType<typeof useLocalBook> }) {
           </footer>
         </main>
       </div>
-      {toast && (
-        <div className="r-toast" role="status">
-          <Check size={17} />
-          {toast}
-        </div>
-      )}
+      {toast && <KeptToast message={toast} onDismiss={() => setToast("")} />}
       {error && (
         <div className="r-error-banner" role="alert">
           {error}
@@ -936,12 +984,14 @@ function OpenBook({ vault }: { vault: ReturnType<typeof useLocalBook> }) {
           title={
             modal.type === "moment"
               ? "Keep a moment"
-              : modal.type === "settings"
-                ? "Your privacy and your book"
-                : "Your book"
+              : modal.type === "review"
+                ? "Your weekly reflection"
+                : modal.type === "settings"
+                  ? "Your privacy and your book"
+                  : "Your book"
           }
           onClose={() => !busy && setModal(null)}
-          wide={modal.type === "moment"}
+          wide={modal.type === "moment" || modal.type === "review"}
         >
           {modal.type === "create" && (
             <VaultForm
@@ -1027,6 +1077,21 @@ function OpenBook({ vault }: { vault: ReturnType<typeof useLocalBook> }) {
               }}
             />
           )}
+          {modal.type === "review" && (
+            <WeeklyReflection
+              book={book}
+              now={now}
+              busy={busy}
+              onSave={async (review) => {
+                await save(
+                  keepReview(book, review),
+                  "A week of little things, gathered.",
+                );
+                setModal(null);
+                changePage("rhythm");
+              }}
+            />
+          )}
           {modal.type === "settings" && (
             <div className="r-settings">
               <p className="r-eyebrow">A PRIVATE PLACE TO BE HUMAN</p>
@@ -1035,6 +1100,7 @@ function OpenBook({ vault }: { vault: ReturnType<typeof useLocalBook> }) {
                 <br />
                 <em>Your boundaries.</em>
               </h2>
+              <SoundSettings />
               <div className="r-setting-row">
                 <ShieldCheck size={24} />
                 <div>
@@ -1375,7 +1441,7 @@ function MomentForm({
           </span>
         ))}
       </div>
-      <h2>{title}</h2>
+      <h2 aria-live="polite">{title}</h2>
       <p className="r-form-intro">
         {
           [
@@ -1407,96 +1473,98 @@ function MomentForm({
           }
         }}
       >
-        {step === 0 && (
-          <>
-            <label>
-              Who’s this moment with?
-              <select value={who} onChange={(e) => setWho(e.target.value)}>
-                {people.map((p) => (
-                  <option value={p.id} key={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              What happened?
-              <textarea
-                autoFocus
-                required
-                value={observation}
-                onChange={(e) => setObservation(e.target.value)}
-                rows={6}
-                maxLength={8000}
-                placeholder="Start anywhere. There’s no right way to write this."
-              />
-            </label>
-          </>
-        )}
-        {step === 1 && (
-          <>
-            <blockquote className="r-context-quote">{observation}</blockquote>
-            <label>
-              Another possible perspective
-              <textarea
-                autoFocus
-                value={perspective}
-                onChange={(e) => setPerspective(e.target.value)}
-                rows={4}
-                maxLength={8000}
-                placeholder={`What might ${person?.name} have needed? What could you ask instead of assuming?`}
-              />
-            </label>
-            <button
-              type="button"
-              className="r-ai-invite"
-              onClick={() => setAi(!ai)}
-            >
-              <Sparkles size={17} />
-              {ai ? "Close AI invitation" : "Invite a little help from AI"}
-              <span>Your choice, every time</span>
-            </button>
-            {ai && (
-              <AIHelp
-                observation={observation}
-                onUse={(text) => {
-                  setPerspective(text);
-                  setAi(false);
-                }}
-              />
-            )}
-          </>
-        )}
-        {step === 2 && (
-          <>
-            <div className="r-prompt-note">
-              <Leaf size={20} />
-              <p>
-                A good next move might be a question, a little more time, or
-                simply listening differently.
+        <div className="r-step-body" key={step}>
+          {step === 0 && (
+            <>
+              <label>
+                Who’s this moment with?
+                <select value={who} onChange={(e) => setWho(e.target.value)}>
+                  {people.map((p) => (
+                    <option value={p.id} key={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                What happened? <span>One honest sentence is enough</span>
+                <textarea
+                  autoFocus
+                  required
+                  value={observation}
+                  onChange={(e) => setObservation(e.target.value)}
+                  rows={6}
+                  maxLength={8000}
+                  placeholder="Start anywhere. There’s no right way to write this."
+                />
+              </label>
+            </>
+          )}
+          {step === 1 && (
+            <>
+              <blockquote className="r-context-quote">{observation}</blockquote>
+              <label>
+                Another possible perspective <span>optional</span>
+                <textarea
+                  autoFocus
+                  value={perspective}
+                  onChange={(e) => setPerspective(e.target.value)}
+                  rows={4}
+                  maxLength={8000}
+                  placeholder={`What might ${person?.name} have needed? What could you ask instead of assuming?`}
+                />
+              </label>
+              <button
+                type="button"
+                className="r-ai-invite"
+                onClick={() => setAi(!ai)}
+              >
+                <Sparkles size={17} />
+                {ai ? "Close AI invitation" : "Invite a little help from AI"}
+                <span>Your choice, every time</span>
+              </button>
+              {ai && (
+                <AIHelp
+                  observation={observation}
+                  onUse={(text) => {
+                    setPerspective(text);
+                    setAi(false);
+                  }}
+                />
+              )}
+            </>
+          )}
+          {step === 2 && (
+            <>
+              <div className="r-prompt-note">
+                <Leaf size={20} />
+                <p>
+                  A good next move might be a question, a little more time, or
+                  simply listening differently.
+                </p>
+              </div>
+              <label>
+                What would you like to try? <span>optional</span>
+                <textarea
+                  autoFocus
+                  value={move}
+                  onChange={(e) => setMove(e.target.value)}
+                  rows={5}
+                  maxLength={3000}
+                  placeholder="Next time, I’d like to…"
+                />
+              </label>
+              <p className="r-small">
+                You can also keep this moment without a next step.
               </p>
-            </div>
-            <label>
-              What would you like to try?
-              <textarea
-                autoFocus
-                value={move}
-                onChange={(e) => setMove(e.target.value)}
-                rows={5}
-                maxLength={3000}
-                placeholder="Next time, I’d like to…"
-              />
-            </label>
-            <p className="r-small">
-              You can also keep this moment without a next step.
+            </>
+          )}
+          {err && (
+            <p role="alert" className="r-error">
+              {err}
             </p>
-          </>
-        )}
-        {err && (
-          <p role="alert" className="r-error">
-            {err}
-          </p>
-        )}
+          )}
+        </div>
         <div className="r-form-actions">
           {step > 0 ? (
             <button

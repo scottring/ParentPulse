@@ -26,6 +26,25 @@ describe("encrypted relationship book", () => {
     expect(raw).not.toContain("Private Person");
     expect((await unlockVault(raw, pass)).book).toEqual(book);
   });
+  it("keeps cadence and weekly reflection text inside the encrypted book", async () => {
+    const book = {
+      ...emptyBook("Alex"),
+      rhythm: { target: 3 as const, reviewDay: 0 },
+      reviews: [
+        {
+          id: "week",
+          weekStart: "2026-10-26",
+          reflection: "PRIVATE WEEKLY INSIGHT",
+          next: "PRIVATE NEXT MOVE",
+          createdAt: "2026-10-29T12:00:00Z",
+        },
+      ],
+    };
+    const { envelope } = await createVault(book, pass);
+    const raw = JSON.stringify(envelope);
+    expect(raw).not.toContain("PRIVATE");
+    expect((await unlockVault(raw, pass)).book).toEqual(book);
+  });
   it("rejects an incorrect passphrase", async () => {
     const { envelope } = await createVault(emptyBook("Alex"), pass);
     await expect(

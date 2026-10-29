@@ -16,11 +16,21 @@ export type Moment = {
   createdAt: string;
   completedAt?: string;
 };
+export type WeeklyReview = {
+  id: string;
+  weekStart: string;
+  reflection: string;
+  next: string;
+  createdAt: string;
+};
+export type RhythmSettings = { target: 1 | 3 | 5; reviewDay: number };
 export type Book = {
   version: 1;
   owner: string;
   people: Person[];
   moments: Moment[];
+  rhythm?: RhythmSettings;
+  reviews?: WeeklyReview[];
 };
 export const emptyBook = (owner: string): Book => ({
   version: 1,
@@ -98,6 +108,23 @@ export function isBook(value: unknown): value is Book {
   const b = value as Book;
   return (
     b.version === 1 &&
+    (b.rhythm === undefined ||
+      (!!b.rhythm &&
+        [1, 3, 5].includes(b.rhythm.target) &&
+        Number.isInteger(b.rhythm.reviewDay) &&
+        b.rhythm.reviewDay >= 0 &&
+        b.rhythm.reviewDay <= 6)) &&
+    (b.reviews === undefined ||
+      (Array.isArray(b.reviews) &&
+        b.reviews.every(
+          (r) =>
+            r &&
+            ["id", "weekStart", "reflection", "next", "createdAt"].every(
+              (k) => typeof r[k as keyof WeeklyReview] === "string",
+            ) &&
+            /^\d{4}-\d{2}-\d{2}$/.test(r.weekStart) &&
+            Number.isFinite(Date.parse(r.createdAt)),
+        ))) &&
     typeof b.owner === "string" &&
     Array.isArray(b.people) &&
     b.people.every(
