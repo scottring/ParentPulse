@@ -1,19 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans, Cormorant_Garamond } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
-import AppBoundary from '@/components/relish/AppBoundary';
+import AppBoundary from "@/components/relish/AppBoundary";
 
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  variable: "--font-parent-body",
-  weight: ["300", "400", "500", "600"],
+const dmSans = localFont({
+  src: "./fonts/dm-sans.ttf", variable: "--font-parent-body", weight: "100 1000", display: "swap",
 });
-
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
-  variable: "--font-parent-display",
-  weight: ["300", "400", "500", "600"],
-  style: ["normal", "italic"],
+const cormorant = localFont({
+  src: [
+    { path: "./fonts/cormorant-garamond.ttf", weight: "300 700", style: "normal" },
+    { path: "./fonts/cormorant-garamond-italic.ttf", weight: "300 700", style: "italic" },
+  ],
+  variable: "--font-parent-display", display: "swap",
 });
 
 export const metadata: Metadata = {

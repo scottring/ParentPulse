@@ -100,3 +100,8 @@ Secrets are excluded from uploads and must never use a `NEXT_PUBLIC_` prefix.
 `npm run build` explicitly uses Webpack: the installed Next 16.1.2 Turbopack font
 resolver fails on the Google font assets. This makes the tested and hosted build
 commands identical. A hosted preview must be verified before any main-branch release.
+
+The hosted build exposed a Google font URL change incompatible with this Next
+font loader. The same DM Sans and Cormorant Garamond variable fonts are now
+bundled from the official Google Fonts repository, together with their OFL
+licenses. Neither building nor visiting Relish requires a Google Fonts request.
