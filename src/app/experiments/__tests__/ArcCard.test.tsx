@@ -56,14 +56,14 @@ describe('ArcCard', () => {
   } as unknown as GrowthArc;
 
   it('renders the whole card as a link to /experiments/arc/[arcId]', async () => {
-    const { ArcCard } = await import('@/app/experiments/page');
+    const { ArcCard } = await import('@/app/experiments/ArcCard');
     render(<ArcCard arc={arc} progress={0} activeItems={[] as GrowthItem[]} />);
     const link = screen.getByRole('link', { name: /Test arc/i });
     expect(link).toHaveAttribute('href', '/experiments/arc/arc-1');
   });
 
   it('renders an inner Next line when an active item exists (item label, not a separate link)', async () => {
-    const { ArcCard } = await import('@/app/experiments/page');
+    const { ArcCard } = await import('@/app/experiments/ArcCard');
     const activeItem = {
       growthItemId: 'item-7',
       arcId: 'arc-1',

@@ -236,27 +236,17 @@ describe('resolveRecipe', () => {
       },
     };
 
-    const arcGroupActive = {
+    const arcGroupActive: SurfaceData['arcGroups'][number] = {
       arc: {
-        arcId: 'a1',
-        familyId: 'f1',
-        title: 'Arc',
-        description: 'desc',
-        dimensionId: 'emotional_availability' as any,
-        targetPersonIds: [],
-        targetPersonNames: [],
-        assignedToUserId: 'u1',
-        phases: [],
-        currentPhase: 1,
-        totalPhases: 3,
-        status: 'active' as const,
-        startedAt: Timestamp.now(),
-        createdAt: Timestamp.now(),
-        generatedBy: 'ai' as const,
-      },
-      activeItems: [],
-      completedItems: [],
-      progress: 0,
+        arcId:'a1',familyId:'f1',title:'Arc',subtitle:'Practice listening',
+        dimensionId:'emotional_availability' as any,dimensionName:'Emotional availability',domain:'couple',
+        participantIds:[],participantNames:[],emoji:'',researchBasis:'',outcomeStatement:'',
+        level:1,levelTitle:'Awareness',durationWeeks:3,startDate:Timestamp.now(),targetEndDate:Timestamp.now(),
+        phases:[],arcItems:[],currentPhase:'awareness',currentWeek:1,status:'active',
+        preScore:2,preConfidence:'low',graduationCriteria:{minItemsCompleted:1,minPositiveReactions:1,minScoreImprovement:1,targetPostScore:3},
+        completedItemCount:0,totalItemCount:1,averageImpactRating:0,positiveReactionCount:0,
+        createdAt:Timestamp.now(),updatedAt:Timestamp.now(),generatedBy:'ai',
+      },activeItems:[],completedItems:[],progress:0,
     };
 
     const result = resolveRecipe(
@@ -356,7 +346,7 @@ describe('resolveRecipe', () => {
       name: 'Iris',
       hasManual: false,
       canSelfContribute: false,
-      linkedUserId: null,
+      linkedUserId: undefined,
       addedAt: Timestamp.now(),
       addedByUserId: 'u1',
     };
