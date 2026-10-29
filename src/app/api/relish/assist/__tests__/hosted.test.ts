@@ -109,14 +109,15 @@ describe("hosted AI", () => {
     expect(res.headers.get("retry-after")).toBe("60");
     expect(fetch).not.toHaveBeenCalled();
   });
-  it.each([
+  const rejectedHeaders: Record<string, string>[] = [
     { origin: "https://evil.example" },
     { host: "evil.example", origin: "https://evil.example" },
     { "x-relish-consent": "" },
     { host: "localhost:3210", origin: "http://localhost:3210" },
-  ])("rejects origin/consent/host bypass before auth", async (headers) => {
+  ];
+  it.each(rejectedHeaders)("rejects origin/consent/host bypass before auth", async (headers) => {
     expect(
-      (await POST(request(undefined, headers as Record<string, string>)))
+      (await POST(request(undefined, headers)))
         .status,
     ).toBe(403);
     expect(authorizeAI).not.toHaveBeenCalled();
