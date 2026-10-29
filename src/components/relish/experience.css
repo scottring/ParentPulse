@@ -1105,3 +1105,33 @@
     transform: none !important;
   }
 }
+
+/* AI remains an invitation within the reflection, with a separate account. */
+.r-ai-connection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--r-olive, #626b40);
+}
+.r-ai-account {
+  margin: 20px 0;
+  padding: 18px;
+  background: #faf9f3;
+  border: 1px solid #e4e5d7;
+  border-radius: 14px;
+}
+.r-ai-account .r-small {
+  margin: 10px 0;
+}
+.r-ai-account-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 14px 0;
+}
+.r-ai-panel a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

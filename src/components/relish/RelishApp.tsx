@@ -29,8 +29,6 @@ import {
   Sprout,
   Quote,
   CornerDownRight,
-  Monitor,
-  Cloud,
   LoaderCircle,
 } from "lucide-react";
 import { type Book, type Person, type Moment } from "@/lib/relish/model";
@@ -43,6 +41,7 @@ import {
   KeptToast,
   useSensory,
 } from "./Sensory";
+import { AIHelp } from "./AIHelp";
 import { RhythmStrip, RhythmPage, WeeklyReflection } from "./Rhythm";
 import { keepReview } from "@/lib/relish/rhythm";
 import "./relish.css";
@@ -305,6 +304,9 @@ export default function RelishApp() {
 function BookGate() {
   const vault = useLocalBook();
   const { mode, busy, error } = vault;
+  useEffect(() => {
+    if (mode === "locked") window.dispatchEvent(new Event("relish:locked"));
+  }, [mode]);
   if (mode === "loading")
     return (
       <div className="r-loading">
@@ -1108,7 +1110,7 @@ function OpenBook({ vault }: { vault: ReturnType<typeof useLocalBook> }) {
                   <p>
                     {sample
                       ? "You’re exploring fictional stories. Create your own encrypted book to save personal information."
-                      : "Your book is encrypted with your passphrase and saved in this browser profile. No account or cloud sync is used."}
+                      : "Your book is encrypted with your passphrase and saved in this browser profile. No account is needed to keep your book, and it is not synced to the cloud."}
                   </p>
                 </div>
               </div>
@@ -1117,9 +1119,10 @@ function OpenBook({ vault }: { vault: ReturnType<typeof useLocalBook> }) {
                 <div>
                   <h3>AI by invitation</h3>
                   <p>
-                    During a reflection, choose an AI running on this Mac or a
-                    cloud connection. Review the exact excerpt before sending
-                    it. Your whole book is never attached.
+                    During a reflection, invite cloud AI with a verified
+                    account. Review the exact excerpt before sending it. Your
+                    whole book is never attached. On-device AI is available when
+                    you run Relish locally with an installed model.
                   </p>
                 </div>
               </div>
@@ -1595,139 +1598,6 @@ function MomentForm({
           </button>
         </div>
       </form>
-    </div>
-  );
-}
-function AIHelp({
-  observation,
-  onUse,
-}: {
-  observation: string;
-  onUse: (text: string) => void;
-}) {
-  const [provider, setProvider] = useState<"local" | "cloud">("local"),
-    [excerpt, setExcerpt] = useState(observation),
-    [model, setModel] = useState(""),
-    [answer, setAnswer] = useState(""),
-    [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
-  const controller = useRef<AbortController | null>(null);
-  useEffect(() => () => controller.current?.abort(), []);
-  async function ask() {
-    setBusy(true);
-    setError("");
-    setAnswer("");
-    controller.current = new AbortController();
-    try {
-      const res = await fetch("/api/relish/assist", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-relish-consent": "selected-excerpt",
-        },
-        body: JSON.stringify({ provider, model, excerpt }),
-        signal: controller.current.signal,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setAnswer(data.text);
-    } catch (e) {
-      if (!controller.current?.signal.aborted)
-        setError(
-          e instanceof Error ? e.message : "The connection is unavailable.",
-        );
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <div className="r-ai-panel">
-      <h3>A second perspective, on your terms.</h3>
-      <div className="r-provider-choice">
-        <button
-          type="button"
-          className={provider === "local" ? "r-selected" : ""}
-          onClick={() => {
-            setProvider("local");
-            setAnswer("");
-          }}
-        >
-          <Monitor size={15} /> On this Mac
-        </button>
-        <button
-          type="button"
-          className={provider === "cloud" ? "r-selected" : ""}
-          onClick={() => {
-            setProvider("cloud");
-            setAnswer("");
-          }}
-        >
-          <Cloud size={15} /> Cloud AI
-        </button>
-      </div>
-      <p className="r-small">
-        {provider === "local"
-          ? "Uses an installed model through Ollama when Relish runs locally. This excerpt stays on this computer."
-          : "Sends the excerpt below to OpenAI through your configured connection. Its data policies apply. Your full book stays on this computer."}
-      </p>
-      {provider === "local" && (
-        <label>
-          Installed model name
-          <input
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            placeholder="For example, the model listed in Ollama"
-          />
-        </label>
-      )}
-      <label>
-        Only this excerpt will be sent
-        <textarea
-          value={excerpt}
-          onChange={(e) => setExcerpt(e.target.value)}
-          rows={3}
-          maxLength={10000}
-        />
-      </label>
-      <button
-        type="button"
-        className="r-secondary"
-        disabled={
-          busy ||
-          excerpt.trim().length < 5 ||
-          (provider === "local" && !model.trim())
-        }
-        onClick={ask}
-      >
-        {busy ? (
-          <LoaderCircle size={15} className="r-spin" />
-        ) : (
-          <Sparkles size={15} />
-        )}{" "}
-        {busy
-          ? "Considering your moment…"
-          : provider === "local"
-            ? "Send excerpt to local model"
-            : "Send this excerpt to OpenAI"}
-      </button>
-      {error && (
-        <p className="r-error" role="alert">
-          {error}
-        </p>
-      )}
-      {answer && (
-        <div className="r-ai-answer">
-          <p className="r-eyebrow">A POSSIBILITY, NOT A VERDICT</p>
-          <p>{answer}</p>
-          <button
-            type="button"
-            className="r-text-button"
-            onClick={() => onUse(answer)}
-          >
-            Use this as a starting point <CornerDownRight size={14} />
-          </button>
-        </div>
-      )}
     </div>
   );
 }

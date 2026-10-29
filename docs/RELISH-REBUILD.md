@@ -48,7 +48,7 @@ For local AI, run Ollama separately with an installed local model and enter its 
 
 For optional cloud AI, set `OPENAI_API_KEY` in this local app’s environment and select Cloud AI. `RELISH_AI_MODEL` optionally overrides the configured default. Only the reviewed excerpt is sent to OpenAI; the provider’s data policies apply. Requests set `store: false`.
 
-The route requires a loopback host, matching Origin, and explicit excerpt-consent header. Production builds disable it unless `RELISH_LOCAL_AI_ENABLED=true` is explicitly set for a locally hosted installation. This route must not be repurposed as a hosted public AI proxy without authentication and abuse controls. Provider errors do not log excerpts or return provider internals. Real provider responses require a running local model or configured cloud service; automated tests mock those services.
+The route requires a loopback host, matching Origin, and explicit excerpt-consent header. Production builds disable it unless `RELISH_LOCAL_AI_ENABLED=true` is explicitly set for a locally hosted installation. Hosted AI now follows the separate authenticated path below. Provider errors do not log excerpts or return provider internals. Real provider responses require a running local model or configured cloud service; automated tests mock those services.
 
 References: [Web Crypto encryption](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/encrypt), [Ollama chat API](https://docs.ollama.com/api/chat), [Ollama model metadata](https://github.com/ollama/ollama/blob/main/api/types.go).
 
@@ -64,3 +64,39 @@ npx next build --webpack
 The focused suite covers encryption round trips, wrong passphrases, tampering, fresh nonces, schema rejection, sample isolation, encrypted persistence, automatic lock, and AI origin/consent/model boundaries. Additional checks cover calendar-week boundaries, cadence recommendations, review updates, encrypted weekly entries, audio amplitude/tails, opt-in sound, mute cancellation, hidden tabs, and cross-tab sound preferences. The main reflection-to-manual interaction and desktop/mobile layouts were also exercised in a browser.
 
 Two pre-existing build blockers were repaired: outdated GrowthArc test fixtures and a named ArcCard export from a Next page (moved into its own component). No deployment, main-branch merge, cloud data migration, or existing user-data deletion is part of this rebuild.
+
+
+## Hosted AI preview (October 29, 2026)
+
+This is a fresh start; migrating old Firebase books is intentionally out of scope.
+The book remains encrypted in browser storage. An optional, separate Firebase
+email/password account enables hosted AI. Email verification is required; the
+server checks token validity and revocation on every request. The client uses a
+named Auth-only Firebase app with memory-only persistence. It never initializes
+Firestore or imports the legacy family/account providers. Reloading or locking
+the book ends the AI session.
+
+Only the reviewed excerpt is forwarded to OpenAI; requests use `store: false`.
+Relish does not store excerpts or responses server-side. Provider abuse-monitoring
+retention can still apply; see [OpenAI data controls](https://developers.openai.com/api/docs/guides/your-data).
+The server stores only opaque user identifiers and quota counters in
+`relish_ai_usage`, a server-only collection denied to clients by default rules.
+A Firestore transaction limits each verified account to 3 requests/minute and 20
+per UTC day, with an overall preview cap of 200/day. Failed provider requests count
+toward the quota to bound retry abuse. Missing quota storage fails closed.
+
+Server-only hosting variables:
+- `OPENAI_API_KEY`
+- `RELISH_FIREBASE_ADMIN_JSON` (service account JSON for the configured Firebase project)
+- `RELISH_AI_MODEL` (defaults to `gpt-4o-mini`)
+- `RELISH_AI_ORIGINS` (comma-separated HTTPS custom origins)
+
+Vercel's deployment and branch URLs are accepted directly from server environment
+variables. All requests require exact same-origin consent; arbitrary forwarded
+hosts are ignored. The body is bounded to 30 KB as it is read, regardless of the
+Content-Length header. Hosting never enables the loopback Ollama provider.
+Secrets are excluded from uploads and must never use a `NEXT_PUBLIC_` prefix.
+
+`npm run build` explicitly uses Webpack: the installed Next 16.1.2 Turbopack font
+resolver fails on the Google font assets. This makes the tested and hosted build
+commands identical. A hosted preview must be verified before any main-branch release.

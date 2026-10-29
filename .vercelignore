@@ -1,0 +1,9 @@
+.env*
+.git
+.worktrees
+node_modules
+*.pem
+*firebase-adminsdk*.json
+serviceAccountKey.json
+service-account.json
+coverage
