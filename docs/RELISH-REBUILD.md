@@ -8,12 +8,13 @@ Use Node 22 and `npm ci`, then `npm run dev:local`. Open http://127.0.0.1:3210/r
 
 ```sh
 npm run test:relish
+npm run test:auth-runtime
 npx tsc --noEmit
 npm run build
 npm audit --omit=dev
 ```
 
-`npm run build` uses Webpack, matching the hosted build. Fonts and the approved muted alpine artwork are bundled locally. The manifest supports portrait and landscape. There is no service worker or promise of loading the site without a network connection; a loaded private book can be used without an online account.
+`npm run build` uses Webpack, matching the hosted build. A checksum-guarded install/prebuild correction loads jose 6 through dynamic import inside jwks-rsa 4.1.0; this fixes the hosted CommonJS startup failure tracked in [upstream issue 507](https://github.com/auth0/node-jwks-rsa/issues/507) while retaining the supported cryptography version. A prebuild check disables native require(ESM), loads the actual authentication packages, and verifies a real RSA signature and tamper rejection. Dependency changes fail the checksum guard until reviewed. Fonts and the approved muted alpine artwork are bundled locally. The manifest supports portrait and landscape. There is no service worker or promise of loading the site without a network connection; a loaded private book can be used without an online account.
 
 ## A living book with a stopping point
 

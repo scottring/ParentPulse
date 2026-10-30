@@ -18,7 +18,10 @@
     "test:rules": "firebase emulators:exec --only firestore 'vitest run firestore-rules/'",
     "test:all": "npm run test:run && npm run test:functions && npm run test:rules",
     "dev:local": "next dev --webpack --hostname 127.0.0.1 --port 3210",
-    "test:relish": "vitest run --config vitest.relish.config.ts"
+    "test:relish": "vitest run --config vitest.relish.config.ts",
+    "postinstall": "node scripts/prepare-auth-runtime.cjs",
+    "prebuild": "node scripts/prepare-auth-runtime.cjs && npm run test:auth-runtime",
+    "test:auth-runtime": "node --no-experimental-require-module scripts/verify-auth-runtime.cjs"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",
