@@ -1135,3 +1135,14 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+.r-ai-panel .r-small {
+  display: block;
+  font-size: 12px !important;
+  line-height: 1.65;
+  color: #657057;
+  overflow-wrap: anywhere;
+}
+.r-ai-panel > .r-small {
+  margin: 12px 0 18px;
+}
