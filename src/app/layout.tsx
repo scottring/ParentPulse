@@ -1,30 +1,25 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans, Cormorant_Garamond } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
-import { AuthProvider } from "@/context/AuthContext";
-import { WalkthroughProvider } from "@/components/walkthrough/WalkthroughContext";
-import WalkthroughOverlay from "@/components/walkthrough/WalkthroughOverlay";
-import WalkthroughTrigger from "@/components/walkthrough/WalkthroughTrigger";
-import PageFooter from "@/components/layout/PageFooter";
-import RitualBanner from '@/components/rituals/RitualBanner';
-import { LayoutChrome } from "@/components/layout/LayoutChrome";
+import AppBoundary from "@/components/relish/AppBoundary";
 
-const dmSans = DM_Sans({
-  subsets: ["latin"],
+const bodyFont = localFont({
+  src: "./fonts/ibm-plex-sans.ttf",
   variable: "--font-parent-body",
-  weight: ["300", "400", "500", "600"],
+  weight: "100 700",
+  display: "swap",
 });
-
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
+const displayFont = localFont({
+  src: "./fonts/literata.ttf",
   variable: "--font-parent-display",
-  weight: ["300", "400", "500", "600"],
-  style: ["normal", "italic"],
+  weight: "200 900",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Relish - Operating Manuals for the People You Love",
-  description: "Create comprehensive operating manuals for the important people in your life",
+  title: "Relish — The Operating Manual for Relationships",
+  description:
+    "A private, living book of the people you love. Understand a little more. Find your next small move.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -36,9 +31,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  themeColor: "#0f172a",
+  themeColor: "#d0d9d6",
 };
 
 export default function RootLayout({
@@ -48,16 +41,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${dmSans.variable} ${cormorant.variable} antialiased`}>
-        <AuthProvider>
-          <WalkthroughProvider>
-            <RitualBanner />
-            <LayoutChrome>{children}</LayoutChrome>
-            <PageFooter />
-            <WalkthroughOverlay />
-            <WalkthroughTrigger />
-          </WalkthroughProvider>
-        </AuthProvider>
+      <body
+        className={`${bodyFont.variable} ${displayFont.variable} antialiased`}
+      >
+        <AppBoundary>{children}</AppBoundary>
       </body>
     </html>
   );

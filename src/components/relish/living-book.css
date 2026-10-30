@@ -1,0 +1,1148 @@
+.lb-app,
+.lb-gate {
+  --paper: #e6e8e4;
+  --ink: #3e5051;
+  --muted: #586968;
+  --line: #c4cfca;
+  --olive: #46676b;
+  --lb-desk: #d0d9d6;
+  --lb-deep: #dce2dd;
+  --lb-cover: #49696b;
+  --serif: var(--font-parent-display), Georgia, serif;
+  --sans: var(--font-parent-body), sans-serif;
+  color: var(--ink);
+  background: var(--lb-desk);
+  font: 400 15px/1.75 var(--sans);
+}
+.lb-app *,
+.lb-gate * {
+  box-sizing: border-box;
+}
+.lb-app h1,
+.lb-app h2,
+.lb-app h3,
+.lb-gate h1,
+.lb-gate h2 {
+  color: var(--ink);
+  font-family: var(--serif);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+.lb-app h2 {
+  font-size: 32px;
+  line-height: 1.25;
+  margin: 14px 0 22px;
+}
+.lb-app h3 {
+  font-size: 23px;
+  line-height: 1.35;
+  margin: 9px 0 15px;
+}
+.lb-app p {
+  margin: 0 0 16px;
+}
+.lb-app button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  max-width: 100%;
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  color: inherit;
+  padding: 9px 13px;
+  line-height: 1.45;
+  text-align: left;
+}
+.lb-app button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.lb-app button:not(:disabled):hover {
+  background: var(--lb-deep);
+  transform: translateY(-1px);
+}
+.lb-app button:not(:disabled):active {
+  transform: translateY(1px);
+}
+.lb-app :focus-visible {
+  outline: 2px solid var(--olive);
+  outline-offset: 4px;
+}
+.lb-app .lb-primary {
+  background: var(--olive);
+  color: #f2f4ee;
+  padding: 13px 19px;
+  font-weight: 500;
+}
+.lb-app .lb-primary:not(:disabled):hover {
+  background: #385b60;
+}
+.lb-app .lb-secondary {
+  border: 1px solid var(--line);
+  background: var(--lb-deep);
+}
+.lb-app .lb-text {
+  padding: 6px 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--line);
+  justify-content: flex-start;
+}
+.lb-app .lb-text:not(:disabled):hover {
+  background: transparent;
+  border-color: var(--olive);
+}
+.lb-kicker {
+  display: block;
+  font: 500 11px/1.7 var(--sans);
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--muted);
+}
+.lb-app .lb-fine {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.lb-app .lb-error {
+  color: #813e34;
+  padding: 12px 0;
+}
+.lb-app .lb-save-error {
+  background: var(--paper);
+  padding: 14px 20px;
+}
+.lb-desk {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  padding: 26px clamp(18px, 3vw, 48px) 32px;
+  overflow: hidden;
+}
+.lb-desk::before {
+  content: "";
+  position: absolute;
+  z-index: -2;
+  inset: 180px 0 0;
+  background: url("/illustrations/relish-alpine-landscape.jpg") center 25% /
+    cover;
+  filter: saturate(0.22) contrast(0.65);
+  opacity: 0.36;
+  pointer-events: none;
+}
+.lb-desk::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(
+    var(--lb-desk) 0,
+    transparent 380px,
+    var(--lb-desk) 100%
+  );
+  pointer-events: none;
+}
+.lb-header {
+  display: flex;
+  gap: 26px;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1460px;
+  margin: auto;
+}
+.lb-wordmark {
+  font: 500 37px/1.15 var(--serif);
+  letter-spacing: -0.065em;
+}
+.lb-tagline {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.lb-header nav {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.lb-header nav button {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.lb-header button[aria-current="page"] {
+  background: color-mix(in srgb, var(--paper) 65%, transparent);
+}
+.lb-header .r-sound-toggle {
+  border: 0;
+  color: var(--ink);
+}
+.lb-horizon {
+  padding: 38px 0 23px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.03em;
+}
+.lb-identity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 auto 22px;
+  max-width: 1360px;
+}
+.lb-identity h1 {
+  font: 500 11px/1.7 var(--sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 0;
+  outline: none;
+}
+.lb-identity > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.lb-sample {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 35px;
+  font-size: 11px;
+  background: var(--paper);
+  color: var(--muted);
+}
+.lb-sample button {
+  font-size: 12px;
+  min-height: 32px;
+  padding: 3px 5px;
+}
+.lb-book {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  position: relative;
+  max-width: 1360px;
+  margin: 0 auto;
+  border-radius: 4px 10px 10px 4px;
+  background: var(--paper);
+  box-shadow:
+    0 6px 0 -1px var(--lb-cover),
+    0 10px 0 -3px #adbbb5,
+    0 22px 35px #3f5c6020;
+  perspective: 1800px;
+}
+.lb-page {
+  position: relative;
+  padding: 32px clamp(25px, 3vw, 50px) 70px;
+  min-width: 0;
+  min-height: 560px;
+  overflow-wrap: anywhere;
+}
+.lb-page::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 140px;
+  background:
+    linear-gradient(var(--paper), transparent),
+    url("/illustrations/relish-alpine-landscape.jpg") center 63% / cover;
+  opacity: 0.055;
+  filter: grayscale(1);
+  pointer-events: none;
+}
+.lb-left {
+  background: linear-gradient(90deg, transparent 88%, #627a7512 97%, #627a7524);
+}
+.lb-right {
+  transform-origin: left center;
+  background: linear-gradient(90deg, #627a7518, transparent 7%);
+  animation: lb-page-arrive 0.55s cubic-bezier(0.2, 0.65, 0.2, 1);
+}
+.lb-running {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 31px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+.lb-folio {
+  position: absolute;
+  bottom: 22px;
+  left: clamp(25px, 3vw, 50px);
+  font-size: 11px;
+  color: var(--muted);
+}
+.lb-right .lb-folio {
+  left: auto;
+  right: clamp(25px, 3vw, 50px);
+}
+.lb-thread {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  margin: 30px 0 24px;
+  padding: 18px 0;
+}
+.lb-thread p {
+  font: 500 23px/1.45 var(--serif);
+  margin: 8px 0;
+}
+.lb-boundary {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 18px 0;
+  margin: 23px 0;
+}
+.lb-boundary strong {
+  font-weight: 500;
+  color: var(--olive);
+  font-size: 13px;
+}
+.lb-boundary p {
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+.lb-boundary button {
+  margin-top: 15px;
+}
+.lb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 19px;
+  margin: 20px 0 0;
+}
+.lb-kept {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 28px 0;
+}
+.lb-kept svg {
+  margin-top: 4px;
+}
+.lb-kept p {
+  margin: 0;
+}
+.lb-later {
+  margin: 26px 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+}
+.lb-later p:last-child {
+  margin: 0;
+}
+.lb-chapters {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  max-width: 1360px;
+  margin: 0 auto;
+}
+.lb-chapters button {
+  padding: 11px 18px;
+  border-radius: 4px 4px 0 0;
+  font-size: 12px;
+  background: var(--lb-deep);
+}
+.lb-chapters button span {
+  opacity: 0.65;
+  font-size: 10px;
+}
+.lb-chapters button[aria-current="page"] {
+  background: var(--paper);
+}
+.lb-book-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  max-width: 1360px;
+  margin: 18px auto 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.lb-book-footer > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.lb-book-footer button {
+  width: 44px;
+  padding: 10px;
+}
+.lb-announcement {
+  max-width: 1360px;
+  margin: 15px auto 0 !important;
+  min-height: 20px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.lb-app label {
+  display: grid;
+  gap: 8px;
+  margin: 20px 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+.lb-app textarea,
+.lb-app input,
+.lb-app select {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  font: 400 16px/1.65 var(--sans);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--lb-deep) 55%, var(--paper));
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 11px 13px;
+}
+.lb-app textarea {
+  resize: vertical;
+}
+.lb-app select {
+  min-height: 46px;
+}
+.lb-app textarea::placeholder,
+.lb-app input::placeholder {
+  color: var(--muted);
+  opacity: 0.8;
+}
+.lb-choices {
+  display: grid;
+  gap: 10px;
+  margin: 25px 0;
+}
+.lb-choices button {
+  justify-content: flex-start;
+  padding: 15px 18px;
+  border: 1px solid var(--line);
+  background: var(--lb-deep);
+}
+.lb-editor-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 28px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.lb-margin {
+  padding: 18px 0 18px 19px;
+  margin: 25px 0;
+  border-left: 2px solid var(--line);
+}
+.lb-margin p {
+  margin-bottom: 9px;
+}
+.lb-margin p:last-child {
+  margin-bottom: 0;
+}
+.lb-entries > article {
+  border-bottom: 1px solid var(--line);
+  padding: 25px 0;
+}
+.lb-entries > article:last-child {
+  border: 0;
+}
+.lb-app blockquote {
+  font: 400 22px/1.6 var(--serif);
+  margin: 15px 0;
+  white-space: pre-wrap;
+}
+.lb-app details summary {
+  min-height: 44px;
+  padding: 11px 0;
+  color: var(--muted);
+  cursor: pointer;
+}
+.lb-app details p {
+  font-size: 14px;
+}
+.lb-empty {
+  padding: 30px 0;
+}
+.lb-people article {
+  padding: 26px 0;
+  border-bottom: 1px solid var(--line);
+}
+.lb-people article:last-child {
+  border: 0;
+}
+.lb-people ul {
+  padding-left: 19px;
+  margin: 15px 0;
+}
+.lb-people li {
+  margin: 8px 0;
+}
+.lb-cadence {
+  margin: 30px 0;
+}
+.lb-cadence p {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.lb-cadence small {
+  color: var(--muted);
+}
+.lb-stones {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 70px;
+  margin: 24px 0;
+}
+.lb-stones i {
+  display: block;
+  height: 17px;
+  width: 38px;
+  border-radius: 44% 56% 42% 58%;
+  background: #819992;
+  transform: rotate(-8deg);
+}
+.lb-stones i:nth-child(2) {
+  width: 29px;
+  height: 21px;
+  background: #a2b2aa;
+  transform: rotate(10deg);
+}
+.lb-stones i:nth-child(3) {
+  width: 34px;
+  height: 15px;
+  background: #627d78;
+  animation: lb-stone-settle 0.5s ease-out;
+}
+.lb-play-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr);
+  max-width: 1260px;
+  margin: auto;
+  background: var(--paper);
+  border-radius: 4px;
+  box-shadow:
+    0 7px 0 -2px var(--lb-cover),
+    0 20px 35px #3f5c6018;
+}
+.lb-play-layout > aside {
+  padding: 40px;
+  border-right: 1px solid var(--line);
+}
+.lb-play-main {
+  padding: 34px 42px 45px;
+  min-width: 0;
+}
+.lb-landscape-inset {
+  height: 150px;
+  margin: 30px -10px;
+  background: url("/illustrations/relish-alpine-landscape.jpg") center 55% /
+    cover;
+  opacity: 0.4;
+  filter: saturate(0.2) contrast(0.7);
+  mask-image: linear-gradient(transparent, #000 20% 75%, transparent);
+}
+.lb-play-setup fieldset {
+  border: 0;
+  padding: 0;
+  margin: 25px 0;
+}
+.lb-play-setup legend {
+  font: 500 19px/1.4 var(--serif);
+}
+.lb-players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 15px 0;
+}
+.lb-players button {
+  background: var(--lb-deep);
+  border: 1px solid var(--line);
+}
+.lb-players button[aria-pressed="true"] {
+  background: var(--lb-cover);
+  color: #f2f4ee;
+  border-color: var(--lb-cover);
+}
+.lb-guest {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+.lb-guest label {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.lb-guest button {
+  flex-shrink: 0;
+  margin-bottom: 1px;
+}
+.lb-game-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 30px 0;
+}
+.lb-game-options > button {
+  display: block;
+  align-self: stretch;
+  padding: 22px;
+  border: 1px solid var(--line);
+}
+.lb-game-options p {
+  font-size: 13px;
+}
+.lb-game-options h3 {
+  font-size: 24px;
+}
+.lb-session-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 15px;
+  margin-bottom: 25px;
+}
+.lb-session-line p {
+  margin: 3px 0;
+}
+.lb-session-line button {
+  flex-shrink: 0;
+}
+.lb-turns {
+  display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  padding: 0;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  margin: 22px 0;
+}
+.lb-turns li + li::before {
+  content: "→";
+  margin-right: 8px;
+}
+.lb-handoff {
+  padding: 35px 0;
+  text-align: center;
+}
+.lb-handoff > svg {
+  margin: 0 auto 22px;
+}
+.lb-handoff button {
+  margin-top: 16px;
+}
+.lb-story-so-far {
+  font-size: 13px;
+  border-left: 2px solid var(--line);
+  padding-left: 15px;
+}
+.lb-reveal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin: 25px 0;
+}
+.lb-reveal > div {
+  background: var(--lb-deep);
+  padding: 20px;
+}
+.lb-reveal p {
+  font: 500 20px/1.45 var(--serif);
+  margin: 8px 0 0;
+}
+.lb-sharing {
+  margin: 22px 0;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.lb-cover-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 26px;
+  padding: 10px 0 35px;
+}
+.lb-cover {
+  width: min(100%, 410px);
+  padding: 35px 32px;
+  background: var(--lb-cover);
+  color: #e4ebe5;
+  border-radius: 3px 12px 12px 3px;
+  box-shadow:
+    inset 9px 0 12px #122f3738,
+    7px 5px 0 #c0cec5,
+    0 20px 35px #324d4f30;
+  text-align: center;
+  transform: rotate(-1deg);
+  animation: lb-close 0.55s ease-out;
+}
+.lb-cover h2 {
+  color: inherit;
+  font-size: 33px;
+  margin: 24px 0;
+}
+.lb-cover .lb-kicker {
+  color: inherit;
+  opacity: 0.8;
+}
+.lb-cover-picture {
+  height: 160px;
+  margin: 28px 0;
+  background: url("/illustrations/relish-alpine-landscape.jpg") center 45% /
+    cover;
+  filter: saturate(0.3) contrast(0.75);
+  border-radius: 45% 45% 2px 2px;
+  opacity: 0.8;
+}
+.lb-gate {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  padding: 5vw;
+  gap: 6vw;
+  min-height: 100vh;
+}
+.lb-gate-art {
+  min-width: 0;
+}
+.lb-gate-art h1 {
+  font-size: clamp(36px, 5vw, 70px);
+  line-height: 1.3;
+  margin: 50px 0;
+}
+.lb-gate-art > p:last-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lb-gate .r-vault-form {
+  width: 100%;
+  max-width: 500px;
+  padding: 35px;
+  background: var(--paper);
+  border-radius: 5px;
+}
+.lb-gate .r-vault-form h1 {
+  font-size: 32px;
+}
+.lb-gate .r-vault-form input {
+  font-size: 16px;
+}
+.lb-app .r-dialog {
+  color: var(--ink);
+  background: var(--paper);
+  max-width: 620px;
+  padding: 36px 35px;
+  max-height: 90dvh;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+.lb-app .r-dialog::backdrop {
+  background: #2c444d66;
+  backdrop-filter: blur(4px);
+}
+.lb-app .r-dialog h2 {
+  font-size: 30px;
+  margin: 15px 0 22px;
+}
+.lb-app .r-dialog .r-close {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  padding: 8px;
+}
+.lb-app .r-dialog .r-vault-form {
+  padding: 0;
+}
+.lb-app .r-dialog .r-vault-form h1 {
+  font-size: 30px;
+}
+.lb-app .r-dialog .r-primary {
+  background: var(--olive);
+  color: #f2f4ee;
+}
+.lb-app .r-dialog .r-secondary {
+  border: 1px solid var(--line);
+  background: var(--lb-deep);
+}
+.lb-app .r-dialog .r-small,
+.lb-app .r-dialog .r-eyebrow {
+  color: var(--muted);
+}
+.lb-app .r-dialog em {
+  font-style: normal;
+  color: inherit;
+}
+.lb-app .r-ai-panel {
+  background: var(--lb-deep);
+  border-color: var(--line);
+  color: var(--ink);
+  margin: 0;
+}
+.lb-app .r-ai-panel h3 {
+  font-size: 25px;
+}
+.lb-app .r-ai-panel textarea {
+  background: var(--paper);
+}
+.lb-app .r-ai-panel button {
+  white-space: normal;
+}
+@keyframes lb-page-arrive {
+  from {
+    transform: rotateY(9deg) translateX(7px);
+    opacity: 0.5;
+  }
+  to {
+    transform: rotateY(0) translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes lb-close {
+  from {
+    transform: rotateY(15deg) rotate(-1deg) translateY(-8px);
+    opacity: 0.5;
+  }
+  to {
+    transform: rotateY(0) rotate(-1deg) translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes lb-stone-settle {
+  0% {
+    transform: translateY(-20px) rotate(12deg);
+    opacity: 0;
+  }
+  80% {
+    transform: translateY(2px) rotate(-7deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) rotate(-8deg);
+  }
+}
+@media (max-width: 1100px) {
+  .lb-header {
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  .lb-header nav {
+    justify-content: space-between;
+    width: 100%;
+  }
+  .lb-page {
+    padding: 28px 28px 60px;
+  }
+}
+@media (max-width: 900px) {
+  .lb-book {
+    display: block;
+    max-width: 720px;
+  }
+  .lb-left {
+    display: none;
+  }
+  .lb-right {
+    background: var(--paper);
+    padding: 32px 38px 65px;
+  }
+  .lb-play-layout {
+    display: block;
+    max-width: 720px;
+  }
+  .lb-play-layout > aside {
+    display: none;
+  }
+  .lb-play-main {
+    padding: 30px 35px;
+  }
+  .lb-chapters {
+    max-width: 720px;
+    justify-content: stretch;
+  }
+  .lb-chapters button {
+    flex: 1;
+  }
+  .lb-app h2 {
+    font-size: 30px;
+  }
+  .lb-gate {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .lb-gate-art h1 {
+    display: none;
+  }
+  .lb-gate-art > p:not(.lb-wordmark) {
+    display: none;
+  }
+  .lb-gate .r-vault-form {
+    margin: auto;
+  }
+}
+@media (max-width: 560px) {
+  .lb-desk {
+    padding: 20px 14px 25px;
+  }
+  .lb-header nav {
+    gap: 3px 7px;
+    justify-content: flex-start;
+  }
+  .lb-header nav button {
+    padding: 7px 6px;
+    font-size: 11px;
+  }
+  .lb-tagline {
+    max-width: 220px;
+  }
+  .lb-horizon {
+    padding: 26px 0 22px;
+  }
+  .lb-identity {
+    gap: 10px;
+  }
+  .lb-identity h1 {
+    font-size: 10px;
+    max-width: 55%;
+  }
+  .lb-identity > span {
+    font-size: 10px;
+  }
+  .lb-page.lb-right {
+    padding: 25px 22px 60px;
+  }
+  .lb-app h2 {
+    font-size: 28px;
+  }
+  .lb-app blockquote {
+    font-size: 21px;
+  }
+  .lb-running {
+    font-size: 9px;
+    margin-bottom: 25px;
+  }
+  .lb-game-options {
+    grid-template-columns: 1fr;
+  }
+  .lb-play-main {
+    padding: 25px 21px;
+  }
+  .lb-reveal {
+    grid-template-columns: 1fr;
+  }
+  .lb-session-line {
+    align-items: flex-start;
+  }
+  .lb-session-line p {
+    font-size: 13px;
+  }
+  .lb-guest {
+    flex-wrap: wrap;
+  }
+  .lb-guest label {
+    min-width: 100%;
+  }
+  .lb-players button {
+    flex-grow: 1;
+  }
+  .lb-chapters button {
+    padding: 9px 7px;
+    font-size: 10px;
+  }
+  .lb-chapters button span {
+    display: none;
+  }
+  .lb-sample {
+    padding: 9px 16px;
+  }
+  .lb-book-footer > span {
+    max-width: 50%;
+  }
+  .lb-app .r-dialog {
+    padding: 38px 22px 25px;
+    width: calc(100% - 24px);
+  }
+  .lb-app .r-dialog .r-vault-form h1 {
+    font-size: 26px;
+  }
+  .lb-gate .r-vault-form {
+    padding: 23px;
+  }
+  .lb-editor-foot {
+    flex-wrap: wrap;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lb-app *,
+  .lb-app *::before,
+  .lb-app *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .lb-app button:not(:disabled):hover,
+  .lb-app button:not(:disabled):active {
+    transform: none;
+  }
+}
+
+.lb-app .lb-identity h1:focus {
+  outline: none;
+}
+@media (pointer: coarse), (max-width: 1100px) {
+  .lb-sample button {
+    min-height: 44px;
+  }
+}
+
+.lb-app .r-dialog .r-primary:not(:disabled):hover,
+.lb-app .lb-players button[aria-pressed="true"]:not(:disabled):hover {
+  background: #385b60;
+  color: #f2f4ee;
+}
+
+.lb-shelf {
+  display: block;
+  padding: clamp(24px, 6vw, 90px);
+}
+.lb-shelf > section {
+  max-width: 1100px;
+  margin: auto;
+}
+.lb-edition-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 24px;
+  margin: 36px 0;
+}
+.lb-edition-grid button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 22px;
+  min-height: 260px;
+  padding: 30px;
+  text-align: left;
+  background: #dbe0db;
+  border: 1px solid #9faeaa;
+  border-left: 8px solid #44676a;
+  border-radius: 4px 16px 16px 4px;
+  box-shadow: 3px 5px 0 #bac6c1;
+}
+.lb-edition-grid button span {
+  font-family: var(--font-parent-display);
+  font-size: 24px;
+}
+.lb-edition-grid button small {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.lb-connections .lb-boundary {
+  margin: 24px 0;
+}
+.lb-connections h3 {
+  margin-top: 28px;
+}
+.lb-connections code {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  padding: 12px;
+  background: #d3dcd6;
+}
+.lb-connection-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+.lb-account-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 14px;
+  margin: 20px 0;
+}
+.lb-member-list {
+  display: grid;
+  gap: 12px;
+}
+.lb-member-list details {
+  border-bottom: 1px solid #bbc5be;
+  padding: 12px 0;
+}
+.lb-app summary {
+  cursor: pointer;
+  min-height: 44px;
+  align-content: center;
+}
+.lb-app .lb-consent-check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+.lb-app .lb-consent-check input {
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+}
+.lb-passage-review {
+  border-left: 3px solid #4c7174;
+  padding: 24px;
+  background: #dce2dc;
+}
+.lb-connections blockquote {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-parent-display);
+  font-size: 21px;
+  line-height: 1.65;
+}
+.lb-connections fieldset {
+  border: 1px solid #b9c6be;
+  padding: 16px;
+}
+.lb-connections .r-form button {
+  margin-right: 10px;
+  margin-top: 10px;
+}
+@media (max-width: 700px) {
+  .lb-connection-columns {
+    grid-template-columns: 1fr;
+  }
+  .lb-header nav {
+    gap: 4px;
+  }
+}
+
+.lb-connections summary {
+  cursor: pointer;
+}
+.lb-connections summary svg {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 6px 0 0;
+}
