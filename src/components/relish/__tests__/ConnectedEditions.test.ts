@@ -38,12 +38,20 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-async function setup() {
+async function setup(mismatch?: "account" | "key") {
   const a = await makeIdentity("adult-a"),
     b = await makeIdentity("adult-b");
   let current: Book = {
     ...emptyBook("Fictional A"),
-    connections: { identity: a, received: [] },
+    connections: {
+      identity:
+        mismatch === "account"
+          ? { ...a, uid: "another-account" }
+          : mismatch === "key"
+            ? { ...b, uid: a.uid }
+            : a,
+      received: [],
+    },
   };
   const member = async (identity: typeof a, name: string) => ({
     uid: identity.uid,
@@ -100,8 +108,16 @@ async function setup() {
   await screen.findByText("Connect the Fictional A edition");
   fireEvent.click(screen.getByRole("checkbox", { name: /18 or older/ }));
   fireEvent.click(screen.getByRole("button", { name: "Connect this edition" }));
-  await screen.findByText("Test family");
-  fireEvent.click(screen.getByText("Offer a passage from my edition"));
+  if (mismatch)
+    await screen.findByText(
+      mismatch === "account"
+        ? /This edition belongs to a different online account/
+        : /This account already has an edition/,
+    );
+  else {
+    await screen.findByText("Test family");
+    fireEvent.click(screen.getByText("Offer a passage from my edition"));
+  }
   return {
     sent,
     online: () => {
@@ -112,6 +128,30 @@ async function setup() {
   };
 }
 describe("sharing recovery", () => {
+  it("keeps a mismatched key disconnected after reading the account profile", async () => {
+    await setup("key");
+    expect(screen.queryByText("Test family")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Connect this edition" }),
+    ).toBeTruthy();
+  });
+  it("never removes another edition’s identity when deleting the signed-in account", async () => {
+    const state = await setup("account");
+    const identity = state.current().connections!.identity;
+    fireEvent.click(screen.getByText("Delete my online account"));
+    fireEvent.change(
+      screen.getByRole("textbox", { name: /Type DELETE ONLINE ACCOUNT/ }),
+      { target: { value: "DELETE ONLINE ACCOUNT" } },
+    );
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Delete online account",
+        exact: true,
+      }),
+    );
+    await screen.findByText(/Your online account was removed/);
+    expect(state.current().connections!.identity).toEqual(identity);
+  });
   it("retries the saved invitation without clearing another draft", async () => {
     const state = await setup();
     fireEvent.change(

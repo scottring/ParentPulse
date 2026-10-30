@@ -5,6 +5,7 @@ import { Lock, RefreshCw, Send, Users, BookOpen, Check } from "lucide-react";
 import { Dialog } from "./BookForms";
 import type { Book } from "@/lib/relish/model";
 import {
+  canonicalKey,
   decryptPassage,
   encryptPassage,
   makeIdentity,
@@ -190,7 +191,13 @@ export default function ConnectedEditions({
     setNotice("Online session ended. Your private edition stays here.");
   }
   const identity = book.connections?.identity;
-  const connected = !!(user && identity?.uid === user.uid && snapshot?.profile);
+  const connected = !!(
+    user &&
+    identity?.uid === user.uid &&
+    snapshot?.profile &&
+    canonicalKey(identity.publicKey) ===
+      canonicalKey(snapshot.profile.publicKey)
+  );
   const circle = connected ? snapshot?.circle : null;
   const others = circle?.members.filter((m) => m.uid !== user?.uid) || [];
   const owner = circle?.ownerId === user?.uid;
@@ -1016,15 +1023,19 @@ export default function ConnectedEditions({
                       const { deleteUser } = await import("firebase/auth");
                       await deleteUser(user);
                     }
-                    await save((b) => ({
-                      ...b,
-                      connections: {
-                        ...b.connections,
-                        identity: undefined,
-                        outgoing: [],
-                        received: b.connections?.received || [],
-                      },
-                    }));
+                    await save((b) =>
+                      b.connections?.identity?.uid === user.uid
+                        ? {
+                            ...b,
+                            connections: {
+                              ...b.connections,
+                              identity: undefined,
+                              outgoing: [],
+                              received: b.connections?.received || [],
+                            },
+                          }
+                        : b,
+                    );
                     await disconnect();
                     setDeleteConfirmation("");
                     setNotice(
