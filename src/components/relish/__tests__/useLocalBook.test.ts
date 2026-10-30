@@ -13,6 +13,25 @@ Object.defineProperty(globalThis, "crypto", {
   value: webcrypto,
   configurable: true,
 });
+// Model one origin-wide exclusive lock shared by the two simulated tabs.
+let browserWrites = Promise.resolve();
+Object.defineProperty(navigator, "locks", {
+  configurable: true,
+  value: {
+    request: (
+      _name: string,
+      _options: unknown,
+      operation: () => Promise<unknown>,
+    ) => {
+      const next = browserWrites.catch(() => {}).then(operation);
+      browserWrites = next.then(
+        () => {},
+        () => {},
+      );
+      return next;
+    },
+  },
+});
 beforeEach(() => localStorage.clear());
 afterEach(() => {
   cleanup();
@@ -81,4 +100,90 @@ describe("local book lifecycle", () => {
     expect(result.current.mode).toBe("locked");
     expect(result.current.book.people).toEqual([]);
   });
+});
+
+describe("serialized encrypted updates", () => {
+  it("keeps both changes when saves overlap", async () => {
+    const { result } = renderHook(useLocalBook);
+    await act(async () => {
+      await result.current.open("test-only long passphrase", "Alex");
+    });
+    await act(async () => {
+      await Promise.all([
+        result.current.save((b) => ({ ...b, owner: "New Owner" })),
+        result.current.save((b) => ({
+          ...b,
+          people: [
+            {
+              id: "p",
+              name: "A person",
+              role: "Friend",
+              color: "sage",
+              note: "",
+              lessons: [],
+            },
+          ],
+        })),
+      ]);
+    });
+    act(() => result.current.lock());
+    await act(async () => {
+      await result.current.open("test-only long passphrase");
+    });
+    expect(result.current.book.owner).toBe("New Owner");
+    expect(result.current.book.people[0].name).toBe("A person");
+  });
+  it("does not claim a saved change after storage fails, and allows retry", async () => {
+    const { result } = renderHook(useLocalBook);
+    await act(async () => {
+      await result.current.open("test-only long passphrase", "Alex");
+    });
+    const write = vi.spyOn(localStorage, "setItem").mockImplementation(() => {
+      throw new Error("Storage is full");
+    });
+    await act(async () => {
+      await expect(
+        result.current.save((b) => ({ ...b, owner: "Unsaved" })),
+      ).rejects.toThrow();
+    });
+    expect(result.current.book.owner).toBe("Alex");
+    write.mockRestore();
+    await act(async () => {
+      await result.current.save((b) => ({ ...b, owner: "Retry saved" }));
+    });
+    expect(result.current.book.owner).toBe("Retry saved");
+  });
+  it("clears decrypted data when all browser storage is cleared", async () => {
+    const { result } = renderHook(useLocalBook);
+    await act(async () => {
+      await result.current.open("test-only long passphrase", "Alex");
+    });
+    act(() => window.dispatchEvent(new StorageEvent("storage", { key: null })));
+    expect(result.current.mode).toBe("locked");
+    expect(result.current.book.owner).toBe("");
+  });
+});
+
+it("rejects a stale tab instead of letting two tabs overwrite each other", async () => {
+  const first = renderHook(useLocalBook);
+  await act(async () => {
+    await first.result.current.open("test-only long passphrase", "Initial");
+  });
+  const second = renderHook(useLocalBook);
+  await act(async () => {
+    await second.result.current.open("test-only long passphrase");
+  });
+  let results: PromiseSettledResult<void>[] = [];
+  await act(async () => {
+    results = await Promise.allSettled([
+      first.result.current.save((b) => ({ ...b, owner: "First writer" })),
+      second.result.current.save((b) => ({ ...b, owner: "Stale writer" })),
+    ]);
+  });
+  expect(results.map((r) => r.status)).toEqual(["fulfilled", "rejected"]);
+  expect(second.result.current.mode).toBe("locked");
+  await act(async () => {
+    await second.result.current.open("test-only long passphrase");
+  });
+  expect(second.result.current.book.owner).toBe("First writer");
 });

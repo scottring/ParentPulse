@@ -1,3 +1,4 @@
+import { isLiving, type LivingState } from "./living";
 export type Person = {
   id: string;
   name: string;
@@ -26,6 +27,7 @@ export type WeeklyReview = {
 export type RhythmSettings = { target: 1 | 3 | 5; reviewDay: number };
 export type Book = {
   version: 1;
+  living?: LivingState;
   owner: string;
   people: Person[];
   moments: Moment[];
@@ -108,6 +110,7 @@ export function isBook(value: unknown): value is Book {
   const b = value as Book;
   return (
     b.version === 1 &&
+    (b.living === undefined || isLiving(b.living)) &&
     (b.rhythm === undefined ||
       (!!b.rhythm &&
         [1, 3, 5].includes(b.rhythm.target) &&

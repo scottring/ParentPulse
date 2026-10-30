@@ -11,14 +11,26 @@ npm run dev:local
 
 Open http://127.0.0.1:3210/relish/ in a browser. Use this same address and browser profile to reopen a private book. The root route also opens the new experience. The sample book uses fictional people and stories; edits last only for that visit. Create a private book to save your own writing. Legacy Firebase routes remain available, and their providers are loaded only outside the new root and `/relish/` routes. The existing app’s Firebase environment configuration is still needed for a full build of those legacy pages.
 
-## What works
+## Current living-book build
 
-- Responsive home, people, individual manuals, and searchable moments.
-- Add a person, edit their chapter introduction and learning notes.
-- Guided Notice → Understand → Try flow, with optional AI invitation.
-- Return to a moment, record what happened, and add a learning to the person’s manual.
-- Create, lock, unlock, export, and restore an encrypted local book.
-- Keyboard-accessible dialogs, responsive navigation, reduced-motion support.
+The `/relish/` and root routes now use the approved alpine book interface. The older dashboard has been replaced. The sample remains fictional and memory-only; a private book uses the existing encrypted vault.
+
+- Personal bookmark, three book chapters, a closed cover, and a Family-pages view.
+- Bounded visits: choose a thread and notice one moment; plan a practice; return after trying; keep an honest reflection. Completion is shown only after the write succeeds.
+- Private draft autosave, explicit pause/resume, and a recap with a clear stopping point. Drafts, session progress, game turns and approved pages are included in encrypted backup/restore.
+- Two pass-and-play games for 2–12 selected people, including guests. Choose the starting player; anyone may pass. Answers stay out of the rendered handoff view. A shared page requires explicit approval from every selected player; finishing without saving is equally valid.
+- Private pages and AI sessions are put away during shared play. Returning to a real private edition locks the vault and requires the passphrase. Sample editions return without authentication because their content is fictional.
+- Real optional AI assistance from the existing consent-based `AIHelp` flow, available while writing a moment. The contextual session guide itself is deterministic; it does not pretend to be an AI conversation.
+- Locally bundled Literata and IBM Plex Sans, the approved alpine artwork, finite page/cover motion, reduced-motion support, and optional existing stone sounds.
+- Existing people, notes, lessons and older moments remain readable. Legacy cadence/review fields remain in encrypted backups; the new interface uses bounded visits instead of the older weekly dashboard.
+
+### Security and release scope
+
+This is a **single-owner local book**, not a multi-account family system. Family pages are an explicitly approved collection inside that book on this device. Participant approval buttons are in-person consent in a pass-and-play experience, not authenticated signatures. No invitations are sent, and no other person's private edition can be opened from the player picker. Separate accounts, independent per-person vaults, cross-device passage offers/acceptance, and synchronized family membership remain release work.
+
+`useLocalBook.save` now serializes functional updates against the latest decrypted book, validates the result, and checks the encrypted envelope before and after sealing. A failed write leaves the prior book intact and never advances the session. An origin-wide exclusive Web Lock covers vault creation/restoration and encrypted saves, so two cooperating tabs cannot pass the envelope check concurrently. Browsers without that locking API can read an existing book but cannot create or save one. Locking invalidates pending operations and removes decrypted state. The living-state validator rejects malformed turns, invalid completion records, duplicate players, and incomplete approval records during restore.
+
+Browser verification covered real session pause/resume/completion, a five-person game including a pass, unanimous approval, and tablet/phone layouts. Automated checks cover persistence, encryption/restore, failed-save recovery, concurrent same-tab changes, privacy while playing, and finite game transitions. Full production security review and authenticated multi-account verification are still required before a family-account release.
 
 ## A guided rhythm and tactile feedback
 

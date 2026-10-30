@@ -3,20 +3,23 @@ import localFont from "next/font/local";
 import "./globals.css";
 import AppBoundary from "@/components/relish/AppBoundary";
 
-const dmSans = localFont({
-  src: "./fonts/dm-sans.ttf", variable: "--font-parent-body", weight: "100 1000", display: "swap",
+const bodyFont = localFont({
+  src: "./fonts/ibm-plex-sans.ttf",
+  variable: "--font-parent-body",
+  weight: "100 700",
+  display: "swap",
 });
-const cormorant = localFont({
-  src: [
-    { path: "./fonts/cormorant-garamond.ttf", weight: "300 700", style: "normal" },
-    { path: "./fonts/cormorant-garamond-italic.ttf", weight: "300 700", style: "italic" },
-  ],
-  variable: "--font-parent-display", display: "swap",
+const displayFont = localFont({
+  src: "./fonts/literata.ttf",
+  variable: "--font-parent-display",
+  weight: "200 900",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "Relish — The Operating Manual for Relationships",
-  description: "A private, living book of the people you love. Understand a little more. Find your next small move.",
+  description:
+    "A private, living book of the people you love. Understand a little more. Find your next small move.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -28,7 +31,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f6f4ed",
+  themeColor: "#d0d9d6",
 };
 
 export default function RootLayout({
@@ -38,7 +41,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${dmSans.variable} ${cormorant.variable} antialiased`}>
+      <body
+        className={`${bodyFont.variable} ${displayFont.variable} antialiased`}
+      >
         <AppBoundary>{children}</AppBoundary>
       </body>
     </html>

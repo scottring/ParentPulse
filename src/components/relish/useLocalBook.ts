@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { emptyBook, sampleBook, type Book } from "@/lib/relish/model";
+import { emptyBook, sampleBook, isBook, type Book } from "@/lib/relish/model";
 import {
   createVault,
   unlockVault,
@@ -9,6 +9,17 @@ import {
   VAULT_KEY,
   type Envelope,
 } from "@/lib/relish/vault";
+async function withVaultWrite<T>(operation: () => Promise<T>): Promise<T> {
+  if (!navigator.locks?.request)
+    throw new Error(
+      "This browser cannot safely save this book. Please try a newer browser.",
+    );
+  return navigator.locks.request(
+    "relish-vault-write-v1",
+    { mode: "exclusive" },
+    operation,
+  );
+}
 export function useLocalBook() {
   const [book, setBook] = useState<Book>(sampleBook);
   const [mode, setMode] = useState<"loading" | "sample" | "locked" | "open">(
@@ -19,6 +30,9 @@ export function useLocalBook() {
   const key = useRef<CryptoKey | null>(null),
     envelope = useRef<Envelope | null>(null),
     epoch = useRef(0);
+  const currentBook = useRef(book);
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  const pending = useRef(0);
   useEffect(() => {
     try {
       setMode(localStorage.getItem(VAULT_KEY) ? "locked" : "sample");
@@ -33,7 +47,8 @@ export function useLocalBook() {
     epoch.current++;
     key.current = null;
     envelope.current = null;
-    setBook(emptyBook(""));
+    currentBook.current = emptyBook("");
+    setBook(currentBook.current);
     setMode("locked");
     setBusy(false);
     setError("");
@@ -46,7 +61,7 @@ export function useLocalBook() {
       timer = setTimeout(lock, 10 * 60 * 1000);
     };
     const change = (e: StorageEvent) => {
-      if (e.key === VAULT_KEY) lock();
+      if (e.key === VAULT_KEY || e.key === null) lock();
     };
     const visibility = () => {
       clearTimeout(timer);
@@ -89,10 +104,25 @@ export function useLocalBook() {
             book: emptyBook(owner?.trim() || "You"),
           };
       if (token !== epoch.current) return;
-      if (!raw || importRaw)
-        localStorage.setItem(VAULT_KEY, JSON.stringify(result.envelope));
+      if (!raw || importRaw) {
+        await withVaultWrite(async () => {
+          if (token !== epoch.current)
+            throw new Error("The book was locked before it could be created.");
+          if (localStorage.getItem(VAULT_KEY))
+            throw new Error(
+              "A book was created in another tab. Reload to open it.",
+            );
+          localStorage.setItem(VAULT_KEY, JSON.stringify(result.envelope));
+        });
+      } else if (localStorage.getItem(VAULT_KEY) !== raw) {
+        throw new Error(
+          "This book changed in another tab. Please unlock its latest version.",
+        );
+      }
+      if (token !== epoch.current) return;
       key.current = result.key;
       envelope.current = result.envelope;
+      currentBook.current = result.book;
       setBook(result.book);
       setMode("open");
       navigator.storage?.persist?.().catch(() => {});
@@ -101,36 +131,78 @@ export function useLocalBook() {
         e instanceof Error ? e.message : "Your book could not be opened.",
       );
     } finally {
-      setBusy(false);
+      if (token === epoch.current) setBusy(false);
     }
   };
-  const save = async (next: Book) => {
-    if (mode === "sample") {
-      setBook(next);
-      return;
-    }
-    if (!key.current || !envelope.current)
-      throw new Error("Unlock your book first.");
+  const save = (change: Book | ((book: Book) => Book)): Promise<void> => {
+    const token = epoch.current;
+    const sample = mode === "sample";
+    pending.current++;
     setBusy(true);
     setError("");
-    const token = epoch.current;
-    try {
-      const encrypted = await seal(next, key.current, envelope.current.salt);
-      if (token !== epoch.current)
-        throw new Error(
-          "Your book locked before saving. Please unlock it and try again.",
-        );
-      localStorage.setItem(VAULT_KEY, JSON.stringify(encrypted));
-      envelope.current = encrypted;
-      setBook(next);
-    } catch (e) {
-      setError(
-        "Could not save. Your browser may be out of storage. Export a backup and try again.",
-      );
-      throw e;
-    } finally {
-      setBusy(false);
-    }
+    const operation = queue.current
+      .catch(() => {})
+      .then(async () => {
+        if (token !== epoch.current)
+          throw new Error(
+            "Your book locked before saving. Unlock it to continue.",
+          );
+        const next =
+          typeof change === "function" ? change(currentBook.current) : change;
+        if (!isBook(next))
+          throw new Error("This change could not be saved safely.");
+        if (!sample) {
+          await withVaultWrite(async () => {
+            if (token !== epoch.current)
+              throw new Error(
+                "Your book locked before saving. Unlock it to continue.",
+              );
+            if (!key.current || !envelope.current)
+              throw new Error("Unlock your book first.");
+            const previous = JSON.stringify(envelope.current);
+            if (localStorage.getItem(VAULT_KEY) !== previous) {
+              lock();
+              throw new Error(
+                "This book changed in another tab. Unlock its latest version.",
+              );
+            }
+            const encrypted = await seal(
+              next,
+              key.current,
+              envelope.current.salt,
+            );
+            if (token !== epoch.current)
+              throw new Error(
+                "Your book locked before saving. Unlock it to continue.",
+              );
+            if (localStorage.getItem(VAULT_KEY) !== previous) {
+              lock();
+              throw new Error(
+                "This book changed in another tab. Unlock its latest version.",
+              );
+            }
+            localStorage.setItem(VAULT_KEY, JSON.stringify(encrypted));
+            envelope.current = encrypted;
+          });
+        }
+        currentBook.current = next;
+        setBook(next);
+      });
+    queue.current = operation.catch(() => {});
+    return operation
+      .catch((e) => {
+        if (token === epoch.current)
+          setError(
+            e instanceof Error
+              ? e.message
+              : "Could not save. Your draft is still here; try again.",
+          );
+        throw e;
+      })
+      .finally(() => {
+        pending.current--;
+        if (token === epoch.current && pending.current === 0) setBusy(false);
+      });
   };
   const backup = () => {
     const raw = localStorage.getItem(VAULT_KEY);
