@@ -61,12 +61,14 @@ export function VaultForm({
   error,
   onSubmit,
   onCancel,
+  cancelLabel = "Keep exploring the sample book",
 }: {
   locked: boolean;
   busy: boolean;
   error: string;
   onSubmit: (pass: string, name?: string, raw?: string) => Promise<void>;
   onCancel?: () => void;
+  cancelLabel?: string;
 }) {
   const [name, setName] = useState(""),
     [pass, setPass] = useState(""),
@@ -198,7 +200,7 @@ export function VaultForm({
       )}
       {onCancel && (
         <button type="button" className="r-text-button" onClick={onCancel}>
-          Keep exploring the sample book
+          {cancelLabel}
         </button>
       )}
     </form>

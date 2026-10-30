@@ -7,7 +7,6 @@ import {
   Bookmark,
   BookmarkCheck,
   BookOpen,
-  Check,
   Download,
   Feather,
   Lock,
@@ -40,23 +39,17 @@ import {
   type GameAction,
   type Player,
   type SessionKind,
-  type ThreadId,
 } from "@/lib/relish/living";
 import type { useLocalBook } from "./useLocalBook";
 import { Dialog, EditPerson, PersonForm, VaultForm } from "./BookForms";
 import { SoundControl, SoundSettings, useSensory } from "./Sensory";
 import VisitEditor from "./VisitEditor";
 import GroupPlay from "./GroupPlay";
+import ConnectedEditions from "./ConnectedEditions";
 
 type View =
-  | "bookmark"
-  | "session"
-  | "words"
-  | "people"
-  | "practice"
-  | "family"
-  | "play";
-type Modal = "settings" | "create" | "person" | "guide" | null;
+  "bookmark" | "session" | "words" | "people" | "practice" | "family" | "play";
+type Modal = "settings" | "create" | "person" | "guide" | "connections" | null;
 type Vault = ReturnType<typeof useLocalBook>;
 const chapters = [
   { id: "words", label: "In my own words" },
@@ -69,6 +62,8 @@ const shortDate = (iso: string) =>
     day: "numeric",
   });
 export default function LivingBook({ vault }: { vault: Vault }) {
+  const [removeName, setRemoveName] = useState("");
+  const [removeError, setRemoveError] = useState("");
   const { book, mode } = vault,
     sample = mode === "sample",
     l = livingOf(book),
@@ -433,6 +428,24 @@ export default function LivingBook({ vault }: { vault: Vault }) {
         )}
       </>
     );
+    if (book.connections?.received.length)
+      right = (
+        <>
+          {right}
+          <section className="lb-entries">
+            <p className="lb-kicker">Words you chose to welcome</p>
+            {book.connections.received.toReversed().map((p) => (
+              <article key={p.id}>
+                <p className="lb-fine">
+                  From {p.fromName} · kept {shortDate(p.acceptedAt)}
+                </p>
+                <h3>{p.title}</h3>
+                <blockquote>{p.text}</blockquote>
+              </article>
+            ))}
+          </section>
+        </>
+      );
   } else if (view === "people") {
     left = (
       <>
@@ -748,6 +761,19 @@ export default function LivingBook({ vault }: { vault: Vault }) {
             <button onClick={() => setModal("guide")}>
               <Sparkles size={16} /> Guide
             </button>
+            {!sample && !sharedView && (
+              <button disabled={busy || !!sessionOpen} onClick={vault.shelf}>
+                <BookOpen size={16} /> Editions
+              </button>
+            )}
+            {!sample && !sharedView && (
+              <button
+                disabled={busy || !!sessionOpen}
+                onClick={() => setModal("connections")}
+              >
+                <Users size={16} /> Connect editions
+              </button>
+            )}
             <SoundControl />
             {!sharedView && (
               <button
@@ -931,6 +957,14 @@ export default function LivingBook({ vault }: { vault: Vault }) {
           {notice}
         </p>
       </div>
+      {modal === "connections" && !sample && !sharedView && (
+        <ConnectedEditions
+          book={book}
+          save={vault.save}
+          backup={vault.backup}
+          onClose={() => setModal(null)}
+        />
+      )}
       {modal === "settings" && (
         <Dialog title="Privacy and settings" onClose={() => setModal(null)}>
           <p className="lb-kicker">Your words belong to you</p>
@@ -961,6 +995,59 @@ export default function LivingBook({ vault }: { vault: Vault }) {
               <Download size={16} /> Export encrypted backup
             </button>
           </div>
+          {!sample && (
+            <button
+              className="lb-secondary"
+              onClick={() => setModal("connections")}
+            >
+              <Users size={16} /> Connect with family editions
+            </button>
+          )}
+          <p className="lb-fine">
+            <a href="/privacy/" target="_blank" rel="noreferrer">
+              Read how Relish handles your data
+            </a>
+          </p>
+          {!sample && (
+            <details className="lb-boundary">
+              <summary>Remove this edition from this device</summary>
+              <p>
+                Export a backup first if you want to keep this book. This
+                permanently removes its local copy. Online connections, other
+                editions and backups are separate.
+              </p>
+              <label>
+                Type {book.owner} to confirm
+                <input
+                  value={removeName}
+                  onChange={(e) => setRemoveName(e.target.value)}
+                  autoComplete="off"
+                />
+              </label>
+              {removeError && (
+                <p role="alert" className="lb-error">
+                  {removeError}
+                </p>
+              )}
+              <button
+                className="lb-secondary"
+                disabled={busy || removeName !== book.owner}
+                onClick={() =>
+                  void vault
+                    .remove(removeName)
+                    .catch((e) =>
+                      setRemoveError(
+                        e instanceof Error
+                          ? e.message
+                          : "The edition could not be removed.",
+                      ),
+                    )
+                }
+              >
+                Remove this local edition
+              </button>
+            </details>
+          )}
           <SoundSettings />
           {sample ? (
             <button className="lb-text" onClick={() => setModal("create")}>

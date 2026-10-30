@@ -51,6 +51,11 @@ describe("living-book interaction boundaries", () => {
         vault: {
           book,
           mode: "open",
+          editions: [],
+          editionId: "original",
+          shelf: () => {},
+          select: () => {},
+          remove: async () => {},
           busy: false,
           error: "",
           open: async () => {},
@@ -91,6 +96,11 @@ describe("living-book interaction boundaries", () => {
         vault: {
           book,
           mode: "open",
+          editions: [],
+          editionId: "original",
+          shelf: () => {},
+          select: () => {},
+          remove: async () => {},
           busy: false,
           error: "",
           open: async () => {},

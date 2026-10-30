@@ -26,16 +26,16 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
-    "firebase": "^12.8.0",
-    "firebase-admin": "^13.6.0",
+    "firebase": "^13.1.0",
+    "firebase-admin": "^14.5.0",
     "lucide-react": "^0.562.0",
-    "next": "16.1.2",
+    "next": "^16.4.3",
     "openai": "^6.16.0",
-    "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "@firebase/rules-unit-testing": "^5.0.0",
+    "@firebase/rules-unit-testing": "^6.0.0",
     "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
@@ -47,11 +47,17 @@
     "@vitejs/plugin-react": "^5.1.2",
     "@vitest/coverage-v8": "^4.0.17",
     "eslint": "^9",
-    "eslint-config-next": "16.1.2",
-    "happy-dom": "^20.3.1",
+    "eslint-config-next": "^16.4.3",
+    "happy-dom": "^21.0.4",
     "msw": "^2.12.7",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.17"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "1.13.6"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

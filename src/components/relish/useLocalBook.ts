@@ -1,12 +1,18 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  editionKey,
+  listEditions,
+  labelEdition,
+  removeEditionLabel,
+  type Edition,
+} from "@/lib/relish/editions";
 import { emptyBook, sampleBook, isBook, type Book } from "@/lib/relish/model";
 import {
   createVault,
   unlockVault,
   seal,
   parseEnvelope,
-  VAULT_KEY,
   type Envelope,
 } from "@/lib/relish/vault";
 async function withVaultWrite<T>(operation: () => Promise<T>): Promise<T> {
@@ -21,10 +27,13 @@ async function withVaultWrite<T>(operation: () => Promise<T>): Promise<T> {
   );
 }
 export function useLocalBook() {
+  const selected = useRef("original");
+  const [editions, setEditions] = useState<Edition[]>([]);
+  const [editionId, setEditionId] = useState("original");
   const [book, setBook] = useState<Book>(sampleBook);
-  const [mode, setMode] = useState<"loading" | "sample" | "locked" | "open">(
-    "loading",
-  );
+  const [mode, setMode] = useState<
+    "loading" | "sample" | "locked" | "open" | "shelf" | "new"
+  >("loading");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const key = useRef<CryptoKey | null>(null),
@@ -35,7 +44,13 @@ export function useLocalBook() {
   const pending = useRef(0);
   useEffect(() => {
     try {
-      setMode(localStorage.getItem(VAULT_KEY) ? "locked" : "sample");
+      const shelf = listEditions();
+      // Read browser-only storage after hydration so server and first client render agree.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setEditions(shelf);
+      selected.current = shelf[0]?.id || "original";
+      setEditionId(selected.current);
+      setMode(shelf.length > 1 ? "shelf" : shelf.length ? "locked" : "sample");
     } catch {
       setMode("sample");
       setError(
@@ -61,7 +76,7 @@ export function useLocalBook() {
       timer = setTimeout(lock, 10 * 60 * 1000);
     };
     const change = (e: StorageEvent) => {
-      if (e.key === VAULT_KEY || e.key === null) lock();
+      if (e.key === editionKey(selected.current) || e.key === null) lock();
     };
     const visibility = () => {
       clearTimeout(timer);
@@ -88,11 +103,13 @@ export function useLocalBook() {
     setBusy(true);
     setError("");
     const token = epoch.current;
+    const storageKey = editionKey(selected.current);
+    const id = selected.current;
     try {
-      const raw = importRaw || localStorage.getItem(VAULT_KEY);
-      if (importRaw && localStorage.getItem(VAULT_KEY))
+      const raw = importRaw || localStorage.getItem(storageKey);
+      if (importRaw && localStorage.getItem(storageKey))
         throw new Error(
-          "A book already exists here. Export it before restoring another book in a separate browser profile.",
+          "This edition already exists. Choose Add an edition on the bookshelf to restore a backup separately.",
         );
       const result = raw
         ? await unlockVault(raw, passphrase)
@@ -108,13 +125,15 @@ export function useLocalBook() {
         await withVaultWrite(async () => {
           if (token !== epoch.current)
             throw new Error("The book was locked before it could be created.");
-          if (localStorage.getItem(VAULT_KEY))
+          if (localStorage.getItem(storageKey))
             throw new Error(
               "A book was created in another tab. Reload to open it.",
             );
-          localStorage.setItem(VAULT_KEY, JSON.stringify(result.envelope));
+          localStorage.setItem(storageKey, JSON.stringify(result.envelope));
+          labelEdition(id, result.book.owner);
+          setEditions(listEditions());
         });
-      } else if (localStorage.getItem(VAULT_KEY) !== raw) {
+      } else if (localStorage.getItem(storageKey) !== raw) {
         throw new Error(
           "This book changed in another tab. Please unlock its latest version.",
         );
@@ -137,6 +156,7 @@ export function useLocalBook() {
   const save = (change: Book | ((book: Book) => Book)): Promise<void> => {
     const token = epoch.current;
     const sample = mode === "sample";
+    const storageKey = editionKey(selected.current);
     pending.current++;
     setBusy(true);
     setError("");
@@ -160,7 +180,7 @@ export function useLocalBook() {
             if (!key.current || !envelope.current)
               throw new Error("Unlock your book first.");
             const previous = JSON.stringify(envelope.current);
-            if (localStorage.getItem(VAULT_KEY) !== previous) {
+            if (localStorage.getItem(storageKey) !== previous) {
               lock();
               throw new Error(
                 "This book changed in another tab. Unlock its latest version.",
@@ -175,13 +195,13 @@ export function useLocalBook() {
               throw new Error(
                 "Your book locked before saving. Unlock it to continue.",
               );
-            if (localStorage.getItem(VAULT_KEY) !== previous) {
+            if (localStorage.getItem(storageKey) !== previous) {
               lock();
               throw new Error(
                 "This book changed in another tab. Unlock its latest version.",
               );
             }
-            localStorage.setItem(VAULT_KEY, JSON.stringify(encrypted));
+            localStorage.setItem(storageKey, JSON.stringify(encrypted));
             envelope.current = encrypted;
           });
         }
@@ -205,7 +225,8 @@ export function useLocalBook() {
       });
   };
   const backup = () => {
-    const raw = localStorage.getItem(VAULT_KEY);
+    const storageKey = editionKey(selected.current);
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return;
     parseEnvelope(raw);
     const url = URL.createObjectURL(
@@ -217,5 +238,56 @@ export function useLocalBook() {
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
-  return { book, mode, busy, error, open, save, lock, backup };
+  const remove = async (confirmation: string) => {
+    if (mode !== "open" || confirmation !== currentBook.current.owner)
+      throw new Error("Type the edition name exactly before removing it.");
+    const token = epoch.current,
+      id = selected.current,
+      storageKey = editionKey(id);
+    await withVaultWrite(async () => {
+      if (
+        token !== epoch.current ||
+        !envelope.current ||
+        localStorage.getItem(storageKey) !== JSON.stringify(envelope.current)
+      )
+        throw new Error(
+          "This book changed. Unlock its latest version before removing it.",
+        );
+      localStorage.removeItem(storageKey);
+      removeEditionLabel(id);
+      lock();
+      setEditions(listEditions());
+      setMode("shelf");
+    });
+  };
+  const shelf = () => {
+    lock();
+    setEditions(listEditions());
+    setMode("shelf");
+  };
+  const select = (id?: string) => {
+    lock();
+    if (id && !listEditions().some((e) => e.id === id)) {
+      setMode("shelf");
+      return;
+    }
+    selected.current = id || crypto.randomUUID();
+    setEditionId(selected.current);
+    setMode(id ? "locked" : "new");
+  };
+  return {
+    book,
+    mode,
+    busy,
+    error,
+    open,
+    save,
+    lock,
+    backup,
+    editions,
+    editionId,
+    shelf,
+    select,
+    remove,
+  };
 }

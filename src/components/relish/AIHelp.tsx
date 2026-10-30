@@ -32,6 +32,7 @@ export function AIHelp({
   const [user, setUser] = useState<User | null>(null);
   const [showAccount, setShowAccount] = useState(false);
   const [create, setCreate] = useState(false);
+  const [adult, setAdult] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [accountBusy, setAccountBusy] = useState(false);
@@ -66,6 +67,12 @@ export function AIHelp({
     };
   }, []);
   async function connect() {
+    if (create && !adult) {
+      setError(
+        "Online accounts are for adults. Children can keep local editions and play together without an account.",
+      );
+      return;
+    }
     setAccountBusy(true);
     setError("");
     setAccountNotice("");
@@ -311,6 +318,16 @@ export function AIHelp({
                   <p className="r-small">
                     Use a different password from your book’s passphrase.
                   </p>
+                  {create && (
+                    <label className="lb-consent-check">
+                      <input
+                        type="checkbox"
+                        checked={adult}
+                        onChange={(e) => setAdult(e.target.checked)}
+                      />
+                      I’m 18 or older.
+                    </label>
+                  )}
                   <div className="r-ai-account-actions">
                     <button
                       type="button"

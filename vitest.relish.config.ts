@@ -7,7 +7,7 @@ export default defineConfig({
     environment: "node",
     include: [
       "src/lib/relish/__tests__/*.test.ts",
-      "src/app/api/relish/assist/__tests__/*.test.ts",
+      "src/app/api/relish/*/__tests__/*.test.ts",
       "src/components/relish/__tests__/*.test.ts",
     ],
     testTimeout: 10000,

@@ -1,4 +1,5 @@
 import { isLiving, type LivingState } from "./living";
+import { isConnections, type Connections } from "./sharing";
 export type Person = {
   id: string;
   name: string;
@@ -28,6 +29,7 @@ export type RhythmSettings = { target: 1 | 3 | 5; reviewDay: number };
 export type Book = {
   version: 1;
   living?: LivingState;
+  connections?: Connections;
   owner: string;
   people: Person[];
   moments: Moment[];
@@ -110,6 +112,7 @@ export function isBook(value: unknown): value is Book {
   const b = value as Book;
   return (
     b.version === 1 &&
+    (b.connections === undefined || isConnections(b.connections)) &&
     (b.living === undefined || isLiving(b.living)) &&
     (b.rhythm === undefined ||
       (!!b.rhythm &&

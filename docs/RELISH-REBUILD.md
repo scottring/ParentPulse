@@ -1,141 +1,89 @@
 # Relish: the operating manual for relationships
 
-This branch rebuilds the front door around a living book: notice a moment, consider another perspective, try a small change, and return to keep what you learned. A person’s manual grows from those reflections. It is a working local first release, not a replacement for every legacy feature.
+Release scope: a fresh start with private local editions for adults and children, adult-only optional online accounts, chosen encrypted passage sharing, and family pass-and-play. Existing users do not need to migrate. The root and `/relish/` open the living book; legacy entry routes redirect there without changing legacy stored data.
 
-## Run it
+## Run and verify
 
-```sh
-npm ci
-npm run dev:local
-```
-
-Open http://127.0.0.1:3210/relish/ in a browser. Use this same address and browser profile to reopen a private book. The root route also opens the new experience. The sample book uses fictional people and stories; edits last only for that visit. Create a private book to save your own writing. Legacy Firebase routes remain available, and their providers are loaded only outside the new root and `/relish/` routes. The existing app’s Firebase environment configuration is still needed for a full build of those legacy pages.
-
-## Current living-book build
-
-The `/relish/` and root routes now use the approved alpine book interface. The older dashboard has been replaced. The sample remains fictional and memory-only; a private book uses the existing encrypted vault.
-
-- Personal bookmark, three book chapters, a closed cover, and a Family-pages view.
-- Bounded visits: choose a thread and notice one moment; plan a practice; return after trying; keep an honest reflection. Completion is shown only after the write succeeds.
-- Private draft autosave, explicit pause/resume, and a recap with a clear stopping point. Drafts, session progress, game turns and approved pages are included in encrypted backup/restore.
-- Two pass-and-play games for 2–12 selected people, including guests. Choose the starting player; anyone may pass. Answers stay out of the rendered handoff view. A shared page requires explicit approval from every selected player; finishing without saving is equally valid.
-- Private pages and AI sessions are put away during shared play. Returning to a real private edition locks the vault and requires the passphrase. Sample editions return without authentication because their content is fictional.
-- Real optional AI assistance from the existing consent-based `AIHelp` flow, available while writing a moment. The contextual session guide itself is deterministic; it does not pretend to be an AI conversation.
-- Locally bundled Literata and IBM Plex Sans, the approved alpine artwork, finite page/cover motion, reduced-motion support, and optional existing stone sounds.
-- Existing people, notes, lessons and older moments remain readable. Legacy cadence/review fields remain in encrypted backups; the new interface uses bounded visits instead of the older weekly dashboard.
-
-### Security and release scope
-
-This is a **single-owner local book**, not a multi-account family system. Family pages are an explicitly approved collection inside that book on this device. Participant approval buttons are in-person consent in a pass-and-play experience, not authenticated signatures. No invitations are sent, and no other person's private edition can be opened from the player picker. Separate accounts, independent per-person vaults, cross-device passage offers/acceptance, and synchronized family membership remain release work.
-
-`useLocalBook.save` now serializes functional updates against the latest decrypted book, validates the result, and checks the encrypted envelope before and after sealing. A failed write leaves the prior book intact and never advances the session. An origin-wide exclusive Web Lock covers vault creation/restoration and encrypted saves, so two cooperating tabs cannot pass the envelope check concurrently. Browsers without that locking API can read an existing book but cannot create or save one. Locking invalidates pending operations and removes decrypted state. The living-state validator rejects malformed turns, invalid completion records, duplicate players, and incomplete approval records during restore.
-
-Browser verification covered real session pause/resume/completion, a five-person game including a pass, unanimous approval, and tablet/phone layouts. Automated checks cover persistence, encryption/restore, failed-save recovery, concurrent same-tab changes, privacy while playing, and finite game transitions. Full production security review and authenticated multi-account verification are still required before a family-account release.
-
-## A guided rhythm and tactile feedback
-
-The home screen now suggests a useful next step based on the actual book: add a first person, notice a moment, return to an open experiment after at least a day, or gather the current week. **Your rhythm** explains the Notice → Try & return → Look back practice, time estimates, and exactly which writing is required.
-
-Choose one, three, or five moments as a soft weekly intention and a preferred day to look back. Weeks begin on local-calendar Monday; old missed targets do not accumulate. A saved weekly reflection gathers this week's moments, accepts an optional next intention, and can be revisited. Updating the same week replaces that reflection while preserving previous weeks. Cadence and weekly reflections are optional additions to the existing encrypted book format, so older backups remain readable. Sample changes still last only for the visit. Guidance appears inside the app; this does not schedule notifications or background jobs.
-
-Quiet sounds are off by default. The header control and privacy/settings panel let users enable, preview, and mute the feedback. The app synthesizes short stone-like taps locally with Web Audio; it does not record audio or fetch sound assets. Button activation gets a soft touch; successful persistence gets a two-part settling response. Muting stops active and queued sources; hiding the tab suspends audio. Only the non-sensitive sound preference is stored outside the encrypted book. No sounds play on page load, hovering, or typing.
-
-Finite page entrances, step transitions, tactile button/card responses, and a settling pebble confirmation provide visual feedback. The system reduced-motion preference disables animation and hover movement. See [Web Audio guidance](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Best_practices).
-
-## Local storage and its limits
-
-The browser stores only an encrypted envelope under `relish.encrypted-book.v1`. AES-GCM uses a fresh random IV for each save; a nonexportable key is derived with PBKDF2-SHA-256, 600,000 iterations, and a random salt. The key and decrypted book remain in memory only while open. The book locks after ten idle minutes, one minute in a hidden tab, or a cross-tab storage change. No Firebase provider, remote font import, or analytics is mounted by the new experience.
-
-This protects the stored copy, not a compromised device or malicious code running in the same browser origin. An unlocked book is readable on the device. Browser extensions, device backups, and OS security are outside this protection. This implementation has not had an independent security audit.
-
-Clearing browser data or losing the browser profile removes the local copy. There is no password recovery. Export encrypted backups from privacy settings and keep the passphrase separately. Restore is available from the new-book screen in a browser profile without an existing book. The app refuses to overwrite an existing book during restore.
-
-This is currently browser storage, not a native macOS document or Keychain vault. Cloud sync, encrypted multi-device sharing, legacy Firebase data migration, and native packaging are not implemented.
-
-## Optional AI
-
-AI runs only when invited. The user reviews the exact excerpt before sending; the whole book is never included. The response is presented as a possibility and becomes part of a moment only if the user chooses it. The core reflection flow works without AI.
-
-For local AI, run Ollama separately with an installed local model and enter its name in the invitation. The app calls only the loopback Ollama service. Before sending writing, it checks `/api/show` metadata and rejects remote models, remote aliases, and unverifiable metadata. It does not install models or start Ollama automatically.
-
-For optional cloud AI, set `OPENAI_API_KEY` in this local app’s environment and select Cloud AI. `RELISH_AI_MODEL` optionally overrides the configured default. Only the reviewed excerpt is sent to OpenAI; the provider’s data policies apply. Requests set `store: false`.
-
-The local route requires a loopback host, matching Origin, and explicit excerpt-consent header. Production builds allow local AI only when `RELISH_LOCAL_AI_ENABLED=true` is explicitly set for a locally hosted installation. Hosted requests instead require a verified account and the controls below. Hosted AI now follows the separate authenticated path below. Provider errors do not log excerpts or return provider internals. Real provider responses require a running local model or configured cloud service; automated tests mock those services.
-
-References: [Web Crypto encryption](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/encrypt), [Ollama chat API](https://docs.ollama.com/api/chat), [Ollama model metadata](https://github.com/ollama/ollama/blob/main/api/types.go).
-
-## Verification
+Use Node 22 and `npm ci`, then `npm run dev:local`. Open http://127.0.0.1:3210/relish/ in a modern browser with Web Crypto and Web Locks. Keep that address and browser profile to reopen local books.
 
 ```sh
 npm run test:relish
-npx vitest run __tests__/lib/surface-recipes.test.ts src/app/experiments/__tests__/ArcCard.test.tsx
 npx tsc --noEmit
-npx next build --webpack
+npm run build
+npm audit --omit=dev
 ```
 
-The focused suite covers encryption round trips, wrong passphrases, tampering, fresh nonces, schema rejection, sample isolation, encrypted persistence, automatic lock, and AI origin/consent/model boundaries. Additional checks cover calendar-week boundaries, cadence recommendations, review updates, encrypted weekly entries, audio amplitude/tails, opt-in sound, mute cancellation, hidden tabs, and cross-tab sound preferences. The main reflection-to-manual interaction and desktop/mobile layouts were also exercised in a browser.
+`npm run build` uses Webpack, matching the hosted build. Fonts and the approved muted alpine artwork are bundled locally. The manifest supports portrait and landscape. There is no service worker or promise of loading the site without a network connection; a loaded private book can be used without an online account.
 
-Two pre-existing build blockers were repaired: outdated GrowthArc test fixtures and a named ArcCard export from a Next page (moved into its own component). No deployment, main-branch merge, cloud data migration, or existing user-data deletion is part of this rebuild.
+## A living book with a stopping point
 
+Each edition opens at a personal bookmark. A short visit has an explicit purpose, estimated duration and finishing condition: choose a direction and notice a moment, plan a small practice, or return and keep an honest reflection. A visit completes only after the encrypted write succeeds. Private drafts and paused sessions can be resumed. Three chapters collect personal words, relationships and practices.
 
-## Hosted AI preview (October 29, 2026)
+Two family games support 2–12 selected players, including guests. Players choose who starts and may pass. The handoff screen hides the preceding answer. Everyone must approve before a shared game page is kept; finishing without saving is valid. Private chapters and online sessions are put away during play. Returning to a private edition requires unlocking it. Game approvals are in-person choices, not authenticated signatures. Games are on one device, not remote multiplayer.
 
-This is a fresh start; migrating old Firebase books is intentionally out of scope.
-The book remains encrypted in browser storage. An optional, separate Firebase
-email/password account enables hosted AI. Email verification is required; the
-server checks token validity and revocation on every request. The client uses a
-named Auth-only Firebase app with memory-only persistence. It never initializes
-Firestore or imports the legacy family/account providers. Reloading or locking
-the book ends the AI session.
+Finite page and cover transitions respect reduced-motion preferences. Stone-like sounds are synthesized locally, off by default, and stop when muted or the tab is hidden. No microphone or remote sound files are used. The contextual guide is deterministic; optional AI is clearly identified separately.
 
-Only the reviewed excerpt is forwarded to OpenAI; requests use `store: false`.
-Relish does not store excerpts or responses server-side. Provider abuse-monitoring
-retention can still apply; see [OpenAI data controls](https://developers.openai.com/api/docs/guides/your-data).
-The server stores only opaque user identifiers and quota counters in
-`relish_ai_usage`, a server-only collection denied to clients by default rules.
-A Firestore transaction limits each verified account to 3 requests/minute and 20
-per UTC day, with an overall preview cap of 200/day. Failed provider requests count
-toward the quota to bound retry abuse. Missing quota storage fails closed.
+## Separate local editions
 
-Server-only hosting variables:
+A device can hold multiple independently encrypted editions. Each has its own passphrase and encrypted envelope. The original envelope key is retained for existing local books; new ones use a random identifier. Shelf labels and the sound preference are the only unencrypted app preferences. The sample edition is fictional and memory-only.
+
+AES-GCM uses fresh random IVs. PBKDF2-SHA-256 with 600,000 iterations and a random salt derives a nonexportable encryption key. An unlocked key and book stay in memory. Idle timeout is ten minutes, reduced to one minute while hidden. Locking, switching editions, or detecting another tab's change removes decrypted state and ends online authentication.
+
+Functional writes are serialized against the current book and protected by an origin-wide exclusive Web Lock. Envelope checks prevent stale-tab overwrite. Creation, restore, save and removal are guarded. A failed write does not advance a session. Restore validates the complete book, including living sessions, game approvals and connection records, and refuses to overwrite another edition. A restored backup can be added alongside other books.
+
+Export encrypted backups regularly. Clearing browser data, losing a profile or forgetting a passphrase can make the book unavailable. Relish cannot recover its passphrase. Private books do not automatically synchronize: restoring a backup carries the edition and its sharing key to another device. This is browser storage, not a native macOS document or Keychain vault. An unlocked or compromised device, browser extension, or malicious same-origin script remains outside the encryption boundary. No independent security audit is claimed.
+
+Removing a local edition requires unlocking it and typing its name. It removes only that device's copy; backups and online records are separate.
+
+## Adult connected editions
+
+Online accounts are intended for adults aged 18 and older. New account and edition connection flows require adult confirmation; this is self-confirmation, not identity or age verification. Children's editions stay local and can participate in family games. Each adult uses their own verified Firebase email/password account. Auth uses a named, Auth-only Firebase app with in-memory persistence and never initializes client Firestore.
+
+Connecting explicitly publishes an edition name, a P-256 ECDH public key and its fingerprint. The corresponding private key is stored only inside the encrypted local book and backup. An account's key is immutable: use the matching backup to open it on another device. Members can compare fingerprints out of band.
+
+An organizer creates a family connection and one-person invitation codes. Codes are random, expire in 24 hours, are stored hashed, and are consumed transactionally. A new code or membership change invalidates the current code. The family has at most 12 connected adult editions. Organizers may transfer their role or remove members; an organizer with remaining members must transfer before leaving or deleting an account.
+
+Only the exact selected passage is offered to explicitly chosen editions. For each recipient the browser generates a fresh ephemeral ECDH key, derives an AES-256-GCM key using HKDF-SHA-256, and encrypts the title and text. Authenticated context binds protocol version, passage ID, family ID, sender, recipient and key fingerprint. The relay receives ciphertext, public keys and delivery metadata; it does not receive the selected plaintext or full book. The server authenticates the sender; this protocol does not independently sign authorship against a compromised relay.
+
+Recipients decrypt locally and choose whether to keep a passage. A kept copy enters their encrypted private chapter with attribution, never shared game pages or AI automatically. Acknowledgment removes their relay packet. Withdrawal removes remaining packets but cannot recall saved copies. Membership removal ends access to pending relay content. The newest 60 invitations are displayed; kept passages remain in the local edition. This is selective copying, not shared-document synchronization.
+
+Unfinished composer text is encrypted locally when the connection dialog is closed normally; recipients must be chosen again. Sending first saves an encrypted pending draft; retries reuse the same ID and ciphertext. The relay preserves a payload hash so retrying after acceptance cannot recreate a removed packet. An abrupt tab close before saving a composer draft may lose it.
+
+## Server boundaries and deletion
+
+`/api/relish/connections/` requires exact configured HTTPS origin, explicit consent header, a verified nonanonymous Firebase token, revocation checking, bounded streamed JSON and no-store responses. The server enforces current membership and organizer privileges transactionally, only returns the requesting recipient's packet, and never exposes provider errors. Direct client access to `relish_connections_*` collections is denied by the deployed default Firestore rules.
+
+Durable limits are 60 actions/minute, 2,000/day and 40 sends/day per account. The relay stores account identifiers, edition names/public keys, membership, hashed invitations, delivery choices, ciphertext and usage counters. Operational metadata remains until account removal; invitation expiry invalidates access, not automatic physical deletion.
+
+Account deletion requires typed confirmation and a sign-in within 15 minutes. A resumable deletion marker blocks new sharing, membership is removed, sent relay documents and incoming packets/receipts are removed, invitation records and individual usage records are removed, then Firebase authentication and the profile are deleted. Large cleanup passes ask the owner to retry until finished. Other members' opaque inbox pointers may remain, but refer to missing documents and expose no passage. Other people's local copies and hosting-provider operational logs cannot be deleted by this control. Legacy Firebase collections are untouched by this fresh-start release.
+
+The public `/privacy/` page describes these boundaries. The living-book response uses a per-request nonce CSP, restricts active scripts and connections, denies framing, and disables camera/microphone/geolocation/payment permissions. Legacy routes redirect to the new experience.
+
+## Optional AI
+
+AI runs only when invited. Users review the exact excerpt; the whole book is never sent. A response is a possible perspective and enters the book only if chosen. Core sessions and games work without AI.
+
+Hosted AI requires the same verified adult account. Server-only variables are:
+
 - `OPENAI_API_KEY`
-- `RELISH_FIREBASE_ADMIN_JSON` (service account JSON for the configured Firebase project)
-- `RELISH_AI_MODEL` (defaults to `gpt-4o-mini`)
-- `RELISH_AI_ORIGINS` (comma-separated HTTPS custom origins)
+- `RELISH_FIREBASE_ADMIN_JSON`, matching `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+- `RELISH_AI_MODEL` (default `gpt-4o-mini`)
+- `RELISH_AI_ORIGINS` for verified HTTPS custom domains
 
-Vercel's deployment and branch URLs are accepted directly from server environment
-variables. All requests require exact same-origin consent; arbitrary forwarded
-hosts are ignored. The body is bounded to 30 KB as it is read, regardless of the
-Content-Length header. Hosting never enables the loopback Ollama provider.
-Secrets are excluded from uploads and must never use a `NEXT_PUBLIC_` prefix.
+Vercel's deployment and branch URLs are accepted from server environment variables. Secrets are configured for preview and production builds. The obsolete, unused `NEXT_PUBLIC_OPENAI_API_KEY` hosting variable was removed. No provider secret belongs in a browser bundle.
 
-`npm run build` explicitly uses Webpack: the installed Next 16.1.2 Turbopack font
-resolver fails on the Google font assets. This makes the tested and hosted build
-commands identical. A hosted preview must be verified before any main-branch release.
+Requests use `store: false`; Relish stores no AI excerpt or response server-side. OpenAI abuse-monitoring retention may apply; see [OpenAI data controls](https://developers.openai.com/api/docs/guides/your-data). Firestore transactions limit AI to 3 requests/minute, 20/day/account and 200/day globally. Failed provider requests count toward the quota. Missing quota storage fails closed. The daily global cap is a deliberate cost guard for the first release.
 
-The hosted build exposed a Google font URL change incompatible with this Next
-font loader. The same DM Sans and Cormorant Garamond variable fonts are now
-bundled from the official Google Fonts repository, together with their OFL
-licenses. Neither building nor visiting Relish requires a Google Fonts request.
+For a locally hosted installation, Ollama is optional. The app accepts only loopback connections, checks model metadata before sending writing, and rejects remote aliases or unverifiable models. It does not install or start Ollama. Production local installations require explicit `RELISH_LOCAL_AI_ENABLED=true`; the public host never enables loopback AI.
 
+## Release evidence and rollout
 
-## Live preview verification — October 30, 2026
+The focused automated suite covers encrypted persistence/restore, wrong passwords and tampering, stale/concurrent writes, independent editions, local removal, private/shared UI boundaries, game completion, session recovery, sound preferences, AI boundary checks, connection request limits, authenticated encryption, interrupted-send retry and composer recovery.
 
-Verified on the Git-backed Vercel preview at commit `39f9052`:
-- Real OpenAI response with fictional text and a temporary verified Firebase account.
-- Unauthenticated requests: 401; foreign Origin: 403; unverified email: 403.
-- Daily user quota: 429 with Retry-After. Two concurrent requests for one remaining
-  minute slot returned one 200 and one 429; persisted counters admitted exactly one.
-- Direct authenticated client reads of the usage collection: 403.
-- Hosted create/save/reload, wrong-passphrase rejection, and correct unlock.
-- Browser backup export contained only the encrypted envelope, with no plaintext
-  name, owner, or passphrase. Restored the file through the UI on a fresh HTTPS origin.
+`scripts/verify-relish-release.ts` runs real authenticated integration checks against the local or approved hosted preview. It creates isolated fictional accounts and removes their data in `finally`. Configuration comes from an ignored `.env.release-test.local` containing public Firebase settings plus a matching existing administrator credential. It does not print credentials. `RELISH_VERIFY_AI=1` adds one real hosted AI request with a fictional excerpt. `RELISH_KEEP_QA=1` is only for deliberate browser fixtures and requires explicit later cleanup.
 
-Branch-scoped Vercel secrets are applied to Git-triggered previews. A manual CLI
-upload with only a commit-ref metadata value did not receive those secrets; use
-Git-backed deployments for release verification. Production remains unchanged.
+Live checks cover unauthenticated/unverified/foreign-origin rejection, adult confirmation, immutable edition keys, concurrent one-use invitations, organizer-only actions, exact recipient decryption, ciphertext-only relay storage, direct client database denial, removed-member isolation, receipts, retry after acceptance, withdrawal, account deletion and revoked sessions.
 
-The hosted browser flow also verified AI sign-in, explicit excerpt submission,
-real response display, opt-in application of the response, and encrypted moment
-saving. Locking and reopening the book required a fresh AI sign-in. Final local
-validation passed 65 focused tests, TypeScript, and the production build.
+Browser verification covers personal session pause/resume/finish, five-person play and unanimous approval, encrypted backup/restore, multiple books, real-account offering and acceptance, sign-out on switching, and tablet/phone layouts. A hosted release candidate must additionally pass the production build, exact-deployment live checks, CSP/hydration check and real AI response before main is approved.
+
+Production is built only from main. Rebase on freshly fetched origin/main, run checks, and obtain Scott's approval before merging/pushing main. A branch preview is not production. Do not deploy or promote an unmerged branch. The production release is complete only after origin/main and the live production deployment match and the production smoke check passes.

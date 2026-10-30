@@ -1019,3 +1019,130 @@
   background: #385b60;
   color: #f2f4ee;
 }
+
+.lb-shelf {
+  display: block;
+  padding: clamp(24px, 6vw, 90px);
+}
+.lb-shelf > section {
+  max-width: 1100px;
+  margin: auto;
+}
+.lb-edition-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 24px;
+  margin: 36px 0;
+}
+.lb-edition-grid button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 22px;
+  min-height: 260px;
+  padding: 30px;
+  text-align: left;
+  background: #dbe0db;
+  border: 1px solid #9faeaa;
+  border-left: 8px solid #44676a;
+  border-radius: 4px 16px 16px 4px;
+  box-shadow: 3px 5px 0 #bac6c1;
+}
+.lb-edition-grid button span {
+  font-family: var(--font-parent-display);
+  font-size: 24px;
+}
+.lb-edition-grid button small {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.lb-connections .lb-boundary {
+  margin: 24px 0;
+}
+.lb-connections h3 {
+  margin-top: 28px;
+}
+.lb-connections code {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  padding: 12px;
+  background: #d3dcd6;
+}
+.lb-connection-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+.lb-account-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 14px;
+  margin: 20px 0;
+}
+.lb-member-list {
+  display: grid;
+  gap: 12px;
+}
+.lb-member-list details {
+  border-bottom: 1px solid #bbc5be;
+  padding: 12px 0;
+}
+.lb-app summary {
+  cursor: pointer;
+  min-height: 44px;
+  align-content: center;
+}
+.lb-app .lb-consent-check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+.lb-app .lb-consent-check input {
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+}
+.lb-passage-review {
+  border-left: 3px solid #4c7174;
+  padding: 24px;
+  background: #dce2dc;
+}
+.lb-connections blockquote {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-parent-display);
+  font-size: 21px;
+  line-height: 1.65;
+}
+.lb-connections fieldset {
+  border: 1px solid #b9c6be;
+  padding: 16px;
+}
+.lb-connections .r-form button {
+  margin-right: 10px;
+  margin-top: 10px;
+}
+@media (max-width: 700px) {
+  .lb-connection-columns {
+    grid-template-columns: 1fr;
+  }
+  .lb-header nav {
+    gap: 4px;
+  }
+}
+
+.lb-connections summary {
+  cursor: pointer;
+}
+.lb-connections summary svg {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 6px 0 0;
+}

@@ -187,3 +187,67 @@ it("rejects a stale tab instead of letting two tabs overwrite each other", async
   });
   expect(second.result.current.book.owner).toBe("First writer");
 });
+
+it("keeps editions separately locked and never lets a switch save into the next book", async () => {
+  const { result } = renderHook(useLocalBook);
+  await act(async () => {
+    await result.current.open("first edition secret", "Fictional First");
+  });
+  const first = result.current.editionId;
+  act(() => result.current.select());
+  expect(result.current.book.owner).toBe("");
+  expect(result.current.mode).toBe("new");
+  await act(async () => {
+    await result.current.open("second edition secret", "Fictional Second");
+  });
+  const second = result.current.editionId;
+  expect(first).not.toBe(second);
+  expect(result.current.editions).toHaveLength(2);
+  act(() => result.current.select(first));
+  await act(async () => {
+    await result.current.open("second edition secret");
+  });
+  expect(result.current.mode).toBe("locked");
+  await act(async () => {
+    await result.current.open("first edition secret");
+  });
+  expect(result.current.book.owner).toBe("Fictional First");
+  let pending: Promise<void>;
+  act(() => {
+    pending = result.current.save((b) => ({
+      ...b,
+      owner: "Should never overwrite",
+    }));
+    result.current.select(second);
+  });
+  await act(async () => {
+    await expect(pending!).rejects.toThrow();
+  });
+  await act(async () => {
+    await result.current.open("second edition secret");
+  });
+  expect(result.current.book.owner).toBe("Fictional Second");
+});
+
+it("removes only the unlocked edition after an exact confirmation", async () => {
+  const { result } = renderHook(useLocalBook);
+  await act(async () => {
+    await result.current.open("first test passphrase", "First");
+  });
+  const original = localStorage.getItem(VAULT_KEY);
+  act(() => result.current.select());
+  await act(async () => {
+    await result.current.open("second test passphrase", "Second");
+  });
+  await act(async () => {
+    await expect(result.current.remove("First")).rejects.toThrow("exactly");
+  });
+  expect(result.current.editions).toHaveLength(2);
+  await act(async () => {
+    await result.current.remove("Second");
+  });
+  expect(result.current.mode).toBe("shelf");
+  expect(result.current.book.owner).toBe("");
+  expect(result.current.editions).toHaveLength(1);
+  expect(localStorage.getItem(VAULT_KEY)).toBe(original);
+});

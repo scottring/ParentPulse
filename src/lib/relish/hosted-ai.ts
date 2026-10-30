@@ -13,7 +13,7 @@ export class AIError extends Error {
     super(message);
   }
 }
-function services() {
+export function services() {
   const name = "relish-hosted-ai";
   let app = getApps().find((app) => app.name === name);
   if (!app) {

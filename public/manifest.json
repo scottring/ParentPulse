@@ -1,11 +1,11 @@
 {
-  "name": "Relish - Personal Operating Manuals",
+  "name": "Relish \u2014 The Operating Manual for Relationships",
   "short_name": "Relish",
-  "description": "Create personalized operating manuals for the important people in your life",
-  "start_url": "/",
+  "description": "Private living books, connected by choice.",
+  "start_url": "/relish/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#0f172a",
-  "orientation": "portrait-primary"
+  "background_color": "#d0d9d6",
+  "theme_color": "#d0d9d6",
+  "orientation": "any"
 }

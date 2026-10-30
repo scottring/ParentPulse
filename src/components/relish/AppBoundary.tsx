@@ -11,7 +11,11 @@ export default function AppBoundary({
   children: React.ReactNode;
 }) {
   const path = usePathname();
-  return path === "/" || path === "/relish" || path === "/relish/" ? (
+  return path === "/" ||
+    path === "/relish" ||
+    path === "/relish/" ||
+    path === "/privacy" ||
+    path === "/privacy/" ? (
     <>{children}</>
   ) : (
     <LegacyProviders>{children}</LegacyProviders>
