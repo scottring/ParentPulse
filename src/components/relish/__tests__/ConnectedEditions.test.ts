@@ -146,7 +146,6 @@ describe("sharing recovery", () => {
     fireEvent.click(
       screen.getByRole("button", {
         name: "Delete online account",
-        exact: true,
       }),
     );
     await screen.findByText(/Your online account was removed/);
