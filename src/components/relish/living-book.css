@@ -1013,3 +1013,9 @@
     min-height: 44px;
   }
 }
+
+.lb-app .r-dialog .r-primary:not(:disabled):hover,
+.lb-app .lb-players button[aria-pressed="true"]:not(:disabled):hover {
+  background: #385b60;
+  color: #f2f4ee;
+}
