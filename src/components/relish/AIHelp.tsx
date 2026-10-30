@@ -71,6 +71,7 @@ export function AIHelp({
     setAccountNotice("");
     try {
       const { connectAI } = await import("@/lib/relish/ai-auth");
+      if (!mounted.current) return;
       const next = await connectAI(email, password, create);
       if (mounted.current) {
         setUser(next);

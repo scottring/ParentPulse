@@ -48,7 +48,7 @@ For local AI, run Ollama separately with an installed local model and enter its 
 
 For optional cloud AI, set `OPENAI_API_KEY` in this local app’s environment and select Cloud AI. `RELISH_AI_MODEL` optionally overrides the configured default. Only the reviewed excerpt is sent to OpenAI; the provider’s data policies apply. Requests set `store: false`.
 
-The route requires a loopback host, matching Origin, and explicit excerpt-consent header. Production builds disable it unless `RELISH_LOCAL_AI_ENABLED=true` is explicitly set for a locally hosted installation. Hosted AI now follows the separate authenticated path below. Provider errors do not log excerpts or return provider internals. Real provider responses require a running local model or configured cloud service; automated tests mock those services.
+The local route requires a loopback host, matching Origin, and explicit excerpt-consent header. Production builds allow local AI only when `RELISH_LOCAL_AI_ENABLED=true` is explicitly set for a locally hosted installation. Hosted requests instead require a verified account and the controls below. Hosted AI now follows the separate authenticated path below. Provider errors do not log excerpts or return provider internals. Real provider responses require a running local model or configured cloud service; automated tests mock those services.
 
 References: [Web Crypto encryption](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/encrypt), [Ollama chat API](https://docs.ollama.com/api/chat), [Ollama model metadata](https://github.com/ollama/ollama/blob/main/api/types.go).
 
@@ -105,3 +105,25 @@ The hosted build exposed a Google font URL change incompatible with this Next
 font loader. The same DM Sans and Cormorant Garamond variable fonts are now
 bundled from the official Google Fonts repository, together with their OFL
 licenses. Neither building nor visiting Relish requires a Google Fonts request.
+
+
+## Live preview verification — October 30, 2026
+
+Verified on the Git-backed Vercel preview at commit `39f9052`:
+- Real OpenAI response with fictional text and a temporary verified Firebase account.
+- Unauthenticated requests: 401; foreign Origin: 403; unverified email: 403.
+- Daily user quota: 429 with Retry-After. Two concurrent requests for one remaining
+  minute slot returned one 200 and one 429; persisted counters admitted exactly one.
+- Direct authenticated client reads of the usage collection: 403.
+- Hosted create/save/reload, wrong-passphrase rejection, and correct unlock.
+- Browser backup export contained only the encrypted envelope, with no plaintext
+  name, owner, or passphrase. Restored the file through the UI on a fresh HTTPS origin.
+
+Branch-scoped Vercel secrets are applied to Git-triggered previews. A manual CLI
+upload with only a commit-ref metadata value did not receive those secrets; use
+Git-backed deployments for release verification. Production remains unchanged.
+
+The hosted browser flow also verified AI sign-in, explicit excerpt submission,
+real response display, opt-in application of the response, and encrypted moment
+saving. Locking and reopening the book required a fresh AI sign-in. Final local
+validation passed 65 focused tests, TypeScript, and the production build.
