@@ -761,13 +761,13 @@ export default function LivingBook({ vault }: { vault: Vault }) {
       )}
       <div className="lb-desk">
         <header className="lb-header">
-          <div>
+          <div className="lb-brand">
             <span className="lb-wordmark">relish</span>
             <span className="lb-tagline">
               The operating manual for relationships
             </span>
           </div>
-          <nav aria-label="Your book">
+          <nav className="lb-main-nav" aria-label="Your book">
             {!sharedView ? (
               <button
                 disabled={busy || !!sessionOpen}
@@ -787,17 +787,28 @@ export default function LivingBook({ vault }: { vault: Vault }) {
             <button onClick={() => setModal("guide")}>
               <Sparkles size={16} /> Guide
             </button>
+          </nav>
+          <div className="lb-tools" role="group" aria-label="Edition tools">
             {!sample && !sharedView && (
-              <button disabled={busy || !!sessionOpen} onClick={vault.shelf}>
-                <BookOpen size={16} /> Editions
+              <button
+                disabled={busy || !!sessionOpen}
+                onClick={vault.shelf}
+                aria-label="Editions"
+                title="Editions"
+              >
+                <BookOpen size={16} />{" "}
+                <span className="lb-tool-label">Editions</span>
               </button>
             )}
             {!sample && !sharedView && online && (
               <button
                 disabled={busy || !!sessionOpen}
                 onClick={() => setModal("connections")}
+                aria-label="Connect editions"
+                title="Connect editions"
               >
-                <Users size={16} /> Connect editions
+                <Users size={16} />{" "}
+                <span className="lb-connection-label">Connect editions</span>
               </button>
             )}
             <SoundControl />
@@ -817,16 +828,18 @@ export default function LivingBook({ vault }: { vault: Vault }) {
               </button>
             ) : (
               !sample && (
-                <button disabled={busy || !!sessionOpen} onClick={vault.lock}>
-                  <Lock size={15} /> Lock
+                <button
+                  disabled={busy || !!sessionOpen}
+                  onClick={vault.lock}
+                  aria-label="Lock"
+                  title="Lock"
+                >
+                  <Lock size={15} /> <span className="lb-tool-label">Lock</span>
                 </button>
               )
             )}
-          </nav>
+          </div>
         </header>
-        <div className="lb-horizon" aria-hidden="true">
-          A little closer, every day.
-        </div>
         <div className="lb-identity">
           <h1 ref={heading} tabIndex={-1}>
             {headingText}
