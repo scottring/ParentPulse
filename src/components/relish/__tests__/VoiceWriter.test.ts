@@ -210,3 +210,16 @@ describe("voice writing consent and lifecycle", () => {
     expect(stopTrack).toHaveBeenCalled();
   });
 });
+
+it("does not start a microphone result that arrives while the page is hidden", async () => {
+  let resolve!: (value: unknown) => void;
+  media.mockReturnValue(new Promise((r) => { resolve = r; }));
+  show();
+  await connect();
+  fireEvent.click(screen.getByRole("button", { name: "Start talking" }));
+  await waitFor(() => expect(media).toHaveBeenCalled());
+  vi.spyOn(document, "hidden", "get").mockReturnValue(true);
+  await act(async () => { resolve({ getTracks: () => [{stop: stopTrack}] }); });
+  expect(stopTrack).toHaveBeenCalled();
+  expect(screen.queryByRole("button", {name:"I’m done talking"})).toBeNull();
+});

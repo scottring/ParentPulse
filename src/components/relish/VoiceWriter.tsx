@@ -170,8 +170,9 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
         audio: { echoCancellation: true, noiseSuppression: true },
         video: false,
       });
-      if (!alive.current) {
+      if (!alive.current || document.hidden) {
         media.getTracks().forEach((t) => t.stop());
+        if (alive.current) setError("Return to this page and start again when you’re ready.");
         return;
       }
       stream.current = media;
