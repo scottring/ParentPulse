@@ -1358,12 +1358,14 @@
   margin-top: 12px;
 }
 
-@media (max-width: 360px) {
+@media (max-width: 560px) {
   .lb-main-nav button {
     flex-direction: column;
     gap: 4px;
     padding: 7px 3px;
   }
+}
+@media (max-width: 360px) {
   .lb-tools {
     display: grid;
     grid-template-columns: repeat(3, 44px);

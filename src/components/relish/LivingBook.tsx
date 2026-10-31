@@ -42,6 +42,7 @@ import type { useLocalBook } from "./useLocalBook";
 import { Dialog, EditPerson, PersonForm, VaultForm } from "./BookForms";
 import { SoundControl, SoundSettings, useSensory } from "./Sensory";
 import VisitEditor from "./VisitEditor";
+import Journal from "./Journal";
 import GroupPlay from "./GroupPlay";
 import ConnectedEditions from "./ConnectedEditions";
 import EditionSetup from "./EditionSetup";
@@ -50,6 +51,7 @@ import { canUseOnline, ageLabels, audienceOf } from "@/lib/relish/profiles";
 
 type View =
   | "bookmark"
+  | "journal"
   | "session"
   | "words"
   | "people"
@@ -57,13 +59,7 @@ type View =
   | "family"
   | "play";
 type Modal =
-  | "settings"
-  | "create"
-  | "person"
-  | "guide"
-  | "connections"
-  | "profile"
-  | null;
+  "settings" | "create" | "person" | "guide" | "connections" | "profile" | null;
 type Vault = ReturnType<typeof useLocalBook>;
 const chapters = [
   { id: "words", label: "In my own words" },
@@ -90,6 +86,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
     [modal, setModal] = useState<Modal>(null),
     [editing, setEditing] = useState<Person | null>(null),
     [shared, setShared] = useState(false),
+    [journalEditing, setJournalEditing] = useState(false),
     [working, setWorking] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
@@ -222,6 +219,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
     );
   }
   const sessionOpen = view === "session" && v && v.status !== "complete";
+  const privateEditorOpen = !!sessionOpen || journalEditing;
   const chapterIndex = chapters.findIndex((c) => c.id === view);
   const activeGame = l.game && l.game.stage !== "finished" ? l.game : undefined;
   const sharedView = shared || view === "play" || view === "family";
@@ -230,16 +228,19 @@ export default function LivingBook({ vault }: { vault: Vault }) {
     ? sharedView
       ? "Our Family pages"
       : personalTitle
-    : view === "play"
-      ? "Together at the table"
-      : sharedView
-        ? "Our Family pages"
-        : view === "bookmark"
-          ? "My bookmark"
-          : sessionOpen
-            ? "This small visit"
-            : chapters.find((c) => c.id === view)?.label || "Your book";
-  let right: ReactNode, left: ReactNode;
+    : view === "journal"
+      ? "Journal"
+      : view === "play"
+        ? "Together at the table"
+        : sharedView
+          ? "Our Family pages"
+          : view === "bookmark"
+            ? "My bookmark"
+            : sessionOpen
+              ? "This small visit"
+              : chapters.find((c) => c.id === view)?.label || "Your book";
+  let right: ReactNode = null,
+    left: ReactNode;
   left = (
     <>
       <p className="lb-kicker">Your thread in this chapter</p>
@@ -752,7 +753,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
             Sample book · fictional people · changes last until reload
           </span>
           <button
-            disabled={busy || !!sessionOpen}
+            disabled={busy || privateEditorOpen}
             onClick={() => setModal("create")}
           >
             Create my private book <ArrowUpRight size={13} />
@@ -770,7 +771,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
           <nav className="lb-main-nav" aria-label="Your book">
             {!sharedView ? (
               <button
-                disabled={busy || !!sessionOpen}
+                disabled={busy || privateEditorOpen}
                 onClick={() => navigate("bookmark")}
                 aria-current={view === "bookmark" ? "page" : undefined}
               >
@@ -781,7 +782,16 @@ export default function LivingBook({ vault }: { vault: Vault }) {
                 <Bookmark size={16} /> Family pages
               </button>
             )}
-            <button disabled={busy || !!sessionOpen} onClick={openPlay}>
+            {!sharedView && (
+              <button
+                disabled={busy || privateEditorOpen}
+                onClick={() => navigate("journal")}
+                aria-current={view === "journal" ? "page" : undefined}
+              >
+                <Feather size={16} /> Journal
+              </button>
+            )}
+            <button disabled={busy || privateEditorOpen} onClick={openPlay}>
               <Users size={16} /> Play together
             </button>
             <button onClick={() => setModal("guide")}>
@@ -791,7 +801,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
           <div className="lb-tools" role="group" aria-label="Edition tools">
             {!sample && !sharedView && (
               <button
-                disabled={busy || !!sessionOpen}
+                disabled={busy || privateEditorOpen}
                 onClick={vault.shelf}
                 aria-label="Editions"
                 title="Editions"
@@ -802,7 +812,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
             )}
             {!sample && !sharedView && online && (
               <button
-                disabled={busy || !!sessionOpen}
+                disabled={busy || privateEditorOpen}
                 onClick={() => setModal("connections")}
                 aria-label="Connect editions"
                 title="Connect editions"
@@ -814,7 +824,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
             <SoundControl />
             {!sharedView && (
               <button
-                disabled={busy || !!sessionOpen}
+                disabled={busy || privateEditorOpen}
                 onClick={() => setModal("settings")}
                 aria-label="Privacy and settings"
               >
@@ -829,7 +839,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
             ) : (
               !sample && (
                 <button
-                  disabled={busy || !!sessionOpen}
+                  disabled={busy || privateEditorOpen}
                   onClick={vault.lock}
                   aria-label="Lock"
                   title="Lock"
@@ -883,6 +893,17 @@ export default function LivingBook({ vault }: { vault: Vault }) {
               </button>
             )}
           </div>
+        ) : view === "journal" && !sharedView ? (
+          <Journal
+            book={book}
+            save={vault.save}
+            sample={sample}
+            onEditingChange={setJournalEditing}
+            onDone={() => {
+              navigate("bookmark");
+              setClosed(true);
+            }}
+          />
         ) : view === "play" ? (
           <div className="lb-play-layout">
             <aside>
@@ -1195,29 +1216,39 @@ export default function LivingBook({ vault }: { vault: Vault }) {
         <Dialog title="Your guide" onClose={() => setModal(null)}>
           <p className="lb-kicker">A little guidance for this moment</p>
           <h2>
-            {sharedView
-              ? "One round is enough."
-              : v?.status === "complete"
-                ? "Enough for now."
-                : "A small visit, with an ending."}
+            {view === "journal"
+              ? "A page can be enough."
+              : sharedView
+                ? "One round is enough."
+                : v?.status === "complete"
+                  ? "Enough for now."
+                  : "A small visit, with an ending."}
           </h2>
           <p>
-            {sharedView
-              ? "Each player gets a turn or may pass. Reveal together, then finish for now. Keeping a page requires everyone’s approval; it is always optional."
-              : v?.status === "complete"
-                ? plans[v.kind].next
-                : plans[v?.kind || nextKind(book)].end}
+            {view === "journal"
+              ? "Write anything you like. Keep this page when it feels finished, or choose Save for later to leave it in progress. You can return and edit either one."
+              : sharedView
+                ? "Each player gets a turn or may pass. Reveal together, then finish for now. Keeping a page requires everyone’s approval; it is always optional."
+                : v?.status === "complete"
+                  ? plans[v.kind].next
+                  : plans[v?.kind || nextKind(book)].end}
           </p>
           <div className="lb-boundary">
             <strong>
-              {online ? "AI, when you invite it" : "Your guide, right here"}
+              {view === "journal"
+                ? "Your words, your space"
+                : online
+                  ? "AI, when you invite it"
+                  : "Your guide, right here"}
             </strong>
             <p>
-              {!online
-                ? "These are written prompts chosen for your age, not an AI conversation. Your words stay here. You can pause, pass, or ask a trusted grown-up for help."
-                : sharedView
-                  ? "Shared play works without AI. Private writing is never included in a game."
-                  : "While writing a moment, you can invite AI to help consider another perspective. Review the exact excerpt first. You choose whether to keep its response."}
+              {view === "journal"
+                ? "Journal pages and drafts stay in this edition. They are never sent to AI or included in shared games. Your encrypted backup includes them, too."
+                : !online
+                  ? "These are written prompts chosen for your age, not an AI conversation. Your words stay here. You can pause, pass, or ask a trusted grown-up for help."
+                  : sharedView
+                    ? "Shared play works without AI. Private writing is never included in a game."
+                    : "While writing a moment, you can invite AI to help consider another perspective. Review the exact excerpt first. You choose whether to keep its response."}
             </p>
           </div>
           <button className="lb-primary" onClick={() => setModal(null)}>

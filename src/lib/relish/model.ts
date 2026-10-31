@@ -1,3 +1,4 @@
+import { isJournal, type JournalEntry } from "./journal";
 import { isEditionProfile, type EditionProfile } from "./profiles";
 import { isLiving, type LivingState } from "./living";
 import { isConnections, type Connections } from "./sharing";
@@ -35,6 +36,7 @@ export type Book = {
   profile?: EditionProfile;
   people: Person[];
   moments: Moment[];
+  journal?: JournalEntry[];
   rhythm?: RhythmSettings;
   reviews?: WeeklyReview[];
 };
@@ -115,6 +117,7 @@ export function isBook(value: unknown): value is Book {
   const b = value as Book;
   return (
     b.version === 1 &&
+    (b.journal === undefined || isJournal(b.journal)) &&
     (b.profile === undefined || isEditionProfile(b.profile)) &&
     (b.connections === undefined || isConnections(b.connections)) &&
     (b.living === undefined || isLiving(b.living)) &&
