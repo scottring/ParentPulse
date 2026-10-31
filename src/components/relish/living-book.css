@@ -1146,3 +1146,132 @@
   vertical-align: middle;
   margin: 0 6px 0 0;
 }
+
+/* Reader settings use the same quiet paper and tactile controls as the book. */
+.lb-profile-gate > section {
+  width: min(100%, 680px);
+}
+.lb-edition-setup {
+  width: 100%;
+  max-width: 640px;
+  margin-inline: auto;
+}
+.lb-edition-setup fieldset {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+.lb-edition-setup legend {
+  margin-bottom: 0.75rem;
+}
+.lb-profile-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.lb-profile-choices button {
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  padding: 1rem;
+  text-align: left;
+  color: inherit;
+  background: transparent;
+  transition:
+    background 0.2s,
+    transform 0.2s;
+}
+.lb-profile-choices button[aria-pressed="true"] {
+  background: rgba(62, 97, 100, 0.14);
+  box-shadow: inset 0 -3px currentColor;
+}
+.lb-profile-choices button:hover {
+  transform: translateY(-2px);
+}
+.lb-profile-choices span {
+  display: block;
+  font-size: 0.8rem;
+  margin-top: 0.4rem;
+}
+.lb-age-cue {
+  border-left: 2px solid #557577;
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  background: rgba(85, 117, 119, 0.06);
+}
+.lb-feeling-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-block: 1rem;
+}
+.lb-player-ages {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-block: 1rem;
+}
+.lb-player-ages label {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+.lb-player-ages select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.55rem;
+  color: inherit;
+  border: 1px solid #98aaa7;
+  border-radius: 4px;
+  background: transparent;
+}
+@media (max-width: 520px) {
+  .lb-profile-choices,
+  .lb-player-ages {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lb-profile-choices button {
+    transition: none;
+  }
+  .lb-profile-choices button:hover {
+    transform: none;
+  }
+}
+.lb-profile-gate {
+  display: block;
+  padding: clamp(20px, 5vw, 72px);
+}
+.lb-profile-gate > section {
+  margin: auto;
+  padding: clamp(22px, 4vw, 44px);
+  background: var(--paper);
+  border-left: 4px solid var(--olive);
+  border-radius: 4px 12px 12px 4px;
+  box-shadow: 3px 5px 0 #bac6c1;
+}
+.lb-edition-setup > .lb-kicker {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.lb-app .lb-profile-choices button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 18px;
+  border: 1px solid var(--line);
+}
+.lb-app .lb-profile-choices button[aria-pressed="true"] {
+  border-color: var(--olive);
+}
+.lb-edition-setup > .lb-primary {
+  margin: 18px 12px 0 0;
+}
+.lb-edition-setup > .lb-text {
+  margin-top: 12px;
+}

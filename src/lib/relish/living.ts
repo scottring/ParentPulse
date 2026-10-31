@@ -1,4 +1,6 @@
 import type { Book } from "./model";
+import { isAudience, youngestAudience, type Audience } from "./profiles";
+import { childPlayContent, childStoryRounds } from "./play-content";
 
 export const threads = {
   listen: {
@@ -60,8 +62,10 @@ export type LivingEntry = {
   triedAt?: string;
   createdAt: string;
 };
-export type Player = { id: string; name: string };
+export type Player = { id: string; name: string; audience?: Audience };
 export type Game = {
+  audience?: Audience;
+  contentVersion?: 1;
   id: string;
   kind: "joy" | "story";
   players: Player[];
@@ -348,31 +352,47 @@ const middle = [
     ],
   },
 ];
-export const storyRounds = (count: number) => [
-  storyOpening,
-  storyFriend,
-  ...Array.from(
-    { length: Math.max(0, count - 3) },
-    (_, i) => middle[i % middle.length],
-  ),
-  storyEnding,
-];
+export const storyRounds = (count: number, audience?: Audience) =>
+  audience && audience !== "adult"
+    ? childStoryRounds(count, audience)
+    : [
+        storyOpening,
+        storyFriend,
+        ...Array.from(
+          { length: Math.max(0, count - 3) },
+          (_, i) => middle[i % middle.length],
+        ),
+        storyEnding,
+      ];
 export const turnCount = (g: Game) =>
   g.kind === "joy" ? g.players.length : Math.max(3, g.players.length);
 export const gamePlayer = (g: Game) => g.players[g.turn % g.players.length];
-export function newGame(kind: Game["kind"], players: Player[]): Game {
+export function newGame(
+  kind: Game["kind"],
+  players: Player[],
+  editionAudience?: Audience,
+): Game {
   if (
     !["joy", "story"].includes(kind) ||
     players.length < 2 ||
     players.length > 12 ||
     new Set(players.map((p) => p.id)).size !== players.length ||
-    players.some((p) => !p.name.trim())
+    players.some(
+      (p) =>
+        !p.name.trim() || (p.audience !== undefined && !isAudience(p.audience)),
+    ) ||
+    (editionAudience !== undefined && !isAudience(editionAudience))
   )
     throw new Error("Choose between 2 and 12 different players.");
   const stamp = now();
   return {
     id: id(),
     kind,
+    contentVersion: 1,
+    audience: youngestAudience([
+      ...players,
+      ...(editionAudience ? [{ audience: editionAudience }] : []),
+    ]),
     players: players.map((p) => ({ ...p })),
     stage: "ready",
     turn: 0,
@@ -382,12 +402,16 @@ export function newGame(kind: Game["kind"], players: Player[]): Game {
     updatedAt: stamp,
   };
 }
+export const joyOptions = (g: Pick<Game, "audience">) =>
+  g.audience && g.audience !== "adult"
+    ? childPlayContent(g.audience).joys
+    : joyChoices;
 export function gameText(g: Game): string {
   if (g.kind === "joy")
     return Number.isInteger(g.choices[0])
-      ? `A small joy for ${g.players[0].name}: ${joyChoices[g.choices[0]!].toLowerCase()}.`
+      ? `A small joy for ${g.players[0].name}: ${joyOptions(g)[g.choices[0]!].toLowerCase()}.`
       : "";
-  const rounds = storyRounds(g.players.length);
+  const rounds = storyRounds(g.players.length, g.audience);
   return g.choices
     .map((c, i) =>
       c === null
@@ -493,7 +517,12 @@ const date = (v: unknown) => str(v, 40) && Number.isFinite(Date.parse(v));
 const optional = (v: unknown, test: (v: unknown) => boolean) =>
   v === undefined || test(v);
 const player = (p: unknown): p is Player =>
-  obj(p) && str(p.id, 100) && !!p.id && str(p.name, 80) && !!p.name.trim();
+  obj(p) &&
+  str(p.id, 100) &&
+  !!p.id &&
+  str(p.name, 80) &&
+  !!p.name.trim() &&
+  optional(p.audience, isAudience);
 export function isLiving(value: unknown): value is LivingState {
   if (
     !obj(value) ||
@@ -582,6 +611,10 @@ export function isLiving(value: unknown): value is LivingState {
     if (
       !obj(g) ||
       !str(g.id, 100) ||
+      !optional(g.audience, isAudience) ||
+      (g.audience === undefined
+        ? g.contentVersion !== undefined
+        : g.contentVersion !== 1) ||
       !["joy", "story"].includes(String(g.kind)) ||
       !["ready", "choose", "handoff", "reveal", "kept", "finished"].includes(
         String(g.stage),

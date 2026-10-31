@@ -57,6 +57,7 @@ async function main() {
         "Content-Type": "application/json",
         Origin: customOrigin,
         "x-relish-consent": "chosen-connection",
+        "x-relish-edition": "adult",
         ...(who ? { Authorization: `Bearer ${who.token}` } : {}),
       },
       body: JSON.stringify(body),
@@ -106,6 +107,40 @@ async function main() {
       403,
     );
     check("online registration requires adult confirmation");
+    for (const edition of ["child", ""]) {
+      for (const endpoint of ["connections", "assist"]) {
+        const blocked = await fetch(`${origin}/api/relish/${endpoint}/`, {
+          method: "POST",
+          headers: {
+            Origin: origin,
+            "Content-Type": "application/json",
+            "x-relish-consent":
+              endpoint === "connections"
+                ? "chosen-connection"
+                : "selected-excerpt",
+            "x-relish-edition": edition,
+            Authorization: `Bearer ${a.token}`,
+          },
+          body: JSON.stringify(
+            endpoint === "connections"
+              ? { action: "list" }
+              : {
+                  provider: "cloud",
+                  excerpt:
+                    "Fictional child boundary check. This must never reach AI.",
+                },
+          ),
+        });
+        assert.equal(
+          blocked.status,
+          403,
+          "A non-adult edition must be rejected even with a valid adult token",
+        );
+      }
+    }
+    check(
+      "child and unconfigured requests blocked with real authenticated adult accounts",
+    );
     for (const u of users.slice(0, 4))
       await call(u, {
         action: "register",
@@ -142,6 +177,7 @@ async function main() {
             "Content-Type": "application/json",
             Origin: origin,
             "x-relish-consent": "chosen-connection",
+            "x-relish-edition": "adult",
             Authorization: `Bearer ${u.token}`,
           },
           body: JSON.stringify({ action: "join", code: invite.code }),
@@ -302,6 +338,7 @@ async function main() {
           Origin: origin,
           "Content-Type": "application/json",
           "x-relish-consent": "selected-excerpt",
+          "x-relish-edition": "adult",
           Authorization: `Bearer ${a.token}`,
         },
         body: JSON.stringify({

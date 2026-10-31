@@ -31,8 +31,6 @@ import {
   outcomes,
   pauseVisit,
   pendingPractice,
-  plans,
-  threads,
   updateDraft,
   type Draft,
   type Game,
@@ -46,10 +44,26 @@ import { SoundControl, SoundSettings, useSensory } from "./Sensory";
 import VisitEditor from "./VisitEditor";
 import GroupPlay from "./GroupPlay";
 import ConnectedEditions from "./ConnectedEditions";
+import EditionSetup from "./EditionSetup";
+import { guidanceFor } from "@/lib/relish/guidance";
+import { canUseOnline, ageLabels, audienceOf } from "@/lib/relish/profiles";
 
 type View =
-  "bookmark" | "session" | "words" | "people" | "practice" | "family" | "play";
-type Modal = "settings" | "create" | "person" | "guide" | "connections" | null;
+  | "bookmark"
+  | "session"
+  | "words"
+  | "people"
+  | "practice"
+  | "family"
+  | "play";
+type Modal =
+  | "settings"
+  | "create"
+  | "person"
+  | "guide"
+  | "connections"
+  | "profile"
+  | null;
 type Vault = ReturnType<typeof useLocalBook>;
 const chapters = [
   { id: "words", label: "In my own words" },
@@ -64,6 +78,8 @@ const shortDate = (iso: string) =>
 export default function LivingBook({ vault }: { vault: Vault }) {
   const [removeName, setRemoveName] = useState("");
   const [removeError, setRemoveError] = useState("");
+  const { threads, plans, intro, cue } = guidanceFor(vault.book);
+  const online = canUseOnline(vault.book);
   const { book, mode } = vault,
     sample = mode === "sample",
     l = livingOf(book),
@@ -182,7 +198,15 @@ export default function LivingBook({ vault }: { vault: Vault }) {
   }
   function createGame(kind: Game["kind"], players: Player[]) {
     void commit(
-      (b) => changeLiving(b, (x) => ({ ...x, game: newGame(kind, players) })),
+      (b) =>
+        changeLiving(b, (x) => ({
+          ...x,
+          game: newGame(
+            kind,
+            players,
+            b.profile?.kind === "child" ? b.profile.ageBand : undefined,
+          ),
+        })),
       () => navigate("play"),
     );
   }
@@ -221,8 +245,9 @@ export default function LivingBook({ vault }: { vault: Vault }) {
       <p className="lb-kicker">Your thread in this chapter</p>
       <h2>{theme?.title || "A little more understanding."}</h2>
       <p>
-        Ordinary moments become pages. Pages become a little more understanding
-        of yourself and the people you love.
+        {online
+          ? "Ordinary moments become pages. Pages become a little more understanding of yourself and the people you love."
+          : "One little moment at a time. You can explore how you feel, try something small, and come back when you want."}
       </p>
       <div className="lb-thread">
         <span className="lb-kicker">Across several visits</span>
@@ -344,7 +369,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
           <h2>{plan.title}</h2>
           <p>
             {kind === "begin"
-              ? "Choose one thing you would like to make a little easier in your relationships."
+              ? intro
               : kind === "reflect"
                 ? "Return after life has given you a chance to try."
                 : theme?.notice}
@@ -353,6 +378,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
             <strong>Our stopping point</strong>
             <p>{plan.end}</p>
           </div>
+          {cue && <p className="lb-age-cue">{cue}</p>}
           <button
             className="lb-primary"
             disabled={busy}
@@ -766,7 +792,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
                 <BookOpen size={16} /> Editions
               </button>
             )}
-            {!sample && !sharedView && (
+            {!sample && !sharedView && online && (
               <button
                 disabled={busy || !!sessionOpen}
                 onClick={() => setModal("connections")}
@@ -811,7 +837,9 @@ export default function LivingBook({ vault }: { vault: Vault }) {
               ? "Only shared pages"
               : sample
                 ? "Fictional sample"
-                : "Your private pages"}
+                : book.profile?.kind === "child"
+                  ? `${ageLabels[book.profile.ageBand]} · local book`
+                  : "Your private pages"}
           </span>
         </div>
         {error || vault.error ? (
@@ -957,13 +985,29 @@ export default function LivingBook({ vault }: { vault: Vault }) {
           {notice}
         </p>
       </div>
-      {modal === "connections" && !sample && !sharedView && (
+      {modal === "connections" && !sample && !sharedView && online && (
         <ConnectedEditions
           book={book}
           save={vault.save}
           backup={vault.backup}
           onClose={() => setModal(null)}
         />
+      )}
+      {modal === "profile" && !sample && !sharedView && (
+        <Dialog
+          title="Edition & parent settings"
+          onClose={() => setModal(null)}
+        >
+          <EditionSetup
+            book={book}
+            save={vault.save}
+            onDone={() => {
+              setModal(null);
+              setNotice("Edition settings saved.");
+            }}
+            onCancel={() => setModal("settings")}
+          />
+        </Dialog>
       )}
       {modal === "settings" && (
         <Dialog title="Privacy and settings" onClose={() => setModal(null)}>
@@ -978,9 +1022,32 @@ export default function LivingBook({ vault }: { vault: Vault }) {
             {sample
               ? "examples in memory only"
               : "encrypted in this browser on this device"}
-            . AI receives only an excerpt you review and explicitly choose to
-            send.
+            .{" "}
+            {online
+              ? "AI receives only an excerpt you review and explicitly choose to send."
+              : "AI and online connections are off for this edition."}
           </p>
+          {!sample && (
+            <div className="lb-boundary">
+              <h3>
+                {book.profile?.kind === "child"
+                  ? "A book for their age"
+                  : "Your adult edition"}
+              </h3>
+              <p>{ageLabels[audienceOf(book)]}</p>
+              <p className="lb-fine">
+                {online
+                  ? "Optional AI and family connections are available when you choose them."
+                  : "Written guidance for this age. No AI, online sign-in or online sharing. A parent passphrase protects changes."}
+              </p>
+              <button
+                className="lb-secondary"
+                onClick={() => setModal("profile")}
+              >
+                Edition & parent settings
+              </button>
+            </div>
+          )}
           <div className="lb-boundary">
             <h3>Keep a copy you control.</h3>
             <p>
@@ -995,7 +1062,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
               <Download size={16} /> Export encrypted backup
             </button>
           </div>
-          {!sample && (
+          {!sample && online && (
             <button
               className="lb-secondary"
               onClick={() => setModal("connections")}
@@ -1129,11 +1196,15 @@ export default function LivingBook({ vault }: { vault: Vault }) {
                 : plans[v?.kind || nextKind(book)].end}
           </p>
           <div className="lb-boundary">
-            <strong>AI, when you invite it</strong>
+            <strong>
+              {online ? "AI, when you invite it" : "Your guide, right here"}
+            </strong>
             <p>
-              {sharedView
-                ? "Shared play works without AI. Private writing is never included in a game."
-                : "While writing a moment, you can invite AI to help consider another perspective. Review the exact excerpt first. You choose whether to keep its response."}
+              {!online
+                ? "These are written prompts chosen for your age, not an AI conversation. Your words stay here. You can pause, pass, or ask a trusted grown-up for help."
+                : sharedView
+                  ? "Shared play works without AI. Private writing is never included in a game."
+                  : "While writing a moment, you can invite AI to help consider another perspective. Review the exact excerpt first. You choose whether to keep its response."}
             </p>
           </div>
           <button className="lb-primary" onClick={() => setModal(null)}>

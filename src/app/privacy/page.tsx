@@ -12,7 +12,7 @@ export default function PrivacyPage() {
     >
       <Link href="/relish/">← Back to Relish</Link>
       <h1>Your words belong to you.</h1>
-      <p>Relish’s data practices · October 30, 2026</p>
+      <p>Relish’s data practices · October 31, 2026</p>
       <h2>Your private editions</h2>
       <p>
         Your writing, people, session progress, games and sharing private keys
@@ -32,8 +32,23 @@ export default function PrivacyPage() {
       <p>
         Online accounts and connected-edition features are intended for adults
         aged 18 and older. Children can keep separate encrypted local editions
-        and take part in family games without an online account. Adults decide
-        which family passages they offer from their own connected editions.
+        and take part in family games without an online account. A parent or
+        guardian explicitly chooses an age range: under 6, 6–8, 9–12 or 13–17.
+        It is stored inside the encrypted edition, not sent to Relish’s servers.
+        Relish does not infer or verify anyone’s age. Written prompts and
+        session guidance adapt to the chosen range. Existing writing is not
+        automatically reviewed or filtered by this setting.
+      </p>
+      <p>
+        Children’s editions cannot open AI, online sign-in or online passage
+        sharing. This applies to local AI too. A separate parent passphrase
+        protects age changes and switching to an adult edition. Only a salted
+        verifier is kept inside the encrypted book and its backups; Relish
+        cannot recover that passphrase. These are app controls, not device-wide
+        parental controls or age verification. Someone controlling the browser
+        or able to alter a decrypted backup can bypass local settings. Use a
+        parent-managed device where stronger restrictions are needed. Under 6, a
+        grown-up should read and choose together with the child.
       </p>
       <h2>Optional connected editions</h2>
       <p>
@@ -87,7 +102,11 @@ export default function PrivacyPage() {
       </p>
       <h2>Family play</h2>
       <p>
-        Pass-and-play games work on one device. Players can pass, and every
+        Pass-and-play games work on one device. Select an age range for each
+        participant; an unspecified age uses the simplest prompts. New rounds
+        use the youngest selected range and never exceed a child edition’s own
+        range. These game settings remain in the encrypted book. Existing saved
+        games retain their original wording. Players can pass, and every
         selected player must approve before a game passage is kept. These are
         in-person choices, not separately authenticated signatures. Shared play
         puts private pages away and returning to a private edition requires its

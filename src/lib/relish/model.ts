@@ -1,3 +1,4 @@
+import { isEditionProfile, type EditionProfile } from "./profiles";
 import { isLiving, type LivingState } from "./living";
 import { isConnections, type Connections } from "./sharing";
 export type Person = {
@@ -31,6 +32,7 @@ export type Book = {
   living?: LivingState;
   connections?: Connections;
   owner: string;
+  profile?: EditionProfile;
   people: Person[];
   moments: Moment[];
   rhythm?: RhythmSettings;
@@ -46,6 +48,7 @@ export function sampleBook(): Book {
   return {
     version: 1,
     owner: "Alex",
+    profile: { kind: "adult" },
     people: [
       {
         id: "anna",
@@ -112,6 +115,7 @@ export function isBook(value: unknown): value is Book {
   const b = value as Book;
   return (
     b.version === 1 &&
+    (b.profile === undefined || isEditionProfile(b.profile)) &&
     (b.connections === undefined || isConnections(b.connections)) &&
     (b.living === undefined || isLiving(b.living)) &&
     (b.rhythm === undefined ||

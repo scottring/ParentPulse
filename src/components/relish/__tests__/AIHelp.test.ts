@@ -25,18 +25,16 @@ beforeEach(() => {
   session.user = null;
   vi.stubGlobal(
     "fetch",
-    vi
-      .fn()
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            local: false,
-            hosted: true,
-            cloud: true,
-            dailyLimit: 20,
-          }),
-        ),
+    vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          local: false,
+          hosted: true,
+          cloud: true,
+          dailyLimit: 20,
+        }),
       ),
+    ),
   );
 });
 afterEach(() => {
@@ -48,6 +46,7 @@ describe("hosted AI invitation", () => {
   it("does not send writing or initialize sign-in merely by opening the invitation", async () => {
     render(
       createElement(AIHelp, {
+        profile: { kind: "adult" },
         observation: "PRIVATE FICTIONAL MOMENT",
         onUse: vi.fn(),
       }),
@@ -74,6 +73,7 @@ describe("hosted AI invitation", () => {
     };
     render(
       createElement(AIHelp, {
+        profile: { kind: "adult" },
         observation: "A fictional moment.",
         onUse: vi.fn(),
       }),
@@ -97,6 +97,7 @@ describe("hosted AI invitation", () => {
     const use = vi.fn();
     render(
       createElement(AIHelp, {
+        profile: { kind: "adult" },
         observation: "Fictional observation.",
         onUse: use,
       }),
@@ -117,6 +118,7 @@ describe("hosted AI invitation", () => {
       headers: {
         Authorization: "Bearer memory-token",
         "x-relish-consent": "selected-excerpt",
+        "x-relish-edition": "adult",
       },
     });
     expect(
@@ -128,4 +130,34 @@ describe("hosted AI invitation", () => {
     );
     expect(use).toHaveBeenCalledWith("A tentative idea.");
   });
+});
+
+describe("child and unconfigured AI boundaries", () => {
+  it.each([
+    undefined,
+    {
+      kind: "child" as const,
+      ageBand: "13-17" as const,
+      parentLock: { salt: "a".repeat(32), verifier: "b".repeat(64) },
+    },
+  ])(
+    "does not connect or retrieve an adult token for a restricted edition",
+    async (profile) => {
+      session.user = {
+        email: "fictional@example.invalid",
+        emailVerified: true,
+        getIdToken: vi.fn(),
+      };
+      render(
+        createElement(AIHelp, {
+          profile,
+          observation: "PRIVATE CHILD WORDS",
+          onUse: vi.fn(),
+        }),
+      );
+      expect(screen.queryByText("Sign in for AI")).toBeNull();
+      expect(fetch).not.toHaveBeenCalled();
+      expect(session.user.getIdToken).not.toHaveBeenCalled();
+    },
+  );
 });

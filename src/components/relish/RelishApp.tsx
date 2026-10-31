@@ -5,6 +5,7 @@ import { useLocalBook } from "./useLocalBook";
 import { SensoryProvider } from "./Sensory";
 import { VaultForm } from "./BookForms";
 import LivingBook from "./LivingBook";
+import EditionSetup from "./EditionSetup";
 import "./relish.css";
 import "./experience.css";
 import "./living-book.css";
@@ -108,6 +109,19 @@ function BookGate() {
           onCancel={vault.shelf}
           cancelLabel="Choose another edition"
         />
+      </div>
+    );
+  if (vault.mode === "open" && !vault.book.profile)
+    return (
+      <div className="r-app lb-app lb-gate lb-profile-gate">
+        <section>
+          <p className="lb-wordmark">relish</p>
+          <EditionSetup
+            book={vault.book}
+            save={vault.save}
+            onCancel={vault.shelf}
+          />
+        </section>
       </div>
     );
   return <LivingBook key={`${vault.mode}:${vault.editionId}`} vault={vault} />;
