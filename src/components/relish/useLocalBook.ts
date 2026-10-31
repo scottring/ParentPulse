@@ -1,6 +1,19 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  photoIds,
+  preparePhoto,
+  encryptPhoto,
+  decryptPhoto,
+  putPhoto,
+  getPhoto,
+  backupPhotos,
+  restorePhotos,
+  removePhotos,
+  BACKUP_BYTES,
+  type PhotoAccess,
+} from "@/lib/relish/photos";
+import {
   editionKey,
   listEditions,
   labelEdition,
@@ -39,6 +52,7 @@ export function useLocalBook() {
   const key = useRef<CryptoKey | null>(null),
     envelope = useRef<Envelope | null>(null),
     epoch = useRef(0);
+  const samplePhotos = useRef(new Map<string, Blob>());
   const currentBook = useRef(book);
   const queue = useRef<Promise<void>>(Promise.resolve());
   const pending = useRef(0);
@@ -60,6 +74,7 @@ export function useLocalBook() {
   }, []);
   const lock = useCallback(() => {
     epoch.current++;
+    samplePhotos.current.clear();
     key.current = null;
     envelope.current = null;
     currentBook.current = emptyBook("");
@@ -129,6 +144,10 @@ export function useLocalBook() {
             throw new Error(
               "A book was created in another tab. Reload to open it.",
             );
+          if (importRaw)
+            await restorePhotos(importRaw, result.book, result.key, id);
+          if (token !== epoch.current)
+            throw new Error("The book was locked before it could be restored.");
           localStorage.setItem(storageKey, JSON.stringify(result.envelope));
           labelEdition(id, result.book.owner);
           setEditions(listEditions());
@@ -224,19 +243,82 @@ export function useLocalBook() {
         if (token === epoch.current && pending.current === 0) setBusy(false);
       });
   };
-  const backup = () => {
-    const storageKey = editionKey(selected.current);
-    const raw = localStorage.getItem(storageKey);
-    if (!raw) return;
-    parseEnvelope(raw);
-    const url = URL.createObjectURL(
-      new Blob([raw], { type: "application/json" }),
-    );
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `relish-encrypted-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const photos: PhotoAccess = {
+    add: async (file) => {
+      const token = epoch.current,
+        id = selected.current,
+        sample = mode === "sample";
+      if (!sample && !key.current) throw new Error("Unlock your book first.");
+      if (photoIds(currentBook.current).length >= 200)
+        throw new Error(
+          "This book holds up to 200 photos. Save a backup before starting another edition.",
+        );
+      const prepared = await preparePhoto(file);
+      if (token !== epoch.current) throw new Error("This book was locked.");
+      if (sample) samplePhotos.current.set(prepared.photo.id, prepared.blob);
+      else {
+        const encrypted = await encryptPhoto(
+          prepared.photo.id,
+          prepared.blob,
+          key.current!,
+        );
+        if (token !== epoch.current) throw new Error("This book was locked.");
+        await putPhoto(id, encrypted);
+      }
+      if (token !== epoch.current) throw new Error("This book was locked.");
+      return prepared.photo;
+    },
+    load: async (id) => {
+      const token = epoch.current,
+        edition = selected.current,
+        activeKey = key.current;
+      const sample = samplePhotos.current.get(id);
+      if (mode === "sample" && sample) return sample;
+      if (!activeKey) throw new Error("Unlock this book to see its photos.");
+      const blob = await decryptPhoto(await getPhoto(edition, id), activeKey);
+      if (token !== epoch.current) throw new Error("This book was locked.");
+      return blob;
+    },
+  };
+  const backup = async () => {
+    const token = epoch.current;
+    try {
+      await queue.current;
+      if (token !== epoch.current || !key.current)
+        throw new Error("Unlock your book before making a backup.");
+      const raw = localStorage.getItem(editionKey(selected.current));
+      if (!raw) throw new Error("This book has not been saved yet.");
+      const encrypted = parseEnvelope(raw);
+      if (JSON.stringify(encrypted) !== JSON.stringify(envelope.current))
+        throw new Error(
+          "This book changed in another tab. Unlock its latest version before making a backup.",
+        );
+      const media = await backupPhotos(currentBook.current, selected.current);
+      if (token !== epoch.current) throw new Error("This book was locked.");
+      const bundle = JSON.stringify({
+        ...encrypted,
+        ...(media.length ? { media } : {}),
+      });
+      if (bundle.length > BACKUP_BYTES)
+        throw new Error(
+          "This book is too large for a single backup. Please contact support before adding more photos.",
+        );
+      const url = URL.createObjectURL(
+        new Blob([bundle], { type: "application/json" }),
+      );
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `relish-encrypted-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      if (token === epoch.current)
+        setError(
+          e instanceof Error
+            ? e.message
+            : "The backup could not be made. Your book is still here.",
+        );
+    }
   };
   const remove = async (confirmation: string) => {
     if (mode !== "open" || confirmation !== currentBook.current.owner)
@@ -255,6 +337,7 @@ export function useLocalBook() {
         );
       localStorage.removeItem(storageKey);
       removeEditionLabel(id);
+      await removePhotos(id).catch(() => {});
       lock();
       setEditions(listEditions());
       setMode("shelf");
@@ -276,6 +359,7 @@ export function useLocalBook() {
     setMode(id ? "locked" : "new");
   };
   return {
+    photos,
     book,
     mode,
     busy,

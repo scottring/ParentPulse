@@ -1,3 +1,4 @@
+import { BACKUP_BYTES } from "./photos";
 import { isBook, type Book } from "./model";
 export const VAULT_KEY = "relish.encrypted-book.v1";
 const ITERATIONS = 600_000;
@@ -13,7 +14,7 @@ const encode = (bytes: Uint8Array) =>
 const decode = (text: string) =>
   Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
 export function parseEnvelope(raw: string): Envelope {
-  if (raw.length > 12_000_000) throw new Error("This backup is too large.");
+  if (raw.length > BACKUP_BYTES) throw new Error("This backup is too large.");
   const e = JSON.parse(raw) as Envelope;
   if (
     e.version !== 1 ||
@@ -21,11 +22,18 @@ export function parseEnvelope(raw: string): Envelope {
     typeof e.salt !== "string" ||
     typeof e.iv !== "string" ||
     typeof e.ciphertext !== "string" ||
+    e.ciphertext.length > 12_000_000 ||
     decode(e.salt).length !== 16 ||
     decode(e.iv).length !== 12
   )
     throw new Error("This is not a supported Relish backup.");
-  return e;
+  return {
+    version: 1,
+    salt: e.salt,
+    iv: e.iv,
+    ciphertext: e.ciphertext,
+    iterations: e.iterations,
+  };
 }
 export async function deriveKey(
   passphrase: string,

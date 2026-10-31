@@ -63,7 +63,7 @@ describe("freeform journal", () => {
     );
     first.unmount();
     render(createElement(Harness));
-    fireEvent.click(screen.getByRole("button", { name: /A page in progress/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Keep writing:/ }));
     expect((input() as HTMLTextAreaElement).value).toContain("second line");
     fill("The ending arrived.");
     fireEvent.click(screen.getByRole("button", { name: "Keep this page" }));
@@ -73,7 +73,7 @@ describe("freeform journal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Edit this page" }));
     fill("Actually, another ending!");
     fireEvent.click(screen.getByRole("button", { name: "Save for later" }));
-    await screen.findByRole("button", { name: /Open this page/ });
+    await screen.findByRole("button", { name: /A page of my own/ });
     expect(stored.journal?.[0]).toMatchObject({
       text: "Actually, another ending!",
       status: "kept",
@@ -201,6 +201,7 @@ describe("freeform journal", () => {
           open: async () => {},
           lock,
           backup: vi.fn(),
+          photos: { add: vi.fn(), load: vi.fn() },
           save: async (change) => {
             current.current =
               typeof change === "function" ? change(current.current) : change;
@@ -210,7 +211,7 @@ describe("freeform journal", () => {
       });
     }
     render(createElement(Harness));
-    fireEvent.click(screen.getByRole("button", { name: "Journal" }));
+    fireEvent.click(screen.getByRole("button", { name: "Your pages" }));
     expect(screen.getByText("PRIVATE JOURNAL SENTENCE")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "A fresh page" }));
     expect(
@@ -226,7 +227,7 @@ describe("freeform journal", () => {
       await screen.findByRole("button", { name: "Play together" }),
     );
     expect(screen.queryByText("PRIVATE JOURNAL SENTENCE")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Journal" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Your pages" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Unlock my edition" }));
     expect(lock).toHaveBeenCalledOnce();
   });

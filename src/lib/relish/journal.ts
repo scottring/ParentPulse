@@ -1,3 +1,4 @@
+import { isPhotos, type Photo } from "./photos";
 import type { Book } from "./model";
 
 export const journalStyles = {
@@ -12,6 +13,8 @@ export type JournalDraft = {
   text: string;
   style: JournalStyle;
   createdAt: string;
+  photos?: Photo[];
+  people?: string[];
 };
 export type JournalEntry = JournalDraft & {
   updatedAt: string;
@@ -34,6 +37,12 @@ function isDraft(value: unknown): value is JournalDraft {
     typeof e.text === "string" &&
     e.text.length <= JOURNAL_TEXT_LIMIT &&
     ["sky", "moss", "blush"].includes(e.style) &&
+    (e.photos === undefined || isPhotos(e.photos)) &&
+    (e.people === undefined ||
+      (Array.isArray(e.people) &&
+        e.people.length <= 30 &&
+        new Set(e.people).size === e.people.length &&
+        e.people.every((id) => typeof id === "string" && id.length <= 100))) &&
     validDate(e.createdAt)
   );
 }
@@ -45,7 +54,7 @@ function isEntry(value: unknown): value is JournalEntry {
     Number.isSafeInteger(e.revision) &&
     e.revision > 0 &&
     ["draft", "kept"].includes(e.status) &&
-    (e.status !== "kept" || !!e.text.trim())
+    (e.status !== "kept" || !!e.text.trim() || !!e.photos?.length)
   );
 }
 export function isJournal(value: unknown): value is JournalEntry[] {
@@ -72,8 +81,8 @@ export function writeJournalPage(
 ): Book {
   if (!isDraft(draft) || !["draft", "kept"].includes(status))
     throw new Error("This journal page could not be saved.");
-  if (status === "kept" && !draft.text.trim())
-    throw new Error("Add a few words before keeping this page.");
+  if (status === "kept" && !draft.text.trim() && !draft.photos?.length)
+    throw new Error("Add a few words or a photo before keeping this page.");
   const entries = book.journal || [];
   const previous = entries.find((e) => e.id === draft.id);
   if ((previous?.revision || 0) !== expectedRevision)
@@ -87,6 +96,8 @@ export function writeJournalPage(
     title: draft.title,
     text: draft.text,
     style: draft.style,
+    photos: draft.photos?.map((p) => ({ ...p })),
+    people: draft.people?.filter((id) => book.people.some((p) => p.id === id)),
     createdAt: previous?.createdAt || draft.createdAt,
     updatedAt: new Date().toISOString(),
     revision: expectedRevision + 1,

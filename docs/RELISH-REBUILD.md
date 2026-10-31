@@ -22,7 +22,7 @@ Each edition opens at a personal bookmark. A short visit has an explicit purpose
 
 Two family games support 2–12 selected players, including guests. Players choose who starts and may pass. The handoff screen hides the preceding answer. Everyone must approve before a shared game page is kept; finishing without saving is valid. Private chapters and online sessions are put away during play. Returning to a private edition requires unlocking it. Game approvals are in-person choices, not authenticated signatures. Games are on one device, not remote multiplayer.
 
-Finite page and cover transitions respect reduced-motion preferences. Stone-like sounds are synthesized locally, off by default, and stop when muted or the tab is hidden. No microphone or remote sound files are used. The contextual guide is deterministic; optional AI is clearly identified separately.
+Finite page and cover transitions respect reduced-motion preferences. Stone-like sounds are synthesized locally, off by default, and stop when muted or the tab is hidden. These sounds use no microphone or remote sound files; optional voice writing has a separate explicit recording flow. The contextual guide is deterministic; optional AI is clearly identified separately.
 
 ## Separate local editions
 
@@ -46,7 +46,7 @@ An organizer creates a family connection and one-person invitation codes. Codes 
 
 Only the exact selected passage is offered to explicitly chosen editions. For each recipient the browser generates a fresh ephemeral ECDH key, derives an AES-256-GCM key using HKDF-SHA-256, and encrypts the title and text. Authenticated context binds protocol version, passage ID, family ID, sender, recipient and key fingerprint. The relay receives ciphertext, public keys and delivery metadata; it does not receive the selected plaintext or full book. The server authenticates the sender; this protocol does not independently sign authorship against a compromised relay.
 
-Recipients decrypt locally and choose whether to keep a passage. A kept copy enters their encrypted private chapter with attribution, never shared game pages or AI automatically. Acknowledgment removes their relay packet. Withdrawal removes remaining packets but cannot recall saved copies. Membership removal ends access to pending relay content. The newest 60 invitations are displayed; kept passages remain in the local edition. This is selective copying, not shared-document synchronization.
+Recipients decrypt locally and choose whether to keep a passage. A kept copy enters their encrypted private chapter with attribution, never shared game pages automatically. If the recipient opts into personal manual analysis, accepted text can be included among their recent pages, with author attribution. Acknowledgment removes their relay packet. Withdrawal removes remaining packets but cannot recall saved copies. Membership removal ends access to pending relay content. The newest 60 invitations are displayed; kept passages remain in the local edition. This is selective copying, not shared-document synchronization.
 
 Unfinished composer text is encrypted locally when the connection dialog is closed normally; recipients must be chosen again. Sending first saves an encrypted pending draft; retries reuse the same ID and ciphertext. The relay preserves a payload hash so retrying after acceptance cannot recreate a removed packet. An abrupt tab close before saving a composer draft may lose it.
 
@@ -58,11 +58,11 @@ Durable limits are 60 actions/minute, 2,000/day and 40 sends/day per account. Th
 
 Account deletion requires typed confirmation and a sign-in within 15 minutes. A resumable deletion marker blocks new sharing, membership is removed, sent relay documents and incoming packets/receipts are removed, invitation records and individual usage records are removed, then Firebase authentication and the profile are deleted. Large cleanup passes ask the owner to retry until finished. Other members' opaque inbox pointers may remain, but refer to missing documents and expose no passage. Other people's local copies and hosting-provider operational logs cannot be deleted by this control. Legacy Firebase collections are untouched by this fresh-start release.
 
-The public `/privacy/` page describes these boundaries. The living-book response uses a per-request nonce CSP, restricts active scripts and connections, denies framing, and disables camera/microphone/geolocation/payment permissions. Legacy routes redirect to the new experience.
+The public `/privacy/` page describes these boundaries. The living-book response uses a per-request nonce CSP, restricts active scripts and connections, denies framing, and permits same-origin microphone/camera access only on the living-book route, with browser permission, and disables geolocation/payment permissions. The root redirects to that route. Legacy routes redirect to the new experience.
 
 ## Optional AI
 
-AI runs only when invited. Users review the exact excerpt; the whole book is never sent. A response is a possible perspective and enters the book only if chosen. Core sessions and games work without AI.
+On-demand AI runs only when invited. Users review the exact excerpt; the whole book is never sent. Separately opted-in automatic manual analysis is described below. A response is a possible perspective and enters the book only if chosen. Core sessions and games work without AI.
 
 Hosted AI requires the same verified adult account. Server-only variables are:
 
@@ -97,6 +97,29 @@ The range and a salted PBKDF2-SHA-256 (600,000 iterations) parent-passphrase ver
 
 Written, deterministic guidance adapts thread choices, prompts, practices, session duration, finishing conditions and reflection options to the range. Under-6 use is explicitly together with a grown-up. Younger children can choose a feeling instead of typing; teens get language about support, space and boundaries. Children are never asked to repair adults' disagreements or manage someone else's feelings. Existing text is not retrospectively filtered or classified.
 
-AI (including local Ollama), account sign-in and online passage sharing are unavailable in child editions. Both AI and connected-edition components fail closed without an adult profile, before loading auth or fetching. Requests require an explicit adult-edition header as well as the existing origin/consent/auth rules; that header guards accidental or stale client use, not proof of the reader's age. Child guidance is not generative AI. Parents use their own editions for online services.
+General AI perspectives (including local Ollama) and online passage sharing remain unavailable in child editions. Parent-assisted voice and manual suggestions have separate controls: verified adult authentication, a local parent passphrase, explicit visit consent, age-appropriate manual prompting, and fail-closed provider privacy flags. No independent child account is created. Edition headers guard accidental/stale use, not verified age or device-wide restrictions.
 
 Family play asks for the selected participants' age ranges. Unknown ranges use the simplest under-6 set. The youngest selected range determines new prompts and choices, capped by the hosting child edition's range even if its owner is not playing. A round stores its content version and audience with the encrypted game so choices and reveal text survive reload/restore. Older saved games retain the original wording. Other people's private editions are never opened to obtain their ages.
+
+
+## Continuous pages, photos and voice
+
+Your pages interleaves kept journal entries, guided moments, reflections, approved game pages and accepted passages chronologically. Editing preserves original placement; unfinished drafts remain separate. Private people tags are local metadata and never grant access. A chosen excerpt can enter the local Family album or prefill the existing encrypted adult-to-adult offer flow. Recipients still approve their copy. Photo sharing is local Family album only in this release.
+
+Up to four photos per journal page are re-encoded as JPEG (long edge at most 1,600 pixels, at most 350 KB each), stripping embedded metadata. AES-GCM encryption uses the edition key and binds each blob to its photo ID. Ciphertext lives in IndexedDB, separate from the text envelope. Up to 200 referenced photos per edition are supported. Backup packages include all referenced ciphertext and allow at most 120 MB; the text envelope remains bounded at 12 MB. Restore authenticates all referenced media before writing it. Unreferenced encrypted blobs can remain until the local edition is removed. No photo is sent to AI.
+
+Voice uses MediaRecorder, up to two minutes / 3 MB per take. The user reviews a take locally, explicitly sends that clip, then reviews/edits the transcript before insertion. Microphone tracks stop on completion, hiding or closing; late permission results and requests are cancelled. Audio is memory-only. The server validates origin, consent, verified adult authentication, type/magic bytes and streamed size before calling OpenAI audio transcriptions. Default model: `gpt-transcribe`; optional `RELISH_TRANSCRIPTION_MODEL`. Durable limits: 3/minute, 30/day/account, 300/day globally. No audio, transcript or journal context is logged/stored by Relish. Provider failures use generic errors and count toward quota.
+
+## Automatic living manuals and provider setup
+
+Manual analysis is off by default. An adult authorizes each unlocked visit, then separately enables personal and/or Family analysis. Only the six latest kept text sources (at most 1,800 characters each) are sent after changes. Drafts, photos/captions and private person tags are excluded. Family sources are only chosen album passages and approved game pages. The guide returns up to three tentative, source-cited ideas, never automatic accepted conclusions. Keep/dismiss decisions and source snapshots stay in the encrypted book. Only kept Family ideas appear in shared time. Disabling, signing out, editing or entering shared time cancels pending work; stale results cannot overwrite changed source context. Manual requests share the existing written-AI quota and use `store:false`.
+
+Launch gates, false by default:
+- `RELISH_VOICE_CHILDREN_ZDR_VERIFIED`: parent-assisted child dictation.
+- `RELISH_MANUAL_ZDR_VERIFIED`: automatic manual analysis for all editions, since adult family writing may contain children’s personal data.
+
+On October 31, the signed-in OpenAI Platform showed Personal / Default project and API-call logging controls, with no ZDR control. This does not establish that this account owns the hosting API key. Do not infer ZDR from API-call logging, `store:false`, or the transcription endpoint’s retention table. [OpenAI data controls](https://developers.openai.com/api/docs/guides/your-data) requires prior approval; [under-18 guidance](https://developers.openai.com/api/docs/guides/safety-checks/under-18-api-guidance) requires ZDR before processing under-13 personal data. Verify approval and enablement for the exact project behind the deployed key before changing either flag. Then run synthetic provider checks and parent-assisted device verification before launch.
+
+Prepared request for the account owner to submit to OpenAI’s sales contact (not sent):
+
+> We are building Relish, a private family journaling and relationship-manual application. We request Zero Data Retention eligibility for the API project used by our hosted app, covering audio transcription and text-based manual suggestions. Children may participate under parent supervision, including under 13; independent online accounts are adult-only. We keep books and photos encrypted on family devices, send only explicitly authorized recordings or limited opted-in text, and require review before keeping suggestions or sharing passages. Please confirm eligibility, any additional requirements, and how to verify ZDR for the specific project and models before enabling these features.

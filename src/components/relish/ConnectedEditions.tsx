@@ -14,7 +14,7 @@ import {
   type Delivery,
   type Outgoing,
 } from "@/lib/relish/sharing";
-import { livingOf } from "@/lib/relish/living";
+import { bookPages } from "@/lib/relish/pages";
 import { canUseOnline } from "@/lib/relish/profiles";
 type Save = (change: (b: Book) => Book) => Promise<void>;
 type Props = {
@@ -22,6 +22,7 @@ type Props = {
   save: Save;
   backup: () => void;
   onClose: () => void;
+  initialPassage?: { title: string; text: string };
 };
 export default function ConnectedEditions(props: Props) {
   if (!canUseOnline(props.book))
@@ -41,11 +42,13 @@ function AdultConnectedEditions({
   save,
   backup,
   onClose,
+  initialPassage,
 }: {
   book: Book;
   save: Save;
   backup: () => void;
   onClose: () => void;
+  initialPassage?: { title: string; text: string };
 }) {
   const [user, setUser] = useState<User | null>(null),
     [snapshot, setSnapshot] = useState<ConnectionSnapshot | null>(null);
@@ -63,9 +66,13 @@ function AdultConnectedEditions({
     [invite, setInvite] = useState(""),
     [joinName, setJoinName] = useState("");
   const [title, setTitle] = useState(
-      book.connections?.draft?.title || "A passage from my edition",
+      initialPassage?.title ||
+        book.connections?.draft?.title ||
+        "A passage from my edition",
     ),
-    [text, setText] = useState(book.connections?.draft?.text || ""),
+    [text, setText] = useState(
+      initialPassage?.text || book.connections?.draft?.text || "",
+    ),
     [recipients, setRecipients] = useState<string[]>([]);
   const [opened, setOpened] = useState<{
     delivery: Delivery;
@@ -222,16 +229,9 @@ function AdultConnectedEditions({
   const circle = connected ? snapshot?.circle : null;
   const others = circle?.members.filter((m) => m.uid !== user?.uid) || [];
   const owner = circle?.ownerId === user?.uid;
-  const sources = [
-    ...livingOf(book)
-      .entries.filter((e) => e.kind !== "practice" && e.text.trim())
-      .map((e) => ({ id: e.id, label: e.text.slice(0, 65), text: e.text })),
-    ...book.moments.map((m) => ({
-      id: m.id,
-      label: m.observation.slice(0, 65),
-      text: m.observation,
-    })),
-  ];
+  const sources = bookPages(book)
+    .filter((p) => p.text.trim())
+    .map((p) => ({ id: p.id, label: p.title, text: p.text }));
   async function sendPrepared(outgoing: Outgoing) {
     await api({
       action: "send",
@@ -288,7 +288,7 @@ function AdultConnectedEditions({
       connections: {
         ...b.connections!,
         outgoing: [...(b.connections?.outgoing || []), outgoing],
-        draft: undefined,
+        draft: initialPassage ? b.connections?.draft : undefined,
       },
     }));
     setText("");
@@ -340,7 +340,7 @@ function AdultConnectedEditions({
   async function closeWithDraft() {
     if (busy) return;
     await run(async () => {
-      if (text || book.connections?.draft)
+      if ((!initialPassage || !book.connections?.draft) && (text || book.connections?.draft))
         await save((b) => ({
           ...b,
           connections: {
@@ -518,9 +518,8 @@ function AdultConnectedEditions({
                   disabled={busy}
                   onClick={() =>
                     void run(async () => {
-                      const { sendEmailVerification } = await import(
-                        "firebase/auth"
-                      );
+                      const { sendEmailVerification } =
+                        await import("firebase/auth");
                       await sendEmailVerification(user);
                       setNotice("A verification link is on its way.");
                     })
@@ -752,13 +751,16 @@ function AdultConnectedEditions({
                         )}
                       </div>
                     )}
-                    <details className="lb-boundary">
+                    <details
+                      className="lb-boundary"
+                      open={initialPassage ? true : undefined}
+                    >
                       <summary>Offer a passage from my edition</summary>
                       <p>
                         Choose the exact words and the editions that may receive
-                        them. Closing this window keeps your text as an
-                        encrypted local draft. Choose recipients again when you
-                        return.
+                        them. {initialPassage && book.connections?.draft
+                          ? "Your earlier unfinished draft stays in your book. Send this selection before closing to keep edits to it; its original page is always kept."
+                          : "Closing this window keeps your text as an encrypted local draft. Choose recipients again when you return."}
                       </p>
                       <form
                         className="r-form"
