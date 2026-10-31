@@ -322,7 +322,7 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
       ) : !ready ? (
         <p>
           {child
-            ? "Children’s online voice writing is waiting for its privacy setup. You can still type and add photos."
+            ? "Voice writing is being connected. You can still type and add photos."
             : "Voice writing is being connected. Please try again later."}
         </p>
       ) : !approved ? (

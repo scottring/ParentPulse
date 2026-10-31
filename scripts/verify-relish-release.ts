@@ -333,23 +333,116 @@ async function main() {
     );
     if (process.env.RELISH_VERIFY_VOICE === "1") {
       const clip = await fs.readFile("/private/tmp/relish-voice-check.wav");
-      const headers = { Origin: origin, "Content-Type": "audio/wav", "x-relish-consent": "this-recording", "x-relish-edition": "adult", Authorization: `Bearer ${a.token}` };
-      const config = await (await fetch(`${origin}/api/relish/transcribe/`)).json();
+      const headers = {
+        Origin: origin,
+        "Content-Type": "audio/wav",
+        "x-relish-consent": "this-recording",
+        "x-relish-edition": "adult",
+        Authorization: `Bearer ${a.token}`,
+      };
+      const config = await (
+        await fetch(`${origin}/api/relish/transcribe/`)
+      ).json();
       assert.equal(config.enabled, true, "Hosted voice must be configured");
-      assert.equal(config.children, false, "Child voice remains gated pending verified ZDR");
-      const blocked = await fetch(`${origin}/api/relish/transcribe/`, {method:"POST",headers:{...headers,"x-relish-edition":"parent-assisted-child"},body:clip});
-      assert.equal(blocked.status,403);
-      const manual = await fetch(`${origin}/api/relish/manual/`);
-      assert.equal((await manual.json()).enabled,false,"Automatic family analysis stays gated until ZDR verified");
-      const response = await fetch(`${origin}/api/relish/transcribe/`, { method: "POST", headers, body: clip });
+      assert.equal(
+        config.children,
+        true,
+        "Parent-assisted transcription uses the standard no-retention endpoint",
+      );
+      const manual = await (await fetch(`${origin}/api/relish/manual/`)).json();
+      assert.equal(manual.enabled, true, "Adult reflection is configured");
+      assert.equal(
+        manual.children,
+        false,
+        "Child text analysis retains its separate ZDR gate",
+      );
+      const blocked = await fetch(`${origin}/api/relish/manual/`, {
+        method: "POST",
+        headers: {
+          Origin: origin,
+          "Content-Type": "application/json",
+          "x-relish-consent": "automatic-manual-suggestions",
+          "x-relish-edition": "parent-assisted-child",
+          Authorization: `Bearer ${a.token}`,
+        },
+        body: JSON.stringify({
+          scope: "personal",
+          audience: "9-12",
+          sources: [
+            {
+              id: "journal:qa",
+              title: "Fictional page",
+              text: "An invented child made a paper boat.",
+            },
+          ],
+        }),
+      });
+      assert.equal(blocked.status, 403);
+      const response = await fetch(`${origin}/api/relish/transcribe/`, {
+        method: "POST",
+        headers: { ...headers, "x-relish-edition": "parent-assisted-child" },
+        body: clip,
+      });
       const result = await response.json();
-      assert.equal(response.status, 200, "Hosted transcription should return a real response");
+      assert.equal(
+        response.status,
+        200,
+        "Hosted transcription should return a real response",
+      );
       assert(typeof result.text === "string");
-      for (const phrase of ["blanket fort", "living room", "spaceship", "helped each other"]) assert(result.text.toLowerCase().includes(phrase), `Transcription should preserve: ${phrase}`);
-      assert.equal(response.headers.get("cache-control"),"no-store");
-      check("real hosted transcription preserved all four expected phrases from synthetic audio; child voice and automatic analysis gates held");
+      for (const phrase of [
+        "blanket fort",
+        "living room",
+        "spaceship",
+        "helped each other",
+      ])
+        assert(
+          result.text.toLowerCase().includes(phrase),
+          `Transcription should preserve: ${phrase}`,
+        );
+      assert.equal(response.headers.get("cache-control"), "no-store");
+      check(
+        "real parent-assisted transcription preserved four synthetic phrases; child automatic-analysis gate held",
+      );
     }
     if (process.env.RELISH_VERIFY_AI === "1") {
+      const reflection = await fetch(`${origin}/api/relish/manual/`, {
+        method: "POST",
+        headers: {
+          Origin: origin,
+          "Content-Type": "application/json",
+          "x-relish-consent": "automatic-manual-suggestions",
+          "x-relish-edition": "adult",
+          Authorization: `Bearer ${a.token}`,
+        },
+        body: JSON.stringify({
+          scope: "personal",
+          audience: "adult",
+          sources: [
+            {
+              id: "journal:qa1",
+              title: "Fictional walk",
+              text: "Fictional adult Robin took a quiet walk before a conversation and found it easier to listen.",
+            },
+            {
+              id: "journal:qa2",
+              title: "Another fictional walk",
+              text: "Invented adult Robin walked again and felt more able to listen patiently.",
+            },
+          ],
+        }),
+      });
+      const reflected = await reflection.json();
+      assert.equal(
+        reflection.status,
+        200,
+        "Adult manual reflection uses a real provider response",
+      );
+      assert(Array.isArray(reflected.ideas));
+      check(
+        "real adult manual reflection returned validated suggestions with standard API privacy",
+      );
+
       const response = await fetch(`${origin}/api/relish/assist/`, {
         method: "POST",
         headers: {
@@ -403,7 +496,10 @@ async function main() {
         confirmation: "DELETE ONLINE ACCOUNT",
       });
       await assert.rejects(auth.getUser(a.uid));
-      assert(!(await db.doc(`relish_ai_usage/voice-${hash(a.uid)}`).get()).exists, "Deletion must remove voice usage");
+      assert(
+        !(await db.doc(`relish_ai_usage/voice-${hash(a.uid)}`).get()).exists,
+        "Deletion must remove voice usage",
+      );
       assert(
         !(await db.doc(`relish_connections_passages/${passageId}`).get())
           .exists,

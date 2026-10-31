@@ -50,3 +50,8 @@ service-account.json
 
 # git worktrees (isolated feature branches)
 .worktrees/
+
+# Native build products and personal signing state
+DerivedData/
+*.xcuserstate
+xcuserdata/

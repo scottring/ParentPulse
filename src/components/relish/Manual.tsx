@@ -24,7 +24,7 @@ export function useManualGuide(
 ) {
   const [config, setConfig] = useState<{
     enabled: boolean;
-    privacyReady: boolean;
+    children: boolean;
   } | null>(null);
   const [account, setAccount] = useState<User | null>(null),
     [authorized, setAuthorized] = useState(false),
@@ -45,7 +45,10 @@ export function useManualGuide(
   }, [book, save]);
   useEffect(() => {
     alive.current = true;
-    return () => { alive.current = false; running.current?.abort(); };
+    return () => {
+      alive.current = false;
+      running.current?.abort();
+    };
   }, []);
   const interested =
     active || manual.automatic.personal || manual.automatic.family;
@@ -57,7 +60,9 @@ export function useManualGuide(
         if (!r.ok) throw new Error();
         return r.json();
       })
-      .then((c) => { if (!abort.signal.aborted) setConfig(c); })
+      .then((c) => {
+        if (!abort.signal.aborted) setConfig(c);
+      })
       .catch(() => {
         if (!abort.signal.aborted)
           setError("The guide couldn’t connect. Your book is still here.");
@@ -70,6 +75,10 @@ export function useManualGuide(
         throw new Error("The guide is waiting for its privacy setup.");
       const b = latest.current;
       if (!b.profile) throw new Error("Choose an edition age range first.");
+      if (b.profile.kind === "child" && !config.children)
+        throw new Error(
+          "Children’s automatic reflections need the additional provider privacy setup.",
+        );
       if (
         b.profile.kind === "child" &&
         !(await verifyParent(b.profile.parentLock, parentPass))
@@ -89,25 +98,33 @@ export function useManualGuide(
       setError("");
       attempts.current.clear();
     },
-    [config?.enabled, sample],
+    [config, sample],
   );
   useEffect(() => {
     if (!authorized || !account) return;
     let closed = false;
     let unsubscribe: (() => void) | undefined;
-    Promise.all([import("@/lib/relish/ai-auth"), import("firebase/auth")]).then(([auth, firebase]) => {
-      if (closed) return;
-      unsubscribe = firebase.onAuthStateChanged(auth.getAIAuth(), (user) => {
-        if (user?.uid === account.uid) return;
-        running.current?.abort();
-        setAuthorized(false);
-        setAccount(null);
-        setStatus("");
+    Promise.all([import("@/lib/relish/ai-auth"), import("firebase/auth")])
+      .then(([auth, firebase]) => {
+        if (closed) return;
+        unsubscribe = firebase.onAuthStateChanged(auth.getAIAuth(), (user) => {
+          if (user?.uid === account.uid) return;
+          running.current?.abort();
+          setAuthorized(false);
+          setAccount(null);
+          setStatus("");
+        });
+      })
+      .catch(() => {
+        if (!closed) {
+          running.current?.abort();
+          setAuthorized(false);
+        }
       });
-    }).catch(() => {
-      if (!closed) { running.current?.abort(); setAuthorized(false); }
-    });
-    return () => { closed = true; unsubscribe?.(); };
+    return () => {
+      closed = true;
+      unsubscribe?.();
+    };
   }, [authorized, account]);
   useEffect(() => {
     if (!authorized || !account || !config?.enabled || paused || sample) return;
@@ -163,7 +180,8 @@ export function useManualGuide(
             throw new Error(
               result.error || "The guide couldn’t finish. Try again later.",
             );
-          if (abort.signal.aborted || auth.currentAIUser()?.uid !== account.uid) return;
+          if (abort.signal.aborted || auth.currentAIUser()?.uid !== account.uid)
+            return;
           await saveRef.current((current) =>
             addManualIdeas(current, scope, sources, result.ideas, fingerprint),
           );
@@ -368,14 +386,17 @@ export default function Manual({
           </p>
           {sample ? (
             <p className="lb-fine">
-              The thought below is a fictional example. Automatic reflection is available in a private edition once its cloud privacy setup is complete.
+              The thought below is a fictional example. Automatic reflection is
+              available with an adult account and your permission.
             </p>
           ) : !guide.config ? (
             <p className="lb-fine">Checking the guide connection…</p>
-          ) : !guide.config.enabled ? (
+          ) : !guide.config.enabled ||
+            (book.profile?.kind === "child" && !guide.config.children) ? (
             <p className="lb-fine">
-              Automatic reflection is waiting for Relish’s private-data setup.
-              Your writing stays on this device in the meantime.
+              {book.profile?.kind === "child"
+                ? "Children’s automatic reflections need additional provider privacy setup. Your writing, photos and parent-assisted voice are available."
+                : "The guide is being connected. Your pages stay on this device."}
             </p>
           ) : !guide.authorized ? (
             <details>
@@ -434,7 +455,12 @@ export default function Manual({
                       : "I’m 18 or older. "}
                     I understand that turning on a manual’s guide sends its
                     recent kept text to OpenAI automatically while this edition
-                    is open. I can turn it off below.
+                    is open. I can turn it off below. Standard API privacy
+                    applies: no model training by default, response storage off,
+                    and possible abuse-monitoring retention for up to 30 days.
+                    Don’t include personal information about children under 13
+                    (or the local age of digital consent) in automatic
+                    reflections.
                   </span>
                 </label>
                 <button className="lb-primary" disabled={busy || !consent}>

@@ -23,9 +23,9 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(
     {
       enabled: configured(request),
-      children:
-        configured(request) &&
-        process.env.RELISH_VOICE_CHILDREN_ZDR_VERIFIED === "true",
+      // This specific endpoint documents no abuse-log or application retention
+      // under standard API controls. It does not use a stored conversation.
+      children: configured(request),
       maxSeconds: VOICE_SECONDS,
       provider: "OpenAI",
     },
@@ -58,14 +58,6 @@ export async function POST(request: NextRequest) {
     const edition = request.headers.get("x-relish-edition");
     if (edition !== "adult" && edition !== "parent-assisted-child")
       throw new AIError("An adult needs to connect voice writing first.", 403);
-    if (
-      edition === "parent-assisted-child" &&
-      process.env.RELISH_VOICE_CHILDREN_ZDR_VERIFIED !== "true"
-    )
-      throw new AIError(
-        "Children’s online voice writing is waiting for its privacy setup. You can still write and add photos.",
-        403,
-      );
     if (!configured(request))
       throw new AIError(
         "Voice writing is being connected. Please try again later.",

@@ -79,6 +79,45 @@ describe("freeform journal", () => {
       status: "kept",
     });
   });
+  it("opens quick capture directly and keeps one draft through outer/inner resizes", async () => {
+    let book = emptyBook("Robin");
+    const draft = newJournalDraft();
+    const props = {
+      initialDraft: draft,
+      book,
+      sample: true,
+      onEditingChange: vi.fn(),
+      onDone: vi.fn(),
+      save: async (change: (b: Book) => Book) => {
+        book = change(book);
+      },
+    };
+    const view = render(createElement(Journal, props));
+    const original = input();
+    fill("A moment from the outside screen");
+    for (const width of [669, 951, 382, 594, 385]) {
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        value: width,
+      });
+      fireEvent(window, new Event("resize"));
+      view.rerender(createElement(Journal, { ...props, book }));
+      expect(input()).toBe(original);
+      expect((input() as HTMLTextAreaElement).value).toBe(
+        "A moment from the outside screen",
+      );
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Keep this page" }));
+    await waitFor(() => expect(book.journal?.[0].status).toBe("kept"));
+    view.rerender(createElement(Journal, { ...props, book }));
+    await screen.findByText("That one’s a keeper.");
+    expect(book.journal).toHaveLength(1);
+    expect(book.journal?.[0]).toMatchObject({
+      id: draft.id,
+      text: "A moment from the outside screen",
+      status: "kept",
+    });
+  });
   it("does not claim success or leave the writer when saving fails", async () => {
     let book = emptyBook("A"),
       failing = true;

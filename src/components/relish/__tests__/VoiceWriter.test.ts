@@ -26,8 +26,8 @@ vi.mock("@/lib/relish/ai-auth", () => ({
   connectAI: vi.fn().mockResolvedValue(account),
 }));
 const stopTrack = vi.fn();
-let instance: FakeRecorder;
 class FakeRecorder {
+  static instances: FakeRecorder[] = [];
   static isTypeSupported() {
     return true;
   }
@@ -37,7 +37,7 @@ class FakeRecorder {
   onstop: (() => void) | null = null;
   onerror: (() => void) | null = null;
   constructor() {
-    instance = this;
+    FakeRecorder.instances.push(this);
   }
   start() {
     this.state = "recording";
@@ -56,6 +56,7 @@ class FakeRecorder {
 let media: ReturnType<typeof vi.fn>, network: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   vi.clearAllMocks();
+  FakeRecorder.instances.length = 0;
   media = vi.fn().mockResolvedValue({ getTracks: () => [{ stop: stopTrack }] });
   Object.defineProperty(navigator, "mediaDevices", {
     value: { getUserMedia: media },
@@ -127,12 +128,12 @@ describe("voice writing consent and lifecycle", () => {
     expect(media).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "Start talking" })).toBeNull();
   });
-  it("keeps child dictation unavailable when the server privacy gate is off", async () => {
+  it("keeps dictation unavailable when the server disables child voice", async () => {
     network.mockResolvedValue(
       Response.json({ enabled: true, children: false }),
     );
     show(true);
-    await screen.findByText(/waiting for its privacy setup/);
+    await screen.findByText(/Voice writing is being connected/);
     expect(screen.queryByRole("checkbox")).toBeNull();
     expect(media).not.toHaveBeenCalled();
   });
@@ -187,7 +188,7 @@ describe("voice writing consent and lifecycle", () => {
     fireEvent.click(screen.getByRole("button", { name: "Start talking" }));
     await screen.findByRole("button", { name: "I’m done talking" });
     view.unmount();
-    expect(instance.state).toBe("inactive");
+    expect(FakeRecorder.instances.at(-1)?.state).toBe("inactive");
     expect(stopTrack).toHaveBeenCalled();
     expect(network.mock.calls[0][1].signal.aborted).toBe(true);
     expect(view.onInsert).not.toHaveBeenCalled();

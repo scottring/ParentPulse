@@ -46,28 +46,26 @@ beforeEach(() => {
   vi.mocked(reserveAI).mockResolvedValue();
   vi.stubGlobal(
     "fetch",
-    vi
-      .fn()
-      .mockResolvedValue(
-        Response.json({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({
-                  ideas: [
-                    {
-                      title: "A little space",
-                      observation: "A walk might have helped in this moment.",
-                      tryThis: "Consider another small walk.",
-                      sourceIds: [source.id],
-                    },
-                  ],
-                }),
-              },
+    vi.fn().mockResolvedValue(
+      Response.json({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                ideas: [
+                  {
+                    title: "A little space",
+                    observation: "A walk might have helped in this moment.",
+                    tryThis: "Consider another small walk.",
+                    sourceIds: [source.id],
+                  },
+                ],
+              }),
             },
-          ],
-        }),
-      ),
+          },
+        ],
+      }),
+    ),
   );
 });
 afterEach(() => {
@@ -75,13 +73,26 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("manual reflection endpoint", () => {
-  it("does not send family data to AI before its retention setup is verified", async () => {
+  it("allows opted-in adult reflection with standard privacy while keeping child analysis gated", async () => {
     vi.stubEnv("RELISH_MANUAL_ZDR_VERIFIED", "");
     expect(
       (await GET(new NextRequest(`${origin}/api/relish/manual/`))).status,
     ).toBe(200);
-    expect((await POST(request())).status).toBe(503);
+    expect(
+      (
+        await POST(
+          request(
+            { scope: "personal", audience: "9-12", sources: [source] },
+            { "x-relish-edition": "parent-assisted-child" },
+          ),
+        )
+      ).status,
+    ).toBe(403);
     expect(fetch).not.toHaveBeenCalled();
+    expect((await POST(request())).status).toBe(200);
+    expect(
+      JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string).store,
+    ).toBe(false);
   });
   it("rejects family requests containing private-source ids and invalid citations from AI", async () => {
     expect(

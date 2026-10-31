@@ -43,6 +43,8 @@ import { Dialog, EditPerson, PersonForm, VaultForm } from "./BookForms";
 import { SoundControl, SoundSettings, useSensory } from "./Sensory";
 import VisitEditor from "./VisitEditor";
 import Journal from "./Journal";
+import { newJournalDraft, type JournalDraft } from "@/lib/relish/journal";
+import "./duo.css";
 import Manual, { ManualCardView, useManualGuide } from "./Manual";
 import { manualOf } from "@/lib/relish/manual";
 import { PhotoGallery } from "./Photos";
@@ -87,6 +89,10 @@ export default function LivingBook({ vault }: { vault: Vault }) {
     l = livingOf(book),
     v = l.visit,
     theme = l.thread ? threads[l.thread] : undefined;
+  const [capture, setCapture] = useState<{
+    draft: JournalDraft;
+    voice: boolean;
+  } | null>(null);
   const [view, setView] = useState<View>("bookmark"),
     [closed, setClosed] = useState(false),
     [modal, setModal] = useState<Modal>(null),
@@ -117,12 +123,18 @@ export default function LivingBook({ vault }: { vault: Vault }) {
     heading.current?.focus({ preventScroll: true });
   }, [view, pageKey]);
   function navigate(next: View) {
+    setCapture(null);
     setModal(null);
     setEditing(null);
     setView(next);
     setClosed(false);
     setPageKey((n) => n + 1);
     sensory.play("touch");
+  }
+  function quickEntry(voice = false, draft = newJournalDraft()) {
+    navigate("words");
+    setCapture({ draft, voice });
+    setJournalEditing(true);
   }
   async function commit(
     update: (b: Book) => Book,
@@ -272,8 +284,8 @@ export default function LivingBook({ vault }: { vault: Vault }) {
         <span className="lb-fine">A chapter can unfold at its own pace.</span>
       </div>
       <p className="lb-fine">
-        Your private edition belongs to you. Family pages hold only chosen album passages and game
-        passages everyone approved.
+        Your private edition belongs to you. Family pages hold only chosen album
+        passages and game passages everyone approved.
       </p>
     </>
   );
@@ -707,7 +719,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
       );
   }
   return (
-    <div className="r-app lb-app">
+    <div className={`r-app lb-app ${journalEditing ? "lb-capturing" : ""}`}>
       {sample && (
         <div className="lb-sample">
           <span>
@@ -834,6 +846,57 @@ export default function LivingBook({ vault }: { vault: Vault }) {
             {error || vault.error}
           </p>
         ) : null}
+        {!sharedView && !closed && view === "bookmark" && (
+          <section className="rd-quick" aria-label="Quick entry">
+            <div className="rd-quick-heading">
+              <p className="lb-kicker">Your pocket notebook</p>
+              <span aria-hidden="true">
+                <Feather size={26} />
+              </span>
+            </div>
+            <h2>
+              A little thing
+              <br />
+              <em>worth keeping.</em>
+            </h2>
+            <p>A thought, a photo, a story. Catch it here.</p>
+            <div className="rd-quick-actions">
+              <button
+                className="lb-primary"
+                disabled={busy}
+                onClick={() => quickEntry()}
+              >
+                <Plus size={20} /> Write a little
+              </button>
+              <button
+                className="lb-secondary"
+                disabled={busy}
+                onClick={() => quickEntry(true)}
+              >
+                <Feather size={18} /> Tell it
+              </button>
+            </div>
+            {book.journal?.some((p) => p.status === "draft") && (
+              <button
+                className="lb-text rd-resume"
+                disabled={busy}
+                onClick={() =>
+                  quickEntry(
+                    false,
+                    [...book.journal!]
+                      .reverse()
+                      .find((p) => p.status === "draft")!,
+                  )
+                }
+              >
+                Pick up my unfinished page <ArrowRight size={16} />
+              </button>
+            )}
+            <p className="lb-fine rd-quick-note">
+              Keep one moment. That can be enough for today.
+            </p>
+          </section>
+        )}
         {closed ? (
           <div className="lb-cover-wrap">
             <div className="lb-cover">
@@ -868,6 +931,8 @@ export default function LivingBook({ vault }: { vault: Vault }) {
         ) : view === "words" && !sharedView ? (
           <Journal
             key={pageKey}
+            initialDraft={capture?.draft}
+            initialVoice={capture?.voice}
             book={book}
             photos={vault.photos}
             onNotice={() => start("notice")}

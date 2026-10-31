@@ -40,7 +40,7 @@ export default function PrivacyPage() {
         automatically reviewed or filtered by this setting.
       </p>
       <p>
-        Children cannot create independent online accounts or share passages online. General AI chat and local Ollama remain unavailable in children’s editions. Optional voice writing and manual suggestions require a verified adult account, the separate parent passphrase, explicit permission for that visit, and completed provider privacy setup. These features stay unavailable until that setup is verified. A separate parent passphrase
+        Children cannot create independent online accounts or share passages online. General AI chat and local Ollama remain unavailable in children’s editions. Optional voice writing and manual suggestions require a verified adult account, the separate parent passphrase, explicit permission for that visit. Parent-assisted voice uses the standard transcription endpoint. Children’s automatic manual suggestions additionally require verified provider Zero Data Retention. A separate parent passphrase
         protects age changes and switching to an adult edition. Only a salted
         verifier is kept inside the encrypted book and its backups; Relish
         cannot recover that passphrase. These are app controls, not device-wide
@@ -105,8 +105,7 @@ export default function PrivacyPage() {
         sending it through Relish to OpenAI for transcription, then review and
         edit the words before adding them to your page. Audio remains in memory
         for that visit and is not included in your book or backup. Relish does
-        not persist recordings or transcripts on its server. Children’s voice
-        writing requires verified Zero Data Retention for the provider project.
+        not persist recordings or transcripts on its server. OpenAI documents no abuse-monitoring or application retention for the audio transcription endpoint under standard API controls. This is distinct from project-wide Zero Data Retention.
       </p>
       <p>
         Photos are resized and re-encoded in your browser to remove embedded
@@ -124,8 +123,11 @@ export default function PrivacyPage() {
         passages. Requests include at most 1,800 characters per page; drafts,
         photos, captions and private people tags are excluded. Suggestions cite
         their sources and become kept manual entries only when you approve them.
-        Automatic analysis requires verified provider Zero Data Retention and
-        stops when you disconnect, lock or enter shared time.
+        Adult automatic analysis uses standard API privacy: no model training by default,
+        response storage disabled, and possible abuse-monitoring retention for up to 30 days.
+        Do not include personal information about children under 13 (or the local age of digital consent)
+        in those automatic reflections. Children’s automatic analysis remains unavailable until
+        provider Zero Data Retention is verified. Analysis stops when you disconnect, lock or enter shared time.
       </p>
       <h2>Family play</h2>
       <p>

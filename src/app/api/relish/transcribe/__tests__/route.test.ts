@@ -31,7 +31,6 @@ beforeEach(() => {
   vi.stubEnv("RELISH_AI_ORIGINS", origin);
   vi.stubEnv("OPENAI_API_KEY", "test-key");
   vi.stubEnv("RELISH_FIREBASE_ADMIN_JSON", "configured");
-  vi.stubEnv("RELISH_VOICE_CHILDREN_ZDR_VERIFIED", "");
   vi.mocked(authorizeAI).mockResolvedValue("adult");
   vi.mocked(reserveVoice).mockResolvedValue();
   vi.stubGlobal(
@@ -40,14 +39,14 @@ beforeEach(() => {
   );
 });
 describe("hosted transcription boundary", () => {
-  it("advertises children as unavailable until the privacy configuration is verified", async () => {
+  it("offers standard no-retention transcription to parent-assisted editions", async () => {
     const res = await GET(new NextRequest(`${origin}/api/relish/transcribe/`));
-    expect(await res.json()).toMatchObject({ enabled: true, children: false });
+    expect(await res.json()).toMatchObject({ enabled: true, children: true });
     expect(
       (await POST(request({ "x-relish-edition": "parent-assisted-child" })))
         .status,
-    ).toBe(403);
-    expect(fetch).not.toHaveBeenCalled();
+    ).toBe(200);
+    expect(authorizeAI).toHaveBeenCalledWith("Bearer test");
   });
   it("requires explicit consent, an allowed origin, an adult session and a supported edition", async () => {
     for (const h of [
@@ -55,9 +54,17 @@ describe("hosted transcription boundary", () => {
       { "x-relish-consent": "" },
       { "x-relish-edition": "child" },
     ])
-      expect((await POST(request(Object.fromEntries(Object.entries(h).filter(([,v]) => typeof v === "string")) as Record<string,string>))).status).toBe(
-        403,
-      );
+      expect(
+        (
+          await POST(
+            request(
+              Object.fromEntries(
+                Object.entries(h).filter(([, v]) => typeof v === "string"),
+              ) as Record<string, string>,
+            ),
+          )
+        ).status,
+      ).toBe(403);
     vi.mocked(authorizeAI).mockRejectedValue(new AIError("Sign in", 401));
     expect((await POST(request())).status).toBe(401);
     expect(fetch).not.toHaveBeenCalled();
@@ -100,12 +107,12 @@ describe("hosted transcription boundary", () => {
     expect(failed.status).toBe(502);
     expect(await failed.text()).not.toContain("internal");
   });
-  it("accepts parent-assisted recordings only after the server privacy gate is enabled", async () => {
-    vi.stubEnv("RELISH_VOICE_CHILDREN_ZDR_VERIFIED", "true");
+  it("requires adult authentication even for a parent-assisted recording", async () => {
+    vi.mocked(authorizeAI).mockRejectedValue(new AIError("Sign in", 401));
     expect(
       (await POST(request({ "x-relish-edition": "parent-assisted-child" })))
         .status,
-    ).toBe(200);
+    ).toBe(401);
     expect(authorizeAI).toHaveBeenCalledWith("Bearer test");
   });
 });

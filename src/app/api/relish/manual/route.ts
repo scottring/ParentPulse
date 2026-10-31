@@ -10,15 +10,14 @@ function enabled(request: NextRequest) {
   return !!(
     (c.local || c.hosted) &&
     process.env.OPENAI_API_KEY &&
-    process.env.RELISH_FIREBASE_ADMIN_JSON &&
-    process.env.RELISH_MANUAL_ZDR_VERIFIED === "true"
+    process.env.RELISH_FIREBASE_ADMIN_JSON
   );
 }
 export async function GET(request: NextRequest) {
   return NextResponse.json(
     {
       enabled: enabled(request),
-      privacyReady: process.env.RELISH_MANUAL_ZDR_VERIFIED === "true",
+      children: process.env.RELISH_MANUAL_ZDR_VERIFIED === "true",
     },
     { headers },
   );
@@ -53,10 +52,9 @@ export async function POST(request: NextRequest) {
       )
     )
       throw new AIError("An adult needs to connect this guide session.", 403);
-    // Family writing can contain children's personal data even in an adult edition.
     if (!enabled(request))
       throw new AIError(
-        "The living guide is waiting for its private-data setup. Your pages and manual stay available.",
+        "The living guide is being connected. Your pages and manual stay available.",
         503,
       );
     const uid = await authorizeAI(request.headers.get("authorization"));
@@ -101,6 +99,25 @@ export async function POST(request: NextRequest) {
       payload.audience === "adult"
     )
       throw new AIError("Use the child edition’s age range.", 403);
+    // Standard text processing can retain abuse-monitoring data. Children’s
+    // automatic analysis remains separate from the no-retention audio endpoint.
+    if (
+      (payload.audience !== "adult" ||
+        request.headers.get("x-relish-edition") === "parent-assisted-child") &&
+      process.env.RELISH_MANUAL_ZDR_VERIFIED !== "true"
+    )
+      throw new AIError(
+        "Children’s automatic reflections need the additional provider privacy setup. Writing, photos and parent-assisted voice are available.",
+        403,
+      );
+    if (
+      payload.audience !== "adult" &&
+      request.headers.get("x-relish-edition") !== "parent-assisted-child"
+    )
+      throw new AIError(
+        "A parent needs to connect a child’s guide session.",
+        403,
+      );
     await reserveAI(uid);
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
