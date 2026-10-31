@@ -125,7 +125,7 @@
   content: "";
   position: absolute;
   z-index: -2;
-  inset: 180px 0 0;
+  inset: 0;
   background: url("/illustrations/relish-alpine-landscape.jpg") center 25% /
     cover;
   filter: saturate(0.22) contrast(0.65);
@@ -145,12 +145,17 @@
   pointer-events: none;
 }
 .lb-header {
-  display: flex;
-  gap: 26px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 20px;
   align-items: center;
-  justify-content: space-between;
-  max-width: 1460px;
+  max-width: 1360px;
   margin: auto;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.lb-brand {
+  min-width: 0;
 }
 .lb-wordmark {
   font: 500 37px/1.15 var(--serif);
@@ -162,16 +167,25 @@
   font-size: 10px;
   color: var(--muted);
 }
-.lb-header nav {
+.lb-main-nav,
+.lb-tools {
   display: flex;
   align-items: center;
-  gap: 3px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  gap: 4px;
 }
-.lb-header nav button {
+.lb-main-nav {
+  justify-content: center;
+}
+.lb-tools {
+  justify-content: flex-end;
+  padding-left: 16px;
+  border-left: 1px solid var(--line);
+}
+.lb-header button {
+  min-width: 44px;
   font-size: 12px;
   white-space: nowrap;
+  padding: 9px 10px;
 }
 .lb-header button[aria-current="page"] {
   background: color-mix(in srgb, var(--paper) 65%, transparent);
@@ -180,19 +194,12 @@
   border: 0;
   color: var(--ink);
 }
-.lb-horizon {
-  padding: 38px 0 23px;
-  text-align: center;
-  font-size: 12px;
-  color: var(--muted);
-  letter-spacing: 0.03em;
-}
 .lb-identity {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  margin: 0 auto 22px;
+  margin: 18px auto;
   max-width: 1360px;
 }
 .lb-identity h1 {
@@ -840,20 +847,35 @@
     transform: translateY(0) rotate(-8deg);
   }
 }
-@media (max-width: 1100px) {
+@media (max-width: 1180px) {
   .lb-header {
+    grid-template-columns: auto 1fr;
+    gap: 14px 20px;
+    padding-bottom: 14px;
+  }
+  .lb-tools {
+    grid-column: 2;
+    grid-row: 1;
     flex-wrap: wrap;
-    gap: 20px;
+    border-left: 0;
+    padding-left: 0;
   }
-  .lb-header nav {
-    justify-content: space-between;
-    width: 100%;
+  .lb-main-nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-start;
   }
+}
+@media (max-width: 1100px) {
   .lb-page {
     padding: 28px 28px 60px;
   }
 }
 @media (max-width: 900px) {
+  .lb-header,
+  .lb-identity {
+    max-width: 720px;
+  }
   .lb-book {
     display: block;
     max-width: 720px;
@@ -903,19 +925,23 @@
   .lb-desk {
     padding: 20px 14px 25px;
   }
-  .lb-header nav {
-    gap: 3px 7px;
-    justify-content: flex-start;
+  .lb-header {
+    gap: 12px 8px;
   }
-  .lb-header nav button {
-    padding: 7px 6px;
+  .lb-header button {
+    padding: 8px;
     font-size: 11px;
   }
-  .lb-tagline {
-    max-width: 220px;
+  .lb-tools {
+    gap: 2px;
   }
-  .lb-horizon {
-    padding: 26px 0 22px;
+  .lb-main-nav button {
+    flex: 1;
+  }
+  .lb-tagline,
+  .lb-tool-label,
+  .lb-connection-label {
+    display: none;
   }
   .lb-identity {
     gap: 10px;
@@ -1022,39 +1048,98 @@
 
 .lb-shelf {
   display: block;
-  padding: clamp(24px, 6vw, 90px);
+  padding: clamp(28px, 5vw, 72px) clamp(22px, 6vw, 80px) 64px;
 }
 .lb-shelf > section {
-  max-width: 1100px;
+  max-width: 1000px;
   margin: auto;
+}
+.lb-shelf > section > .lb-wordmark {
+  margin: 0 0 42px;
+}
+.lb-shelf-heading .lb-kicker {
+  margin-bottom: 14px;
+}
+.lb-shelf-heading h1 {
+  max-width: 16ch;
+  margin: 0 0 22px;
+  font-size: clamp(36px, 4.4vw, 54px);
+  line-height: 1.12;
+  text-wrap: balance;
+}
+.lb-shelf .lb-shelf-intro {
+  max-width: 650px;
+  margin: 0;
+  line-height: 1.75;
+  color: var(--muted);
 }
 .lb-edition-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
   gap: 24px;
-  margin: 36px 0;
+  margin: 32px 0;
 }
-.lb-edition-grid button {
+.lb-shelf .lb-edition-grid button {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 22px;
-  min-height: 260px;
-  padding: 30px;
+  justify-content: flex-start;
+  gap: 16px;
+  min-height: 208px;
+  padding: 24px;
   text-align: left;
-  background: #dbe0db;
-  border: 1px solid #9faeaa;
-  border-left: 8px solid #44676a;
-  border-radius: 4px 16px 16px 4px;
-  box-shadow: 3px 5px 0 #bac6c1;
+  background: var(--paper);
+  border: 1px solid #b4c1bb;
+  border-left: 6px solid var(--olive);
+  border-radius: 3px 10px 10px 3px;
+  box-shadow: 2px 4px 0 #bac6c1;
 }
-.lb-edition-grid button span {
-  font-family: var(--font-parent-display);
-  font-size: 24px;
+.lb-shelf .lb-edition-grid button:hover {
+  background: #edf0ea;
+  transform: translateY(-2px);
+}
+.lb-edition-icons {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  color: var(--olive);
+}
+.lb-edition-title {
+  font: 500 26px/1.25 var(--serif);
+  overflow-wrap: anywhere;
 }
 .lb-edition-grid button small {
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.6;
+  color: var(--muted);
+}
+.lb-shelf-footer {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  padding-top: 8px;
+}
+.lb-shelf-footer .lb-fine {
+  max-width: 65ch;
+  margin: 0;
+}
+@media (max-width: 560px) {
+  .lb-shelf > section > .lb-wordmark {
+    margin-bottom: 30px;
+  }
+  .lb-edition-grid {
+    gap: 18px;
+    margin: 28px 0;
+  }
+  .lb-shelf .lb-edition-grid button {
+    min-height: 180px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lb-shelf .lb-edition-grid button:hover {
+    transform: none;
+  }
 }
 
 .lb-connections .lb-boundary {
@@ -1132,9 +1217,6 @@
 @media (max-width: 700px) {
   .lb-connection-columns {
     grid-template-columns: 1fr;
-  }
-  .lb-header nav {
-    gap: 4px;
   }
 }
 
@@ -1274,4 +1356,16 @@
 }
 .lb-edition-setup > .lb-text {
   margin-top: 12px;
+}
+
+@media (max-width: 360px) {
+  .lb-main-nav button {
+    flex-direction: column;
+    gap: 4px;
+    padding: 7px 3px;
+  }
+  .lb-tools {
+    display: grid;
+    grid-template-columns: repeat(3, 44px);
+  }
 }

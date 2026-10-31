@@ -1,6 +1,6 @@
 "use client";
 import { useEffect } from "react";
-import { Lock } from "lucide-react";
+import { ArrowUpRight, Lock, Plus } from "lucide-react";
 import { useLocalBook } from "./useLocalBook";
 import { SensoryProvider } from "./Sensory";
 import { VaultForm } from "./BookForms";
@@ -32,37 +32,41 @@ function BookGate() {
     );
   if (vault.mode === "shelf")
     return (
-      <div className="r-app lb-gate lb-shelf">
+      <main className="r-app lb-app lb-gate lb-shelf">
         <section>
           <p className="lb-wordmark">relish</p>
-          <p className="lb-kicker">A library of lives, connected by choice</p>
-          <h1>
-            Whose book
-            <br />
-            are we opening?
-          </h1>
-          <p>
-            Every edition has its own passphrase. Family members share passages,
-            never access to each other’s private pages.
-          </p>
+          <header className="lb-shelf-heading">
+            <p className="lb-kicker">A library of lives, connected by choice</p>
+            <h1>Whose book are we opening?</h1>
+            <p className="lb-shelf-intro">
+              Every edition has its own passphrase. Family members share
+              passages, never access to each other’s private pages.
+            </p>
+          </header>
           <div className="lb-edition-grid">
             {vault.editions.map((e) => (
               <button key={e.id} onClick={() => vault.select(e.id)}>
-                <Lock size={20} />
-                <span>The {e.label} edition</span>
+                <span className="lb-edition-icons" aria-hidden="true">
+                  <Lock size={20} />
+                  <ArrowUpRight size={18} />
+                </span>
+                <span className="lb-edition-title">The {e.label} edition</span>
                 <small>Unlock to pick up your thread</small>
               </button>
             ))}
           </div>
-          <button className="lb-primary" onClick={() => vault.select()}>
-            Add an edition or restore a backup
-          </button>
-          <p className="lb-fine">
-            Edition names are visible on this device. Writing, games and private
-            keys stay encrypted.
-          </p>
+          <footer className="lb-shelf-footer">
+            <button className="lb-primary" onClick={() => vault.select()}>
+              <Plus size={16} aria-hidden="true" /> Add an edition or restore a
+              backup
+            </button>
+            <p className="lb-fine">
+              Edition names are visible on this device. Writing, games and
+              private keys stay encrypted.
+            </p>
+          </footer>
         </section>
-      </div>
+      </main>
     );
   if (vault.mode === "new")
     return (
