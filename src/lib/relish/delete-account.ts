@@ -83,6 +83,7 @@ export async function deleteOnlineAccount(uid: string) {
   await db.recursiveDelete(profile.collection("inbox"));
   const key = createHash("sha256").update(uid).digest("hex");
   await db.doc(`relish_ai_usage/user-${key}`).delete();
+  await db.doc(`relish_ai_usage/voice-${key}`).delete();
   await db.doc(`relish_connections_usage/${key}`).delete();
   await auth.deleteUser(uid);
   await profile.delete();

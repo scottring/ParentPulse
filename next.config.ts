@@ -21,10 +21,21 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        source: "/relish/:path*",
+        headers: [
+          {
+            key: "Permissions-Policy",
+            value:
+              "camera=(self), microphone=(self), geolocation=(), payment=()",
+          },
+        ],
+      },
     ];
   },
   async redirects() {
     return [
+      { source: "/", destination: "/relish/", permanent: false },
       ...[
         "archive",
         "check-in",

@@ -38,7 +38,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-async function setup(mismatch?: "account" | "key") {
+async function setup(mismatch?: "account" | "key", initialPassage?: {title:string;text:string}) {
   const a = await makeIdentity("adult-a"),
     b = await makeIdentity("adult-b");
   let current: Book = {
@@ -52,6 +52,7 @@ async function setup(mismatch?: "account" | "key") {
             ? { ...b, uid: a.uid }
             : a,
       received: [],
+      draft: initialPassage ? { title: "Earlier draft", text: "Do not replace my unfinished thought." } : undefined,
     },
   };
   const member = async (identity: typeof a, name: string) => ({
@@ -97,6 +98,7 @@ async function setup(mismatch?: "account" | "key") {
     const [book, setBook] = useState(current);
     return createElement(ConnectedEditions, {
       book,
+      initialPassage,
       backup: () => {},
       onClose: close,
       save: async (change) => {
@@ -222,4 +224,13 @@ it("never initializes a connection for a child edition even with an adult alread
   expect(screen.getByText("A book kept here.")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Sign in" })).toBeNull();
   expect(fetch).not.toHaveBeenCalled();
+});
+
+it("opening and closing a selected passage preserves an earlier composer draft", async () => {
+  const state = await setup(undefined, { title: "Selected page", text: "Only this chosen sentence." });
+  expect((screen.getByRole("textbox", { name: "The exact passage" }) as HTMLTextAreaElement).value).toBe("Only this chosen sentence.");
+  fireEvent.click(screen.getByRole("button", {name:"Close dialog"}));
+  await waitFor(() => expect(state.close).toHaveBeenCalledOnce());
+  expect(state.current().connections?.draft?.text).toBe("Do not replace my unfinished thought.");
+  expect(state.sent).toHaveLength(0);
 });

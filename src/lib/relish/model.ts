@@ -1,3 +1,5 @@
+import { isManual, type ManualState } from "./manual";
+import { isAlbum, type AlbumPassage } from "./pages";
 import { isJournal, type JournalEntry } from "./journal";
 import { isEditionProfile, type EditionProfile } from "./profiles";
 import { isLiving, type LivingState } from "./living";
@@ -37,6 +39,8 @@ export type Book = {
   people: Person[];
   moments: Moment[];
   journal?: JournalEntry[];
+  album?: AlbumPassage[];
+  manual?: ManualState;
   rhythm?: RhythmSettings;
   reviews?: WeeklyReview[];
 };
@@ -85,6 +89,18 @@ export function sampleBook(): Book {
         ],
       },
     ],
+    journal: [{
+      id: "sample-story", title: "The blanket-fort expedition", style: "sky", status: "kept", revision: 1,
+      text: "The couch became a spaceship. Everyone found a job: one captain, one blanket engineer, one very important snack supplier.\n\nMy favorite part was helping each other find a way in.",
+      createdAt: "2026-10-29T17:00:00Z", updatedAt: "2026-10-29T17:00:00Z", people: ["anna", "leo"],
+    }],
+    manual: { automatic: {personal:false,family:false}, fingerprints:{}, cards:[{
+      id:"sample-insight", scope:"personal", status:"suggested", createdAt:"2026-10-29T18:00:00Z",
+      title:"A little room to talk",
+      observation:"On this walk, leaving the phones behind seemed to make conversation easier. That is one moment worth remembering, and a possibility to explore again.",
+      tryThis:"If you both feel like it, try another unhurried walk and notice how it feels.",
+      sourceIds:["earlier:sample1"], sources:[{id:"earlier:sample1",title:"A moment noticed",text:"We went for a walk without our phones. Somewhere between the house and the park, we started really talking."}],
+    }] },
     moments: [
       {
         id: "sample1",
@@ -117,6 +133,8 @@ export function isBook(value: unknown): value is Book {
   const b = value as Book;
   return (
     b.version === 1 &&
+    (b.manual === undefined || isManual(b.manual)) &&
+    (b.album === undefined || isAlbum(b.album)) &&
     (b.journal === undefined || isJournal(b.journal)) &&
     (b.profile === undefined || isEditionProfile(b.profile)) &&
     (b.connections === undefined || isConnections(b.connections)) &&

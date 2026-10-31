@@ -60,7 +60,8 @@ describe("living-book interaction boundaries", () => {
           error: "",
           open: async () => {},
           lock: () => {},
-          backup: () => {},
+          backup: async () => {},
+          photos: { add: vi.fn(), load: vi.fn() },
           save: async (change) => {
             if (fail) throw new Error("Storage is full");
             setBook((b) => (typeof change === "function" ? change(b) : change));
@@ -105,7 +106,8 @@ describe("living-book interaction boundaries", () => {
           error: "",
           open: async () => {},
           lock,
-          backup: () => {},
+          backup: async () => {},
+          photos: { add: vi.fn(), load: vi.fn() },
           save: async (change) => {
             setBook((b) => (typeof change === "function" ? change(b) : change));
           },

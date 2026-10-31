@@ -43,6 +43,9 @@ import { Dialog, EditPerson, PersonForm, VaultForm } from "./BookForms";
 import { SoundControl, SoundSettings, useSensory } from "./Sensory";
 import VisitEditor from "./VisitEditor";
 import Journal from "./Journal";
+import Manual, { ManualCardView, useManualGuide } from "./Manual";
+import { manualOf } from "@/lib/relish/manual";
+import { PhotoGallery } from "./Photos";
 import GroupPlay from "./GroupPlay";
 import ConnectedEditions from "./ConnectedEditions";
 import EditionSetup from "./EditionSetup";
@@ -51,7 +54,7 @@ import { canUseOnline, ageLabels, audienceOf } from "@/lib/relish/profiles";
 
 type View =
   | "bookmark"
-  | "journal"
+  | "manual"
   | "session"
   | "words"
   | "people"
@@ -62,7 +65,7 @@ type Modal =
   "settings" | "create" | "person" | "guide" | "connections" | "profile" | null;
 type Vault = ReturnType<typeof useLocalBook>;
 const chapters = [
-  { id: "words", label: "In my own words" },
+  { id: "words", label: "Your pages" },
   { id: "people", label: "Between us" },
   { id: "practice", label: "The way we practice" },
 ] as const;
@@ -72,6 +75,9 @@ const shortDate = (iso: string) =>
     day: "numeric",
   });
 export default function LivingBook({ vault }: { vault: Vault }) {
+  const [offered, setOffered] = useState<
+    { title: string; text: string } | undefined
+  >(undefined);
   const [removeName, setRemoveName] = useState("");
   const [removeError, setRemoveError] = useState("");
   const { threads, plans, intro, cue } = guidanceFor(vault.book);
@@ -223,22 +229,32 @@ export default function LivingBook({ vault }: { vault: Vault }) {
   const chapterIndex = chapters.findIndex((c) => c.id === view);
   const activeGame = l.game && l.game.stage !== "finished" ? l.game : undefined;
   const sharedView = shared || view === "play" || view === "family";
+  const guide = useManualGuide(
+    book,
+    vault.save,
+    view === "manual",
+    !!privateEditorOpen || sharedView,
+    sample,
+  );
+  const manualCards = manualOf(book).cards;
   const personalTitle = `The ${book.owner} edition`;
   const headingText = closed
     ? sharedView
       ? "Our Family pages"
       : personalTitle
-    : view === "journal"
-      ? "Journal"
-      : view === "play"
-        ? "Together at the table"
-        : sharedView
-          ? "Our Family pages"
-          : view === "bookmark"
-            ? "My bookmark"
-            : sessionOpen
-              ? "This small visit"
-              : chapters.find((c) => c.id === view)?.label || "Your book";
+    : view === "manual"
+      ? "Your living manual"
+      : view === "words"
+        ? "Your pages"
+        : view === "play"
+          ? "Together at the table"
+          : sharedView
+            ? "Our Family pages"
+            : view === "bookmark"
+              ? "My bookmark"
+              : sessionOpen
+                ? "This small visit"
+                : chapters.find((c) => c.id === view)?.label || "Your book";
   let right: ReactNode = null,
     left: ReactNode;
   left = (
@@ -256,8 +272,8 @@ export default function LivingBook({ vault }: { vault: Vault }) {
         <span className="lb-fine">A chapter can unfold at its own pace.</span>
       </div>
       <p className="lb-fine">
-        Your private edition belongs to you. Family pages hold only the game
-        passages everyone chose to approve.
+        Your private edition belongs to you. Family pages hold only chosen album passages and game
+        passages everyone approved.
       </p>
     </>
   );
@@ -395,84 +411,6 @@ export default function LivingBook({ vault }: { vault: Vault }) {
         </>
       );
     }
-  } else if (view === "words") {
-    const entries = l.entries.filter((e) => e.kind !== "practice").toReversed();
-    right = (
-      <>
-        <p className="lb-kicker">Words you have kept</p>
-        <h2>In my own words.</h2>
-        <button
-          className="lb-text"
-          disabled={busy}
-          onClick={() => start("notice")}
-        >
-          <Feather size={16} /> Notice one moment
-        </button>
-        {entries.length === 0 && book.moments.length === 0 ? (
-          <div className="lb-empty">
-            <p>A sentence is enough to begin.</p>
-            <p className="lb-fine">Your first moment will have a place here.</p>
-          </div>
-        ) : (
-          <div className="lb-entries">
-            {entries.map((e) => (
-              <article key={e.id}>
-                <p className="lb-kicker">
-                  {shortDate(e.createdAt)} ·{" "}
-                  {e.kind === "reflection"
-                    ? "A lesson kept"
-                    : "A moment noticed"}
-                </p>
-                <blockquote>
-                  {e.text || (e.outcome ? outcomes[e.outcome] : "")}
-                </blockquote>
-                {e.perspective && (
-                  <details>
-                    <summary>A perspective I chose to keep</summary>
-                    <p>{e.perspective}</p>
-                  </details>
-                )}
-                {e.outcome && e.text && (
-                  <p className="lb-fine">{outcomes[e.outcome]}</p>
-                )}
-              </article>
-            ))}
-            {book.moments.toReversed().map((m) => (
-              <article key={m.id}>
-                <p className="lb-kicker">
-                  {shortDate(m.createdAt)} ·{" "}
-                  {book.people.find((p) => p.id === m.personId)?.name ||
-                    "An earlier moment"}
-                </p>
-                <blockquote>{m.observation}</blockquote>
-                {m.reflection && <p>{m.reflection}</p>}
-                {m.move && (
-                  <p className="lb-fine">A small practice: {m.move}</p>
-                )}
-              </article>
-            ))}
-          </div>
-        )}
-      </>
-    );
-    if (book.connections?.received.length)
-      right = (
-        <>
-          {right}
-          <section className="lb-entries">
-            <p className="lb-kicker">Words you chose to welcome</p>
-            {book.connections.received.toReversed().map((p) => (
-              <article key={p.id}>
-                <p className="lb-fine">
-                  From {p.fromName} · kept {shortDate(p.acceptedAt)}
-                </p>
-                <h3>{p.title}</h3>
-                <blockquote>{p.text}</blockquote>
-              </article>
-            ))}
-          </section>
-        </>
-      );
   } else if (view === "people") {
     left = (
       <>
@@ -620,8 +558,8 @@ export default function LivingBook({ vault }: { vault: Vault }) {
           we learn together.
         </h2>
         <p>
-          Only the words everyone playing chose to approve belong on these
-          pages.
+          The passages someone chose to share, and the game pages everyone
+          playing approved, have a home here.
         </p>
         <div className="lb-thread">
           <p>
@@ -713,6 +651,29 @@ export default function LivingBook({ vault }: { vault: Vault }) {
               </button>
             </div>
           )}
+          {manualCards
+            .filter((c) => c.scope === "family" && c.status === "kept")
+            .map((card) => (
+              <ManualCardView key={card.id} card={card} />
+            ))}
+          {!!book.album?.length && (
+            <div className="lb-entries">
+              {book.album.toReversed().map((p) => (
+                <article key={p.id}>
+                  <p className="lb-kicker">
+                    {shortDate(p.createdAt)} · Chosen by {p.fromName}
+                  </p>
+                  <h3>{p.title}</h3>
+                  <blockquote>{p.text}</blockquote>
+                  <PhotoGallery photos={p.photos || []} access={vault.photos} />
+                  <p className="lb-fine">
+                    A chosen passage from {shortDate(p.sourceDate)}. The
+                    original page stays private.
+                  </p>
+                </article>
+              ))}
+            </div>
+          )}
           {l.sharedPages.length ? (
             <div className="lb-entries">
               {l.sharedPages.toReversed().map((p) => (
@@ -729,7 +690,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
                 </article>
               ))}
             </div>
-          ) : (
+          ) : !book.album?.length ? (
             <div className="lb-empty">
               <p>A place for something you make together.</p>
               <p className="lb-fine">
@@ -737,7 +698,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
                 optional.
               </p>
             </div>
-          )}
+          ) : null}
           <button className="lb-text" onClick={() => navigate("play")}>
             <Users size={16} />{" "}
             {activeGame ? "Return to our game" : "Play one round together"}
@@ -785,10 +746,10 @@ export default function LivingBook({ vault }: { vault: Vault }) {
             {!sharedView && (
               <button
                 disabled={busy || privateEditorOpen}
-                onClick={() => navigate("journal")}
-                aria-current={view === "journal" ? "page" : undefined}
+                onClick={() => navigate("words")}
+                aria-current={view === "words" ? "page" : undefined}
               >
-                <Feather size={16} /> Journal
+                <Feather size={16} /> Your pages
               </button>
             )}
             <button disabled={busy || privateEditorOpen} onClick={openPlay}>
@@ -813,7 +774,10 @@ export default function LivingBook({ vault }: { vault: Vault }) {
             {!sample && !sharedView && online && (
               <button
                 disabled={busy || privateEditorOpen}
-                onClick={() => setModal("connections")}
+                onClick={() => {
+                  setOffered(undefined);
+                  setModal("connections");
+                }}
                 aria-label="Connect editions"
                 title="Connect editions"
               >
@@ -893,9 +857,38 @@ export default function LivingBook({ vault }: { vault: Vault }) {
               </button>
             )}
           </div>
-        ) : view === "journal" && !sharedView ? (
-          <Journal
+        ) : view === "manual" && !sharedView ? (
+          <Manual
             book={book}
+            save={vault.save}
+            guide={guide}
+            sample={sample}
+            onPages={() => navigate("words")}
+          />
+        ) : view === "words" && !sharedView ? (
+          <Journal
+            key={pageKey}
+            book={book}
+            photos={vault.photos}
+            onNotice={() => start("notice")}
+            onChapter={navigate}
+            onManual={() => navigate("manual")}
+            pendingInsights={
+              manualCards.filter((c) => c.status === "suggested").length
+            }
+            onAlbum={() => {
+              setShared(true);
+              navigate("family");
+              window.dispatchEvent(new Event("relish:locked"));
+            }}
+            onOffer={
+              !sample && online
+                ? (passage) => {
+                    setOffered(passage);
+                    setModal("connections");
+                  }
+                : undefined
+            }
             save={vault.save}
             sample={sample}
             onEditingChange={setJournalEditing}
@@ -1015,6 +1008,16 @@ export default function LivingBook({ vault }: { vault: Vault }) {
             )}
           </>
         )}
+        {!sharedView && !privateEditorOpen && view === "bookmark" && (
+          <div className="rm-bookmark-link">
+            <button className="lb-text" onClick={() => navigate("manual")}>
+              <Sparkles size={17} />
+              {manualCards.some((c) => c.status === "suggested")
+                ? "A few possibilities for your manual are ready"
+                : "Open my living manual"}
+            </button>
+          </div>
+        )}
         <p className="lb-announcement" role="status" aria-live="polite">
           {notice}
         </p>
@@ -1024,6 +1027,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
           book={book}
           save={vault.save}
           backup={vault.backup}
+          initialPassage={offered}
           onClose={() => setModal(null)}
         />
       )}
@@ -1058,8 +1062,8 @@ export default function LivingBook({ vault }: { vault: Vault }) {
               : "encrypted in this browser on this device"}
             .{" "}
             {online
-              ? "AI receives only an excerpt you review and explicitly choose to send."
-              : "AI and online connections are off for this edition."}
+              ? "On-demand AI uses a reviewed excerpt. Automatic manual suggestions have a separate opt-in; photos and private people tags stay here."
+              : "General AI chat and online passage sharing are off. Voice writing and manual suggestions, when available, need a parent’s permission and adult account."}
           </p>
           {!sample && (
             <div className="lb-boundary">
@@ -1099,7 +1103,10 @@ export default function LivingBook({ vault }: { vault: Vault }) {
           {!sample && online && (
             <button
               className="lb-secondary"
-              onClick={() => setModal("connections")}
+              onClick={() => {
+                setOffered(undefined);
+                setModal("connections");
+              }}
             >
               <Users size={16} /> Connect with family editions
             </button>
@@ -1216,7 +1223,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
         <Dialog title="Your guide" onClose={() => setModal(null)}>
           <p className="lb-kicker">A little guidance for this moment</p>
           <h2>
-            {view === "journal"
+            {view === "words"
               ? "A page can be enough."
               : sharedView
                 ? "One round is enough."
@@ -1225,7 +1232,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
                   : "A small visit, with an ending."}
           </h2>
           <p>
-            {view === "journal"
+            {view === "words"
               ? "Write anything you like. Keep this page when it feels finished, or choose Save for later to leave it in progress. You can return and edit either one."
               : sharedView
                 ? "Each player gets a turn or may pass. Reveal together, then finish for now. Keeping a page requires everyone’s approval; it is always optional."
@@ -1235,15 +1242,15 @@ export default function LivingBook({ vault }: { vault: Vault }) {
           </p>
           <div className="lb-boundary">
             <strong>
-              {view === "journal"
+              {view === "words"
                 ? "Your words, your space"
                 : online
                   ? "AI, when you invite it"
                   : "Your guide, right here"}
             </strong>
             <p>
-              {view === "journal"
-                ? "Journal pages and drafts stay in this edition. They are never sent to AI or included in shared games. Your encrypted backup includes them, too."
+              {view === "words"
+                ? "Your pages stay private. Only passages you choose enter the Family album or are offered to connected editions. Voice writing sends only a recording you review. Your encrypted backup includes your pages and photos."
                 : !online
                   ? "These are written prompts chosen for your age, not an AI conversation. Your words stay here. You can pause, pass, or ask a trusted grown-up for help."
                   : sharedView
