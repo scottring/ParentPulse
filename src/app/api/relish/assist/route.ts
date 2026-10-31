@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       local,
       cloud: Boolean(
         process.env.OPENAI_API_KEY &&
-        (local || (hosted && process.env.RELISH_FIREBASE_ADMIN_JSON)),
+          (local || (hosted && process.env.RELISH_FIREBASE_ADMIN_JSON)),
       ),
       hosted,
       dailyLimit: AI_DAILY_LIMIT,
@@ -107,6 +107,11 @@ export async function POST(request: NextRequest) {
     )
       return fail(
         "Open Relish and review your excerpt before asking for AI help.",
+        403,
+      );
+    if (request.headers.get("x-relish-edition") !== "adult")
+      return fail(
+        "AI is available only from a configured adult edition. Children’s editions use the written guide.",
         403,
       );
     const payload = await readBody(request);

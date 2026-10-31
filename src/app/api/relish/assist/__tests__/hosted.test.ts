@@ -20,6 +20,7 @@ function request(
       host: "relish-preview.example",
       "content-type": "application/json",
       "x-relish-consent": "selected-excerpt",
+      "x-relish-edition": "adult",
       authorization: "Bearer verified-token",
       ...headers,
     },
@@ -37,15 +38,13 @@ beforeEach(() => {
   vi.mocked(reserveAI).mockResolvedValue();
   vi.stubGlobal(
     "fetch",
-    vi
-      .fn()
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            choices: [{ message: { content: "A gentle possibility." } }],
-          }),
-        ),
+    vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: "A gentle possibility." } }],
+        }),
       ),
+    ),
   );
 });
 afterEach(() => {
@@ -115,14 +114,14 @@ describe("hosted AI", () => {
     { "x-relish-consent": "" },
     { host: "localhost:3210", origin: "http://localhost:3210" },
   ];
-  it.each(rejectedHeaders)("rejects origin/consent/host bypass before auth", async (headers) => {
-    expect(
-      (await POST(request(undefined, headers)))
-        .status,
-    ).toBe(403);
-    expect(authorizeAI).not.toHaveBeenCalled();
-    expect(fetch).not.toHaveBeenCalled();
-  });
+  it.each(rejectedHeaders)(
+    "rejects origin/consent/host bypass before auth",
+    async (headers) => {
+      expect((await POST(request(undefined, headers))).status).toBe(403);
+      expect(authorizeAI).not.toHaveBeenCalled();
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
   it("does not allow the hosted server to use its own loopback as a user's local model", async () => {
     expect(
       (await POST(request({ provider: "local", excerpt, model: "test" })))

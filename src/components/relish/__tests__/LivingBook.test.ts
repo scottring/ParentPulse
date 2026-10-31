@@ -146,7 +146,7 @@ describe("living-book interaction boundaries", () => {
       onCancel: vi.fn(),
     };
     const { rerender } = render(createElement(GroupPlay, props));
-    expect(screen.queryByText("An unhurried walk")).toBeNull();
+    expect(screen.queryByText("A silly song")).toBeNull();
     rerender(
       createElement(GroupPlay, {
         ...props,
@@ -154,6 +154,6 @@ describe("living-book interaction boundaries", () => {
       }),
     );
     expect(screen.queryByText(/A chose/)).toBeNull();
-    expect(screen.getAllByText("An unhurried walk")).toHaveLength(1);
+    expect(screen.getAllByText("A silly song")).toHaveLength(1);
   });
 });

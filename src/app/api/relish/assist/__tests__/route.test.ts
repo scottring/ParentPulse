@@ -18,6 +18,7 @@ function request(
       origin: "http://localhost:3210",
       "Content-Type": "application/json",
       "x-relish-consent": "selected-excerpt",
+      "x-relish-edition": "adult",
       ...extra,
     },
     body: JSON.stringify(payload),
@@ -137,3 +138,15 @@ describe("explicit AI boundaries", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+it.each(["", "child", "13-17"])(
+  "rejects non-adult edition %s before contacting any AI provider",
+  async (edition) => {
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    expect((await POST(request({ "x-relish-edition": edition }))).status).toBe(
+      403,
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  },
+);

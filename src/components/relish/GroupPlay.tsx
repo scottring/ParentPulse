@@ -1,6 +1,13 @@
 "use client";
 import { useState } from "react";
 import { Hand, Check, Users, ArrowRight } from "lucide-react";
+import {
+  ageBands,
+  ageLabels,
+  audienceOf,
+  youngestAudience,
+  type Audience,
+} from "@/lib/relish/profiles";
 import type { Book } from "@/lib/relish/model";
 import {
   type Game,
@@ -8,7 +15,7 @@ import {
   type Player,
   gamePlayer,
   gameText,
-  joyChoices,
+  joyOptions,
   storyRounds,
   turnCount,
 } from "@/lib/relish/living";
@@ -34,8 +41,8 @@ export default function GroupPlay({
   onFinish: () => void;
   onCancel: () => void;
 }) {
-  const people = [
-    { id: "owner", name: book.owner },
+  const people: Player[] = [
+    { id: "owner", name: book.owner, audience: audienceOf(book) },
     ...book.people.map((p) => ({ id: p.id, name: p.name })),
   ];
   const family = people.filter(
@@ -61,8 +68,18 @@ export default function GroupPlay({
     [name, setName] = useState(""),
     [error, setError] = useState("");
   const [firstPlayer, setFirstPlayer] = useState(game?.players[0].id || "");
-  const roster = [...people, ...guests],
+  const [ages, setAges] = useState<Record<string, Audience | "">>({});
+  const roster = [...people, ...guests].map((p) => ({
+      ...p,
+      audience: p.id === "owner" ? p.audience : ages[p.id] || undefined,
+    })),
     players = roster.filter((p) => selected.includes(p.id));
+  const audience = youngestAudience([
+    ...players,
+    ...(book.profile?.kind === "child"
+      ? [{ audience: book.profile.ageBand }]
+      : []),
+  ]);
   function addGuest() {
     const value = name.trim();
     if (
@@ -145,6 +162,39 @@ export default function GroupPlay({
             Add player
           </button>
         </form>
+        <fieldset>
+          <legend>Make this round fit everyone</legend>
+          <div className="lb-player-ages">
+            {players.map((p) => (
+              <label key={p.id}>
+                {p.name} · age range
+                <select
+                  aria-label={`Age range for ${p.name}`}
+                  value={p.audience || ""}
+                  disabled={p.id === "owner"}
+                  onChange={(e) =>
+                    setAges({
+                      ...ages,
+                      [p.id]: e.target.value as Audience | "",
+                    })
+                  }
+                >
+                  <option value="">Not specified · simplest prompts</option>
+                  {[...ageBands, "adult" as const].map((a) => (
+                    <option key={a} value={a}>
+                      {ageLabels[a]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
+          <p className="lb-age-cue">
+            {ageLabels[audience]} · This round uses the youngest selected range.
+            An unspecified age uses our simplest prompts. For little ones, a
+            grown-up reads and helps them choose; anyone can pass.
+          </p>
+        </fieldset>
         {error && (
           <p className="lb-error" role="alert">
             {error}
@@ -186,7 +236,8 @@ export default function GroupPlay({
     );
   const g = game,
     total = turnCount(g),
-    rounds = storyRounds(g.players.length),
+    rounds = storyRounds(g.players.length, g.audience),
+    joyChoices = joyOptions(g),
     text = gameText(g),
     finished = ["reveal", "kept", "finished"].includes(g.stage);
   const next = gamePlayer(g);
@@ -211,6 +262,11 @@ export default function GroupPlay({
           </button>
         )}
       </div>
+      {g.audience && (
+        <p className="lb-fine">
+          {ageLabels[g.audience]} · chosen for this round
+        </p>
+      )}
       {g.stage === "ready" ? (
         <>
           <h2>
@@ -290,8 +346,12 @@ export default function GroupPlay({
           <h2>
             {g.kind === "joy"
               ? g.turn === 0
-                ? "What would brighten an ordinary afternoon for you?"
-                : `What would brighten ${g.players[0].name}’s ordinary afternoon?`
+                ? g.audience === "under-6" || g.audience === "6-8"
+                  ? "What would you like to do?"
+                  : "What would brighten an ordinary afternoon for you?"
+                : g.audience === "under-6" || g.audience === "6-8"
+                  ? `What do you think ${g.players[0].name} would like?`
+                  : `What would brighten ${g.players[0].name}’s ordinary afternoon?`
               : rounds[g.turn].prompt}
           </h2>
           {g.kind === "story" && text && (

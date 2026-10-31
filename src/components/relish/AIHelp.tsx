@@ -9,13 +9,28 @@ import {
   CornerDownRight,
   ShieldCheck,
 } from "lucide-react";
+import { canUseOnline, type EditionProfile } from "@/lib/relish/profiles";
 type Connection = {
   local: boolean;
   cloud: boolean;
   hosted: boolean;
   dailyLimit: number;
 };
-export function AIHelp({
+export function AIHelp(props: {
+  observation: string;
+  onUse: (text: string) => void;
+  profile?: EditionProfile;
+}) {
+  if (!canUseOnline({ profile: props.profile }))
+    return (
+      <p className="lb-boundary">
+        AI is available only in an adult edition. This edition’s written guide
+        works without sending your words anywhere.
+      </p>
+    );
+  return <AdultAIHelp {...props} />;
+}
+function AdultAIHelp({
   observation,
   onUse,
 }: {
@@ -155,6 +170,7 @@ export function AIHelp({
         headers: {
           "Content-Type": "application/json",
           "x-relish-consent": "selected-excerpt",
+          "x-relish-edition": "adult",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ provider, model, excerpt }),

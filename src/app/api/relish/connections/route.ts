@@ -31,6 +31,11 @@ export async function POST(request: NextRequest) {
     )
       throw new AIError("Open Relish to manage your family connections.", 403);
     const uid = await authorizeAI(request.headers.get("authorization"));
+    if (request.headers.get("x-relish-edition") !== "adult")
+      throw new AIError(
+        "Online connections are available only from a configured adult edition.",
+        403,
+      );
     if (!request.headers.get("content-type")?.startsWith("application/json"))
       throw new AIError("Send a JSON request.", 415);
     const reader = request.body?.getReader();

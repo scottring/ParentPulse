@@ -15,8 +15,28 @@ import {
   type Outgoing,
 } from "@/lib/relish/sharing";
 import { livingOf } from "@/lib/relish/living";
+import { canUseOnline } from "@/lib/relish/profiles";
 type Save = (change: (b: Book) => Book) => Promise<void>;
-export default function ConnectedEditions({
+type Props = {
+  book: Book;
+  save: Save;
+  backup: () => void;
+  onClose: () => void;
+};
+export default function ConnectedEditions(props: Props) {
+  if (!canUseOnline(props.book))
+    return (
+      <Dialog title="Local edition" onClose={props.onClose}>
+        <h2>A book kept here.</h2>
+        <p>
+          Online connections are available only in adult editions. Children can
+          use their written guide and play together on this device.
+        </p>
+      </Dialog>
+    );
+  return <AdultConnectedEditions {...props} />;
+}
+function AdultConnectedEditions({
   book,
   save,
   backup,
@@ -93,6 +113,7 @@ export default function ConnectedEditions({
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
         "x-relish-consent": "chosen-connection",
+        "x-relish-edition": "adult",
       },
       body: JSON.stringify(data),
       signal: abort.current.signal,
@@ -497,8 +518,9 @@ export default function ConnectedEditions({
                   disabled={busy}
                   onClick={() =>
                     void run(async () => {
-                      const { sendEmailVerification } =
-                        await import("firebase/auth");
+                      const { sendEmailVerification } = await import(
+                        "firebase/auth"
+                      );
                       await sendEmailVerification(user);
                       setNotice("A verification link is on its way.");
                     })

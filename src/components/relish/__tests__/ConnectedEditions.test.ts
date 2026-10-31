@@ -43,6 +43,7 @@ async function setup(mismatch?: "account" | "key") {
     b = await makeIdentity("adult-b");
   let current: Book = {
     ...emptyBook("Fictional A"),
+    profile: { kind: "adult" },
     connections: {
       identity:
         mismatch === "account"
@@ -198,4 +199,27 @@ describe("sharing recovery", () => {
     );
     expect(state.sent).toHaveLength(0);
   });
+});
+
+it("never initializes a connection for a child edition even with an adult already signed in", () => {
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  render(
+    createElement(ConnectedEditions, {
+      book: {
+        ...emptyBook("Child"),
+        profile: {
+          kind: "child",
+          ageBand: "9-12",
+          parentLock: { salt: "a".repeat(32), verifier: "b".repeat(64) },
+        },
+      },
+      save: vi.fn(),
+      backup: vi.fn(),
+      onClose: vi.fn(),
+    }),
+  );
+  expect(screen.getByText("A book kept here.")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Sign in" })).toBeNull();
+  expect(fetch).not.toHaveBeenCalled();
 });

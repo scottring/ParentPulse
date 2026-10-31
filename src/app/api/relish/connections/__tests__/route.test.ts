@@ -38,6 +38,7 @@ function request(
       origin,
       "content-type": "application/json",
       "x-relish-consent": "chosen-connection",
+      "x-relish-edition": "adult",
       authorization: "Bearer test",
       ...extra,
     },
@@ -156,3 +157,14 @@ describe("connection request boundary", () => {
     expect(limited.headers.get("retry-after")).toBe("60");
   });
 });
+
+it.each(["", "child", "13-17"])(
+  "rejects non-adult edition %s even with a valid adult token",
+  async (edition) => {
+    expect(
+      (await POST(request(undefined, { "x-relish-edition": edition }))).status,
+    ).toBe(403);
+    expect(stubs.action).not.toHaveBeenCalled();
+    expect(stubs.remove).not.toHaveBeenCalled();
+  },
+);

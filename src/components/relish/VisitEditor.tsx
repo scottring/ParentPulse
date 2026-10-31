@@ -6,12 +6,11 @@ import {
   type Draft,
   type Visit,
   type ThreadId,
-  threads,
-  plans,
-  outcomes,
   pendingPractice,
   updateDraft,
 } from "@/lib/relish/living";
+import { guidanceFor } from "@/lib/relish/guidance";
+import { canUseOnline } from "@/lib/relish/profiles";
 import { AIHelp } from "./AIHelp";
 import { Dialog } from "./BookForms";
 
@@ -42,7 +41,9 @@ export default function VisitEditor({
     saveRef = useRef(save),
     alive = useRef(true),
     timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  saveRef.current = save;
+  useEffect(() => {
+    saveRef.current = save;
+  }, [save]);
   const dirty = JSON.stringify(draft) !== JSON.stringify(visit.draft);
   useEffect(() => {
     alive.current = true;
@@ -90,6 +91,17 @@ export default function VisitEditor({
     revision.current++;
     fn(draft);
   };
+  const {
+    threads,
+    plans,
+    outcomes,
+    cue,
+    choices,
+    opportunities,
+    placeholder,
+    maxLength,
+  } = guidanceFor(book);
+  const online = canUseOnline(book);
   const theme = visit.thread ? threads[visit.thread] : null,
     plan = plans[visit.kind],
     practice = pendingPractice(book);
@@ -104,6 +116,7 @@ export default function VisitEditor({
         <strong>Enough for this visit</strong>
         <p>{plan.end}</p>
       </div>
+      {cue && <p className="lb-age-cue">{cue}</p>}
       {visit.kind === "begin" && visit.step === 0 ? (
         <>
           <h2>
@@ -126,20 +139,47 @@ export default function VisitEditor({
       ) : visit.kind === "begin" || visit.kind === "notice" ? (
         <>
           <h2>{theme?.notice}</h2>
+          {choices.length > 0 && (
+            <div
+              className="lb-feeling-choices"
+              aria-label="A feeling to start with"
+            >
+              {choices.map((choice) => (
+                <button
+                  key={choice}
+                  type="button"
+                  className="lb-secondary"
+                  disabled={busy}
+                  onClick={() =>
+                    setDraft({
+                      ...draft,
+                      text: (draft.text
+                        ? draft.text + " " + choice
+                        : choice
+                      ).slice(0, maxLength),
+                    })
+                  }
+                >
+                  {choice}
+                </button>
+              ))}
+            </div>
+          )}
           <label>
             Your moment
             <textarea
               autoFocus
-              maxLength={3000}
+              maxLength={maxLength}
               rows={5}
               value={draft.text}
               onChange={(e) => setDraft({ ...draft, text: e.target.value })}
-              placeholder="One small moment is enough…"
+              placeholder={placeholder}
             />
           </label>
           <p className="lb-fine">
-            These words stay in your private edition. Sharing is a separate
-            choice.
+            {online
+              ? "These words stay in your private edition. Sharing is a separate choice."
+              : "These words stay in this book on this device. You do not have to show them to anyone."}
           </p>
           {draft.perspective && (
             <div className="lb-margin">
@@ -161,13 +201,15 @@ export default function VisitEditor({
             >
               Keep this moment · finish here <Check size={15} />
             </button>
-            <button
-              className="lb-text"
-              disabled={!draft.text.trim()}
-              onClick={() => setAI(true)}
-            >
-              <Sparkles size={15} /> Invite AI to help
-            </button>
+            {online && (
+              <button
+                className="lb-text"
+                disabled={!draft.text.trim()}
+                onClick={() => setAI(true)}
+              >
+                <Sparkles size={15} /> Invite AI to help
+              </button>
+            )}
           </div>
         </>
       ) : visit.kind === "practice" ? (
@@ -183,10 +225,9 @@ export default function VisitEditor({
               }
             >
               <option value="">Choose an ordinary opportunity</option>
-              <option>the next conversation</option>
-              <option>a meal together</option>
-              <option>a quiet moment side by side</option>
-              <option>when I have a little room</option>
+              {opportunities.map((option) => (
+                <option key={option}>{option}</option>
+              ))}
             </select>
           </label>
           <button
@@ -253,7 +294,7 @@ export default function VisitEditor({
                 <textarea
                   value={draft.text}
                   rows={4}
-                  maxLength={3000}
+                  maxLength={maxLength}
                   onChange={(e) => setDraft({ ...draft, text: e.target.value })}
                   placeholder="Next time, I might…"
                 />
@@ -296,9 +337,10 @@ export default function VisitEditor({
           </button>
         </p>
       )}
-      {ai && (
+      {ai && online && (
         <Dialog title="Invite AI to help" onClose={() => setAI(false)}>
           <AIHelp
+            profile={book.profile}
             observation={draft.text}
             onUse={(text) => {
               setDraft({ ...draft, perspective: text });
