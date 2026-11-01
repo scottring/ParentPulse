@@ -89,6 +89,12 @@ export async function createVault(book: Book, passphrase: string) {
 export async function unlockVault(raw: string, passphrase: string) {
   const envelope = parseEnvelope(raw);
   const key = await deriveKey(passphrase, decode(envelope.salt));
+  return { key, envelope, book: await decryptVault(envelope, key) };
+}
+export async function decryptVault(
+  envelope: Envelope,
+  key: CryptoKey,
+): Promise<Book> {
   let decrypted: ArrayBuffer;
   try {
     decrypted = await crypto.subtle.decrypt(
@@ -104,5 +110,5 @@ export async function unlockVault(raw: string, passphrase: string) {
   const book: unknown = JSON.parse(new TextDecoder().decode(decrypted));
   if (!isBook(book))
     throw new Error("The contents of this backup could not be read.");
-  return { key, envelope, book };
+  return book;
 }

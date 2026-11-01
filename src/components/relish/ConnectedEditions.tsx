@@ -172,7 +172,7 @@ function AdultConnectedEditions({
         (await keyFingerprint(identity.publicKey)) !== next.profile.keyId)
     )
       throw new Error(
-        "This account already has an edition. Restore that edition’s encrypted backup from the bookshelf to connect it on this device.",
+        "This account already has an edition. Open that edition from Account & synced books, or restore its encrypted backup from the bookshelf.",
       );
     if (!identity) {
       identity = await makeIdentity(user.uid);
@@ -371,7 +371,7 @@ function AdultConnectedEditions({
           </summary>
           <p>
             Only selected passages are encrypted and uploaded. Your full book,
-            passphrase and private key stay on this device. Relish stores
+            passphrase stays on this device and the private key stays inside its encrypted book. Relish stores
             account details, edition names, family membership, delivery status
             and encrypted passages.
           </p>

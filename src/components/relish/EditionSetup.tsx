@@ -134,16 +134,18 @@ export default function EditionSetup({
               </select>
             </label>
             <div className="lb-boundary">
-              <strong>A local book, with guidance for their age.</strong>
+              <strong>A private book, with guidance for their age.</strong>
               <p>
                 Prompts, small practices and session length follow this range.
                 Under 6, read and choose together. Children and teens can always
                 pause or pass.
               </p>
               <p>
-                AI, online sign-in and online passage sharing are off in
-                children’s editions. The guide uses written prompts; their words
-                stay on this device.
+                Children have no independent online account or online passage
+                sharing. A parent can authorize encrypted book sync through
+                their account, or keep this edition local only. Assisted voice
+                writing has its own parent permission; syncing never authorizes
+                AI analysis.
               </p>
             </div>
           </>

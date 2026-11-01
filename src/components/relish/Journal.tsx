@@ -373,7 +373,7 @@ export default function Journal({
             <Lock size={14} />{" "}
             {sample
               ? "Sample pages disappear when you reload."
-              : "Encrypted in your book, on this device."}
+              : "Encrypted in your private book."}
           </p>
         </div>
         <div className="rj-paper-stack" aria-hidden="true">
@@ -868,7 +868,7 @@ export function JournalEditor({
             <Lock size={14} />
             {sample
               ? "Fictional sample · changes last until reload"
-              : "Private to this edition. Saved on this device."}
+              : "Private to this edition. Encrypted when saved."}
           </p>
         </section>
       </div>

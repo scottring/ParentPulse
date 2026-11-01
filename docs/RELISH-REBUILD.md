@@ -1,6 +1,6 @@
 # Relish: the operating manual for relationships
 
-Release scope: a fresh start with private local editions for adults and children, adult-only optional online accounts, chosen encrypted passage sharing, and family pass-and-play. Existing users do not need to migrate. The root and `/relish/` open the living book; legacy entry routes redirect there without changing legacy stored data.
+Release scope: a fresh start with independently encrypted editions for adults and children, optional cross-device sync through adult accounts, chosen encrypted passage sharing, and family pass-and-play. Existing users do not need to migrate. The root and `/relish/` open the living book; legacy entry routes redirect there without changing legacy stored data.
 
 ## Run and verify
 
@@ -18,7 +18,7 @@ npm audit --omit=dev
 
 ## A living book with a stopping point
 
-Each edition opens at a personal bookmark. A short visit has an explicit purpose, estimated duration and finishing condition: choose a direction and notice a moment, plan a small practice, or return and keep an honest reflection. A visit completes only after the encrypted write succeeds. Private drafts and paused sessions can be resumed. Three chapters collect personal words, relationships and practices.
+Each edition opens with Activities: personal journal, guided reflection, or play together. A personal bookmark tracks the ongoing chapter. A short visit has an explicit purpose, estimated duration and finishing condition: choose a direction and notice a moment, plan a small practice, or return and keep an honest reflection. A visit completes only after the encrypted write succeeds. Private drafts and paused sessions can be resumed. Three chapters collect personal words, relationships and practices.
 
 Two family games support 2–12 selected players, including guests. Players choose who starts and may pass. The handoff screen hides the preceding answer. Everyone must approve before a shared game page is kept; finishing without saving is valid. Private chapters and online sessions are put away during play. Returning to a private edition requires unlocking it. Game approvals are in-person choices, not authenticated signatures. Games are on one device, not remote multiplayer.
 
@@ -26,21 +26,21 @@ Finite page and cover transitions respect reduced-motion preferences. Stone-like
 
 ## Separate local editions
 
-A device can hold multiple independently encrypted editions. Each has its own passphrase and encrypted envelope. The original envelope key is retained for existing local books; new ones use a random identifier. Shelf labels and the sound preference are the only unencrypted app preferences. The sample edition is fictional and memory-only.
+A device can hold multiple independently encrypted editions. Each has its own passphrase and encrypted envelope. The original envelope key is retained for existing local books; new ones use a random identifier. Shelf labels, sound preferences and sync bindings (account UID, opaque book/revision IDs and ciphertext fingerprints) are unencrypted device metadata. The sample edition is fictional and memory-only.
 
 AES-GCM uses fresh random IVs. PBKDF2-SHA-256 with 600,000 iterations and a random salt derives a nonexportable encryption key. An unlocked key and book stay in memory. Idle timeout is ten minutes, reduced to one minute while hidden. Locking, switching editions, or detecting another tab's change removes decrypted state and ends online authentication.
 
 Functional writes are serialized against the current book and protected by an origin-wide exclusive Web Lock. Envelope checks prevent stale-tab overwrite. Creation, restore, save and removal are guarded. A failed write does not advance a session. Restore validates the complete book, including living sessions, game approvals and connection records, and refuses to overwrite another edition. A restored backup can be added alongside other books.
 
-Export encrypted backups regularly. Clearing browser data, losing a profile or forgetting a passphrase can make the book unavailable. Relish cannot recover its passphrase. Private books do not automatically synchronize: restoring a backup carries the edition and its sharing key to another device. This is browser storage, not a native macOS document or Keychain vault. An unlocked or compromised device, browser extension, or malicious same-origin script remains outside the encryption boundary. No independent security audit is claimed.
+Export encrypted backups regularly. Clearing browser data, losing a profile or forgetting a passphrase can make the book unavailable. Relish cannot recover its passphrase. Books synchronize only after explicit opt-in through Account. Restoring an exported backup remains available for local-only books. This is browser storage, not a native macOS document or Keychain vault. An unlocked or compromised device, browser extension, or malicious same-origin script remains outside the encryption boundary. No independent security audit is claimed.
 
 Removing a local edition requires unlocking it and typing its name. It removes only that device's copy; backups and online records are separate.
 
 ## Adult connected editions
 
-Online accounts are intended for adults aged 18 and older. New account and edition connection flows require adult confirmation; this is self-confirmation, not identity or age verification. Children's editions stay local and can participate in family games. Each adult uses their own verified Firebase email/password account. Auth uses a named, Auth-only Firebase app with in-memory persistence and never initializes client Firestore.
+Online accounts are intended for adults aged 18 and older. New account and edition connection flows require adult confirmation; this is self-confirmation, not identity or age verification. Children’s editions can remain local or use a parent-authorized encrypted copy in an adult’s library; they never create independent online accounts. Each adult uses their own verified Firebase email/password account. Auth uses a named, Auth-only Firebase app with in-memory persistence and never initializes client Firestore.
 
-Connecting explicitly publishes an edition name, a P-256 ECDH public key and its fingerprint. The corresponding private key is stored only inside the encrypted local book and backup. An account's key is immutable: use the matching backup to open it on another device. Members can compare fingerprints out of band.
+Connecting explicitly publishes an edition name, a P-256 ECDH public key and its fingerprint. The corresponding private key is stored only inside the encrypted book (local copy, optional sync copy and backup). An account's key is immutable: open the matching synced edition or backup on another device. Members can compare fingerprints out of band.
 
 An organizer creates a family connection and one-person invitation codes. Codes are random, expire in 24 hours, are stored hashed, and are consumed transactionally. A new code or membership change invalidates the current code. The family has at most 12 connected adult editions. Organizers may transfer their role or remove members; an organizer with remaining members must transfer before leaving or deleting an account.
 
@@ -129,7 +129,7 @@ The same mounted editor, save queue and voice dialog survive resizing. No entry 
 
 `ios/Relish.xcodeproj` is a real SwiftUI iOS 27.1+ development target, built with the installed iOS 27.2 SDK. It hosts one persistent WKWebView backed by the existing encrypted vault, shields app-switcher snapshots, asks for camera/microphone permission, opens external links outside the book and exports encrypted backups through the system share sheet. Debug points at local port 3210; Release is pinned to app.relish.my. No provider keys or JS/native credential bridge are bundled. See `ios/README.md` for build and distribution notes.
 
-Verified in Device Hub’s iPhone Duo simulator: outer quick entry, typed fictional text, unfold to a live spread, fold back with the text intact, keep once, and inner portrait/landscape reading. Camera/microphone hardware, backup share sheet, physical-device signing and App Store distribution are not yet verified. The app requires network access to load the hosted experience; this is not an offline native rewrite. Safari and native WKWebView have separate stores, so existing books need an encrypted backup/import when moving between them.
+Verified in Device Hub’s iPhone Duo simulator: outer quick entry, typed fictional text, unfold to a live spread, fold back with the text intact, keep once, and inner portrait/landscape reading. Camera/microphone hardware, backup share sheet, physical-device signing and App Store distribution are not yet verified. The app requires network access to load the hosted experience; this is not an offline native rewrite. Safari and native WKWebView have separate stores, so existing books can move between them through encrypted sync or backup/import.
 
 
 ## Clear activities at the opening (November 1, 2026)
@@ -139,3 +139,16 @@ Every unlocked edition opens to Activities: personal journal, guided reflection,
 Save for later and Pause here return to Activities only after persistence succeeds. The most recently updated journal draft has a direct resume action; up to three unfinished pages appear below, with access to the full list. Kept pages and completed guided visits offer Choose another activity alongside the existing finish/close action. View changes return to the beginning of the screen; resizing never remounts the editor. Shared play still removes private activities and requires unlocking before returning to an actual private edition.
 
 Validation: 175 focused Relish tests, TypeScript, targeted ESLint, and the production build. Browser checks cover direct journal capture, a draft surviving 382→669px resizing, save/resume, guided entry/pause, shared-game selection, and responsive choices at Duo outer/inner and desktop widths. No storage schema, provider privacy policy, or account permissions change in this update.
+
+
+## Account library and encrypted cross-device sync (November 1)
+
+Sign in is visible on the sample, locked book and bookshelf. Account opens an adult’s library of up to 20 independently encrypted adult/child editions. A new device signs into the same verified email account, selects an edition, and supplies that book’s separate passphrase. No book key or passphrase goes to the server. Enabling an existing child edition’s sync requires its parent passphrase and explicit parent consent. This changes the earlier local-only child release choice: child accounts and general online sharing remain unavailable, but parents can sync encrypted children’s books. It does not change AI or transcription consent/retention rules.
+
+The same existing Firebase project supplies Authentication and Firestore. `/api/relish/sync/` authenticates a revoked-token-checked verified adult session, validates same-origin consent and bounds actual streamed bytes. Firestore client access to `relish_sync/{uid}` is denied by existing rules. UID comes only from the verified token. Immutable SHA-256-addressed encrypted text chunks and photo blobs stay under Firestore/function document/request limits. A manifest publishes a complete revision with compare-and-swap; missing chunks cannot be committed. A lost-response retry with the same ciphertext fingerprint is idempotent. Quotas are 20 editions, 300 MB of stored ciphertext, 400 requests/minute and 20,000/day/account. Existing text/photo/backup limits still apply.
+
+Device writes happen first. While signed in, encrypted changes upload after a short delay; the client checks remote revisions on focus, reconnect and every 30 seconds. Clean local books receive remote changes only outside editors, dialogs and shared play. Divergent versions require an explicit Keep both action: the complete device copy, including photos, is preserved as a separate local edition before opening the latest remote version. No automatic content merge or last-writer-wins overwrite. A missing remote revision does not recreate a removed synced copy. A locked book ends authentication and aborts client requests. Already submitted encrypted commits may finish; their fingerprint is reconciled on the next sign-in.
+
+Current and previous manifests are retained for safe transfers. Bounded garbage collection removes older unreferenced ciphertext after an hour, while a cursor ensures protected old blobs cannot starve cleanup. Removing a synced book atomically removes its current/previous blobs unless another edition references them. Deleting the account removes all synced books and blobs before authentication removal; a content-free marker blocks delayed authorized requests from recreating storage. Local copies are separately controlled.
+
+`scripts/verify-relish-sync.ts` creates fictional accounts to verify actual token/origin gates, same-account encrypted journal/photo restore, other-account isolation, denial of direct authenticated Firestore reads, simultaneous-save conflicts, idempotent retries, adult/child books in one library, and deletion. `--keep-browser` temporarily retains one fictional library in a private `/private/tmp` fixture for UI checks; `--cleanup` removes it. No real family data is used.

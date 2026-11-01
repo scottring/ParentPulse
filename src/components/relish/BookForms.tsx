@@ -97,7 +97,7 @@ export function VaultForm({
       <p>
         {locked
           ? "Unlock your book to pick up where you left off."
-          : "Your relationships belong to you. Your book is encrypted and kept in this browser, on this computer."}
+          : "Your book starts encrypted on this device. You can enable encrypted sync from Account to use it on your other devices."}
       </p>
       {!locked && !restoring && (
         <label>

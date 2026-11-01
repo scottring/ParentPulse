@@ -396,7 +396,7 @@ export default function Manual({
             <p className="lb-fine">
               {book.profile?.kind === "child"
                 ? "Children’s automatic reflections need additional provider privacy setup. Your writing, photos and parent-assisted voice are available."
-                : "The guide is being connected. Your pages stay on this device."}
+                : "The guide is being connected. Your pages remain private."}
             </p>
           ) : !guide.authorized ? (
             <details>

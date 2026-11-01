@@ -11,6 +11,7 @@ import {
   Feather,
   Lock,
   Compass,
+  Cloud,
   CircleHelp,
   Plus,
   Settings2,
@@ -69,7 +70,10 @@ type View =
   | "play";
 type Modal =
   "settings" | "create" | "person" | "guide" | "connections" | "profile" | null;
-type Vault = ReturnType<typeof useLocalBook>;
+type Vault = Omit<
+  ReturnType<typeof useLocalBook>,
+  "syncSnapshot" | "openSynced" | "receiveSynced"
+>;
 const chapters = [
   { id: "words", label: "Your pages" },
   { id: "people", label: "Between us" },
@@ -80,7 +84,19 @@ const shortDate = (iso: string) =>
     month: "short",
     day: "numeric",
   });
-export default function LivingBook({ vault }: { vault: Vault }) {
+export default function LivingBook({
+  vault,
+  onAccount,
+  accountLabel = "Sign in",
+  syncStatus,
+  onInteraction,
+}: {
+  vault: Vault;
+  onAccount?: () => void;
+  accountLabel?: string;
+  syncStatus?: string;
+  onInteraction?: (paused: boolean) => void;
+}) {
   const [offered, setOffered] = useState<
     { title: string; text: string } | undefined
   >(undefined);
@@ -246,6 +262,9 @@ export default function LivingBook({ vault }: { vault: Vault }) {
   const chapterIndex = chapters.findIndex((c) => c.id === view);
   const activeGame = l.game && l.game.stage !== "finished" ? l.game : undefined;
   const sharedView = shared || view === "play" || view === "family";
+  useEffect(() => {
+    onInteraction?.(privateEditorOpen || sharedView || modal !== null);
+  }, [privateEditorOpen, sharedView, modal, onInteraction]);
   const guide = useManualGuide(
     book,
     vault.save,
@@ -787,6 +806,22 @@ export default function LivingBook({ vault }: { vault: Vault }) {
             </button>
           </nav>
           <div className="lb-tools" role="group" aria-label="Edition tools">
+            {!sharedView && onAccount && (
+              <button
+                className={
+                  sample
+                    ? "lb-account-trigger lb-account-sample"
+                    : "lb-account-trigger"
+                }
+                disabled={busy || privateEditorOpen}
+                onClick={onAccount}
+              >
+                <Cloud size={16} />
+                {book.profile?.kind === "child" && !sample
+                  ? "Parent account"
+                  : accountLabel}
+              </button>
+            )}
             {!sample && !sharedView && (
               <button
                 disabled={busy || privateEditorOpen}
@@ -852,10 +887,23 @@ export default function LivingBook({ vault }: { vault: Vault }) {
               : sample
                 ? "Fictional sample"
                 : book.profile?.kind === "child"
-                  ? `${ageLabels[book.profile.ageBand]} · local book`
+                  ? `${ageLabels[book.profile.ageBand]} · private book`
                   : "Your private pages"}
           </span>
         </div>
+        {!sample && !sharedView && onAccount && syncStatus && (
+          <div className="lb-sync-status">
+            <span>{syncStatus}</span>
+            <button disabled={busy || privateEditorOpen} onClick={onAccount}>
+              <Cloud size={14} />{" "}
+              {book.profile?.kind === "child"
+                ? "Parent account"
+                : accountLabel === "Sign in"
+                  ? "Sign in & sync"
+                  : "Account & sync"}
+            </button>
+          </div>
+        )}
         {error || vault.error ? (
           <p className="lb-error lb-save-error" role="alert">
             {error || vault.error}
@@ -1105,7 +1153,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
               : "encrypted in this browser on this device"}
             .{" "}
             {online
-              ? "On-demand AI uses a reviewed excerpt. Automatic manual suggestions have a separate opt-in; photos and private people tags stay here."
+              ? "On-demand AI uses a reviewed excerpt. Automatic manual suggestions have a separate opt-in; photos and private people tags are excluded from AI requests. Optional library sync stores an encrypted copy."
               : "General AI chat and online passage sharing are off. Voice writing and manual suggestions, when available, need a parent’s permission and adult account."}
           </p>
           {!sample && (
@@ -1119,7 +1167,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
               <p className="lb-fine">
                 {online
                   ? "Optional AI and family connections are available when you choose them."
-                  : "Written guidance for this age. No AI, online sign-in or online sharing. A parent passphrase protects changes."}
+                  : "Written guidance for this age. A parent can authorize encrypted sync and assisted voice writing. No independent child account or online passage sharing. A parent passphrase protects changes."}
               </p>
               <button
                 className="lb-secondary"

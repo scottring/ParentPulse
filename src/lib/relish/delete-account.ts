@@ -18,6 +18,7 @@ export async function deleteOnlineAccount(uid: string) {
         409,
       );
     tx.set(profile, { ...(p || {}), uid, deleting: true, circleId: null });
+    tx.set(db.doc(`relish_sync/${uid}`), { deleting: true }, { merge: true });
     if (circleRef && c?.memberIds.includes(uid)) {
       if (c.memberIds.length === 1) tx.delete(circleRef);
       else
@@ -81,6 +82,24 @@ export async function deleteOnlineAccount(uid: string) {
   // Inboxes contain only opaque document IDs and timestamps. Remove this inbox;
   // other members' pointers to removed passages become harmless missing records.
   await db.recursiveDelete(profile.collection("inbox"));
+  // The tombstone above also blocks sync mutations while all ciphertext is removed.
+  const sync = db.doc(`relish_sync/${uid}`);
+  for (const collection of ["blobs", "books"])
+    while (true) {
+      time();
+      const records = await sync
+        .collection(collection)
+        .limit(100)
+        .select()
+        .get();
+      if (records.empty) break;
+      const batch = db.batch();
+      records.docs.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+    }
+  // A content-free marker prevents requests authorized before deletion from
+  // resurrecting storage after the authentication record has disappeared.
+  await sync.set({ deleting: true });
   const key = createHash("sha256").update(uid).digest("hex");
   await db.doc(`relish_ai_usage/user-${key}`).delete();
   await db.doc(`relish_ai_usage/voice-${key}`).delete();
