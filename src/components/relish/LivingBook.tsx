@@ -123,6 +123,7 @@ export default function LivingBook({
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [pageKey, setPageKey] = useState(0);
+  const journalNavigation = useRef<(() => Promise<boolean>) | null>(null);
   const operation = useRef(false),
     alive = useRef(true),
     heading = useRef<HTMLHeadingElement>(null),
@@ -144,6 +145,7 @@ export default function LivingBook({
     heading.current?.focus({ preventScroll: true });
   }, [view, pageKey]);
   function navigate(next: View) {
+    setJournalEditing(false);
     setCapture(null);
     setModal(null);
     setEditing(null);
@@ -151,6 +153,23 @@ export default function LivingBook({
     setClosed(false);
     setPageKey((n) => n + 1);
     sensory.play("touch");
+  }
+  async function headerAction(action: () => void) {
+    if (operation.current) return;
+    if (!journalEditing) {
+      action();
+      return;
+    }
+    operation.current = true;
+    setWorking(true);
+    try {
+      if (await journalNavigation.current?.()) {
+        if (alive.current) action();
+      }
+    } finally {
+      operation.current = false;
+      if (alive.current) setWorking(false);
+    }
   }
   function quickEntry(voice = false, draft = newJournalDraft()) {
     navigate("words");
@@ -259,6 +278,9 @@ export default function LivingBook({
   }
   const sessionOpen = view === "session" && v && v.status !== "complete";
   const privateEditorOpen = !!sessionOpen || journalEditing;
+  // Journal navigation queues behind autosave; guided visits still use their pause action.
+  const headerBusy =
+    working || !!sessionOpen || (!journalEditing && vault.busy);
   const chapterIndex = chapters.findIndex((c) => c.id === view);
   const activeGame = l.game && l.game.stage !== "finished" ? l.game : undefined;
   const sharedView = shared || view === "play" || view === "family";
@@ -758,8 +780,8 @@ export default function LivingBook({
             Sample book · fictional people · changes last until reload
           </span>
           <button
-            disabled={busy || privateEditorOpen}
-            onClick={() => setModal("create")}
+            disabled={headerBusy}
+            onClick={() => void headerAction(() => setModal("create"))}
           >
             Create my private book <ArrowUpRight size={13} />
           </button>
@@ -776,8 +798,8 @@ export default function LivingBook({
           <nav className="lb-main-nav" aria-label="Your book">
             {!sharedView ? (
               <button
-                disabled={busy || privateEditorOpen}
-                onClick={() => navigate("activities")}
+                disabled={headerBusy}
+                onClick={() => void headerAction(() => navigate("activities"))}
                 aria-current={
                   view === "activities" && !closed ? "page" : undefined
                 }
@@ -791,14 +813,17 @@ export default function LivingBook({
             )}
             {!sharedView && (
               <button
-                disabled={busy || privateEditorOpen}
-                onClick={() => navigate("words")}
+                disabled={headerBusy}
+                onClick={() => void headerAction(() => navigate("words"))}
                 aria-current={view === "words" ? "page" : undefined}
               >
                 <Feather size={16} /> Your pages
               </button>
             )}
-            <button disabled={busy || privateEditorOpen} onClick={openPlay}>
+            <button
+              disabled={headerBusy}
+              onClick={() => void headerAction(openPlay)}
+            >
               <Users size={16} /> Play together
             </button>
             <button onClick={() => setModal("guide")}>
@@ -813,8 +838,8 @@ export default function LivingBook({
                     ? "lb-account-trigger lb-account-sample"
                     : "lb-account-trigger"
                 }
-                disabled={busy || privateEditorOpen}
-                onClick={onAccount}
+                disabled={headerBusy}
+                onClick={() => void headerAction(onAccount)}
               >
                 <Cloud size={16} />
                 {book.profile?.kind === "child" && !sample
@@ -824,8 +849,8 @@ export default function LivingBook({
             )}
             {!sample && !sharedView && (
               <button
-                disabled={busy || privateEditorOpen}
-                onClick={vault.shelf}
+                disabled={headerBusy}
+                onClick={() => void headerAction(vault.shelf)}
                 aria-label="Editions"
                 title="Editions"
               >
@@ -835,11 +860,13 @@ export default function LivingBook({
             )}
             {!sample && !sharedView && online && (
               <button
-                disabled={busy || privateEditorOpen}
-                onClick={() => {
-                  setOffered(undefined);
-                  setModal("connections");
-                }}
+                disabled={headerBusy}
+                onClick={() =>
+                  void headerAction(() => {
+                    setOffered(undefined);
+                    setModal("connections");
+                  })
+                }
                 aria-label="Connect editions"
                 title="Connect editions"
               >
@@ -850,8 +877,8 @@ export default function LivingBook({
             <SoundControl />
             {!sharedView && (
               <button
-                disabled={busy || privateEditorOpen}
-                onClick={() => setModal("settings")}
+                disabled={headerBusy}
+                onClick={() => void headerAction(() => setModal("settings"))}
                 aria-label="Privacy and settings"
               >
                 <Settings2 size={17} />
@@ -865,8 +892,8 @@ export default function LivingBook({
             ) : (
               !sample && (
                 <button
-                  disabled={busy || privateEditorOpen}
-                  onClick={vault.lock}
+                  disabled={headerBusy}
+                  onClick={() => void headerAction(vault.lock)}
                   aria-label="Lock"
                   title="Lock"
                 >
@@ -894,7 +921,10 @@ export default function LivingBook({
         {!sample && !sharedView && onAccount && syncStatus && (
           <div className="lb-sync-status">
             <span>{syncStatus}</span>
-            <button disabled={busy || privateEditorOpen} onClick={onAccount}>
+            <button
+              disabled={headerBusy}
+              onClick={() => void headerAction(onAccount)}
+            >
               <Cloud size={14} />{" "}
               {book.profile?.kind === "child"
                 ? "Parent account"
@@ -956,6 +986,7 @@ export default function LivingBook({
         ) : view === "words" && !sharedView ? (
           <Journal
             key={pageKey}
+            navigation={journalNavigation}
             initialDraft={capture?.draft}
             initialVoice={capture?.voice}
             book={book}
@@ -1328,7 +1359,7 @@ export default function LivingBook({
             {view === "activities"
               ? "Write a personal journal entry for open space, choose a guided reflection for prompts, or play a game together. Each activity has its own stopping point. Unfinished pages and reflections will wait for you here."
               : view === "words"
-                ? "Write anything you like. Keep this page when it feels finished, or choose Save for later to leave it in progress. You can return and edit either one."
+                ? "Write anything you like. Your draft saves as you go, including when you switch activities or lock your book. Keep this page when it feels finished. You can return and edit either one."
                 : sharedView
                   ? "Each player gets a turn or may pass. Reveal together, then finish for now. Keeping a page requires everyone’s approval; it is always optional."
                   : v?.status === "complete"

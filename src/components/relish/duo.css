@@ -175,7 +175,6 @@
   }
 }
 @media (max-width: 639px) {
-  .lb-app.lb-capturing .lb-main-nav,
   .lb-app.lb-capturing .lb-identity,
   .lb-app.lb-capturing .lb-tagline {
     display: none;
@@ -186,9 +185,6 @@
   }
   .lb-app.lb-capturing .lb-wordmark {
     font-size: 29px;
-  }
-  .lb-app.lb-capturing .lb-tools button:disabled {
-    display: none;
   }
   .lb-app .rj-writing-intro {
     margin: 10px 4px 18px;

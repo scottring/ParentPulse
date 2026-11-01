@@ -161,3 +161,10 @@ Voice entry now has separate account, email-verification, and recording-consent 
 Regression coverage includes existing-account reuse, sign-in followed by explicit consent, verification/token refresh without losing the draft, explicit resend, account changes, and recording shutdown/late microphone results after lock.
 
 Operational email repair (2026-11-01): Firebase project `parentpulse-d68ba` used a failing custom Gmail SMTP relay. Changed only `notification.sendEmail.method` from `CUSTOM_SMTP` to `DEFAULT`; read-back confirmed other authentication settings were unchanged. Scott confirmed receiving and completing email verification afterward. No email-verification requirement was bypassed.
+
+
+### Journal navigation while writing
+
+Opening a journal no longer disables the header. The compact layout keeps the activity navigation visible and does not hide controls during saves. Activities, Your pages, Play together, Sign in, Editions, connections, settings, and Lock first ask the mounted editor to finish its save queue. Unfinished writing stays a draft; an untouched blank page is not created. Account/settings dialogs keep the editor mounted, and incoming sync/manual analysis remain paused while it is open. A failed save keeps the writer available for retry. Pending photo attachment or voice review keeps the page open with an explanation. Shared play still removes private content and requires unlocking before returning. Guided visits retain their existing Pause here behavior.
+
+Regression coverage checks immediate navigation before debounce, slow earlier autosaves, a single lock after the newest write, retry after failure, sign-in with the draft intact, photo completion, and child journal privacy during shared play.

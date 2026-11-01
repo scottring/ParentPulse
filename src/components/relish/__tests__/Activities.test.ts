@@ -82,9 +82,9 @@ it("opens free writing in one click, keeps the latest words before leaving, and 
   expect(
     (screen.getByRole("button", { name: "Activities" }) as HTMLButtonElement)
       .disabled,
-  ).toBe(true);
+  ).toBe(false);
   app.fail(true);
-  fireEvent.click(screen.getByRole("button", { name: "Save for later" }));
+  fireEvent.click(screen.getByRole("button", { name: "Activities" }));
   await screen.findByRole("alert");
   expect(
     screen.queryByRole("heading", { name: "What would you like to do?" }),
@@ -93,7 +93,7 @@ it("opens free writing in one click, keeps the latest words before leaving, and 
     input,
   );
   app.fail(false);
-  fireEvent.click(screen.getByRole("button", { name: "Save for later" }));
+  fireEvent.click(screen.getByRole("button", { name: "Activities" }));
   await screen.findByRole("heading", { name: "What would you like to do?" });
   expect(app.stored().journal?.[0].text).toBe(
     "A small adventure, still unfolding",

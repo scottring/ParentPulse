@@ -1,5 +1,11 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -35,6 +41,7 @@ import { useSensory } from "./Sensory";
 import "./journal.css";
 
 type Save = (change: (book: Book) => Book) => Promise<void>;
+export type JournalNavigation = RefObject<(() => Promise<boolean>) | null>;
 const dateLabel = (date: string) =>
   new Date(date).toLocaleDateString(undefined, {
     month: "long",
@@ -69,6 +76,7 @@ export default function Journal({
   onAlbum,
   initialDraft,
   initialVoice = false,
+  navigation,
 }: {
   book: Book;
   save: Save;
@@ -85,6 +93,7 @@ export default function Journal({
   onAlbum?: () => void;
   initialDraft?: JournalDraft;
   initialVoice?: boolean;
+  navigation?: JournalNavigation;
 }) {
   const [editor, setEditor] = useState<JournalDraft | null>(
     initialDraft || null,
@@ -123,6 +132,7 @@ export default function Journal({
         <JournalEditor
           key={editor.id}
           initial={editor}
+          navigation={navigation}
           initialVoice={initialVoice && editor.id === initialDraft?.id}
           initialEntry={editingEntry}
           save={save}
@@ -509,9 +519,11 @@ export function JournalEditor({
   book,
   photos,
   initialVoice = false,
+  navigation,
 }: {
   initial: JournalDraft;
   initialVoice?: boolean;
+  navigation?: JournalNavigation;
   initialEntry?: JournalEntry;
   save: Save;
   sample: boolean;
@@ -522,6 +534,7 @@ export function JournalEditor({
 }) {
   const [draft, setDraft] = useState<JournalDraft>(initial);
   const [mediaBusy, setMediaBusy] = useState(false);
+  const [navigationNotice, setNavigationNotice] = useState("");
   const [voiceOpen, setVoiceOpen] = useState(initialVoice);
   const [saved, setSaved] = useState(signature(initial));
   const [pending, setPending] = useState(0);
@@ -639,6 +652,32 @@ export function JournalEditor({
       if (alive.current) setFinishing(false);
     }
   }
+  // Header actions wait for this editor's queue before they can replace or lock it.
+  // Keep the callback registered while account/settings dialogs cover the writer.
+  useImperativeHandle(navigation, () => async () => {
+    if (finalizing.current) return false;
+    if (mediaBusy || voiceOpen) {
+      setNavigationNotice(
+        mediaBusy
+          ? "Your photo is still being added. Give it a moment, then try again."
+          : "Finish or close voice writing before moving to another activity.",
+      );
+      return false;
+    }
+    setNavigationNotice("");
+    finalizing.current = true;
+    setFinishing(true);
+    if (timer.current) clearTimeout(timer.current);
+    try {
+      if (dirty || pending > 0) await persist(current.current);
+      return alive.current;
+    } catch {
+      return false;
+    } finally {
+      finalizing.current = false;
+      if (alive.current) setFinishing(false);
+    }
+  });
   const previous = book
     ? bookPages(book)
         .filter((p) => p.journalId !== draft.id)
@@ -751,6 +790,11 @@ export function JournalEditor({
                       : "Saved in your encrypted book."
                     : "Just you and a fresh page."}
           </div>
+          {navigationNotice && (mediaBusy || voiceOpen) && (
+            <p className="lb-fine" role="status">
+              {navigationNotice}
+            </p>
+          )}
           {draft.text.length >= JOURNAL_TEXT_LIMIT - 500 && (
             <p className="lb-fine">
               {JOURNAL_TEXT_LIMIT - draft.text.length} characters left on this

@@ -208,7 +208,7 @@ describe("freeform journal", () => {
     expect(calls).toBe(1);
     expect(onPause).not.toHaveBeenCalled();
   });
-  it("offers the journal to children, protects an open editor, and puts it away during shared play", async () => {
+  it("lets children leave the journal for shared play without exposing private pages", async () => {
     const lock = vi.fn();
     function Harness() {
       const initial = {
@@ -259,15 +259,202 @@ describe("freeform journal", () => {
           name: "Play together",
         }) as HTMLButtonElement
       ).disabled,
-    ).toBe(true);
+    ).toBe(false);
     expect(screen.queryByText("Ask AI")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Save for later" }));
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Play together" }),
-    );
+    fill("Another private moment");
+    fireEvent.click(screen.getByRole("button", { name: "Play together" }));
+    await screen.findByRole("heading", { name: "Together at the table" });
     expect(screen.queryByText("PRIVATE JOURNAL SENTENCE")).toBeNull();
+    expect(screen.queryByText("Another private moment")).toBeNull();
     expect(screen.queryByRole("button", { name: "Your pages" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Unlock my edition" }));
     expect(lock).toHaveBeenCalledOnce();
+  });
+});
+
+describe("journal header navigation", () => {
+  function setup(
+    options: {
+      beforeSave?: () => Promise<void>;
+      addPhoto?: () => Promise<import("@/lib/relish/photos").Photo>;
+    } = {},
+  ) {
+    let stored: Book = { ...emptyBook("Robin"), profile: { kind: "adult" } };
+    const account = vi.fn(),
+      lock = vi.fn(),
+      shelf = vi.fn(),
+      interaction = vi.fn();
+    const save = vi.fn(async (change: Book | ((book: Book) => Book)) => {
+      await options.beforeSave?.();
+      stored = typeof change === "function" ? change(stored) : change;
+    });
+    function Harness() {
+      const [book, setBook] = useState(stored);
+      const [busy, setBusy] = useState(false);
+      return createElement(LivingBook, {
+        onAccount: account,
+        onInteraction: interaction,
+        syncStatus: "Local only",
+        vault: {
+          book,
+          mode: "open",
+          editions: [],
+          editionId: "test",
+          shelf,
+          select: vi.fn(),
+          remove: async () => {},
+          busy,
+          error: "",
+          open: async () => {},
+          lock,
+          backup: vi.fn(),
+          photos: {
+            add: options.addPhoto || vi.fn(),
+            load: vi.fn(async () => new Blob()),
+          },
+          save: async (change) => {
+            setBusy(true);
+            try {
+              await save(change);
+              setBook(stored);
+            } finally {
+              setBusy(false);
+            }
+          },
+        },
+      });
+    }
+    render(createElement(Harness));
+    fireEvent.click(screen.getByRole("button", { name: "Your pages" }));
+    fireEvent.click(screen.getByRole("button", { name: "A fresh page" }));
+    return { account, lock, shelf, interaction, save, book: () => stored };
+  }
+  it("keeps the header available on a blank page and leaves without creating an empty entry", async () => {
+    const qa = setup();
+    for (const name of [
+      "Activities",
+      "Your pages",
+      "Play together",
+      "Sign in",
+      "Sign in & sync",
+      "Editions",
+      "Connect editions",
+      "Privacy and settings",
+      "Lock",
+    ]) {
+      expect(
+        (screen.getByRole("button", { name }) as HTMLButtonElement).disabled,
+      ).toBe(false);
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Activities" }));
+    await screen.findByRole("heading", { name: "Activities" });
+    expect(qa.save).not.toHaveBeenCalled();
+    expect(qa.book().journal || []).toHaveLength(0);
+    expect(qa.interaction).toHaveBeenLastCalledWith(false);
+  });
+  it("keeps the newest words as a draft when navigating before the autosave timer", async () => {
+    const qa = setup();
+    fill("These words were just typed.");
+    fireEvent.click(screen.getByRole("button", { name: "Your pages" }));
+    const resume = await screen.findByRole("button", { name: /Keep writing:/ });
+    expect(qa.book().journal?.[0]).toMatchObject({
+      text: "These words were just typed.",
+      status: "draft",
+    });
+    fireEvent.click(resume);
+    expect((input() as HTMLTextAreaElement).value).toBe(
+      "These words were just typed.",
+    );
+  });
+  it("saves before opening sign-in, keeps the editor mounted, and keeps incoming sync paused", async () => {
+    const qa = setup();
+    const editor = input();
+    fill("My draft stays here while I sign in.");
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    await waitFor(() => expect(qa.account).toHaveBeenCalledOnce());
+    expect(input()).toBe(editor);
+    expect(qa.book().journal?.[0].text).toBe(
+      "My draft stays here while I sign in.",
+    );
+    expect(qa.interaction).toHaveBeenLastCalledWith(true);
+    fill("And I can carry on afterward.");
+    fireEvent.click(screen.getByRole("button", { name: "Editions" }));
+    await waitFor(() => expect(qa.shelf).toHaveBeenCalledOnce());
+    expect(qa.book().journal?.[0].text).toBe("And I can carry on afterward.");
+  });
+  it("waits for a slow autosave and then keeps the newest words before locking exactly once", async () => {
+    const slow = deferred();
+    let calls = 0;
+    const qa = setup({
+      beforeSave: async () => {
+        if (++calls === 1) await slow.promise;
+      },
+    });
+    fill("First version");
+    await waitFor(() => expect(calls).toBe(1));
+    fill("Newest version before locking");
+    const lock = screen.getByRole("button", { name: "Lock" });
+    expect((lock as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(lock);
+    fireEvent.click(lock);
+    expect(qa.lock).not.toHaveBeenCalled();
+    await act(async () => slow.resolve());
+    await waitFor(() => expect(qa.lock).toHaveBeenCalledOnce());
+    expect(qa.book().journal?.[0]).toMatchObject({
+      text: "Newest version before locking",
+      status: "draft",
+      revision: 2,
+    });
+  });
+  it("keeps the draft open after a save failure and allows the same navigation to retry", async () => {
+    let failing = true;
+    const qa = setup({
+      beforeSave: async () => {
+        if (failing) throw new Error("Full");
+      },
+    });
+    fill("Words that must survive a failed save");
+    fireEvent.click(screen.getByRole("button", { name: "Lock" }));
+    await screen.findByRole("alert");
+    expect(qa.lock).not.toHaveBeenCalled();
+    expect((input() as HTMLTextAreaElement).value).toBe(
+      "Words that must survive a failed save",
+    );
+    failing = false;
+    fireEvent.click(screen.getByRole("button", { name: "Lock" }));
+    await waitFor(() => expect(qa.lock).toHaveBeenCalledOnce());
+    expect(qa.book().journal?.[0].text).toBe(
+      "Words that must survive a failed save",
+    );
+  });
+  it("holds the page open until a photo is attached, then saves it before leaving", async () => {
+    const slow = deferred();
+    const photo = {
+      id: crypto.randomUUID(),
+      width: 100,
+      height: 100,
+      caption: "",
+      createdAt: new Date().toISOString(),
+    };
+    const qa = setup({
+      addPhoto: async () => {
+        await slow.promise;
+        return photo;
+      },
+    });
+    fireEvent.change(screen.getByLabelText("Upload a photo"), {
+      target: {
+        files: [new File(["photo"], "photo.png", { type: "image/png" })],
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Activities" }));
+    await screen.findByText(
+      "Your photo is still being added. Give it a moment, then try again.",
+    );
+    expect(input()).toBeTruthy();
+    await act(async () => slow.resolve());
+    fireEvent.click(screen.getByRole("button", { name: "Activities" }));
+    await screen.findByRole("heading", { name: "Activities" });
+    expect(qa.book().journal?.[0].photos).toEqual([photo]);
   });
 });
