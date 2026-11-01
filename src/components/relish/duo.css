@@ -1,0 +1,252 @@
+/* One mounted book, resized by the window. A fold never swaps the editor. */
+.lb-app .lb-desk {
+  padding-top: max(20px, env(safe-area-inset-top));
+  padding-right: max(clamp(14px, 3vw, 48px), env(safe-area-inset-right));
+  padding-bottom: max(28px, env(safe-area-inset-bottom));
+  padding-left: max(clamp(14px, 3vw, 48px), env(safe-area-inset-left));
+}
+.rd-writing-context,
+.rd-next-page {
+  display: none;
+}
+.lb-app .rd-writing-spread > .rj-paper {
+  width: 100%;
+}
+.lb-app .rd-page-details {
+  margin: 24px 0;
+  border-top: 1px solid #768f8a40;
+  padding-top: 10px;
+}
+.lb-app .rd-page-details summary {
+  min-height: 44px;
+  padding-block: 10px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.lb-app .rd-page-details .rj-style-picker {
+  margin-top: 12px;
+}
+.lb-app .rd-mountain {
+  height: 180px;
+  margin: 25px -10px;
+  background: url("/illustrations/relish-alpine-landscape.jpg") center 48% /
+    cover;
+  mask-image: linear-gradient(transparent, black 25%, black 75%, transparent);
+  filter: saturate(0.2) contrast(0.65);
+  opacity: 0.65;
+}
+.lb-app .rd-context-date {
+  margin-top: 34px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.lb-app .rd-context-foot {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  font-family: var(--serif);
+  font-style: italic;
+}
+.lb-app .rd-context-prose {
+  display: -webkit-box;
+  -webkit-line-clamp: 12;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.lb-app .rd-reading-spread .rj-paper {
+  width: 100%;
+  margin: 0;
+}
+/* 640 leaves readable pages on the 669px inner Safari viewport. The outer
+   display, including its 594px landscape window, remains a pocket notebook.
+   Split View follows its own available width, not a device/user-agent guess. */
+@media (min-width: 640px) {
+  .lb-app .rd-writing-spread,
+  .lb-app .rd-reading-spread {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
+    max-width: 1200px;
+    margin: auto;
+    gap: 0;
+    box-shadow:
+      0 6px 0 -1px var(--lb-cover),
+      0 18px 36px #304f5015;
+    border-radius: 5px 14px 14px 5px;
+  }
+  .lb-app .rd-writing-spread > .rj-paper,
+  .lb-app .rd-reading-spread > .rj-paper {
+    min-width: 0;
+    max-width: none;
+    box-shadow: none;
+    border-radius: 0;
+    padding: clamp(22px, 3vw, 42px);
+    margin: 0;
+  }
+  .lb-app .rd-writing-context,
+  .lb-app .rd-next-page {
+    display: block;
+  }
+  .lb-app .rd-writing-context,
+  .lb-app .rd-reading-spread > article {
+    border-radius: 5px 0 0 5px;
+    background-image: linear-gradient(
+      90deg,
+      transparent 92%,
+      #46676b0d 98%,
+      #46676b1c
+    );
+  }
+  .lb-app .rd-editor-page,
+  .lb-app .rd-next-page {
+    border-radius: 0 14px 14px 0;
+    border-left: 0;
+    background-image: linear-gradient(90deg, #46676b14, transparent 8%);
+  }
+  .lb-app .rd-writing-context h2,
+  .lb-app .rd-reading-spread h2 {
+    font-size: clamp(28px, 3vw, 42px);
+    line-height: 1.25;
+  }
+  .lb-app .rd-writing-spread .rj-prose,
+  .lb-app .rd-reading-spread .rj-prose {
+    font-size: clamp(19px, 2vw, 26px);
+  }
+  .lb-app .rd-writing-spread textarea {
+    font-size: clamp(22px, 2.3vw, 28px);
+  }
+  .lb-app .rd-writing-spread .rj-paper-date {
+    font-size: 11px;
+  }
+  .lb-app .rd-writing-spread .rj-capture-actions {
+    gap: 8px;
+  }
+  .lb-app .rd-writing-spread .rj-capture-actions button {
+    padding-inline: 10px;
+    font-size: 13px;
+  }
+  .lb-app .rd-writing-spread .rj-writing-actions {
+    gap: 12px;
+  }
+}
+@media (min-width: 640px) and (max-width: 900px) {
+  .lb-app .lb-book {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    max-width: 1200px;
+  }
+  .lb-app .lb-left {
+    display: block;
+  }
+  .lb-app .lb-page,
+  .lb-app .lb-page.lb-right {
+    padding: 24px 22px 60px;
+  }
+  .lb-app .lb-page {
+    font-size: 14px;
+  }
+  .lb-app .lb-page h2 {
+    font-size: 26px;
+  }
+  .lb-app .lb-page h3 {
+    font-size: 21px;
+  }
+  .lb-app .lb-page blockquote {
+    font-size: 19px;
+  }
+  .lb-app .lb-running {
+    gap: 10px;
+    font-size: 8px;
+    margin-bottom: 25px;
+  }
+  .lb-app .lb-running span:last-child {
+    text-align: right;
+  }
+  .lb-app .rj-writing-intro {
+    gap: 20px;
+    margin: 15px 0 24px;
+  }
+  .lb-app .rj-writing-intro h2 {
+    font-size: 39px;
+  }
+  .lb-app .rj-writing-intro > p {
+    max-width: 250px;
+    font-size: 15px;
+  }
+}
+@media (max-width: 639px) {
+  .lb-app.lb-capturing .lb-main-nav,
+  .lb-app.lb-capturing .lb-identity,
+  .lb-app.lb-capturing .lb-tagline {
+    display: none;
+  }
+  .lb-app.lb-capturing .lb-header {
+    padding-bottom: 9px;
+    margin-bottom: 14px;
+  }
+  .lb-app.lb-capturing .lb-wordmark {
+    font-size: 29px;
+  }
+  .lb-app.lb-capturing .lb-tools button:disabled {
+    display: none;
+  }
+  .lb-app .rj-writing-intro {
+    margin: 10px 4px 18px;
+    display: block;
+  }
+  .lb-app .rj-writing-intro .lb-kicker,
+  .lb-app .rj-writing-intro > p,
+  .lb-app .rj-writing-intro h2 br {
+    display: none;
+  }
+  .lb-app .rj-writing-intro h2 {
+    font-size: 28px;
+    margin: 0;
+  }
+  .lb-app .rj-writing-intro h2 em::before {
+    content: " ";
+  }
+  .lb-app .rd-editor-page {
+    padding: 18px;
+  }
+  .lb-app .rd-editor-page .rj-paper-date {
+    padding-bottom: 12px;
+    font-size: 11px;
+  }
+  .lb-app .rd-editor-page textarea {
+    min-height: 155px;
+    height: 26svh;
+    font-size: 23px;
+    line-height: 1.5;
+  }
+  .lb-app .rd-editor-page .rj-voice-launch {
+    margin-block: 10px 0;
+    padding: 8px 0;
+    font-size: 16px;
+  }
+  .lb-app .rd-editor-page .rj-voice-launch span {
+    display: none;
+  }
+  .lb-app .rd-editor-page .rj-capture-actions {
+    gap: 8px;
+  }
+  .lb-app .rd-editor-page .rj-capture-actions button {
+    font-size: 13px;
+    padding: 8px 10px;
+  }
+  .lb-app .rd-editor-page .rj-photo-picker {
+    margin-block: 10px;
+  }
+  .lb-app .rd-editor-page .rj-writing-actions {
+    position: sticky;
+    bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--rj-paper);
+    padding-block: 12px;
+    margin-bottom: 0;
+    gap: 12px;
+    z-index: 1;
+  }
+  .lb-app .rd-editor-page .rj-writing-actions button {
+    font-size: 15px;
+  }
+}

@@ -1,15 +1,9 @@
 // @vitest-environment happy-dom
 import { createElement, useState } from "react";
 import { afterEach, describe, it, expect, vi } from "vitest";
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  cleanup,
-} from "@testing-library/react";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { webcrypto } from "node:crypto";
-import { emptyBook, type Book } from "@/lib/relish/model";
+import { emptyBook } from "@/lib/relish/model";
 import {
   beginVisit,
   chooseThread,
@@ -17,7 +11,6 @@ import {
   livingOf,
   newGame,
   advanceGame,
-  freshLiving,
 } from "@/lib/relish/living";
 import LivingBook from "../LivingBook";
 import GroupPlay from "../GroupPlay";
@@ -60,7 +53,8 @@ describe("living-book interaction boundaries", () => {
           error: "",
           open: async () => {},
           lock: () => {},
-          backup: () => {},
+          backup: async () => {},
+          photos: { add: vi.fn(), load: vi.fn() },
           save: async (change) => {
             if (fail) throw new Error("Storage is full");
             setBook((b) => (typeof change === "function" ? change(b) : change));
@@ -70,13 +64,13 @@ describe("living-book interaction boundaries", () => {
     }
     render(createElement(Harness));
     fireEvent.click(
-      screen.getByRole("button", { name: "Continue where I paused" }),
+      screen.getByRole("button", { name: "Continue guided reflection" }),
     );
     await screen.findByRole("alert");
     expect(screen.queryByText("This visit is complete")).toBeNull();
     fail = false;
     fireEvent.click(
-      screen.getByRole("button", { name: "Continue where I paused" }),
+      screen.getByRole("button", { name: "Continue guided reflection" }),
     );
     const textbox = await screen.findByRole("textbox", { name: "Your moment" });
     fireEvent.change(textbox, { target: { value: "One sample moment" } });
@@ -105,7 +99,8 @@ describe("living-book interaction boundaries", () => {
           error: "",
           open: async () => {},
           lock,
-          backup: () => {},
+          backup: async () => {},
+          photos: { add: vi.fn(), load: vi.fn() },
           save: async (change) => {
             setBook((b) => (typeof change === "function" ? change(b) : change));
           },
@@ -113,7 +108,7 @@ describe("living-book interaction boundaries", () => {
       });
     }
     render(createElement(Harness));
-    fireEvent.click(screen.getByRole("button", { name: "Just browse" }));
+    fireEvent.click(screen.getByRole("button", { name: "Read your pages" }));
     expect(screen.getByText("A confidential sample sentence")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Play together" }));
     expect(screen.queryByText("A confidential sample sentence")).toBeNull();

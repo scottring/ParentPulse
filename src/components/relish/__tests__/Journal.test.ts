@@ -63,7 +63,7 @@ describe("freeform journal", () => {
     );
     first.unmount();
     render(createElement(Harness));
-    fireEvent.click(screen.getByRole("button", { name: /A page in progress/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Keep writing:/ }));
     expect((input() as HTMLTextAreaElement).value).toContain("second line");
     fill("The ending arrived.");
     fireEvent.click(screen.getByRole("button", { name: "Keep this page" }));
@@ -73,9 +73,48 @@ describe("freeform journal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Edit this page" }));
     fill("Actually, another ending!");
     fireEvent.click(screen.getByRole("button", { name: "Save for later" }));
-    await screen.findByRole("button", { name: /Open this page/ });
+    await screen.findByRole("button", { name: /A page of my own/ });
     expect(stored.journal?.[0]).toMatchObject({
       text: "Actually, another ending!",
+      status: "kept",
+    });
+  });
+  it("opens quick capture directly and keeps one draft through outer/inner resizes", async () => {
+    let book = emptyBook("Robin");
+    const draft = newJournalDraft();
+    const props = {
+      initialDraft: draft,
+      book,
+      sample: true,
+      onEditingChange: vi.fn(),
+      onDone: vi.fn(),
+      save: async (change: (b: Book) => Book) => {
+        book = change(book);
+      },
+    };
+    const view = render(createElement(Journal, props));
+    const original = input();
+    fill("A moment from the outside screen");
+    for (const width of [669, 951, 382, 594, 385]) {
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        value: width,
+      });
+      fireEvent(window, new Event("resize"));
+      view.rerender(createElement(Journal, { ...props, book }));
+      expect(input()).toBe(original);
+      expect((input() as HTMLTextAreaElement).value).toBe(
+        "A moment from the outside screen",
+      );
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Keep this page" }));
+    await waitFor(() => expect(book.journal?.[0].status).toBe("kept"));
+    view.rerender(createElement(Journal, { ...props, book }));
+    await screen.findByText("That one’s a keeper.");
+    expect(book.journal).toHaveLength(1);
+    expect(book.journal?.[0]).toMatchObject({
+      id: draft.id,
+      text: "A moment from the outside screen",
       status: "kept",
     });
   });
@@ -201,6 +240,7 @@ describe("freeform journal", () => {
           open: async () => {},
           lock,
           backup: vi.fn(),
+          photos: { add: vi.fn(), load: vi.fn() },
           save: async (change) => {
             current.current =
               typeof change === "function" ? change(current.current) : change;
@@ -210,7 +250,7 @@ describe("freeform journal", () => {
       });
     }
     render(createElement(Harness));
-    fireEvent.click(screen.getByRole("button", { name: "Journal" }));
+    fireEvent.click(screen.getByRole("button", { name: "Your pages" }));
     expect(screen.getByText("PRIVATE JOURNAL SENTENCE")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "A fresh page" }));
     expect(
@@ -226,7 +266,7 @@ describe("freeform journal", () => {
       await screen.findByRole("button", { name: "Play together" }),
     );
     expect(screen.queryByText("PRIVATE JOURNAL SENTENCE")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Journal" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Your pages" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Unlock my edition" }));
     expect(lock).toHaveBeenCalledOnce();
   });

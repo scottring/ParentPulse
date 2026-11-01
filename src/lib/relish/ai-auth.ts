@@ -1,7 +1,8 @@
-// Loaded only after the user opens AI help. This app never initializes Firestore.
+// Online services share an in-memory adult account. Book keys never enter Firebase.
 import { getApps, initializeApp } from "firebase/app";
 import {
   initializeAuth,
+  onAuthStateChanged,
   inMemoryPersistence,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -25,6 +26,9 @@ export function getAIAuth() {
         name,
       );
     auth = initializeAuth(app, { persistence: inMemoryPersistence });
+    onAuthStateChanged(auth, () =>
+      window.dispatchEvent(new Event("relish:account")),
+    );
     window.addEventListener("relish:locked", () => {
       generation++;
       if (auth) void signOut(auth);

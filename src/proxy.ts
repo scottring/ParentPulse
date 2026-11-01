@@ -9,6 +9,7 @@ export function proxy(request: NextRequest) {
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
+    "media-src 'self' blob:",
     "font-src 'self'",
     `connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com${dev ? " ws://127.0.0.1:3210 ws://localhost:3210" : ""}`,
     "object-src 'none'",

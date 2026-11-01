@@ -1,0 +1,293 @@
+.lb-app .ra-book {
+  max-width: 1200px;
+  margin: 0 auto 24px;
+  padding: clamp(22px, 3vw, 40px);
+  background: var(--paper);
+  border-radius: 5px 14px 14px 5px;
+  box-shadow:
+    0 6px 0 -1px var(--lb-cover),
+    0 10px 0 -3px #adbbb5,
+    0 22px 35px #3f5c6020;
+  animation: ra-arrive 400ms ease-out both;
+}
+.lb-app .ra-welcome {
+  position: relative;
+  padding-bottom: 24px;
+}
+.lb-app .ra-welcome > .lb-kicker {
+  margin-bottom: 12px;
+}
+.lb-app .ra-welcome h2 {
+  font-size: clamp(32px, 3.7vw, 49px);
+  line-height: 1.12;
+  margin: 0 0 14px;
+}
+.lb-app .ra-intro {
+  font-size: 17px;
+  line-height: 1.6;
+  margin-bottom: 6px;
+}
+.lb-app .ra-permission {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+.lb-app .ra-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.lb-app .ra-choice {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  border: 1px solid #9bb0aa55;
+  border-radius: 4px 13px 13px 4px;
+  box-shadow: 0 3px 0 #b4c2ba77;
+}
+.lb-app .ra-write {
+  background: #dce5e2;
+}
+.lb-app .ra-guided {
+  background: #e0e5db;
+}
+.lb-app .ra-play {
+  background: #e5e1dc;
+}
+.lb-app .ra-choice-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--olive);
+  min-height: 44px;
+}
+.lb-app .ra-choice-heading svg {
+  flex-shrink: 0;
+}
+.lb-app .ra-choice-heading .lb-kicker {
+  font-size: 9px;
+  line-height: 1.6;
+}
+.lb-app .ra-choice h3 {
+  font-size: clamp(25px, 2.4vw, 31px);
+  margin: 12px 0;
+}
+.lb-app .ra-choice > p {
+  line-height: 1.6;
+  margin-bottom: 12px;
+  font-size: 15px;
+}
+.lb-app .ra-choice .ra-end {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+.lb-app .ra-end strong {
+  font-weight: 600;
+}
+.lb-app .ra-choice .ra-next {
+  font-size: 12px;
+}
+.lb-app .ra-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+}
+.lb-app .ra-choice > .lb-primary {
+  align-self: flex-start;
+  margin-top: auto;
+}
+.lb-app .ra-choice .lb-primary {
+  font-size: 13px;
+  min-height: 46px;
+  text-align: left;
+  padding-inline: 12px;
+}
+.lb-app .ra-voice {
+  border: 1px solid #9bb0aa77;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+.lb-app .ra-choice button {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+@media (hover: hover) {
+  .lb-app .ra-choice button:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px #304f5018;
+  }
+}
+.lb-app .ra-choice button:not(:disabled):active {
+  transform: translateY(1px);
+}
+.lb-app .ra-read {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 26px;
+  padding-top: 28px;
+}
+.lb-app .ra-read > .lb-kicker {
+  margin: 0;
+}
+.lb-app .ra-read .lb-text {
+  font-size: 13px;
+  text-align: left;
+}
+.lb-app .ra-read .lb-fine {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+}
+.lb-app .ra-drafts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  padding-top: 24px;
+  margin-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.lb-app .ra-drafts h3 {
+  margin: 4px 0 10px;
+}
+.lb-app .ra-drafts p {
+  font-size: 14px;
+}
+.lb-app .ra-draft-list {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+.lb-app .ra-draft-list button {
+  text-align: left;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px 10px 10px 4px;
+  background: #dce2dd88;
+}
+.lb-app .ra-draft-list button > svg {
+  flex-shrink: 0;
+}
+.lb-app .ra-draft-list button > span {
+  flex: 1;
+  min-width: 0;
+}
+.lb-app .ra-draft-list strong {
+  display: block;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.lb-app .ra-draft-list small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+@keyframes ra-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (min-width: 640px) and (max-width: 900px) {
+  .lb-app .ra-choices {
+    gap: 10px;
+  }
+  .lb-app .ra-choice {
+    padding: 15px;
+  }
+  .lb-app .ra-choice-heading {
+    align-items: flex-start;
+  }
+  .lb-app .ra-choice h3 {
+    font-size: 24px;
+  }
+  .lb-app .ra-choice > p {
+    font-size: 14px;
+  }
+  .lb-app .ra-actions {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 639px) {
+  .lb-app.lb-activities .lb-identity {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .lb-app.lb-activities .lb-header {
+    margin-bottom: 18px;
+  }
+  .lb-app .ra-book {
+    padding: 22px 18px;
+  }
+  .lb-app .ra-welcome > .lb-kicker {
+    font-size: 9px;
+  }
+  .lb-app .ra-welcome h2 {
+    font-size: 30px;
+  }
+  .lb-app .ra-choice > p:not(.ra-end) {
+    display: none;
+  }
+  .lb-app .ra-intro {
+    font-size: 15px;
+  }
+  .lb-app .ra-permission {
+    font-size: 12px;
+  }
+  .lb-app .ra-choices {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .lb-app .ra-choice {
+    padding: 14px;
+  }
+  .lb-app .ra-choice-heading {
+    min-height: 24px;
+  }
+  .lb-app .ra-choice h3 {
+    font-size: 28px;
+    margin-block: 8px;
+  }
+  .lb-app .ra-choice .ra-end {
+    margin-bottom: 14px;
+  }
+  .lb-app .ra-read {
+    display: grid;
+    gap: 8px;
+  }
+  .lb-app .ra-drafts {
+    display: block;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lb-app .ra-book {
+    animation: none;
+  }
+  .lb-app .ra-choice button {
+    transition: none;
+    transform: none !important;
+  }
+}
+
+.lb-app .ra-resume {
+  font-size: 12px;
+  margin-top: 12px;
+  text-align: left;
+}

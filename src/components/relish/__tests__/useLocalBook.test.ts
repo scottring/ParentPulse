@@ -251,3 +251,215 @@ it("removes only the unlocked edition after an exact confirmation", async () => 
   expect(result.current.editions).toHaveLength(1);
   expect(localStorage.getItem(VAULT_KEY)).toBe(original);
 });
+
+it("opens a child's synced edition on a fresh device and preserves offline edits on reopen", async () => {
+  const { createVault, seal } = await import("@/lib/relish/vault");
+  const { emptyBook } = await import("@/lib/relish/model");
+  const { hashSync, readBinding } = await import("@/lib/relish/book-sync");
+  const book = {
+    ...emptyBook("Fictional child"),
+    profile: {
+      kind: "child" as const,
+      ageBand: "9-12" as const,
+      parentLock: { salt: "a".repeat(32), verifier: "b".repeat(64) },
+    },
+  };
+  const encrypted = await createVault(book, "fictional child passphrase");
+  const head = {
+    id: crypto.randomUUID(),
+    label: book.owner,
+    revision: crypto.randomUUID(),
+    updatedAt: Date.now(),
+    manifest: {
+      envelope: {
+        version: 1 as const,
+        salt: encrypted.envelope.salt,
+        iv: encrypted.envelope.iv,
+        iterations: 600000,
+        parts: [],
+      },
+      photos: [],
+      fingerprint: await hashSync(encrypted.envelope),
+    },
+  };
+  const { result } = renderHook(useLocalBook);
+  await act(async () => {
+    await result.current.openSynced(
+      JSON.stringify(encrypted.envelope),
+      "fictional child passphrase",
+      head,
+      "parent-account",
+    );
+  });
+  expect(result.current.book.profile).toEqual(book.profile);
+  expect(readBinding(result.current.editionId)?.uid).toBe("parent-account");
+  const id = result.current.editionId;
+  await act(async () => {
+    await result.current.save((b) => ({
+      ...b,
+      owner: "Offline device edit",
+    }));
+  });
+  act(() => result.current.lock());
+  const remote = await seal(
+    { ...book, owner: "Another device edit" },
+    encrypted.key,
+    encrypted.envelope.salt,
+  );
+  const remoteHead = {
+    ...head,
+    revision: crypto.randomUUID(),
+    manifest: { ...head.manifest, fingerprint: await hashSync(remote) },
+  };
+  await act(async () => {
+    await result.current.openSynced(
+      JSON.stringify(remote),
+      "fictional child passphrase",
+      remoteHead,
+      "parent-account",
+    );
+  });
+  expect(result.current.editionId).toBe(id);
+  expect(result.current.book.owner).toBe("Offline device edit");
+  expect(readBinding(id)?.revision).toBe(head.revision);
+});
+
+it("keeps a complete separate device copy before resolving two divergent versions", async () => {
+  const { seal, unlockVault } = await import("@/lib/relish/vault");
+  const { hashSync, writeBinding } = await import("@/lib/relish/book-sync");
+  const { editionKey, listEditions } = await import("@/lib/relish/editions");
+  const { result } = renderHook(useLocalBook);
+  await act(async () => {
+    await result.current.open(
+      "fictional conflict passphrase",
+      "Fictional adult",
+    );
+  });
+  const initial = await result.current.syncSnapshot();
+  const binding = {
+    uid: "adult-account",
+    remoteId: crypto.randomUUID(),
+    revision: crypto.randomUUID(),
+    fingerprint: await hashSync(initial.envelope),
+  };
+  writeBinding(result.current.editionId, binding);
+  const unlocked = await unlockVault(
+    JSON.stringify(initial.envelope),
+    "fictional conflict passphrase",
+  );
+  const remote = await seal(
+    { ...unlocked.book, owner: "Remote kept words" },
+    unlocked.key,
+    initial.envelope.salt,
+  );
+  const head = {
+    id: binding.remoteId,
+    label: "Fictional adult",
+    revision: crypto.randomUUID(),
+    updatedAt: Date.now(),
+    manifest: {
+      envelope: {
+        version: 1 as const,
+        salt: remote.salt,
+        iv: remote.iv,
+        iterations: 600000,
+        parts: [],
+      },
+      photos: [],
+      fingerprint: await hashSync(remote),
+    },
+  };
+  await act(async () => {
+    await result.current.save((b) => ({
+      ...b,
+      owner: "Device kept words",
+    }));
+  });
+  const local = await result.current.syncSnapshot(),
+    expected = await hashSync(local.envelope);
+  await expect(
+    result.current.receiveSynced(
+      JSON.stringify(remote),
+      head,
+      binding.uid,
+      expected,
+    ),
+  ).rejects.toThrow("Keep both");
+  await expect(
+    result.current.receiveSynced(
+      JSON.stringify(remote),
+      head,
+      binding.uid,
+      expected,
+      true,
+      undefined,
+      () => false,
+    ),
+  ).rejects.toThrow("Finish this activity");
+  expect(result.current.book.owner).toBe("Device kept words");
+  await act(async () => {
+    await result.current.receiveSynced(
+      JSON.stringify(remote),
+      head,
+      binding.uid,
+      expected,
+      true,
+    );
+  });
+  expect(result.current.book.owner).toBe("Remote kept words");
+  const copy = listEditions().find((e) => e.id !== result.current.editionId)!;
+  expect(copy.label).toContain("device copy");
+  expect(
+    (
+      await unlockVault(
+        localStorage.getItem(editionKey(copy.id))!,
+        "fictional conflict passphrase",
+      )
+    ).book.owner,
+  ).toBe("Device kept words");
+  act(() => result.current.lock());
+  await expect(result.current.syncSnapshot()).rejects.toThrow("Unlock");
+});
+
+it("does not open downloaded private writing after a sync operation is cancelled", async () => {
+  const { createVault } = await import("@/lib/relish/vault");
+  const { emptyBook } = await import("@/lib/relish/model");
+  const { hashSync } = await import("@/lib/relish/book-sync");
+  const encrypted = await createVault(
+    emptyBook("Cancelled download"),
+    "fictional cancelled passphrase",
+  );
+  const head = {
+    id: crypto.randomUUID(),
+    label: "Cancelled",
+    revision: crypto.randomUUID(),
+    updatedAt: Date.now(),
+    manifest: {
+      envelope: {
+        version: 1 as const,
+        salt: encrypted.envelope.salt,
+        iv: encrypted.envelope.iv,
+        iterations: 600000,
+        parts: [],
+      },
+      photos: [],
+      fingerprint: await hashSync(encrypted.envelope),
+    },
+  };
+  const { result } = renderHook(useLocalBook);
+  const controller = new AbortController();
+  let task: Promise<void>;
+  await act(async () => {
+    task = result.current.openSynced(
+      JSON.stringify(encrypted.envelope),
+      "fictional cancelled passphrase",
+      head,
+      "adult",
+      controller.signal,
+    );
+    controller.abort();
+    await expect(task).rejects.toThrow();
+  });
+  expect(result.current.mode).toBe("sample");
+  expect(localStorage.length).toBe(0);
+});

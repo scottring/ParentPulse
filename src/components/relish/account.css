@@ -1,0 +1,174 @@
+.lb-account {
+  display: grid;
+  gap: 20px;
+  padding-top: 0.75rem;
+}
+.lb-app .lb-account h2 {
+  font-size: clamp(32px, 5vw, 40px);
+  line-height: 1.08;
+  margin: 0;
+}
+.lb-app .lb-account h3 {
+  font-size: 24px;
+  margin: 0 0 0.7rem;
+}
+.lb-app .lb-account p {
+  line-height: 1.6;
+  margin: 0;
+}
+.lb-account .lb-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.lb-account form,
+.lb-account section {
+  display: grid;
+  gap: 16px;
+}
+.lb-account label:not(.lb-account-check) {
+  display: grid;
+  gap: 0.5rem;
+}
+.lb-account input:not([type="checkbox"]) {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid #667c7c70;
+  border-radius: 0.5rem;
+  padding: 0.8rem;
+  background: #ffffff55;
+  font: inherit;
+}
+.lb-account-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  line-height: 1.5;
+}
+.lb-account-check input {
+  margin-top: 0.3rem;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.lb-account button {
+  min-height: 44px;
+  text-align: left;
+}
+.lb-account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+.lb-account-current {
+  padding: 1.25rem;
+  border: 1px solid #667c7c50;
+  border-radius: 0.8rem;
+  background: #49686a09;
+}
+.lb-account-books {
+  display: grid;
+  gap: 16px;
+}
+.lb-account-books > div {
+  border: 1px solid #667c7c50;
+  border-radius: 0.7rem;
+  padding: 0.8rem 1rem;
+}
+.lb-account-books > div > button:first-child {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  width: 100%;
+}
+.lb-account-books span {
+  flex: 1;
+  font-size: 1.35rem;
+}
+.lb-account-books small {
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 0.4rem;
+}
+.lb-account-conflict {
+  display: grid;
+  gap: 16px;
+  border-top: 1px solid #667c7c50;
+  padding-top: 1rem;
+}
+.lb-gate-account {
+  position: absolute;
+  top: 1.4rem;
+  right: clamp(1rem, 4vw, 3rem);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+}
+.lb-sync-status {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 0.8rem;
+  font-size: 0.8rem;
+  gap: 0.5rem;
+  min-height: 24px;
+}
+.lb-sync-status button {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+@media (max-width: 560px) {
+  .lb-account-current {
+    padding: 1rem;
+  }
+  .lb-app .lb-account h2 {
+    font-size: 32px;
+  }
+  .lb-sync-status {
+    justify-content: flex-start;
+    font-size: 0.73rem;
+    flex-wrap: wrap;
+  }
+  .lb-gate-account {
+    top: 0.5rem;
+  }
+}
+
+.lb-account-host {
+  min-height: 0;
+  background: transparent;
+}
+.lb-app .lb-account label {
+  margin: 0;
+  font-size: 15px;
+}
+.lb-app .lb-account label:not(.lb-account-check) {
+  gap: 8px;
+}
+.lb-app .lb-account .lb-account-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+}
+.lb-app .lb-account input:not([type="checkbox"]) {
+  font-size: 16px;
+  padding: 12px;
+  min-height: 48px;
+}
+.lb-app .lb-account .lb-account-actions {
+  gap: 0 12px;
+  font-size: 13px;
+}
+
+.lb-sync-status {
+  align-items: center;
+}
+@media (max-width: 560px) {
+  .lb-app .lb-tools .lb-account-trigger:not(.lb-account-sample) {
+    display: none;
+  }
+  .lb-sync-status {
+    justify-content: space-between;
+  }
+}

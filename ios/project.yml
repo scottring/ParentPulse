@@ -1,0 +1,55 @@
+name: Relish
+options:
+  bundleIdPrefix: my.relish
+  deploymentTarget:
+    iOS: '27.1'
+settings:
+  base:
+    SWIFT_VERSION: '6.0'
+    SWIFT_STRICT_CONCURRENCY: complete
+    TARGETED_DEVICE_FAMILY: '1,2'
+    CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: '1.0.0'
+    CURRENT_PROJECT_VERSION: '1'
+    RELISH_START_URL: 'https:/$()/app.relish.my/relish/'
+  configs:
+    Debug:
+      RELISH_START_URL: 'http:/$()/127.0.0.1:3210/relish/'
+targets:
+  Relish:
+    type: application
+    platform: iOS
+    sources: [Relish]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: my.relish.book
+        GENERATE_INFOPLIST_FILE: NO
+    info:
+      path: Relish/Info.plist
+      properties:
+        CFBundleDisplayName: Relish
+        RelishStartURL: $(RELISH_START_URL)
+        UILaunchScreen:
+          UIColorName: ''
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+          - UIInterfaceOrientationPortraitUpsideDown
+        NSCameraUsageDescription: Take a photo you choose to keep in your encrypted Relish book.
+        NSMicrophoneUsageDescription: Record a short story. You choose whether to send it for transcription.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    dependencies:
+      - sdk: WebKit.framework
+schemes:
+  Relish:
+    build:
+      targets:
+        Relish: all
+    run:
+      config: Debug
+    archive:
+      config: Release

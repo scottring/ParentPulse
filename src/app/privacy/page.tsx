@@ -12,14 +12,15 @@ export default function PrivacyPage() {
     >
       <Link href="/relish/">← Back to Relish</Link>
       <h1>Your words belong to you.</h1>
-      <p>Relish’s data practices · October 31, 2026</p>
+      <p>Relish’s data practices · November 1, 2026</p>
       <h2>Your private editions</h2>
       <p>
-        Your writing, people, session progress, games and sharing private keys
-        are encrypted in this browser with your edition’s passphrase. Relish’s
-        servers do not receive the complete book or its passphrase. Edition
-        names on the device’s bookshelf and your sound preference are stored
-        without encryption.
+        Your writing, photos, manual suggestions, people, session progress,
+        games and sharing private keys are encrypted in this browser with your
+        edition’s passphrase. Relish’s servers never receive its passphrase or
+        unencrypted complete book. If you enable sync, they store its encrypted
+        contents. Edition names on the device’s bookshelf and your sound
+        preference are stored without encryption.
       </p>
       <p>
         An unlocked book can be read on that device. Device security, browser
@@ -32,23 +33,55 @@ export default function PrivacyPage() {
       <p>
         Online accounts and connected-edition features are intended for adults
         aged 18 and older. Children can keep separate encrypted local editions
-        and take part in family games without an online account. A parent or
-        guardian explicitly chooses an age range: under 6, 6–8, 9–12 or 13–17.
-        It is stored inside the encrypted edition, not sent to Relish’s servers.
-        Relish does not infer or verify anyone’s age. Written prompts and
-        session guidance adapt to the chosen range. Existing writing is not
-        automatically reviewed or filtered by this setting.
+        and take part in family games without an independent online account. A
+        parent may also authorize encrypted sync through their adult account,
+        after entering the child edition’s parent passphrase. The child’s
+        writing and photos remain encrypted, and each edition still requires its
+        own book passphrase. A parent or guardian explicitly chooses an age
+        range: under 6, 6–8, 9–12 or 13–17. It is stored inside the encrypted
+        edition. If a parent enables manual suggestions, the chosen age range
+        accompanies that request so the language can be appropriate. Relish does
+        not infer or verify anyone’s age. Written prompts and session guidance
+        adapt to the chosen range. Existing writing is not automatically
+        reviewed or filtered by this setting.
       </p>
       <p>
-        Children’s editions cannot open AI, online sign-in or online passage
-        sharing. This applies to local AI too. A separate parent passphrase
-        protects age changes and switching to an adult edition. Only a salted
-        verifier is kept inside the encrypted book and its backups; Relish
-        cannot recover that passphrase. These are app controls, not device-wide
-        parental controls or age verification. Someone controlling the browser
-        or able to alter a decrypted backup can bypass local settings. Use a
-        parent-managed device where stronger restrictions are needed. Under 6, a
-        grown-up should read and choose together with the child.
+        Children cannot create independent online accounts or share passages
+        online. General AI chat and local Ollama remain unavailable in
+        children’s editions. Optional voice writing and manual suggestions
+        require a verified adult account, the separate parent passphrase,
+        explicit permission for that visit. Parent-assisted voice uses the
+        standard transcription endpoint. Children’s automatic manual suggestions
+        additionally require verified provider Zero Data Retention. A separate
+        parent passphrase protects age changes and switching to an adult
+        edition. Only a salted verifier is kept inside the encrypted book and
+        its backups; Relish cannot recover that passphrase. These are app
+        controls, not device-wide parental controls or age verification. Someone
+        controlling the browser or able to alter a decrypted backup can bypass
+        local settings. Use a parent-managed device where stronger restrictions
+        are needed. Under 6, a grown-up should read and choose together with the
+        child.
+      </p>
+      <h2>Optional encrypted library sync</h2>
+      <p>
+        Sign in to the same verified adult account on another device to open
+        your synced editions. Sync stores encrypted book contents and photos in
+        Google Cloud Firestore, together with edition names, opaque identifiers,
+        revision metadata, sizes and usage counters. Edition names are visible
+        to that signed-in account; the writing, child age settings, private
+        people tags and sharing keys stay inside the encrypted book. Relish
+        never receives the book passphrase or decryption key. Sync does not
+        authorize sharing with another account or sending any content to AI.
+      </p>
+      <p>
+        Sync is off until you enable it for a book. Changes save on the device
+        first, then sync while the account is signed in. If both devices change
+        a book, Relish asks you to keep a separate device copy before opening
+        the latest synced version. Local-only books remain possible. Removing a
+        synced copy stops it appearing in the library; obsolete encrypted blobs
+        are collected after a grace period when the library is next used.
+        Account deletion removes all synced book contents. Minimal content-free
+        deletion markers prevent late requests from recreating deleted storage.
       </p>
       <h2>Optional connected editions</h2>
       <p>
@@ -71,18 +104,18 @@ export default function PrivacyPage() {
       <p>
         Online account sessions stay in memory and end when you reload, lock
         your book or enter shared play. The private book remains usable without
-        signing in. Restore an encrypted backup to carry an edition and its
-        private sharing key to another device; private books do not
-        automatically synchronize.
+        signing in. Enable encrypted sync to carry an edition and its private
+        sharing key across devices, or restore an exported encrypted backup
+        manually. Each synced edition still needs its book passphrase.
       </p>
       <h2>Optional AI</h2>
       <p>
-        AI receives only the excerpt you review and choose to send. Hosted AI
-        passes it through Relish’s server to OpenAI. Relish does not store the
-        excerpt or response on its server. Requests disable response storage;
-        the provider’s abuse-monitoring retention may still apply. Responses are
-        possibilities for reflection, not a diagnosis or a judgment about
-        another person.
+        The on-demand perspective tool receives only the excerpt you review and
+        choose to send. Hosted AI passes it through Relish’s server to OpenAI.
+        Relish does not store the excerpt or response on its server. Requests
+        disable response storage; the provider’s abuse-monitoring retention may
+        still apply. Responses are possibilities for reflection, not a diagnosis
+        or a judgment about another person.
       </p>
       <p>
         <a
@@ -99,6 +132,41 @@ export default function PrivacyPage() {
       <p>
         When running Relish locally with a verified local Ollama model, the
         selected excerpt can stay on that computer.
+      </p>
+      <h2>Voice, photos and your living manual</h2>
+      <p>
+        Voice writing records only after you start it. You review a take before
+        sending it through Relish to OpenAI for transcription, then review and
+        edit the words before adding them to your page. Audio remains in memory
+        for that visit and is not included in your book or backup. Relish does
+        not persist recordings or transcripts on its server. OpenAI documents no
+        abuse-monitoring or application retention for the audio transcription
+        endpoint under standard API controls. This is distinct from project-wide
+        Zero Data Retention.
+      </p>
+      <p>
+        Photos are resized and re-encoded in your browser to remove embedded
+        metadata, then encrypted on this device. They are not sent to AI. Your
+        encrypted backup includes the photos referenced by your pages and album.
+        Private people tags do not notify anyone or grant access. Only the words
+        and photos you explicitly choose appear in the Family album on this
+        device. Online passage sharing carries selected text only.
+      </p>
+      <p>
+        Automatic manual suggestions are off by default. After an adult connects
+        the guide for a visit, each manual has its own opt-in switch. The
+        personal manual uses up to six recent kept pages, including accepted
+        passages with attribution. The Family manual uses only approved Family
+        album and game passages. Requests include at most 1,800 characters per
+        page; drafts, photos, captions and private people tags are excluded.
+        Suggestions cite their sources and become kept manual entries only when
+        you approve them. Adult automatic analysis uses standard API privacy: no
+        model training by default, response storage disabled, and possible
+        abuse-monitoring retention for up to 30 days. Do not include personal
+        information about children under 13 (or the local age of digital
+        consent) in those automatic reflections. Children’s automatic analysis
+        remains unavailable until provider Zero Data Retention is verified.
+        Analysis stops when you disconnect, lock or enter shared time.
       </p>
       <h2>Family play</h2>
       <p>
@@ -117,14 +185,14 @@ export default function PrivacyPage() {
         Export an encrypted backup from Privacy and settings. Use Connected
         editions to withdraw invitations, leave a family or delete your online
         account. Account deletion removes authentication, membership, sent
-        passages, remaining received delivery packets and individual usage
-        records. It cannot erase recipients’ local copies or hosting providers’
-        operational logs. Remove a local edition separately in Privacy and
-        settings after exporting a backup if desired. Saved local editions and
-        copies kept by other people remain under their control. Relish does not
-        use advertising trackers or load remote fonts in the living-book
-        experience. Hosting and authentication services may retain operational
-        security logs under their own policies.
+        passages, remaining received delivery packets, synced book contents and
+        individual usage records. It cannot erase recipients’ local copies or
+        hosting providers’ operational logs. Remove a local edition separately
+        in Privacy and settings after exporting a backup if desired. Saved local
+        editions and copies kept by other people remain under their control.
+        Relish does not use advertising trackers or load remote fonts in the
+        living-book experience. Hosting and authentication services may retain
+        operational security logs under their own policies.
       </p>
     </main>
   );

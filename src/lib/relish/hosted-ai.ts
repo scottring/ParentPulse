@@ -101,3 +101,43 @@ export async function reserveAI(uid: string, now = Date.now()): Promise<void> {
     });
   });
 }
+
+// Separate voice counters keep recording limits independent of written reflections.
+export async function reserveVoice(
+  uid: string,
+  now = Date.now(),
+): Promise<void> {
+  const { db } = services();
+  const day = Math.floor(now / 86_400_000),
+    minute = Math.floor(now / 60_000);
+  const key = createHash("sha256").update(uid).digest("hex");
+  const globalRef = db.doc("relish_ai_usage/voice-global");
+  const userRef = db.doc(`relish_ai_usage/voice-${key}`);
+  await db.runTransaction(async (tx) => {
+    const [globalSnap, userSnap] = await tx.getAll(globalRef, userRef);
+    const global = globalSnap.data(),
+      user = userSnap.data();
+    const globalCount = global?.day === day ? global.count : 0;
+    const userCount = user?.day === day ? user.count : 0;
+    const minuteCount = user?.minute === minute ? user.minuteCount : 0;
+    if (userCount >= 30 || globalCount >= 300)
+      throw new AIError(
+        "Today’s voice allowance has been used. You can keep writing and adding photos, and speak again tomorrow.",
+        429,
+        Math.ceil(((day + 1) * 86_400_000 - now) / 1000),
+      );
+    if (minuteCount >= 3)
+      throw new AIError(
+        "Please wait a minute before turning another recording into words.",
+        429,
+        60,
+      );
+    tx.set(globalRef, { day, count: globalCount + 1 });
+    tx.set(userRef, {
+      day,
+      count: userCount + 1,
+      minute,
+      minuteCount: minuteCount + 1,
+    });
+  });
+}

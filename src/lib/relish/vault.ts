@@ -1,3 +1,4 @@
+import { BACKUP_BYTES } from "./photos";
 import { isBook, type Book } from "./model";
 export const VAULT_KEY = "relish.encrypted-book.v1";
 const ITERATIONS = 600_000;
@@ -13,7 +14,7 @@ const encode = (bytes: Uint8Array) =>
 const decode = (text: string) =>
   Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
 export function parseEnvelope(raw: string): Envelope {
-  if (raw.length > 12_000_000) throw new Error("This backup is too large.");
+  if (raw.length > BACKUP_BYTES) throw new Error("This backup is too large.");
   const e = JSON.parse(raw) as Envelope;
   if (
     e.version !== 1 ||
@@ -21,11 +22,18 @@ export function parseEnvelope(raw: string): Envelope {
     typeof e.salt !== "string" ||
     typeof e.iv !== "string" ||
     typeof e.ciphertext !== "string" ||
+    e.ciphertext.length > 12_000_000 ||
     decode(e.salt).length !== 16 ||
     decode(e.iv).length !== 12
   )
     throw new Error("This is not a supported Relish backup.");
-  return e;
+  return {
+    version: 1,
+    salt: e.salt,
+    iv: e.iv,
+    ciphertext: e.ciphertext,
+    iterations: e.iterations,
+  };
 }
 export async function deriveKey(
   passphrase: string,
@@ -81,6 +89,12 @@ export async function createVault(book: Book, passphrase: string) {
 export async function unlockVault(raw: string, passphrase: string) {
   const envelope = parseEnvelope(raw);
   const key = await deriveKey(passphrase, decode(envelope.salt));
+  return { key, envelope, book: await decryptVault(envelope, key) };
+}
+export async function decryptVault(
+  envelope: Envelope,
+  key: CryptoKey,
+): Promise<Book> {
   let decrypted: ArrayBuffer;
   try {
     decrypted = await crypto.subtle.decrypt(
@@ -96,5 +110,5 @@ export async function unlockVault(raw: string, passphrase: string) {
   const book: unknown = JSON.parse(new TextDecoder().decode(decrypted));
   if (!isBook(book))
     throw new Error("The contents of this backup could not be read.");
-  return { key, envelope, book };
+  return book;
 }

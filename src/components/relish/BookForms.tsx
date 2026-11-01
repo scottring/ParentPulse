@@ -97,7 +97,7 @@ export function VaultForm({
       <p>
         {locked
           ? "Unlock your book to pick up where you left off."
-          : "Your relationships belong to you. Your book is encrypted and kept in this browser, on this computer."}
+          : "Your book starts encrypted on this device. You can enable encrypted sync from Account to use it on your other devices."}
       </p>
       {!locked && !restoring && (
         <label>
@@ -178,8 +178,8 @@ export function VaultForm({
             onChange={async (e) => {
               const file = e.target.files?.[0];
               if (!file) return;
-              if (file.size > 12_000_000) {
-                setFileError("Choose a Relish backup smaller than 12 MB.");
+              if (file.size > 120_000_000) {
+                setFileError("Choose a Relish backup smaller than 120 MB.");
                 return;
               }
               setRaw(await file.text());

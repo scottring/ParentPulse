@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
+  ArrowRight,
+  Share2,
   ArrowUpRight,
   Check,
   Feather,
@@ -13,6 +15,11 @@ import {
   Sparkles,
   Sun,
 } from "lucide-react";
+import { bookPages } from "@/lib/relish/pages";
+import type { PhotoAccess } from "@/lib/relish/photos";
+import { PhotoGallery, PhotoPicker } from "./Photos";
+import PassagePicker from "./PassagePicker";
+import VoiceWriter from "./VoiceWriter";
 import type { Book } from "@/lib/relish/model";
 import {
   journalStyles,
@@ -37,7 +44,13 @@ const dateLabel = (date: string) =>
 const pageTitle = (entry: JournalDraft) =>
   entry.title.trim() || "A little untitled something";
 const signature = (entry: JournalDraft) =>
-  JSON.stringify([entry.title, entry.text, entry.style]);
+  JSON.stringify([
+    entry.title,
+    entry.text,
+    entry.style,
+    entry.photos,
+    entry.people,
+  ]);
 const styleIcons = { sky: Sun, moss: Leaf, blush: Heart };
 
 export default function Journal({
@@ -46,24 +59,49 @@ export default function Journal({
   sample,
   onEditingChange,
   onDone,
+  onActivities,
+  photos,
+  onOffer,
+  onNotice,
+  onChapter,
+  onManual,
+  pendingInsights = 0,
+  onAlbum,
+  initialDraft,
+  initialVoice = false,
 }: {
   book: Book;
   save: Save;
   sample: boolean;
   onEditingChange: (editing: boolean) => void;
   onDone: () => void;
+  onActivities?: () => void;
+  photos?: PhotoAccess;
+  onOffer?: (passage: { title: string; text: string }) => void;
+  onNotice?: () => void;
+  onChapter?: (chapter: "people" | "practice") => void;
+  onManual?: () => void;
+  pendingInsights?: number;
+  onAlbum?: () => void;
+  initialDraft?: JournalDraft;
+  initialVoice?: boolean;
 }) {
-  const [editor, setEditor] = useState<JournalDraft | null>(null);
+  const [editor, setEditor] = useState<JournalDraft | null>(
+    initialDraft || null,
+  );
   const [reading, setReading] = useState<string | null>(null);
   const [celebrate, setCelebrate] = useState(false);
   const [query, setQuery] = useState("");
+  const [excerpt, setExcerpt] = useState<string | null>(null);
+  const prose = useRef<HTMLElement>(null);
   const sensory = useSensory();
   const top = useRef<HTMLHeadingElement>(null);
-  const entries = (book.journal || []).toSorted((a, b) =>
-    b.updatedAt.localeCompare(a.updatedAt),
-  );
+  const entries = bookPages(book);
+  const drafts = (book.journal || []).filter((e) => e.status === "draft");
   const page = entries.find((e) => e.id === reading);
-  const editingEntry = entries.find((e) => e.id === editor?.id);
+  const pageIndex = entries.findIndex((e) => e.id === reading);
+  const nextPage = entries[pageIndex + 1];
+  const editingEntry = book.journal?.find((e) => e.id === editor?.id);
   useEffect(() => {
     top.current?.focus({ preventScroll: true });
   }, [reading, editor?.id]);
@@ -77,6 +115,7 @@ export default function Journal({
     onEditingChange(false);
     setEditor(null);
     setReading(null);
+    onActivities?.();
   }
   if (editor)
     return (
@@ -84,14 +123,17 @@ export default function Journal({
         <JournalEditor
           key={editor.id}
           initial={editor}
+          initialVoice={initialVoice && editor.id === initialDraft?.id}
           initialEntry={editingEntry}
           save={save}
           sample={sample}
+          book={book}
+          photos={photos}
           onPause={leaveEditor}
           onKeep={(entry) => {
             onEditingChange(false);
             setEditor(null);
-            setReading(entry.id);
+            setReading(`journal:${entry.id}`);
             setCelebrate(true);
             sensory.play("place");
           }}
@@ -127,26 +169,174 @@ export default function Journal({
             </div>
           </div>
         )}
-        <article className="rj-paper">
-          <div className="rj-paper-date">
-            <span>{dateLabel(page.createdAt)}</span>
-            <StyleMark style={page.style} />
-          </div>
-          <h2 ref={top} tabIndex={-1}>
-            {pageTitle(page)}
-          </h2>
-          <div className="rj-prose">{page.text}</div>
-          <div className="rj-paper-footer">
-            <span>{journalStyles[page.style].note}</span>
-            <button className="lb-text" onClick={() => edit(page)}>
-              <Feather size={16} /> Edit this page
-            </button>
-          </div>
-        </article>
+        <div className="rd-reading-spread">
+          <article
+            className="rj-paper rj-sequence-paper"
+            ref={prose}
+            key={page.id}
+          >
+            <div className="rj-paper-date">
+              <span>{dateLabel(page.date)}</span>
+              <StyleMark style={page.style} />
+            </div>
+            <h2 ref={top} tabIndex={-1}>
+              {page.title}
+            </h2>
+            <p className="lb-kicker">
+              {page.kind}
+              {page.from ? ` · From ${page.from}` : ""}
+            </p>
+            <div className="rj-prose">{page.text}</div>
+            <PhotoGallery photos={page.photos} access={photos} />
+            {page.sections.map((section) => (
+              <section className="rj-page-section" key={section.label}>
+                <p className="lb-kicker">{section.label}</p>
+                <p>{section.text}</p>
+              </section>
+            ))}
+            {page.people.length > 0 && (
+              <p className="rj-private">
+                Thinking of{" "}
+                {page.people
+                  .map((id) => book.people.find((p) => p.id === id)?.name)
+                  .filter(Boolean)
+                  .join(", ")}{" "}
+                · private tags
+              </p>
+            )}
+            <div className="rj-paper-footer">
+              <span>{journalStyles[page.style].note}</span>
+              <div className="rj-capture-actions">
+                {page.journalId && (
+                  <button
+                    className="lb-text"
+                    onClick={() =>
+                      edit(book.journal!.find((e) => e.id === page.journalId)!)
+                    }
+                  >
+                    <Feather size={16} /> Edit this page
+                  </button>
+                )}
+                <button
+                  className="lb-text"
+                  onClick={() => {
+                    const selection = window.getSelection();
+                    const within =
+                      !!selection?.anchorNode &&
+                      !!selection.focusNode &&
+                      prose.current?.contains(selection.anchorNode) &&
+                      prose.current?.contains(selection.focusNode);
+                    setExcerpt(within ? selection!.toString() : "");
+                  }}
+                >
+                  <Share2 size={16} /> Choose a passage
+                </button>
+              </div>
+            </div>
+          </article>
+          <aside
+            className="rj-paper rd-next-page"
+            aria-label="The following page"
+          >
+            {nextPage ? (
+              <>
+                <p className="lb-kicker">The next page in your story</p>
+                <h2>{nextPage.title}</h2>
+                <p className="lb-kicker">
+                  {dateLabel(nextPage.date)} · {nextPage.kind}
+                </p>
+                <div className="rj-prose">{nextPage.text}</div>
+                <PhotoGallery photos={nextPage.photos} access={photos} />
+                {nextPage.sections.map((section) => (
+                  <section className="rj-page-section" key={section.label}>
+                    <p className="lb-kicker">{section.label}</p>
+                    <p>{section.text}</p>
+                  </section>
+                ))}
+                <button
+                  className="lb-text"
+                  onClick={() => {
+                    setReading(nextPage.id);
+                    setCelebrate(false);
+                    sensory.play("touch");
+                  }}
+                >
+                  Open this page <ArrowRight size={16} />
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="lb-kicker">Room for what comes next</p>
+                <div className="rd-mountain" aria-hidden="true" />
+                <h2>
+                  Your story
+                  <br />
+                  <em>keeps unfolding.</em>
+                </h2>
+                <p>You’re up to date. Leave a little room for tomorrow.</p>
+                <button
+                  className="lb-text"
+                  onClick={() => edit(newJournalDraft())}
+                >
+                  Start another page <Plus size={16} />
+                </button>
+              </>
+            )}
+          </aside>
+        </div>
+        <nav className="rj-sequence" aria-label="Pages in order">
+          <button
+            className="lb-secondary"
+            disabled={pageIndex === 0}
+            onClick={() => {
+              setReading(entries[pageIndex - 1].id);
+              setCelebrate(false);
+              sensory.play("touch");
+            }}
+          >
+            <ArrowLeft size={18} /> Previous page
+          </button>
+          <span>
+            Page {pageIndex + 1} of {entries.length}
+          </span>
+          <button
+            className="lb-secondary"
+            disabled={pageIndex === entries.length - 1}
+            onClick={() => {
+              setReading(entries[pageIndex + 1].id);
+              setCelebrate(false);
+              sensory.play("touch");
+            }}
+          >
+            Next page <ArrowRight size={18} />
+          </button>
+        </nav>
+        {excerpt !== null && (
+          <PassagePicker
+            page={page}
+            selected={excerpt}
+            save={save}
+            photos={photos}
+            onOffer={
+              onOffer
+                ? (passage) => {
+                    setExcerpt(null);
+                    onOffer(passage);
+                  }
+                : undefined
+            }
+            onClose={() => setExcerpt(null)}
+          />
+        )}
         <div className="rj-finish-actions">
           <button className="lb-primary" onClick={onDone}>
             Done for now <Check size={17} />
           </button>
+          {onActivities && (
+            <button className="lb-text" onClick={onActivities}>
+              Choose another activity <ArrowRight size={16} />
+            </button>
+          )}
           <button className="lb-text" onClick={() => edit(newJournalDraft())}>
             One more page <Plus size={16} />
           </button>
@@ -154,7 +344,7 @@ export default function Journal({
       </main>
     );
   const matching = entries.filter((e) =>
-    `${e.title}\n${e.text}`
+    `${e.title}\n${e.text}\n${e.people.map((id) => book.people.find((p) => p.id === id)?.name || "").join(" ")}`
       .toLocaleLowerCase()
       .includes(query.toLocaleLowerCase()),
   );
@@ -162,15 +352,16 @@ export default function Journal({
     <main className="rj-workspace">
       <header className="rj-welcome">
         <div>
-          <p className="lb-kicker">Your journal · entirely your own</p>
+          <p className="lb-kicker">One book · your unfolding story</p>
           <h2 ref={top} tabIndex={-1}>
             Oh, the things
             <br />
             <em>you could write.</em>
           </h2>
           <p>
-            Big feelings. Tiny triumphs. A completely made-up story.
-            <br className="rj-desktop-break" /> There’s room for all of it here.
+            Big feelings. Tiny triumphs. The moments you noticed.
+            <br className="rj-desktop-break" /> All finding their place in the
+            same story.
           </p>
           <button
             className="rj-new-page"
@@ -182,7 +373,7 @@ export default function Journal({
             <Lock size={14} />{" "}
             {sample
               ? "Sample pages disappear when you reload."
-              : "Encrypted in your book, on this device."}
+              : "Encrypted in your private book."}
           </p>
         </div>
         <div className="rj-paper-stack" aria-hidden="true">
@@ -200,8 +391,50 @@ export default function Journal({
           </div>
         </div>
       </header>
+      <div className="rj-capture-actions rj-browse-links">
+        {onManual && (
+          <button className="lb-text" onClick={onManual}>
+            <Sparkles size={16} /> My living manual
+            {pendingInsights ? ` · ${pendingInsights} to consider` : ""}
+          </button>
+        )}
+        {onAlbum && (
+          <button className="lb-text" onClick={onAlbum}>
+            Our Family album
+          </button>
+        )}
+        {onNotice && (
+          <button className="lb-text" onClick={onNotice}>
+            Notice a moment <Feather size={16} />
+          </button>
+        )}
+        {onChapter && (
+          <>
+            <button className="lb-text" onClick={() => onChapter("people")}>
+              The people in my life
+            </button>
+            <button className="lb-text" onClick={() => onChapter("practice")}>
+              My little practices
+            </button>
+          </>
+        )}
+      </div>
+      {drafts.length > 0 && (
+        <section className="rj-drafts" aria-label="Pages in progress">
+          <p className="lb-kicker">A few beginnings, waiting for you</p>
+          {drafts.map((draft) => (
+            <button
+              className="lb-secondary"
+              key={draft.id}
+              onClick={() => edit(draft)}
+            >
+              Keep writing: {pageTitle(draft)} <Feather size={16} />
+            </button>
+          ))}
+        </section>
+      )}
       {entries.length > 0 ? (
-        <section className="rj-saved-pages" aria-label="Your journal pages">
+        <section className="rj-saved-pages" aria-label="Your pages in order">
           <div className="rj-list-heading">
             <h3>
               Your pages <span>{entries.length}</span>
@@ -209,7 +442,7 @@ export default function Journal({
             <label className="rj-search">
               <Search size={17} />
               <input
-                aria-label="Find a journal page"
+                aria-label="Find a page"
                 placeholder="Find a page…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -222,28 +455,21 @@ export default function Journal({
                 className={`rj-page-card rj-${entry.style}`}
                 key={entry.id}
                 onClick={() => {
-                  if (entry.status === "draft") edit(entry);
-                  else {
-                    setReading(entry.id);
-                    setCelebrate(false);
-                    sensory.play("touch");
-                  }
+                  setReading(entry.id);
+                  setCelebrate(false);
+                  sensory.play("touch");
                 }}
               >
                 <span className="rj-card-meta">
-                  <span>
-                    {entry.status === "draft"
-                      ? "A page in progress"
-                      : dateLabel(entry.createdAt)}
-                  </span>
+                  <span>{dateLabel(entry.date)}</span>
                   <StyleMark style={entry.style} />
                 </span>
-                <strong>{pageTitle(entry)}</strong>
+                <strong>{entry.title}</strong>
                 <span className="rj-card-excerpt">
-                  {entry.text || "A beginning, waiting for you."}
+                  {entry.text || "A moment, held in a photo."}
                 </span>
                 <span className="rj-card-open">
-                  {entry.status === "draft" ? "Keep writing" : "Open this page"}
+                  {entry.kind}
                   <ArrowUpRight size={18} />
                 </span>
               </button>
@@ -280,15 +506,23 @@ export function JournalEditor({
   sample,
   onPause,
   onKeep,
+  book,
+  photos,
+  initialVoice = false,
 }: {
   initial: JournalDraft;
+  initialVoice?: boolean;
   initialEntry?: JournalEntry;
   save: Save;
   sample: boolean;
   onPause: () => void;
   onKeep: (entry: JournalEntry) => void;
+  book?: Book;
+  photos?: PhotoAccess;
 }) {
   const [draft, setDraft] = useState<JournalDraft>(initial);
+  const [mediaBusy, setMediaBusy] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(initialVoice);
   const [saved, setSaved] = useState(signature(initial));
   const [pending, setPending] = useState(0);
   const [hasSaved, setHasSaved] = useState(!!initialEntry);
@@ -377,13 +611,13 @@ export function JournalEditor({
     };
   }, [draft, dirty, saved, error]);
   useEffect(() => {
-    if (!dirty && pending === 0) return;
+    if (!dirty && pending === 0 && !mediaBusy && !voiceOpen) return;
     const warn = (e: BeforeUnloadEvent) => {
       e.preventDefault();
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty, pending]);
+  }, [dirty, pending, mediaBusy, voiceOpen]);
   async function finish(keep: boolean) {
     if (finalizing.current) return;
     finalizing.current = true;
@@ -405,6 +639,11 @@ export function JournalEditor({
       if (alive.current) setFinishing(false);
     }
   }
+  const previous = book
+    ? bookPages(book)
+        .filter((p) => p.journalId !== draft.id)
+        .at(-1)
+    : undefined;
   return (
     <div className={`rj-writing rj-${draft.style}`}>
       <div className="rj-writing-intro">
@@ -422,109 +661,217 @@ export function JournalEditor({
           Start anywhere. Stop when it feels like enough.
         </p>
       </div>
-      <section className="rj-paper" aria-label="Journal editor">
-        <div className="rj-paper-date">
-          <span>{dateLabel(draft.createdAt)}</span>
-          <StyleMark style={draft.style} />
-        </div>
-        <fieldset className="rj-style-picker" disabled={finishing}>
-          <legend>Pick a little atmosphere</legend>
-          <div>
-            {(Object.keys(journalStyles) as JournalStyle[]).map((style) => (
-              <button
-                key={style}
-                type="button"
-                className={`rj-style rj-${style}`}
-                aria-pressed={draft.style === style}
-                onClick={() => {
-                  change({ style });
-                  sensory.play("touch");
-                }}
-              >
-                <StyleMark style={style} /> {journalStyles[style].label}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-        <label className="rj-title-label">
-          Title <span>if you feel like it</span>
-          <input
-            aria-label="Page title (optional)"
-            maxLength={JOURNAL_TITLE_LIMIT}
-            value={draft.title}
-            disabled={finishing}
-            onChange={(e) => change({ title: e.target.value })}
-            placeholder="A little untitled something…"
-          />
-        </label>
-        <label className="rj-writing-label">
-          <span className="rj-sr-only">Your journal entry</span>
-          <textarea
-            aria-label="Your journal entry"
-            autoFocus
-            value={draft.text}
-            maxLength={JOURNAL_TEXT_LIMIT}
-            disabled={finishing}
-            onChange={(e) => change({ text: e.target.value })}
-            placeholder="Start anywhere…"
-            rows={9}
-          />
-        </label>
-        <div className="rj-save-state" role="status" aria-live="polite">
-          {pending > 0
-            ? "Keeping your words…"
-            : error
-              ? "Not saved yet"
-              : dirty
-                ? "A few words in motion…"
-                : hasSaved
-                  ? sample
-                    ? "Kept in this sample for this visit."
-                    : "Saved in your encrypted book."
-                  : "Just you and a fresh page."}
-        </div>
-        {draft.text.length >= JOURNAL_TEXT_LIMIT - 500 && (
-          <p className="lb-fine">
-            {JOURNAL_TEXT_LIMIT - draft.text.length} characters left on this
-            page. You can start another.
+      {book && (
+        <VoiceWriter
+          book={book}
+          sample={sample}
+          open={voiceOpen}
+          onClose={() => setVoiceOpen(false)}
+          remaining={JOURNAL_TEXT_LIMIT - draft.text.length}
+          onInsert={(text) => {
+            change({
+              text: `${current.current.text}${current.current.text.trim() ? "\n\n" : ""}${text}`.slice(
+                0,
+                JOURNAL_TEXT_LIMIT,
+              ),
+            });
+            setVoiceOpen(false);
+          }}
+        />
+      )}
+      <div className="rd-writing-spread">
+        <aside
+          className="rj-paper rd-writing-context"
+          aria-label="Your story so far"
+        >
+          <p className="lb-kicker">
+            {book?.owner || "Your"} · the story so far
           </p>
-        )}
-        {error && (
-          <div className="rj-save-error" role="alert">
-            <p>{error}</p>
+          {previous ? (
+            <>
+              <p className="rd-context-date">{dateLabel(previous.date)}</p>
+              <h2>{previous.title}</h2>
+              <div className="rj-prose rd-context-prose">{previous.text}</div>
+              <PhotoGallery photos={previous.photos} access={photos} />
+              <p className="rd-context-foot">
+                And now, a little room for today.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="rd-mountain" aria-hidden="true" />
+              <h2>
+                Every story
+                <br />
+                starts somewhere.
+              </h2>
+              <p>This page is yours. A single sentence counts.</p>
+            </>
+          )}
+        </aside>
+        <section
+          className="rj-paper rd-editor-page"
+          aria-label="Journal editor"
+        >
+          <div className="rj-paper-date">
+            <span>{dateLabel(draft.createdAt)}</span>
+            <StyleMark style={draft.style} />
+          </div>
+          {book && (
             <button
-              className="lb-secondary"
-              disabled={finishing || pending > 0}
-              onClick={() => void persist(current.current).catch(() => {})}
+              className="rj-voice-launch"
+              disabled={finishing || mediaBusy}
+              onClick={() => setVoiceOpen(true)}
             >
-              Try saving again
+              Tell your story <span>Speak it. Read it. Make it yours.</span>
+            </button>
+          )}
+          <label className="rj-writing-label">
+            <span className="rj-sr-only">Your journal entry</span>
+            <textarea
+              aria-label="Your journal entry"
+              value={draft.text}
+              maxLength={JOURNAL_TEXT_LIMIT}
+              disabled={finishing}
+              onChange={(e) => change({ text: e.target.value })}
+              placeholder="Start anywhere…"
+              rows={5}
+            />
+          </label>
+          <div className="rj-save-state" role="status" aria-live="polite">
+            {pending > 0
+              ? "Keeping your words…"
+              : error
+                ? "Not saved yet"
+                : dirty
+                  ? "A few words in motion…"
+                  : hasSaved
+                    ? sample
+                      ? "Kept in this sample for this visit."
+                      : "Saved in your encrypted book."
+                    : "Just you and a fresh page."}
+          </div>
+          {draft.text.length >= JOURNAL_TEXT_LIMIT - 500 && (
+            <p className="lb-fine">
+              {JOURNAL_TEXT_LIMIT - draft.text.length} characters left on this
+              page. You can start another.
+            </p>
+          )}
+          {error && (
+            <div className="rj-save-error" role="alert">
+              <p>{error}</p>
+              <button
+                className="lb-secondary"
+                disabled={finishing || pending > 0}
+                onClick={() => void persist(current.current).catch(() => {})}
+              >
+                Try saving again
+              </button>
+            </div>
+          )}
+          <div className="rj-writing-actions">
+            <button
+              className="rj-keep"
+              disabled={
+                finishing ||
+                mediaBusy ||
+                voiceOpen ||
+                (!draft.text.trim() && !draft.photos?.length)
+              }
+              onClick={() => void finish(true)}
+            >
+              {finishing ? "Keeping…" : "Keep this page"}
+              <Check size={20} />
+            </button>
+            <button
+              className="lb-text"
+              disabled={finishing || mediaBusy || voiceOpen}
+              onClick={() => void finish(false)}
+            >
+              Save for later
             </button>
           </div>
-        )}
-        <div className="rj-writing-actions">
-          <button
-            className="rj-keep"
-            disabled={finishing || !draft.text.trim()}
-            onClick={() => void finish(true)}
-          >
-            {finishing ? "Keeping…" : "Keep this page"}
-            <Check size={20} />
-          </button>
-          <button
-            className="lb-text"
-            disabled={finishing}
-            onClick={() => void finish(false)}
-          >
-            Save for later
-          </button>
-        </div>
-        <p className="rj-private">
-          <Lock size={14} />
-          {sample
-            ? "Fictional sample · changes last until reload"
-            : "Private to this edition. Saved on this device."}
-        </p>
-      </section>
+          {photos && (
+            <PhotoPicker
+              photos={draft.photos || []}
+              access={photos}
+              disabled={finishing}
+              onBusy={setMediaBusy}
+              onChange={(photos) => change({ photos })}
+            />
+          )}
+          <details className="rd-page-details">
+            <summary>Give it a title & a little color</summary>
+            <fieldset className="rj-style-picker" disabled={finishing}>
+              <legend>Pick a little atmosphere</legend>
+              <div>
+                {(Object.keys(journalStyles) as JournalStyle[]).map((style) => (
+                  <button
+                    key={style}
+                    type="button"
+                    className={`rj-style rj-${style}`}
+                    aria-pressed={draft.style === style}
+                    onClick={() => {
+                      change({ style });
+                      sensory.play("touch");
+                    }}
+                  >
+                    <StyleMark style={style} /> {journalStyles[style].label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <label className="rj-title-label">
+              Title <span>if you feel like it</span>
+              <input
+                aria-label="Page title (optional)"
+                maxLength={JOURNAL_TITLE_LIMIT}
+                value={draft.title}
+                disabled={finishing}
+                onChange={(e) => change({ title: e.target.value })}
+                placeholder="A little untitled something…"
+              />
+            </label>
+          </details>
+          {!!book?.people.length && (
+            <fieldset
+              className="rj-people-tags"
+              disabled={finishing || mediaBusy}
+            >
+              <legend>
+                Who’s in this moment?{" "}
+                <span>Private tags · nobody is notified</span>
+              </legend>
+              <div>
+                {book.people.map((person) => (
+                  <label key={person.id}>
+                    <input
+                      type="checkbox"
+                      checked={draft.people?.includes(person.id) || false}
+                      onChange={(e) =>
+                        change({
+                          people: e.target.checked
+                            ? [...(current.current.people || []), person.id]
+                            : (current.current.people || []).filter(
+                                (id) => id !== person.id,
+                              ),
+                        })
+                      }
+                    />
+                    {person.name}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          )}
+          <p className="rj-private">
+            <Lock size={14} />
+            {sample
+              ? "Fictional sample · changes last until reload"
+              : "Private to this edition. Encrypted when saved."}
+          </p>
+        </section>
+      </div>
     </div>
   );
 }
