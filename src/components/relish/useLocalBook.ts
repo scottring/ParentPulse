@@ -455,6 +455,7 @@ export function useLocalBook() {
     expected: string,
     preserve = false,
     signal?: AbortSignal,
+    canApply: () => boolean = () => true,
   ) => {
     const token = epoch.current,
       id = selected.current,
@@ -466,6 +467,8 @@ export function useLocalBook() {
     signal?.throwIfAborted();
     await withVaultWrite(async () => {
       signal?.throwIfAborted();
+      if (!canApply())
+        throw new Error("Finish this activity before bringing in new pages.");
       const current = envelope.current;
       if (
         token !== epoch.current ||
@@ -489,12 +492,16 @@ export function useLocalBook() {
           copyId,
         );
         signal?.throwIfAborted();
+        if (!canApply())
+          throw new Error("Finish this activity before bringing in new pages.");
         if (token !== epoch.current) throw new Error("This book was locked.");
         localStorage.setItem(editionKey(copyId), JSON.stringify(current));
         labelEdition(copyId, `${currentBook.current.owner} — device copy`);
       }
       await restorePhotos(raw, next, activeKey, id);
       signal?.throwIfAborted();
+      if (!canApply())
+        throw new Error("Finish this activity before bringing in new pages.");
       if (token !== epoch.current) throw new Error("This book was locked.");
       localStorage.setItem(editionKey(id), JSON.stringify(encrypted));
       envelope.current = encrypted;

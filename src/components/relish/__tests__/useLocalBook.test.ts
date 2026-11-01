@@ -385,6 +385,18 @@ it("keeps a complete separate device copy before resolving two divergent version
       expected,
     ),
   ).rejects.toThrow("Keep both");
+  await expect(
+    result.current.receiveSynced(
+      JSON.stringify(remote),
+      head,
+      binding.uid,
+      expected,
+      true,
+      undefined,
+      () => false,
+    ),
+  ).rejects.toThrow("Finish this activity");
+  expect(result.current.book.owner).toBe("Device kept words");
   await act(async () => {
     await result.current.receiveSynced(
       JSON.stringify(remote),

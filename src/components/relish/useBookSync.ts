@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { User } from "firebase/auth";
+import { editionKey } from "@/lib/relish/editions";
 import { currentAIUser } from "@/lib/relish/ai-auth";
 import {
   readBinding,
@@ -115,13 +116,20 @@ export function useBookSync(vault: Vault) {
         throw new Error("The book changed. Reopen Account.");
     };
     valid();
+    const markSaved = () =>
+      setStatus(
+        localStorage.getItem(editionKey(v.editionId)) ===
+          JSON.stringify(snapshot.envelope)
+          ? "Synced"
+          : "Saved here · changes waiting to sync",
+      );
     if (head?.manifest.fingerprint === fingerprint) {
       writeBinding(v.editionId, {
         ...binding,
         revision: head.revision,
         fingerprint,
       });
-      setStatus("Synced");
+      markSaved();
       setConflict(false);
       return;
     }
@@ -146,13 +154,21 @@ export function useBookSync(vault: Vault) {
         setStatus("New pages ready · finish this activity");
         return;
       }
-      await v.receiveSynced(raw, head, user.uid, fingerprint, false, signal);
+      await v.receiveSynced(
+        raw,
+        head,
+        user.uid,
+        fingerprint,
+        false,
+        signal,
+        () => !paused.current && !latest.current.busy,
+      );
       setStatus("Synced");
       setConflict(false);
       return;
     }
     if (fingerprint === binding.fingerprint) {
-      setStatus("Synced");
+      markSaved();
       return;
     }
     setStatus("Saving encrypted copy…");
@@ -175,7 +191,7 @@ export function useBookSync(vault: Vault) {
       saved,
     ]);
     setConflict(false);
-    setStatus("Synced");
+    markSaved();
   }
   const syncNow = () => exclusive(run);
   // Poll while open and also on online/focus. Editor drafts are never replaced.
