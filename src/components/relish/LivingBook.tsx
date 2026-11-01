@@ -10,6 +10,8 @@ import {
   Download,
   Feather,
   Lock,
+  Compass,
+  CircleHelp,
   Plus,
   Settings2,
   Sparkles,
@@ -43,6 +45,7 @@ import { Dialog, EditPerson, PersonForm, VaultForm } from "./BookForms";
 import { SoundControl, SoundSettings, useSensory } from "./Sensory";
 import VisitEditor from "./VisitEditor";
 import Journal from "./Journal";
+import Activities from "./Activities";
 import { newJournalDraft, type JournalDraft } from "@/lib/relish/journal";
 import "./duo.css";
 import Manual, { ManualCardView, useManualGuide } from "./Manual";
@@ -55,6 +58,7 @@ import { guidanceFor } from "@/lib/relish/guidance";
 import { canUseOnline, ageLabels, audienceOf } from "@/lib/relish/profiles";
 
 type View =
+  | "activities"
   | "bookmark"
   | "manual"
   | "session"
@@ -93,7 +97,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
     draft: JournalDraft;
     voice: boolean;
   } | null>(null);
-  const [view, setView] = useState<View>("bookmark"),
+  const [view, setView] = useState<View>("activities"),
     [closed, setClosed] = useState(false),
     [modal, setModal] = useState<Modal>(null),
     [editing, setEditing] = useState<Person | null>(null),
@@ -120,6 +124,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
       firstPage.current = false;
       return;
     }
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     heading.current?.focus({ preventScroll: true });
   }, [view, pageKey]);
   function navigate(next: View) {
@@ -175,7 +180,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
     if (!v) return;
     void commit(
       (b) => pauseVisit(updateDraft(b, v.id, draft)),
-      () => navigate("bookmark"),
+      () => navigate("activities"),
       "Your place is kept.",
     );
   }
@@ -195,7 +200,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
   function leaveShared() {
     if (sample) {
       setShared(false);
-      navigate("bookmark");
+      navigate("activities");
     } else vault.lock();
   }
   function gameAction(action: GameAction) {
@@ -254,19 +259,21 @@ export default function LivingBook({ vault }: { vault: Vault }) {
     ? sharedView
       ? "Our Family pages"
       : personalTitle
-    : view === "manual"
-      ? "Your living manual"
-      : view === "words"
-        ? "Your pages"
-        : view === "play"
-          ? "Together at the table"
-          : sharedView
-            ? "Our Family pages"
-            : view === "bookmark"
-              ? "My bookmark"
-              : sessionOpen
-                ? "This small visit"
-                : chapters.find((c) => c.id === view)?.label || "Your book";
+    : view === "activities"
+      ? "Activities"
+      : view === "manual"
+        ? "Your living manual"
+        : view === "words"
+          ? "Your pages"
+          : view === "play"
+            ? "Together at the table"
+            : sharedView
+              ? "Our Family pages"
+              : view === "bookmark"
+                ? "My bookmark"
+                : sessionOpen
+                  ? "This small visit"
+                  : chapters.find((c) => c.id === view)?.label || "Your book";
   let right: ReactNode = null,
     left: ReactNode;
   left = (
@@ -343,8 +350,12 @@ export default function LivingBook({ vault }: { vault: Vault }) {
             Close the book for now <BookOpen size={16} />
           </button>
           <div className="lb-actions">
-            <button className="lb-text" disabled={busy} onClick={() => start()}>
-              I’d like another small session
+            <button
+              className="lb-text"
+              disabled={busy}
+              onClick={() => navigate("activities")}
+            >
+              Choose another activity
             </button>
             <button className="lb-text" onClick={() => navigate("words")}>
               Just browse
@@ -719,7 +730,9 @@ export default function LivingBook({ vault }: { vault: Vault }) {
       );
   }
   return (
-    <div className={`r-app lb-app ${journalEditing ? "lb-capturing" : ""}`}>
+    <div
+      className={`r-app lb-app ${journalEditing ? "lb-capturing" : ""} ${view === "activities" && !closed ? "lb-activities" : ""}`}
+    >
       {sample && (
         <div className="lb-sample">
           <span>
@@ -745,10 +758,12 @@ export default function LivingBook({ vault }: { vault: Vault }) {
             {!sharedView ? (
               <button
                 disabled={busy || privateEditorOpen}
-                onClick={() => navigate("bookmark")}
-                aria-current={view === "bookmark" ? "page" : undefined}
+                onClick={() => navigate("activities")}
+                aria-current={
+                  view === "activities" && !closed ? "page" : undefined
+                }
               >
-                <Bookmark size={16} /> My bookmark
+                <Compass size={16} /> Activities
               </button>
             ) : (
               <button disabled={busy} onClick={() => navigate("family")}>
@@ -768,7 +783,7 @@ export default function LivingBook({ vault }: { vault: Vault }) {
               <Users size={16} /> Play together
             </button>
             <button onClick={() => setModal("guide")}>
-              <Sparkles size={16} /> Guide
+              <CircleHelp size={16} /> Help
             </button>
           </nav>
           <div className="lb-tools" role="group" aria-label="Edition tools">
@@ -846,57 +861,6 @@ export default function LivingBook({ vault }: { vault: Vault }) {
             {error || vault.error}
           </p>
         ) : null}
-        {!sharedView && !closed && view === "bookmark" && (
-          <section className="rd-quick" aria-label="Quick entry">
-            <div className="rd-quick-heading">
-              <p className="lb-kicker">Your pocket notebook</p>
-              <span aria-hidden="true">
-                <Feather size={26} />
-              </span>
-            </div>
-            <h2>
-              A little thing
-              <br />
-              <em>worth keeping.</em>
-            </h2>
-            <p>A thought, a photo, a story. Catch it here.</p>
-            <div className="rd-quick-actions">
-              <button
-                className="lb-primary"
-                disabled={busy}
-                onClick={() => quickEntry()}
-              >
-                <Plus size={20} /> Write a little
-              </button>
-              <button
-                className="lb-secondary"
-                disabled={busy}
-                onClick={() => quickEntry(true)}
-              >
-                <Feather size={18} /> Tell it
-              </button>
-            </div>
-            {book.journal?.some((p) => p.status === "draft") && (
-              <button
-                className="lb-text rd-resume"
-                disabled={busy}
-                onClick={() =>
-                  quickEntry(
-                    false,
-                    [...book.journal!]
-                      .reverse()
-                      .find((p) => p.status === "draft")!,
-                  )
-                }
-              >
-                Pick up my unfinished page <ArrowRight size={16} />
-              </button>
-            )}
-            <p className="lb-fine rd-quick-note">
-              Keep one moment. That can be enough for today.
-            </p>
-          </section>
-        )}
         {closed ? (
           <div className="lb-cover-wrap">
             <div className="lb-cover">
@@ -920,6 +884,19 @@ export default function LivingBook({ vault }: { vault: Vault }) {
               </button>
             )}
           </div>
+        ) : view === "activities" && !sharedView ? (
+          <Activities
+            book={book}
+            busy={busy}
+            onWrite={quickEntry}
+            onGuided={() => start()}
+            onPlay={openPlay}
+            onPages={() => navigate("words")}
+            onManual={() => navigate("manual")}
+            pendingInsights={
+              manualCards.filter((c) => c.status === "suggested").length
+            }
+          />
         ) : view === "manual" && !sharedView ? (
           <Manual
             book={book}
@@ -957,8 +934,9 @@ export default function LivingBook({ vault }: { vault: Vault }) {
             save={vault.save}
             sample={sample}
             onEditingChange={setJournalEditing}
+            onActivities={() => navigate("activities")}
             onDone={() => {
-              navigate("bookmark");
+              navigate("activities");
               setClosed(true);
             }}
           />
@@ -1285,25 +1263,29 @@ export default function LivingBook({ vault }: { vault: Vault }) {
         </Dialog>
       )}
       {modal === "guide" && (
-        <Dialog title="Your guide" onClose={() => setModal(null)}>
+        <Dialog title="A little help" onClose={() => setModal(null)}>
           <p className="lb-kicker">A little guidance for this moment</p>
           <h2>
-            {view === "words"
-              ? "A page can be enough."
-              : sharedView
-                ? "One round is enough."
-                : v?.status === "complete"
-                  ? "Enough for now."
-                  : "A small visit, with an ending."}
+            {view === "activities"
+              ? "Pick one thing that fits."
+              : view === "words"
+                ? "A page can be enough."
+                : sharedView
+                  ? "One round is enough."
+                  : v?.status === "complete"
+                    ? "Enough for now."
+                    : "A small visit, with an ending."}
           </h2>
           <p>
-            {view === "words"
-              ? "Write anything you like. Keep this page when it feels finished, or choose Save for later to leave it in progress. You can return and edit either one."
-              : sharedView
-                ? "Each player gets a turn or may pass. Reveal together, then finish for now. Keeping a page requires everyone’s approval; it is always optional."
-                : v?.status === "complete"
-                  ? plans[v.kind].next
-                  : plans[v?.kind || nextKind(book)].end}
+            {view === "activities"
+              ? "Write a personal journal entry for open space, choose a guided reflection for prompts, or play a game together. Each activity has its own stopping point. Unfinished pages and reflections will wait for you here."
+              : view === "words"
+                ? "Write anything you like. Keep this page when it feels finished, or choose Save for later to leave it in progress. You can return and edit either one."
+                : sharedView
+                  ? "Each player gets a turn or may pass. Reveal together, then finish for now. Keeping a page requires everyone’s approval; it is always optional."
+                  : v?.status === "complete"
+                    ? plans[v.kind].next
+                    : plans[v?.kind || nextKind(book)].end}
           </p>
           <div className="lb-boundary">
             <strong>

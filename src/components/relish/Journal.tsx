@@ -59,6 +59,7 @@ export default function Journal({
   sample,
   onEditingChange,
   onDone,
+  onActivities,
   photos,
   onOffer,
   onNotice,
@@ -74,6 +75,7 @@ export default function Journal({
   sample: boolean;
   onEditingChange: (editing: boolean) => void;
   onDone: () => void;
+  onActivities?: () => void;
   photos?: PhotoAccess;
   onOffer?: (passage: { title: string; text: string }) => void;
   onNotice?: () => void;
@@ -113,6 +115,7 @@ export default function Journal({
     onEditingChange(false);
     setEditor(null);
     setReading(null);
+    onActivities?.();
   }
   if (editor)
     return (
@@ -329,6 +332,11 @@ export default function Journal({
           <button className="lb-primary" onClick={onDone}>
             Done for now <Check size={17} />
           </button>
+          {onActivities && (
+            <button className="lb-text" onClick={onActivities}>
+              Choose another activity <ArrowRight size={16} />
+            </button>
+          )}
           <button className="lb-text" onClick={() => edit(newJournalDraft())}>
             One more page <Plus size={16} />
           </button>

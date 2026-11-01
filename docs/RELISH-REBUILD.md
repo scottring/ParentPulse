@@ -123,10 +123,19 @@ The inspected OpenAI Personal / Default project showed API-call logging controls
 
 ## iPhone Duo and the native development app
 
-Apple released iPhone Duo October 23, 2026. The UI adapts to available width, never a user-agent, a device name or the experimental posture API. At less than 640 CSS pixels the bookmark offers quick entry; the editor prioritizes words, voice and Keep before optional title/color/tags. At 640 and above it opens a spread with the preceding kept page beside the same editor. Readers show the current and following chronological page. Existing bookmark spreads also open at 640. All four safe-area edges are respected. Outer landscape and inner Split View stay compact.
+Apple released iPhone Duo October 23, 2026. The UI adapts to available width, never a user-agent, a device name or the experimental posture API. The Activities home offers direct journal and voice entry at every width. At less than 640 CSS pixels, choices stack and keep their stopping points visible; the editor prioritizes words, voice and Keep before optional title/color/tags. At 640 and above it opens a spread with the preceding kept page beside the same editor. Readers show the current and following chronological page. Existing bookmark spreads also open at 640. All four safe-area edges are respected. Outer landscape and inner Split View stay compact.
 
 The same mounted editor, save queue and voice dialog survive resizing. No entry is automatically kept or shared by a fold. A one-sentence capture has an explicit stopping point. Reduced-motion preferences and optional sound remain in effect.
 
 `ios/Relish.xcodeproj` is a real SwiftUI iOS 27.1+ development target, built with the installed iOS 27.2 SDK. It hosts one persistent WKWebView backed by the existing encrypted vault, shields app-switcher snapshots, asks for camera/microphone permission, opens external links outside the book and exports encrypted backups through the system share sheet. Debug points at local port 3210; Release is pinned to app.relish.my. No provider keys or JS/native credential bridge are bundled. See `ios/README.md` for build and distribution notes.
 
 Verified in Device Hub’s iPhone Duo simulator: outer quick entry, typed fictional text, unfold to a live spread, fold back with the text intact, keep once, and inner portrait/landscape reading. Camera/microphone hardware, backup share sheet, physical-device signing and App Store distribution are not yet verified. The app requires network access to load the hosted experience; this is not an offline native rewrite. Safari and native WKWebView have separate stores, so existing books need an encrypted backup/import when moving between them.
+
+
+## Clear activities at the opening (November 1, 2026)
+
+Every unlocked edition opens to Activities: personal journal, guided reflection, or play together. Each choice names an approximate duration and a stopping point. Journal and microphone controls open the existing editor directly; guided reflection begins the next age-appropriate step or resumes the unfinished visit. Games resume an existing round instead of replacing it. Reading pages and reviewing available manual suggestions remain secondary choices.
+
+Save for later and Pause here return to Activities only after persistence succeeds. The most recently updated journal draft has a direct resume action; up to three unfinished pages appear below, with access to the full list. Kept pages and completed guided visits offer Choose another activity alongside the existing finish/close action. View changes return to the beginning of the screen; resizing never remounts the editor. Shared play still removes private activities and requires unlocking before returning to an actual private edition.
+
+Validation: 175 focused Relish tests, TypeScript, targeted ESLint, and the production build. Browser checks cover direct journal capture, a draft surviving 382→669px resizing, save/resume, guided entry/pause, shared-game selection, and responsive choices at Duo outer/inner and desktop widths. No storage schema, provider privacy policy, or account permissions change in this update.
