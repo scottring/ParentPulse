@@ -46,9 +46,13 @@ function BookGate() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unauthorized]);
   useEffect(() => {
-    if (vault.mode === "open" && vault.book.profile?.kind === "child")
-      setParentGate(vault.book.profile.parentLock);
-  }, [vault.mode, vault.book.profile]);
+    if (vault.mode === "open")
+      setParentGate(
+        vault.book.profile?.kind === "child"
+          ? vault.book.profile.parentLock
+          : null,
+      );
+  }, [vault.mode, vault.book.profile, accountOpen]);
   const closeAccount = () => {
     sync.cancel();
     setAccountOpen(false);

@@ -228,3 +228,26 @@
     padding: 24px 20px;
   }
 }
+
+.lb-app .lb-account .lb-account-check input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  flex: 0 0 18px;
+  padding: 0;
+  margin: 3px 0 0;
+  accent-color: #42676b;
+}
+.lb-account {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.lb-library-home {
+  padding: clamp(24px, 4vw, 48px);
+}
+.lb-library-home > header {
+  margin-bottom: 28px;
+}
+.lb-library-home > section {
+  padding: clamp(24px, 3vw, 36px);
+}
