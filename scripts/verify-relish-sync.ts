@@ -316,12 +316,113 @@ async function main() {
     check(
       "child and adult editions share an adult library while contents and parent settings stay encrypted",
     );
+    const accountSecret = randomBytes(32).toString("hex");
+    const managed = await createVault(
+      {
+        ...child,
+        profile: {
+          kind: "child",
+          ageBand: "9-12",
+          parentLock: { accountUid: a.uid },
+        },
+      },
+      accountSecret,
+    );
+    const managedHead = await uploadBook(
+      user(a),
+      { envelope: managed.envelope, media: [], label: "Robin account book" },
+      randomUUID(),
+      null,
+      signal(),
+      undefined,
+      accountSecret,
+    );
+    assert.equal(managedHead.accountManaged, true);
+    const access = await syncRequest<{ secret: string }>(user(a), {
+      action: "account-key",
+      id: managedHead.id,
+    });
+    assert.equal(access.secret, accountSecret);
+    const managedCopy = await unlockVault(
+      await downloadBook(user(a), managedHead, signal()),
+      access.secret,
+    );
+    assert.deepEqual(managedCopy.book.profile, {
+      kind: "child",
+      ageBand: "9-12",
+      parentLock: { accountUid: a.uid },
+    });
+    const library = await syncRequest<{ books: SyncedEdition[] }>(user(a), {
+      action: "list",
+    });
+    assert(!JSON.stringify(library).includes(accountSecret));
+    await assert.rejects(
+      syncRequest(user(b), {
+        action: "account-key",
+        id: managedHead.id,
+        uid: a.uid,
+      }),
+      (e) => e instanceof SyncError && e.status === 404,
+    );
+    await assert.rejects(
+      syncRequest(user(c), { action: "account-key", id: managedHead.id }),
+      (e) => e instanceof SyncError && e.status === 403,
+    );
+    await assert.rejects(
+      syncRequest(user(a), { action: "account-key", id: "../other" }),
+      (e) => e instanceof SyncError && e.status === 400,
+    );
+    await assert.rejects(
+      syncRequest(user(a), {
+        action: "commit",
+        id: managedHead.id,
+        baseRevision: managedHead.revision,
+        label: "Robin",
+        manifest: managedHead.manifest,
+        accountSecret: randomBytes(32).toString("hex"),
+      }),
+      (e) => e instanceof SyncError && e.status === 409,
+    );
+    const directKey = await nativeFetch(
+      `https://firestore.googleapis.com/v1/projects/${credentials.project_id}/databases/(default)/documents/relish_sync/${a.uid}/access/${managedHead.id}`,
+      { headers: { Authorization: `Bearer ${a.token}` } },
+    );
+    assert.equal(directKey.status, 403);
+    // Normal subsequent saves retain account access without retransmitting the key.
+    const changed = await seal(
+      { ...managedCopy.book, owner: "Robin account book" },
+      managed.key,
+      managed.envelope.salt,
+    );
+    const updated = await uploadBook(
+      user(a),
+      { envelope: changed, media: [], label: "Robin account book" },
+      managedHead.id,
+      managedHead.revision,
+      signal(),
+      managedHead.manifest,
+    );
+    assert.equal(updated.accountManaged, true);
+    assert.equal(
+      (
+        await syncRequest<{ secret: string }>(user(a), {
+          action: "account-key",
+          id: updated.id,
+        })
+      ).secret,
+      accountSecret,
+    );
+    check(
+      "parent account recovers child book; keys are absent from listings, denied to other/unverified accounts and direct Firestore, and immutable across saves",
+    );
     await uploadBook(
       user(b),
       { envelope: childVault.envelope, media: [], label: "Disposable" },
       randomUUID(),
       null,
       signal(),
+      undefined,
+      randomBytes(32).toString("hex"),
     );
     const deletion = await nativeFetch(`${origin}/api/relish/connections/`, {
       method: "POST",
@@ -344,6 +445,10 @@ async function main() {
     );
     assert.equal(
       (await db.doc(`relish_sync/${b.uid}`).collection("books").get()).size,
+      0,
+    );
+    assert.equal(
+      (await db.doc(`relish_sync/${b.uid}`).collection("access").get()).size,
       0,
     );
     assert.deepEqual((await db.doc(`relish_sync/${b.uid}`).get()).data(), {
@@ -375,6 +480,8 @@ async function main() {
       randomUUID(),
       null,
       signal(),
+      undefined,
+      randomBytes(32).toString("hex"),
     );
     await syncRequest(user(c), {
       action: "remove",
@@ -388,6 +495,10 @@ async function main() {
     );
     assert.equal(
       (await db.doc(`relish_sync/${c.uid}`).collection("blobs").get()).size,
+      0,
+    );
+    assert.equal(
+      (await db.doc(`relish_sync/${c.uid}`).collection("access").get()).size,
       0,
     );
     check(
@@ -411,7 +522,7 @@ async function main() {
           childPassphrase,
           parentPassphrase,
           origin,
-          heads: list.books,
+          heads: library.books,
         }),
         { mode: 0o600 },
       );

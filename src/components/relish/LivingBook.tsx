@@ -1,4 +1,5 @@
 "use client";
+import { readBinding } from "@/lib/relish/book-sync";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowLeft,
@@ -72,7 +73,7 @@ type Modal =
   "settings" | "create" | "person" | "guide" | "connections" | "profile" | null;
 type Vault = Omit<
   ReturnType<typeof useLocalBook>,
-  "syncSnapshot" | "openSynced" | "receiveSynced"
+  "syncSnapshot" | "openSynced" | "receiveSynced" | "accountSnapshot"
 >;
 const chapters = [
   { id: "words", label: "Your pages" },
@@ -1159,6 +1160,11 @@ export default function LivingBook({
           onClose={() => setModal(null)}
         >
           <EditionSetup
+            accountUid={
+              readBinding(vault.editionId)?.accountManaged
+                ? readBinding(vault.editionId)?.uid
+                : undefined
+            }
             book={book}
             save={vault.save}
             onDone={() => {
@@ -1217,7 +1223,7 @@ export default function LivingBook({
             <button
               className="lb-primary"
               disabled={sample}
-              onClick={vault.backup}
+              onClick={() => void vault.backup()}
             >
               <Download size={16} /> Export encrypted backup
             </button>

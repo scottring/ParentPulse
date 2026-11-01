@@ -1,9 +1,21 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { Cloud, Lock, ArrowUpRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Cloud, BookOpen, ArrowUpRight, Plus, ShieldCheck } from "lucide-react";
 import { sendPasswordResetEmail, sendEmailVerification } from "firebase/auth";
-import { connectAI, disconnectAI, getAIAuth } from "@/lib/relish/ai-auth";
-import { verifyParent } from "@/lib/relish/profiles";
+import {
+  connectAI,
+  disconnectAI,
+  getAIAuth,
+  getParentGate,
+  setParentGate,
+} from "@/lib/relish/ai-auth";
+import {
+  verifyParent,
+  parentCredentialLabel,
+  ageBands,
+  ageLabels,
+  type Audience,
+} from "@/lib/relish/profiles";
 import { readBinding, type SyncedEdition } from "@/lib/relish/book-sync";
 import type { useLocalBook } from "./useLocalBook";
 import type { useBookSync } from "./useBookSync";
@@ -12,35 +24,43 @@ export default function AccountLibrary({
   vault,
   sync,
   onClose,
+  inline = false,
+  onLocal,
+  onExplore,
 }: {
   vault: ReturnType<typeof useLocalBook>;
   sync: ReturnType<typeof useBookSync>;
   onClose: () => void;
+  inline?: boolean;
+  onLocal?: () => void;
+  onExplore?: () => void;
 }) {
-  const passInput = useRef<HTMLInputElement>(null);
-  const child = vault.mode === "open" && vault.book.profile?.kind === "child";
-  const [parentReady, setParentReady] = useState(!child);
+  const [gate] = useState(() =>
+    vault.mode === "open" && vault.book.profile?.kind === "child"
+      ? vault.book.profile.parentLock
+      : getParentGate(),
+  );
+  const [parentReady, setParentReady] = useState(!gate);
   const [parentPass, setParentPass] = useState("");
-  const [email, setEmail] = useState(child ? sync.user?.email || "" : ""),
-    [password, setPassword] = useState(""),
-    [create, setCreate] = useState(false),
+  const [email, setEmail] = useState(sync.user?.email || ""),
+    [password, setPassword] = useState("");
+  const [create, setCreate] = useState(false),
     [adult, setAdult] = useState(false);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [notice, setNotice] = useState(""),
-    [consent, setConsent] = useState(false);
+    [notice, setNotice] = useState("");
   const [chosen, setChosen] = useState<SyncedEdition | null>(null),
-    [passphrase, setPassphrase] = useState(""),
-    [removing, setRemoving] = useState<string | null>(null);
-  useEffect(() => {
-    if (chosen) passInput.current?.focus();
-  }, [chosen]);
+    [passphrase, setPassphrase] = useState("");
+  const [adding, setAdding] = useState(false),
+    [name, setName] = useState("");
+  const [audience, setAudience] = useState<Audience | "">("adult"),
+    [parentConfirm, setParentConfirm] = useState(false);
   const user = sync.user,
     bound = readBinding(vault.editionId),
     working = busy || sync.working;
   useEffect(() => {
     if (user?.emailVerified && parentReady) void sync.refresh().catch(() => {});
-    // Refresh only when this dialog acquires an authorized account, not on render.
+    // Fetch once when this view gains authorized access.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid, user?.emailVerified, parentReady]);
   async function act(fn: () => Promise<unknown>) {
@@ -50,387 +70,478 @@ export default function AccountLibrary({
     try {
       await fn();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Please try again.");
+      const code = (e as { code?: string })?.code;
+      setError(
+        code === "auth/invalid-credential" ||
+          code === "auth/wrong-password" ||
+          code === "auth/user-not-found"
+          ? "That email and account password didn’t match. Use your Relish account password, or choose ‘Forgot account password?’ below. A book passphrase won’t sign you in."
+          : e instanceof Error
+            ? e.message
+            : "Please try again.",
+      );
     } finally {
       setBusy(false);
     }
   }
-  return (
-    <Dialog title="Account and synced books" onClose={onClose}>
-      <div className="lb-account">
-        <p className="lb-kicker">
-          <Cloud size={16} /> Your books, wherever you are
-        </p>
-        <h2>
-          {child && !parentReady
-            ? "A parent’s turn."
-            : user && parentReady
-              ? "Your Relish library."
-              : "Welcome back."}
-        </h2>
-        <p>
-          One adult account, across your devices. Each edition keeps its own
-          book passphrase. Children’s books can sync through a parent’s account.
-        </p>
-        {!user || !parentReady ? (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              void act(async () => {
-                if (!adult)
-                  throw new Error(
-                    "Confirm you are the adult managing this account.",
-                  );
-                if (
-                  vault.book.profile?.kind === "child" &&
-                  !(await verifyParent(
-                    vault.book.profile.parentLock,
-                    parentPass,
-                  ))
-                )
-                  throw new Error("That parent passphrase did not match.");
-                await connectAI(email, password, create);
-                setParentPass("");
+  async function open(head: SyncedEdition) {
+    if (!head.accountManaged) {
+      setChosen(head);
+      return;
+    }
+    await sync.open(head);
+    onClose();
+  }
+  const content = (
+    <div className="lb-account">
+      <p className="lb-kicker">
+        <Cloud size={17} /> Your people. Your pages. Any device.
+      </p>
+      <h2>
+        {user && !parentReady
+          ? "A parent’s turn."
+          : user
+            ? "Your family library."
+            : create
+              ? "Make room for your family."
+              : "Welcome to Relish."}
+      </h2>
+      <p>
+        {user && !parentReady
+          ? "Enter the parent password to return to the family library."
+          : "Sign in once. Your entries and photos save to your account, ready wherever you open Relish."}
+      </p>
+      {!user ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void act(async () => {
+              if (!adult) throw new Error("An adult must manage this account.");
+              await connectAI(email, password, create);
+              setPassword("");
+              setParentReady(!gate || "accountUid" in gate);
+              // A legacy local child edition still requires its separate parent passphrase.
+              if (gate && !("accountUid" in gate)) setParentReady(false);
+              sync.refreshUser();
+              if (create)
+                setNotice(
+                  "Check your email for a verification link, then come back here.",
+                );
+            });
+          }}
+        >
+          <label>
+            Email
+            <input
+              type="email"
+              autoComplete="username"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </label>
+          <label>
+            Account password
+            <input
+              type="password"
+              autoComplete={create ? "new-password" : "current-password"}
+              minLength={create ? 12 : undefined}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </label>
+          <label className="lb-account-check">
+            <input
+              type="checkbox"
+              checked={adult}
+              onChange={(e) => setAdult(e.target.checked)}
+            />
+            I’m 18 or older and manage this account.
+          </label>
+          <button className="lb-primary" disabled={working || !adult}>
+            {working ? "One moment…" : create ? "Create my account" : "Sign in"}
+            <ArrowUpRight size={17} />
+          </button>
+          <div className="lb-account-actions">
+            <button
+              type="button"
+              disabled={working}
+              onClick={() => {
+                setCreate(!create);
                 setPassword("");
-                setParentReady(true);
-                sync.refreshUser();
-                if (create)
-                  setNotice(
-                    "Check your email for a verification link, then return here.",
-                  );
-              });
-            }}
-          >
-            <label>
-              Email
-              <input
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </label>
-            <label>
-              Account password
-              <input
-                type="password"
-                autoComplete={create ? "new-password" : "current-password"}
-                minLength={create ? 12 : undefined}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </label>
-            {child && (
-              <label>
-                Parent passphrase
-                <input
-                  type="password"
-                  autoComplete="off"
-                  required
-                  value={parentPass}
-                  onChange={(e) => setParentPass(e.target.value)}
-                />
-              </label>
-            )}
-            <label className="lb-account-check">
-              <input
-                type="checkbox"
-                checked={adult}
-                onChange={(e) => setAdult(e.target.checked)}
-              />
-              I’m 18 or older and manage this account
-              {child ? " as a parent or guardian" : ""}.
-            </label>
-            <button className="lb-primary" disabled={working || !adult}>
+              }}
+            >
               {create
-                ? "Create adult account"
-                : child
-                  ? "Parent sign in"
-                  : "Sign in"}
-              <ArrowUpRight size={16} />
+                ? "Already have an account? Sign in"
+                : "New here? Create an account"}
             </button>
-            <div className="lb-account-actions">
-              <button
-                type="button"
-                disabled={working}
-                onClick={() => {
-                  setCreate(!create);
-                  setPassword("");
-                }}
-              >
-                {create
-                  ? "Already have an account? Sign in"
-                  : "New here? Create an account"}
-              </button>
-              <button
-                type="button"
-                disabled={working || !email}
-                onClick={() =>
-                  void act(async () => {
-                    await sendPasswordResetEmail(getAIAuth(), email.trim());
-                    setNotice(
-                      "If that email has an account, you’ll receive a reset link.",
-                    );
-                  })
-                }
-              >
-                Forgot account password?
-              </button>
-            </div>
-          </form>
-        ) : !user.emailVerified ? (
-          <section>
-            <p>
-              Verify <strong>{user.email}</strong> before syncing books.
-            </p>
             <button
-              className="lb-primary"
-              disabled={working}
+              type="button"
+              disabled={working || !email}
               onClick={() =>
                 void act(async () => {
-                  await user.reload();
-                  await user.getIdToken(true);
-                  sync.refreshUser();
-                  if (!user.emailVerified)
-                    throw new Error(
-                      "The email is not verified yet. Check its link and try again.",
-                    );
-                  await sync.refresh();
+                  await sendPasswordResetEmail(getAIAuth(), email.trim());
+                  setNotice(
+                    "If that email has an account, you’ll receive a password reset link.",
+                  );
                 })
               }
             >
-              I’ve verified my email
+              Forgot account password?
             </button>
-            <button
-              disabled={working}
-              onClick={() =>
-                void act(async () => {
-                  await sendEmailVerification(user);
-                  setNotice("Verification email sent.");
-                })
-              }
-            >
-              Resend verification email
-            </button>
-          </section>
-        ) : (
-          <>
-            <p className="lb-fine">Signed in as {user.email}</p>
-            {vault.mode === "open" && (
-              <section className="lb-account-current">
-                <h3>{vault.book.owner}’s book</h3>
-                {bound ? (
-                  <>
-                    <p role="status">{sync.status}</p>
-                    <button
-                      className="lb-primary"
-                      disabled={working}
-                      onClick={() => void act(sync.syncNow)}
-                    >
-                      Sync now
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <p>
-                      Keep an encrypted copy of this book, its photos and
-                      private passages in your account. Only devices with its
-                      passphrase can read it. Its edition name is visible in
-                      your signed-in library.
-                    </p>
-                    <label className="lb-account-check">
-                      <input
-                        type="checkbox"
-                        checked={consent}
-                        onChange={(e) => setConsent(e.target.checked)}
-                      />
-                      {child
-                        ? "As a parent or guardian, I authorize encrypted sync for this child’s book."
-                        : "Keep this book synced across my devices."}
-                    </label>
-                    <button
-                      className="lb-primary"
-                      disabled={working || !consent}
-                      onClick={() => void act(sync.enable)}
-                    >
-                      Enable encrypted sync
-                    </button>
-                    <p className="lb-fine">
-                      Leave this off to keep the book local only.
-                    </p>
-                  </>
-                )}
-                {sync.conflict && (
-                  <div className="lb-account-conflict">
-                    <h3>Both devices have new pages.</h3>
-                    <p>
-                      We’ll keep this device’s complete version as a separate
-                      book on your bookshelf, then open the latest synced
-                      version. You can bring passages across deliberately.
-                    </p>
-                    <button
-                      className="lb-primary"
-                      disabled={working}
-                      onClick={() => void act(sync.keepBoth)}
-                    >
-                      Keep both & open latest
-                    </button>
-                  </div>
-                )}
-              </section>
-            )}
-            <section>
-              <h3>Your synced editions</h3>
-              <p className="lb-fine">
-                Adult and children’s editions live in the same library. Syncing
-                does not share private pages with other family accounts or with
-                AI.
-              </p>
-              {!sync.books.length && (
-                <p>
-                  No books synced yet. Open a book on the device where it lives,
-                  then enable encrypted sync here.
-                </p>
-              )}
-              {!chosen && (
-                <div className="lb-account-books">
-                  {sync.books.map((head) => (
-                    <div key={head.id}>
-                      <button
-                        disabled={working}
-                        onClick={() => {
-                          setChosen(head);
-                          setPassphrase("");
-                          setRemoving(null);
-                        }}
-                      >
-                        <Lock size={17} />
-                        <span>
-                          {head.label}
-                          <small>
-                            Updated {new Date(head.updatedAt).toLocaleString()}
-                          </small>
-                        </span>
-                        <ArrowUpRight size={16} />
-                      </button>
-                      {removing === head.id ? (
-                        <div>
-                          <p>
-                            Remove this synced copy? Books already saved on your
-                            devices stay there.
-                          </p>
-                          <button
-                            disabled={working}
-                            onClick={() =>
-                              void act(async () => {
-                                await sync.remove(head);
-                                setRemoving(null);
-                                setChosen(null);
-                              })
-                            }
-                          >
-                            Remove synced copy
-                          </button>
-                          <button
-                            disabled={working}
-                            onClick={() => setRemoving(null)}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          className="lb-fine"
-                          disabled={working}
-                          onClick={() => setRemoving(head.id)}
-                        >
-                          Remove synced copy…
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {chosen && (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    void act(async () => {
-                      await sync.open(chosen, passphrase);
-                      setPassphrase("");
-                      onClose();
-                    });
-                  }}
-                >
-                  <button
-                    type="button"
-                    disabled={working}
-                    onClick={() => {
-                      setChosen(null);
-                      setPassphrase("");
-                    }}
-                  >
-                    ← Back to your library
-                  </button>
-                  <h3>Open {chosen.label}’s book</h3>
-                  <label>
-                    Book passphrase
-                    <input
-                      type="password"
-                      autoComplete="off"
-                      ref={passInput}
-                      required
-                      value={passphrase}
-                      onChange={(e) => setPassphrase(e.target.value)}
-                    />
-                  </label>
-                  <p className="lb-fine">
-                    This is the passphrase chosen for this book, separate from
-                    your account password. Relish cannot recover a forgotten
-                    book passphrase.
-                  </p>
-                  <button className="lb-primary" disabled={working}>
-                    Unlock on this device
-                  </button>
-                </form>
-              )}
-              <button disabled={working} onClick={() => void act(sync.refresh)}>
-                Refresh library
-              </button>
-            </section>
-          </>
-        )}
-        {(error || sync.error) && (
-          <p role="alert" className="lb-error">
-            {error || sync.error}
+          </div>
+        </form>
+      ) : !parentReady && gate ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void act(async () => {
+              if (!(await verifyParent(gate, parentPass)))
+                throw new Error(
+                  "That parent password didn’t match. Try again, or sign out and sign in to the parent account.",
+                );
+              setParentPass("");
+              setParentReady(true);
+              setParentGate(null);
+            });
+          }}
+        >
+          <label>
+            {parentCredentialLabel(gate)}
+            <input
+              type="password"
+              autoComplete="current-password"
+              required
+              value={parentPass}
+              onChange={(e) => setParentPass(e.target.value)}
+            />
+          </label>
+          <button className="lb-primary" disabled={working}>
+            <ShieldCheck size={17} />
+            Open family library
+          </button>
+        </form>
+      ) : !user.emailVerified ? (
+        <section>
+          <p>
+            Verify <strong>{user.email}</strong> to open your account library.
           </p>
-        )}
-        {notice && <p role="status">{notice}</p>}
-        {user && parentReady && (
+          <button
+            className="lb-primary"
+            disabled={working}
+            onClick={() =>
+              void act(async () => {
+                await user.reload();
+                await user.getIdToken(true);
+                sync.refreshUser();
+                if (!user.emailVerified)
+                  throw new Error(
+                    "Check your email and follow its verification link first.",
+                  );
+                await sync.refresh();
+              })
+            }
+          >
+            I’ve verified my email
+          </button>
           <button
             disabled={working}
             onClick={() =>
               void act(async () => {
-                await disconnectAI();
-                sync.refreshUser();
-                setChosen(null);
-                setParentReady(!child);
+                await sendEmailVerification(user);
+                setNotice("Verification email sent.");
               })
             }
           >
-            Sign out
+            Resend verification email
           </button>
-        )}
+        </section>
+      ) : (
+        <>
+          <p className="lb-fine">Signed in as {user.email}</p>
+          {vault.mode === "open" && !bound?.accountManaged && (
+            <section className="lb-account-current">
+              <h3>Bring {vault.book.owner}’s book with you.</h3>
+              <p>
+                Add the entries, photos and progress in this book to your
+                account. After this one-time step, sign-in opens the account
+                copy on any device. Your original stays on this device.
+              </p>
+              <p className="lb-fine">
+                Your account can recover this copy. Anyone signed in to this
+                parent account can open its family books. Other accounts cannot.
+              </p>
+              <button
+                className="lb-primary"
+                disabled={working}
+                onClick={() =>
+                  void act(async () => {
+                    await sync.addCurrentBook();
+                    onClose();
+                  })
+                }
+              >
+                Add this book to my account
+                <ArrowUpRight size={17} />
+              </button>
+            </section>
+          )}
+          {sync.conflict && (
+            <section className="lb-account-current">
+              <h3>Two devices added something.</h3>
+              <p>
+                Keep both versions so nothing gets overwritten. You can review
+                the separate copies in your library.
+              </p>
+              <button
+                className="lb-primary"
+                disabled={working}
+                onClick={() => void act(sync.keepBoth)}
+              >
+                Keep both versions
+              </button>
+            </section>
+          )}
+          {!adding && !chosen && (
+            <>
+              <div className="lb-account-books">
+                {sync.books.map((head) => (
+                  <div key={head.id}>
+                    <button
+                      disabled={working}
+                      onClick={() => void act(() => open(head))}
+                    >
+                      <BookOpen size={22} />
+                      <span>
+                        {head.label}
+                        <small>
+                          {head.accountManaged
+                            ? "Saved to your account · open your book"
+                            : "Earlier book · original passphrase needed"}
+                        </small>
+                      </span>
+                      <ArrowUpRight size={18} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {!sync.books.length && (
+                <section className="lb-account-empty">
+                  <BookOpen size={30} />
+                  <h3>Every person gets a book.</h3>
+                  <p>
+                    Start with yours, then add the kids. Their profiles belong
+                    to this parent account—no child email or password needed.
+                  </p>
+                </section>
+              )}
+              <div className="lb-account-actions">
+                <button
+                  className="lb-primary"
+                  disabled={working}
+                  onClick={() => {
+                    setAdding(true);
+                    setAudience("adult");
+                  }}
+                >
+                  <Plus size={17} />
+                  Add my book
+                </button>
+                <button
+                  className="lb-secondary"
+                  disabled={working}
+                  onClick={() => {
+                    setAdding(true);
+                    setAudience("");
+                  }}
+                >
+                  <Plus size={17} />
+                  Add a child
+                </button>
+              </div>
+            </>
+          )}
+          {adding && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void act(async () => {
+                  if (!audience || (audience !== "adult" && !parentConfirm))
+                    throw new Error(
+                      "Choose the child’s age range and confirm you are their parent or guardian.",
+                    );
+                  await sync.createBook(name, audience);
+                  onClose();
+                });
+              }}
+            >
+              <h3>
+                {audience === "adult"
+                  ? "Your book starts here."
+                  : "A book just for them."}
+              </h3>
+              <label>
+                {audience === "adult" ? "Your name" : "Child’s name"}
+                <input
+                  autoFocus
+                  required
+                  maxLength={60}
+                  autoComplete="off"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </label>
+              {audience !== "adult" && (
+                <>
+                  <label>
+                    Age range
+                    <select
+                      required
+                      value={audience}
+                      onChange={(e) => setAudience(e.target.value as Audience)}
+                    >
+                      <option value="">Choose an age range</option>
+                      {ageBands.map((b) => (
+                        <option key={b} value={b}>
+                          {ageLabels[b]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <p>
+                    Their prompts and activities will match this age range.
+                    Their entries and photos save under your account. A parent
+                    password protects access to the family library and parent
+                    settings.
+                  </p>
+                  <label className="lb-account-check">
+                    <input
+                      type="checkbox"
+                      checked={parentConfirm}
+                      onChange={(e) => setParentConfirm(e.target.checked)}
+                    />
+                    I’m their parent or guardian and understand this account can
+                    access their book.
+                  </label>
+                </>
+              )}
+              <button
+                className="lb-primary"
+                disabled={
+                  working ||
+                  !name.trim() ||
+                  !audience ||
+                  (audience !== "adult" && !parentConfirm)
+                }
+              >
+                {working ? "Making their place…" : "Create & open book"}
+                <ArrowUpRight size={17} />
+              </button>
+              <button
+                type="button"
+                disabled={working}
+                onClick={() => setAdding(false)}
+              >
+                Back to library
+              </button>
+            </form>
+          )}
+          {chosen && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void act(async () => {
+                  await sync.open(chosen, passphrase);
+                  setPassphrase("");
+                  onClose();
+                });
+              }}
+            >
+              <h3>Open {chosen.label}’s earlier book</h3>
+              <p>
+                This copy still uses its original book passphrase. Once it’s
+                open, choose Account to add it to your sign-in library.
+              </p>
+              <label>
+                Original book passphrase
+                <input
+                  type="password"
+                  required
+                  autoComplete="off"
+                  value={passphrase}
+                  onChange={(e) => setPassphrase(e.target.value)}
+                />
+              </label>
+              <button className="lb-primary" disabled={working}>
+                Open book
+              </button>
+              <button type="button" onClick={() => setChosen(null)}>
+                Back to library
+              </button>
+            </form>
+          )}
+          <p className="lb-fine">
+            Children’s profiles are managed by this adult account. Signing into
+            the same account on another device brings the whole library with
+            you. AI and sharing with other accounts still need your permission.
+          </p>
+          <button disabled={working} onClick={() => void act(sync.refresh)}>
+            Refresh library
+          </button>
+        </>
+      )}
+      {(error || sync.error) && (
+        <p role="alert" className="lb-error">
+          {error || sync.error}
+        </p>
+      )}
+      {notice && <p role="status">{notice}</p>}
+      {user && (
+        <button
+          disabled={working}
+          onClick={() =>
+            void act(async () => {
+              await disconnectAI();
+              vault.lock();
+              sync.refreshUser();
+              setParentReady(false);
+            })
+          }
+        >
+          Sign out
+        </button>
+      )}
+      <footer className="lb-account-footer">
         <p className="lb-fine">
-          Book passphrases stay on your device. Account access ends when you
-          reload or lock Relish.{" "}
+          Account books save automatically online. Stay signed in only on a
+          device you trust.{" "}
           <a href="/privacy/" target="_blank" rel="noreferrer">
             Privacy details
           </a>
         </p>
-      </div>
+        {onLocal && (
+          <button onClick={onLocal}>
+            Open a local-only book or restore a backup
+          </button>
+        )}
+        {onExplore && (
+          <button onClick={onExplore}>Explore a sample book</button>
+        )}
+      </footer>
+    </div>
+  );
+  return inline ? (
+    <main className="r-app lb-app lb-library-home">
+      <header>
+        <p className="lb-wordmark">relish</p>
+        <p>The operating manual for relationships</p>
+      </header>
+      <section>{content}</section>
+    </main>
+  ) : (
+    <Dialog title="Your family library" onClose={onClose}>
+      {content}
     </Dialog>
   );
 }

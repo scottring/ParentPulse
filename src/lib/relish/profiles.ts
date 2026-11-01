@@ -10,7 +10,8 @@ export const ageLabels: Record<Audience, string> = {
   "13-17": "Ages 13–17",
   adult: "Adult · 18 or older",
 };
-export type ParentLock = { salt: string; verifier: string };
+export type ParentLock =
+  { salt: string; verifier: string } | { accountUid: string };
 export type EditionProfile =
   | { kind: "adult" }
   | { kind: "child"; ageBand: AgeBand; parentLock: ParentLock };
@@ -28,11 +29,15 @@ export function isEditionProfile(x: unknown): x is EditionProfile {
     isAgeBand(p.ageBand) &&
     !!p.parentLock &&
     typeof p.parentLock === "object" &&
-    Object.keys(p.parentLock).length === 2 &&
-    typeof p.parentLock.salt === "string" &&
-    typeof p.parentLock.verifier === "string" &&
-    /^[a-f0-9]{32}$/.test(p.parentLock.salt) &&
-    /^[a-f0-9]{64}$/.test(p.parentLock.verifier)
+    ("accountUid" in p.parentLock
+      ? Object.keys(p.parentLock).length === 1 &&
+        typeof p.parentLock.accountUid === "string" &&
+        /^[A-Za-z0-9_-]{1,128}$/.test(p.parentLock.accountUid)
+      : Object.keys(p.parentLock).length === 2 &&
+        typeof p.parentLock.salt === "string" &&
+        typeof p.parentLock.verifier === "string" &&
+        /^[a-f0-9]{32}$/.test(p.parentLock.salt) &&
+        /^[a-f0-9]{64}$/.test(p.parentLock.verifier))
   );
 }
 export const canUseOnline = (book: Pick<Book, "profile">) =>
@@ -76,6 +81,10 @@ export async function makeParentLock(pass: string): Promise<ParentLock> {
 }
 export async function verifyParent(lock: ParentLock, pass: string) {
   if (!pass || pass.length > 256) return false;
+  if ("accountUid" in lock) {
+    const { verifyAccountPassword } = await import("./ai-auth");
+    return verifyAccountPassword(lock.accountUid, pass);
+  }
   const result = await digest(pass, lock.salt);
   let diff = 0;
   for (let i = 0; i < result.length; i++)
@@ -87,6 +96,7 @@ export async function configureProfile(
   book: Book,
   audience: Audience,
   parentPass: string,
+  accountUid?: string,
 ): Promise<EditionProfile> {
   if (!isAudience(audience)) throw new Error("Choose an age range.");
   if (
@@ -96,6 +106,13 @@ export async function configureProfile(
     throw new Error(
       "That parent passphrase did not match. The edition has not changed.",
     );
+  if (accountUid && book.profile?.kind !== "child") {
+    const { verifyAccountPassword } = await import("./ai-auth");
+    if (!(await verifyAccountPassword(accountUid, parentPass)))
+      throw new Error(
+        "Enter the parent account password to change these settings.",
+      );
+  }
   if (audience === "adult") return { kind: "adult" };
   return {
     kind: "child",
@@ -103,6 +120,11 @@ export async function configureProfile(
     parentLock:
       book.profile?.kind === "child"
         ? book.profile.parentLock
-        : await makeParentLock(parentPass),
+        : accountUid
+          ? { accountUid }
+          : await makeParentLock(parentPass),
   };
 }
+
+export const parentCredentialLabel = (lock: ParentLock) =>
+  "accountUid" in lock ? "Parent account password" : "Parent passphrase";

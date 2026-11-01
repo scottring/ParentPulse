@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import "fake-indexeddb/auto";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { renderHook, act, cleanup } from "@testing-library/react";
 import { webcrypto } from "node:crypto";
@@ -462,4 +463,101 @@ it("does not open downloaded private writing after a sync operation is cancelled
   });
   expect(result.current.mode).toBe("sample");
   expect(localStorage.length).toBe(0);
+});
+
+it("copies a child book to its parent account without changing the local original", async () => {
+  const { unlockVault } = await import("@/lib/relish/vault");
+  const { result } = renderHook(useLocalBook);
+  await act(async () => {
+    await result.current.open("original local book password", "Robin");
+  });
+  await act(async () => {
+    await result.current.save((b) => ({
+      ...b,
+      profile: {
+        kind: "child",
+        ageBand: "9-12",
+        parentLock: { salt: "a".repeat(32), verifier: "b".repeat(64) },
+      },
+    }));
+  });
+  const before = localStorage.getItem(VAULT_KEY);
+  const snapshot = await result.current.accountSnapshot(
+    "a".repeat(64),
+    "parent-one",
+  );
+  const account = await unlockVault(
+    JSON.stringify(snapshot.envelope),
+    "a".repeat(64),
+  );
+  expect(account.book.profile).toEqual({
+    kind: "child",
+    ageBand: "9-12",
+    parentLock: { accountUid: "parent-one" },
+  });
+  expect(account.book.owner).toBe("Robin");
+  expect(localStorage.getItem(VAULT_KEY)).toBe(before);
+  const original = await unlockVault(before!, "original local book password");
+  expect(original.book.profile).not.toEqual(account.book.profile);
+});
+
+it("re-encrypts photos with an account copy and leaves the original photo readable", async () => {
+  const { encryptPhoto, decryptPhoto, putPhoto, getPhoto } =
+    await import("@/lib/relish/photos");
+  const { unlockVault } = await import("@/lib/relish/vault");
+  const { newJournalDraft, writeJournalPage } =
+    await import("@/lib/relish/journal");
+  const { result } = renderHook(useLocalBook);
+  await act(async () => {
+    await result.current.open("original photo book password", "River");
+  });
+  const original = await unlockVault(
+    localStorage.getItem(VAULT_KEY)!,
+    "original photo book password",
+  );
+  const id = crypto.randomUUID(),
+    blob = new Blob([new Uint8Array([255, 216, 255, 224, 1, 2, 3])], {
+      type: "image/jpeg",
+    });
+  await putPhoto(
+    result.current.editionId,
+    await encryptPhoto(id, blob, original.key),
+  );
+  await act(async () => {
+    await result.current.save((b) =>
+      writeJournalPage(
+        b,
+        {
+          ...newJournalDraft(),
+          text: "My fictional photo",
+          photos: [{ id, width: 1, height: 1, caption: "A keepsake" }],
+        },
+        0,
+        "kept",
+      ),
+    );
+  });
+  const snapshot = await result.current.accountSnapshot(
+    "c".repeat(64),
+    "parent-one",
+  );
+  const next = await unlockVault(
+    JSON.stringify(snapshot.envelope),
+    "c".repeat(64),
+  );
+  expect(snapshot.media).toHaveLength(1);
+  expect(
+    new Uint8Array(
+      await (await decryptPhoto(snapshot.media[0], next.key)).arrayBuffer(),
+    ),
+  ).toEqual(new Uint8Array(await blob.arrayBuffer()));
+  await expect(decryptPhoto(snapshot.media[0], original.key)).rejects.toThrow();
+  expect(
+    (
+      await decryptPhoto(
+        await getPhoto(result.current.editionId, id),
+        original.key,
+      )
+    ).size,
+  ).toBe(blob.size);
 });

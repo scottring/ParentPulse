@@ -2,7 +2,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { User } from "firebase/auth";
 import { editionKey } from "@/lib/relish/editions";
-import { currentAIUser } from "@/lib/relish/ai-auth";
+import { currentAIUser, getAIAuth } from "@/lib/relish/ai-auth";
 import {
   readBinding,
   writeBinding,
@@ -16,8 +16,12 @@ import {
   downloadBook,
 } from "@/lib/relish/book-sync-client";
 import type { useLocalBook } from "./useLocalBook";
+import { emptyBook } from "@/lib/relish/model";
+import { createVault } from "@/lib/relish/vault";
+import { type Audience, isAudience } from "@/lib/relish/profiles";
 type Vault = ReturnType<typeof useLocalBook>;
 export function useBookSync(vault: Vault) {
+  const [authReady, setAuthReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [books, setBooks] = useState<SyncedEdition[]>([]);
   const [status, setStatus] = useState("Local only");
@@ -39,15 +43,26 @@ export function useBookSync(vault: Vault) {
     };
     const locked = () => {
       abort.current?.abort();
-      setUser(null);
-      setBooks([]);
+
       setError("");
       setConflict(false);
     };
-    account();
+    let alive = true;
+    void getAIAuth()
+      .authStateReady()
+      .then(() => {
+        if (alive) {
+          account();
+          setAuthReady(true);
+        }
+      })
+      .catch(() => {
+        if (alive) setAuthReady(true);
+      });
     window.addEventListener("relish:account", account);
     window.addEventListener("relish:locked", locked);
     return () => {
+      alive = false;
       abort.current?.abort();
       window.removeEventListener("relish:account", account);
       window.removeEventListener("relish:locked", locked);
@@ -120,7 +135,7 @@ export function useBookSync(vault: Vault) {
       setStatus(
         localStorage.getItem(editionKey(v.editionId)) ===
           JSON.stringify(snapshot.envelope)
-          ? "Synced"
+          ? "Saved to your account"
           : "Saved here · changes waiting to sync",
       );
     if (head?.manifest.fingerprint === fingerprint) {
@@ -163,7 +178,7 @@ export function useBookSync(vault: Vault) {
         signal,
         () => !paused.current && !latest.current.busy,
       );
-      setStatus("Synced");
+      setStatus("Saved to your account");
       setConflict(false);
       return;
     }
@@ -171,7 +186,7 @@ export function useBookSync(vault: Vault) {
       markSaved();
       return;
     }
-    setStatus("Saving encrypted copy…");
+    setStatus("Saving to your account…");
     const saved = await uploadBook(
       user,
       snapshot,
@@ -238,6 +253,65 @@ export function useBookSync(vault: Vault) {
       window.removeEventListener("online", check);
     };
   }, [vault.book, vault.editionId, vault.mode, user]);
+  const newSecret = () =>
+    Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) =>
+      b.toString(16).padStart(2, "0"),
+    ).join("");
+  async function accountBook(name: string, audience: Audience, copy = false) {
+    return exclusive(async (signal) => {
+      if (!user?.emailVerified)
+        throw new Error("Sign in and verify your email first.");
+      const label = name.trim();
+      if (!label || label.length > 60 || !isAudience(audience))
+        throw new Error("Choose a name and age range.");
+      const secret = newSecret(),
+        id = crypto.randomUUID();
+      const profile =
+        audience === "adult"
+          ? { kind: "adult" as const }
+          : {
+              kind: "child" as const,
+              ageBand: audience,
+              parentLock: { accountUid: user.uid },
+            };
+      const initial = copy
+        ? null
+        : await createVault({ ...emptyBook(label), profile }, secret);
+      const snapshot = copy
+        ? await latest.current.accountSnapshot(secret, user.uid)
+        : { envelope: initial!.envelope, media: [], label };
+      signal.throwIfAborted();
+      const head = await uploadBook(
+        user,
+        snapshot,
+        id,
+        null,
+        signal,
+        undefined,
+        secret,
+      );
+      signal.throwIfAborted();
+      await latest.current.openSynced(
+        JSON.stringify({ ...snapshot.envelope, media: snapshot.media }),
+        secret,
+        head,
+        user.uid,
+        signal,
+      );
+      setBooks((previous) => [...previous, head]);
+      setStatus("Saved to your account");
+    });
+  }
+  const createBook = (name: string, audience: Audience) =>
+    accountBook(name, audience);
+  const addCurrentBook = () =>
+    accountBook(
+      latest.current.book.owner,
+      latest.current.book.profile?.kind === "child"
+        ? latest.current.book.profile.ageBand
+        : "adult",
+      true,
+    );
   async function enable() {
     if (!user?.emailVerified || latest.current.mode !== "open")
       throw new Error("Open a private book and sign in first.");
@@ -255,7 +329,7 @@ export function useBookSync(vault: Vault) {
       });
     await syncNow();
   }
-  async function open(head: SyncedEdition, passphrase: string) {
+  async function open(head: SyncedEdition, passphrase = "") {
     return exclusive(async (signal) => {
       if (!user) throw new Error("Sign in first.");
       const current = (await list(signal)).find((book) => book.id === head.id);
@@ -263,6 +337,14 @@ export function useBookSync(vault: Vault) {
         throw new Error(
           "This synced copy was removed. Choose another book from your library.",
         );
+      if (current.accountManaged) {
+        const access = await syncRequest<{ secret: string }>(
+          user,
+          { action: "account-key", id: current.id },
+          signal,
+        );
+        passphrase = access.secret;
+      }
       const raw = await downloadBook(user, current, signal);
       signal.throwIfAborted();
       await latest.current.openSynced(
@@ -290,16 +372,39 @@ export function useBookSync(vault: Vault) {
       const snapshot = await v.syncSnapshot(),
         raw = await downloadBook(user, head, signal);
       signal.throwIfAborted();
+      if (head.accountManaged) {
+        const { secret } = await syncRequest<{ secret: string }>(
+          user,
+          { action: "account-key", id: head.id },
+          signal,
+        );
+        await uploadBook(
+          user,
+          {
+            ...snapshot,
+            label: `${snapshot.label.slice(0, 43)} — device copy`,
+          },
+          crypto.randomUUID(),
+          null,
+          signal,
+          undefined,
+          secret,
+        );
+      }
       await v.receiveSynced(
         raw,
         head,
         user.uid,
         await hashSync(snapshot.envelope),
-        true,
+        head.accountManaged ? "online" : true,
         signal,
       );
       setConflict(false);
-      setStatus("Synced · device copy kept on bookshelf");
+      setStatus(
+        head.accountManaged
+          ? "Saved · both versions in your library"
+          : "Synced · device copy kept on bookshelf",
+      );
     });
   }
   async function remove(head: SyncedEdition) {
@@ -325,6 +430,9 @@ export function useBookSync(vault: Vault) {
   }
   return {
     user,
+    authReady,
+    createBook,
+    addCurrentBook,
     books,
     status,
     conflict,

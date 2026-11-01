@@ -6,6 +6,7 @@ import {
   ageBands,
   ageLabels,
   configureProfile,
+  parentCredentialLabel,
   type Audience,
 } from "@/lib/relish/profiles";
 
@@ -14,8 +15,10 @@ export default function EditionSetup({
   save,
   onDone,
   onCancel,
+  accountUid,
 }: {
   book: Book;
+  accountUid?: string;
   save: (change: (b: Book) => Book) => Promise<void>;
   onDone?: () => void;
   onCancel: () => void;
@@ -39,7 +42,7 @@ export default function EditionSetup({
     };
   }, []);
   const protectedEdition = book.profile?.kind === "child";
-  const newLock = kind === "child" && !protectedEdition;
+  const newLock = kind === "child" && !protectedEdition && !accountUid;
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (busy || !confirmed || !kind || (kind === "child" && !band)) return;
@@ -53,6 +56,7 @@ export default function EditionSetup({
         book,
         kind === "adult" ? "adult" : (band as Audience),
         parentPass,
+        accountUid,
       );
       if (!alive.current) return;
       await save((b) => {
@@ -150,12 +154,18 @@ export default function EditionSetup({
             </div>
           </>
         )}
-        {(newLock || protectedEdition) && (
+        {(newLock || protectedEdition || !!accountUid) && (
           <>
             <label>
               {protectedEdition
-                ? "Parent passphrase"
-                : "Choose a parent passphrase"}
+                ? parentCredentialLabel(
+                    book.profile!.kind === "child"
+                      ? book.profile!.parentLock
+                      : { accountUid: accountUid! },
+                  )
+                : accountUid
+                  ? "Parent account password"
+                  : "Choose a parent passphrase"}
               <input
                 type="password"
                 required
@@ -181,10 +191,11 @@ export default function EditionSetup({
               </label>
             )}
             <p className="lb-fine">
-              A separate parent passphrase protects age changes and switching to
-              an adult edition. Keep it privately, apart from the book’s unlock
-              passphrase. Relish cannot recover it. It does not unlock anyone’s
-              writing.
+              {accountUid ||
+              (book.profile?.kind === "child" &&
+                "accountUid" in book.profile.parentLock)
+                ? "Your parent account password protects these changes. Children do not need their own account password."
+                : "A separate parent passphrase protects this local edition’s age changes. Keep it privately; Relish cannot recover it."}
             </p>
           </>
         )}

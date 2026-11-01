@@ -4,7 +4,7 @@ import { Mic, Square, Check, RotateCcw } from "lucide-react";
 import { sendEmailVerification, type User } from "firebase/auth";
 import { currentAIUser, connectAI } from "@/lib/relish/ai-auth";
 import type { Book } from "@/lib/relish/model";
-import { verifyParent } from "@/lib/relish/profiles";
+import { verifyParent, parentCredentialLabel } from "@/lib/relish/profiles";
 import {
   VOICE_BYTES,
   VOICE_SECONDS,
@@ -219,7 +219,9 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
           parentPass,
         ))
       )
-        throw new Error("That parent passphrase didn’t match.");
+        throw new Error(
+          `That ${book.profile?.kind === "child" ? parentCredentialLabel(book.profile.parentLock).toLowerCase() : "parent password"} didn’t match.`,
+        );
       if (!alive.current || epoch !== accountEpoch.current) return;
       const account = currentAIUser();
       if (!account || account.uid !== user?.uid)
@@ -239,7 +241,7 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
     } catch (e) {
       if (alive.current)
         setError(
-          e instanceof Error && /passphrase|sign in/.test(e.message)
+          e instanceof Error && /passphrase|password|sign in/.test(e.message)
             ? e.message
             : "We couldn’t connect voice writing. Please try again.",
         );
@@ -524,7 +526,9 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
             </p>
             {child && (
               <label className="rj-field">
-                Parent passphrase
+                {book.profile?.kind === "child"
+                  ? parentCredentialLabel(book.profile.parentLock)
+                  : "Parent password"}
                 <input
                   type="password"
                   autoComplete="off"
