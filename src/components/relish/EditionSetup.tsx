@@ -145,11 +145,11 @@ export default function EditionSetup({
                 pause or pass.
               </p>
               <p>
-                Children have no independent online account or online passage
-                sharing. A parent can authorize encrypted book sync through
-                their account, or keep this edition local only. Assisted voice
-                writing has its own parent permission; syncing never authorizes
-                AI analysis.
+                {accountUid
+                  ? "This profile belongs to your parent account. Its entries and photos save automatically online and can be opened from that account on any device."
+                  : "Children have no independent online account. This local edition can stay on the device or be added to a parent’s account."}{" "}
+                Assisted voice writing has its own parent permission; saving
+                online never authorizes AI analysis or online passage sharing.
               </p>
             </div>
           </>

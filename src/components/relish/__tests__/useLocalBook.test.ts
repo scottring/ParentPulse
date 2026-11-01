@@ -561,3 +561,62 @@ it("re-encrypts photos with an account copy and leaves the original photo readab
     ).size,
   ).toBe(blob.size);
 });
+
+it("exports an account child book with an independent portable passphrase", async () => {
+  const { unlockVault } = await import("@/lib/relish/vault");
+  const { writeBinding } = await import("@/lib/relish/book-sync");
+  const { verifyParent } = await import("@/lib/relish/profiles");
+  const { result } = renderHook(useLocalBook);
+  await act(async () => {
+    await result.current.open("fictional account secret", "Robin");
+  });
+  await act(async () => {
+    await result.current.save((b) => ({
+      ...b,
+      profile: {
+        kind: "child",
+        ageBand: "9-12",
+        parentLock: { accountUid: "parent-one" },
+      },
+    }));
+  });
+  writeBinding(result.current.editionId, {
+    uid: "parent-one",
+    remoteId: crypto.randomUUID(),
+    revision: null,
+    fingerprint: null,
+    accountManaged: true,
+  });
+  const createUrl = vi
+    .spyOn(URL, "createObjectURL")
+    .mockReturnValue("blob:fictional-backup");
+  const click = vi
+    .spyOn(HTMLAnchorElement.prototype, "click")
+    .mockImplementation(() => {});
+  try {
+    await act(async () => {
+      await result.current.backup("portable backup passphrase");
+    });
+    expect(result.current.error).toBe("");
+    expect(click).toHaveBeenCalled();
+    const payload = await (createUrl.mock.calls[0][0] as Blob).text();
+    const restored = await unlockVault(payload, "portable backup passphrase");
+    expect(restored.book.owner).toBe("Robin");
+    expect(restored.book.profile?.kind).toBe("child");
+    if (restored.book.profile?.kind !== "child")
+      throw new Error("Expected child profile");
+    expect("accountUid" in restored.book.profile.parentLock).toBe(false);
+    expect(
+      await verifyParent(
+        restored.book.profile.parentLock,
+        "portable backup passphrase",
+      ),
+    ).toBe(true);
+    await expect(
+      unlockVault(payload, "fictional account secret"),
+    ).rejects.toThrow();
+  } finally {
+    createUrl.mockRestore();
+    click.mockRestore();
+  }
+});

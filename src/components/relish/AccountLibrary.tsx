@@ -496,6 +496,7 @@ export default function AccountLibrary({
           {error || sync.error}
         </p>
       )}
+      {working && <p role="status">Working on your library…</p>}
       {notice && <p role="status">{notice}</p>}
       {user && (
         <button
