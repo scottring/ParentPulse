@@ -1015,3 +1015,55 @@
     padding: 24px;
   }
 }
+
+/* Voice entry keeps account access and recording permission as distinct steps. */
+.lb-app .rj-voice-session .rj-voice-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.lb-app .rj-voice-session p {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.65;
+}
+.lb-app .rj-voice-session .rj-voice-note,
+.lb-app .rj-voice-session .lb-fine {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.lb-app .rj-voice-session .rj-field {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 0;
+  font: 500 15px/1.5 var(--sans);
+}
+.lb-app .rj-voice-session .rj-field input {
+  margin: 0;
+  min-height: 48px;
+  font-size: 18px;
+}
+.lb-app .rj-voice-session .rj-consent {
+  margin: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #d1deda80;
+  cursor: pointer;
+}
+.lb-app .rj-voice-session .rj-consent span {
+  font: 400 16px/1.6 var(--sans);
+  color: var(--ink);
+}
+.lb-app .rj-voice-session .rj-consent input {
+  width: 22px;
+  height: 22px;
+}
+.lb-app .rj-voice-session .rj-voice-account {
+  padding: 14px 18px;
+  background: #d1deda80;
+  border-radius: 12px;
+  overflow-wrap: anywhere;
+}

@@ -12,18 +12,30 @@ import { beforeEach, afterEach, describe, it, expect, vi } from "vitest";
 import VoiceWriter from "../VoiceWriter";
 import { emptyBook } from "@/lib/relish/model";
 import { verifyParent } from "@/lib/relish/profiles";
+import { connectAI } from "@/lib/relish/ai-auth";
+import { sendEmailVerification } from "firebase/auth";
 vi.mock("@/lib/relish/profiles", async (original) => ({
   ...(await original<typeof import("@/lib/relish/profiles")>()),
   verifyParent: vi.fn(),
 }));
 const account = {
+  uid: "fictional-adult",
+  email: "fictional@example.invalid",
   emailVerified: true,
   reload: vi.fn().mockResolvedValue(undefined),
   getIdToken: vi.fn().mockResolvedValue("adult-token"),
 };
+const session: { user: typeof account | null } = { user: account };
 vi.mock("@/lib/relish/ai-auth", () => ({
-  currentAIUser: () => account,
-  connectAI: vi.fn().mockResolvedValue(account),
+  currentAIUser: () => session.user,
+  connectAI: vi.fn(async () => {
+    session.user = account;
+    window.dispatchEvent(new Event("relish:account"));
+    return account;
+  }),
+}));
+vi.mock("firebase/auth", () => ({
+  sendEmailVerification: vi.fn().mockResolvedValue(undefined),
 }));
 const stopTrack = vi.fn();
 class FakeRecorder {
@@ -56,6 +68,10 @@ class FakeRecorder {
 let media: ReturnType<typeof vi.fn>, network: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   vi.clearAllMocks();
+  session.user = account;
+  account.emailVerified = true;
+  account.reload.mockResolvedValue(undefined);
+  account.getIdToken.mockResolvedValue("adult-token");
   FakeRecorder.instances.length = 0;
   media = vi.fn().mockResolvedValue({ getTracks: () => [{ stop: stopTrack }] });
   Object.defineProperty(navigator, "mediaDevices", {
@@ -117,7 +133,7 @@ async function connect() {
   await screen.findByRole("checkbox");
   fireEvent.click(screen.getByRole("checkbox"));
   fireEvent.click(
-    screen.getByRole("button", { name: "Connect voice writing" }),
+    screen.getByRole("button", { name: "Continue to recording" }),
   );
   await screen.findByRole("button", { name: "Start talking" });
 }
@@ -146,7 +162,7 @@ describe("voice writing consent and lifecycle", () => {
     });
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(
-      screen.getByRole("button", { name: "Connect voice writing" }),
+      screen.getByRole("button", { name: "Continue to recording" }),
     );
     await screen.findByText(/passphrase didn’t match/);
     expect(media).not.toHaveBeenCalled();
@@ -214,13 +230,148 @@ describe("voice writing consent and lifecycle", () => {
 
 it("does not start a microphone result that arrives while the page is hidden", async () => {
   let resolve!: (value: unknown) => void;
-  media.mockReturnValue(new Promise((r) => { resolve = r; }));
+  media.mockReturnValue(
+    new Promise((r) => {
+      resolve = r;
+    }),
+  );
   show();
   await connect();
   fireEvent.click(screen.getByRole("button", { name: "Start talking" }));
   await waitFor(() => expect(media).toHaveBeenCalled());
   vi.spyOn(document, "hidden", "get").mockReturnValue(true);
-  await act(async () => { resolve({ getTracks: () => [{stop: stopTrack}] }); });
+  await act(async () => {
+    resolve({ getTracks: () => [{ stop: stopTrack }] });
+  });
   expect(stopTrack).toHaveBeenCalled();
-  expect(screen.queryByRole("button", {name:"I’m done talking"})).toBeNull();
+  expect(screen.queryByRole("button", { name: "I’m done talking" })).toBeNull();
+});
+
+describe("voice account handoff", () => {
+  it("reuses the signed-in account and requires separate consent before recording", async () => {
+    show();
+    await screen.findByText(/You’re signed in as fictional/);
+    expect(screen.queryByLabelText("Account password")).toBeNull();
+    const next = screen.getByRole("button", { name: "Continue to recording" });
+    expect(next.hasAttribute("disabled")).toBe(true);
+    expect(media).not.toHaveBeenCalled();
+    await connect();
+    expect(connectAI).not.toHaveBeenCalled();
+    expect(account.getIdToken).toHaveBeenCalledWith(true);
+    expect(media).not.toHaveBeenCalled();
+  });
+  it("signs in once, then moves to a distinct consent step without opening the microphone", async () => {
+    session.user = null;
+    show();
+    await screen.findByLabelText("Account email");
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    fireEvent.change(screen.getByLabelText("Account email"), {
+      target: { value: "fictional@example.invalid" },
+    });
+    fireEvent.change(screen.getByLabelText("Account password"), {
+      target: { value: "fictional password" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Sign in and continue" }),
+    );
+    await screen.findByRole("checkbox");
+    expect(connectAI).toHaveBeenCalledExactlyOnceWith(
+      "fictional@example.invalid",
+      "fictional password",
+      false,
+    );
+    expect(screen.queryByLabelText("Account password")).toBeNull();
+    expect(media).not.toHaveBeenCalled();
+    await connect();
+    expect(connectAI).toHaveBeenCalledTimes(1);
+  });
+  it("refreshes newly verified credentials before allowing voice entry", async () => {
+    account.emailVerified = false;
+    show();
+    await screen.findByRole("button", { name: "I’ve verified my email" });
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    fireEvent.click(
+      screen.getByRole("button", { name: "I’ve verified my email" }),
+    );
+    await screen.findByText(/Your email is not verified yet/);
+    expect(media).not.toHaveBeenCalled();
+    account.reload.mockImplementationOnce(async () => {
+      account.emailVerified = true;
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "I’ve verified my email" }),
+    );
+    await screen.findByRole("checkbox");
+    expect(account.getIdToken).toHaveBeenCalledWith(true);
+    expect(connectAI).not.toHaveBeenCalled();
+    expect(media).not.toHaveBeenCalled();
+  });
+  it("resends verification only on request and keeps the draft in the writer", async () => {
+    account.emailVerified = false;
+    const view = show();
+    await screen.findByRole("button", { name: "Resend verification email" });
+    expect(sendEmailVerification).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Resend verification email" }),
+    );
+    await screen.findByText(/Verification email sent/);
+    expect(sendEmailVerification).toHaveBeenCalledExactlyOnceWith(account);
+    expect(view.onClose).not.toHaveBeenCalled();
+    expect(view.onInsert).not.toHaveBeenCalled();
+  });
+  it("observes an account sign-in while the writer is open", async () => {
+    session.user = null;
+    show();
+    await screen.findByLabelText("Account email");
+    await act(async () => {
+      session.user = account;
+      window.dispatchEvent(new Event("relish:account"));
+    });
+    await screen.findByRole("checkbox");
+    expect(screen.queryByLabelText("Account password")).toBeNull();
+    expect(media).not.toHaveBeenCalled();
+  });
+  it("stops a recording and clears consent when the account signs out", async () => {
+    show();
+    await connect();
+    fireEvent.click(screen.getByRole("button", { name: "Start talking" }));
+    await screen.findByRole("button", { name: "I’m done talking" });
+    await act(async () => {
+      session.user = null;
+      window.dispatchEvent(new Event("relish:account"));
+    });
+    await screen.findByLabelText("Account email");
+    expect(stopTrack).toHaveBeenCalled();
+    expect(
+      network.mock.calls.filter((c) => c[1]?.method === "POST"),
+    ).toHaveLength(0);
+    await act(async () => {
+      session.user = account;
+      window.dispatchEvent(new Event("relish:account"));
+    });
+    const next = await screen.findByRole("button", {
+      name: "Continue to recording",
+    });
+    expect(next.hasAttribute("disabled")).toBe(true);
+  });
+  it("rejects late microphone access after an account lock", async () => {
+    let resolve!: (value: unknown) => void;
+    media.mockReturnValue(
+      new Promise((r) => {
+        resolve = r;
+      }),
+    );
+    show();
+    await connect();
+    fireEvent.click(screen.getByRole("button", { name: "Start talking" }));
+    await waitFor(() => expect(media).toHaveBeenCalled());
+    await act(async () => {
+      window.dispatchEvent(new Event("relish:locked"));
+      resolve({ getTracks: () => [{ stop: stopTrack }] });
+    });
+    expect(stopTrack).toHaveBeenCalled();
+    expect(
+      screen.queryByRole("button", { name: "I’m done talking" }),
+    ).toBeNull();
+  });
 });

@@ -152,3 +152,12 @@ Device writes happen first. While signed in, encrypted changes upload after a sh
 Current and previous manifests are retained for safe transfers. Bounded garbage collection removes older unreferenced ciphertext after an hour, while a cursor ensures protected old blobs cannot starve cleanup. Removing a synced book atomically removes its current/previous blobs unless another edition references them. Deleting the account removes all synced books and blobs before authentication removal; a content-free marker blocks delayed authorized requests from recreating storage. Local copies are separately controlled.
 
 `scripts/verify-relish-sync.ts` creates fictional accounts to verify actual token/origin gates, same-account encrypted journal/photo restore, other-account isolation, denial of direct authenticated Firestore reads, simultaneous-save conflicts, idempotent retries, adult/child books in one library, and deletion. `--keep-browser` temporarily retains one fictional library in a private `/private/tmp` fixture for UI checks; `--cleanup` removes it. No real family data is used.
+
+
+### Voice entry account handoff
+
+Voice entry now has separate account, email-verification, and recording-consent steps. It uses the current adult account without asking for credentials again, observes account changes while open, and refreshes the verified ID token after the user returns from email verification. Signed-out users are told to use their existing account password; opening a local book is separate from signing in online. Online sessions remain memory-only and end on reload, lock, or shared play. Parent approval and the child edition’s parent passphrase remain required before child recording. Consent text uses readable touch-friendly controls.
+
+Regression coverage includes existing-account reuse, sign-in followed by explicit consent, verification/token refresh without losing the draft, explicit resend, account changes, and recording shutdown/late microphone results after lock.
+
+Operational email repair (2026-11-01): Firebase project `parentpulse-d68ba` used a failing custom Gmail SMTP relay. Changed only `notification.sendEmail.method` from `CUSTOM_SMTP` to `DEFAULT`; read-back confirmed other authentication settings were unchanged. Scott confirmed receiving and completing email verification afterward. No email-verification requirement was bypassed.

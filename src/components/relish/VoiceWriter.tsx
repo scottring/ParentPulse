@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Mic, Square, Check, RotateCcw } from "lucide-react";
-import type { User } from "firebase/auth";
+import { sendEmailVerification, type User } from "firebase/auth";
+import { currentAIUser, connectAI } from "@/lib/relish/ai-auth";
 import type { Book } from "@/lib/relish/model";
 import { verifyParent } from "@/lib/relish/profiles";
 import {
@@ -29,7 +30,12 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
     children: boolean;
   } | null>(null);
   const [user, setUser] = useState<User | null>(null),
-    [approved, setApproved] = useState(false);
+    [accountReady, setAccountReady] = useState(false),
+    [verified, setVerified] = useState(false),
+    [approved, setApproved] = useState(false),
+    [notice, setNotice] = useState("");
+  const accountId = useRef<string | null>(null),
+    accountEpoch = useRef(0);
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [parentPass, setParentPass] = useState("");
@@ -61,7 +67,7 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
   useEffect(() => {
     alive.current = true;
     const controller = new AbortController();
-    abort.current = controller;
+    abort.current = new AbortController();
     if (!sample) {
       fetch("/api/relish/transcribe/", {
         signal: controller.signal,
@@ -80,12 +86,41 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
               "Voice writing couldn’t connect. Please reopen it to try again.",
             );
         });
-      import("@/lib/relish/ai-auth")
-        .then((a) => {
-          if (alive.current) setUser(a.currentAIUser());
-        })
-        .catch(() => {});
     }
+    const accountChanged = () => {
+      const next = sample ? null : currentAIUser();
+      if (accountId.current !== (next?.uid ?? null)) {
+        accountEpoch.current++;
+        accountId.current = next?.uid ?? null;
+        abort.current.abort();
+        abort.current = new AbortController();
+        stop();
+        setRecording(false);
+        setClip(null);
+        setTranscript(null);
+        setApproved(false);
+        setConsent(false);
+        setParentPass("");
+      }
+      setUser(next);
+      setVerified(!!next?.emailVerified);
+      setAccountReady(true);
+    };
+    const locked = () => {
+      accountEpoch.current++;
+      abort.current.abort();
+      stop();
+      setApproved(false);
+      setRecording(false);
+      setClip(null);
+      setTranscript(null);
+      setUser(null);
+      setVerified(false);
+      setConsent(false);
+    };
+    accountChanged();
+    window.addEventListener("relish:account", accountChanged);
+    window.addEventListener("relish:locked", locked);
     const hidden = () => {
       if (document.hidden) stop();
     };
@@ -93,6 +128,9 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
     return () => {
       alive.current = false;
       controller.abort();
+      abort.current.abort();
+      window.removeEventListener("relish:account", accountChanged);
+      window.removeEventListener("relish:locked", locked);
       if (recorder.current) {
         recorder.current.ondataavailable = null;
         recorder.current.onstop = null;
@@ -111,9 +149,64 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
     setAudioUrl(url); // eslint-disable-line react-hooks/set-state-in-effect
     return () => URL.revokeObjectURL(url);
   }, [clip]);
-  async function allow() {
+  async function accountAction(action: "sign-in" | "verify" | "resend") {
     if (operation.current) return;
     operation.current = true;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const account =
+        action === "sign-in"
+          ? await connectAI(email, password, false)
+          : currentAIUser();
+      if (!alive.current || !account || currentAIUser()?.uid !== account.uid)
+        return;
+      const epoch = accountEpoch.current;
+      setPassword("");
+      if (action === "resend") {
+        await sendEmailVerification(account);
+        if (
+          alive.current &&
+          epoch === accountEpoch.current &&
+          currentAIUser()?.uid === account.uid
+        )
+          setNotice(
+            "Verification email sent. Open its link, then return here.",
+          );
+        return;
+      }
+      await account.reload();
+      await account.getIdToken(true);
+      if (
+        !alive.current ||
+        epoch !== accountEpoch.current ||
+        currentAIUser()?.uid !== account.uid
+      )
+        return;
+      setUser(account);
+      setVerified(account.emailVerified);
+      window.dispatchEvent(new Event("relish:account"));
+      if (action === "verify" && !account.emailVerified)
+        setError(
+          "Your email is not verified yet. Open the newest link in your inbox, then try again.",
+        );
+    } catch {
+      if (alive.current)
+        setError(
+          action === "sign-in"
+            ? "That sign-in didn’t work. Use your Relish account password, not your book passphrase."
+            : "We couldn’t check your account. Please try again.",
+        );
+    } finally {
+      operation.current = false;
+      if (alive.current) setBusy(false);
+    }
+  }
+  async function allow() {
+    if (operation.current || !consent) return;
+    operation.current = true;
+    const epoch = accountEpoch.current;
     setBusy(true);
     setError("");
     try {
@@ -127,26 +220,28 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
         ))
       )
         throw new Error("That parent passphrase didn’t match.");
-      if (!alive.current) return;
-      const auth = await import("@/lib/relish/ai-auth");
-      if (!alive.current) return;
-      const account = user || (await auth.connectAI(email, password, false));
+      if (!alive.current || epoch !== accountEpoch.current) return;
+      const account = currentAIUser();
+      if (!account || account.uid !== user?.uid)
+        throw new Error("Please sign in again.");
       await account.reload();
-      if (!account.emailVerified)
-        throw new Error(
-          "Verify the adult account’s email before using voice writing.",
-        );
-      if (!alive.current) return;
-      setUser(account);
-      setPassword("");
+      await account.getIdToken(true);
+      if (
+        !alive.current ||
+        epoch !== accountEpoch.current ||
+        currentAIUser()?.uid !== account.uid
+      )
+        return;
+      setVerified(account.emailVerified);
+      if (!account.emailVerified) return;
       setParentPass("");
       setApproved(true);
     } catch (e) {
       if (alive.current)
         setError(
-          e instanceof Error && /passphrase|Verify/.test(e.message)
+          e instanceof Error && /passphrase|sign in/.test(e.message)
             ? e.message
-            : "That sign-in didn’t work. Use a verified adult Relish account.",
+            : "We couldn’t connect voice writing. Please try again.",
         );
     } finally {
       operation.current = false;
@@ -154,7 +249,9 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
     }
   }
   async function start() {
-    if (operation.current || !approved) return;
+    if (operation.current || !approved || currentAIUser()?.uid !== user?.uid)
+      return;
+    const epoch = accountEpoch.current;
     operation.current = true;
     setBusy(true);
     setError("");
@@ -170,9 +267,10 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
         audio: { echoCancellation: true, noiseSuppression: true },
         video: false,
       });
-      if (!alive.current || document.hidden) {
+      if (!alive.current || document.hidden || epoch !== accountEpoch.current) {
         media.getTracks().forEach((t) => t.stop());
-        if (alive.current) setError("Return to this page and start again when you’re ready.");
+        if (alive.current)
+          setError("Return to this page and start again when you’re ready.");
         return;
       }
       stream.current = media;
@@ -194,7 +292,8 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
       let size = 0,
         tooLarge = false;
       rec.ondataavailable = (e) => {
-        if (!alive.current || !e.data.size) return;
+        if (!alive.current || epoch !== accountEpoch.current || !e.data.size)
+          return;
         size += e.data.size;
         if (size > VOICE_BYTES) {
           tooLarge = true;
@@ -203,7 +302,7 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
       };
       rec.onstop = () => {
         releaseMicrophone();
-        if (!alive.current) return;
+        if (!alive.current || epoch !== accountEpoch.current) return;
         setRecording(false);
         if (tooLarge) {
           setError("That recording was too large. Try a shorter take.");
@@ -247,13 +346,21 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
     }
   }
   async function transcribe() {
-    if (!clip || !user || operation.current) return;
+    if (
+      !clip ||
+      !user ||
+      !approved ||
+      operation.current ||
+      currentAIUser()?.uid !== user.uid
+    )
+      return;
+    const epoch = accountEpoch.current;
     operation.current = true;
     setBusy(true);
     setError("");
     try {
       const token = await user.getIdToken();
-      if (!alive.current) return;
+      if (!alive.current || epoch !== accountEpoch.current) return;
       const response = await fetch("/api/relish/transcribe/", {
         method: "POST",
         headers: {
@@ -281,7 +388,8 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
         throw new Error(
           "The voice service returned an unreadable result. Please try again.",
         );
-      if (alive.current) setTranscript(result.text);
+      if (alive.current && epoch === accountEpoch.current)
+        setTranscript(result.text);
     } catch (e) {
       if (alive.current)
         setError(
@@ -298,219 +406,266 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
     config?.enabled && (!child || config.children) && !!book.profile;
   return (
     <Dialog title="Tell your story" onClose={onClose}>
-      <div className="rj-voice-title">
-        <Mic size={32} />
-        <p className="lb-kicker">A page starts with your voice</p>
-        <h2>
-          Go on.
-          <br />
-          <em>We’re listening.</em>
-        </h2>
-      </div>
-      {sample ? (
-        <p>
-          Voice writing is available in your private book. This sample never
-          opens the microphone or sends a recording.
-        </p>
-      ) : !book.profile ? (
-        <p>
-          Choose an adult or child edition in parent settings before connecting
-          voice writing.
-        </p>
-      ) : !config ? (
-        <p>Connecting voice writing…</p>
-      ) : !ready ? (
-        <p>
-          {child
-            ? "Voice writing is being connected. You can still type and add photos."
-            : "Voice writing is being connected. Please try again later."}
-        </p>
-      ) : !approved ? (
-        <form
-          className="rj-voice-setup"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void allow();
-          }}
-        >
+      <div className="rj-voice-session">
+        <div className="rj-voice-title">
+          <Mic size={32} />
+          <p className="lb-kicker">A page starts with your voice</p>
+          <h2>
+            {accountReady && !sample && !user
+              ? "One quick sign-in."
+              : "Your voice. Your words."}
+          </h2>
+        </div>
+        {sample ? (
+          <p>
+            Voice writing is available in your private book. This sample never
+            opens the microphone or sends a recording.
+          </p>
+        ) : !book.profile ? (
+          <p>
+            Choose an adult or child edition in parent settings before
+            connecting voice writing.
+          </p>
+        ) : !config || !accountReady ? (
+          <p>Connecting voice writing…</p>
+        ) : !ready ? (
           <p>
             {child
-              ? "A grown-up connects this short voice session. Your child doesn’t need an online account."
-              : "Connect with your verified adult Relish account."}
+              ? "Voice writing is being connected. You can still type and add photos."
+              : "Voice writing is being connected. Please try again later."}
           </p>
-          {!user && (
-            <>
-              <label className="rj-field">
-                Adult account email
-                <input
-                  type="email"
-                  autoComplete="username"
-                  required
-                  value={email}
-                  disabled={busy}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </label>
-              <label className="rj-field">
-                Account password
-                <input
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  disabled={busy}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </label>
-            </>
-          )}
-          {user && (
-            <p className="lb-fine">Using the signed-in adult account.</p>
-          )}
-          {child && (
+        ) : !user ? (
+          <form
+            className="rj-voice-setup"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void accountAction("sign-in");
+            }}
+          >
+            <p>
+              Use your existing adult Relish account. If you just verified your
+              email, sign in with that same account.
+            </p>
+            <p className="rj-voice-note">
+              Opening a book unlocks its private pages. Online sign-in ends when
+              you reload or lock Relish, so you may need to sign in again here.
+            </p>
             <label className="rj-field">
-              Parent passphrase
+              Account email
               <input
-                type="password"
-                autoComplete="off"
+                type="email"
+                autoComplete="username"
                 required
-                value={parentPass}
+                value={email}
                 disabled={busy}
-                onChange={(e) => setParentPass(e.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </label>
-          )}
-          <label className="rj-consent">
-            <input
-              type="checkbox"
-              checked={consent}
-              disabled={busy}
-              onChange={(e) => setConsent(e.target.checked)}
-            />
-            <span>
-              {child
-                ? "I’m the parent or guardian and allow this voice session. "
-                : "I’m 18 or older. "}
-              I understand that only the recording I choose will be sent to
-              OpenAI to turn into words.
-            </span>
-          </label>
-          <p className="lb-fine">
-            Relish does not save the recording. OpenAI documents no retention of
-            audio or transcripts for this transcription endpoint. You’ll review
-            the words before adding them to your private book.
-          </p>
-          <button className="lb-primary" disabled={busy || !consent}>
-            {busy ? "Connecting…" : "Connect voice writing"}
-          </button>
-          {!user && (
-            <p className="lb-fine">
-              Need an account? Set up an adult account through Connect editions
-              first.
-            </p>
-          )}
-        </form>
-      ) : transcript !== null ? (
-        <>
-          <p className="lb-kicker">Does this sound like you?</p>
-          <label className="rj-field">
-            Your spoken words
-            <textarea
-              className="rj-transcript"
-              rows={7}
-              value={transcript}
-              maxLength={VOICE_TEXT_LIMIT}
-              onChange={(e) => setTranscript(e.target.value)}
-            />
-          </label>
-          <p>
-            Fix any names or words it missed. Nothing joins your page until you
-            choose it.
-          </p>
-          {transcript.length + 2 > remaining && (
-            <p className="lb-error">
-              This page needs a little more room. Shorten this take before
-              inserting it.
-            </p>
-          )}
-          <button
-            className="lb-primary"
-            disabled={!transcript.trim() || transcript.length + 2 > remaining}
-            onClick={() => onInsert(transcript.trim())}
-          >
-            Add these words to my page <Check size={18} />
-          </button>
-        </>
-      ) : (
-        <>
-          <p>
-            Talk about anything. One little story, up to two minutes. You can
-            add another take after this one.
-          </p>
-          {recording ? (
-            <div className="rj-recording" role="status">
-              <span className="rj-voice-pulse" aria-hidden="true" />
-              <strong>
-                {Math.floor(seconds / 60)}:
-                {String(seconds % 60).padStart(2, "0")}
-              </strong>
-              <p>Listening. Take your time.</p>
-              <button className="lb-primary" onClick={stop}>
-                <Square size={18} /> I’m done talking
-              </button>
-            </div>
-          ) : clip ? (
-            <>
-              <audio
-                src={audioUrl || undefined}
-                controls
-                aria-label="Review your recording"
+            <label className="rj-field">
+              Account password
+              <input
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                disabled={busy}
+                onChange={(e) => setPassword(e.target.value)}
               />
-              <p className="lb-fine">
-                This recording is still on your device. The next button sends
-                this clip to OpenAI.
+            </label>
+            <p className="rj-voice-note">
+              Use your account password here, rather than your book’s
+              passphrase. Your writing stays right where it is.
+            </p>
+            <button className="lb-primary" disabled={busy}>
+              {busy ? "Signing in…" : "Sign in and continue"}
+            </button>
+          </form>
+        ) : !verified ? (
+          <div className="rj-voice-setup">
+            <p>
+              One last step: verify <strong>{user.email}</strong>.
+            </p>
+            <p>
+              Open the link in your email, then come back to this page. Your
+              journal draft stays here.
+            </p>
+            <button
+              className="lb-primary"
+              disabled={busy}
+              onClick={() => void accountAction("verify")}
+            >
+              I’ve verified my email
+            </button>
+            <button
+              className="lb-text"
+              disabled={busy}
+              onClick={() => void accountAction("resend")}
+            >
+              Resend verification email
+            </button>
+          </div>
+        ) : !approved ? (
+          <form
+            className="rj-voice-setup"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void allow();
+            }}
+          >
+            <p className="rj-voice-account">
+              {child ? "A parent is signed in" : "You’re signed in"}
+              {!child && user.email ? ` as ${user.email}` : ""}. No need to sign
+              in again.
+            </p>
+            <p>
+              {child
+                ? "A grown-up approves this short voice session. Your child doesn’t need an online account."
+                : "First record a little story. Listen back, then choose whether to turn it into words."}
+            </p>
+            {child && (
+              <label className="rj-field">
+                Parent passphrase
+                <input
+                  type="password"
+                  autoComplete="off"
+                  required
+                  value={parentPass}
+                  disabled={busy}
+                  onChange={(e) => setParentPass(e.target.value)}
+                />
+              </label>
+            )}
+            <label className="rj-consent">
+              <input
+                type="checkbox"
+                checked={consent}
+                disabled={busy}
+                onChange={(e) => setConsent(e.target.checked)}
+              />
+              <span>
+                {child
+                  ? "I’m the parent or guardian and allow this voice session. "
+                  : "I’m 18 or older. "}
+                I understand that only the recording I choose will be sent to
+                OpenAI to turn into words.
+              </span>
+            </label>
+            <p className="lb-fine">
+              Relish does not save the recording. OpenAI documents no retention
+              of audio or transcripts for this transcription endpoint. You’ll
+              review the words before adding them to your private book.
+            </p>
+            <button className="lb-primary" disabled={busy || !consent}>
+              {busy ? "Getting ready…" : "Continue to recording"}
+            </button>
+          </form>
+        ) : transcript !== null ? (
+          <>
+            <p className="lb-kicker">Does this sound like you?</p>
+            <label className="rj-field">
+              Your spoken words
+              <textarea
+                className="rj-transcript"
+                rows={7}
+                value={transcript}
+                maxLength={VOICE_TEXT_LIMIT}
+                onChange={(e) => setTranscript(e.target.value)}
+              />
+            </label>
+            <p>
+              Fix any names or words it missed. Nothing joins your page until
+              you choose it.
+            </p>
+            {transcript.length + 2 > remaining && (
+              <p className="lb-error">
+                This page needs a little more room. Shorten this take before
+                inserting it.
               </p>
-              <div className="rj-capture-actions">
-                <button
-                  className="lb-primary"
-                  disabled={busy}
-                  onClick={() => void transcribe()}
-                >
-                  {busy
-                    ? "Finding your words…"
-                    : "Turn this recording into words"}
-                </button>
-                <button
-                  className="lb-text"
-                  disabled={busy}
-                  onClick={() => void start()}
-                >
-                  <RotateCcw size={17} /> Try another take
+            )}
+            <button
+              className="lb-primary"
+              disabled={!transcript.trim() || transcript.length + 2 > remaining}
+              onClick={() => onInsert(transcript.trim())}
+            >
+              Add these words to my page <Check size={18} />
+            </button>
+          </>
+        ) : (
+          <>
+            <p>
+              Talk about anything. One little story, up to two minutes. You can
+              add another take after this one.
+            </p>
+            {recording ? (
+              <div className="rj-recording" role="status">
+                <span className="rj-voice-pulse" aria-hidden="true" />
+                <strong>
+                  {Math.floor(seconds / 60)}:
+                  {String(seconds % 60).padStart(2, "0")}
+                </strong>
+                <p>Listening. Take your time.</p>
+                <button className="lb-primary" onClick={stop}>
+                  <Square size={18} /> I’m done talking
                 </button>
               </div>
-            </>
-          ) : (
-            <button
-              className="rj-record-button"
-              disabled={busy}
-              onClick={() => void start()}
-            >
-              <Mic size={30} />
-              {busy ? "Opening microphone…" : "Start talking"}
-            </button>
-          )}
-        </>
-      )}
-      {error && (
-        <p className="lb-error" role="alert">
-          {error}
-        </p>
-      )}
-      <button className="lb-text rj-voice-close" onClick={onClose}>
-        {clip || recording || transcript !== null
-          ? "Discard this take and go back"
-          : "Back to my page"}
-      </button>
+            ) : clip ? (
+              <>
+                <audio
+                  src={audioUrl || undefined}
+                  controls
+                  aria-label="Review your recording"
+                />
+                <p className="lb-fine">
+                  This recording is still on your device. The next button sends
+                  this clip to OpenAI.
+                </p>
+                <div className="rj-capture-actions">
+                  <button
+                    className="lb-primary"
+                    disabled={busy}
+                    onClick={() => void transcribe()}
+                  >
+                    {busy
+                      ? "Finding your words…"
+                      : "Turn this recording into words"}
+                  </button>
+                  <button
+                    className="lb-text"
+                    disabled={busy}
+                    onClick={() => void start()}
+                  >
+                    <RotateCcw size={17} /> Try another take
+                  </button>
+                </div>
+              </>
+            ) : (
+              <button
+                className="rj-record-button"
+                disabled={busy}
+                onClick={() => void start()}
+              >
+                <Mic size={30} />
+                {busy ? "Opening microphone…" : "Start talking"}
+              </button>
+            )}
+          </>
+        )}
+        {notice && (
+          <p role="status" className="rj-voice-note">
+            {notice}
+          </p>
+        )}
+        {error && (
+          <p className="lb-error" role="alert">
+            {error}
+          </p>
+        )}
+        <button className="lb-text rj-voice-close" onClick={onClose}>
+          {clip || recording || transcript !== null
+            ? "Discard this take and go back"
+            : "Back to my page"}
+        </button>
+      </div>
     </Dialog>
   );
 }
