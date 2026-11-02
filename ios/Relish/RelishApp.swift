@@ -18,7 +18,7 @@ struct RelishBook: View {
             BookWebView(browser: browser)
             if let error = browser.error {
                 ContentUnavailableView {
-                    Label("Your book is waiting", systemImage: "book.closed")
+                    Label("Could not open Relish", systemImage: "book.closed")
                 } description: {
                     Text(error)
                 } actions: {
@@ -34,7 +34,7 @@ struct RelishBook: View {
                 VStack(spacing: 16) {
                     Image(systemName: "book.closed").font(.largeTitle)
                     Text("relish").font(.system(size: 40, design: .serif))
-                    Text("Your words belong to you.").font(.subheadline)
+                    Text("Content hidden while Relish is inactive.").font(.subheadline)
                 }
                 .foregroundStyle(Color(red: 0.24, green: 0.31, blue: 0.32))
                 .accessibilityLabel("Relish. Your private book is covered.")
@@ -73,24 +73,28 @@ struct BackupShare: UIViewControllerRepresentable {
 final class BookBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
     let webView: WKWebView
     let startURL: URL
+    let policy: BookURLPolicy
     @Published var error: String?
     @Published var export: BackupExport?
     private var downloads: [ObjectIdentifier: URL] = [:]
 
     override init() {
         let configured = Bundle.main.object(forInfoDictionaryKey: "RelishStartURL") as? String ?? ""
-        let fallback = URL(string: "https://app.relish.my/relish/")!
         #if DEBUG
-        startURL = URL(string: configured) ?? fallback
+        startURL = BookURLPolicy.startURL(configured, development: true)
         #else
         // A production binary cannot accidentally ship against a preview host.
-        startURL = fallback
+        startURL = BookURLPolicy.production
         #endif
+        policy = BookURLPolicy(origin: startURL)
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
         configuration.allowsInlineMediaPlayback = true
         webView = WKWebView(frame: .zero, configuration: configuration)
         super.init()
+        #if DEBUG
+        webView.isInspectable = true
+        #endif
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.isOpaque = false
@@ -101,20 +105,17 @@ final class BookBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUID
         webView.load(URLRequest(url: startURL))
     }
     func retry() { error = nil; webView.load(URLRequest(url: startURL)) }
-    private func trusted(_ url: URL) -> Bool {
-        url.scheme == startURL.scheme && url.host == startURL.host && url.port == startURL.port
-    }
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void) {
         guard let url = action.request.url else { decisionHandler(.cancel); return }
-        if action.shouldPerformDownload && (trusted(url) || (url.scheme == "blob" && URL(string: String(url.absoluteString.dropFirst(5))).map(trusted) == true)) {
+        if action.shouldPerformDownload && policy.permitsDownload(url) {
             decisionHandler(.download); return
         }
-        if trusted(url) {
+        if policy.trusts(url) {
             if action.targetFrame == nil { webView.load(action.request); decisionHandler(.cancel) }
             else { decisionHandler(.allow) }
         } else {
             decisionHandler(.cancel)
-            if action.navigationType == .linkActivated, ["https", "mailto"].contains(url.scheme ?? "") {
+            if action.navigationType == .linkActivated, policy.permitsExternalLink(url) {
                 UIApplication.shared.open(url)
             }
         }
@@ -128,7 +129,7 @@ final class BookBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUID
         error = "Relish needs to reopen. Your last saved words are still in your encrypted book."
     }
     func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping @MainActor @Sendable (WKPermissionDecision) -> Void) {
-        let allowed = origin.host == startURL.host && origin.protocol == startURL.scheme && frame.isMainFrame
+        let allowed = policy.permitsMedia(scheme: origin.protocol, host: origin.host, port: origin.port, mainFrame: frame.isMainFrame)
         decisionHandler(allowed ? .prompt : .deny)
     }
     func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) { download.delegate = self }

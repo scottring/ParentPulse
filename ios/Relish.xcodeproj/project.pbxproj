@@ -7,15 +7,35 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		557A255897011E5BCB12F386 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 3023862B6A4B49DD9DC20E92 /* PrivacyInfo.xcprivacy */; };
 		58197C5E55C18D1299FA0FD1 /* RelishApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AA72653F49816E40300D7C3 /* RelishApp.swift */; };
+		72A75C9B93D5BCA46BB8C416 /* BookURLPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEDFB505A1BD207713B66A44 /* BookURLPolicyTests.swift */; };
 		9AFC8C81BF85FEA36222BE0A /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 458311FBE9BA69278B1DDA88 /* WebKit.framework */; };
+		9D22AF10363F2E0BDF5F23D7 /* BookURLPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82103323B4B2562B67FAC3BB /* BookURLPolicy.swift */; };
+		CDB53911D44120D15E459018 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6B0DA22FCB7A63B8ACDCB327 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		1B7A02BA2026AE5027E5C928 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C2702068EF26BEB0BB949802 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 26F002E553E4AEAB8499B9CD;
+			remoteInfo = Relish;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		3023862B6A4B49DD9DC20E92 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		458311FBE9BA69278B1DDA88 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
+		5A2CD25B8AD2EC1BB43CFA16 /* RelishTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RelishTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5AA72653F49816E40300D7C3 /* RelishApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelishApp.swift; sourceTree = "<group>"; };
+		6B0DA22FCB7A63B8ACDCB327 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		6FC1352B6DB58473B05ECC40 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8016625041AA34AF7A0C3A05 /* Relish.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Relish.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		82103323B4B2562B67FAC3BB /* BookURLPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookURLPolicy.swift; sourceTree = "<group>"; };
+		9AAF92DE7FCE34F8BD80FD04 /* Relish.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Relish.entitlements; sourceTree = "<group>"; };
+		DEDFB505A1BD207713B66A44 /* BookURLPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookURLPolicyTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -33,7 +53,11 @@
 		04137473F6F6E14D7B129D07 /* Relish */ = {
 			isa = PBXGroup;
 			children = (
+				6B0DA22FCB7A63B8ACDCB327 /* Assets.xcassets */,
+				82103323B4B2562B67FAC3BB /* BookURLPolicy.swift */,
 				6FC1352B6DB58473B05ECC40 /* Info.plist */,
+				3023862B6A4B49DD9DC20E92 /* PrivacyInfo.xcprivacy */,
+				9AAF92DE7FCE34F8BD80FD04 /* Relish.entitlements */,
 				5AA72653F49816E40300D7C3 /* RelishApp.swift */,
 			);
 			path = Relish;
@@ -51,14 +75,24 @@
 			isa = PBXGroup;
 			children = (
 				8016625041AA34AF7A0C3A05 /* Relish.app */,
+				5A2CD25B8AD2EC1BB43CFA16 /* RelishTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		53D1DAAE44888DA7FFF1C57E /* RelishTests */ = {
+			isa = PBXGroup;
+			children = (
+				DEDFB505A1BD207713B66A44 /* BookURLPolicyTests.swift */,
+			);
+			path = RelishTests;
 			sourceTree = "<group>";
 		};
 		BCBF103730BC9DC8F7D17B82 = {
 			isa = PBXGroup;
 			children = (
 				04137473F6F6E14D7B129D07 /* Relish */,
+				53D1DAAE44888DA7FFF1C57E /* RelishTests */,
 				043592AB2EA9EE9CBC9AA715 /* Frameworks */,
 				04FFE4A6F82A2CB2466993EC /* Products */,
 			);
@@ -72,6 +106,7 @@
 			buildConfigurationList = BD9AB428E54E316F70DCEBF5 /* Build configuration list for PBXNativeTarget "Relish" */;
 			buildPhases = (
 				9FD0FB8C962A118AA97604CB /* Sources */,
+				B3BA8E24C509B96CD1E8A124 /* Resources */,
 				13409C128AAE521EF47DE449 /* Frameworks */,
 			);
 			buildRules = (
@@ -85,6 +120,24 @@
 			productReference = 8016625041AA34AF7A0C3A05 /* Relish.app */;
 			productType = "com.apple.product-type.application";
 		};
+		AE4492E7AA3584CD6270638B /* RelishTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1CEDB0E17642EB403E6F16F4 /* Build configuration list for PBXNativeTarget "RelishTests" */;
+			buildPhases = (
+				70EB0C26A41D64F2155ECEBC /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F3ABB29579CB76F112945FF8 /* PBXTargetDependency */,
+			);
+			name = RelishTests;
+			packageProductDependencies = (
+			);
+			productName = RelishTests;
+			productReference = 5A2CD25B8AD2EC1BB43CFA16 /* RelishTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -95,6 +148,11 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					26F002E553E4AEAB8499B9CD = {
+						DevelopmentTeam = XT33G7U496;
+						ProvisioningStyle = Automatic;
+					};
+					AE4492E7AA3584CD6270638B = {
+						DevelopmentTeam = XT33G7U496;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -114,26 +172,57 @@
 			projectRoot = "";
 			targets = (
 				26F002E553E4AEAB8499B9CD /* Relish */,
+				AE4492E7AA3584CD6270638B /* RelishTests */,
 			);
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		B3BA8E24C509B96CD1E8A124 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CDB53911D44120D15E459018 /* Assets.xcassets in Resources */,
+				557A255897011E5BCB12F386 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
+		70EB0C26A41D64F2155ECEBC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				72A75C9B93D5BCA46BB8C416 /* BookURLPolicyTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9FD0FB8C962A118AA97604CB /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9D22AF10363F2E0BDF5F23D7 /* BookURLPolicy.swift in Sources */,
 				58197C5E55C18D1299FA0FD1 /* RelishApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		F3ABB29579CB76F112945FF8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 26F002E553E4AEAB8499B9CD /* Relish */;
+			targetProxy = 1B7A02BA2026AE5027E5C928 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
 		21D30F428FB31D53F64F2BC4 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Relish/Relish.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Relish/Info.plist;
@@ -147,10 +236,28 @@
 			};
 			name = Release;
 		};
+		3F375D42D823EB506C6B3082 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = my.relish.book.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Relish.app/Relish";
+			};
+			name = Debug;
+		};
 		85E61D324C3F07DF485E52EB /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Relish/Relish.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Relish/Info.plist;
@@ -164,10 +271,28 @@
 			};
 			name = Debug;
 		};
+		86D180B98FF858393577DD94 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = my.relish.book.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Relish.app/Relish";
+			};
+			name = Release;
+		};
 		C477A593AEBEF0496A186E90 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -199,10 +324,12 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = XT33G7U496;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -223,7 +350,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				RELISH_START_URL = "http:/$()/127.0.0.1:3210/relish/";
+				RELISH_START_URL = "https:/$()/app.relish.my/relish/";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -237,6 +364,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -268,10 +396,12 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = XT33G7U496;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -298,6 +428,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		1CEDB0E17642EB403E6F16F4 /* Build configuration list for PBXNativeTarget "RelishTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3F375D42D823EB506C6B3082 /* Debug */,
+				86D180B98FF858393577DD94 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		B511673FEA6AEEE58F734D04 /* Build configuration list for PBXProject "Relish" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
