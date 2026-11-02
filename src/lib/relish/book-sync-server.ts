@@ -15,7 +15,9 @@ const bad = (message = "This sync request could not be read.", status = 400) =>
   new AIError(message, status);
 
 // The UID comes exclusively from the verified token. These collections are not
-// accessible through the client Firestore SDK. No passphrase or plaintext is sent.
+// accessible through the client Firestore SDK. Account-managed books have a random
+// recovery secret in a separate owner-scoped collection; local book passphrases
+// are never uploaded. This is account security, not zero-knowledge storage.
 export async function syncAction(uid: string, data: Record<string, unknown>) {
   const { db } = services();
   const root = db.doc(`relish_sync/${uid}`),
@@ -55,6 +57,22 @@ export async function syncAction(uid: string, data: Record<string, unknown>) {
         return head;
       }),
     };
+  }
+  if (data.action === "account-key") {
+    if (!isSyncId(data.id)) throw bad();
+    return db.runTransaction(async (tx) => {
+      const [p, r, head, access] = await tx.getAll(
+        tombstone,
+        root,
+        books.doc(data.id as string),
+        root.collection("access").doc(data.id as string),
+      );
+      if (p.data()?.deleting || r.data()?.deleting)
+        throw bad("Account removal is in progress.", 409);
+      if (!head.data()?.accountManaged || !access.exists)
+        throw bad("This account book is not available.", 404);
+      return { secret: access.data()!.secret };
+    });
   }
   if (data.action === "get") {
     if (!isHash(data.hash)) throw bad();
@@ -108,7 +126,8 @@ export async function syncAction(uid: string, data: Record<string, unknown>) {
       typeof data.label !== "string" ||
       !data.label.trim() ||
       data.label.length > 60 ||
-      !validManifest(data.manifest)
+      !validManifest(data.manifest) ||
+      (data.accountSecret !== undefined && !isHash(data.accountSecret))
     )
       throw bad();
     const manifest = data.manifest,
@@ -119,6 +138,16 @@ export async function syncAction(uid: string, data: Record<string, unknown>) {
         throw bad("Account removal is in progress.", 409);
       const current = head.data() as
         (SyncedEdition & { previous?: SyncManifest }) | undefined;
+      if (data.accountSecret !== undefined && current) {
+        const access = await tx.get(
+          root.collection("access").doc(data.id as string),
+        );
+        if (
+          !current.accountManaged ||
+          access.data()?.secret !== data.accountSecret
+        )
+          throw bad("An existing book’s account key cannot be replaced.", 409);
+      }
       // An acknowledged retry after a lost response is idempotent.
       if (current?.manifest.fingerprint === manifest.fingerprint)
         return {
@@ -128,6 +157,9 @@ export async function syncAction(uid: string, data: Record<string, unknown>) {
             revision: current.revision,
             updatedAt: current.updatedAt,
             manifest: current.manifest,
+            ...(current.accountManaged
+              ? { accountManaged: true as const }
+              : {}),
           },
         };
       if ((current?.revision || null) !== data.baseRevision)
@@ -162,7 +194,14 @@ export async function syncAction(uid: string, data: Record<string, unknown>) {
         revision: randomUUID(),
         updatedAt: now,
         manifest,
+        ...(current?.accountManaged || data.accountSecret
+          ? { accountManaged: true as const }
+          : {}),
       };
+      if (!current && data.accountSecret)
+        tx.set(root.collection("access").doc(data.id as string), {
+          secret: data.accountSecret,
+        });
       tx.set(ref, { ...book, previous: current?.manifest || null });
       return { book };
     });
@@ -219,6 +258,7 @@ export async function syncAction(uid: string, data: Record<string, unknown>) {
         { merge: true },
       );
       tx.delete(head.ref);
+      tx.delete(root.collection("access").doc(data.id as string));
     });
     return { ok: true };
   }

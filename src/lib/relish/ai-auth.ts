@@ -1,9 +1,11 @@
-// Online services share an in-memory adult account. Book keys never enter Firebase.
+// One persistent adult account owns the family library and online services.
 import { getApps, initializeApp } from "firebase/app";
 import {
   initializeAuth,
   onAuthStateChanged,
-  inMemoryPersistence,
+  browserLocalPersistence,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendEmailVerification,
@@ -25,13 +27,13 @@ export function getAIAuth() {
         },
         name,
       );
-    auth = initializeAuth(app, { persistence: inMemoryPersistence });
+    auth = initializeAuth(app, { persistence: browserLocalPersistence });
     onAuthStateChanged(auth, () =>
       window.dispatchEvent(new Event("relish:account")),
     );
     window.addEventListener("relish:locked", () => {
       generation++;
-      if (auth) void signOut(auth);
+      // Locking a view cancels pending consent/sign-in, not the account session.
     });
   }
   return auth;
@@ -54,9 +56,39 @@ export async function connectAI(
     throw new Error("The book locked. Please sign in again.");
   }
   if (create) await sendEmailVerification(result.user);
+  setParentGate(null);
   return result.user;
 }
 export async function disconnectAI() {
   generation++;
   if (auth) await signOut(auth);
+}
+
+export async function verifyAccountPassword(uid: string, password: string) {
+  const user = currentAIUser();
+  if (!user?.email || !user.emailVerified || user.uid !== uid || !password)
+    return false;
+  try {
+    await reauthenticateWithCredential(
+      user,
+      EmailAuthProvider.credential(user.email, password),
+    );
+    return currentAIUser()?.uid === uid;
+  } catch {
+    return false;
+  }
+}
+// A child view stays behind the parent gate even after a page reload. This is
+// a shared-device UI safeguard; the signed-in adult account owns these books.
+const gateKey = "relish.parent-gate.v1";
+export function setParentGate(lock: import("./profiles").ParentLock | null) {
+  if (lock) localStorage.setItem(gateKey, JSON.stringify(lock));
+  else localStorage.removeItem(gateKey);
+}
+export function getParentGate(): import("./profiles").ParentLock | null {
+  try {
+    return JSON.parse(localStorage.getItem(gateKey) || "null");
+  } catch {
+    return null;
+  }
 }

@@ -50,6 +50,7 @@ export async function uploadBook(
   baseRevision: string | null,
   signal: AbortSignal,
   previous?: SyncManifest,
+  accountSecret?: string,
 ): Promise<SyncedEdition> {
   const { ciphertext, ...envelope } = snapshot.envelope;
   const parts: string[] = [],
@@ -88,7 +89,14 @@ export async function uploadBook(
   return (
     await syncRequest<{ book: SyncedEdition }>(
       user,
-      { action: "commit", id, baseRevision, label: snapshot.label, manifest },
+      {
+        action: "commit",
+        id,
+        baseRevision,
+        label: snapshot.label,
+        manifest,
+        ...(accountSecret ? { accountSecret } : {}),
+      },
       signal,
     )
   ).book;

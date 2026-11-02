@@ -1,4 +1,5 @@
 "use client";
+import { readBinding } from "@/lib/relish/book-sync";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowLeft,
@@ -72,7 +73,7 @@ type Modal =
   "settings" | "create" | "person" | "guide" | "connections" | "profile" | null;
 type Vault = Omit<
   ReturnType<typeof useLocalBook>,
-  "syncSnapshot" | "openSynced" | "receiveSynced"
+  "syncSnapshot" | "openSynced" | "receiveSynced" | "accountSnapshot"
 >;
 const chapters = [
   { id: "words", label: "Your pages" },
@@ -100,6 +101,7 @@ export default function LivingBook({
   const [offered, setOffered] = useState<
     { title: string; text: string } | undefined
   >(undefined);
+  const accountManaged = !!readBinding(vault.editionId)?.accountManaged;
   const [removeName, setRemoveName] = useState("");
   const [removeError, setRemoveError] = useState("");
   const { threads, plans, intro, cue } = guidanceFor(vault.book);
@@ -929,8 +931,8 @@ export default function LivingBook({
               {book.profile?.kind === "child"
                 ? "Parent account"
                 : accountLabel === "Sign in"
-                  ? "Sign in & sync"
-                  : "Account & sync"}
+                  ? "Sign in"
+                  : "Family library"}
             </button>
           </div>
         )}
@@ -1159,6 +1161,11 @@ export default function LivingBook({
           onClose={() => setModal(null)}
         >
           <EditionSetup
+            accountUid={
+              readBinding(vault.editionId)?.accountManaged
+                ? readBinding(vault.editionId)?.uid
+                : undefined
+            }
             book={book}
             save={vault.save}
             onDone={() => {
@@ -1181,10 +1188,12 @@ export default function LivingBook({
             Your book, drafts, session progress and games are{" "}
             {sample
               ? "examples in memory only"
-              : "encrypted in this browser on this device"}
+              : accountManaged
+                ? "encrypted and saved automatically to your account, including its parent-managed child books"
+                : "encrypted in this browser on this device"}
             .{" "}
             {online
-              ? "On-demand AI uses a reviewed excerpt. Automatic manual suggestions have a separate opt-in; photos and private people tags are excluded from AI requests. Optional library sync stores an encrypted copy."
+              ? "On-demand AI uses a reviewed excerpt. Automatic manual suggestions have a separate opt-in; photos and private people tags are excluded from AI requests. Saving online does not give AI access to your book."
               : "General AI chat and online passage sharing are off. Voice writing and manual suggestions, when available, need a parent’s permission and adult account."}
           </p>
           {!sample && (
@@ -1198,7 +1207,9 @@ export default function LivingBook({
               <p className="lb-fine">
                 {online
                   ? "Optional AI and family connections are available when you choose them."
-                  : "Written guidance for this age. A parent can authorize encrypted sync and assisted voice writing. No independent child account or online passage sharing. A parent passphrase protects changes."}
+                  : accountManaged
+                    ? "This child’s book belongs to the parent account and saves automatically online. The parent account password protects age changes and access to the family library. Voice writing needs a parent’s separate permission."
+                    : "Written guidance for this age. A separate parent passphrase protects this local edition’s settings. Children have no independent account or online passage sharing."}
               </p>
               <button
                 className="lb-secondary"
@@ -1211,13 +1222,14 @@ export default function LivingBook({
           <div className="lb-boundary">
             <h3>Keep a copy you control.</h3>
             <p>
-              Browser data can be cleared. Export encrypted backups regularly
-              and keep your passphrase separately.
+              {accountManaged
+                ? "Your saved book is available whenever you sign in. For an extra portable copy, export a backup with a passphrase you choose and keep separately."
+                : "Browser data can be cleared. Export encrypted backups regularly and keep your passphrase separately."}
             </p>
             <button
               className="lb-primary"
               disabled={sample}
-              onClick={vault.backup}
+              onClick={() => void vault.backup()}
             >
               <Download size={16} /> Export encrypted backup
             </button>

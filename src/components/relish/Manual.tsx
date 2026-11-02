@@ -3,7 +3,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { User } from "firebase/auth";
 import { Check, Sparkles, BookOpen, X, RefreshCw } from "lucide-react";
 import type { Book } from "@/lib/relish/model";
-import { audienceOf, verifyParent } from "@/lib/relish/profiles";
+import {
+  audienceOf,
+  verifyParent,
+  parentCredentialLabel,
+} from "@/lib/relish/profiles";
 import {
   addManualIdeas,
   manualOf,
@@ -83,7 +87,7 @@ export function useManualGuide(
         b.profile.kind === "child" &&
         !(await verifyParent(b.profile.parentLock, parentPass))
       )
-        throw new Error("That parent passphrase didn’t match.");
+        throw new Error("That parent password didn’t match.");
       if (!alive.current) return;
       const auth = await import("@/lib/relish/ai-auth");
       if (!alive.current) return;
@@ -433,7 +437,9 @@ export default function Manual({
                 )}
                 {book.profile?.kind === "child" && (
                   <label className="rj-field">
-                    Parent passphrase
+                    {book.profile?.kind === "child"
+                      ? parentCredentialLabel(book.profile.parentLock)
+                      : "Parent password"}
                     <input
                       type="password"
                       required

@@ -340,7 +340,10 @@ function AdultConnectedEditions({
   async function closeWithDraft() {
     if (busy) return;
     await run(async () => {
-      if ((!initialPassage || !book.connections?.draft) && (text || book.connections?.draft))
+      if (
+        (!initialPassage || !book.connections?.draft) &&
+        (text || book.connections?.draft)
+      )
         await save((b) => ({
           ...b,
           connections: {
@@ -370,10 +373,11 @@ function AdultConnectedEditions({
             <Lock size={15} /> How this connection stays private
           </summary>
           <p>
-            Only selected passages are encrypted and uploaded. Your full book,
-            passphrase stays on this device and the private key stays inside its encrypted book. Relish stores
-            account details, edition names, family membership, delivery status
-            and encrypted passages.
+            Only passages you select are delivered to other accounts. Your
+            private sharing key stays inside your encrypted book.
+            Account-managed books can be opened by the account owner. Relish
+            stores account details, edition names, family membership, delivery
+            status and encrypted passages.
           </p>
           <p className="lb-fine">
             A saved copy belongs to its recipient. Withdrawing an invitation or
@@ -431,7 +435,8 @@ function AdultConnectedEditions({
               />
             </label>
             <p className="lb-fine">
-              Use a different password from your private book’s passphrase.
+              Use your Relish account password. Local-only book passphrases are
+              separate.
             </p>
             {create && (
               <label className="lb-consent-check">
@@ -758,7 +763,8 @@ function AdultConnectedEditions({
                       <summary>Offer a passage from my edition</summary>
                       <p>
                         Choose the exact words and the editions that may receive
-                        them. {initialPassage && book.connections?.draft
+                        them.{" "}
+                        {initialPassage && book.connections?.draft
                           ? "Your earlier unfinished draft stays in your book. Send this selection before closing to keep edits to it; its original page is always kept."
                           : "Closing this window keeps your text as an encrypted local draft. Choose recipients again when you return."}
                       </p>

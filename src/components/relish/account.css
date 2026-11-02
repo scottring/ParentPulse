@@ -172,3 +172,82 @@
     justify-content: space-between;
   }
 }
+
+.lb-library-home {
+  min-height: 100dvh;
+  padding: clamp(24px, 5vw, 72px);
+}
+.lb-library-home > header {
+  max-width: 980px;
+  margin: 0 auto 40px;
+}
+.lb-library-home > header > p:last-child {
+  font-size: 13px;
+  margin-top: 8px;
+}
+.lb-library-home > section {
+  max-width: 760px;
+  margin: auto;
+  padding: clamp(24px, 4vw, 52px);
+  background: #e6ebe7ed;
+  border: 1px solid #47646730;
+  border-radius: 12px;
+  box-shadow: 0 16px 60px #2443440d;
+}
+.lb-account-empty {
+  padding: 20px 0;
+}
+.lb-account-footer {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid #667c7c40;
+  padding-top: 24px;
+  margin-top: 4px;
+}
+.lb-account select {
+  min-height: 48px;
+  padding: 12px;
+  font: inherit;
+  color: inherit;
+  background: #ffffff55;
+  border: 1px solid #667c7c70;
+  border-radius: 8px;
+  width: 100%;
+}
+.lb-app .lb-library-home .lb-account h2 {
+  font-size: clamp(32px, 5vw, 48px);
+}
+@media (max-width: 560px) {
+  .lb-library-home {
+    padding: 24px 16px;
+  }
+  .lb-library-home > header {
+    margin-bottom: 24px;
+  }
+  .lb-library-home > section {
+    padding: 24px 20px;
+  }
+}
+
+.lb-app .lb-account .lb-account-check input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  flex: 0 0 18px;
+  padding: 0;
+  margin: 3px 0 0;
+  accent-color: #42676b;
+}
+.lb-account {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.lb-library-home {
+  padding: clamp(24px, 4vw, 48px);
+}
+.lb-library-home > header {
+  margin-bottom: 28px;
+}
+.lb-library-home > section {
+  padding: clamp(24px, 3vw, 36px);
+}

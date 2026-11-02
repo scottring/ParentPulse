@@ -19,6 +19,14 @@ vi.mock("../useLocalBook", () => ({
     shelf: vi.fn(),
   }),
 }));
+vi.mock("../useBookSync", () => ({
+  useBookSync: () => ({ authReady: true, user: null }),
+}));
+vi.mock("@/lib/relish/ai-auth", () => ({
+  setParentGate: vi.fn(),
+  getParentGate: () => null,
+  disconnectAI: vi.fn(),
+}));
 vi.mock("../Sensory", () => ({
   SensoryProvider: ({ children }: { children: ReactNode }) => children,
 }));

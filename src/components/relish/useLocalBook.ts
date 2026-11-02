@@ -289,7 +289,7 @@ export function useLocalBook() {
       return blob;
     },
   };
-  const backup = async () => {
+  const backup = async (exportPassphrase?: string) => {
     const token = epoch.current;
     try {
       await queue.current;
@@ -297,12 +297,42 @@ export function useLocalBook() {
         throw new Error("Unlock your book before making a backup.");
       const raw = localStorage.getItem(editionKey(selected.current));
       if (!raw) throw new Error("This book has not been saved yet.");
-      const encrypted = parseEnvelope(raw);
+      let encrypted = parseEnvelope(raw);
       if (JSON.stringify(encrypted) !== JSON.stringify(envelope.current))
         throw new Error(
           "This book changed in another tab. Unlock its latest version before making a backup.",
         );
-      const media = await backupPhotos(currentBook.current, selected.current);
+      let media = await backupPhotos(currentBook.current, selected.current);
+      if (readBinding(selected.current)?.accountManaged) {
+        if (!exportPassphrase || exportPassphrase.length < 12)
+          throw new Error(
+            "Choose a backup passphrase of at least 12 characters.",
+          );
+        const source = currentBook.current;
+        const { makeParentLock } = await import("@/lib/relish/profiles");
+        const portable =
+          source.profile?.kind === "child"
+            ? {
+                ...source,
+                profile: {
+                  ...source.profile,
+                  parentLock: await makeParentLock(exportPassphrase),
+                },
+              }
+            : source;
+        const result = await createVault(portable, exportPassphrase);
+        const converted = [];
+        for (const photo of media)
+          converted.push(
+            await encryptPhoto(
+              photo.id,
+              await decryptPhoto(photo, key.current!),
+              result.key,
+            ),
+          );
+        encrypted = result.envelope;
+        media = converted;
+      }
       if (token !== epoch.current) throw new Error("This book was locked.");
       const bundle = JSON.stringify({
         ...encrypted,
@@ -390,6 +420,52 @@ export function useLocalBook() {
       };
     });
   };
+  // Re-encrypt a complete snapshot when moving an existing local book into an
+  // account. The original edition and its passphrase are left untouched.
+  const accountSnapshot = async (
+    secret: string,
+    uid: string,
+  ): Promise<EncryptedSnapshot> => {
+    const token = epoch.current;
+    await queue.current;
+    return withVaultWrite(async () => {
+      const activeKey = key.current,
+        before = envelope.current,
+        source = currentBook.current;
+      if (
+        !activeKey ||
+        !before ||
+        token !== epoch.current ||
+        localStorage.getItem(editionKey(selected.current)) !==
+          JSON.stringify(before)
+      )
+        throw new Error("Reopen your book before adding it to your account.");
+      const next: Book = {
+        ...source,
+        ...(source.profile?.kind === "child"
+          ? { profile: { ...source.profile, parentLock: { accountUid: uid } } }
+          : {}),
+      };
+      const result = await createVault(next, secret);
+      const oldPhotos = await backupPhotos(source, selected.current);
+      const media = [];
+      for (const photo of oldPhotos)
+        media.push(
+          await encryptPhoto(
+            photo.id,
+            await decryptPhoto(photo, activeKey),
+            result.key,
+          ),
+        );
+      if (token !== epoch.current || before !== envelope.current)
+        throw new Error("Your book changed. Try adding it again.");
+      return {
+        envelope: result.envelope,
+        media,
+        label: source.owner.slice(0, 60),
+      };
+    });
+  };
   const openSynced = async (
     raw: string,
     passphrase: string,
@@ -432,6 +508,7 @@ export function useLocalBook() {
           remoteId: head.id,
           revision: head.revision,
           fingerprint: head.manifest.fingerprint,
+          ...(head.accountManaged ? { accountManaged: true as const } : {}),
         });
       labelEdition(id, result.book.owner);
     });
@@ -453,7 +530,7 @@ export function useLocalBook() {
     head: SyncedEdition,
     uid: string,
     expected: string,
-    preserve = false,
+    preserve: boolean | "online" = false,
     signal?: AbortSignal,
     canApply: () => boolean = () => true,
   ) => {
@@ -482,7 +559,7 @@ export function useLocalBook() {
         throw new Error("The sync connection changed. Reopen Account.");
       if (!preserve && binding.fingerprint !== expected)
         throw new Error("This device has changes. Keep both versions first.");
-      if (preserve) {
+      if (preserve === true) {
         const copyId = crypto.randomUUID();
         const media = await backupPhotos(currentBook.current, id);
         await restorePhotos(
@@ -512,6 +589,7 @@ export function useLocalBook() {
         remoteId: head.id,
         revision: head.revision,
         fingerprint: head.manifest.fingerprint,
+        ...(head.accountManaged ? { accountManaged: true as const } : {}),
       });
       labelEdition(id, next.owner);
       setEditions(listEditions());
@@ -519,6 +597,7 @@ export function useLocalBook() {
   };
   return {
     syncSnapshot,
+    accountSnapshot,
     openSynced,
     receiveSynced,
     photos,

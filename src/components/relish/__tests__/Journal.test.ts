@@ -336,14 +336,14 @@ describe("journal header navigation", () => {
       "Your pages",
       "Play together",
       "Sign in",
-      "Sign in & sync",
       "Editions",
       "Connect editions",
       "Privacy and settings",
       "Lock",
     ]) {
       expect(
-        (screen.getByRole("button", { name }) as HTMLButtonElement).disabled,
+        (screen.getAllByRole("button", { name })[0] as HTMLButtonElement)
+          .disabled,
       ).toBe(false);
     }
     fireEvent.click(screen.getByRole("button", { name: "Activities" }));
@@ -370,7 +370,7 @@ describe("journal header navigation", () => {
     const qa = setup();
     const editor = input();
     fill("My draft stays here while I sign in.");
-    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Sign in" })[0]);
     await waitFor(() => expect(qa.account).toHaveBeenCalledOnce());
     expect(input()).toBe(editor);
     expect(qa.book().journal?.[0].text).toBe(

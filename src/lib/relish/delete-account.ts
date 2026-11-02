@@ -84,7 +84,7 @@ export async function deleteOnlineAccount(uid: string) {
   await db.recursiveDelete(profile.collection("inbox"));
   // The tombstone above also blocks sync mutations while all ciphertext is removed.
   const sync = db.doc(`relish_sync/${uid}`);
-  for (const collection of ["blobs", "books"])
+  for (const collection of ["blobs", "books", "access"])
     while (true) {
       time();
       const records = await sync

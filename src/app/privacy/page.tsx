@@ -13,75 +13,81 @@ export default function PrivacyPage() {
       <Link href="/relish/">← Back to Relish</Link>
       <h1>Your words belong to you.</h1>
       <p>Relish’s data practices · November 1, 2026</p>
-      <h2>Your private editions</h2>
+      <h2>Your account library</h2>
       <p>
-        Your writing, photos, manual suggestions, people, session progress,
-        games and sharing private keys are encrypted in this browser with your
-        edition’s passphrase. Relish’s servers never receive its passphrase or
-        unencrypted complete book. If you enable sync, they store its encrypted
-        contents. Edition names on the device’s bookshelf and your sound
-        preference are stored without encryption.
+        One verified adult account owns your family library. Account books,
+        including entries, photos, people, progress, games and manual
+        suggestions, save automatically to Google Cloud Firestore. Sign in to
+        the same account on another device to open them without a separate book
+        passphrase.
       </p>
       <p>
-        An unlocked book can be read on that device. Device security, browser
-        extensions and anyone with your passphrase affect that protection.
-        Clearing browser data removes its local books. Relish cannot recover a
-        lost passphrase; export encrypted backups regularly and keep the
-        passphrase separately.
+        Books and photos are encrypted in the browser before upload. For
+        account-managed books, Relish also stores a random recovery secret in a
+        separate restricted database collection, accessible through the
+        authenticated owner’s account. Database storage and connections are
+        protected by the provider. This is account-based protection, not
+        end-to-end or zero-knowledge encryption: the account and service can
+        recover these books. Anyone signed into the parent account can access
+        its books. Other accounts cannot retrieve them.
       </p>
-      <h2>Children’s editions</h2>
       <p>
-        Online accounts and connected-edition features are intended for adults
-        aged 18 and older. Children can keep separate encrypted local editions
-        and take part in family games without an independent online account. A
-        parent may also authorize encrypted sync through their adult account,
-        after entering the child edition’s parent passphrase. The child’s
-        writing and photos remain encrypted, and each edition still requires its
-        own book passphrase. A parent or guardian explicitly chooses an age
-        range: under 6, 6–8, 9–12 or 13–17. It is stored inside the encrypted
-        edition. If a parent enables manual suggestions, the chosen age range
-        accompanies that request so the language can be appropriate. Relish does
-        not infer or verify anyone’s age. Written prompts and session guidance
-        adapt to the chosen range. Existing writing is not automatically
-        reviewed or filtered by this setting.
+        Edition names, identifiers, revisions, sizes and usage counters are also
+        stored. Changes save on the device first and then upload automatically
+        while connected and signed in. The save indicator distinguishes account
+        saves from changes waiting on this device. If devices edit the same
+        version, Relish keeps separate copies for review instead of silently
+        overwriting either one.
+      </p>
+      <h2>Children’s profiles</h2>
+      <p>
+        Children have profiles inside a parent-managed account, without separate
+        email addresses or sign-in credentials. A parent chooses their name and
+        age range: under 6, 6–8, 9–12 or 13–17. Prompts, games and session
+        guidance adapt to that range. Relish does not infer or verify age, and
+        existing writing is not automatically reviewed or filtered.
+      </p>
+      <p>
+        The parent account can access its children’s entries and photos on other
+        devices. Returning from a child’s book to the family library and
+        changing age settings requires parent confirmation with the parent
+        account password. These are shared-device app safeguards, not
+        independent child authentication or device-wide parental controls. Use a
+        parent-managed device where stronger restrictions are needed. Under 6,
+        read and choose together.
       </p>
       <p>
         Children cannot create independent online accounts or share passages
         online. General AI chat and local Ollama remain unavailable in
-        children’s editions. Optional voice writing and manual suggestions
-        require a verified adult account, the separate parent passphrase,
-        explicit permission for that visit. Parent-assisted voice uses the
-        standard transcription endpoint. Children’s automatic manual suggestions
-        additionally require verified provider Zero Data Retention. A separate
-        parent passphrase protects age changes and switching to an adult
-        edition. Only a salted verifier is kept inside the encrypted book and
-        its backups; Relish cannot recover that passphrase. These are app
-        controls, not device-wide parental controls or age verification. Someone
-        controlling the browser or able to alter a decrypted backup can bypass
-        local settings. Use a parent-managed device where stronger restrictions
-        are needed. Under 6, a grown-up should read and choose together with the
-        child.
+        children’s editions. Assisted voice and manual suggestions require a
+        verified adult account, parent authorization and explicit permission for
+        that visit. Children’s automatic manual suggestions additionally require
+        verified provider Zero Data Retention. Saving a book online does not
+        authorize AI analysis.
       </p>
-      <h2>Optional encrypted library sync</h2>
+      <h2>Local-only and earlier books</h2>
       <p>
-        Sign in to the same verified adult account on another device to open
-        your synced editions. Sync stores encrypted book contents and photos in
-        Google Cloud Firestore, together with edition names, opaque identifiers,
-        revision metadata, sizes and usage counters. Edition names are visible
-        to that signed-in account; the writing, child age settings, private
-        people tags and sharing keys stay inside the encrypted book. Relish
-        never receives the book passphrase or decryption key. Sync does not
-        authorize sharing with another account or sending any content to AI.
+        You can explicitly choose a local-only book instead. Its passphrase and
+        decryption key stay on your device. Relish cannot recover a forgotten
+        local passphrase. Earlier passphrase-protected synced books continue to
+        require their original passphrase. Opening a local or earlier book does
+        not upload or convert it automatically: choose “Add this book to my
+        account” to make an account-managed copy of its entries and photos. The
+        original remains intact.
       </p>
       <p>
-        Sync is off until you enable it for a book. Changes save on the device
-        first, then sync while the account is signed in. If both devices change
-        a book, Relish asks you to keep a separate device copy before opening
-        the latest synced version. Local-only books remain possible. Removing a
-        synced copy stops it appearing in the library; obsolete encrypted blobs
-        are collected after a grace period when the library is next used.
-        Account deletion removes all synced book contents. Minimal content-free
-        deletion markers prevent late requests from recreating deleted storage.
+        An unlocked book can be read on that device. Device security, browser
+        extensions and anyone using a signed-in account affect protection.
+        Clearing browser data removes local copies and pending offline changes;
+        already saved account books remain online. Local-only books need
+        exported backups. When exporting an account book, choose an independent
+        backup passphrase; for a child’s restored backup, this also protects its
+        parent settings. Keep the passphrase separately.
+      </p>
+      <p>
+        Account deletion removes saved books, photos and recovery secrets.
+        Minimal content-free deletion markers prevent late requests from
+        recreating deleted storage. Local copies and backups are separate.
       </p>
       <h2>Optional connected editions</h2>
       <p>
@@ -102,11 +108,12 @@ export default function PrivacyPage() {
         its pending invitations.
       </p>
       <p>
-        Online account sessions stay in memory and end when you reload, lock
-        your book or enter shared play. The private book remains usable without
-        signing in. Enable encrypted sync to carry an edition and its private
-        sharing key across devices, or restore an exported encrypted backup
-        manually. Each synced edition still needs its book passphrase.
+        Your account stays signed in across reloads on this browser until you
+        sign out or lock Relish. Use a device you trust. Shared play puts
+        private pages and AI permissions away; returning through Lock signs out.
+        Child views retain a parent gate across reloads. Signing out never
+        deletes entries already saved to the account. Local-only books remain
+        usable without signing in.
       </p>
       <h2>Optional AI</h2>
       <p>
@@ -177,8 +184,8 @@ export default function PrivacyPage() {
         games retain their original wording. Players can pass, and every
         selected player must approve before a game passage is kept. These are
         in-person choices, not separately authenticated signatures. Shared play
-        puts private pages away and returning to a private edition requires its
-        passphrase.
+        puts private pages away. Returning to an account book requires signing
+        back in; local-only books require their passphrase.
       </p>
       <h2>Storage and control</h2>
       <p>

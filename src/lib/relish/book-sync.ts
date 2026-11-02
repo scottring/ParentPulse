@@ -14,12 +14,14 @@ export type SyncedEdition = {
   revision: string;
   updatedAt: number;
   manifest: SyncManifest;
+  accountManaged?: true;
 };
 export type SyncBinding = {
   uid: string;
   remoteId: string;
   revision: string | null;
   fingerprint: string | null;
+  accountManaged?: true;
 };
 export type EncryptedSnapshot = {
   envelope: Envelope;
