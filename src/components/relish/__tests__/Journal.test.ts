@@ -51,7 +51,7 @@ describe("freeform journal", () => {
       });
     }
     const first = render(createElement(Harness));
-    fireEvent.click(screen.getByRole("button", { name: "A fresh page" }));
+    fireEvent.click(screen.getByRole("button", { name: "New journal entry" }));
     fill("A secret adventure\nwith a second line");
     fireEvent.click(screen.getByRole("button", { name: "Moss" }));
     await waitFor(() =>
@@ -66,14 +66,14 @@ describe("freeform journal", () => {
     fireEvent.click(screen.getByRole("button", { name: /Keep writing:/ }));
     expect((input() as HTMLTextAreaElement).value).toContain("second line");
     fill("The ending arrived.");
-    fireEvent.click(screen.getByRole("button", { name: "Keep this page" }));
-    await screen.findByText("That one’s a keeper.");
+    fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
+    await screen.findByText("Entry saved");
     expect(stored.journal).toHaveLength(1);
     expect(stored.journal?.[0].status).toBe("kept");
     fireEvent.click(screen.getByRole("button", { name: "Edit this page" }));
     fill("Actually, another ending!");
-    fireEvent.click(screen.getByRole("button", { name: "Save for later" }));
-    await screen.findByRole("button", { name: /A page of my own/ });
+    fireEvent.click(screen.getByRole("button", { name: "Save draft and close" }));
+    await screen.findByRole("button", { name: /Journal entry/ });
     expect(stored.journal?.[0]).toMatchObject({
       text: "Actually, another ending!",
       status: "kept",
@@ -107,10 +107,10 @@ describe("freeform journal", () => {
         "A moment from the outside screen",
       );
     }
-    fireEvent.click(screen.getByRole("button", { name: "Keep this page" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
     await waitFor(() => expect(book.journal?.[0].status).toBe("kept"));
     view.rerender(createElement(Journal, { ...props, book }));
-    await screen.findByText("That one’s a keeper.");
+    await screen.findByText("Entry saved");
     expect(book.journal).toHaveLength(1);
     expect(book.journal?.[0]).toMatchObject({
       id: draft.id,
@@ -136,7 +136,7 @@ describe("freeform journal", () => {
       }),
     );
     fill("Words we must not lose");
-    fireEvent.click(screen.getByRole("button", { name: "Keep this page" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
     await screen.findByRole("alert");
     expect(onKeep).not.toHaveBeenCalled();
     expect(onPause).not.toHaveBeenCalled();
@@ -144,7 +144,7 @@ describe("freeform journal", () => {
       "Words we must not lose",
     );
     failing = false;
-    fireEvent.click(screen.getByRole("button", { name: "Keep this page" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
     await waitFor(() => expect(onKeep).toHaveBeenCalledOnce());
     expect(book.journal?.[0].text).toBe("Words we must not lose");
   });
@@ -169,7 +169,7 @@ describe("freeform journal", () => {
     fill("First version");
     await waitFor(() => expect(calls).toBe(1));
     fill("Newest version");
-    fireEvent.click(screen.getByRole("button", { name: "Save for later" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save draft and close" }));
     await act(async () => slow.resolve());
     await waitFor(() => expect(onPause).toHaveBeenCalledOnce());
     expect(book.journal?.[0]).toMatchObject({
@@ -199,7 +199,7 @@ describe("freeform journal", () => {
     fill("First autosave");
     await waitFor(() => expect(calls).toBe(1));
     fill("Queued words belonging only to this edition");
-    fireEvent.click(screen.getByRole("button", { name: "Save for later" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save draft and close" }));
     writer.unmount();
     await act(async () => {
       slow.resolve();
@@ -252,7 +252,7 @@ describe("freeform journal", () => {
     render(createElement(Harness));
     fireEvent.click(screen.getByRole("button", { name: "Your pages" }));
     expect(screen.getByText("PRIVATE JOURNAL SENTENCE")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "A fresh page" }));
+    fireEvent.click(screen.getByRole("button", { name: "New journal entry" }));
     expect(
       (
         screen.getByRole("button", {
@@ -263,7 +263,7 @@ describe("freeform journal", () => {
     expect(screen.queryByText("Ask AI")).toBeNull();
     fill("Another private moment");
     fireEvent.click(screen.getByRole("button", { name: "Play together" }));
-    await screen.findByRole("heading", { name: "Together at the table" });
+    await screen.findByRole("heading", { name: "Play together", level: 1 });
     expect(screen.queryByText("PRIVATE JOURNAL SENTENCE")).toBeNull();
     expect(screen.queryByText("Another private moment")).toBeNull();
     expect(screen.queryByRole("button", { name: "Your pages" })).toBeNull();
@@ -326,7 +326,7 @@ describe("journal header navigation", () => {
     }
     render(createElement(Harness));
     fireEvent.click(screen.getByRole("button", { name: "Your pages" }));
-    fireEvent.click(screen.getByRole("button", { name: "A fresh page" }));
+    fireEvent.click(screen.getByRole("button", { name: "New journal entry" }));
     return { account, lock, shelf, interaction, save, book: () => stored };
   }
   it("keeps the header available on a blank page and leaves without creating an empty entry", async () => {

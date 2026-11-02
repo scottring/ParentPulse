@@ -85,14 +85,13 @@ export default function EditionSetup({
   return (
     <form className="r-form lb-edition-setup" onSubmit={submit}>
       <p className="lb-kicker">
-        <ShieldCheck size={17} /> Made for the person opening it
+        <ShieldCheck size={17} /> Profile settings
       </p>
       <h2>
         {book.profile ? "Edition & parent settings" : "Who is this book for?"}
       </h2>
       <p>
-        The {book.owner} edition can meet its reader where they are. Choose
-        explicitly; Relish never guesses from a name.
+        The {book.owner} edition uses this age range to select prompts and activities. Relish does not infer age from a name.
       </p>
       <fieldset disabled={busy}>
         <legend>This edition belongs to</legend>
@@ -229,7 +228,7 @@ export default function EditionSetup({
         disabled={busy || !kind || !confirmed || (kind === "child" && !band)}
       >
         {busy
-          ? "Keeping these settings…"
+          ? "Saving settings…"
           : book.profile
             ? "Save edition settings"
             : "Open this edition"}

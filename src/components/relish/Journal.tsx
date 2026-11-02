@@ -49,7 +49,7 @@ const dateLabel = (date: string) =>
     year: "numeric",
   });
 const pageTitle = (entry: JournalDraft) =>
-  entry.title.trim() || "A little untitled something";
+  entry.title.trim() || "Untitled entry";
 const signature = (entry: JournalDraft) =>
   JSON.stringify([
     entry.title,
@@ -174,8 +174,8 @@ export default function Journal({
               <Sparkles size={34} />
             </span>
             <div>
-              <strong>That one’s a keeper.</strong>
-              <p>You kept a page. That can be enough for today.</p>
+              <strong>Entry saved</strong>
+              <p>You can edit this entry, start another, or return to Activities.</p>
             </div>
           </div>
         )}
@@ -215,7 +215,6 @@ export default function Journal({
               </p>
             )}
             <div className="rj-paper-footer">
-              <span>{journalStyles[page.style].note}</span>
               <div className="rj-capture-actions">
                 {page.journalId && (
                   <button
@@ -250,7 +249,7 @@ export default function Journal({
           >
             {nextPage ? (
               <>
-                <p className="lb-kicker">The next page in your story</p>
+                <p className="lb-kicker">Next entry</p>
                 <h2>{nextPage.title}</h2>
                 <p className="lb-kicker">
                   {dateLabel(nextPage.date)} · {nextPage.kind}
@@ -276,19 +275,15 @@ export default function Journal({
               </>
             ) : (
               <>
-                <p className="lb-kicker">Room for what comes next</p>
+                <p className="lb-kicker">End of your entries</p>
                 <div className="rd-mountain" aria-hidden="true" />
-                <h2>
-                  Your story
-                  <br />
-                  <em>keeps unfolding.</em>
-                </h2>
-                <p>You’re up to date. Leave a little room for tomorrow.</p>
+                <h2>No more entries</h2>
+                <p>You’ve reached your latest entry.</p>
                 <button
                   className="lb-text"
                   onClick={() => edit(newJournalDraft())}
                 >
-                  Start another page <Plus size={16} />
+                  New entry <Plus size={16} />
                 </button>
               </>
             )}
@@ -348,7 +343,7 @@ export default function Journal({
             </button>
           )}
           <button className="lb-text" onClick={() => edit(newJournalDraft())}>
-            One more page <Plus size={16} />
+            New entry <Plus size={16} />
           </button>
         </div>
       </main>
@@ -362,22 +357,17 @@ export default function Journal({
     <main className="rj-workspace">
       <header className="rj-welcome">
         <div>
-          <p className="lb-kicker">One book · your unfolding story</p>
-          <h2 ref={top} tabIndex={-1}>
-            Oh, the things
-            <br />
-            <em>you could write.</em>
-          </h2>
+          <p className="lb-kicker">Journal, reflections and shared passages</p>
+          <h2 ref={top} tabIndex={-1}>Your pages</h2>
           <p>
-            Big feelings. Tiny triumphs. The moments you noticed.
-            <br className="rj-desktop-break" /> All finding their place in the
-            same story.
+            Read your entries in date order.
+            <br className="rj-desktop-break" /> Write a new entry or continue a draft.
           </p>
           <button
             className="rj-new-page"
             onClick={() => edit(newJournalDraft())}
           >
-            A fresh page <Plus size={23} />
+            New journal entry <Plus size={23} />
           </button>
           <p className="rj-private">
             <Lock size={14} />{" "}
@@ -391,11 +381,6 @@ export default function Journal({
           <span className="rj-stack-middle" />
           <div className="rj-stack-front">
             <Sun size={42} />
-            <span>
-              Dear
-              <br />
-              <em>anything,</em>
-            </span>
             <div className="rj-doodle-line" />
             <Heart size={28} />
           </div>
@@ -404,18 +389,18 @@ export default function Journal({
       <div className="rj-capture-actions rj-browse-links">
         {onManual && (
           <button className="lb-text" onClick={onManual}>
-            <Sparkles size={16} /> My living manual
+            <Sparkles size={16} /> My manual
             {pendingInsights ? ` · ${pendingInsights} to consider` : ""}
           </button>
         )}
         {onAlbum && (
           <button className="lb-text" onClick={onAlbum}>
-            Our Family album
+            Family album
           </button>
         )}
         {onNotice && (
           <button className="lb-text" onClick={onNotice}>
-            Notice a moment <Feather size={16} />
+            Guided reflection <Feather size={16} />
           </button>
         )}
         {onChapter && (
@@ -424,14 +409,14 @@ export default function Journal({
               The people in my life
             </button>
             <button className="lb-text" onClick={() => onChapter("practice")}>
-              My little practices
+              Practice plans
             </button>
           </>
         )}
       </div>
       {drafts.length > 0 && (
         <section className="rj-drafts" aria-label="Pages in progress">
-          <p className="lb-kicker">A few beginnings, waiting for you</p>
+          <p className="lb-kicker">Saved drafts</p>
           {drafts.map((draft) => (
             <button
               className="lb-secondary"
@@ -476,7 +461,7 @@ export default function Journal({
                 </span>
                 <strong>{entry.title}</strong>
                 <span className="rj-card-excerpt">
-                  {entry.text || "A moment, held in a photo."}
+                  {entry.text || "Photo entry"}
                 </span>
                 <span className="rj-card-open">
                   {entry.kind}
@@ -495,9 +480,9 @@ export default function Journal({
         <div className="rj-first-page">
           <Feather size={24} />
           <p>
-            Your first page can be one word or a whole adventure.
+            No entries yet.
             <br />
-            <strong>You get to decide.</strong>
+            <strong>Select New journal entry to start writing or add a photo.</strong>
           </p>
         </div>
       )}
@@ -687,17 +672,13 @@ export function JournalEditor({
     <div className={`rj-writing rj-${draft.style}`}>
       <div className="rj-writing-intro">
         <div>
-          <p className="lb-kicker">A little room to be you</p>
-          <h2>
-            Your page.
-            <br />
-            <em>Your rules.</em>
-          </h2>
+          <p className="lb-kicker">Personal journal</p>
+          <h2>{initialEntry?.status === "kept" ? "Edit entry" : "New entry"}</h2>
         </div>
         <p>
-          A list, a ramble, a story, a single sentence.
+          Write, record your voice, or add a photo.
           <br />
-          Start anywhere. Stop when it feels like enough.
+          Drafts save automatically. Select Save entry when you’re finished.
         </p>
       </div>
       {book && (
@@ -721,10 +702,10 @@ export function JournalEditor({
       <div className="rd-writing-spread">
         <aside
           className="rj-paper rd-writing-context"
-          aria-label="Your story so far"
+          aria-label="Previous entry"
         >
           <p className="lb-kicker">
-            {book?.owner || "Your"} · the story so far
+            {book?.owner || "Your"} · Previous entry
           </p>
           {previous ? (
             <>
@@ -733,18 +714,14 @@ export function JournalEditor({
               <div className="rj-prose rd-context-prose">{previous.text}</div>
               <PhotoGallery photos={previous.photos} access={photos} />
               <p className="rd-context-foot">
-                And now, a little room for today.
+                Write your new entry on the right.
               </p>
             </>
           ) : (
             <>
               <div className="rd-mountain" aria-hidden="true" />
-              <h2>
-                Every story
-                <br />
-                starts somewhere.
-              </h2>
-              <p>This page is yours. A single sentence counts.</p>
+              <h2>No previous entries</h2>
+              <p>Write your first entry on the right. You can also record your voice or add a photo.</p>
             </>
           )}
         </aside>
@@ -762,7 +739,7 @@ export function JournalEditor({
               disabled={finishing || mediaBusy}
               onClick={() => setVoiceOpen(true)}
             >
-              Tell your story <span>Speak it. Read it. Make it yours.</span>
+              Record your voice <span>Record, transcribe, then review.</span>
             </button>
           )}
           <label className="rj-writing-label">
@@ -773,22 +750,22 @@ export function JournalEditor({
               maxLength={JOURNAL_TEXT_LIMIT}
               disabled={finishing}
               onChange={(e) => change({ text: e.target.value })}
-              placeholder="Start anywhere…"
+              placeholder="Write your entry…"
               rows={5}
             />
           </label>
           <div className="rj-save-state" role="status" aria-live="polite">
             {pending > 0
-              ? "Keeping your words…"
+              ? "Saving draft…"
               : error
                 ? "Not saved yet"
                 : dirty
-                  ? "A few words in motion…"
+                  ? "Unsaved changes…"
                   : hasSaved
                     ? sample
-                      ? "Kept in this sample for this visit."
-                      : "Saved in your encrypted book."
-                    : "Just you and a fresh page."}
+                      ? "Saved in this sample until reload."
+                      : "Saved on this device. See account sync status above."
+                    : "No text or photos added yet."}
           </div>
           {navigationNotice && (mediaBusy || voiceOpen) && (
             <p className="lb-fine" role="status">
@@ -824,7 +801,7 @@ export function JournalEditor({
               }
               onClick={() => void finish(true)}
             >
-              {finishing ? "Keeping…" : "Keep this page"}
+              {finishing ? "Saving…" : "Save entry"}
               <Check size={20} />
             </button>
             <button
@@ -832,7 +809,7 @@ export function JournalEditor({
               disabled={finishing || mediaBusy || voiceOpen}
               onClick={() => void finish(false)}
             >
-              Save for later
+              Save draft and close
             </button>
           </div>
           {photos && (
@@ -845,9 +822,9 @@ export function JournalEditor({
             />
           )}
           <details className="rd-page-details">
-            <summary>Give it a title & a little color</summary>
+            <summary>Title, color and people</summary>
             <fieldset className="rj-style-picker" disabled={finishing}>
-              <legend>Pick a little atmosphere</legend>
+              <legend>Page color</legend>
               <div>
                 {(Object.keys(journalStyles) as JournalStyle[]).map((style) => (
                   <button
@@ -873,7 +850,7 @@ export function JournalEditor({
                 value={draft.title}
                 disabled={finishing}
                 onChange={(e) => change({ title: e.target.value })}
-                placeholder="A little untitled something…"
+                placeholder="Entry title…"
               />
             </label>
           </details>
@@ -883,7 +860,7 @@ export function JournalEditor({
               disabled={finishing || mediaBusy}
             >
               <legend>
-                Who’s in this moment?{" "}
+                Tag people{" "}
                 <span>Private tags · nobody is notified</span>
               </legend>
               <div>

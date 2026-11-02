@@ -66,8 +66,8 @@ export function bookPages(book: Book): BookPage[] {
         page({
           id: `journal:${e.id}`,
           journalId: e.id,
-          kind: "A page of my own",
-          title: e.title.trim() || "A little untitled something",
+          kind: "Journal entry",
+          title: e.title.trim() || "Untitled entry",
           text: e.text,
           date: e.createdAt,
           style: e.style,
@@ -80,15 +80,15 @@ export function bookPages(book: Book): BookPage[] {
         id: `moment:${e.id}`,
         kind:
           e.kind === "notice"
-            ? "A moment noticed"
+            ? "Guided reflection"
             : e.kind === "practice"
-              ? "A little practice"
-              : "A lesson kept",
+              ? "Practice plan"
+              : "Practice review",
         text: e.text || (e.outcome ? outcomes[e.outcome] : ""),
         date: e.createdAt,
         style: e.kind === "practice" ? "moss" : "sky",
         sections: [
-          { label: "A perspective I kept", text: e.perspective || "" },
+          { label: "Saved perspective", text: e.perspective || "" },
           {
             label: "How it felt",
             text: e.outcome && e.text ? outcomes[e.outcome] : "",
@@ -99,12 +99,12 @@ export function bookPages(book: Book): BookPage[] {
     ...book.moments.map((m) =>
       page({
         id: `earlier:${m.id}`,
-        kind: "A moment noticed",
+        kind: "Guided reflection",
         text: m.observation,
         date: m.createdAt,
         people: [m.personId],
         sections: [
-          { label: "A perspective I kept", text: m.perspective },
+          { label: "Saved perspective", text: m.perspective },
           { label: "A small practice", text: m.move },
           { label: "Looking back", text: m.reflection },
         ].filter((s) => s.text),
@@ -123,7 +123,7 @@ export function bookPages(book: Book): BookPage[] {
     ...(book.connections?.received || []).map((p) =>
       page({
         id: `passage:${p.id}`,
-        kind: "A passage welcomed",
+        kind: "Received passage",
         title: p.title,
         text: p.text,
         date: p.acceptedAt,

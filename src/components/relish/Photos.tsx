@@ -146,7 +146,7 @@ export function PhotoPicker({
         </button>
         <span className="lb-fine">
           {busy
-            ? "Tucking your photo into the book…"
+            ? "Adding photo…"
             : `${photos.length} / ${PHOTO_LIMIT} photos · encrypted in your book`}
         </span>
       </div>
@@ -190,7 +190,7 @@ export function PhotoPicker({
                 maxLength={240}
                 value={photo.caption}
                 disabled={disabled || busy}
-                placeholder="A few words about this moment…"
+                placeholder="Add a caption…"
                 onChange={(e) =>
                   onChange(
                     photos.map((p) =>

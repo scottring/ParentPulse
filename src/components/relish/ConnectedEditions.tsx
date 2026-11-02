@@ -28,7 +28,7 @@ export default function ConnectedEditions(props: Props) {
   if (!canUseOnline(props.book))
     return (
       <Dialog title="Local edition" onClose={props.onClose}>
-        <h2>A book kept here.</h2>
+        <h2>Child profile</h2>
         <p>
           Online connections are available only in adult editions. Children can
           use their written guide and play together on this device.
@@ -334,7 +334,7 @@ function AdultConnectedEditions({
     setOpened(null);
     await refresh();
     setNotice(
-      "Kept in your private edition, with its author’s name. That is enough for this visit.",
+      "Passage saved in your book with the author’s name.",
     );
   }
   async function closeWithDraft() {
@@ -362,11 +362,10 @@ function AdultConnectedEditions({
       onClose={() => void closeWithDraft()}
     >
       <section className="lb-connections" data-verification={tick}>
-        <p className="lb-kicker">Books that speak to one another</p>
-        <h2>Connected by choice.</h2>
+        <p className="lb-kicker">Share selected passages</p>
+        <h2>Connected books</h2>
         <p>
-          Keep your private book here. Offer a chosen passage to someone you
-          love; they decide whether it belongs in their edition.
+          Connect with another adult account to send selected passages. Recipients choose whether to save them.
         </p>
         <details className="lb-boundary">
           <summary>
@@ -583,7 +582,7 @@ function AdultConnectedEditions({
                         });
                       }}
                     >
-                      <h3>Start your Family book</h3>
+                      <h3>Create a family sharing group</h3>
                       <label>
                         Family book name
                         <input
@@ -760,7 +759,7 @@ function AdultConnectedEditions({
                       className="lb-boundary"
                       open={initialPassage ? true : undefined}
                     >
-                      <summary>Offer a passage from my edition</summary>
+                      <summary>Share a passage</summary>
                       <p>
                         Choose the exact words and the editions that may receive
                         them.{" "}
@@ -818,7 +817,7 @@ function AdultConnectedEditions({
                           />
                         </label>
                         <fieldset>
-                          <legend>Offer to these editions</legend>
+                          <legend>Choose recipients</legend>
                           {others.map((m) => (
                             <label key={m.uid} className="lb-consent-check">
                               <input
@@ -851,7 +850,7 @@ function AdultConnectedEditions({
                             !recipients.length
                           }
                         >
-                          <Send size={16} /> Encrypt and offer this passage
+                          <Send size={16} /> Send passage
                         </button>
                       </form>
                     </details>
@@ -874,11 +873,9 @@ function AdultConnectedEditions({
                           </button>
                         </div>
                       ))}
-                    <h3>Passages at your door</h3>
+                    <h3>Received passages</h3>
                     <p className="lb-fine">
-                      Reading one invitation and choosing whether to keep it is
-                      a complete visit. The latest 60 invitations are shown
-                      here; kept passages remain in your private book.
+                      Review a passage and choose whether to save it. The latest 60 invitations appear here; saved passages remain in your book.
                     </p>
                     {snapshot.deliveries.filter(
                       (d) =>
@@ -887,8 +884,7 @@ function AdultConnectedEditions({
                         d.receipts[user.uid] === "pending",
                     ).length === 0 && (
                       <p>
-                        No new passages are waiting. Your own thread is a good
-                        next place to begin.
+                        No new passages received.
                       </p>
                     )}
                     {snapshot.deliveries
@@ -942,19 +938,19 @@ function AdultConnectedEditions({
                           disabled={busy}
                           onClick={() => void run(accept)}
                         >
-                          <Check size={16} /> Keep in my edition · finish here
+                          <Check size={16} /> Save to my book
                         </button>
                         <button
                           className="lb-text"
                           disabled={busy}
                           onClick={() => setOpened(null)}
                         >
-                          Leave it for another day
+                          Review later
                         </button>
                       </article>
                     )}
                     <details className="lb-boundary">
-                      <summary>Passages I offered</summary>
+                      <summary>Sent passages</summary>
                       {snapshot.deliveries
                         .filter((d) => d.sender === user.uid)
                         .map((d) => (

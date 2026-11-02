@@ -218,7 +218,7 @@ export default function LivingBook({
     void commit(
       (b) => pauseVisit(updateDraft(b, v.id, draft)),
       () => navigate("activities"),
-      "Your place is kept.",
+      "Progress saved.",
     );
   }
   function finish(draft: Draft) {
@@ -309,29 +309,29 @@ export default function LivingBook({
         : view === "words"
           ? "Your pages"
           : view === "play"
-            ? "Together at the table"
+            ? "Play together"
             : sharedView
               ? "Our Family pages"
               : view === "bookmark"
                 ? "My bookmark"
                 : sessionOpen
-                  ? "This small visit"
+                  ? "Guided reflection"
                   : chapters.find((c) => c.id === view)?.label || "Your book";
   let right: ReactNode = null,
     left: ReactNode;
   left = (
     <>
-      <p className="lb-kicker">Your thread in this chapter</p>
-      <h2>{theme?.title || "A little more understanding."}</h2>
+      <p className="lb-kicker">Guided reflection</p>
+      <h2>{theme?.title || "Choose a topic"}</h2>
       <p>
         {online
-          ? "Ordinary moments become pages. Pages become a little more understanding of yourself and the people you love."
-          : "One little moment at a time. You can explore how you feel, try something small, and come back when you want."}
+          ? "Choose a topic, describe an experience, then decide whether to try a related action."
+          : "Choose a topic and describe what happened or how you felt. You can skip questions or stop at any time."}
       </p>
       <div className="lb-thread">
-        <span className="lb-kicker">Across several visits</span>
-        <p>Notice. Try. Return.</p>
-        <span className="lb-fine">A chapter can unfold at its own pace.</span>
+        <span className="lb-kicker">How it works</span>
+        <p>Write a reflection. Make a plan. Review what happened.</p>
+        <span className="lb-fine">Each step is a separate session. Your progress is saved.</span>
       </div>
       <p className="lb-fine">
         Your private edition belongs to you. Family pages hold only chosen album
@@ -365,22 +365,17 @@ export default function LivingBook({
     if (v?.status === "complete")
       right = (
         <>
-          <p className="lb-kicker">This visit is complete</p>
-          <h2>
-            A good place
-            <br />
-            to stop.
-          </h2>
+          <p className="lb-kicker">Progress saved</p>
+          <h2>Session complete</h2>
           <div className="lb-kept">
             <BookmarkCheck size={20} />
             <p>{v.summary}</p>
           </div>
           <p>
-            Let this be enough for now. The rest of your chapter can unfold over
-            time.
+            Your response is saved. Close this session or choose another activity.
           </p>
           <div className="lb-later">
-            <p className="lb-kicker">For another day</p>
+            <p className="lb-kicker">Next session</p>
             <p>{plans[v.kind].next}</p>
           </div>
           <button
@@ -408,7 +403,7 @@ export default function LivingBook({
               disabled={busy}
               onClick={() => start("begin")}
             >
-              Choose a new thread
+              Choose another topic
             </button>
           </div>
         </>
@@ -417,15 +412,14 @@ export default function LivingBook({
       right = (
         <>
           <p className="lb-kicker">
-            {v.status === "paused" ? "A place to pause" : "Your current visit"}
+            {v.status === "paused" ? "Paused session" : "Current session"}
           </p>
           <h2>{plans[v.kind].title}</h2>
           <p>
-            Your place is held. Your unfinished words are kept with the rest of
-            your book.
+            Your unfinished response is saved. Continue from the same step.
           </p>
           <div className="lb-boundary">
-            <strong>Enough for this visit</strong>
+            <strong>To complete this session</strong>
             <p>{plans[v.kind].end}</p>
           </div>
           <button
@@ -440,7 +434,7 @@ export default function LivingBook({
               Close the book for now
             </button>
           </div>
-          <p className="lb-fine">There is no catching up to do.</p>
+          <p className="lb-fine">Continue whenever you’re ready.</p>
         </>
       );
     else {
@@ -454,7 +448,7 @@ export default function LivingBook({
             {kind === "begin"
               ? intro
               : kind === "reflect"
-                ? "Return after life has given you a chance to try."
+                ? "After you try your plan, record what happened."
                 : theme?.notice}
           </p>
           <div className="lb-boundary">
@@ -467,11 +461,11 @@ export default function LivingBook({
             disabled={busy}
             onClick={() => start()}
           >
-            Begin this small session <ArrowUpRight size={16} />
+            Start session <ArrowUpRight size={16} />
           </button>
           <div className="lb-actions">
             <button className="lb-text" onClick={() => navigate("words")}>
-              Browse at my own pace
+              Read saved entries
             </button>
           </div>
         </>
@@ -480,29 +474,17 @@ export default function LivingBook({
   } else if (view === "people") {
     left = (
       <>
-        <p className="lb-kicker">Other lives, held with care</p>
-        <h2>
-          Let me
-          <br />
-          understand you.
-        </h2>
+        <p className="lb-kicker">People</p>
+        <h2>Notes about people</h2>
         <p>
-          Your own notes about the people you love. Their private books are
-          theirs to open.
+          Keep your notes about people here. These notes do not create accounts or grant access to anyone’s book.
         </p>
-        <div className="lb-thread">
-          <p>
-            A little curiosity
-            <br />
-            can change a conversation.
-          </p>
-        </div>
       </>
     );
     right = (
       <>
         <p className="lb-kicker">The people in your life</p>
-        <h2>Between us.</h2>
+        <h2>People in your book</h2>
         <button className="lb-text" onClick={() => setModal("person")}>
           <Plus size={16} /> Add someone
         </button>
@@ -512,7 +494,7 @@ export default function LivingBook({
               <span className="lb-kicker">{p.role}</span>
               <h3>{p.name}</h3>
               <p>
-                {p.note || "Room for what you are learning about each other."}
+                {p.note || "No notes added yet."}
               </p>
               {p.lessons.length > 0 && (
                 <ul>
@@ -522,15 +504,14 @@ export default function LivingBook({
                 </ul>
               )}
               <button className="lb-text" onClick={() => setEditing(p)}>
-                Edit my understanding <ArrowUpRight size={14} />
+                Edit notes <ArrowUpRight size={14} />
               </button>
             </article>
           ))}
         </div>
         {book.people.length === 0 && (
           <p className="lb-fine">
-            Add a person to make room for what you are learning. This creates a
-            chapter in your book, not an account for them.
+            Add a person to record notes about them. To create a child’s book, use Family library instead.
           </p>
         )}
       </>
@@ -539,24 +520,20 @@ export default function LivingBook({
     const pending = pendingPractice(book);
     left = (
       <>
-        <p className="lb-kicker">A rhythm, not a score</p>
-        <h2>
-          Small things.
-          <br />
-          Done with care.
-        </h2>
-        <p>This book comes alive in the space between reading and trying.</p>
+        <p className="lb-kicker">Practice plans</p>
+        <h2>Try a practice plan</h2>
+        <p>Choose an action to try, then record what happened.</p>
         <div className="lb-cadence">
           <p>
-            <span>Notice something</span>
-            <small>A moment, when you can</small>
+            <span>Write a reflection</span>
+            <small>Describe an experience</small>
           </p>
           <p>
-            <span>Try a little differently</span>
-            <small>An ordinary opportunity</small>
+            <span>Make a plan</span>
+            <small>Choose when to try it</small>
           </p>
           <p>
-            <span>Return to these pages</span>
+            <span>Review the result</span>
             <small>After you have tried</small>
           </p>
         </div>
@@ -564,19 +541,19 @@ export default function LivingBook({
     );
     right = (
       <>
-        <p className="lb-kicker">The next ordinary opportunity</p>
-        <h2>{theme?.practice || "Begin with one small intention."}</h2>
+        <p className="lb-kicker">Your next plan</p>
+        <h2>{theme?.practice || "Choose a practice plan"}</h2>
         <p>
           {theme?.instruction ||
-            "Your intention gives your next small practice somewhere to begin."}
+            "Choose a topic to see a suggested action."}
         </p>
         {pending && (
           <div className="lb-margin">
             <p>Your opportunity: {pending.text}.</p>
             <p className="lb-fine">
               {pending.triedAt
-                ? "You marked this as tried. There is room to notice what happened."
-                : "A plan, still waiting for its moment. Nothing is overdue."}
+                ? "You marked this plan as tried. Record the result next."
+                : "This plan has not been marked as tried."}
             </p>
           </div>
         )}
@@ -596,7 +573,7 @@ export default function LivingBook({
             ? "Return to this practice"
             : theme
               ? "Choose a moment to try"
-              : "Choose my thread"}{" "}
+              : "Choose a topic"}{" "}
           <ArrowUpRight size={16} />
         </button>
         {l.entries.some((e) => e.kind === "reflection") && (
@@ -617,37 +594,21 @@ export default function LivingBook({
   } else if (view === "family") {
     left = (
       <>
-        <p className="lb-kicker">Many voices, room for each one</p>
-        <h2>
-          The things
-          <br />
-          we learn together.
-        </h2>
+        <p className="lb-kicker">Family album</p>
+        <h2>Shared entries and game results</h2>
         <p>
-          The passages someone chose to share, and the game pages everyone
-          playing approved, have a home here.
+          View selected journal passages and game results approved by every player.
         </p>
-        <div className="lb-thread">
-          <p>
-            Shared moments.
-            <br />A growing story.
-          </p>
-        </div>
         <p className="lb-fine">
-          These Family pages are kept locally in {book.owner}’s encrypted book.
-          They are not automatically sent to anyone.
+          These shared entries are part of {book.owner}’s book. Account books sync to the parent account; local books stay on this device. Other accounts receive only passages you explicitly send.
         </p>
       </>
     );
     if (l.game?.stage === "finished")
       right = (
         <>
-          <p className="lb-kicker">This visit is complete</p>
-          <h2>
-            A good place
-            <br />
-            to stop.
-          </h2>
+          <p className="lb-kicker">Progress saved</p>
+          <h2>Session complete</h2>
           <div className="lb-kept">
             <BookmarkCheck size={20} />
             <p>
@@ -655,12 +616,12 @@ export default function LivingBook({
                 ? "You finished a round and kept a page everyone approved."
                 : gameText(l.game)
                   ? "You finished one round together. No shared page was saved."
-                  : "You made room to pass. No shared page was saved."}
+                  : "Everyone passed. No shared page was saved."}
             </p>
           </div>
-          <p>You have spent this time together. You can leave it here.</p>
+          <p>The game is finished. Close it or choose another activity.</p>
           <div className="lb-later">
-            <p className="lb-kicker">For another day</p>
+            <p className="lb-kicker">Next session</p>
             <p>
               When you feel like playing again, someone else can start. One
               round is enough each time.
@@ -698,7 +659,7 @@ export default function LivingBook({
                 )
               }
             >
-              Choose another small game
+              Choose another game
             </button>
           </div>
         </>
@@ -706,11 +667,11 @@ export default function LivingBook({
     else
       right = (
         <>
-          <p className="lb-kicker">Our chosen, shared pages</p>
-          <h2>A book made together.</h2>
+          <p className="lb-kicker">Saved family content</p>
+          <h2>Family album</h2>
           {activeGame && (
             <div className="lb-boundary">
-              <strong>Our game is waiting here</strong>
+              <strong>Unfinished game</strong>
               <p>You can continue the same round, at the same turn.</p>
               <button className="lb-primary" onClick={() => navigate("play")}>
                 Resume our round <ArrowUpRight size={16} />
@@ -758,7 +719,7 @@ export default function LivingBook({
             </div>
           ) : !book.album?.length ? (
             <div className="lb-empty">
-              <p>A place for something you make together.</p>
+              <p>No shared entries yet.</p>
               <p className="lb-fine">
                 A game can be enough on its own. Keeping a page is always
                 optional.
@@ -947,7 +908,7 @@ export default function LivingBook({
               <span className="lb-kicker">Relish · the operating manual</span>
               <div className="lb-cover-picture" />
               <h2>{sharedView ? "Our Family pages" : personalTitle}</h2>
-              <span className="lb-kicker">Forever a work in becoming</span>
+              <span className="lb-kicker">Journal, reflections and practice plans</span>
             </div>
             <button
               className="lb-primary"
@@ -1024,14 +985,10 @@ export default function LivingBook({
         ) : view === "play" ? (
           <div className="lb-play-layout">
             <aside>
-              <p className="lb-kicker">Together at the table</p>
-              <h2>
-                Room for
-                <br />
-                every voice.
-              </h2>
+              <p className="lb-kicker">Play together</p>
+              <h2>Play together</h2>
               <p>
-                A few minutes, a little curiosity, and a place to stop together.
+                Select players, choose a game, and play one round on this device.
               </p>
               <div className="lb-landscape-inset" />
               <p className="lb-fine">
@@ -1085,7 +1042,7 @@ export default function LivingBook({
             >
               <aside className="lb-page lb-left">
                 <div className="lb-running">
-                  <span>Your place in the story</span>
+                  <span>Guided activities</span>
                   <span>
                     {sharedView ? "Family pages" : `${book.owner} edition`}
                   </span>
@@ -1097,7 +1054,7 @@ export default function LivingBook({
                 <div className="lb-running">
                   <span>
                     {view === "bookmark"
-                      ? "Your place in the story"
+                      ? "Guided activities"
                       : headingText}
                   </span>
                   <span>
@@ -1110,7 +1067,7 @@ export default function LivingBook({
             </main>
             {chapterIndex >= 0 && !sharedView && (
               <footer className="lb-book-footer">
-                <span>You don’t have to finish yourself.</span>
+                <span>Your progress is saved after each step.</span>
                 <div>
                   <button
                     aria-label="Previous chapter"
@@ -1137,8 +1094,8 @@ export default function LivingBook({
             <button className="lb-text" onClick={() => navigate("manual")}>
               <Sparkles size={17} />
               {manualCards.some((c) => c.status === "suggested")
-                ? "A few possibilities for your manual are ready"
-                : "Open my living manual"}
+                ? "New AI suggestions are ready for review"
+                : "Review manual suggestions"}
             </button>
           </div>
         )}
@@ -1178,12 +1135,8 @@ export default function LivingBook({
       )}
       {modal === "settings" && (
         <Dialog title="Privacy and settings" onClose={() => setModal(null)}>
-          <p className="lb-kicker">Your words belong to you</p>
-          <h2>
-            A private place
-            <br />
-            to keep them.
-          </h2>
+          <p className="lb-kicker">Privacy and storage</p>
+          <h2>Privacy and settings</h2>
           <p>
             Your book, drafts, session progress and games are{" "}
             {sample
@@ -1220,7 +1173,7 @@ export default function LivingBook({
             </div>
           )}
           <div className="lb-boundary">
-            <h3>Keep a copy you control.</h3>
+            <h3>Back up your book</h3>
             <p>
               {accountManaged
                 ? "Your saved book is available whenever you sign in. For an extra portable copy, export a backup with a passphrase you choose and keep separately."
@@ -1354,24 +1307,24 @@ export default function LivingBook({
         </Dialog>
       )}
       {modal === "guide" && (
-        <Dialog title="A little help" onClose={() => setModal(null)}>
-          <p className="lb-kicker">A little guidance for this moment</p>
+        <Dialog title="Help" onClose={() => setModal(null)}>
+          <p className="lb-kicker">How to use this screen</p>
           <h2>
             {view === "activities"
-              ? "Pick one thing that fits."
+              ? "Choose an activity"
               : view === "words"
-                ? "A page can be enough."
+                ? "Write and save an entry"
                 : sharedView
-                  ? "One round is enough."
+                  ? "Complete one round"
                   : v?.status === "complete"
-                    ? "Enough for now."
-                    : "A small visit, with an ending."}
+                    ? "Session complete"
+                    : "Complete the current step"}
           </h2>
           <p>
             {view === "activities"
               ? "Write a personal journal entry for open space, choose a guided reflection for prompts, or play a game together. Each activity has its own stopping point. Unfinished pages and reflections will wait for you here."
               : view === "words"
-                ? "Write anything you like. Your draft saves as you go, including when you switch activities or lock your book. Keep this page when it feels finished. You can return and edit either one."
+                ? "Write anything you like. Your draft saves as you go, including when you switch activities or lock your book. Select Save entry when you’re finished. You can return and edit either one."
                 : sharedView
                   ? "Each player gets a turn or may pass. Reveal together, then finish for now. Keeping a page requires everyone’s approval; it is always optional."
                   : v?.status === "complete"
@@ -1381,10 +1334,10 @@ export default function LivingBook({
           <div className="lb-boundary">
             <strong>
               {view === "words"
-                ? "Your words, your space"
+                ? "Saving and sharing"
                 : online
-                  ? "AI, when you invite it"
-                  : "Your guide, right here"}
+                  ? "Optional AI assistance"
+                  : "Age-based prompts"}
             </strong>
             <p>
               {view === "words"
@@ -1397,7 +1350,7 @@ export default function LivingBook({
             </p>
           </div>
           <button className="lb-primary" onClick={() => setModal(null)}>
-            Back to this moment
+            Back to activity
           </button>
         </Dialog>
       )}

@@ -67,7 +67,7 @@ describe("living-book interaction boundaries", () => {
       screen.getByRole("button", { name: "Continue guided reflection" }),
     );
     await screen.findByRole("alert");
-    expect(screen.queryByText("This visit is complete")).toBeNull();
+    expect(screen.queryByText("Session complete")).toBeNull();
     fail = false;
     fireEvent.click(
       screen.getByRole("button", { name: "Continue guided reflection" }),
@@ -75,12 +75,12 @@ describe("living-book interaction boundaries", () => {
     const textbox = await screen.findByRole("textbox", { name: "Your moment" });
     fireEvent.change(textbox, { target: { value: "One sample moment" } });
     fail = true;
-    fireEvent.click(screen.getByRole("button", { name: /Keep this moment/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Save reflection and finish/ }));
     await screen.findByRole("alert");
-    expect(screen.queryByText("This visit is complete")).toBeNull();
+    expect(screen.queryByText("Session complete")).toBeNull();
     fail = false;
-    fireEvent.click(screen.getByRole("button", { name: /Keep this moment/ }));
-    await screen.findByText("This visit is complete");
+    fireEvent.click(screen.getByRole("button", { name: /Save reflection and finish/ }));
+    await screen.findByText("Session complete");
   });
   it("puts private content away for shared play and locks before returning to it", async () => {
     const lock = vi.fn();

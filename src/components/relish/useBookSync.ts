@@ -162,7 +162,7 @@ export function useBookSync(vault: Vault) {
         setStatus("New pages ready · finish this activity");
         return;
       }
-      setStatus("Bringing in your latest pages…");
+      setStatus("Downloading latest entries…");
       const raw = await downloadBook(user, head, signal);
       valid();
       if (paused.current || latest.current.busy) {

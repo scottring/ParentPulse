@@ -108,8 +108,8 @@ it("opens free writing in one click, keeps the latest words before leaving, and 
       }) as HTMLTextAreaElement
     ).value,
   ).toBe("A small adventure, still unfolding");
-  fireEvent.click(screen.getByRole("button", { name: "Keep this page" }));
-  await screen.findByText("That one’s a keeper.");
+  fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
+  await screen.findByText("Entry saved");
   fireEvent.click(
     screen.getByRole("button", { name: "Choose another activity" }),
   );
@@ -167,16 +167,16 @@ it("starts guided prompts directly and offers the next guided step after complet
   ).toBeNull();
   expect(screen.getByText(/Step 1 of 2/)).toBeTruthy();
   fireEvent.click(
-    screen.getByRole("button", { name: "Listen with a little more room" }),
+    screen.getByRole("button", { name: "Practice listening" }),
   );
   const input = await screen.findByRole("textbox", { name: "Your moment" });
   fireEvent.change(input, { target: { value: "We took time to listen" } });
-  fireEvent.click(screen.getByRole("button", { name: /Keep this moment/ }));
-  await screen.findByText("This visit is complete");
+  fireEvent.click(screen.getByRole("button", { name: /Save reflection and finish/ }));
+  await screen.findByText("Session complete");
   fireEvent.click(
     screen.getByRole("button", { name: "Choose another activity" }),
   );
-  expect(screen.getByText("One small thing to take into life")).toBeTruthy();
+  expect(screen.getByText("Make a practice plan")).toBeTruthy();
   fireEvent.click(
     screen.getByRole("button", { name: "Start guided reflection" }),
   );

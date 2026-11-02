@@ -73,7 +73,7 @@ async function setup(mismatch?: "account" | "key", initialPassage?: {title:strin
     },
     deliveries: [],
   };
-  const sent: any[] = [];
+  const sent: unknown[] = [];
   let offline = true;
   vi.stubGlobal(
     "fetch",
@@ -119,7 +119,7 @@ async function setup(mismatch?: "account" | "key", initialPassage?: {title:strin
     );
   else {
     await screen.findByText("Test family");
-    fireEvent.click(screen.getByText("Offer a passage from my edition"));
+    fireEvent.click(screen.getByText("Share a passage"));
   }
   return {
     sent,
@@ -161,7 +161,7 @@ describe("sharing recovery", () => {
       { target: { value: "A fictional passage to offer." } },
     );
     fireEvent.click(screen.getByRole("checkbox", { name: "Fictional B" }));
-    fireEvent.click(screen.getByRole("button", { name: /Encrypt and offer/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Send passage/ }));
     await screen.findByText("Connection interrupted");
     expect(
       (
@@ -221,7 +221,7 @@ it("never initializes a connection for a child edition even with an adult alread
       onClose: vi.fn(),
     }),
   );
-  expect(screen.getByText("A book kept here.")).toBeTruthy();
+  expect(screen.getByText("Child profile")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Sign in" })).toBeNull();
   expect(fetch).not.toHaveBeenCalled();
 });

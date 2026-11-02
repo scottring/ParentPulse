@@ -31,9 +31,9 @@ const childThreads: Record<AgeBand, Record<ThreadId, Thread>> = {
         "If something is tricky, ask a grown-up you trust for help. You do not have to do it alone.",
     },
     joy: {
-      title: "Find a little happy",
-      notice: "How did you feel about a little thing today?",
-      practice: "Choose a little happy thing.",
+      title: "Choose something fun",
+      notice: "How did you feel today?",
+      practice: "Choose something you enjoy.",
       instruction:
         "Pick a song, a funny face or a story to enjoy with your grown-up. It is okay to choose quiet time too.",
     },
@@ -54,16 +54,16 @@ const childThreads: Record<AgeBand, Record<ThreadId, Thread>> = {
         "Choose a grown-up you trust. Ask for one small thing you need, like help with a task or a quiet break. Their feelings are not your job to fix.",
     },
     joy: {
-      title: "Notice a small good thing",
-      notice: "How did you feel about a small moment in your day?",
-      practice: "Invite someone to do a little fun thing.",
+      title: "Something you enjoyed",
+      notice: "What did you enjoy today?",
+      practice: "Invite someone to play.",
       instruction:
         "Offer a game, a drawing or a story. They can say yes or no, and so can you.",
     },
   },
   "9-12": {
     listen: {
-      title: "Make room for both voices",
+      title: "Take turns listening",
       notice: "When did you feel heard—or wish you had been?",
       practice: "Ask one curious question.",
       instruction:
@@ -77,9 +77,9 @@ const childThreads: Record<AgeBand, Record<ThreadId, Thread>> = {
         "Try “Could we…” or “I need a break.” You can ask a trusted adult for support. You are not responsible for sorting out adults’ disagreements.",
     },
     joy: {
-      title: "Make space for what I enjoy",
-      notice: "What gave you a little energy or made you smile?",
-      practice: "Make a small invitation.",
+      title: "Make time for an interest",
+      notice: "What did you enjoy today?",
+      practice: "Invite someone to join you.",
       instruction:
         "Invite someone to do something you enjoy, or make time for it yourself. Leave room for each person to choose.",
     },
@@ -101,8 +101,8 @@ const childThreads: Record<AgeBand, Record<ThreadId, Thread>> = {
         "Try “I’d like…” or “I’m not comfortable with that.” You can pause a conversation. If it feels unsafe, talk with a trusted adult instead of trying to resolve it alone.",
     },
     joy: {
-      title: "Make room for what matters to me",
-      notice: "What felt like your own kind of good today?",
+      title: "Plan time for what matters",
+      notice: "What did you enjoy today?",
       practice: "Choose something worth making time for.",
       instruction:
         "Make a small plan for an interest, some rest or time with someone you trust. An invitation leaves everyone free to choose.",
@@ -117,16 +117,16 @@ export function guidanceFor(book: Pick<Book, "profile">) {
       plans,
       outcomes,
       intro:
-        "Choose one thing you would like to make a little easier in your relationships.",
+        "Choose a topic to practice. Next, write about a related experience.",
       cue: "",
       choices: [] as string[],
       opportunities: [
         "the next conversation",
         "a meal together",
         "a quiet moment side by side",
-        "when I have a little room",
+        "when I have time",
       ],
-      placeholder: "One small moment is enough…",
+      placeholder: "Describe what happened…",
       maxLength: 3000,
     };
   const young = audience === "under-6" || audience === "6-8";
@@ -137,47 +137,47 @@ export function guidanceFor(book: Pick<Book, "profile">) {
         ? "About 1–2 minutes"
         : "About 2–3 minutes";
   const ending = young
-    ? "Pick a path, then choose a feeling or add a few words. That is enough. You can pause at any time."
-    : "Choose a direction and keep one small moment. You can leave anything unwritten and pause whenever you like.";
+    ? "Choose a topic, then select a feeling or write a few words. Save your response to finish. You can also skip or pause."
+    : "Choose a topic, write about an experience or feeling, and save your response. You can skip questions or pause.";
   const childPlans: Record<
     SessionKind,
     { title: string; time: string; end: string; next: string }
   > = {
     begin: {
       title: young
-        ? "One little moment from today"
-        : "One moment that matters to you",
+        ? "What happened today?"
+        : "Write about an experience",
       time,
       end: ending,
       next: young
-        ? "Another day, try a little thing or play together. There is no homework."
-        : "On another visit, try one small thing or play together. There is nothing to catch up on.",
+        ? "Next time, choose a practice or a game."
+        : "Next time, choose a practice plan or a game.",
     },
     notice: {
       title: young
-        ? "How was your little moment?"
-        : "A moment in your own words",
+        ? "How did you feel?"
+        : "Describe what happened",
       time,
       end: young
-        ? "Choose a feeling or a few words, then finish here. Passing is okay too."
-        : "A few words are enough. You do not have to explain everything or share it.",
-      next: "Another day, choose a small thing to try. There is no deadline.",
+        ? "Choose a feeling or write a few words, then save your response. You can also skip."
+        : "Write a few words about what happened, then save your response. Sharing is optional.",
+      next: "Next, choose something to practice.",
     },
     practice: {
       title: young
-        ? "One little thing to try"
-        : "One small choice for your day",
-      time: young ? "About 1 minute · then go and play" : "About 1 minute",
-      end: "Choose a time to try one small thing. Then close the book. You do not have to do it now.",
-      next: "After you try, come back if you want to say how it went.",
+        ? "Choose something to try"
+        : "Choose a practice plan",
+      time: young ? "About 1 minute" : "About 1 minute",
+      end: "Choose when to try the activity, then save your plan. Try it later.",
+      next: "After you try it, return to record how it went.",
     },
     reflect: {
       title: young ? "How did it go?" : "What did you notice when you tried?",
       time,
       end: young
-        ? "Choose what fits. No extra words needed. Then you are finished."
-        : "Choose what fits your experience. Extra words are optional, and “I need more time” is a complete answer.",
-      next: "Enough for today. Your next visit can wait.",
+        ? "Choose how it went and save your review. Extra words are optional."
+        : "Choose how it went and save your review. Extra words are optional. You can choose “I need more time”.",
+      next: "Review saved. You can return to Activities.",
     },
   };
   const childOutcomes: Record<Outcome, string> = young
@@ -196,8 +196,8 @@ export function guidanceFor(book: Pick<Book, "profile">) {
     plans: childPlans,
     outcomes: childOutcomes,
     intro: young
-      ? "Pick what you want to explore today. There are no right answers."
-      : "Choose something that matters to you. This book is for your words, at your pace.",
+      ? "Choose a topic. Next, pick a feeling or write a few words."
+      : "Choose a topic below. Next, answer a prompt about an experience or feeling.",
     cue:
       audience === "under-6"
         ? "Grown-up: read aloud and let your child point, speak or choose. Help with words only if they want. Passing is always welcome."
@@ -226,8 +226,8 @@ export function guidanceFor(book: Pick<Book, "profile">) {
           "another day",
         ],
     placeholder: young
-      ? "A word or a little moment…"
-      : "Only what you feel like putting into words…",
+      ? "Choose a feeling or write here…"
+      : "Write your response…",
     maxLength: young ? 500 : 1500,
   };
 }

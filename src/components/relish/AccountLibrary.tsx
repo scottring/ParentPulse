@@ -95,15 +95,15 @@ export default function AccountLibrary({
   const content = (
     <div className="lb-account">
       <p className="lb-kicker">
-        <Cloud size={17} /> Your people. Your pages. Any device.
+        <Cloud size={17} /> Relish account
       </p>
       <h2>
         {user && !parentReady
-          ? "A parent’s turn."
+          ? "Parent sign-in"
           : user
             ? "Your family library."
             : create
-              ? "Make room for your family."
+              ? "Create your account"
               : "Welcome to Relish."}
       </h2>
       <p>
@@ -262,7 +262,7 @@ export default function AccountLibrary({
           <p className="lb-fine">Signed in as {user.email}</p>
           {vault.mode === "open" && !bound?.accountManaged && (
             <section className="lb-account-current">
-              <h3>Bring {vault.book.owner}’s book with you.</h3>
+              <h3>Add {vault.book.owner}’s book to your account</h3>
               <p>
                 Add the entries, photos and progress in this book to your
                 account. After this one-time step, sign-in opens the account
@@ -289,7 +289,7 @@ export default function AccountLibrary({
           )}
           {sync.conflict && (
             <section className="lb-account-current">
-              <h3>Two devices added something.</h3>
+              <h3>Changes from two devices</h3>
               <p>
                 Keep both versions so nothing gets overwritten. You can review
                 the separate copies in your library.
@@ -329,7 +329,7 @@ export default function AccountLibrary({
               {!sync.books.length && (
                 <section className="lb-account-empty">
                   <BookOpen size={30} />
-                  <h3>Every person gets a book.</h3>
+                  <h3>Your library is empty</h3>
                   <p>
                     Start with yours, then add the kids. Their profiles belong
                     to this parent account—no child email or password needed.
@@ -378,8 +378,8 @@ export default function AccountLibrary({
             >
               <h3>
                 {audience === "adult"
-                  ? "Your book starts here."
-                  : "A book just for them."}
+                  ? "Create your book"
+                  : "Add a child’s book"}
               </h3>
               <label>
                 {audience === "adult" ? "Your name" : "Child’s name"}
@@ -435,7 +435,7 @@ export default function AccountLibrary({
                   (audience !== "adult" && !parentConfirm)
                 }
               >
-                {working ? "Making their place…" : "Create & open book"}
+                {working ? "Creating book…" : "Create & open book"}
                 <ArrowUpRight size={17} />
               </button>
               <button

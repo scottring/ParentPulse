@@ -99,7 +99,7 @@ export function sampleBook(): Book {
       title:"A little room to talk",
       observation:"On this walk, leaving the phones behind seemed to make conversation easier. That is one moment worth remembering, and a possibility to explore again.",
       tryThis:"If you both feel like it, try another unhurried walk and notice how it feels.",
-      sourceIds:["earlier:sample1"], sources:[{id:"earlier:sample1",title:"A moment noticed",text:"We went for a walk without our phones. Somewhere between the house and the park, we started really talking."}],
+      sourceIds:["earlier:sample1"], sources:[{id:"earlier:sample1",title:"Guided reflection",text:"We went for a walk without our phones. Somewhere between the house and the park, we started really talking."}],
     }] },
     moments: [
       {

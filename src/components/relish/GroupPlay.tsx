@@ -103,10 +103,9 @@ export default function GroupPlay({
     return (
       <section className="lb-play-setup">
         <p className="lb-kicker">Pass & play · one device</p>
-        <h2>Room for every voice.</h2>
+        <h2>Choose players and a game</h2>
         <p>
-          Choose the whole group or just a few people. One round together is
-          enough.
+          Select 2–12 players, then choose a game. Pass this device between players.
         </p>
         <fieldset>
           <legend>Who’s playing?</legend>
@@ -163,7 +162,7 @@ export default function GroupPlay({
           </button>
         </form>
         <fieldset>
-          <legend>Make this round fit everyone</legend>
+          <legend>Player age ranges</legend>
           <div className="lb-player-ages">
             {players.map((p) => (
               <label key={p.id}>
@@ -247,8 +246,8 @@ export default function GroupPlay({
         <div>
           <p className="lb-kicker">
             {finished
-              ? "Your stopping point is here"
-              : "This visit · one round together"}
+              ? "Round complete"
+              : "One round"}
           </p>
           <p>
             {finished
@@ -381,14 +380,14 @@ export default function GroupPlay({
       ) : (
         <>
           <p className="lb-kicker">
-            {g.kind === "joy" ? "The reveal" : "Made around the circle"}
+            {g.kind === "joy" ? "The reveal" : "Your shared story"}
           </p>
           <h2>
             {text
               ? g.kind === "joy"
-                ? "Something to know about each other."
-                : "Our unlikely adventure."
-              : "There is room to pass."}
+                ? "Results"
+                : "Your story"
+              : "Round ended"}
           </h2>
           {g.kind === "joy" && text ? (
             <div className="lb-reveal">
@@ -414,13 +413,13 @@ export default function GroupPlay({
             <blockquote>{text}</blockquote>
           ) : (
             <p>
-              Choosing to pass is a complete choice. Nothing else is needed.
+              Everyone passed. No answers were saved.
             </p>
           )}
           <div className="lb-boundary">
-            <strong>A good place to stop</strong>
+            <strong>Round complete</strong>
             <p>
-              Enjoy this moment together. One round is enough for this visit.
+              The round is finished. You can close the game or save a shared page below.
             </p>
             <button className="lb-primary" disabled={busy} onClick={onFinish}>
               Finish for now <Check size={16} />
