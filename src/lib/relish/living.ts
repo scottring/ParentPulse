@@ -4,7 +4,7 @@ import { childPlayContent, childStoryRounds } from "./play-content";
 
 export const threads = {
   listen: {
-    title: "Listen with a little more room",
+    title: "Practice listening",
     notice: "When did someone try to tell you something?",
     practice: "Ask before offering an answer.",
     instruction:
@@ -18,8 +18,8 @@ export const threads = {
       "Try: “What would help me right now is…” Let the other person answer in their own words.",
   },
   joy: {
-    title: "Make room for little joys",
-    notice: "What brought a little lightness to your day?",
+    title: "Plan something enjoyable",
+    notice: "What did you enjoy today?",
     practice: "Make time for one small joy.",
     instruction:
       "Choose something small that brings you or someone you love a little joy. Make an invitation, without an obligation.",
@@ -111,28 +111,28 @@ export const plans: Record<
   { title: string; time: string; end: string; next: string }
 > = {
   begin: {
-    title: "A direction and one small moment",
+    title: "Choose a topic and write a reflection",
     time: "About 3 minutes",
-    end: "Choose a direction, then keep one sentence about a real moment. That is enough for this visit.",
-    next: "Another day, make room for another perspective or play a short game together.",
+    end: "Choose a topic, write about an experience, then save your reflection.",
+    next: "Next, choose a practice plan or another activity.",
   },
   notice: {
-    title: "One moment, put into words",
+    title: "Write a reflection",
     time: "About 2 minutes",
-    end: "Keep one sentence about a moment you noticed. You do not need to solve it or share it.",
-    next: "When you have a little room, choose one small thing to try in ordinary life.",
+    end: "Write about an experience, then save your reflection. Sharing is optional.",
+    next: "Next, choose an action to practice.",
   },
   practice: {
-    title: "One small thing to take into life",
+    title: "Make a practice plan",
     time: "About 1 minute here",
-    end: "Name an ordinary opportunity to try the practice. Then close the book and let life provide the moment.",
-    next: "After you try it, return to notice what happened. There is no deadline.",
+    end: "Choose when to try the suggested action, then save your plan.",
+    next: "After you try it, return to record how it went.",
   },
   reflect: {
-    title: "Let one experience teach you",
+    title: "Review your practice",
     time: "About 2 minutes",
-    end: "Choose what fits the experience. A sentence is optional; an unresolved feeling is a valid ending.",
-    next: "On another visit, keep exploring this thread or choose a new direction.",
+    end: "Choose how it went, add a note if you want, then save your review.",
+    next: "Continue with this topic next time, or choose another.",
   },
 };
 export function nextKind(book: Book): SessionKind {
@@ -233,8 +233,8 @@ export function completeVisit(book: Book, visitId: string, draft: Draft): Book {
     };
     summary =
       v.kind === "begin"
-        ? "You chose a thread and kept one moment in your edition."
-        : "You kept one moment. It does not need an answer today.";
+        ? "Topic selected and reflection saved."
+        : "Reflection saved.";
   } else if (v.kind === "practice") {
     if (!draft.opportunity.trim())
       throw new Error("Choose a moment when you could try this.");

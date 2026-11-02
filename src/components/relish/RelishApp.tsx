@@ -92,7 +92,7 @@ function BookGate() {
       return (
         <div className="r-app lb-gate">
           <p className="lb-wordmark">relish</p>
-          <p role="status">Opening a little space…</p>
+          <p role="status">Opening Relish…</p>
         </div>
       );
     if (unauthorized || (!localMode && vault.mode !== "open"))
@@ -104,9 +104,9 @@ function BookGate() {
             <p className="lb-wordmark">relish</p>
             <header className="lb-shelf-heading">
               <p className="lb-kicker">
-                A library of lives, connected by choice
+                Local books
               </p>
-              <h1>Whose book are we opening?</h1>
+              <h1>Choose a book</h1>
               <p className="lb-shelf-intro">
                 These books are stored on this device. Open one with its
                 original passphrase, then choose Account to add it to your
@@ -125,7 +125,7 @@ function BookGate() {
                     <span className="lb-edition-title">
                       The {e.label} edition
                     </span>
-                    <small>Unlock to pick up your thread</small>
+                    <small>Enter its passphrase to open</small>
                   </button>
                 ))}
             </div>
@@ -147,7 +147,7 @@ function BookGate() {
         <div className="r-app lb-gate">
           <section>
             <p className="lb-wordmark">relish</p>
-            <h1>A book of your own.</h1>
+            <h1>Create a local book</h1>
             <p>
               Choose your own passphrase. Nobody else’s edition will be changed.
             </p>
@@ -168,13 +168,7 @@ function BookGate() {
           <div className="lb-gate-art">
             <p className="lb-wordmark">relish</p>
             <p className="lb-kicker">The operating manual for relationships</p>
-            <h1>
-              Some things
-              <br />
-              are yours
-              <br />
-              to keep.
-            </h1>
+            <h1>Unlock your local book</h1>
             <p>
               <Lock size={15} /> Encrypted. Yours to unlock.
             </p>
@@ -262,7 +256,7 @@ function BookGate() {
                 });
               }}
             >
-              <h2>A copy you can keep.</h2>
+              <h2>Export a backup</h2>
               <p>
                 Choose a passphrase for this backup. You’ll need it to restore
                 the file. For a child’s backup, it also becomes the restored

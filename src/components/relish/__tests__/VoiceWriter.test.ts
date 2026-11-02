@@ -135,14 +135,14 @@ async function connect() {
   fireEvent.click(
     screen.getByRole("button", { name: "Continue to recording" }),
   );
-  await screen.findByRole("button", { name: "Start talking" });
+  await screen.findByRole("button", { name: "Start recording" });
 }
 describe("voice writing consent and lifecycle", () => {
   it("never opens the microphone or contacts a service from the sample", () => {
     show(false, true);
     expect(network).not.toHaveBeenCalled();
     expect(media).not.toHaveBeenCalled();
-    expect(screen.queryByRole("button", { name: "Start talking" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Start recording" })).toBeNull();
   });
   it("keeps dictation unavailable when the server disables child voice", async () => {
     network.mockResolvedValue(
@@ -166,31 +166,31 @@ describe("voice writing consent and lifecycle", () => {
     );
     await screen.findByText(/passphrase didn’t match/);
     expect(media).not.toHaveBeenCalled();
-    expect(screen.queryByRole("button", { name: "Start talking" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Start recording" })).toBeNull();
   });
   it("records locally, releases the microphone, sends only after review and inserts only chosen words", async () => {
     const view = show();
     await connect();
-    fireEvent.click(screen.getByRole("button", { name: "Start talking" }));
-    await screen.findByRole("button", { name: "I’m done talking" });
+    fireEvent.click(screen.getByRole("button", { name: "Start recording" }));
+    await screen.findByRole("button", { name: "Stop recording" });
     expect(
       network.mock.calls.filter((c) => c[1]?.method === "POST"),
     ).toHaveLength(0);
-    fireEvent.click(screen.getByRole("button", { name: "I’m done talking" }));
+    fireEvent.click(screen.getByRole("button", { name: "Stop recording" }));
     await screen.findByRole("button", {
-      name: "Turn this recording into words",
+      name: "Send for transcription",
     });
     expect(stopTrack).toHaveBeenCalled();
     expect(view.onInsert).not.toHaveBeenCalled();
     fireEvent.click(
-      screen.getByRole("button", { name: "Turn this recording into words" }),
+      screen.getByRole("button", { name: "Send for transcription" }),
     );
     const words = await screen.findByLabelText("Your spoken words");
     expect(view.onInsert).not.toHaveBeenCalled();
     fireEvent.change(words, {
       target: { value: "A sleepy dragon in the clouds." },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Add these words/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Add transcript to entry/ }));
     expect(view.onInsert).toHaveBeenCalledWith(
       "A sleepy dragon in the clouds.",
     );
@@ -201,8 +201,8 @@ describe("voice writing consent and lifecycle", () => {
   it("stops recording and aborts pending upload when the edition closes", async () => {
     const view = show();
     await connect();
-    fireEvent.click(screen.getByRole("button", { name: "Start talking" }));
-    await screen.findByRole("button", { name: "I’m done talking" });
+    fireEvent.click(screen.getByRole("button", { name: "Start recording" }));
+    await screen.findByRole("button", { name: "Stop recording" });
     view.unmount();
     expect(FakeRecorder.instances.at(-1)?.state).toBe("inactive");
     expect(stopTrack).toHaveBeenCalled();
@@ -218,7 +218,7 @@ describe("voice writing consent and lifecycle", () => {
     );
     const view = show();
     await connect();
-    fireEvent.click(screen.getByRole("button", { name: "Start talking" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start recording" }));
     await waitFor(() => expect(media).toHaveBeenCalled());
     view.unmount();
     await act(async () => {
@@ -237,14 +237,14 @@ it("does not start a microphone result that arrives while the page is hidden", a
   );
   show();
   await connect();
-  fireEvent.click(screen.getByRole("button", { name: "Start talking" }));
+  fireEvent.click(screen.getByRole("button", { name: "Start recording" }));
   await waitFor(() => expect(media).toHaveBeenCalled());
   vi.spyOn(document, "hidden", "get").mockReturnValue(true);
   await act(async () => {
     resolve({ getTracks: () => [{ stop: stopTrack }] });
   });
   expect(stopTrack).toHaveBeenCalled();
-  expect(screen.queryByRole("button", { name: "I’m done talking" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Stop recording" })).toBeNull();
 });
 
 describe("voice account handoff", () => {
@@ -334,8 +334,8 @@ describe("voice account handoff", () => {
   it("stops a recording and clears consent when the account signs out", async () => {
     show();
     await connect();
-    fireEvent.click(screen.getByRole("button", { name: "Start talking" }));
-    await screen.findByRole("button", { name: "I’m done talking" });
+    fireEvent.click(screen.getByRole("button", { name: "Start recording" }));
+    await screen.findByRole("button", { name: "Stop recording" });
     await act(async () => {
       session.user = null;
       window.dispatchEvent(new Event("relish:account"));
@@ -363,7 +363,7 @@ describe("voice account handoff", () => {
     );
     show();
     await connect();
-    fireEvent.click(screen.getByRole("button", { name: "Start talking" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start recording" }));
     await waitFor(() => expect(media).toHaveBeenCalled());
     await act(async () => {
       window.dispatchEvent(new Event("relish:locked"));
@@ -371,7 +371,7 @@ describe("voice account handoff", () => {
     });
     expect(stopTrack).toHaveBeenCalled();
     expect(
-      screen.queryByRole("button", { name: "I’m done talking" }),
+      screen.queryByRole("button", { name: "Stop recording" }),
     ).toBeNull();
   });
 });

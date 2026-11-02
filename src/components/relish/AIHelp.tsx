@@ -198,7 +198,7 @@ function AdultAIHelp({
     provider === "cloud" ? connection?.cloud : connection?.local;
   return (
     <div className="r-ai-panel">
-      <h3>A second perspective, on your terms.</h3>
+      <h3>Review an AI suggestion</h3>
       {!connection ? (
         <p className="r-small" role="status">
           Checking the connection…
@@ -234,7 +234,7 @@ function AdultAIHelp({
             </div>
           ) : (
             <p className="r-ai-connection">
-              <Cloud size={16} /> A little help from OpenAI
+              <Cloud size={16} /> OpenAI assistance
             </p>
           )}
           <p className="r-small">
@@ -243,7 +243,7 @@ function AdultAIHelp({
             ) : (
               <>
                 Only the excerpt below passes through Relish’s server to OpenAI.
-                Your full book and passphrase stay here. OpenAI’s{" "}
+                The rest of your book is not included in this AI request. OpenAI’s{" "}
                 <a
                   href="https://platform.openai.com/docs/guides/your-data"
                   target="_blank"
@@ -265,14 +265,11 @@ function AdultAIHelp({
           {needsAccount && available && (
             <div className="r-ai-account">
               <p className="r-ai-connection">
-                <ShieldCheck size={16} /> An account for AI. A private book for
-                you.
+                <ShieldCheck size={16} /> Sign in to use AI
               </p>
               <p className="r-small">
                 Sign-in enables up to {connection.dailyLimit} AI reflections a
-                day. It doesn’t upload or unlock your book. We keep usage
-                counts; your AI session ends when the page reloads or your book
-                locks.
+                day. Only the excerpt you approve below is sent for analysis. We keep usage counts. Your Relish account also provides access to your saved family library.
               </p>
               {user ? (
                 <>
@@ -319,7 +316,7 @@ function AdultAIHelp({
                     />
                   </label>
                   <label>
-                    AI account password
+                    Relish account password
                     <input
                       type="password"
                       autoComplete={
@@ -358,7 +355,7 @@ function AdultAIHelp({
                       {accountBusy
                         ? "Connecting…"
                         : create
-                          ? "Create AI account"
+                          ? "Create Relish account"
                           : "Sign in"}
                     </button>
                     <button
@@ -435,7 +432,7 @@ function AdultAIHelp({
               <Sparkles size={15} />
             )}{" "}
             {busy
-              ? "Considering your moment…"
+              ? "Generating a suggestion…"
               : provider === "local"
                 ? "Send excerpt to local model"
                 : "Send this excerpt to OpenAI"}
@@ -449,7 +446,7 @@ function AdultAIHelp({
       )}
       {answer && (
         <div className="r-ai-answer">
-          <p className="r-eyebrow">A POSSIBILITY, NOT A VERDICT</p>
+          <p className="r-eyebrow">AI SUGGESTION · REVIEW BEFORE SAVING</p>
           <p>{answer}</p>
           <button
             type="button"

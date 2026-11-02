@@ -12,18 +12,18 @@ export const DAYS = [
 export const PACES = [
   {
     target: 1,
-    name: "Room to breathe",
-    description: "One meaningful moment a week.",
+    name: "Once a week",
+    description: "Save one reflection each week.",
   },
   {
     target: 3,
-    name: "A little, often",
-    description: "A few small pauses through the week.",
+    name: "Three times a week",
+    description: "Save three reflections each week.",
   },
   {
     target: 5,
-    name: "Everyday attention",
-    description: "A moment on most weekdays.",
+    name: "Five times a week",
+    description: "Save five reflections each week.",
   },
 ] as const;
 export const DEFAULT_RHYTHM = { target: 3, reviewDay: 0 } as const;

@@ -47,11 +47,11 @@ export default function Activities({
     <main className="ra-book" aria-labelledby="ra-title">
       <section className="ra-welcome">
         <p className="lb-kicker">
-          The {book.owner} edition · make a little space
+          The {book.owner} edition · Activities
         </p>
         <h2 id="ra-title">What would you like to do?</h2>
         <p className="ra-intro">
-          Pick what fits right now. One small activity can be your whole visit.
+          Choose an activity below, or continue a saved draft.
         </p>
       </section>
       <section className="ra-choices" aria-label="Choose an activity">
@@ -75,11 +75,10 @@ export default function Activities({
           </div>
           <h3>Personal journal</h3>
           <p>
-            Write, talk, or add a photo. Anything on your mind belongs here.
+            Write an entry, record your voice, or add photos.
           </p>
           <p className="ra-end">
-            <strong>Finished when</strong> you keep one page. A sentence or a
-            photo is plenty.
+            <strong>Finished when</strong> you save an entry with text or a photo.
           </p>
           <div className="ra-actions">
             <button
@@ -96,7 +95,7 @@ export default function Activities({
               disabled={busy}
               onClick={() => onWrite(false, drafts[0])}
             >
-              Continue my last page <ArrowRight size={15} />
+              Continue my draft <ArrowRight size={15} />
             </button>
           )}
         </article>
@@ -110,15 +109,15 @@ export default function Activities({
           <h3>Guided reflection</h3>
           <p>
             {unfinishedVisit
-              ? "Your words are kept. Pick up the same step."
-              : "A few gentle prompts when you’re not sure where to start."}
+              ? "Your progress is saved. Continue from your last step."
+              : "Answer prompts about an experience or choose something to practice."}
           </p>
           <p className="ra-next">
             <strong>{unfinishedVisit ? "Continue:" : "Up next:"}</strong>{" "}
             {plan.title}
           </p>
           <p className="ra-end">
-            <strong>Your stopping point:</strong> {plan.end.split(". ")[0]}.
+            <strong>Your stopping point:</strong> {plan.end.split(". ")[0].replace(/\.$/, "")}.
           </p>
           <button className="lb-primary" disabled={busy} onClick={onGuided}>
             {unfinishedVisit
@@ -135,7 +134,7 @@ export default function Activities({
           <h3>Play together</h3>
           <p>
             {game
-              ? "Your round is waiting at the same turn. Gather your players and carry on."
+              ? "Continue your saved game from the current player’s turn."
               : "The whole family, or a few of you. Choose your players and a game."}
           </p>
           <p className="ra-end">
@@ -149,27 +148,26 @@ export default function Activities({
         </article>
       </section>
       <div className="ra-read">
-        <p className="lb-kicker">Or settle in with your book</p>
+        <p className="lb-kicker">Review saved content</p>
         <button className="lb-text" disabled={busy} onClick={onPages}>
           <BookOpen size={18} /> Read your pages <ArrowRight size={16} />
         </button>
         <button className="lb-text" disabled={busy} onClick={onManual}>
           {pendingInsights
             ? `Review ${pendingInsights} manual ${pendingInsights === 1 ? "suggestion" : "suggestions"}`
-            : "Explore your living manual"}{" "}
+            : "Open your manual"}{" "}
           <ArrowRight size={16} />
         </button>
         <p className="lb-fine">
-          Your writing and guided moments live in the same story. You choose
-          what to share.
+          Journal entries and guided reflections appear together in Your pages. Sharing is optional.
         </p>
       </div>
       {!!drafts.length && (
         <section className="ra-drafts" aria-label="Unfinished journal entries">
           <div>
-            <p className="lb-kicker">Right where you left it</p>
+            <p className="lb-kicker">Saved drafts</p>
             <h3>Your unfinished {drafts.length === 1 ? "page" : "pages"}</h3>
-            <p>Start something new, or pick up a page you left for later.</p>
+            <p>Select a draft to continue editing.</p>
           </div>
           <div className="ra-draft-list">
             {drafts.slice(0, 3).map((draft) => (

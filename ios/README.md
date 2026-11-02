@@ -1,27 +1,44 @@
 # Relish for iPhone Duo
 
-A SwiftUI host for the encrypted Relish book, with one persistent WKWebView across folds and resizes. Minimum iOS 27.1; also supports iPad. The responsive book code lives in `src/components/relish`, shared with Safari.
+A SwiftUI app with a persistent WKWebView: quick entry on the outer screen and a book spread on the inner screen. Folding and rotating preserve the editor. Supports iPhone and iPad on iOS 27.1+. Version 1.0.0, build 2.
 
-## Run
+## Build and test
 
-Open `Relish.xcodeproj`, choose the Relish scheme and the iPhone Duo simulator, then Run. Debug opens `http://127.0.0.1:3210/relish/`; run `npm run dev:local` from the repository first. The generated project is committed so XcodeGen is not needed to run it. After editing `project.yml`, regenerate with `xcodegen generate --spec ios/project.yml` from the repository root.
+Open `Relish.xcodeproj`, choose Relish and an iPhone Duo simulator, then Run. Debug and Release now both open `https://app.relish.my/relish/`; a development build no longer depends on a Mac server. A Debug-only `RELISH_START_URL` build setting may point at localhost:3210 or a Relish Vercel preview. Release ignores that override.
 
-Command-line simulator check:
+From the repository root:
 
 ```sh
-xcodebuild -project ios/Relish.xcodeproj -scheme Relish -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+# Only needed after changing project.yml or adding/removing native files.
+xcodegen generate --spec ios/project.yml
+# Only needed after changing the vector icon artwork.
+node ios/scripts/make-icons.mjs
+xcodebuild -project ios/Relish.xcodeproj -scheme Relish -destination 'platform=iOS Simulator,name=iPhone Duo' -derivedDataPath /private/tmp/Relish-ios-test CODE_SIGNING_ALLOWED=NO test
 ```
 
-Release always loads `https://app.relish.my/relish/`. A debug build can target an approved HTTPS preview using `RELISH_START_URL` as a build setting. No API keys belong in this app.
+The six native regression tests cover production URL pinning, debug origin validation, exact origin/port checks, backup blob origins, main-frame media permission and safe external navigation. The app uses no native third-party SDKs or credential bridge. Native WebKit inspection is enabled only for Debug builds.
 
-## Distribution is a separate step
+## Signed release
 
-This development build is not on TestFlight or the App Store. Select the owner's Apple Developer signing team, confirm the `my.relish.book` bundle ID, supply production app icons/privacy declarations/screenshots, and test microphone, camera, encrypted backup export/import, interruption recovery and accessibility on a physical device before archiving for TestFlight. The hosted web change must be merged to main and deployed first; a Release binary points only at production.
+Signing team: Scott Kaufman (`XT33G7U496`). Bundle ID: `my.relish.book`. Sign back into the matching account in **Xcode → Settings → Accounts** if provisioning reports a rejected login. Xcode must be able to register the bundle and download a profile. Do not put account passwords or API keys in this repository.
 
-The native app and Safari have separate local stores. Move existing editions with Relish's encrypted backup/import, keeping the passphrase separately. Loading the hosted app requires a connection; encrypted books stay local, but this shell does not promise an offline launch. A fold does not lock, reload or create a new entry. Inactivity uses the existing vault timer; app-switcher snapshots are covered immediately.
+```sh
+xcodebuild -project ios/Relish.xcodeproj -scheme Relish -configuration Release -destination 'generic/platform=iOS' -archivePath /private/tmp/Relish.xcarchive -derivedDataPath /private/tmp/Relish-ios-release -allowProvisioningUpdates archive
+python3 ios/scripts/check-release.py /private/tmp/Relish.xcarchive --signed
+xcodebuild -exportArchive -archivePath /private/tmp/Relish.xcarchive -exportPath /private/tmp/Relish-export -exportOptionsPlist ios/ExportOptions.plist -allowProvisioningUpdates
+python3 ios/scripts/check-release.py /private/tmp/Relish-export/Relish.ipa --signed
+```
 
-## Simulator evidence
+`ExportOptions.plist` exports an App Store Connect IPA without uploading it. Merge the approved native changes to main, then rebuild/validate from that commit before uploading through Xcode Organizer or Transporter. Confirm the App Store Connect record uses this bundle ID; do not create a duplicate of an existing app. Check the highest uploaded build number before the final archive. TestFlight upload and public App Store release are separate actions.
 
-Built with Xcode 27.2 / iOS 27.2 SDK and run on iPhone Duo / iOS 27.1. Tested outer quick entry → unfold while editing → fold back → Keep, with the same fictional text. Inner portrait and landscape both show a spread. This is simulator evidence, not a physical-device or store-release certification.
+For compilation checks while signing is unavailable, add `CODE_SIGNING_ALLOWED=NO` to archive and omit `--signed` from the checker. That artifact is explicitly unsigned and cannot be installed on a phone or sent to TestFlight.
 
-Apple references: [prepare your app](https://developer.apple.com/iphone-duo/prepare/), [Safari 27.1](https://webkit.org/blog/18486/webkit-features-for-safari-27-1/). The Device Posture and Viewport Segments APIs are feature-flagged; core behavior does not depend on them.
+## Native behavior
+
+The same web view survives resizing. A fold never saves, shares or reloads a page. The system handles safe areas and keyboard insets. Native code covers app-switcher snapshots, restricts navigation/media/download origins, requests camera/microphone access only when used, and exports encrypted backups through the share sheet. The default file-protection entitlement protects app files while the device is locked; exported temporary files also use complete protection and are removed when sharing finishes.
+
+An internet connection is needed to launch the hosted experience. This is not an offline native rewrite. Account books sync through the signed-in parent account; local-only books are an explicit alternative. Safari and the native app have separate local stores. Sign into the same account to open account books; move older local-only books with encrypted backup/import or the one-time “Add this book to my account” flow in their original browser. Never clear browser/app storage to fix login.
+
+## Before calling the release ready
+
+Use the checklist and privacy/metadata notes in [RELEASE.md](RELEASE.md). Simulator success does not prove physical microphone/camera behavior. The app is not on TestFlight until App Store Connect accepts and processes the signed build.

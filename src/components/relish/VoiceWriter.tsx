@@ -407,15 +407,15 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
   const ready =
     config?.enabled && (!child || config.children) && !!book.profile;
   return (
-    <Dialog title="Tell your story" onClose={onClose}>
+    <Dialog title="Record your voice" onClose={onClose}>
       <div className="rj-voice-session">
         <div className="rj-voice-title">
           <Mic size={32} />
-          <p className="lb-kicker">A page starts with your voice</p>
+          <p className="lb-kicker">Voice transcription</p>
           <h2>
             {accountReady && !sample && !user
-              ? "One quick sign-in."
-              : "Your voice. Your words."}
+              ? "Sign in to record"
+              : "Record and transcribe"}
           </h2>
         </div>
         {sample ? (
@@ -449,8 +449,7 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
               email, sign in with that same account.
             </p>
             <p className="rj-voice-note">
-              Opening a book unlocks its private pages. Online sign-in ends when
-              you reload or lock Relish, so you may need to sign in again here.
+              Voice transcription requires a verified adult account. Your journal draft stays saved while you sign in.
             </p>
             <label className="rj-field">
               Account email
@@ -522,7 +521,7 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
             <p>
               {child
                 ? "A grown-up approves this short voice session. Your child doesn’t need an online account."
-                : "First record a little story. Listen back, then choose whether to turn it into words."}
+                : "Record up to two minutes. Listen to the recording, then choose whether to send it for transcription."}
             </p>
             {child && (
               <label className="rj-field">
@@ -565,7 +564,7 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
           </form>
         ) : transcript !== null ? (
           <>
-            <p className="lb-kicker">Does this sound like you?</p>
+            <p className="lb-kicker">Review the transcript</p>
             <label className="rj-field">
               Your spoken words
               <textarea
@@ -577,13 +576,11 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
               />
             </label>
             <p>
-              Fix any names or words it missed. Nothing joins your page until
-              you choose it.
+              Correct any names or words, then select Add transcript to entry.
             </p>
             {transcript.length + 2 > remaining && (
               <p className="lb-error">
-                This page needs a little more room. Shorten this take before
-                inserting it.
+                The transcript exceeds the entry’s remaining character limit. Shorten it before adding it.
               </p>
             )}
             <button
@@ -591,14 +588,13 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
               disabled={!transcript.trim() || transcript.length + 2 > remaining}
               onClick={() => onInsert(transcript.trim())}
             >
-              Add these words to my page <Check size={18} />
+              Add transcript to entry <Check size={18} />
             </button>
           </>
         ) : (
           <>
             <p>
-              Talk about anything. One little story, up to two minutes. You can
-              add another take after this one.
+              Record up to two minutes. You can add another recording afterward.
             </p>
             {recording ? (
               <div className="rj-recording" role="status">
@@ -607,9 +603,9 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
                   {Math.floor(seconds / 60)}:
                   {String(seconds % 60).padStart(2, "0")}
                 </strong>
-                <p>Listening. Take your time.</p>
+                <p>Recording…</p>
                 <button className="lb-primary" onClick={stop}>
-                  <Square size={18} /> I’m done talking
+                  <Square size={18} /> Stop recording
                 </button>
               </div>
             ) : clip ? (
@@ -630,8 +626,8 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
                     onClick={() => void transcribe()}
                   >
                     {busy
-                      ? "Finding your words…"
-                      : "Turn this recording into words"}
+                      ? "Transcribing…"
+                      : "Send for transcription"}
                   </button>
                   <button
                     className="lb-text"
@@ -649,7 +645,7 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
                 onClick={() => void start()}
               >
                 <Mic size={30} />
-                {busy ? "Opening microphone…" : "Start talking"}
+                {busy ? "Opening microphone…" : "Start recording"}
               </button>
             )}
           </>

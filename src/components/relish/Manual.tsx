@@ -69,14 +69,14 @@ export function useManualGuide(
       })
       .catch(() => {
         if (!abort.signal.aborted)
-          setError("The guide couldn’t connect. Your book is still here.");
+          setError("Could not connect to AI suggestions. Your saved entries are unchanged.");
       });
     return () => abort.abort();
   }, [interested, sample]);
   const connect = useCallback(
     async (email: string, password: string, parentPass: string) => {
       if (!config?.enabled || sample || !alive.current)
-        throw new Error("The guide is waiting for its privacy setup.");
+        throw new Error("AI suggestions are not enabled yet.");
       const b = latest.current;
       if (!b.profile) throw new Error("Choose an edition age range first.");
       if (b.profile.kind === "child" && !config.children)
@@ -156,8 +156,8 @@ export function useManualGuide(
         setError("");
         setStatus(
           scope === "family"
-            ? "Finding threads in your approved Family pages…"
-            : "Finding threads in your recent pages…",
+            ? "Analyzing approved family entries…"
+            : "Analyzing recent entries…",
         );
         try {
           const auth = await import("@/lib/relish/ai-auth");
@@ -182,7 +182,7 @@ export function useManualGuide(
           const result = await response.json();
           if (!response.ok)
             throw new Error(
-              result.error || "The guide couldn’t finish. Try again later.",
+              result.error || "AI analysis could not finish. Try again later.",
             );
           if (abort.signal.aborted || auth.currentAIUser()?.uid !== account.uid)
             return;
@@ -192,8 +192,8 @@ export function useManualGuide(
           if (!abort.signal.aborted)
             setStatus(
               result.ideas.length
-                ? "A few possibilities are ready to consider."
-                : "Your pages are kept. No new conclusion needed yet.",
+                ? "AI suggestions are ready for review."
+                : "Analysis complete. No new suggestions.",
             );
         } catch (e) {
           if (abort.signal.aborted) {
@@ -203,7 +203,7 @@ export function useManualGuide(
           setError(
             e instanceof Error
               ? e.message
-              : "The guide couldn’t finish. Try again later.",
+              : "AI analysis could not finish. Try again later.",
           );
           setStatus("");
         }
@@ -249,14 +249,14 @@ export function ManualCardView({
     <article className={`rm-card ${card.status === "kept" ? "rm-kept" : ""}`}>
       <p className="lb-kicker">
         {card.status === "kept"
-          ? "A thought you chose to keep"
-          : "A possibility, not a verdict"}
+          ? "Saved suggestion"
+          : "AI suggestion · review before saving"}
       </p>
       <h3>{card.title}</h3>
       <p>{card.observation}</p>
       {card.tryThis && (
         <div className="rm-try">
-          <span className="lb-kicker">A little thing to try</span>
+          <span className="lb-kicker">Suggested action</span>
           <p>{card.tryThis}</p>
         </div>
       )}
@@ -282,7 +282,7 @@ export function ManualCardView({
           )}
           <button className="lb-text" onClick={() => onReview("dismissed")}>
             <X size={16} />
-            {card.status === "kept" ? "Put this thought away" : "Doesn’t fit"}
+            {card.status === "kept" ? "Remove from manual" : "Dismiss suggestion"}
           </button>
         </div>
       )}
@@ -352,15 +352,10 @@ export default function Manual({
   return (
     <main className="rj-workspace rm-workspace">
       <header className="rm-intro">
-        <p className="lb-kicker">A living manual · always a work in becoming</p>
-        <h2>
-          What we’re
-          <br />
-          <em>learning about us.</em>
-        </h2>
+        <p className="lb-kicker">Manual suggestions</p>
+        <h2>Your manual</h2>
         <p>
-          Your pages hold the moments. Your manual gathers the things that might
-          help. Keep what rings true. Leave room to change your mind.
+          Review AI suggestions based on saved entries. Save useful suggestions to your manual or dismiss them.
         </p>
       </header>
       <div className="rm-tabs" role="group" aria-label="Choose a manual">
@@ -382,7 +377,7 @@ export default function Manual({
       <section className="rm-connection">
         <Sparkles size={24} />
         <div>
-          <h3>A guide that grows with your pages.</h3>
+          <h3>Optional automatic analysis</h3>
           <p>
             {scope === "personal"
               ? "With your permission, the guide reflects on your six most recent kept pages as you add to them. Drafts, photos and private people tags stay out."
@@ -390,21 +385,20 @@ export default function Manual({
           </p>
           {sample ? (
             <p className="lb-fine">
-              The thought below is a fictional example. Automatic reflection is
-              available with an adult account and your permission.
+              The suggestion below is a fictional example. Automatic analysis requires an adult account and your permission.
             </p>
           ) : !guide.config ? (
-            <p className="lb-fine">Checking the guide connection…</p>
+            <p className="lb-fine">Checking AI availability…</p>
           ) : !guide.config.enabled ||
             (book.profile?.kind === "child" && !guide.config.children) ? (
             <p className="lb-fine">
               {book.profile?.kind === "child"
                 ? "Children’s automatic reflections need additional provider privacy setup. Your writing, photos and parent-assisted voice are available."
-                : "The guide is being connected. Your pages remain private."}
+                : "AI suggestions are currently unavailable. Your entries are saved."}
             </p>
           ) : !guide.authorized ? (
             <details>
-              <summary>Connect the guide for this visit</summary>
+              <summary>Enable AI suggestions for this session</summary>
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -470,7 +464,7 @@ export default function Manual({
                   </span>
                 </label>
                 <button className="lb-primary" disabled={busy || !consent}>
-                  {busy ? "Connecting…" : "Connect guide"}
+                  {busy ? "Connecting…" : "Enable AI suggestions"}
                 </button>
               </form>
             </details>
@@ -527,7 +521,7 @@ export default function Manual({
                 {guide.error}
               </p>
               <button className="lb-text" onClick={guide.retry}>
-                <RefreshCw size={16} /> Try the guide again
+                <RefreshCw size={16} /> Retry analysis
               </button>
             </>
           )}
@@ -560,11 +554,9 @@ export default function Manual({
           ))
         ) : (
           <div className="rm-empty">
-            <h3>Understanding starts small.</h3>
+            <h3>No suggestions yet</h3>
             <p>
-              Keep a moment, a story, or a reflection. When the guide is
-              connected, possibilities will appear here for you to consider.
-              Nothing becomes a rule about you.
+              Save an entry, then enable automatic analysis above to receive suggestions. Each suggestion needs your review before you add it to your manual.
             </p>
             <button className="lb-text" onClick={onPages}>
               Back to my pages <BookOpen size={16} />

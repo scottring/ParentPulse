@@ -130,6 +130,11 @@
   }
 }
 @media (min-width: 640px) and (max-width: 900px) {
+  .lb-app .rd-editor-page .rj-voice-launch {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
   .lb-app .lb-book {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

@@ -57,8 +57,8 @@ export default function PassagePicker({
     <Dialog title="Choose a passage" onClose={busy ? () => {} : onClose}>
       {done ? (
         <>
-          <p className="lb-kicker">A little piece, shared</p>
-          <h2>In the Family album.</h2>
+          <p className="lb-kicker">Passage saved</p>
+          <h2>Added to Family album</h2>
           <p>
             Only the words and photos you chose are there. Your original page
             stays private.
@@ -69,12 +69,8 @@ export default function PassagePicker({
         </>
       ) : (
         <>
-          <p className="lb-kicker">You choose what travels</p>
-          <h2>
-            A few lines can
-            <br />
-            mean a lot.
-          </h2>
+          <p className="lb-kicker">Share a passage</p>
+          <h2>Choose text to share</h2>
           <p>
             Select lines on your page before opening this, or copy the words you
             want into the space below.
@@ -96,7 +92,7 @@ export default function PassagePicker({
               maxLength={8000}
               disabled={busy}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Choose a little piece of your page…"
+              placeholder="Enter the text you want to share…"
             />
           </label>
           {photos && page.photos.length > 0 && (
@@ -140,7 +136,7 @@ export default function PassagePicker({
               onClick={() => void keep()}
             >
               <Users size={18} />
-              {busy ? "Keeping…" : "Add to Family album"}
+              {busy ? "Saving…" : "Add to Family album"}
             </button>
             {onOffer && (
               <button

@@ -86,13 +86,13 @@ export function VaultForm({
       }}
     >
       <Mark size={38} />
-      <p className="r-eyebrow">YOUR WORDS. YOUR WORLD.</p>
+      <p className="r-eyebrow">LOCAL BOOK</p>
       <h1>
         {locked
           ? "Welcome back."
           : restoring
-            ? "Bring your book home."
-            : "A little space, just for you."}
+            ? "Restore a backup"
+            : "Create a local book"}
       </h1>
       <p>
         {locked
@@ -101,7 +101,7 @@ export function VaultForm({
       </p>
       {!locked && !restoring && (
         <label>
-          What should we call you?
+          Your name
           <input
             required
             autoComplete="given-name"
@@ -130,7 +130,7 @@ export function VaultForm({
       </label>
       {!locked && !restoring && (
         <label>
-          Once more, to be sure
+          Confirm passphrase
           <input
             required
             autoComplete="new-password"
@@ -236,12 +236,8 @@ export function PersonForm({
         }
       }}
     >
-      <p className="r-eyebrow">A NEW CHAPTER</p>
-      <h2>
-        Who makes
-        <br />
-        <em>your life, yours?</em>
-      </h2>
+      <p className="r-eyebrow">ADD A PERSON</p>
+      <h2>Add a person</h2>
       <label>
         Their name
         <input
@@ -270,12 +266,12 @@ export function PersonForm({
         </select>
       </label>
       <label>
-        A little about them <span>optional</span>
+        Notes about this person <span>optional</span>
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
           maxLength={500}
-          placeholder="What makes them, them?"
+          placeholder="Interests, preferences, or anything you want to remember"
           rows={3}
         />
       </label>
@@ -285,7 +281,7 @@ export function PersonForm({
         </p>
       )}
       <button className="r-primary" disabled={busy || !name.trim()}>
-        Open their chapter <ArrowRight size={16} />
+        Add person <ArrowRight size={16} />
       </button>
     </form>
   );
@@ -321,14 +317,10 @@ export function EditPerson({
         }
       }}
     >
-      <p className="r-eyebrow">YOUR UNDERSTANDING CAN CHANGE</p>
-      <h2>
-        What you know
-        <br />
-        <em>about {person.name}.</em>
-      </h2>
+      <p className="r-eyebrow">EDIT PERSON NOTES</p>
+      <h2>Notes about {person.name}</h2>
       <label>
-        Their chapter introduction
+        Summary
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
@@ -337,7 +329,7 @@ export function EditPerson({
         />
       </label>
       <label>
-        What you’re learning <span>One thought per line</span>
+        Things to remember <span>One thought per line</span>
         <textarea
           value={lessons}
           onChange={(e) => setLessons(e.target.value)}
@@ -351,7 +343,7 @@ export function EditPerson({
         </p>
       )}
       <button className="r-primary" disabled={busy}>
-        Keep these thoughts <Check size={16} />
+        Save notes <Check size={16} />
       </button>
     </form>
   );

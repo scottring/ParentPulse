@@ -37,11 +37,11 @@ const Sensory = createContext({
   enabled: false,
   unavailable: false,
   toggle: () => {},
-  play: (_kind: SoundKind) => {},
+  play: (_kind: SoundKind) => { void _kind; },
 });
 export function SensoryProvider({ children }: { children: ReactNode }) {
   const enabled = useSyncExternalStore(subscribe, readSound, () => false);
-  const engine = useMemo(createSoundEngine, []);
+  const engine = useMemo(() => createSoundEngine(), []);
   const [unavailable, setUnavailable] = useState(false);
   const enabledRef = useRef(enabled);
   useEffect(() => {
@@ -119,11 +119,10 @@ export function SoundSettings() {
     <div className="r-setting-row">
       <Volume2 size={24} />
       <div>
-        <h3>A quieter kind of feedback</h3>
+        <h3>Interaction sounds</h3>
         <p>
-          Soft, stone-like taps as you move. A little settling sound when you
-          keep something. Sound is optional; movement follows your device’s
-          reduced-motion setting.
+          Play a sound when you select an option or save. You can turn sounds off.
+          Animations follow your device’s reduced-motion setting.
         </p>
         <div className="r-sound-options">
           <button
@@ -142,7 +141,7 @@ export function SoundSettings() {
               data-sound="off"
               onClick={() => play("place")}
             >
-              Listen to a stone settle <Volume2 size={14} />
+              Preview sound <Volume2 size={14} />
             </button>
           )}
         </div>
@@ -186,7 +185,7 @@ export function KeptToast({
     <div className="r-kept-toast" role="status">
       <Pebbles small animate />
       <div>
-        <span className="r-eyebrow">A SMALL THING, KEPT.</span>
+        <span className="r-eyebrow">SAVED</span>
         <p>{message}</p>
       </div>
       <button

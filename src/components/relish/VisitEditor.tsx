@@ -56,12 +56,12 @@ export default function VisitEditor({
     if (!dirty) return;
     const rev = ++revision.current;
     timer.current = setTimeout(() => {
-      setStatus("Saving your place…");
+      setStatus("Saving progress…");
       void saveRef
         .current((b) => updateDraft(b, visit.id, draft))
         .then(() => {
           if (alive.current && rev === revision.current) {
-            setStatus("Your place is kept.");
+            setStatus("Progress saved.");
             setError("");
           }
         })
@@ -106,24 +106,20 @@ export default function VisitEditor({
     plan = plans[visit.kind],
     practice = pendingPractice(book);
   const step =
-    visit.kind === "begin" ? `Step ${visit.step + 1} of 2` : "One small step";
+    visit.kind === "begin" ? `Step ${visit.step + 1} of 2` : "Guided reflection";
   return (
     <div className="lb-editor">
       <p className="lb-kicker">
         {step} · {plan.time}
       </p>
       <div className="lb-boundary">
-        <strong>Enough for this visit</strong>
+        <strong>To complete this session</strong>
         <p>{plan.end}</p>
       </div>
       {cue && <p className="lb-age-cue">{cue}</p>}
       {visit.kind === "begin" && visit.step === 0 ? (
         <>
-          <h2>
-            What matters to you
-            <br />
-            right now?
-          </h2>
+          <h2>Choose a topic</h2>
           <div className="lb-choices">
             {Object.entries(threads).map(([key, t]) => (
               <button
@@ -199,7 +195,7 @@ export default function VisitEditor({
               disabled={busy || !draft.text.trim()}
               onClick={() => leave(onFinish)}
             >
-              Keep this moment · finish here <Check size={15} />
+              Save reflection and finish <Check size={15} />
             </button>
             {online && (
               <button
@@ -235,7 +231,7 @@ export default function VisitEditor({
             disabled={busy || !draft.opportunity}
             onClick={() => leave(onFinish)}
           >
-            Take this into my day · finish here
+            Save plan and finish
           </button>
           <p className="lb-fine">
             This keeps a plan. Mark it tried only after it happens.
@@ -243,11 +239,7 @@ export default function VisitEditor({
         </>
       ) : (
         <>
-          <h2>
-            What happened
-            <br />
-            when you tried?
-          </h2>
+          <h2>Review your practice</h2>
           {practice && (
             <div className="lb-margin">
               <p>{theme?.practice}</p>
@@ -304,7 +296,7 @@ export default function VisitEditor({
                 disabled={busy || !draft.outcome}
                 onClick={() => leave(onFinish)}
               >
-                Keep this lesson · finish here <Check size={15} />
+                Save review and finish <Check size={15} />
               </button>
             </>
           )}
@@ -319,7 +311,7 @@ export default function VisitEditor({
           <Pause size={14} /> Pause here
         </button>
         <span className="lb-fine" role="status">
-          {dirty ? "Keeping your place…" : status}
+          {dirty ? "Saving progress…" : status}
         </span>
       </div>
       {error && (

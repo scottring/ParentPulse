@@ -28,40 +28,40 @@ function nextStep(book: Book, now: Date) {
   )?.name;
   const copy = {
     person: {
-      title: "Begin with someone.",
+      title: "Add a person",
       detail:
-        "One person. One relationship you’d like to understand a little better.",
+        "Add someone to write reflections and notes about your relationship.",
       button: "Add your first person",
       time: "ABOUT A MINUTE",
     },
     notice: {
       title: book.moments.length
         ? "What stayed with you today?"
-        : "Start with one real moment.",
+        : "Write a reflection",
       detail:
         "A kind exchange, a difficult minute, or something you’re still wondering about.",
-      button: "Keep a moment",
+      button: "Save a reflection",
       time: "2 MINUTES",
     },
     reflect: {
-      title: `Pick up the thread${who ? ` with ${who}` : ""}.`,
+      title: `Review your practice${who ? ` with ${who}` : ""}`,
       detail:
         "You had something small to try. If you’ve had a chance, come back to what happened.",
       button: "How did it go?",
       time: "2 MINUTES",
     },
     review: {
-      title: "A little time to look back.",
+      title: "Review this week",
       detail:
-        "Gather this week’s moments. Keep one thing you want to carry forward.",
+        "Read this week’s reflections and choose a next step.",
       button: "Begin your weekly reflection",
       time: "5 MINUTES",
     },
     enough: {
-      title: "A little attention, already given.",
+      title: "Weekly target reached",
       detail:
-        "You’ve met your intention for the week. Let what you’re learning find its way into life.",
-      button: rhythm.review ? "Keep another moment" : "Look back on your week",
+        "You’ve saved your target number of reflections this week.",
+      button: rhythm.review ? "Write another reflection" : "Look back on your week",
       time: "AT YOUR PACE",
     },
   }[rhythm.next];
@@ -90,14 +90,12 @@ export function RhythmStrip({
       <div className="r-strip-symbol">
         <Pebbles small />
         <span>
-          A LITTLE,
-          <br />
-          OFTEN.
+          WEEKLY PLAN
         </span>
       </div>
       <div className="r-strip-copy">
         <p className="r-eyebrow">
-          YOUR NEXT LITTLE STEP <span>· {step.time}</span>
+          SUGGESTED NEXT STEP <span>· {step.time}</span>
         </p>
         <h2>{step.title}</h2>
         <p>{step.detail}</p>
@@ -109,7 +107,7 @@ export function RhythmStrip({
         </button>
       </div>
       <button className="r-week-glance" onClick={onOpen}>
-        <span className="r-eyebrow">YOUR GENTLE RHYTHM</span>
+        <span className="r-eyebrow">WEEKLY TARGET</span>
         <span className="r-progress-pebbles" aria-hidden="true">
           {Array.from({ length: step.settings.target }, (_, i) => (
             <i
@@ -122,7 +120,7 @@ export function RhythmStrip({
           {step.current.length} of {step.settings.target} moments this week
         </span>
         <small>
-          Find your rhythm <ArrowUpRight size={13} />
+          Set weekly target <ArrowUpRight size={13} />
         </small>
       </button>
     </section>
@@ -151,29 +149,23 @@ export function RhythmPage({
     <div className="r-rhythm-page">
       <div className="r-rhythm-heading">
         <div>
-          <p className="r-eyebrow">THE ART OF PAYING ATTENTION</p>
-          <h1>
-            Small rituals.
-            <br />
-            <em>A little closer.</em>
-          </h1>
+          <p className="r-eyebrow">REFLECTION SCHEDULE</p>
+          <h1>Your reflection schedule</h1>
           <p>
-            A few minutes to notice. A little courage to try.
-            <br />A quiet return to what you’re learning.
+            Write about an experience, try an action, and review the result.
+            <br />Choose how often you want to reflect.
           </p>
         </div>
         <div className="r-rhythm-still-life">
           <Pebbles animate />
           <span>
-            ONE SMALL THING
-            <br />
-            ON TOP OF ANOTHER.
+            YOUR PROGRESS
           </span>
         </div>
       </div>
       <section className="r-next-invitation">
         <div>
-          <span className="r-eyebrow">A GOOD PLACE TO BEGIN · {step.time}</span>
+          <span className="r-eyebrow">SUGGESTED NEXT STEP · {step.time}</span>
           <h2>{step.title}</h2>
           <p>{step.detail}</p>
         </div>
@@ -186,10 +178,10 @@ export function RhythmPage({
       </section>
       <div className="r-section-title r-rhythm-section-title">
         <div>
-          <p className="r-eyebrow">A PRACTICE THAT FITS A LIFE</p>
-          <h2>Here’s how your book grows.</h2>
+          <p className="r-eyebrow">HOW IT WORKS</p>
+          <h2>Three steps</h2>
         </div>
-        <span className="r-small">Each part has its own pace.</span>
+        <span className="r-small">Complete each step in a separate session.</span>
       </div>
       <div className="r-practice-track">
         <article>
@@ -198,7 +190,7 @@ export function RhythmPage({
             <Feather size={20} />
           </div>
           <p className="r-eyebrow">NOTICE</p>
-          <h3>Keep a little of life.</h3>
+          <h3>Write about an experience</h3>
           <p>
             Write one thing that happened with someone. A sentence or two is
             enough. Add a possible perspective and a next move if they come to
@@ -209,7 +201,7 @@ export function RhythmPage({
             {step.settings.target === 1 ? "time" : "times"} a week
           </div>
           <button className="r-text-button" onClick={actions.onNotice}>
-            Keep a moment <ArrowRight size={14} />
+            Save a reflection <ArrowRight size={14} />
           </button>
         </article>
         <article>
@@ -218,7 +210,7 @@ export function RhythmPage({
             <Footprints size={21} />
           </div>
           <p className="r-eyebrow">TRY & RETURN</p>
-          <h3>Let life answer.</h3>
+          <h3>Try your plan and record the result</h3>
           <p>
             Try the small move you chose. After a day or two, return to the
             moment and describe what you noticed. Keep a useful insight in their
@@ -233,7 +225,7 @@ export function RhythmPage({
               awaiting ? actions.onReflect(awaiting.id) : actions.onNotice()
             }
           >
-            {awaiting ? "Return to a moment" : "Begin with a moment"}{" "}
+            {awaiting ? "Review your plan" : "Write a reflection"}{" "}
             <ArrowRight size={14} />
           </button>
         </article>
@@ -243,7 +235,7 @@ export function RhythmPage({
             <Sun size={21} />
           </div>
           <p className="r-eyebrow">LOOK BACK</p>
-          <h3>Gather what matters.</h3>
+          <h3>Review the week</h3>
           <p>
             Once a week, read your moments together. What helped? What keeps
             showing up? Choose one thing to carry into the week ahead.
@@ -262,19 +254,15 @@ export function RhythmPage({
       </div>
       <section className="r-rhythm-custom">
         <div>
-          <p className="r-eyebrow">YOUR LIFE SETS THE PACE</p>
-          <h2>
-            Find your <br />
-            <em>kind of often.</em>
-          </h2>
+          <p className="r-eyebrow">SCHEDULE SETTINGS</p>
+          <h2>Set your schedule</h2>
           <p>
-            These are gentle intentions. A missed day creates no backlog, and a
-            single honest sentence counts.
+            Set a weekly reflection target and a review day. Missed days do not add extra tasks.
           </p>
           <div className="r-review-date">
             <CalendarDays size={17} />
             <span>
-              {step.review ? "Next weekly pause" : "Your weekly pause"}
+              {step.review ? "Next weekly review" : "Weekly review"}
               <strong>{reviewLabel}</strong>
             </span>
             {step.review && <Check size={17} />}
@@ -295,7 +283,7 @@ export function RhythmPage({
         <BookOpen size={22} />
         <div>
           <p className="r-eyebrow">WHAT DO I NEED TO WRITE?</p>
-          <h3>Just enough to remember.</h3>
+          <h3>Required and optional fields</h3>
           <p>
             A moment needs a person and a few words about what happened. Your
             interpretation and next move are optional. When you return, one
@@ -307,8 +295,8 @@ export function RhythmPage({
       {!!book.reviews?.length && (
         <section className="r-review-archive">
           <div className="r-section-title">
-            <h2>The weeks you’ve gathered.</h2>
-            <span className="r-eyebrow">A SMALL HISTORY OF UNDERSTANDING</span>
+            <h2>Previous weekly reviews</h2>
+            <span className="r-eyebrow">SAVED REVIEWS</span>
           </div>
           {[...book.reviews]
             .sort((a, b) => b.weekStart.localeCompare(a.weekStart))
@@ -332,7 +320,7 @@ export function RhythmPage({
                   <p>{review.reflection}</p>
                   {review.next && (
                     <>
-                      <span className="r-eyebrow">CARRYING FORWARD</span>
+                      <span className="r-eyebrow">NEXT WEEK’S PLAN</span>
                       <p>{review.next}</p>
                     </>
                   )}
@@ -364,12 +352,12 @@ function RhythmPreferences({
           await onSave({ target, reviewDay: day });
           setError("");
         } catch {
-          setError("Your rhythm could not be saved. Please try again.");
+          setError("Your schedule could not be saved. Please try again.");
         }
       }}
     >
       <fieldset className="r-pace-choices">
-        <legend>A comfortable pace</legend>
+        <legend>Reflections per week</legend>
         {PACES.map((pace) => (
           <label
             key={pace.target}
@@ -396,7 +384,7 @@ function RhythmPreferences({
         ))}
       </fieldset>
       <label className="r-review-day">
-        A day to look back
+        Weekly review day
         <select value={day} onChange={(e) => setDay(Number(e.target.value))}>
           {DAYS.map((name, index) => (
             <option key={name} value={index}>
@@ -416,7 +404,7 @@ function RhythmPreferences({
           busy || (target === settings.target && day === settings.reviewDay)
         }
       >
-        {busy ? "Keeping your rhythm…" : "Keep this rhythm"} <Check size={16} />
+        {busy ? "Saving schedule…" : "Save schedule"} <Check size={16} />
       </button>
     </form>
   );
@@ -457,21 +445,17 @@ export function WeeklyReflection({
       }}
     >
       <div className="r-weekly-top">
-        <p className="r-eyebrow">YOUR WEEKLY PAUSE · ABOUT 5 MINUTES</p>
+        <p className="r-eyebrow">WEEKLY REVIEW · ABOUT 5 MINUTES</p>
         <Pebbles small />
       </div>
-      <h2>
-        A week of little things.
-        <br />
-        <em>What will you keep?</em>
-      </h2>
+      <h2>Weekly review</h2>
       <p className="r-form-intro">
         Week of{" "}
         {state.start.toLocaleDateString("en-US", {
           month: "long",
           day: "numeric",
         })}
-        . Read a little. Notice what connects. One useful thought is enough.
+        . Review the entries below, then write what you learned and one next step.
       </p>
       <div className="r-week-recap">
         <span className="r-eyebrow">
@@ -499,8 +483,7 @@ export function WeeklyReflection({
           ))
         ) : (
           <p>
-            A quiet week is welcome here, too. Reflect on a conversation or
-            something you noticed outside the book.
+            No reflections saved this week. You can still write about a conversation or experience below.
           </p>
         )}
       </div>
@@ -532,10 +515,10 @@ export function WeeklyReflection({
       )}
       <button className="r-primary" disabled={busy || !reflection.trim()}>
         {busy
-          ? "Gathering your week…"
+          ? "Saving review…"
           : state.review
             ? "Update this week’s reflection"
-            : "Keep this week’s reflection"}{" "}
+            : "Save weekly review"}{" "}
         <Check size={16} />
       </button>
     </form>
