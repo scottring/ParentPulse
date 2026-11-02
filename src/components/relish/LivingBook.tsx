@@ -313,7 +313,7 @@ export default function LivingBook({
             : sharedView
               ? "Our Family pages"
               : view === "bookmark"
-                ? "My bookmark"
+                ? "Guided activities"
                 : sessionOpen
                   ? "Guided reflection"
                   : chapters.find((c) => c.id === view)?.label || "Your book";
@@ -396,7 +396,7 @@ export default function LivingBook({
               Choose another activity
             </button>
             <button className="lb-text" onClick={() => navigate("words")}>
-              Just browse
+              Read saved entries
             </button>
             <button
               className="lb-text"

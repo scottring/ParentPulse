@@ -48,6 +48,8 @@ The native app links Apple frameworks only. TLS and the hosted vault's AES-GCM/P
 
 ## Acceptance evidence
 
+Web validation: all 208 Relish tests, targeted ESLint, authentication-runtime verification and the production build pass. Direct copy was checked in the desktop journal and through a complete guided session. Browser checks at 382px and 669px preserve a draft when switching between compact and spread layouts. The native simulator repeat of the latest wording was interrupted by the Mac locking; the earlier native fold/save/cross-device flow passed.
+
 - [x] Six native XCTest checks passed on the iPhone Duo / iOS 27.1 simulator.
 - [x] Unsigned iOS Release archive compiles with Xcode 27.2.
 - [x] Signed archive and exported IPA checker; unsigned archive correctly rejected by `--signed`.
