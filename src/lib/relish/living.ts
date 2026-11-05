@@ -1,6 +1,10 @@
 import type { Book } from "./model";
 import { isAudience, youngestAudience, type Audience } from "./profiles";
-import { childPlayContent, childStoryRounds } from "./play-content";
+import {
+  childPlayContent,
+  childStoryRounds,
+  samePagePrompts,
+} from "./play-content";
 
 export const threads = {
   listen: {
@@ -63,11 +67,13 @@ export type LivingEntry = {
   createdAt: string;
 };
 export type Player = { id: string; name: string; audience?: Audience };
+export type GameKind = "joy" | "story" | "match";
+export const gameKinds: GameKind[] = ["joy", "story", "match"];
 export type Game = {
   audience?: Audience;
   contentVersion?: 1;
   id: string;
-  kind: "joy" | "story";
+  kind: GameKind;
   players: Player[];
   stage: "ready" | "choose" | "handoff" | "reveal" | "kept" | "finished";
   turn: number;
@@ -80,7 +86,7 @@ export type Game = {
 };
 export type SharedPage = {
   id: string;
-  kind: "joy" | "story";
+  kind: GameKind;
   title: string;
   text: string;
   players: Player[];
@@ -364,8 +370,27 @@ export const storyRounds = (count: number, audience?: Audience) =>
         ),
         storyEnding,
       ];
-export const turnCount = (g: Game) =>
-  g.kind === "joy" ? g.players.length : Math.max(3, g.players.length);
+export const turnCount = (g: Pick<Game, "kind" | "players">) =>
+  g.kind === "story" ? Math.max(3, g.players.length) : g.players.length;
+// The question for a "Same page?" round is fixed by the game's ID, so it
+// survives reload, sync and restore without another stored field.
+export function samePageRound(g: Pick<Game, "id" | "audience">) {
+  const prompts = samePagePrompts(g.audience ?? "under-6");
+  let n = 0;
+  for (const ch of g.id) n = (n * 31 + ch.charCodeAt(0)) >>> 0;
+  return prompts[n % prompts.length];
+}
+export function samePageAgreement(g: Game) {
+  const answers = g.choices.filter((c): c is number => c !== null);
+  if (answers.length < 2) return "";
+  const counts = new Map<number, number>();
+  for (const c of answers) counts.set(c, (counts.get(c) || 0) + 1);
+  const [top, most] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+  const choice = samePageRound(g).choices[top];
+  if (most === answers.length) return `Same page: everyone chose “${choice}”.`;
+  if (most === 1) return "Everyone chose something different. Worth a conversation.";
+  return `${most} of ${answers.length} chose “${choice}”.`;
+}
 export const gamePlayer = (g: Game) => g.players[g.turn % g.players.length];
 export function newGame(
   kind: Game["kind"],
@@ -373,7 +398,7 @@ export function newGame(
   editionAudience?: Audience,
 ): Game {
   if (
-    !["joy", "story"].includes(kind) ||
+    !gameKinds.includes(kind) ||
     players.length < 2 ||
     players.length > 12 ||
     new Set(players.map((p) => p.id)).size !== players.length ||
@@ -407,6 +432,19 @@ export const joyOptions = (g: Pick<Game, "audience">) =>
     ? childPlayContent(g.audience).joys
     : joyChoices;
 export function gameText(g: Game): string {
+  if (g.kind === "match") {
+    const round = samePageRound(g);
+    const answers = g.players
+      .map((p, i) =>
+        g.choices[i] === null || g.choices[i] === undefined
+          ? ""
+          : `${p.name}: ${round.choices[g.choices[i]!]}.`,
+      )
+      .filter(Boolean);
+    return answers.length
+      ? [round.prompt, ...answers, samePageAgreement(g)].filter(Boolean).join(" ")
+      : "";
+  }
   if (g.kind === "joy")
     return Number.isInteger(g.choices[0])
       ? `A small joy for ${g.players[0].name}: ${joyOptions(g)[g.choices[0]!].toLowerCase()}.`
@@ -449,7 +487,9 @@ export function advanceGame(g: Game, action: GameAction): Game {
     const max =
       g.kind === "joy"
         ? joyChoices.length
-        : storyRounds(g.players.length)[g.turn].choices.length;
+        : g.kind === "match"
+          ? samePageRound(g).choices.length
+          : storyRounds(g.players.length)[g.turn].choices.length;
     if (
       action.choice !== null &&
       (!Number.isInteger(action.choice) ||
@@ -494,7 +534,9 @@ export function keepGame(book: Book): Book {
     title:
       g.kind === "joy"
         ? "A small joy, learned together"
-        : "Our unlikely adventure",
+        : g.kind === "match"
+          ? "Are we on the same page?"
+          : "Our unlikely adventure",
     text: gameText(g),
     players: g.players,
     approvedBy: g.players.map((p) => p.id),
@@ -558,7 +600,7 @@ export function isLiving(value: unknown): value is LivingState {
       (p) =>
         obj(p) &&
         str(p.id, 100) &&
-        ["joy", "story"].includes(String(p.kind)) &&
+        gameKinds.includes(p.kind as GameKind) &&
         str(p.title, 200) &&
         str(p.text) &&
         date(p.createdAt) &&
@@ -615,7 +657,7 @@ export function isLiving(value: unknown): value is LivingState {
       (g.audience === undefined
         ? g.contentVersion !== undefined
         : g.contentVersion !== 1) ||
-      !["joy", "story"].includes(String(g.kind)) ||
+      !gameKinds.includes(g.kind as GameKind) ||
       !["ready", "choose", "handoff", "reveal", "kept", "finished"].includes(
         String(g.stage),
       ) ||
@@ -635,8 +677,7 @@ export function isLiving(value: unknown): value is LivingState {
       !Array.isArray(g.choices)
     )
       return false;
-    const total =
-        g.kind === "joy" ? g.players.length : Math.max(3, g.players.length),
+    const total = turnCount(g as Pick<Game, "kind" | "players">),
       turn = g.turn as number;
     if (
       turn < 0 ||

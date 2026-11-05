@@ -3,6 +3,7 @@ import {
   ArrowRight,
   BookOpen,
   Feather,
+  ListChecks,
   Mic,
   Sparkles,
   Users,
@@ -12,6 +13,7 @@ import type { JournalDraft } from "@/lib/relish/journal";
 import { livingOf, nextKind } from "@/lib/relish/living";
 import { audienceOf } from "@/lib/relish/profiles";
 import { guidanceFor } from "@/lib/relish/guidance";
+import { activeTrackers, toolsFor } from "@/lib/relish/tools";
 import "./activities.css";
 
 export default function Activities({
@@ -22,6 +24,7 @@ export default function Activities({
   onPlay,
   onPages,
   onManual,
+  onTools,
   pendingInsights = 0,
 }: {
   book: Book;
@@ -31,6 +34,7 @@ export default function Activities({
   onPlay: () => void;
   onPages: () => void;
   onManual: () => void;
+  onTools?: () => void;
   pendingInsights?: number;
 }) {
   const living = livingOf(book);
@@ -40,6 +44,8 @@ export default function Activities({
       unfinishedVisit ? living.visit!.kind : nextKind(book)
     ];
   const game = living.game && living.game.stage !== "finished";
+  const exercises = toolsFor(audienceOf(book)).length;
+  const running = activeTrackers(book).length;
   const drafts = (book.journal || [])
     .filter((entry) => entry.status === "draft")
     .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
@@ -146,6 +152,30 @@ export default function Activities({
             <ArrowRight size={17} />
           </button>
         </article>
+        {onTools && exercises > 0 && (
+          <article className="ra-choice ra-tools">
+            <div className="ra-choice-heading">
+              <ListChecks size={24} aria-hidden="true" />
+              <span className="lb-kicker">
+                Hands-on · about 2–5 minutes
+              </span>
+            </div>
+            <h3>Try an exercise</h3>
+            <p>
+              {running
+                ? `You have ${running} ${running === 1 ? "exercise" : "exercises"} in progress.`
+                : "Card sorts, fill-in-the-blank exercises and day-by-day checklists for something that’s hard right now."}
+            </p>
+            <p className="ra-end">
+              <strong>Finished when</strong> you keep the page the exercise
+              makes.
+            </p>
+            <button className="lb-primary" disabled={busy} onClick={onTools}>
+              {running ? "Continue an exercise" : "Choose an exercise"}{" "}
+              <ArrowRight size={17} />
+            </button>
+          </article>
+        )}
       </section>
       <div className="ra-read">
         <p className="lb-kicker">Review saved content</p>

@@ -54,6 +54,7 @@ import Manual, { ManualCardView, useManualGuide } from "./Manual";
 import { manualOf } from "@/lib/relish/manual";
 import { PhotoGallery } from "./Photos";
 import GroupPlay from "./GroupPlay";
+import Tools from "./Tools";
 import ConnectedEditions from "./ConnectedEditions";
 import EditionSetup from "./EditionSetup";
 import { guidanceFor } from "@/lib/relish/guidance";
@@ -68,7 +69,8 @@ type View =
   | "people"
   | "practice"
   | "family"
-  | "play";
+  | "play"
+  | "tools";
 type Modal =
   "settings" | "create" | "person" | "guide" | "connections" | "profile" | null;
 type Vault = Omit<
@@ -304,7 +306,9 @@ export default function LivingBook({
       : personalTitle
     : view === "activities"
       ? "Activities"
-      : view === "manual"
+      : view === "tools"
+        ? "Exercises"
+        : view === "manual"
         ? "Your living manual"
         : view === "words"
           ? "Your pages"
@@ -934,9 +938,20 @@ export default function LivingBook({
             onPlay={openPlay}
             onPages={() => navigate("words")}
             onManual={() => navigate("manual")}
+            onTools={() => navigate("tools")}
             pendingInsights={
               manualCards.filter((c) => c.status === "suggested").length
             }
+          />
+        ) : view === "tools" && !sharedView ? (
+          <Tools
+            book={book}
+            busy={busy}
+            onCommit={(update, after, message) =>
+              void commit(update, after, message)
+            }
+            onPages={() => navigate("words")}
+            onActivities={() => navigate("activities")}
           />
         ) : view === "manual" && !sharedView ? (
           <Manual
@@ -1312,6 +1327,8 @@ export default function LivingBook({
           <h2>
             {view === "activities"
               ? "Choose an activity"
+              : view === "tools"
+                ? "Use an exercise"
               : view === "words"
                 ? "Write and save an entry"
                 : sharedView
@@ -1323,6 +1340,8 @@ export default function LivingBook({
           <p>
             {view === "activities"
               ? "Write a personal journal entry for open space, choose a guided reflection for prompts, or play a game together. Each activity has its own stopping point. Unfinished pages and reflections will wait for you here."
+              : view === "tools"
+                ? "Choose an exercise, then follow its steps. Sorts and fill-in-the-blank exercises are saved only when you keep the page. Day-by-day checklists save each mark and wait for you between visits."
               : view === "words"
                 ? "Write anything you like. Your draft saves as you go, including when you switch activities or lock your book. Select Save entry when you’re finished. You can return and edit either one."
                 : sharedView

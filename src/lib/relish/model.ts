@@ -4,6 +4,7 @@ import { isJournal, type JournalEntry } from "./journal";
 import { isEditionProfile, type EditionProfile } from "./profiles";
 import { isLiving, type LivingState } from "./living";
 import { isConnections, type Connections } from "./sharing";
+import { isTools, type ToolsState } from "./tools";
 export type Person = {
   id: string;
   name: string;
@@ -43,6 +44,7 @@ export type Book = {
   manual?: ManualState;
   rhythm?: RhythmSettings;
   reviews?: WeeklyReview[];
+  tools?: ToolsState;
 };
 export const emptyBook = (owner: string): Book => ({
   version: 1,
@@ -139,6 +141,7 @@ export function isBook(value: unknown): value is Book {
     (b.profile === undefined || isEditionProfile(b.profile)) &&
     (b.connections === undefined || isConnections(b.connections)) &&
     (b.living === undefined || isLiving(b.living)) &&
+    (b.tools === undefined || isTools(b.tools)) &&
     (b.rhythm === undefined ||
       (!!b.rhythm &&
         [1, 3, 5].includes(b.rhythm.target) &&
