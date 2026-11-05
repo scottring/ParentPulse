@@ -209,3 +209,31 @@ export function childStoryRounds(
     ending,
   ];
 }
+
+// "Same page?" — everyone answers the same question in private, then the reveal
+// shows where the group agrees. Every prompt has exactly three choices.
+const sameYoung: Round[] = [
+  { prompt: "Our best Saturday breakfast is…", choices: ["pancakes", "cereal in our pajamas", "eggs and toast"] },
+  { prompt: "The best movie-night snack is…", choices: ["popcorn", "fruit", "something sweet"] },
+  { prompt: "Our perfect rainy day is…", choices: ["a blanket fort", "a board game", "baking something"] },
+  { prompt: "The best way to cheer someone up is…", choices: ["a hug", "a silly joke", "some quiet time"] },
+];
+const sameOlder: Round[] = [
+  { prompt: "Our ideal family trip is…", choices: ["mountains or woods", "a big city", "a beach"] },
+  { prompt: "The fairest way to pick the movie is…", choices: ["take turns", "everyone votes", "flip a coin"] },
+  { prompt: "The house rule that matters most is…", choices: ["be kind", "tell the truth", "clean up after yourself"] },
+  { prompt: "When someone in our family is upset, the best first move is…", choices: ["give them some space", "ask what they need", "offer a hug or a snack"] },
+  { prompt: "A perfect family evening is…", choices: ["cooking together", "a game night", "everyone cozy with their own thing"] },
+];
+const sameAdult: Round[] = [
+  { prompt: "Bedtime is running 30 minutes late. What do we do?", choices: ["Lights out now, no extras", "Shorter routine, keep the cuddle", "Let it go tonight, reset tomorrow"] },
+  { prompt: "A child says, “I’m bored.” The best answer is…", choices: ["Boredom is fine; you’ll find something", "Offer two ideas to choose from", "Let’s do something together"] },
+  { prompt: "Screens at the dinner table?", choices: ["Never", "Only something we watch together", "Fine on special nights"] },
+  { prompt: "A free Saturday afternoon appears. We…", choices: ["get out of the house together", "each do our own thing", "tackle a project as a team"] },
+  { prompt: "A child asks for a new toy they’ve wanted for weeks.", choices: ["They save up for it", "It waits for a birthday or holiday", "Yes, if it’s small"] },
+  { prompt: "Someone says something unkind at the table. First move?", choices: ["Name it calmly, right then", "Talk to them afterwards, privately", "Let it go unless it happens again"] },
+];
+export function samePagePrompts(audience: Audience): Round[] {
+  if (audience === "adult") return sameAdult;
+  return audience === "under-6" || audience === "6-8" ? sameYoung : sameOlder;
+}

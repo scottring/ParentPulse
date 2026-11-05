@@ -188,3 +188,14 @@ Screen headings, actions and status messages now identify what the user is viewi
 Activities and guided sessions explain the next step and the action that finishes each session. Games name the current turn, sharing explains the selected destination and approval, and AI suggestions identify analysis and review explicitly. Account and voice guidance reflect persistent account sign-in and parent-managed books. These changes preserve storage, authentication, age-specific prompts and consent behavior.
 
 The native distribution candidate and its verified/pending checks are documented in `ios/RELEASE.md`. No TestFlight upload or public App Store submission has occurred.
+
+
+## Hands-on exercises and Same page? (November 5, 2026)
+
+Activities now offers **Try an exercise**: thirteen short interactive exercises in three forms. Card sorts (what helps when I’m upset, drains and fills, what’s under the behavior, who carries what) place each card in a pile and choose one to act on. Fill-in-the-blank exercises (rewrite the opener, put a thought on trial, notice the unseen work, plan a repair) show the composed result before anything is saved. Day-by-day checklists (ten real hellos, a week of specific thanks, repair bingo, kindness spotting) save each mark and wait between visits. Exercises are filtered by the edition’s age range; under-6 editions see only the two grown-up-assisted ones. Children are never offered repair or partner-load exercises.
+
+Sorts and fill-in exercises are not stored until **Keep this page**. A finished exercise becomes an ordinary kept journal page (optionally tagged to one person already in the book), so it appears in Your pages, syncs with the book and follows the existing manual-analysis consent. Only checklists add state: an optional `tools` field (`{ version: 1, trackers }`) inside the encrypted book, validated by `isBook` like every other field, with one active run per exercise and at most 40 kept finished runs. Stopping a checklist discards it without writing a page. No server, AI, sharing or account behavior changes.
+
+Play together adds **Same page?**: every player answers one question privately, the device is handed over between turns with earlier answers hidden, and the reveal shows where the group agrees. The question comes from an age-appropriate set and is derived from the game ID, so it survives reload and restore without a new stored field. Kept pages still require every player’s approval.
+
+Validation: 228 focused Relish tests (20 new: catalog age filtering, page text, tracker lifecycle and tamper rejection, Same page? flow and validation, and UI tests for sorting, building, a checklist across visits, child filtering and a full Same page? round), TypeScript, targeted ESLint and the production build. Browser check on the sample book at desktop and 390px widths.

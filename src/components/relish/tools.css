@@ -1,0 +1,319 @@
+.lb-app .rt-book {
+  max-width: 900px;
+  margin: 0 auto 24px;
+  padding: clamp(22px, 3vw, 40px);
+  background: var(--paper);
+  border-radius: 5px 14px 14px 5px;
+  box-shadow:
+    0 6px 0 -1px var(--lb-cover),
+    0 10px 0 -3px #adbbb5,
+    0 22px 35px #3f5c6020;
+}
+.lb-app .rt-book h2 {
+  font-size: clamp(30px, 3.4vw, 44px);
+  line-height: 1.12;
+  margin: 8px 0 12px;
+}
+.lb-app .rt-intro {
+  font-size: 17px;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+.lb-app .rt-end {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+.lb-app .rt-end strong {
+  font-weight: 600;
+}
+.lb-app .rt-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 14px;
+  font-size: 13px;
+}
+.lb-app .rt-group {
+  margin-top: 26px;
+}
+.lb-app .rt-group h3 {
+  font-size: 22px;
+  margin: 0 0 4px;
+}
+.lb-app .rt-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.lb-app .rt-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  text-align: left;
+  padding: 16px 40px 16px 16px;
+  min-height: 44px;
+  background: #e0e5db;
+  border: 1px solid #9bb0aa55;
+  border-radius: 4px 12px 12px 4px;
+  box-shadow: 0 3px 0 #b4c2ba77;
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+.lb-app .rt-card strong {
+  font-size: 17px;
+}
+.lb-app .rt-card > span:not(.lb-kicker) {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.lb-app .rt-card > svg {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--olive);
+}
+.lb-app .rt-running {
+  background: #dce5e2;
+}
+@media (hover: hover) {
+  .lb-app .rt-card:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px #304f5018;
+  }
+}
+.lb-app .rt-runner {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.lb-app .rt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.lb-app .rt-field small {
+  font-weight: 400;
+  color: var(--muted);
+}
+.lb-app .rt-field input,
+.lb-app .rt-field textarea,
+.lb-app .rt-field select {
+  font: inherit;
+  font-weight: 400;
+  font-size: 16px;
+  padding: 10px 12px;
+  min-height: 44px;
+  border: 1px solid #9bb0aa;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+}
+.lb-app .rt-progress {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+.lb-app .rt-sort {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lb-app .rt-sort li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 10px 12px;
+  background: #fff8;
+  border: 1px solid #9bb0aa44;
+  border-radius: 10px;
+}
+.lb-app .rt-sort li > span {
+  font-size: 15px;
+  flex: 1 1 200px;
+}
+.lb-app .rt-sort [role="group"],
+.lb-app .rt-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.lb-app .rt-sort [role="group"] button,
+.lb-app .rt-chips button,
+.lb-app .rt-bingo button {
+  font: inherit;
+  font-size: 13px;
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid #9bb0aa;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.lb-app .rt-sort [role="group"] button[aria-pressed="true"],
+.lb-app .rt-chips button[aria-pressed="true"],
+.lb-app .rt-bingo button[aria-pressed="true"] {
+  background: var(--olive);
+  border-color: var(--olive);
+  color: #fff;
+}
+.lb-app .rt-add {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lb-app .rt-add .rt-field {
+  flex: 1 1 220px;
+}
+.lb-app .rt-pick {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+.lb-app .rt-pick legend {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.lb-app .rt-checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lb-app .rt-checks li {
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.lb-app .rt-checks li[data-ok="true"] {
+  color: var(--olive);
+}
+.lb-app .rt-composed {
+  padding: 16px;
+  background: #dce5e2;
+  border-radius: 10px;
+}
+.lb-app .rt-composed p:last-child {
+  font-size: 19px;
+  line-height: 1.5;
+  margin: 6px 0 0;
+}
+.lb-app .rt-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #9bb0aa55;
+}
+.lb-app .rt-preview blockquote {
+  white-space: pre-wrap;
+  margin: 0;
+  padding: 12px 16px;
+  border-left: 3px solid var(--olive);
+  background: #fff8;
+  font-size: 15px;
+  line-height: 1.6;
+  align-self: stretch;
+}
+.lb-app .rt-instruction {
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0;
+}
+.lb-app .rt-days {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lb-app .rt-days li {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #9bb0aa;
+}
+.lb-app .rt-days li[data-done="true"] {
+  background: var(--olive);
+  border-color: var(--olive);
+}
+.lb-app .rt-bingo {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.lb-app .rt-bingo button {
+  border-radius: 10px;
+  min-height: 72px;
+  justify-content: center;
+  text-align: center;
+  padding: 8px;
+}
+.lb-app .rt-celebrate {
+  font-size: 17px;
+  color: var(--olive);
+  font-weight: 600;
+  margin: 0;
+}
+.lb-app .rt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+}
+.lb-app .rt-confirm {
+  font-size: 13px;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.lb-app .rt-note {
+  margin: 0;
+}
+.lb-app .ra-tools {
+  grid-column: 1 / -1;
+  background: #dfe3e6;
+}
+.lb-app .lb-same-page {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--olive);
+}
+@media (max-width: 639px) {
+  .lb-app .rt-bingo button {
+    min-height: 64px;
+    font-size: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lb-app .rt-card {
+    transition: none;
+  }
+}

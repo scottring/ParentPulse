@@ -16,6 +16,8 @@ import {
   gamePlayer,
   gameText,
   joyOptions,
+  samePageAgreement,
+  samePageRound,
   storyRounds,
   turnCount,
 } from "@/lib/relish/living";
@@ -220,6 +222,18 @@ export default function GroupPlay({
             </p>
             <ArrowRight size={18} />
           </button>
+          <button
+            disabled={busy || players.length < 2 || players.length > 12}
+            onClick={() => onCreate("match", players)}
+          >
+            <span className="lb-kicker">About 3–5 minutes</span>
+            <h3>Same page?</h3>
+            <p>
+              Everyone answers the same question in private. See where you
+              agree.
+            </p>
+            <ArrowRight size={18} />
+          </button>
         </div>
         {players.length < 2 && (
           <p className="lb-fine">
@@ -237,6 +251,13 @@ export default function GroupPlay({
     total = turnCount(g),
     rounds = storyRounds(g.players.length, g.audience),
     joyChoices = joyOptions(g),
+    match = g.kind === "match" ? samePageRound(g) : undefined,
+    title =
+      g.kind === "joy"
+        ? "Guess my small joy"
+        : g.kind === "match"
+          ? "Same page?"
+          : "One story, many voices",
     text = gameText(g),
     finished = ["reveal", "kept", "finished"].includes(g.stage);
   const next = gamePlayer(g);
@@ -268,13 +289,13 @@ export default function GroupPlay({
       )}
       {g.stage === "ready" ? (
         <>
-          <h2>
-            {g.kind === "joy" ? "Guess my small joy" : "One story, many voices"}
-          </h2>
+          <h2>{title}</h2>
           <p>
             {g.kind === "joy"
               ? "One person chooses a joy in private. Pass the device so everyone else can guess. All choices are revealed together."
-              : "Pass the device around. Each person adds to the same story. Anyone can pass."}
+              : g.kind === "match"
+                ? "Everyone answers the same question in private. Pass the device between turns. All answers are revealed together."
+                : "Pass the device around. Each person adds to the same story. Anyone can pass."}
           </p>
           <div className="lb-boundary">
             <strong>Our stopping point · about 5–10 minutes</strong>
@@ -291,7 +312,9 @@ export default function GroupPlay({
           <label>
             {g.kind === "joy"
               ? "Who chooses a joy this round?"
-              : "Who starts the story?"}
+              : g.kind === "match"
+                ? "Who answers first?"
+                : "Who starts the story?"}
             <select
               value={firstPlayer || g.players[0].id}
               onChange={(e) => setFirstPlayer(e.target.value)}
@@ -327,9 +350,9 @@ export default function GroupPlay({
           <p className="lb-kicker">Pass the device</p>
           <h2>Over to {next.name}.</h2>
           <p>
-            {g.kind === "joy"
-              ? "The choices so far are hidden. Hand the device over before continuing."
-              : "It is your turn to add to the story. Passing is welcome too."}
+            {g.kind === "story"
+              ? "It is your turn to add to the story. Passing is welcome too."
+              : "The answers so far are hidden. Hand the device over before continuing."}
           </p>
           <button
             className="lb-primary"
@@ -343,7 +366,9 @@ export default function GroupPlay({
         <>
           <p className="lb-kicker">{next.name}’s turn</p>
           <h2>
-            {g.kind === "joy"
+            {match
+              ? match.prompt
+              : g.kind === "joy"
               ? g.turn === 0
                 ? g.audience === "under-6" || g.audience === "6-8"
                   ? "What would you like to do?"
@@ -357,7 +382,12 @@ export default function GroupPlay({
             <p className="lb-story-so-far">So far: {text}</p>
           )}
           <div className="lb-choices">
-            {(g.kind === "joy" ? joyChoices : rounds[g.turn].choices).map(
+            {(match
+              ? match.choices
+              : g.kind === "joy"
+                ? joyChoices
+                : rounds[g.turn].choices
+            ).map(
               (choice, index) => (
                 <button
                   key={choice}
@@ -380,16 +410,37 @@ export default function GroupPlay({
       ) : (
         <>
           <p className="lb-kicker">
-            {g.kind === "joy" ? "The reveal" : "Your shared story"}
+            {g.kind === "story" ? "Your shared story" : "The reveal"}
           </p>
           <h2>
             {text
-              ? g.kind === "joy"
-                ? "Results"
-                : "Your story"
+              ? g.kind === "story"
+                ? "Your story"
+                : "Results"
               : "Round ended"}
           </h2>
-          {g.kind === "joy" && text ? (
+          {match && text ? (
+            <>
+              <p className="lb-story-so-far">{match.prompt}</p>
+              <div className="lb-reveal">
+                {g.players.map((p, i) => (
+                  <div key={p.id}>
+                    <span className="lb-kicker">
+                      {p.name} {g.choices[i] === null ? "passed" : "chose"}
+                    </span>
+                    <p>
+                      {g.choices[i] === null
+                        ? "No answer"
+                        : match.choices[g.choices[i]!]}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              {samePageAgreement(g) && (
+                <p className="lb-same-page">{samePageAgreement(g)}</p>
+              )}
+            </>
+          ) : g.kind === "joy" && text ? (
             <div className="lb-reveal">
               {g.players.map((p, i) => (
                 <div key={p.id}>
