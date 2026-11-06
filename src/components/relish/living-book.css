@@ -1371,3 +1371,39 @@
     grid-template-columns: repeat(3, 44px);
   }
 }
+.lb-app.lb-update {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  min-height: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 14px;
+  padding: max(8px, env(safe-area-inset-top, 0px)) 16px 8px;
+  background: var(--lb-cover);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.4;
+  box-shadow: 0 2px 8px #304f5030;
+}
+.lb-app.lb-update button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 4px 14px;
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: #ffffff26;
+  border: 1px solid #ffffff55;
+  border-radius: 999px;
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .lb-app.lb-update button:hover {
+    background: #ffffff40;
+  }
+}
