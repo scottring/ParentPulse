@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   trailingSlash: true,
+  env: {
+    // Lets an open tab notice that a newer build is live (see UpdateBar).
+    NEXT_PUBLIC_RELISH_BUILD: process.env.VERCEL_GIT_COMMIT_SHA || "",
+  },
   async headers() {
     return [
       {

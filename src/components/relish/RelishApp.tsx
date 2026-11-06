@@ -7,6 +7,7 @@ import { Dialog, VaultForm } from "./BookForms";
 import LivingBook from "./LivingBook";
 import EditionSetup from "./EditionSetup";
 import AccountLibrary from "./AccountLibrary";
+import UpdateBar from "./UpdateBar";
 import { useBookSync } from "./useBookSync";
 import { readBinding } from "@/lib/relish/book-sync";
 import { disconnectAI, setParentGate } from "@/lib/relish/ai-auth";
@@ -18,6 +19,7 @@ import "./account.css";
 export default function RelishApp() {
   return (
     <SensoryProvider>
+      <UpdateBar />
       <BookGate />
     </SensoryProvider>
   );
