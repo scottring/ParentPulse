@@ -97,6 +97,8 @@ export type Game = {
   answers?: (number | null)[][];
   /** contentVersion 2 Same page?: the question ids, fixed when the round starts. */
   questions?: string[];
+  /** contentVersion 2 story: the title the group picked at the end. */
+  title?: string;
   approvals: boolean[];
   startedAt: string;
   updatedAt: string;
@@ -132,6 +134,9 @@ export type PlayRecord = {
   joys?: (string | null)[];
   /** Guess my small joy: guesses[guesser][target], null for a pass or no guess. */
   guesses?: (string | null)[][];
+  /** One story: its lines in order, and the title the group picked. */
+  story?: string[];
+  title?: string;
 };
 export const PLAY_LIMIT = 500;
 /** Play records keep answers for the newest rounds only. */
@@ -469,7 +474,10 @@ export const turnCount = (g: Game) => turnPlan(g).length;
 // change starts a new version rather than editing this one.
 const isV2 = (g: Pick<Game, "contentVersion">) => g.contentVersion === 2;
 /** The kinds that start new rounds at contentVersion 2. */
-const roundKinds: GameKind[] = ["match", "joy"];
+const roundKinds: GameKind[] = ["match", "joy", "story"];
+/** A story runs at least this many turns, so two players go around more than once. */
+export const STORY_TURNS = 5;
+export const TITLE_LIMIT = 60;
 export const SAME_PAGE_COUNT = 5;
 export type Ask = {
   prompt: string;
@@ -624,7 +632,7 @@ export function turnPlan(g: Game): Turn[] {
       })),
     ];
   }
-  return storyRounds(n, g.audience).map((r, i) => ({
+  return storyRounds(isV2(g) ? Math.max(STORY_TURNS, n) : n, g.audience).map((r, i) => ({
     player: g.players[i % n],
     asks: [{ prompt: r.prompt, choices: r.choices }],
   }));
@@ -777,6 +785,16 @@ export function playMemory(r: PlayRecord): {
     });
     return { summary, sections };
   }
+  if (r.kind === "story" && r.story) {
+    return {
+      summary: r.title
+        ? `“${r.title}”, told together.`
+        : r.story.length
+          ? "A story, told together."
+          : "Everyone passed.",
+      sections: r.story.length ? [{ label: "The story", text: r.story.join(" ") }] : [],
+    };
+  }
   if (r.kind === "joy" && r.joys) {
     const players = r.players as Player[];
     const result = joyLines(players, r.joys, r.guesses || []);
@@ -908,6 +926,40 @@ const knewLine = (l: JoyLine) => {
   return knew.length ? `${list(knew)} guessed it.` : "Nobody guessed it.";
 };
 
+// ── One story results ───────────────────────────────────────────────────────
+/** The story as it was told: each line that wasn't passed, and who added it. */
+export function storyLines(g: Game) {
+  const plan = turnPlan(g);
+  return turnAnswers(g).flatMap((turn, i) => {
+    const ask = plan[i]?.asks[0],
+      c = turn[0];
+    return ask && c !== null && c !== undefined
+      ? [
+          {
+            player: plan[i].player,
+            text: `${ask.prompt.replace(/…$/, "")} ${ask.choices[c]}.`,
+          },
+        ]
+      : [];
+  });
+}
+const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+/** A few titles worked out from the story's own lines, to pick from. */
+export function storyTitles(g: Game) {
+  const plan = turnPlan(g),
+    answers = turnAnswers(g);
+  const from = (i: number) => {
+    const c = answers[i]?.[0];
+    if (c === null || c === undefined || !plan[i]) return "";
+    return capital(`the ${plan[i].asks[0].choices[c].replace(/^(a|an|the|some) /i, "")}`);
+  };
+  return [
+    from(0),
+    from(1),
+    young(g.audience) ? "Our big adventure" : "Our unlikely adventure",
+  ].filter((t, i, all) => t && t.length <= TITLE_LIMIT && all.indexOf(t) === i);
+}
+
 export function newGame(
   kind: Game["kind"],
   players: Player[],
@@ -1005,14 +1057,8 @@ export function gameText(g: Game): string {
     return Number.isInteger(g.choices[0])
       ? `A small joy for ${g.players[0].name}: ${joyOptions(g)[g.choices[0]!].toLowerCase()}.`
       : "";
-  const rounds = storyRounds(g.players.length, g.audience);
-  return g.choices
-    .map((c, i) =>
-      c === null
-        ? ""
-        : `${rounds[i].prompt.replace(/…$/, "")} ${rounds[i].choices[c]}.`,
-    )
-    .filter(Boolean)
+  return storyLines(g)
+    .map((l) => l.text)
     .join(" ");
 }
 export type GameAction =
@@ -1022,7 +1068,9 @@ export type GameAction =
   | { type: "choice"; choice: number | null }
   /** Every answer in a turn with several questions; null passes one. */
   | { type: "answer"; answers: (number | null)[] }
-  | { type: "approve"; playerId: string };
+  | { type: "approve"; playerId: string }
+  /** A story's title, picked together after the last line; "" clears it. */
+  | { type: "title"; title: string };
 export function advanceGame(g: Game, action: GameAction): Game {
   const stamp = now();
   if (action.type === "start" && g.stage === "ready") {
@@ -1080,6 +1128,18 @@ export function advanceGame(g: Game, action: GameAction): Game {
       updatedAt: stamp,
     };
   }
+  if (
+    action.type === "title" &&
+    g.kind === "story" &&
+    isV2(g) &&
+    ["reveal", "kept"].includes(g.stage)
+  ) {
+    const title = String(action.title || "").trim().slice(0, TITLE_LIMIT);
+    const next = { ...g, updatedAt: stamp };
+    if (title) next.title = title;
+    else delete next.title;
+    return next;
+  }
   if (action.type === "finish" && ["reveal", "kept"].includes(g.stage))
     return { ...g, stage: "finished", finishedAt: stamp, updatedAt: stamp };
   throw new Error("That action is not available at this point in the game.");
@@ -1097,7 +1157,7 @@ export function keepGame(book: Book): Book {
         ? "A small joy, learned together"
         : g.kind === "match"
           ? "Are we on the same page?"
-          : "Our unlikely adventure",
+          : g.title || "Our unlikely adventure",
     text: gameText(g),
     players: g.players,
     approvedBy: g.players.map((p) => p.id),
@@ -1124,10 +1184,17 @@ function roundMemory(g: Game): Partial<PlayRecord> {
     const { picks, guesses } = joyResult(g);
     return { joys: picks, guesses };
   }
-  return {};
+  return {
+    story: storyLines(g).map((l) => l.text),
+    ...(g.title ? { title: g.title } : {}),
+  };
 }
 const memoryOf = (r: PlayRecord) =>
-  r.questions !== undefined || r.joys !== undefined || r.guesses !== undefined;
+  r.questions !== undefined ||
+  r.joys !== undefined ||
+  r.guesses !== undefined ||
+  r.story !== undefined ||
+  r.title !== undefined;
 /** Answers stay on the newest ANSWERS_KEPT rounds; older records keep only names and a date. */
 function trimMemory(plays: PlayRecord[]) {
   let kept = 0;
@@ -1139,6 +1206,8 @@ function trimMemory(plays: PlayRecord[]) {
       delete rest.questions;
       delete rest.joys;
       delete rest.guesses;
+      delete rest.story;
+      delete rest.title;
       return rest;
     })
     .toReversed();
@@ -1303,6 +1372,18 @@ export function isLiving(value: unknown): value is LivingState {
                   row.length === (r.players as unknown[]).length &&
                   row.every((x) => x === null || str(x, 80)),
               ),
+          ) &&
+          optional(
+            r.story,
+            (lines) =>
+              r.kind === "story" &&
+              Array.isArray(lines) &&
+              lines.length <= 20 &&
+              lines.every((x) => str(x, 300) && !!x.trim()),
+          ) &&
+          optional(
+            r.title,
+            (t) => r.kind === "story" && str(t, TITLE_LIMIT) && !!t.trim(),
           ),
       ) ||
       value.plays.filter((r) => memoryOf(r as PlayRecord)).length > ANSWERS_KEPT
@@ -1388,7 +1469,20 @@ function isGame(g: unknown, sharedPages: unknown[]): boolean {
       )
         return false;
     } else if (g.questions !== undefined) return false;
-  } else if (g.answers !== undefined || g.questions !== undefined) return false;
+    if (
+      g.title !== undefined &&
+      (g.kind !== "story" ||
+        !str(g.title, TITLE_LIMIT) ||
+        !g.title.trim() ||
+        !["reveal", "kept", "finished"].includes(String(g.stage)))
+    )
+      return false;
+  } else if (
+    g.answers !== undefined ||
+    g.questions !== undefined ||
+    g.title !== undefined
+  )
+    return false;
   const game = g as Game;
   const given = v2 ? (g.answers as unknown[]) : g.choices.map((c) => [c]);
   if (given.length !== game.turn) return false;

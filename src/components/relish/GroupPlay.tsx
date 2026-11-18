@@ -16,6 +16,9 @@ import {
   samePageSummary,
   samePageTrend,
   pickAgreement,
+  storyLines,
+  storyTitles,
+  TITLE_LIMIT,
   turnPlan,
 } from "@/lib/relish/living";
 
@@ -94,7 +97,9 @@ export default function GroupPlay({
                 ? many
                   ? `${plan[0].asks.length} quick questions. On your turn, answer all of them in private, then pass the device. Then see where you match.`
                   : "Everyone answers the same question in private. Pass the device between turns. All answers are revealed together."
-                : "Pass the device around. Each person adds to the same story. Anyone can pass."}
+                : remembers(g)
+                  ? "Pass the device around. Each person picks what happens next in the same story; anyone can pass. At the end, read it back and give it a title together."
+                  : "Pass the device around. Each person adds to the same story. Anyone can pass."}
           </p>
           <div className="lb-boundary">
             <strong>
@@ -117,7 +122,7 @@ export default function GroupPlay({
                   ? " so you can see how you match over time"
                   : g.kind === "joy"
                     ? " so you can look back at what lights each of you up"
-                    : ""}
+                    : " so you can read it again later"}
                 . They’re never sent to AI.
               </p>
             )}
@@ -208,22 +213,14 @@ export default function GroupPlay({
             <SamePageReveal game={g} trend={samePageTrend(living, g, true)} />
           ) : everyone ? (
             <JoyReveal game={g} />
+          ) : g.kind === "story" ? (
+            <StoryReveal game={g} busy={busy} onAction={onAction} />
           ) : (
             <>
-              <p className="lb-kicker">
-                {g.kind === "story" ? "Your shared story" : "The reveal"}
-              </p>
-              <h2>
-                {text
-                  ? g.kind === "story"
-                    ? "Your story"
-                    : "Here’s what everyone chose"
-                  : "Everyone passed"}
-              </h2>
-              {g.kind === "joy" && text ? (
+              <p className="lb-kicker">The reveal</p>
+              <h2>{text ? "Here’s what everyone chose" : "Everyone passed"}</h2>
+              {text ? (
                 <JoyRevealV1 game={g} />
-              ) : text ? (
-                <blockquote>{text}</blockquote>
               ) : (
                 <p>No answers to show this time. That’s fine too.</p>
               )}
@@ -434,6 +431,85 @@ function SamePageReveal({ game: g, trend }: { game: Game; trend: string }) {
           </li>
         ))}
       </ol>
+    </>
+  );
+}
+
+/** The whole story read back, line by line, and a title picked together. */
+function StoryReveal({
+  game: g,
+  busy,
+  onAction,
+}: {
+  game: Game;
+  busy: boolean;
+  onAction: (action: GameAction) => void;
+}) {
+  const lines = storyLines(g);
+  const titles = storyTitles(g);
+  const [own, setOwn] = useState("");
+  if (!lines.length)
+    return (
+      <>
+        <p className="lb-kicker">Your shared story</p>
+        <h2>Everyone passed</h2>
+        <p>No story to read back this time. That’s fine too.</p>
+      </>
+    );
+  return (
+    <>
+      <p className="lb-kicker">Your shared story · read it aloud</p>
+      <h2>{g.title || "Your story"}</h2>
+      <div className="lb-story-read">
+        {lines.map((l, i) => (
+          <p key={i}>
+            {l.text} <span className="lb-story-by">{l.player.name}</span>
+          </p>
+        ))}
+      </div>
+      {remembers(g) && (
+        <fieldset className="lb-title-pick">
+          <legend>
+            {g.title ? "Your title. Change it if you like." : "Give it a title together"}
+          </legend>
+          <div className="lb-title-choices">
+            {titles.map((t) => (
+              <button
+                key={t}
+                type="button"
+                className="ui-chip"
+                disabled={busy}
+                aria-pressed={g.title === t}
+                onClick={() => onAction({ type: "title", title: t })}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+          <form
+            className="lb-title-own"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!own.trim()) return;
+              onAction({ type: "title", title: own });
+              setOwn("");
+            }}
+          >
+            <label>
+              Or write your own
+              <input
+                value={own}
+                maxLength={TITLE_LIMIT}
+                placeholder="The day the moon came to tea"
+                onChange={(e) => setOwn(e.target.value)}
+              />
+            </label>
+            <button className="lb-secondary" disabled={busy || !own.trim()}>
+              Use this title
+            </button>
+          </form>
+        </fieldset>
+      )}
     </>
   );
 }

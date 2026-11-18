@@ -16,6 +16,8 @@ import {
   joySummary,
   playMemory,
   recordRound,
+  storyLines,
+  storyTitles,
   keepGame,
   livingOf,
   markTried,
@@ -368,5 +370,80 @@ describe("Guess my small joy: everyone is guessed about", () => {
       expect(new Set(options).size).toBe(10);
       expect(joyOptions({ audience, contentVersion: 1 })).toEqual(options.slice(0, 4));
     }
+  });
+});
+describe("One story, many voices: an ending with a read-back and a title", () => {
+  const pair = [
+    { id: "a", name: "Iris", audience: "adult" as const },
+    { id: "b", name: "Kaleb", audience: "adult" as const },
+  ];
+  function told(choices: (number | null)[]) {
+    let g = advanceGame(newGame("story", pair), { type: "start" });
+    choices.forEach((choice, i) => {
+      if (i) g = advanceGame(g, { type: "ready" });
+      g = advanceGame(g, { type: "choice", choice });
+    });
+    return g;
+  }
+  it("two players go around more than once, and the story reads back line by line", () => {
+    const g = told([0, 1, null, 2, 0]);
+    expect(turnCount(g)).toBe(5);
+    expect(g.stage).toBe("reveal");
+    const lines = storyLines(g);
+    expect(lines.map((l) => l.player.name)).toEqual(["Iris", "Kaleb", "Kaleb", "Iris"]);
+    expect(lines[0].text).toBe("On an ordinary walk, we found a tiny door in a tree.");
+    expect(lines.at(-1)!.text).toBe("Together, we decided to build a home for lost things.");
+    expect(gameText(g)).toBe(lines.map((l) => l.text).join(" "));
+  });
+  it("offers titles from the story's own lines, and the group's pick names the page", () => {
+    let g = told([0, 1, 0, 0, 0]);
+    expect(storyTitles(g)).toEqual([
+      "The tiny door in a tree",
+      "The very shy dragon",
+      "Our unlikely adventure",
+    ]);
+    expect(() => advanceGame(told([0]), { type: "title", title: "Too soon" })).toThrow();
+    g = advanceGame(g, { type: "title", title: "  The very shy dragon  " });
+    expect(g.title).toBe("The very shy dragon");
+    expect(advanceGame(g, { type: "title", title: "x".repeat(90) }).title).toHaveLength(60);
+    expect(advanceGame(g, { type: "title", title: "" }).title).toBeUndefined();
+    expect(isLiving({ ...freshLiving(), game: g })).toBe(true);
+    let book = changeLiving(emptyBook("Iris"), (l) => ({ ...l, game: g }));
+    for (const p of pair)
+      book = changeLiving(book, (l) => ({
+        ...l,
+        game: advanceGame(l.game!, { type: "approve", playerId: p.id }),
+      }));
+    book = keepGame(book);
+    expect(livingOf(book).sharedPages[0].title).toBe("The very shy dragon");
+    // Choosing a title isn't allowed on other games or older rounds.
+    expect(() => advanceGame(completeRound(2, "joy"), { type: "title", title: "Hi" })).toThrow();
+    for (const bad of [
+      { ...g, title: 7 },
+      { ...g, title: " " },
+      { ...g, title: "x".repeat(61) },
+      { ...g, stage: "choose", turn: 4, answers: g.answers!.slice(0, 4) },
+    ])
+      expect(isLiving({ ...freshLiving(), game: bad })).toBe(false);
+  });
+  it("remembers the story and its title with the round", () => {
+    const g = advanceGame(told([0, 1, 2, 0, 1]), { type: "title", title: "The fox" });
+    const living = recordRound({ ...freshLiving(), game: advanceGame(g, { type: "finish" }) });
+    const record = living.plays![0];
+    expect(record.story).toEqual(storyLines(g).map((l) => l.text));
+    expect(record.title).toBe("The fox");
+    expect(isLiving(living)).toBe(true);
+    expect(playMemory(record)).toEqual({
+      summary: "“The fox”, told together.",
+      sections: [{ label: "The story", text: gameText(g) }],
+    });
+    for (const bad of [
+      { ...record, story: "a story" },
+      { ...record, story: [""] },
+      { ...record, story: Array.from({ length: 21 }, () => "Line.") },
+      { ...record, title: "" },
+      { ...record, kind: "joy" },
+    ])
+      expect(isLiving({ ...living, plays: [bad] })).toBe(false);
   });
 });
