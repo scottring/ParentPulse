@@ -262,7 +262,7 @@ describe("freeform journal", () => {
     ).toBe(false);
     expect(screen.queryByText("Ask AI")).toBeNull();
     fill("Another private moment");
-    fireEvent.click(screen.getByRole("button", { name: "Home" }));
+    fireEvent.click(screen.getByRole("button", { name: "Do something" }));
     fireEvent.click(await screen.findByRole("button", { name: "Choose a game" }));
     await screen.findByRole("heading", { name: "Play together", level: 1 });
     expect(screen.queryByText("PRIVATE JOURNAL SENTENCE")).toBeNull();
@@ -356,7 +356,7 @@ describe("journal header navigation", () => {
       ).toBe(false);
     }
     fireEvent.click(screen.getByRole("button", { name: "Home" }));
-    await screen.findByRole("heading", { name: "Home" });
+    await screen.findByRole("heading", { name: /one small thing/ });
     expect(qa.save).not.toHaveBeenCalled();
     expect(qa.book().journal || []).toHaveLength(0);
     expect(qa.interaction).toHaveBeenLastCalledWith(false);
@@ -464,7 +464,7 @@ describe("journal header navigation", () => {
     expect(input()).toBeTruthy();
     await act(async () => slow.resolve());
     fireEvent.click(screen.getByRole("button", { name: "Home" }));
-    await screen.findByRole("heading", { name: "Home" });
+    await screen.findByRole("heading", { name: /one small thing/ });
     expect(qa.book().journal?.[0].photos).toEqual([photo]);
   });
 });

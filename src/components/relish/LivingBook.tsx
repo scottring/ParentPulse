@@ -52,6 +52,9 @@ import ConnectedEditions from "./ConnectedEditions";
 import EditionSetup from "./EditionSetup";
 import { guidanceFor } from "@/lib/relish/guidance";
 import TopBar, { type MenuItem, type Place } from "./TopBar";
+import Home, { type FamilyPerson } from "./Home";
+import type { NudgeAction } from "@/lib/relish/nudges";
+import { isChild, isFamily, type DoFilter } from "@/lib/relish/catalog";
 import { canUseOnline, ageLabels, audienceOf } from "@/lib/relish/profiles";
 
 // Four places, plus the sub-screens that open inside them.
@@ -96,12 +99,15 @@ export default function LivingBook({
   accountLabel = "Sign in",
   syncStatus,
   onInteraction,
+  family,
 }: {
   vault: Vault;
   onAccount?: () => void;
   accountLabel?: string;
   syncStatus?: string;
   onInteraction?: (paused: boolean) => void;
+  /** Other books in this account (children), opened through the library. */
+  family?: FamilyPerson[];
 }) {
   const [offered, setOffered] = useState<
     { title: string; text: string } | undefined
@@ -129,7 +135,10 @@ export default function LivingBook({
     [working, setWorking] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
-    [pageKey, setPageKey] = useState(0);
+    [pageKey, setPageKey] = useState(0),
+    [reading, setReading] = useState<string | undefined>(),
+    [exercise, setExercise] = useState<string | undefined>(),
+    [doFilter, setDoFilter] = useState<DoFilter>("all");
   const journalNavigation = useRef<(() => Promise<boolean>) | null>(null);
   const operation = useRef(false),
     alive = useRef(true),
@@ -156,6 +165,9 @@ export default function LivingBook({
     setCapture(null);
     setModal(null);
     setEditing(null);
+    setReading(undefined);
+    setExercise(undefined);
+    setDoFilter("all");
     setView(next);
     setClosed(false);
     setPageKey((n) => n + 1);
@@ -182,6 +194,24 @@ export default function LivingBook({
     navigate("words");
     setCapture({ draft, voice });
     setJournalEditing(true);
+  }
+  function openPage(id: string) {
+    navigate("words");
+    setReading(id);
+  }
+  function openExercise(id: string) {
+    navigate("tools");
+    setExercise(id);
+  }
+  function openInvite() {
+    setOffered(undefined);
+    setModal("connections");
+  }
+  function onNudge(action: NudgeAction) {
+    if (action.kind === "journal") quickEntry();
+    else if (action.kind === "exercise") openExercise(action.id);
+    else if (action.kind === "reflect") start();
+    else openPlay();
   }
   async function commit(
     update: (b: Book) => Book,
@@ -222,7 +252,7 @@ export default function LivingBook({
     if (!v) return;
     void commit(
       (b) => pauseVisit(updateDraft(b, v.id, draft)),
-      () => navigate("home"),
+      () => navigate("do"),
       "Progress saved.",
     );
   }
@@ -292,7 +322,21 @@ export default function LivingBook({
   const sharedView = shared || view === "play";
   const place = placeOf[view];
   // Places draw their own big heading; sub-screens keep the small running head.
-  const placeScreen = false;
+  const placeScreen = view === "home" && !closed;
+  const canInvite = !sample && online;
+  const familyNames = [
+    ...(family || []).map((p) => p.name),
+    ...book.people.filter(isChild).map((p) => p.name),
+  ].filter((n, i, all) => all.indexOf(n) === i);
+  // Account books open directly; without them, family members noted in this
+  // book link to what you've written about them.
+  const homePeople: FamilyPerson[] = family?.length
+    ? family
+    : book.people.filter(isFamily).map((p) => ({
+        id: p.id,
+        name: p.name,
+        onOpen: () => navigate("book"),
+      }));
   const menuItems: MenuItem[] = [
     {
       label: "Settings",
@@ -448,7 +492,7 @@ export default function LivingBook({
             <button
               className="lb-text"
               disabled={busy}
-              onClick={() => navigate("home")}
+              onClick={() => navigate("do")}
             >
               Choose another activity
             </button>
@@ -793,6 +837,7 @@ export default function LivingBook({
   return (
     <div
       className={`r-app lb-app rp-shell ${journalEditing ? "lb-capturing" : ""} rp-at-${view}`}
+      data-do-filter={doFilter}
     >
       {sample && (
         <div className="lb-sample">
@@ -878,28 +923,48 @@ export default function LivingBook({
             )}
           </div>
         ) : view === "home" && !sharedView ? (
+          <Home
+            book={book}
+            names={familyNames}
+            people={homePeople}
+            busy={busy}
+            headingRef={heading}
+            onNudge={onNudge}
+            onFilter={(f) => {
+              navigate("do");
+              setDoFilter(f);
+            }}
+            onInvite={canInvite ? () => openInvite() : undefined}
+            onFamily={() => navigate("family")}
+            onBook={() => navigate("book")}
+            onPage={openPage}
+          />
+        ) : view === "do" && !sharedView ? (
           <Activities
             book={book}
             busy={busy}
             onWrite={quickEntry}
             onGuided={() => start()}
             onPlay={openPlay}
-            onPages={() => navigate("words")}
+            onPages={() => navigate("book")}
             onManual={() => navigate("manual")}
             onTools={() => navigate("tools")}
             pendingInsights={
               manualCards.filter((c) => c.status === "suggested").length
             }
           />
-        ) : (view === "tools" || view === "do") && !sharedView ? (
+        ) : view === "tools" && !sharedView ? (
           <Tools
+            key={pageKey}
             book={book}
             busy={busy}
             onCommit={(update, after, message) =>
               void commit(update, after, message)
             }
-            onPages={() => navigate("words")}
-            onActivities={() => navigate("home")}
+            onPages={() => navigate("book")}
+            onActivities={() => navigate("do")}
+            initialId={exercise}
+            onBack={exercise ? () => navigate("do") : undefined}
           />
         ) : view === "manual" && !sharedView ? (
           <Manual
@@ -915,6 +980,7 @@ export default function LivingBook({
             navigation={journalNavigation}
             initialDraft={capture?.draft}
             initialVoice={capture?.voice}
+            initialReading={reading}
             book={book}
             photos={vault.photos}
             onNotice={() => start("notice")}
@@ -935,11 +1001,8 @@ export default function LivingBook({
             save={vault.save}
             sample={sample}
             onEditingChange={setJournalEditing}
-            onActivities={() => navigate("home")}
-            onDone={() => {
-              navigate("home");
-              setClosed(true);
-            }}
+            onActivities={() => navigate("do")}
+            onDone={() => navigate("home")}
           />
         ) : view === "play" ? (
           <div className="lb-play-layout">

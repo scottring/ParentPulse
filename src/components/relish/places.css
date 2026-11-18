@@ -160,3 +160,322 @@
     font-size: 14px;
   }
 }
+
+/* Shared place layout */
+.rp-tone-sun { background: var(--sun); }
+.rp-tone-sage { background: var(--sage); }
+.rp-tone-clay { background: var(--clay); }
+.rp-tone-sky { background: var(--sky); }
+.rp-tone-lilac { background: var(--lilac); }
+.lb-app .rp-place {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  padding: 24px 0 64px;
+  color: var(--ink);
+  font-family: var(--sans);
+  line-height: 1.5;
+}
+.lb-app .rp-place h1 {
+  margin: 0;
+  font: 600 56px/1.02 var(--serif);
+  letter-spacing: -0.01em;
+  outline: none;
+}
+.lb-app .rp-place h2 {
+  margin: 0;
+  font: 600 32px/1.1 var(--serif);
+  letter-spacing: 0;
+}
+.lb-app .rp-place p {
+  margin: 0;
+}
+.lb-app .rp-eyebrow {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.lb-app .rp-lede {
+  font-size: 17px;
+  color: var(--muted);
+}
+.lb-app .rp-quiet {
+  font-size: 15px;
+  color: var(--muted);
+}
+.lb-app .rp-btn {
+  justify-content: center;
+  padding: 14px 22px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+}
+.lb-app .rp-btn-sun {
+  background: var(--sun);
+  color: var(--ink);
+}
+.lb-app .rp-btn-sun:not(:disabled):hover {
+  background: #ecc96b;
+}
+.lb-app .rp-btn-olive {
+  background: var(--olive);
+  color: var(--on-olive);
+}
+.lb-app .rp-btn-olive:not(:disabled):hover {
+  background: var(--ink);
+}
+.lb-app .rp-btn-ghost {
+  background: transparent;
+  border: 1.5px solid var(--olive-line);
+  color: var(--on-olive);
+  font-weight: 600;
+  font-size: 15px;
+}
+.lb-app .rp-btn-ghost:not(:disabled):hover {
+  background: rgba(246, 244, 237, 0.08);
+}
+.lb-app .rp-link {
+  padding: 8px 0;
+  color: var(--olive);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.lb-app .rp-link:not(:disabled):hover {
+  background: transparent;
+  color: var(--ink);
+}
+.lb-app .rp-pill {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.rp-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.rp-pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+.rp-panel {
+  flex: 1 1 340px;
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.lb-app .rp-panel h2 {
+  font-size: 28px;
+}
+.rp-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px 12px;
+}
+
+/* Home */
+.rp-greeting {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+.rp-greeting > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rp-sun {
+  color: var(--olive);
+  flex: none;
+}
+.rp-nudge {
+  background: var(--olive);
+  color: var(--on-olive);
+  border-radius: 28px;
+  padding: 36px 40px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  align-items: center;
+  justify-content: space-between;
+}
+.rp-nudge-text {
+  flex: 999 1 520px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.lb-app .rp-nudge-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--sun);
+}
+.lb-app .rp-nudge-main {
+  font: 600 38px/1.12 var(--serif);
+  color: var(--on-olive);
+}
+.lb-app .rp-nudge-why {
+  font-size: 16px;
+  color: var(--on-olive-muted);
+}
+.rp-nudge-actions {
+  flex: 1 1 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rp-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.lb-app .rp-tile {
+  border-radius: 24px;
+  padding: 24px;
+  min-height: 170px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  color: var(--ink);
+  text-align: left;
+}
+.rp-tiles > .rp-tile:nth-child(4n + 1) { transform: rotate(-1deg); }
+.rp-tiles > .rp-tile:nth-child(4n + 2) { transform: rotate(0.8deg); }
+.rp-tiles > .rp-tile:nth-child(4n + 3) { transform: rotate(-0.6deg); }
+.rp-tiles > .rp-tile:nth-child(4n + 4) { transform: rotate(1deg); }
+.lb-app .rp-tile:not(:disabled):hover {
+  filter: brightness(0.97);
+}
+.lb-app .rp-tiles > .rp-tile:not(:disabled):hover {
+  transform: rotate(0) translateY(-2px);
+}
+.rp-tile-words {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 15px;
+}
+.rp-tile-kicker {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.rp-tile-title {
+  font: 700 28px/1.05 var(--serif);
+}
+.rp-avatars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+.lb-app .rp-avatar {
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 84px;
+  padding: 4px;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--ink);
+  line-height: 1.25;
+}
+.lb-app .rp-avatar-add {
+  width: 104px;
+}
+.rp-avatar-dot {
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 28px/1 var(--serif);
+}
+.rp-avatar-add .rp-avatar-dot {
+  border: 2px dashed var(--olive);
+  color: var(--olive);
+  font: 400 30px/1 var(--sans);
+}
+.lb-app .rp-row {
+  width: 100%;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 12px 0;
+  border-top: 1px solid var(--line-soft);
+  border-radius: 0;
+  color: var(--ink);
+  text-align: left;
+}
+.rp-row-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-row-date {
+  flex: none;
+  font-size: 14px;
+  color: var(--muted);
+}
+.rp-lately {
+  flex-grow: 2;
+}
+@media (max-width: 720px) {
+  .lb-app .rp-place {
+    gap: 28px;
+    padding-top: 8px;
+  }
+  .lb-app .rp-place h1 {
+    font-size: 40px;
+  }
+  .lb-app .rp-place h2 {
+    font-size: 27px;
+  }
+  .rp-nudge {
+    padding: 26px 22px;
+    border-radius: 24px;
+  }
+  .lb-app .rp-nudge-main {
+    font-size: 29px;
+  }
+  .rp-sun {
+    display: none;
+  }
+  .rp-panel {
+    padding: 20px;
+    flex-basis: 100%;
+  }
+}

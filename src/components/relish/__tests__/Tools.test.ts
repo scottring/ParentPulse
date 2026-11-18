@@ -53,6 +53,7 @@ function open(book = emptyBook("Robin")) {
     });
   }
   const mounted = render(createElement(Harness));
+  fireEvent.click(screen.getByRole("button", { name: "Do something" }));
   return {
     stored: () => stored,
     fail: (value: boolean) => {

@@ -76,6 +76,8 @@ export default function Journal({
   onAlbum,
   initialDraft,
   initialVoice = false,
+  initialReading,
+  onBack,
   navigation,
 }: {
   book: Book;
@@ -93,12 +95,18 @@ export default function Journal({
   onAlbum?: () => void;
   initialDraft?: JournalDraft;
   initialVoice?: boolean;
+  /** Opens straight onto one kept page (a BookPage id). */
+  initialReading?: string;
+  /** When set, "My pages" returns here instead of the page list. */
+  onBack?: () => void;
   navigation?: JournalNavigation;
 }) {
   const [editor, setEditor] = useState<JournalDraft | null>(
     initialDraft || null,
   );
-  const [reading, setReading] = useState<string | null>(null);
+  const [reading, setReading] = useState<string | null>(
+    initialReading ?? null,
+  );
   const [celebrate, setCelebrate] = useState(false);
   const [query, setQuery] = useState("");
   const [excerpt, setExcerpt] = useState<string | null>(null);
@@ -157,11 +165,12 @@ export default function Journal({
           <button
             className="lb-text"
             onClick={() => {
+              if (onBack) return onBack();
               setReading(null);
               setCelebrate(false);
             }}
           >
-            <ArrowLeft size={17} /> My pages
+            <ArrowLeft size={17} /> {onBack ? "Your book" : "My pages"}
           </button>
           <span className="rj-private">
             <Lock size={14} />{" "}
@@ -175,7 +184,7 @@ export default function Journal({
             </span>
             <div>
               <strong>Entry saved</strong>
-              <p>You can edit this entry, start another, or return to Activities.</p>
+              <p>You can edit this entry, start another, or choose something else to do.</p>
             </div>
           </div>
         )}

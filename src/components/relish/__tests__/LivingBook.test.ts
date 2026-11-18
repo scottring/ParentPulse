@@ -63,6 +63,7 @@ describe("living-book interaction boundaries", () => {
       });
     }
     render(createElement(Harness));
+    fireEvent.click(screen.getByRole("button", { name: "Do something" }));
     fireEvent.click(
       screen.getByRole("button", { name: "Continue guided reflection" }),
     );
@@ -108,9 +109,9 @@ describe("living-book interaction boundaries", () => {
       });
     }
     render(createElement(Harness));
-    fireEvent.click(screen.getByRole("button", { name: "Read your pages" }));
+    fireEvent.click(screen.getByRole("button", { name: "Your book" }));
     expect(screen.getByText("A confidential sample sentence")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Home" }));
+    fireEvent.click(screen.getByRole("button", { name: "Do something" }));
     fireEvent.click(screen.getByRole("button", { name: "Choose a game" }));
     expect(screen.queryByText("A confidential sample sentence")).toBeNull();
     expect(screen.queryByRole("button", { name: /^Menu/ })).toBeNull();
