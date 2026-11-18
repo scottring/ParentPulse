@@ -78,9 +78,9 @@ export const nudgeTemplates: Template[] = [
   {
     id: "hard-moment",
     audiences: adult,
-    time: "About 5 minutes",
-    text: "Is something sitting heavy? Think it through for five minutes.",
-    why: "A few questions, then one small plan. You can stop at any step.",
+    time: "About 3 minutes",
+    text: "Did something happen today that you keep thinking about? Write it down.",
+    why: "Pick what happened and write a sentence or two. You can stop there.",
     cta: "Think it through",
     action: { kind: "reflect" },
   },

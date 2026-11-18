@@ -16,7 +16,12 @@ import {
   youngestAudience,
   type Audience,
 } from "@/lib/relish/profiles";
-import { livingOf, type Game, type Player } from "@/lib/relish/living";
+import {
+  livingOf,
+  pendingPractice,
+  type Game,
+  type Player,
+} from "@/lib/relish/living";
 import { activeTrackers, trackerProgress } from "@/lib/relish/tools";
 import type { NudgeAction } from "@/lib/relish/nudges";
 import Illustration from "./Illustration";
@@ -77,12 +82,15 @@ export default function DoSomething({
   const game =
     living.game && living.game.stage !== "finished" ? living.game : undefined;
   const pausedVisit = living.visit && living.visit.status !== "complete";
+  const plan = pendingPractice(book);
   const running = activeTrackers(book);
   const all = doItems(audience);
   const shown = all.filter((item) => matchesFilter(item, filter));
   function status(item: DoItem) {
+    if (item.action.kind === "reflect" && plan && !plan.triedAt)
+      return "Your plan is waiting · did you try it?";
     if (item.action.kind === "reflect" && pausedVisit)
-      return "In progress · pick up where you left off";
+      return "Paused · your words are saved";
     if (item.action.kind === "game" && game?.kind === item.action.game)
       return "Round in progress · tap to go back to it";
     if (item.action.kind === "exercise") {

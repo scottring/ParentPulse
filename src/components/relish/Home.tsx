@@ -164,7 +164,7 @@ export default function Home({
       tone: "sky",
       kicker: "Something’s hard",
       title: "Think it through",
-      text: "A few questions, then one small plan.",
+      text: "Write down what happened. A plan is optional.",
       icon: icons.think,
     },
   ];

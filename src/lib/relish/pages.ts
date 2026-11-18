@@ -2,6 +2,7 @@ import type { Book } from "./model";
 import { livingOf, outcomes, type Player } from "./living";
 import { games } from "./play-content";
 import { toolById } from "./tools";
+import { guidanceFor } from "./guidance";
 import type { JournalStyle } from "./journal";
 import { isPhotos, type Photo } from "./photos";
 
@@ -72,6 +73,7 @@ export function isAlbum(value: unknown): value is AlbumPassage[] {
   );
 }
 export function bookPages(book: Book): BookPage[] {
+  const situations = guidanceFor(book).threads;
   const page = (
     data: Partial<BookPage> & Pick<BookPage, "id" | "kind" | "text" | "date">,
   ): BookPage => ({
@@ -108,8 +110,15 @@ export function bookPages(book: Book): BookPage[] {
           e.kind === "notice"
             ? "Guided reflection"
             : e.kind === "practice"
-              ? "Practice plan"
-              : "Practice review",
+              ? "Plan to try"
+              : "How it went",
+        // Named by the situation it came from, so pages are told apart.
+        title:
+          e.kind === "notice"
+            ? situations[e.thread].title
+            : e.kind === "practice"
+              ? `A plan · ${situations[e.thread].title}`
+              : `How it went · ${situations[e.thread].title}`,
         text: e.text || (e.outcome ? outcomes[e.outcome] : ""),
         date: e.createdAt,
         style: e.kind === "practice" ? "moss" : "sky",

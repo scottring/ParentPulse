@@ -101,6 +101,13 @@ describe("explicit edition profiles", () => {
       for (const plan of Object.values(guide.plans))
         expect(plan.end.length).toBeGreaterThan(30);
       expect(guide.cue).toBeTruthy();
+      // Each situation is recognizable, asks one question, and has an example plan.
+      for (const t of Object.values(guide.threads)) {
+        expect(t.lead).toBeTruthy();
+        expect(t.notice.trim().endsWith("?")).toBe(true);
+        expect(t.planExample).toBeTruthy();
+      }
+      expect(guide.words.choose).not.toMatch(/topic|session/i);
     }
     expect(titles.size).toBe(4);
   });

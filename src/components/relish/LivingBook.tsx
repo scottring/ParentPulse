@@ -3,22 +3,23 @@ import { readBinding } from "@/lib/relish/book-sync";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowUpRight,
-  BookmarkCheck,
   BookOpen,
+  Check,
   Download,
   Lock,
-  Sparkles,
   Users,
 } from "lucide-react";
 import type { Book, Person } from "@/lib/relish/model";
 import {
   advanceGame,
+  beginNewMoment,
   beginVisit,
   changeLiving,
   chooseThread,
   completeVisit,
   finishGame as finishRound,
   keepGame,
+  lastEntry,
   livingOf,
   markTried,
   newGame,
@@ -49,7 +50,7 @@ import Illustration, { Emblem } from "./Illustration";
 import { BookSpread, SubHead } from "./ui";
 import { gameIllustration, topicIllustration } from "./illustrations";
 import Manual, { useManualGuide } from "./Manual";
-import { manualOf, reviewManualIdea } from "@/lib/relish/manual";
+import { reviewManualIdea } from "@/lib/relish/manual";
 import GroupPlay from "./GroupPlay";
 import Tools from "./Tools";
 import ConnectedEditions from "./ConnectedEditions";
@@ -117,7 +118,7 @@ export default function LivingBook({
   const accountManaged = !!readBinding(vault.editionId)?.accountManaged;
   const [removeName, setRemoveName] = useState("");
   const [removeError, setRemoveError] = useState("");
-  const { threads, plans, intro, cue } = guidanceFor(vault.book);
+  const { threads, plans, outcomes, words } = guidanceFor(vault.book);
   const online = canUseOnline(vault.book);
   const { book, mode } = vault,
     sample = mode === "sample",
@@ -298,7 +299,14 @@ export default function LivingBook({
     void commit(
       (b) => pauseVisit(updateDraft(b, v.id, draft)),
       () => navigate("do"),
-      "Progress saved.",
+      "Saved. Pick it up from Think it through.",
+    );
+  }
+  function newMoment(draft: Draft) {
+    if (!v) return;
+    void commit(
+      (b) => beginNewMoment(updateDraft(b, v.id, draft)),
+      () => navigate("session"),
     );
   }
   function finish(draft: Draft) {
@@ -306,7 +314,7 @@ export default function LivingBook({
     void commit(
       (b) => completeVisit(b, v.id, draft),
       () => navigate("bookmark"),
-      "This visit is complete.",
+      "Saved in your book.",
     );
   }
   // Leaving a game never locks the book; the round stays saved to resume.
@@ -406,11 +414,8 @@ export default function LivingBook({
         : place === "do"
           ? view === "session" || view === "bookmark"
             ? {
-                title: v?.status === "complete" ? "Session complete" : "Guided reflection",
-                text:
-                  v?.status === "complete"
-                    ? plans[v.kind].next
-                    : plans[v?.kind || nextKind(book)].end,
+                title: "Think it through",
+                text: words.about,
               }
             : {
                 title: "Pick something that fits",
@@ -473,7 +478,6 @@ export default function LivingBook({
     !!privateEditorOpen || sharedView,
     sample,
   );
-  const manualCards = manualOf(book).cards;
   const personalTitle = `The ${book.owner} edition`;
   const headingText = closed
     ? sharedView
@@ -497,11 +501,9 @@ export default function LivingBook({
             ? "Play together"
             : sharedView
               ? "Our Family pages"
-              : view === "bookmark"
-                ? "Guided activities"
-                : sessionOpen
-                  ? "Guided reflection"
-                  : "Your book";
+              : view === "bookmark" || view === "session"
+                ? "Think it through"
+                : "Your book";
   let right: ReactNode = null;
   const left = (
     <>
@@ -511,22 +513,9 @@ export default function LivingBook({
         eager
         className="lb-guided-art"
       />
-      <p className="lb-kicker">Guided reflection</p>
-      <h2>{theme?.title || "Choose a topic"}</h2>
-      <p>
-        {online
-          ? "Choose a topic, describe an experience, then decide whether to try a related action."
-          : "Choose a topic and describe what happened or how you felt. You can skip questions or stop at any time."}
-      </p>
-      <div className="lb-thread">
-        <span className="lb-kicker">How it works</span>
-        <p>Write a reflection. Make a plan. Review what happened.</p>
-        <span className="lb-fine">Each step is a separate session. Your progress is saved.</span>
-      </div>
-      <p className="lb-fine">
-        Your private edition belongs to you. Family pages hold only chosen album
-        passages and game passages everyone approved.
-      </p>
+      <p className="lb-kicker">Think it through</p>
+      <h2>{theme?.title || words.welcome}</h2>
+      <p>{words.about}</p>
     </>
   );
   if (sessionOpen) {
@@ -546,118 +535,126 @@ export default function LivingBook({
             void commit(
               (b) => markTried(updateDraft(b, v.id, draft), practice.id),
               undefined,
-              "Your practice is marked as tried.",
+              "Marked as tried.",
             );
         }}
+        onNewMoment={v.kind === "reflect" ? newMoment : undefined}
       />
     );
   } else if (view === "bookmark" || view === "session") {
-    if (v?.status === "complete")
-      right = (
-        <>
-          <p className="lb-kicker">Progress saved</p>
-          <h2>Session complete</h2>
-          <div className="lb-kept">
-            <BookmarkCheck size={20} />
-            <p>{v.summary}</p>
-          </div>
-          <p>
-            Your response is saved. Close this session or choose another activity.
-          </p>
-          <div className="lb-later">
-            <p className="lb-kicker">Next session</p>
-            <p>{plans[v.kind].next}</p>
-          </div>
-          <button
-            className="lb-primary"
-            onClick={() => {
-              setClosed(true);
-              sensory.play("touch");
-            }}
-          >
-            Close the book for now <BookOpen size={16} />
-          </button>
-          <div className="lb-actions">
-            <button
-              className="lb-text"
-              disabled={busy}
-              onClick={() => navigate("do")}
-            >
-              Choose another activity
-            </button>
-            <button className="lb-text" onClick={() => navigate("words")}>
-              Read saved entries
-            </button>
-            <button
-              className="lb-text"
-              disabled={busy}
-              onClick={() => start("begin")}
-            >
-              Choose another topic
-            </button>
-          </div>
-        </>
-      );
-    else if (v)
+    const entry = lastEntry(book);
+    if (v?.status === "complete") {
+      const kept =
+        v.kind === "practice"
+          ? words.planKept
+          : v.kind === "reflect"
+            ? entry?.outcome
+              ? outcomes[entry.outcome]
+              : words.howWent
+            : words.momentKept;
       right = (
         <>
           <p className="lb-kicker">
-            {v.status === "paused" ? "Paused session" : "Current session"}
+            {v.kind === "practice" ? "Plan kept" : "Kept in your book"}
           </p>
-          <h2>{plans[v.kind].title}</h2>
-          <p>
-            Your unfinished response is saved. Continue from the same step.
-          </p>
-          <div className="lb-boundary">
-            <strong>To complete this session</strong>
-            <p>{plans[v.kind].end}</p>
+          <h2>{kept}</h2>
+          {entry?.text && (
+            <blockquote className="lb-kept-words">
+              {entry.text.length > 280
+                ? entry.text.slice(0, 279).trimEnd() + "…"
+                : entry.text}
+            </blockquote>
+          )}
+          <p>{v.kind === "practice" ? words.planLater : words.stop}</p>
+          <div className="lb-actions">
+            <button
+              className="lb-primary"
+              disabled={busy}
+              onClick={() => navigate("home")}
+            >
+              Done for now <Check size={16} />
+            </button>
+            {entry && v.kind !== "practice" && (
+              <button
+                className="lb-text"
+                disabled={busy}
+                onClick={() => {
+                  browse.current = null;
+                  openPage(`moment:${entry.id}`);
+                }}
+              >
+                Open it in Your book
+              </button>
+            )}
           </div>
+          {(v.kind === "begin" || v.kind === "notice") && theme && (
+            <div className="lb-later">
+              <p className="lb-kicker">If you want a next step · about 1 minute</p>
+              <p>{theme.practice}</p>
+              <button
+                className="lb-secondary"
+                disabled={busy}
+                onClick={() => start("practice")}
+              >
+                {words.makePlan} <ArrowUpRight size={16} />
+              </button>
+            </div>
+          )}
+          {v.kind === "reflect" && (
+            <div className="lb-later">
+              <p className="lb-kicker">Whenever another one comes up</p>
+              <button
+                className="lb-secondary"
+                disabled={busy}
+                onClick={() => start("begin")}
+              >
+                Write about another moment
+              </button>
+            </div>
+          )}
+        </>
+      );
+    } else if (v)
+      right = (
+        <>
+          <p className="lb-kicker">Paused · {plans[v.kind].time}</p>
+          <h2>{plans[v.kind].title}</h2>
+          <p>Your words are saved. Pick up on the same page.</p>
           <button
             className="lb-primary"
             disabled={busy}
             onClick={() => start()}
           >
-            Continue where I paused <ArrowUpRight size={16} />
+            Pick up where I left off <ArrowUpRight size={16} />
           </button>
           <div className="lb-actions">
-            <button className="lb-text" onClick={() => setClosed(true)}>
-              Close the book for now
+            <button className="lb-text" onClick={() => backToDo()}>
+              Back to Do something
             </button>
           </div>
-          <p className="lb-fine">Continue whenever you’re ready.</p>
         </>
       );
     else {
       const kind = nextKind(book),
-        plan = plans[kind];
+        plan = plans[kind],
+        pending = pendingPractice(book);
       right = (
         <>
           <p className="lb-kicker">{plan.time}</p>
-          <h2>{plan.title}</h2>
-          <p>
-            {kind === "begin"
-              ? intro
-              : kind === "reflect"
-                ? "After you try your plan, record what happened."
-                : theme?.notice}
-          </p>
-          <div className="lb-boundary">
-            <strong>Our stopping point</strong>
+          <h2>{kind === "reflect" ? words.askTried : plan.title}</h2>
+          {kind === "reflect" && pending ? (
+            <p className="lb-recall-plan">“{pending.text}”</p>
+          ) : (
             <p>{plan.end}</p>
-          </div>
-          {cue && <p className="lb-age-cue">{cue}</p>}
+          )}
           <button
             className="lb-primary"
             disabled={busy}
             onClick={() => start()}
           >
-            Start session <ArrowUpRight size={16} />
+            {kind === "reflect" ? "Say how it went" : "Start"}{" "}
+            <ArrowUpRight size={16} />
           </button>
-          <div className="lb-actions">
-            <button className="lb-text" onClick={() => navigate("words")}>
-              Read saved entries
-            </button>
-          </div>
         </>
       );
     }
@@ -980,16 +977,6 @@ export default function LivingBook({
             left={<div className="lb-guided-left">{left}</div>}
             right={<div className="lb-guided-right">{right}</div>}
           />
-        )}
-        {!sharedView && !privateEditorOpen && view === "bookmark" && (
-          <div className="rm-bookmark-link">
-            <button className="lb-text" onClick={() => navigate("manual")}>
-              <Sparkles size={17} />
-              {manualCards.some((c) => c.status === "suggested")
-                ? "New AI suggestions are ready for review"
-                : "Review manual suggestions"}
-            </button>
-          </div>
         )}
         <p className="lb-announcement" role="status" aria-live="polite">
           {notice}

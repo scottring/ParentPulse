@@ -114,9 +114,9 @@ export function doItems(audience: Audience): DoItem[] {
     {
       key: "think",
       type: "Think",
-      time: "5 min",
+      time: "3 min",
       title: "Think it through",
-      blurb: "Pick what’s on your mind, write a little, leave with one small plan.",
+      blurb: "Something on your mind? Write down the moment. A small plan is optional.",
       tags: ["hard", "5"],
       action: { kind: "reflect" },
     },

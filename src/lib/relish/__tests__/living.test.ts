@@ -88,7 +88,7 @@ describe("bounded living-book sessions", () => {
     expect(nextKind(book)).toBe("reflect");
     book = beginVisit(book);
     expect(() => completeVisit(book, livingOf(book).visit!.id, draft)).toThrow(
-      "Mark the practice",
+      "Say you tried it first",
     );
     book = markTried(book, plan.id);
     book = completeVisit(book, livingOf(book).visit!.id, {
