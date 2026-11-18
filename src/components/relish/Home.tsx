@@ -6,7 +6,13 @@ import { nudgeStart, nudgesFor, type NudgeAction } from "@/lib/relish/nudges";
 import { pageKind, type DoFilter, type Tone } from "@/lib/relish/catalog";
 import { audienceOf } from "@/lib/relish/profiles";
 
-export type FamilyPerson = { id: string; name: string; onOpen: () => void };
+export type FamilyPerson = {
+  id: string;
+  name: string;
+  onOpen: () => void;
+  /** A short line under the name on Family, e.g. "Book in your account". */
+  note?: string;
+};
 export const personTones: Tone[] = ["clay", "sky", "sage", "lilac", "sun"];
 const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });

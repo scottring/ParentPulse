@@ -145,3 +145,67 @@ it("Your book: unfinished drafts are under Still going", () => {
       .value,
   ).toBe("and then");
 });
+
+it("Family: people, shared pages passed between you, and the album without locking", () => {
+  const base: Book = { ...emptyBook("Robin"), profile: { kind: "adult" } };
+  const book: Book = {
+    ...base,
+    connections: {
+      received: [
+        {
+          id: "p1",
+          title: "A note from Sam",
+          text: "Thanks for Tuesday.",
+          from: "uid-sam",
+          fromName: "Sam",
+          createdAt: "2026-11-01T00:00:00Z",
+          acceptedAt: "2026-11-02T00:00:00Z",
+        },
+      ],
+    },
+    living: {
+      version: 1,
+      entries: [],
+      sharedPages: [
+        {
+          id: "g1",
+          kind: "story",
+          title: "Our story",
+          text: "A fox in yellow boots.",
+          players: [
+            { id: "a", name: "Robin" },
+            { id: "b", name: "Ella" },
+          ],
+          approvedBy: ["a", "b"],
+          createdAt: "2026-11-03T00:00:00Z",
+        },
+      ],
+    },
+  };
+  const app = openBook(book, {
+    family: [{ id: "b1", name: "Ella", onOpen: vi.fn(), note: "Book in your account" }],
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Family" }));
+  expect(screen.getByRole("heading", { name: "Your family", level: 1 })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /Open Ella’s book/ })).toBeTruthy();
+  expect(screen.getByText("A note from Sam")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Story Our story/ }));
+  expect(screen.getByText("A fox in yellow boots.")).toBeTruthy();
+  expect(app.lock).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: /Invite a partner/ }));
+  expect(screen.getByRole("dialog", { name: "Invite a partner" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Close" }));
+  expect(screen.queryByRole("dialog", { name: "Invite a partner" })).toBeNull();
+});
+
+it("Family in a child's book offers no invitations, sharing or other books", () => {
+  openBook({
+    ...emptyBook("Ella"),
+    profile: { kind: "child", ageBand: "6-8", parentLock: { accountUid: "parent" } },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Family" }));
+  expect(screen.queryByRole("button", { name: /Invite a partner/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Add a child/ })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Passed between you" })).toBeNull();
+  expect(screen.getByRole("heading", { name: "Family album" })).toBeTruthy();
+});

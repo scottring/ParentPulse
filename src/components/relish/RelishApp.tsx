@@ -5,6 +5,7 @@ import { useLocalBook } from "./useLocalBook";
 import { SensoryProvider } from "./Sensory";
 import { Dialog, VaultForm } from "./BookForms";
 import LivingBook from "./LivingBook";
+import type { FamilyPerson } from "./Home";
 import EditionSetup from "./EditionSetup";
 import AccountLibrary from "./AccountLibrary";
 import { useBookSync } from "./useBookSync";
@@ -26,6 +27,7 @@ function BookGate() {
   const vault = useLocalBook();
   const sync = useBookSync(vault);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [addChild, setAddChild] = useState(false);
   const [localMode, setLocalMode] = useState(false);
   const [exportOpen, setExportOpen] = useState(false),
     [exportPass, setExportPass] = useState("");
@@ -56,6 +58,7 @@ function BookGate() {
   const closeAccount = () => {
     sync.cancel();
     setAccountOpen(false);
+    setAddChild(false);
     setLocalMode(false);
   };
   const library = (inline = false) => (
@@ -64,6 +67,7 @@ function BookGate() {
       sync={sync}
       onClose={closeAccount}
       inline={inline}
+      startAdding={!inline && addChild ? "child" : undefined}
       onLocal={
         inline
           ? () => {
@@ -196,9 +200,36 @@ function BookGate() {
           </section>
         </div>
       );
+    // The other books in this parent account, shown as people in an adult
+    // book. A child's book never lists or opens its siblings' books.
+    const family: FamilyPerson[] =
+      vault.book.profile?.kind === "adult" &&
+      managed &&
+      sync.user?.emailVerified &&
+      binding?.uid === sync.user.uid
+        ? sync.books
+            .filter(
+              (h) =>
+                h.accountManaged &&
+                h.id !== binding.remoteId &&
+                !h.label.endsWith("— device copy"),
+            )
+            .map((h) => ({
+              id: h.id,
+              name: h.label,
+              note: "Book in your account",
+              onOpen: () =>
+                void sync.open(h).catch(() => setAccountOpen(true)),
+            }))
+        : [];
     return (
       <LivingBook
         key={`${vault.mode}:${vault.editionId}`}
+        family={family}
+        onAddChild={() => {
+          setAddChild(true);
+          setAccountOpen(true);
+        }}
         vault={{
           ...vault,
           shelf: () => {

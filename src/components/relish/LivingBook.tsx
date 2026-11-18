@@ -17,7 +17,6 @@ import {
   changeLiving,
   chooseThread,
   completeVisit,
-  gameText,
   keepGame,
   livingOf,
   markTried,
@@ -40,9 +39,8 @@ import Journal from "./Journal";
 import { newJournalDraft, type JournalDraft } from "@/lib/relish/journal";
 import "./duo.css";
 import "./places.css";
-import Manual, { ManualCardView, useManualGuide } from "./Manual";
+import Manual, { useManualGuide } from "./Manual";
 import { manualOf, reviewManualIdea } from "@/lib/relish/manual";
-import { PhotoGallery } from "./Photos";
 import GroupPlay from "./GroupPlay";
 import Tools from "./Tools";
 import ConnectedEditions from "./ConnectedEditions";
@@ -52,6 +50,7 @@ import TopBar, { type MenuItem, type Place } from "./TopBar";
 import Home, { type FamilyPerson } from "./Home";
 import DoSomething from "./DoSomething";
 import YourBook from "./YourBook";
+import Family from "./Family";
 import type { NudgeAction } from "@/lib/relish/nudges";
 import { isChild, isFamily, type DoFilter } from "@/lib/relish/catalog";
 import { canUseOnline, ageLabels, audienceOf } from "@/lib/relish/profiles";
@@ -83,11 +82,6 @@ type Vault = Omit<
   ReturnType<typeof useLocalBook>,
   "syncSnapshot" | "openSynced" | "receiveSynced" | "accountSnapshot"
 >;
-const shortDate = (iso: string) =>
-  new Date(iso).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
 export default function LivingBook({
   vault,
   onAccount,
@@ -95,6 +89,7 @@ export default function LivingBook({
   syncStatus,
   onInteraction,
   family,
+  onAddChild,
 }: {
   vault: Vault;
   onAccount?: () => void;
@@ -103,6 +98,8 @@ export default function LivingBook({
   onInteraction?: (paused: boolean) => void;
   /** Other books in this account (children), opened through the library. */
   family?: FamilyPerson[];
+  /** Opens the family library's add-a-child form. */
+  onAddChild?: () => void;
 }) {
   const [offered, setOffered] = useState<
     { title: string; text: string } | undefined
@@ -266,11 +263,6 @@ export default function LivingBook({
       "This visit is complete.",
     );
   }
-  function openPlay() {
-    setShared(true);
-    navigate("play");
-    window.dispatchEvent(new Event("relish:locked"));
-  }
   function leaveShared() {
     if (sample) {
       setShared(false);
@@ -324,8 +316,7 @@ export default function LivingBook({
   const sharedView = shared || view === "play";
   const place = placeOf[view];
   // Places draw their own big heading; sub-screens keep the small running head.
-  const placeScreen =
-    (view === "home" || view === "do" || view === "book") && !closed;
+  const placeScreen = view === place && !closed;
   const canInvite = !sample && online;
   const roster: Player[] = [
     { id: "owner", name: book.owner, audience: audienceOf(book) },
@@ -350,6 +341,7 @@ export default function LivingBook({
     : book.people.filter(isFamily).map((p) => ({
         id: p.id,
         name: p.name,
+        note: `${p.role} · notes in your book`,
         onOpen: () => {
           navigate("book");
           setBookWho(p.id);
@@ -432,9 +424,8 @@ export default function LivingBook({
                 : sessionOpen
                   ? "Guided reflection"
                   : "Your book";
-  let right: ReactNode = null,
-    left: ReactNode;
-  left = (
+  let right: ReactNode = null;
+  const left = (
     <>
       <p className="lb-kicker">Guided reflection</p>
       <h2>{theme?.title || "Choose a topic"}</h2>
@@ -586,147 +577,6 @@ export default function LivingBook({
         </>
       );
     }
-  } else if (view === "family") {
-    left = (
-      <>
-        <p className="lb-kicker">Family album</p>
-        <h2>Shared entries and game results</h2>
-        <p>
-          View selected journal passages and game results approved by every player.
-        </p>
-        <p className="lb-fine">
-          These shared entries are part of {book.owner}’s book. Account books sync to the parent account; local books stay on this device. Other accounts receive only passages you explicitly send.
-        </p>
-      </>
-    );
-    if (l.game?.stage === "finished")
-      right = (
-        <>
-          <p className="lb-kicker">Progress saved</p>
-          <h2>Session complete</h2>
-          <div className="lb-kept">
-            <BookmarkCheck size={20} />
-            <p>
-              {l.game.savedPageId
-                ? "You finished a round and kept a page everyone approved."
-                : gameText(l.game)
-                  ? "You finished one round together. No shared page was saved."
-                  : "Everyone passed. No shared page was saved."}
-            </p>
-          </div>
-          <p>The game is finished. Close it or choose another activity.</p>
-          <div className="lb-later">
-            <p className="lb-kicker">Next session</p>
-            <p>
-              When you feel like playing again, someone else can start. One
-              round is enough each time.
-            </p>
-          </div>
-          <button
-            className="lb-primary"
-            onClick={() => {
-              setClosed(true);
-              sensory.play("touch");
-            }}
-          >
-            Close the book for now <BookOpen size={16} />
-          </button>
-          <div className="lb-actions">
-            <button
-              className="lb-text"
-              disabled={busy}
-              onClick={() =>
-                void commit(
-                  (b) => changeLiving(b, (x) => ({ ...x, game: undefined })),
-                  () => navigate("family"),
-                )
-              }
-            >
-              Read our Family pages
-            </button>
-            <button
-              className="lb-text"
-              disabled={busy}
-              onClick={() =>
-                void commit(
-                  (b) => changeLiving(b, (x) => ({ ...x, game: undefined })),
-                  openPlay,
-                )
-              }
-            >
-              Choose another game
-            </button>
-          </div>
-        </>
-      );
-    else
-      right = (
-        <>
-          <p className="lb-kicker">Saved family content</p>
-          <h2>Family album</h2>
-          {activeGame && (
-            <div className="lb-boundary">
-              <strong>Unfinished game</strong>
-              <p>You can continue the same round, at the same turn.</p>
-              <button className="lb-primary" onClick={openPlay}>
-                Resume our round <ArrowUpRight size={16} />
-              </button>
-            </div>
-          )}
-          {manualCards
-            .filter((c) => c.scope === "family" && c.status === "kept")
-            .map((card) => (
-              <ManualCardView key={card.id} card={card} />
-            ))}
-          {!!book.album?.length && (
-            <div className="lb-entries">
-              {book.album.toReversed().map((p) => (
-                <article key={p.id}>
-                  <p className="lb-kicker">
-                    {shortDate(p.createdAt)} · Chosen by {p.fromName}
-                  </p>
-                  <h3>{p.title}</h3>
-                  <blockquote>{p.text}</blockquote>
-                  <PhotoGallery photos={p.photos || []} access={vault.photos} />
-                  <p className="lb-fine">
-                    A chosen passage from {shortDate(p.sourceDate)}. The
-                    original page stays private.
-                  </p>
-                </article>
-              ))}
-            </div>
-          )}
-          {l.sharedPages.length ? (
-            <div className="lb-entries">
-              {l.sharedPages.toReversed().map((p) => (
-                <article key={p.id}>
-                  <p className="lb-kicker">
-                    {shortDate(p.createdAt)} · Made together
-                  </p>
-                  <h3>{p.title}</h3>
-                  <blockquote>{p.text}</blockquote>
-                  <p className="lb-fine">
-                    {p.players.map((x) => x.name).join(" + ")} · everyone
-                    approved these words
-                  </p>
-                </article>
-              ))}
-            </div>
-          ) : !book.album?.length ? (
-            <div className="lb-empty">
-              <p>No shared entries yet.</p>
-              <p className="lb-fine">
-                A game can be enough on its own. Keeping a page is always
-                optional.
-              </p>
-            </div>
-          ) : null}
-          <button className="lb-text" onClick={openPlay}>
-            <Users size={16} />{" "}
-            {activeGame ? "Return to our game" : "Play one round together"}
-          </button>
-        </>
-      );
   }
   return (
     <div
@@ -866,6 +716,34 @@ export default function LivingBook({
             guide={guide}
             sample={sample}
             onPages={() => navigate("book")}
+          />
+        ) : view === "family" && !sharedView ? (
+          <Family
+            book={book}
+            people={homePeople}
+            busy={busy}
+            headingRef={heading}
+            photos={vault.photos}
+            canShare={!sample && online}
+            onInvite={canInvite ? openInvite : undefined}
+            onAddChild={!sample && online ? onAddChild : undefined}
+            onShare={() => navigate("book")}
+            onPlay={() => {
+              navigate("do");
+              setDoFilter("kids");
+            }}
+            onResumeGame={() => navigate("play")}
+            onCloseFinished={(again) =>
+              void commit(
+                (b) => changeLiving(b, (x) => ({ ...x, game: undefined })),
+                again
+                  ? () => {
+                      navigate("do");
+                      setDoFilter("kids");
+                    }
+                  : undefined,
+              )
+            }
           />
         ) : view === "book" && !sharedView ? (
           <YourBook

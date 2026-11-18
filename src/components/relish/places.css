@@ -957,3 +957,185 @@
     flex: 1 1 100%;
   }
 }
+
+/* Family */
+.rp-people {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 18px;
+}
+.lb-app .rp-person {
+  border-radius: 26px;
+  padding: 24px;
+  min-height: 210px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  color: var(--ink);
+  text-align: left;
+}
+.rp-people > .rp-person:nth-child(4n + 1) { transform: rotate(-0.8deg); }
+.rp-people > .rp-person:nth-child(4n + 2) { transform: rotate(0.7deg); }
+.rp-people > .rp-person:nth-child(4n + 3) { transform: rotate(-0.4deg); }
+.lb-app .rp-people > .rp-person:not(:disabled):hover {
+  transform: rotate(0) translateY(-2px);
+}
+.rp-person-dot {
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 34px/1 var(--serif);
+}
+.rp-person-words {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 15px;
+}
+.rp-person-name {
+  font: 700 32px/1 var(--serif);
+}
+.rp-person-open {
+  margin-top: 6px;
+  font-weight: 700;
+}
+.lb-app .rp-person-invite,
+.lb-app .rp-person-invite:not(:disabled):hover {
+  background: var(--card);
+  border: 2.5px dashed var(--olive);
+}
+.lb-app .rp-person-invite .rp-person-dot {
+  font: 600 36px/1 var(--sans);
+}
+.lb-app .rp-person-add,
+.lb-app .rp-person-add:not(:disabled):hover {
+  background: transparent;
+  border: 1.5px solid var(--line);
+  justify-content: flex-end;
+  gap: 4px;
+}
+.rp-person-add-title {
+  font: 700 26px/1 var(--serif);
+}
+.rp-finished {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 24px;
+  padding: 20px 24px;
+  border-radius: 20px;
+  background: var(--card);
+  border: 1.5px solid var(--sage);
+  font-size: 16px;
+}
+.rp-finished-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+.rp-passed {
+  flex: 3 1 460px;
+}
+.rp-album {
+  flex: 2 1 320px;
+}
+.rp-passed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rp-passed-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--paper);
+}
+.rp-album-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.lb-app .rp-album-tile {
+  border-radius: 16px;
+  padding: 14px;
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--ink);
+  text-align: left;
+}
+.rp-album-grid > .rp-album-tile:nth-child(4n + 1) { transform: rotate(-1deg); }
+.rp-album-grid > .rp-album-tile:nth-child(4n + 2) { transform: rotate(0.8deg); }
+.rp-album-grid > .rp-album-tile:nth-child(4n + 3) { transform: rotate(0.5deg); }
+.rp-album-grid > .rp-album-tile:nth-child(4n + 4) { transform: rotate(-0.6deg); }
+.lb-app .rp-album-tile[aria-expanded="true"] {
+  outline: 2px solid var(--olive);
+  outline-offset: 2px;
+}
+.lb-app .rp-album-resume,
+.lb-app .rp-album-resume:not(:disabled):hover {
+  background: var(--card);
+  border: 2px dashed var(--olive);
+}
+.rp-album-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.rp-album-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+.rp-album-open {
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lb-app .rp-album-open h3 {
+  margin: 0;
+  font: 600 24px/1.15 var(--serif);
+}
+.lb-app .rp-album-open blockquote {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 16px;
+}
+.lb-app .rp-steps {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 16px;
+  line-height: 1.45;
+}
+@media (max-width: 720px) {
+  .lb-app .rp-person {
+    min-height: 0;
+  }
+  .rp-person-dot {
+    width: 56px;
+    height: 56px;
+    font-size: 28px;
+  }
+  .rp-person-name {
+    font-size: 28px;
+  }
+}

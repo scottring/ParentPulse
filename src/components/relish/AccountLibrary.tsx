@@ -27,6 +27,7 @@ export default function AccountLibrary({
   inline = false,
   onLocal,
   onExplore,
+  startAdding,
 }: {
   vault: ReturnType<typeof useLocalBook>;
   sync: ReturnType<typeof useBookSync>;
@@ -34,6 +35,8 @@ export default function AccountLibrary({
   inline?: boolean;
   onLocal?: () => void;
   onExplore?: () => void;
+  /** Opens straight onto the add-a-child form (from Family). */
+  startAdding?: "child";
 }) {
   const [gate] = useState(() =>
     vault.mode === "open" && vault.book.profile?.kind === "child"
@@ -51,9 +54,11 @@ export default function AccountLibrary({
     [notice, setNotice] = useState("");
   const [chosen, setChosen] = useState<SyncedEdition | null>(null),
     [passphrase, setPassphrase] = useState("");
-  const [adding, setAdding] = useState(false),
+  const [adding, setAdding] = useState(!!startAdding),
     [name, setName] = useState("");
-  const [audience, setAudience] = useState<Audience | "">("adult"),
+  const [audience, setAudience] = useState<Audience | "">(
+      startAdding ? "" : "adult",
+    ),
     [parentConfirm, setParentConfirm] = useState(false);
   const user = sync.user,
     bound = readBinding(vault.editionId),
