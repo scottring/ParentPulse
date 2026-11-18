@@ -1222,7 +1222,7 @@
 }
 .lb-app .rk-hero {
   display: grid;
-  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
   align-items: center;
   gap: clamp(24px, 5vw, 64px);
 }
@@ -1266,10 +1266,38 @@
   box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.12),
     inset 10px 0 14px rgba(0, 0, 0, 0.18);
 }
-.rk-cover-painted .rk-cover-pages,
-.rk-cover-painted .rk-cover-cloth {
-  background: none;
-  box-shadow: none;
+.rk-cover.rk-cover-painted {
+  width: min(100%, 340px);
+  aspect-ratio: 1;
+  margin: 0 auto;
+  transform: none;
+}
+.rk-cover-photo {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* The cover face of kid-cover.webp: name and emblem sit on the cloth. */
+.rk-cover-face {
+  position: absolute;
+  left: 23.5%;
+  top: 12%;
+  width: 56%;
+  height: 62%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6%;
+  padding-top: 8%;
+  transform: rotate(-2.6deg);
+}
+.rk-cover-painted .rk-cover-name {
+  color: #d8b45c;
+  text-shadow: 0 1px 0 rgba(40, 50, 25, 0.45);
+}
+.rk-cover-painted .rk-cover-emblem {
+  filter: drop-shadow(0 1px 0 rgba(40, 50, 25, 0.35));
 }
 .rk-cover-name {
   font: 600 clamp(28px, 3.4vw, 40px) / 1.05 var(--serif);

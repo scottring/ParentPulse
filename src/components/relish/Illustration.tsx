@@ -1,29 +1,35 @@
 "use client";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
+  illustrationSize,
   illustrationSrc,
   isPainted,
   type IllustrationName,
 } from "./illustrations";
 
 /**
- * A small picture for a screen. Shows the watercolor when it has arrived
- * (listed in illustrations.ts), otherwise a simple drawn sketch in the same
- * palette. Always decorative: hidden from screen readers.
+ * A small picture for a screen: Scott's watercolor (.webp), or a simple
+ * drawn sketch in the same palette when the file is missing or fails to
+ * load. Always decorative: empty alt and hidden from screen readers.
+ * Lazy-loaded unless `eager` (the one picture above the fold).
  */
 export default function Illustration({
   name,
   size = 160,
   className = "",
+  eager = false,
 }: {
   name: IllustrationName;
   size?: number | string;
   className?: string;
+  eager?: boolean;
 }) {
+  const [broken, setBroken] = useState(false);
   // A number fixes the box; a length such as "100%" lets it fill and stay square.
   const style =
     typeof size === "number" ? { width: size, height: size } : { width: size };
-  if (isPainted(name))
+  if (isPainted(name) && !broken) {
+    const px = typeof size === "number" ? size : illustrationSize(name);
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
@@ -31,12 +37,16 @@ export default function Illustration({
         src={illustrationSrc(name)}
         alt=""
         aria-hidden="true"
-        width={typeof size === "number" ? size : undefined}
-        height={typeof size === "number" ? size : undefined}
+        width={px}
+        height={px}
+        loading={eager ? "eager" : "lazy"}
+        decoding="async"
         style={style}
         data-illustration={name}
+        onError={() => setBroken(true)}
       />
     );
+  }
   return (
     <span
       className={`ui-illustration ui-sketch ${className}`}

@@ -9,6 +9,7 @@ import {
   emblemFor,
   exerciseIllustration,
   gameIllustration,
+  kidBannerIllustration,
   isPainted,
   illustrationSrc,
   type IllustrationName,
@@ -24,21 +25,40 @@ function nudgeArt(action: NudgeAction): IllustrationName {
   return "jot";
 }
 
-/** A child's own cloth-covered book: their name and emblem in gold. */
+/**
+ * A child's own cloth-covered book: Scott's blank cloth cover with the
+ * name drawn in code and their gold emblem. Falls back to a drawn cover.
+ */
 export function KidCover({ name }: { name: string }) {
   const emblem = emblemFor(name);
-  const painted = isPainted("kid-cover");
+  const emblemArt = `emblem-${emblem}` as IllustrationName;
+  const [broken, setBroken] = useState(false);
+  if (isPainted("kid-cover") && !broken)
+    return (
+      <div className="rk-cover rk-cover-painted" aria-hidden="true" data-emblem={emblem}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          className="rk-cover-photo"
+          src={illustrationSrc("kid-cover")}
+          alt=""
+          width={900}
+          height={900}
+          loading="eager"
+          decoding="async"
+          onError={() => setBroken(true)}
+        />
+        <span className="rk-cover-face">
+          <span className="rk-cover-name">
+            {name}’s
+            <br />
+            book
+          </span>
+          <Illustration name={emblemArt} size="56%" eager className="rk-cover-emblem" />
+        </span>
+      </div>
+    );
   return (
-    <div
-      className={`rk-cover ${painted ? "rk-cover-painted" : ""}`}
-      aria-hidden="true"
-      style={
-        painted
-          ? { backgroundImage: `url(${illustrationSrc("kid-cover")})` }
-          : undefined
-      }
-      data-emblem={emblem}
-    >
+    <div className="rk-cover" aria-hidden="true" data-emblem={emblem}>
       <span className="rk-cover-pages" />
       <span className="rk-cover-cloth">
         <span className="rk-cover-name">
@@ -47,15 +67,7 @@ export function KidCover({ name }: { name: string }) {
           book
         </span>
         <svg className="rk-cover-emblem" viewBox="0 0 200 200" focusable="false">
-          {isPainted(`emblem-${emblem}` as IllustrationName) ? (
-            <image
-              href={illustrationSrc(`emblem-${emblem}` as IllustrationName)}
-              width="200"
-              height="200"
-            />
-          ) : (
-            <Emblem kind={emblem} />
-          )}
+          <Emblem kind={emblem} />
         </svg>
       </span>
       <span className="rk-cover-ribbon" />
@@ -135,7 +147,10 @@ export default function KidHome({
       {nudge && (
         <section className="rk-banner" aria-label="Something to try">
           <div className="rk-banner-art">
-            <Illustration name={nudgeArt(nudge.action)} size="100%" />
+            <Illustration
+              name={kidBannerIllustration[nudge.id] ?? nudgeArt(nudge.action)}
+              size="100%"
+            />
           </div>
           <div className="rk-banner-text">
             <h2 aria-live="polite">{nudge.title ?? nudge.text}</h2>

@@ -557,7 +557,7 @@ export default function AccountLibrary({
           <p className="lb-wordmark">relish</p>
           <p>The operating manual for relationships</p>
         </div>
-        <Illustration name="welcome" size={132} className="lb-library-sun" />
+        <Illustration name="welcome" size={132} eager className="lb-library-sun" />
       </header>
       <section>{content}</section>
     </main>

@@ -177,7 +177,7 @@ export default function Home({
             Hi {book.owner}. Here’s one small thing.
           </h1>
         </div>
-        <Illustration name="home" size={128} className="rp-sun" />
+        <Illustration name="home" size={128} eager className="rp-sun" />
       </section>
       {onQuickSave && onQuickWrite && (
         <QuickJot busy={busy} onSave={onQuickSave} onWrite={onQuickWrite} onPage={onPage} />
