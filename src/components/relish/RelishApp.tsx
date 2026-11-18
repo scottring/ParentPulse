@@ -95,14 +95,16 @@ function BookGate() {
   useEffect(() => {
     if (ownBook && sync.user) writeHomeBook(sync.user.uid, ownBook);
   }, [ownBook, sync.user]);
-  // After a fresh sign-in (not a reload, not after Lock), open that book on
-  // Home instead of stopping at the family library.
+  // Land on that book's Home instead of stopping at the family library.
   const signedIn = useRef<string | null | undefined>(undefined);
   const openHome = useRef(false);
   useEffect(() => {
     if (!sync.authReady) return;
     const uid = sync.user?.uid ?? null;
-    if (signedIn.current === null && uid) openHome.current = true;
+    // Open your own book after signing in and whenever Relish first loads
+    // signed in (a reload, a new tab, the iPhone app). Not after Lock.
+    if ((signedIn.current === null || signedIn.current === undefined) && uid)
+      openHome.current = true;
     signedIn.current = uid;
     if (!openHome.current || sync.working) return;
     if (vault.mode === "open") {

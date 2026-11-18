@@ -5,7 +5,9 @@ import { emptyBook, isBook } from "../model";
 import {
   newJournalDraft,
   writeJournalPage,
+  renameJournalPage,
   JOURNAL_TEXT_LIMIT,
+  JOURNAL_TITLE_LIMIT,
 } from "../journal";
 import { createVault, unlockVault } from "../vault";
 Object.defineProperty(globalThis, "crypto", {
@@ -102,5 +104,21 @@ describe("private journal pages", () => {
     const raw = JSON.stringify(envelope);
     expect(raw).not.toContain("PRIVATE");
     expect((await unlockVault(raw, pass)).book).toEqual(book);
+  });
+  it("renames a kept page without changing its words", () => {
+    const draft = { ...newJournalDraft(), text: "Words stay." };
+    const kept = writeJournalPage(emptyBook("A"), draft, 0, "kept");
+    const renamed = renameJournalPage(kept, draft.id, "  A new name  ");
+    const entry = renamed.journal![0];
+    expect(entry.title).toBe("A new name");
+    expect(entry.text).toBe("Words stay.");
+    expect(entry.status).toBe("kept");
+    expect(entry.revision).toBe(kept.journal![0].revision + 1);
+    expect(isBook(renamed)).toBe(true);
+    expect(renameJournalPage(renamed, draft.id, "A new name")).toBe(renamed);
+    expect(() =>
+      renameJournalPage(kept, draft.id, "x".repeat(JOURNAL_TITLE_LIMIT + 1)),
+    ).toThrow("under");
+    expect(() => renameJournalPage(kept, "missing", "Hi")).toThrow("found");
   });
 });

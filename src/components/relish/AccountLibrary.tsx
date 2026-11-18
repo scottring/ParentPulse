@@ -20,6 +20,8 @@ import { readBinding, type SyncedEdition } from "@/lib/relish/book-sync";
 import type { useLocalBook } from "./useLocalBook";
 import type { useBookSync } from "./useBookSync";
 import { readHomeBook } from "./homeBook";
+
+const bookTones = ["sun", "clay", "sky", "sage"] as const;
 import { Dialog } from "./BookForms";
 export default function AccountLibrary({
   vault,
@@ -321,22 +323,23 @@ export default function AccountLibrary({
           {!adding && !chosen && (
             <>
               <div className="lb-account-books">
-                {books.map((head) => (
-                  <div key={head.id}>
+                {books.map((head, i) => (
+                  <div key={head.id} data-tone={bookTones[i % bookTones.length]}>
                     <button
                       disabled={working}
                       onClick={() => void act(() => open(head))}
                     >
-                      <BookOpen size={22} />
+                      <span className="lb-book-initial" aria-hidden="true">
+                        {head.label.trim().charAt(0).toUpperCase() || "R"}
+                      </span>
                       <span>
                         {head.label}
                         <small>
                           {head.accountManaged
-                            ? "Saved to your account · open your book"
+                            ? "Open book →"
                             : "Earlier book · original passphrase needed"}
                         </small>
                       </span>
-                      <ArrowUpRight size={18} />
                     </button>
                   </div>
                 ))}
@@ -549,8 +552,27 @@ export default function AccountLibrary({
   return inline ? (
     <main className="r-app lb-app lb-library-home">
       <header>
-        <p className="lb-wordmark">relish</p>
-        <p>The operating manual for relationships</p>
+        <div>
+          <p className="lb-wordmark">relish</p>
+          <p>The operating manual for relationships</p>
+        </div>
+        <svg
+          className="lb-library-sun"
+          aria-hidden="true"
+          width="120"
+          height="72"
+          viewBox="0 0 120 72"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="30" cy="36" r="16" fill="#f2d58a" />
+          <path d="M30 10v-6M30 68v-6M4 36h6M50 36h6M12 18l4 4M44 50l4 4M12 54l4-4M44 22l4-4" />
+          <path d="M70 52c6-14 18-14 24 0M84 30a6 6 0 1 0 0.1 0" fill="#e9b9a0" />
+          <path d="M100 56c3-8 10-8 13 0M106 42a4 4 0 1 0 0.1 0" fill="#cfdcc4" />
+        </svg>
       </header>
       <section>{content}</section>
     </main>

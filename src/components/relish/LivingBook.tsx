@@ -36,7 +36,11 @@ import { Dialog, EditPerson, PersonForm, VaultForm } from "./BookForms";
 import { SoundSettings, useSensory } from "./Sensory";
 import VisitEditor from "./VisitEditor";
 import Journal from "./Journal";
-import { newJournalDraft, type JournalDraft } from "@/lib/relish/journal";
+import {
+  newJournalDraft,
+  writeJournalPage,
+  type JournalDraft,
+} from "@/lib/relish/journal";
 import "./duo.css";
 import "./places.css";
 import Manual, { useManualGuide } from "./Manual";
@@ -46,6 +50,7 @@ import Tools from "./Tools";
 import ConnectedEditions from "./ConnectedEditions";
 import EditionSetup from "./EditionSetup";
 import { guidanceFor } from "@/lib/relish/guidance";
+import { TypingSoundSetting } from "./TypingSound";
 import TopBar, { type MenuItem, type Place } from "./TopBar";
 import Home, { type FamilyPerson } from "./Home";
 import DoSomething from "./DoSomething";
@@ -643,6 +648,7 @@ export default function LivingBook({
           disabled={headerBusy}
           status={!sample && onAccount ? syncStatus : undefined}
           onPlace={(next) => void headerAction(() => navigate(next))}
+          onWrite={() => void headerAction(() => quickEntry())}
           items={menuItems}
         />
       )}
@@ -708,6 +714,15 @@ export default function LivingBook({
             onFamily={() => navigate("family")}
             onBook={() => navigate("book")}
             onPage={openPage}
+            onQuickSave={async (text) => {
+              const draft = { ...newJournalDraft(), text };
+              await vault.save((b) => writeJournalPage(b, draft, 0, "kept"));
+              sensory.play("place");
+              return `journal:${draft.id}`;
+            }}
+            onQuickWrite={(text, voice) =>
+              quickEntry(voice, { ...newJournalDraft(), text })
+            }
           />
         ) : view === "do" && !sharedView ? (
           <DoSomething
@@ -1051,6 +1066,7 @@ export default function LivingBook({
             </details>
           )}
           <SoundSettings />
+          <TypingSoundSetting />
           {sample ? (
             <button className="lb-text" onClick={() => setModal("create")}>
               Create my private book

@@ -67,11 +67,18 @@ it("opens the adult's own book after a fresh sign-in, not the library", () => {
   expect(state.sync.open).toHaveBeenCalledWith(books[1]);
 });
 
-it("stays on the library after a reload or Lock while already signed in", () => {
+it("opens the adult's own book on a reload while already signed in", () => {
+  state.sync = sync({ user: parent, books });
+  render(createElement(RelishApp));
+  expect(state.sync.open).toHaveBeenCalledWith(books[1]);
+});
+
+it("opens it only once per load, so Lock leaves you on the library", () => {
   state.sync = sync({ user: parent, books });
   const { rerender } = render(createElement(RelishApp));
   rerender(createElement(RelishApp));
-  expect(state.sync.open).not.toHaveBeenCalled();
+  rerender(createElement(RelishApp));
+  expect(state.sync.open).toHaveBeenCalledTimes(1);
 });
 
 it("never opens a child's book on sign-in when the own book is unknown", () => {

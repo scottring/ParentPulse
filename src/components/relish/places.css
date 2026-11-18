@@ -1139,3 +1139,97 @@
     font-size: 28px;
   }
 }
+
+/* Write from anywhere */
+.lb-app .rp-write {
+  margin-left: auto;
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: none;
+  background: var(--olive);
+  color: var(--on-olive);
+  font: 700 15px/1 var(--sans);
+  gap: 6px;
+}
+.lb-app .rp-write span {
+  font-size: 19px;
+  line-height: 1;
+}
+.lb-app .rp-write:not(:disabled):hover {
+  background: var(--ink);
+}
+.rp-write + .rp-menu-wrap {
+  margin-left: 0;
+}
+
+/* Home: jot something down */
+.rp-jot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rp-jot-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 20px;
+  border-radius: 28px;
+  background: var(--card);
+  border: 2px solid var(--line);
+}
+.rp-jot-bar:focus-within {
+  border-color: var(--olive);
+}
+.lb-app .rp-jot-bar textarea {
+  flex: 1;
+  min-width: 0;
+  min-height: 28px;
+  max-height: 160px;
+  field-sizing: content;
+  resize: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 400 18px/1.5 var(--sans);
+  padding: 6px 0;
+  outline: none;
+}
+.lb-app .rp-jot-bar textarea::placeholder {
+  color: var(--muted);
+}
+.lb-app .rp-jot-mic {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: transparent;
+  color: var(--olive);
+}
+.lb-app .rp-jot-save {
+  flex: none;
+  min-height: 44px;
+  padding: 10px 22px;
+  border-radius: 999px;
+  border: none;
+  background: var(--olive);
+  color: var(--on-olive);
+  font: 700 16px/1 var(--sans);
+}
+.lb-app .rp-jot-save:disabled {
+  background: var(--line);
+  color: var(--muted);
+}
+.rp-jot-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  min-height: 28px;
+  padding-left: 20px;
+  font-size: 15px;
+  color: var(--muted);
+}
