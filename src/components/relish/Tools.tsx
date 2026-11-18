@@ -457,8 +457,11 @@ function SortRunner({
   const [picks, setPicks] = useState<Record<string, string>>({});
   const [extra, setExtra] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
+  const [skipped, setSkipped] = useState<string[]>([]);
   const cards = [...tool.cards(audienceOf(book)), ...extra];
   const sorted = Object.keys(placed).length;
+  // One card at a time up top; every card stays changeable in the list below.
+  const current = cards.find((c) => !placed[c] && !skipped.includes(c));
   const ready =
     sorted > 0 &&
     (!tool.subject || !!subject.trim()) &&
@@ -496,7 +499,30 @@ function SortRunner({
       <p className="rt-progress" aria-live="polite">
         {sorted} of {cards.length} sorted · skip any that don’t fit
       </p>
-      <ul className="rt-sort">
+      {current ? (
+        <div className="rt-current">
+          <p className="rt-current-card">{current}</p>
+          <div role="group" aria-label={`Sort this card: ${current}`} className="rt-current-piles">
+            {tool.piles.map((pile) => (
+              <button key={pile.id} type="button" onClick={() => place(current, pile.id)}>
+                {pile.label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="ui-link"
+            onClick={() => setSkipped([...skipped, current])}
+          >
+            Skip this one
+          </button>
+        </div>
+      ) : (
+        <p className="rt-current-done">
+          Every card has a place. Change any of them below.
+        </p>
+      )}
+      <ul className="rt-sort" aria-label="Your sorting so far">
         {cards.map((card) => (
           <li key={card}>
             <span>{card}</span>

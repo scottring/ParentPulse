@@ -19,6 +19,20 @@ import {
 import { livingOf, type Game, type Player } from "@/lib/relish/living";
 import { activeTrackers, trackerProgress } from "@/lib/relish/tools";
 import type { NudgeAction } from "@/lib/relish/nudges";
+import Illustration from "./Illustration";
+import {
+  exerciseIllustration,
+  gameIllustration,
+  type IllustrationName,
+} from "./illustrations";
+
+/** The picture on a catalog card. */
+function itemArt(action: NudgeAction): IllustrationName {
+  if (action.kind === "exercise") return exerciseIllustration[action.id] ?? "do-something";
+  if (action.kind === "game") return gameIllustration[action.game] ?? "do-something";
+  if (action.kind === "reflect") return "think-it-through";
+  return "jot";
+}
 
 type GameItem = DoItem & { action: { kind: "game"; game: Game["kind"] } };
 const gameNames: Record<Game["kind"], string> = {
@@ -110,6 +124,14 @@ export default function DoSomething({
             : `${shown.length} ${shown.length === 1 ? "thing fits" : "things that fit"}.`}
         </p>
       </section>
+      {!shown.length && (
+        <div className="rp-quiet rp-empty-filter">
+          <p>Nothing here for this filter yet.</p>
+          <button className="ui-link" onClick={() => onFilter("all")}>
+            Show everything
+          </button>
+        </div>
+      )}
       <section className="rp-do-grid" aria-label="Things to do">
         {shown.map((item) => {
           const note = status(item);
@@ -127,6 +149,9 @@ export default function DoSomething({
               <span className="rp-do-meta">
                 <span className="rp-do-type">{item.type}</span>
                 <span>{item.time}</span>
+              </span>
+              <span className="rp-do-art">
+                <Illustration name={itemArt(item.action)} size={88} />
               </span>
               <span className="rp-do-title">{item.title}</span>
               <span className="rp-do-blurb">{item.blurb}</span>
@@ -216,6 +241,12 @@ function GameSheet({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="rp-sheet-head">
+          <Illustration
+            name={itemArt(item.action)}
+            size={96}
+            eager
+            className="rp-sheet-art"
+          />
           <div>
             <span className="rp-eyebrow">Game · {item.time}</span>
             <h2 id="rp-sheet-title">{item.title}</h2>
@@ -226,7 +257,12 @@ function GameSheet({
           </button>
         </div>
         <fieldset className="rp-players">
-          <legend>Who’s playing? Tap to leave someone out.</legend>
+          <legend>
+            Who’s playing? Tap to leave someone out.{" "}
+            <span className="rp-player-count" aria-live="polite">
+              {players.length} playing · needs 2 to 12
+            </span>
+          </legend>
           <div className="rp-chips">
             {everyone.map((p) => {
               const on = !out.includes(p.id);
@@ -320,7 +356,7 @@ function GameSheet({
           disabled={busy || players.length < 2 || players.length > 12}
           onClick={() => onStart(players)}
         >
-          Start · pass the device around
+          Start game · pass the device around
         </button>
         {players.length < 2 && (
           <p className="rp-quiet">Choose at least two players.</p>

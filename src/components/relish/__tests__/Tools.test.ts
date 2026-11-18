@@ -201,3 +201,23 @@ it("plays Same page? with hidden answers and a shared reveal", async () => {
   expect((await screen.findAllByText(/Same page: everyone chose/)).length).toBeGreaterThan(0);
   expect(livingOf(app.stored()).game?.stage).toBe("reveal");
 });
+
+it("a card sort offers one card at a time, with skip, and keeps every card changeable", async () => {
+  open(adult());
+  fireEvent.click(screen.getByRole("button", { name: /What helps when I’m upset/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /Start this exercise/ }));
+  const first = screen.getByRole("group", { name: /^Sort this card: / });
+  const name = first.getAttribute("aria-label")!.replace("Sort this card: ", "");
+  fireEvent.click(within(first).getByRole("button", { name: "Helps me" }));
+  expect(
+    within(screen.getByRole("group", { name })).getByRole("button", { name: "Helps me" })
+      .getAttribute("aria-pressed"),
+  ).toBe("true");
+  const second = screen.getByRole("group", { name: /^Sort this card: / });
+  expect(second.getAttribute("aria-label")).not.toContain(name);
+  const skippedName = second.getAttribute("aria-label")!;
+  fireEvent.click(screen.getByRole("button", { name: "Skip this one" }));
+  expect(screen.getByRole("group", { name: /^Sort this card: / }).getAttribute("aria-label")).not.toBe(
+    skippedName,
+  );
+});
