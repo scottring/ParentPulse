@@ -330,9 +330,139 @@ const allSame = [
 ];
 export const samePageQuestion = (id: string) => allSame.find((q) => q.id === id);
 
+// "Spot it!" — a card of nine things to spot from the car. Square ids are
+// stored in open rounds and play records: never reorder, reword the meaning
+// of, or remove a square; add new ones.
+export type SpotSquare = { id: string; text: string };
+export const SPOT_SIZE = 9;
+// Under-6s: big, common things a small child can see and name.
+const spotYoung: SpotSquare[] = [
+  { id: "y-cow", text: "A cow" },
+  { id: "y-red-car", text: "A red car" },
+  { id: "y-bridge", text: "A bridge" },
+  { id: "y-dog-car", text: "A dog in a car" },
+  { id: "y-big-truck", text: "A big truck" },
+  { id: "y-horse", text: "A horse" },
+  { id: "y-school-bus", text: "A school bus" },
+  { id: "y-motorcycle", text: "A motorcycle" },
+  { id: "y-tractor", text: "A tractor" },
+  { id: "y-airplane", text: "An airplane" },
+  { id: "y-train", text: "A train" },
+  { id: "y-police-car", text: "A police car" },
+  { id: "y-yellow-car", text: "A yellow car" },
+  { id: "y-bird-wire", text: "A bird on a wire" },
+  { id: "y-stop-sign", text: "A stop sign" },
+  { id: "y-flag", text: "A flag" },
+  { id: "y-sheep", text: "Some sheep" },
+  { id: "y-boat", text: "A boat" },
+  { id: "y-fire-truck", text: "A fire truck" },
+  { id: "y-bike", text: "Someone on a bike" },
+  { id: "y-water", text: "A river or a lake" },
+  { id: "y-digger", text: "A digger" },
+  { id: "y-red-barn", text: "A red barn" },
+  { id: "y-tunnel", text: "A tunnel" },
+];
+// Everyone older: things that take a sharper eye, or a little reading.
+const spotOlder: SpotSquare[] = [
+  { id: "o-plate", text: "A license plate from another state" },
+  { id: "o-water-tower", text: "A water tower" },
+  { id: "o-horse-trailer", text: "A horse trailer" },
+  { id: "o-sign-100", text: "A sign with a number over 100" },
+  { id: "o-boat-tow", text: "A car towing a boat" },
+  { id: "o-convertible", text: "A convertible with the top down" },
+  { id: "o-turbine", text: "A wind turbine" },
+  { id: "o-camper", text: "An RV or a camper" },
+  { id: "o-bike-rack", text: "Bikes on the back of a car" },
+  { id: "o-roof-box", text: "A car with a roof box" },
+  { id: "o-same-car", text: "A car just like ours" },
+  { id: "o-line-sign", text: "A state or county line sign" },
+  { id: "o-funny-town", text: "A town with a funny name" },
+  { id: "o-hawk", text: "A hawk on a post" },
+  { id: "o-cones", text: "Road-work cones" },
+  { id: "o-tow-truck", text: "A tow truck" },
+  { id: "o-food-truck", text: "A food truck" },
+  { id: "o-steeple", text: "A church steeple" },
+  { id: "o-silo", text: "A silo" },
+  { id: "o-moving-truck", text: "A moving truck" },
+  { id: "o-wave", text: "Someone waving back" },
+  { id: "o-mile-zero", text: "A mile marker ending in 0" },
+  { id: "o-long-train", text: "A train with more than 20 cars" },
+  { id: "o-billboard-animal", text: "A billboard with an animal on it" },
+];
+/** Every square a card can hold for this age range. */
+export function spotBank(audience: Audience): SpotSquare[] {
+  return audience === "under-6" ? spotYoung : spotOlder;
+}
+const allSpot = [...spotYoung, ...spotOlder];
+export const spotSquare = (id: string) => allSpot.find((x) => x.id === id);
+
+// "Day's highlights" — three questions for each person at the end of a
+// driving day, with a few quick picks the holder can tap for a child.
+export type DayQuestion = "best" | "hard" | "next";
+const dayPicks: Record<"kids" | "grown", Record<DayQuestion, string[]>> = {
+  kids: {
+    best: [
+      "the snacks",
+      "the swimming pool",
+      "the playground",
+      "a game in the car",
+      "seeing animals",
+      "ice cream",
+    ],
+    hard: [
+      "being stuck in the car",
+      "feeling carsick",
+      "being bored",
+      "a fight in the back seat",
+      "being tired",
+      "missing home",
+    ],
+    next: [
+      "the beach",
+      "the swimming pool",
+      "seeing family",
+      "the next stop",
+      "sleeping in",
+      "getting home",
+    ],
+  },
+  grown: {
+    best: [
+      "the scenery",
+      "a good meal",
+      "everyone laughing",
+      "a good talk",
+      "a walk",
+      "getting there",
+    ],
+    hard: [
+      "traffic",
+      "the long hours",
+      "everyone tired at once",
+      "a wrong turn",
+      "the heat",
+      "not enough sleep",
+    ],
+    next: [
+      "a slow morning",
+      "the next stop",
+      "seeing family",
+      "a swim",
+      "a good meal",
+      "getting home",
+    ],
+  },
+};
+/** Quick picks for one question, fitted to the person's age when it's known. */
+export function dayQuickPicks(question: DayQuestion, audience?: Audience) {
+  return dayPicks[audience === "adult" || audience === "13-17" ? "grown" : "kids"][
+    question
+  ];
+}
+
 // The pass-and-play games as they appear in Do something.
 export const games: {
-  kind: "joy" | "story" | "match";
+  kind: "joy" | "story" | "match" | "spot";
   title: string;
   blurb: string;
   short: string;
@@ -358,5 +488,12 @@ export const games: {
     blurb: "Build a silly adventure, one part each. Read the whole story together at the end.",
     short: "5–10 min",
     tags: ["kids"],
+  },
+  {
+    kind: "spot",
+    title: "Spot it!",
+    blurb: "A card of nine things to spot from the car. Call it out first and the square is yours.",
+    short: "Any length",
+    tags: ["kids", "trip"],
   },
 ];

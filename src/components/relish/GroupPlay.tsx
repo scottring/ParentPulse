@@ -24,11 +24,13 @@ import {
   TITLE_LIMIT,
   turnPlan,
 } from "@/lib/relish/living";
+import { SpotBoard, SpotReveal, SpotSetup } from "./SpotIt";
 
 const titles: Record<Game["kind"], string> = {
   joy: "Guess my small joy",
   match: "Same page?",
   story: "One story, many voices",
+  spot: "Spot it!",
 };
 const list = (items: string[]) =>
   items.length < 2
@@ -74,9 +76,10 @@ export default function GroupPlay({
   /** A joy round where everyone picks, then everyone guesses. */
   const everyone = g.kind === "joy" && remembers(g);
   const guessing = everyone && g.turn >= g.players.length;
+  const spot = g.kind === "spot" && !!g.spot;
   return (
     <section className="lb-game" aria-label="Our game">
-      {!finished && g.stage !== "ready" && (
+      {!finished && g.stage !== "ready" && !spot && (
         <div className="lb-session-line">
           <div>
             <p className="lb-kicker">One round</p>
@@ -87,7 +90,17 @@ export default function GroupPlay({
           </button>
         </div>
       )}
-      {g.stage === "ready" ? (
+      {g.stage === "ready" && spot ? (
+        <SpotSetup
+          game={g}
+          book={book}
+          busy={busy}
+          onAction={onAction}
+          onCancel={onCancel}
+        />
+      ) : g.stage === "choose" && spot ? (
+        <SpotBoard game={g} busy={busy} onAction={onAction} onPause={onPause} />
+      ) : g.stage === "ready" ? (
         <>
           <h2>{title}</h2>
           <p>
@@ -213,7 +226,9 @@ export default function GroupPlay({
         />
       ) : (
         <>
-          {g.kind === "match" ? (
+          {spot ? (
+            <SpotReveal game={g} busy={busy} onAction={onAction} />
+          ) : g.kind === "match" ? (
             <SamePageReveal game={g} trend={samePageTrend(living, g, true)} />
           ) : everyone ? (
             <JoyReveal game={g} />
@@ -233,9 +248,11 @@ export default function GroupPlay({
           <RoundNotes game={g} />
           <div className="lb-round-end">
             <p className="lb-fine">
-              {remembers(g)
-                ? `This round is kept in ${book.owner}’s book.`
-                : "Your book notes that you played, without anyone’s answers."}
+              {spot
+                ? `This card is kept in ${book.owner}’s book.`
+                : remembers(g)
+                  ? `This round is kept in ${book.owner}’s book.`
+                  : "Your book notes that you played, without anyone’s answers."}
               {g.savedPageId
                 ? " A shared page was kept with everyone’s approval."
                 : ""}
@@ -528,7 +545,11 @@ function ReflectStep({
           rows={3}
           maxLength={REFLECTION_LIMIT}
           value={text}
-          placeholder="Who knew I’d pick the beach?"
+          placeholder={
+            g.kind === "spot"
+              ? "Leo saw the cow before anyone."
+              : "Who knew I’d pick the beach?"
+          }
           onChange={(e) => setText(e.target.value)}
         />
       </label>

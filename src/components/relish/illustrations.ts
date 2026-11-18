@@ -89,6 +89,8 @@ export const gameIllustration: Record<string, IllustrationName> = {
   joy: "small-joy",
   story: "story-voices",
   match: "same-page",
+  // Stand-in until a road-trip painting arrives (see the list above).
+  spot: "kid-kindness-spotting",
 };
 
 /**

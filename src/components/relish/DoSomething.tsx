@@ -44,6 +44,7 @@ const gameNames: Record<Game["kind"], string> = {
   joy: "Guess my small joy",
   story: "One story, many voices",
   match: "Same page?",
+  spot: "Spot it!",
 };
 
 export default function DoSomething({
@@ -269,7 +270,8 @@ function GameSheet({
         </div>
         <fieldset className="rp-players">
           <legend>
-            Who’s playing? Tap to leave someone out.{" "}
+            {item.action.game === "spot" ? "Who’s in the car?" : "Who’s playing?"}{" "}
+            Tap to leave someone out.{" "}
             <span className="rp-player-count" aria-live="polite">
               {players.length} playing · needs 2 to 12
             </span>
@@ -324,7 +326,7 @@ function GameSheet({
             </p>
           )}
           <p className="rp-quiet">
-            Prompts fit the youngest player
+            {item.action.game === "spot" ? "Squares" : "Prompts"} fit the youngest player
             {players.some((p) => !p.audience)
               ? "; without ages we use the simplest ones"
               : ` (${ageLabels[youngest]})`}
@@ -367,7 +369,9 @@ function GameSheet({
           disabled={busy || players.length < 2 || players.length > 12}
           onClick={() => onStart(players)}
         >
-          Start game · pass the device around
+          {item.action.game === "spot"
+            ? "Start · one phone, read aloud"
+            : "Start game · pass the device around"}
         </button>
         {players.length < 2 && (
           <p className="rp-quiet">Choose at least two players.</p>

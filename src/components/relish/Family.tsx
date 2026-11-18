@@ -20,11 +20,13 @@ const gameLabel: Record<GameKind, { label: string; tone: Tone }> = {
   match: { label: "Same page?", tone: "clay" },
   joy: { label: "Small joy", tone: "sun" },
   story: { label: "Story", tone: "sage" },
+  spot: { label: "Spot it!", tone: "sky" },
 };
 const gameNames: Record<GameKind, string> = {
   joy: "Guess my small joy",
   story: "One story, many voices",
   match: "Same page?",
+  spot: "Spot it!",
 };
 type AlbumItem = {
   id: string;

@@ -1515,3 +1515,167 @@
 .lb-app .lb-sp-list > li .lb-sp-mark {
   margin-top: 8px;
 }
+
+/* ── Spot it!: one card, read aloud in the car ────────────────────────── */
+.lb-app .lb-spot-rule {
+  font: italic 400 19px/1.5 var(--serif);
+  color: var(--ui-ink-soft);
+}
+.lb-app .lb-spot-card {
+  list-style: none;
+  padding: 0;
+  margin: 18px 0 10px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.lb-app .lb-spot-card > li {
+  min-width: 0;
+}
+.lb-app .lb-spot-text {
+  display: block;
+  font: 500 18px/1.3 var(--serif);
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+.lb-app .lb-spot-card.is-setup > li,
+.lb-app .lb-spot-card.is-reveal > li {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  height: 100%;
+  padding: 12px 13px 6px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--ui-card);
+}
+.lb-app .lb-spot-card.is-reveal > li {
+  padding-bottom: 12px;
+  background: var(--ui-sage-soft);
+  border-color: var(--ui-olive-line);
+}
+.lb-app .lb-spot-swap {
+  justify-content: flex-start;
+  padding: 4px 0;
+  font: 500 12px/1.3 var(--sans);
+  color: var(--muted);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.lb-app .lb-spot-card.is-playing button {
+  width: 100%;
+  height: 100%;
+  min-height: 118px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 13px;
+  border-radius: 14px;
+  border: 1.5px solid var(--line);
+  background: var(--ui-card);
+  box-shadow: 0 4px 10px rgba(48, 56, 44, 0.05);
+}
+.lb-app .lb-spot-card.is-playing button[aria-pressed="true"] {
+  background: var(--ui-sage-soft);
+  border-color: var(--ui-olive-line);
+}
+.lb-app .lb-spot-badge {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--olive);
+  color: #f2f4ee;
+  font: 600 15px/1 var(--sans);
+}
+.lb-app .lb-spot-by {
+  font: 600 14px/1.3 var(--sans);
+  color: var(--olive);
+}
+.lb-app .lb-spot-cheer {
+  min-height: 1.6em;
+  margin: 4px 0 8px;
+  text-align: center;
+  font: italic 500 19px/1.5 var(--serif);
+  color: var(--olive);
+}
+.lb-app .lb-spot-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+}
+.lb-app .lb-spot-foot .lb-fine {
+  margin: 0;
+}
+.lb-app .lb-spot-place {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0 12px;
+}
+.lb-app .lb-spot-place label {
+  flex: 1 1 220px;
+  margin: 14px 0 0;
+  font-size: 14px;
+}
+.lb-app .lb-spot-place label > span {
+  font: 600 15px/1.4 var(--sans);
+  color: var(--ink);
+  letter-spacing: 0;
+  text-transform: none;
+  margin: 0;
+}
+.lb-app .lb-spot-place label small {
+  font-weight: 400;
+  color: var(--muted);
+}
+.lb-app .lb-spot-place button {
+  margin-top: 14px;
+}
+.lb-app .lb-spot-names {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 22px 0;
+}
+.lb-app .lb-spot-names button {
+  min-height: 64px;
+  justify-content: center;
+  font: 600 19px/1.3 var(--sans);
+  border-radius: 14px;
+  border: 1.5px solid var(--line);
+  background: var(--ui-card);
+}
+.lb-app .lb-spot-names button[aria-pressed="true"] {
+  background: var(--lb-cover);
+  border-color: var(--lb-cover);
+  color: #f2f4ee;
+}
+@media (max-width: 719px) {
+  .lb-app .lb-spot-card {
+    gap: 8px;
+  }
+  .lb-app .lb-spot-text {
+    font-size: 14px;
+  }
+  .lb-app .lb-spot-wide {
+    display: none;
+  }
+  .lb-app .lb-spot-card.is-playing button {
+    min-height: 104px;
+    padding: 9px;
+  }
+  .lb-app .lb-spot-card.is-setup > li,
+  .lb-app .lb-spot-card.is-reveal > li {
+    padding: 9px 9px 4px;
+  }
+  .lb-app .lb-spot-names {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}

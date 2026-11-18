@@ -7,6 +7,9 @@ import {
   samePageBank,
   samePagePrompts,
   samePageQuestion,
+  SPOT_SIZE,
+  spotBank,
+  spotSquare,
   type SameQuestion,
 } from "./play-content";
 
@@ -83,8 +86,17 @@ export type Player = { id: string; name: string; audience?: Audience };
 /** One player's own line about a finished round. */
 export type Reflection = { playerId: string; text: string };
 export const REFLECTION_LIMIT = 280;
-export type GameKind = "joy" | "story" | "match";
-export const gameKinds: GameKind[] = ["joy", "story", "match"];
+export type GameKind = "joy" | "story" | "match" | "spot";
+export const gameKinds: GameKind[] = ["joy", "story", "match", "spot"];
+/**
+ * Spot it!: the card's squares (ids from play-content) and, for each square,
+ * who spotted it: a player's index in `players`, SPOT_ALL for "We all did",
+ * or null while it's still waiting.
+ */
+export type SpotCard = { squares: string[]; marks: (number | null)[] };
+export const SPOT_ALL = -1;
+/** "Where were you headed?" — a few words, e.g. "Grandma’s". */
+export const PLACE_LIMIT = 60;
 export type Game = {
   audience?: Audience;
   /** 1: one answer per turn in `choices`. 2: turns of several answers in `answers`. */
@@ -104,6 +116,10 @@ export type Game = {
   title?: string;
   /** After the reveal, each player may add one line of their own. */
   reflections?: Reflection[];
+  /** Spot it!: the card and who spotted what. */
+  spot?: SpotCard;
+  /** Spot it!: where the car was headed, when someone said. */
+  place?: string;
   approvals: boolean[];
   startedAt: string;
   updatedAt: string;
@@ -144,6 +160,10 @@ export type PlayRecord = {
   title?: string;
   /** Each player's own line about the round, when they wrote one. */
   reflections?: Reflection[];
+  /** Spot it!: the card, with marks by index into `players`. */
+  spot?: SpotCard;
+  /** Spot it!: where the car was headed. */
+  place?: string;
 };
 export const PLAY_LIMIT = 500;
 /** Play records keep answers for the newest rounds only. */
@@ -481,7 +501,7 @@ export const turnCount = (g: Game) => turnPlan(g).length;
 // change starts a new version rather than editing this one.
 const isV2 = (g: Pick<Game, "contentVersion">) => g.contentVersion === 2;
 /** The kinds that start new rounds at contentVersion 2. */
-const roundKinds: GameKind[] = ["match", "joy", "story"];
+const roundKinds: GameKind[] = ["match", "joy", "story", "spot"];
 /** A story runs at least this many turns, so two players go around more than once. */
 export const STORY_TURNS = 5;
 export const TITLE_LIMIT = 60;
@@ -560,6 +580,8 @@ function guessOptions(g: Game, target: Player, pick: number) {
 /** Every turn of this round, in order: who plays it and what they're asked. */
 export function turnPlan(g: Game): Turn[] {
   const n = g.players.length;
+  // Spot it! has no turns: anyone calls out, and the holder taps the card.
+  if (g.kind === "spot") return [];
   if (g.kind === "match") {
     const asks = samePageQuestions(g).map((q) => ({
       prompt: q.prompt,
@@ -803,6 +825,31 @@ function roundSummary(r: PlayRecord): {
     });
     return { summary, sections };
   }
+  if (r.kind === "spot" && r.spot) {
+    const result = spotResult(r.players, r.spot);
+    const spotted = result.squares.filter((x) => x.by !== null && x.text);
+    const missed = result.squares.filter((x) => x.by === null && x.text);
+    return {
+      summary: result.spotted
+        ? `${spotSummary(r.players, r.spot)} ${result.spotted} of ${r.spot.squares.length} spotted.`
+        : "Nothing spotted this time.",
+      sections: [
+        ...(spotted.length
+          ? [
+              {
+                label: "Spotted",
+                text: spotted
+                  .map((x) => `${x.text}: ${x.by === SPOT_ALL ? "everyone" : x.who}`)
+                  .join(" · "),
+              },
+            ]
+          : []),
+        ...(missed.length
+          ? [{ label: "Still out there", text: missed.map((x) => x.text).join(" · ") }]
+          : []),
+      ],
+    };
+  }
   if (r.kind === "story" && r.story) {
     return {
       summary: r.title
@@ -855,6 +902,82 @@ function chooseQuestions(audience: Audience, recent: string[]) {
     .filter((q) => recent.includes(q.id))
     .sort((a, b) => recent.indexOf(b.id) - recent.indexOf(a.id));
   return [...fresh, ...stale].slice(0, SAME_PAGE_COUNT).map((q) => q.id);
+}
+
+// ── Spot it! ────────────────────────────────────────────────────────────────
+// One phone, held by a passenger who reads aloud and taps. There are no turns
+// and nothing is private: the card fills in as people call things out.
+const spotRows = [
+  [0, 1, 2],
+  [3, 4, 5],
+  [6, 7, 8],
+  [0, 3, 6],
+  [1, 4, 7],
+  [2, 5, 8],
+  [0, 4, 8],
+  [2, 4, 6],
+];
+/** Full lines of three on the card (rows, columns and diagonals). */
+export function spotLines(card: SpotCard) {
+  return spotRows.filter((row) => row.every((i) => card.marks[i] !== null && card.marks[i] !== undefined))
+    .length;
+}
+/** Each square with who spotted it, and how many each player spotted. */
+export function spotResult(players: Pick<Player, "id" | "name">[], card: SpotCard) {
+  const squares = card.squares.map((id, i) => {
+    const by = card.marks[i] ?? null;
+    return {
+      id,
+      text: spotSquare(id)?.text || "",
+      by,
+      who:
+        by === null
+          ? ""
+          : by === SPOT_ALL
+            ? "Everyone"
+            : players[by]?.name || "",
+    };
+  });
+  const spotted = squares.filter((x) => x.by !== null).length;
+  const together = squares.filter((x) => x.by === SPOT_ALL).length;
+  const tally = players.map((player, i) => ({
+    player,
+    count: squares.filter((x) => x.by === i).length,
+  }));
+  return { squares, spotted, together, tally };
+}
+/** "Anna spotted the most: 4." */
+export function spotSummary(players: Pick<Player, "id" | "name">[], card: SpotCard) {
+  const { spotted, together, tally } = spotResult(players, card);
+  if (!spotted) return "Nothing spotted this time.";
+  const best = Math.max(0, ...tally.map((t) => t.count));
+  if (!best) return `You spotted ${together} together.`;
+  const top = tally.filter((t) => t.count === best);
+  return top.length === 1
+    ? `${top[0].player.name} spotted the most: ${best}.`
+    : `${list(top.map((t) => t.player.name))} each spotted ${best}.`;
+}
+/** "Grandma’s" from "on the way to Grandma’s", trimmed to fit. */
+export function cleanPlace(text: string) {
+  return String(text || "")
+    .trim()
+    .replace(/^(on (the|our) way to|headed to|heading to|going to|to)\s+/i, "")
+    .replace(/[.\s]+$/, "")
+    .slice(0, PLACE_LIMIT)
+    .trim();
+}
+/** The square ids on recent cards, newest first, so a new card feels fresh. */
+export function recentSquares(l: LivingState) {
+  return (l.plays || [])
+    .filter((r) => r.kind === "spot")
+    .toReversed()
+    .flatMap((r) => r.spot?.squares || []);
+}
+function chooseSquares(audience: Audience, recent: string[]) {
+  const bank = spotBank(audience);
+  const fresh = shuffled(bank.filter((q) => !recent.includes(q.id)));
+  const stale = shuffled(bank.filter((q) => recent.includes(q.id)));
+  return [...fresh, ...stale].slice(0, SPOT_SIZE).map((q) => q.id);
 }
 
 // ── Guess my small joy results ──────────────────────────────────────────────
@@ -1013,7 +1136,7 @@ export function newGame(
   kind: Game["kind"],
   players: Player[],
   editionAudience?: Audience,
-  options: { recent?: string[] } = {},
+  options: { recent?: string[]; recentSquares?: string[] } = {},
 ): Game {
   if (
     !gameKinds.includes(kind) ||
@@ -1046,6 +1169,14 @@ export function newGame(
     ...(rounds && kind === "match"
       ? { questions: chooseQuestions(audience, options.recent || []) }
       : {}),
+    ...(kind === "spot"
+      ? {
+          spot: {
+            squares: chooseSquares(audience, options.recentSquares || []),
+            marks: Array.from({ length: SPOT_SIZE }, () => null),
+          },
+        }
+      : {}),
     approvals: players.map(() => false),
     startedAt: stamp,
     updatedAt: stamp,
@@ -1063,10 +1194,28 @@ export function startGame(
     ...before,
     game: newGame(kind, players, editionAudience, {
       recent: kind === "match" ? recentQuestions(before, players) : [],
+      recentSquares: kind === "spot" ? recentSquares(before) : [],
     }),
   };
 }
 export function gameText(g: Game): string {
+  if (g.kind === "spot") {
+    if (!g.spot) return "";
+    const r = spotResult(g.players, g.spot);
+    if (!r.spotted) return "";
+    return [
+      [
+        g.place ? `On the way to ${g.place}.` : "",
+        `${r.spotted} of ${g.spot.squares.length} spotted.`,
+        spotSummary(g.players, g.spot),
+      ]
+        .filter(Boolean)
+        .join(" "),
+      ...r.squares
+        .filter((x) => x.by !== null && x.text)
+        .map((x) => `${x.text}: ${x.by === SPOT_ALL ? "everyone" : x.who}.`),
+    ].join("\n");
+  }
   if (g.kind === "match") {
     const r = samePageResult(g);
     if (!r.lines.some((l) => l.answered)) return "";
@@ -1111,7 +1260,8 @@ export function gameText(g: Game): string {
     .join(" ");
 }
 export type GameAction =
-  | { type: "start"; firstId?: string }
+  /** Spot it! can say where the car is headed as it starts. */
+  | { type: "start"; firstId?: string; place?: string }
   | { type: "ready" | "finish" }
   /** One answer, for a turn with one question; null passes the whole turn. */
   | { type: "choice"; choice: number | null }
@@ -1121,9 +1271,60 @@ export type GameAction =
   /** A story's title, picked together after the last line; "" clears it. */
   | { type: "title"; title: string }
   /** One player's own line about the round; "" takes it back. */
-  | { type: "reflect"; playerId: string; text: string };
+  | { type: "reflect"; playerId: string; text: string }
+  /** Spot it! setup: a fresh square in place of this one. */
+  | { type: "swap"; square: number }
+  /** Spot it!: who spotted this square (a player index or SPOT_ALL); null clears it. */
+  | { type: "spot"; square: number; by: number | null }
+  /** Spot it!: where the car is headed; "" clears it. */
+  | { type: "place"; place: string }
+  /** Spot it!: done spotting, show the card. */
+  | { type: "done" };
 export function advanceGame(g: Game, action: GameAction): Game {
   const stamp = now();
+  if (g.kind === "spot" && g.spot) {
+    const card = g.spot;
+    const square = "square" in action ? action.square : -1;
+    const onCard = Number.isInteger(square) && square >= 0 && square < card.squares.length;
+    if (action.type === "swap" && g.stage === "ready") {
+      if (!onCard) throw new Error("Choose a square on the card.");
+      const pool = spotBank(g.audience ?? "under-6").filter(
+        (q) => !card.squares.includes(q.id),
+      );
+      if (!pool.length) throw new Error("There are no more squares to swap in.");
+      const squares = card.squares.map((id, i) =>
+        i === square ? pool[random(pool.length)].id : id,
+      );
+      return { ...g, spot: { ...card, squares }, updatedAt: stamp };
+    }
+    if (action.type === "spot" && g.stage === "choose") {
+      const by = action.by;
+      if (
+        !onCard ||
+        !(
+          by === null ||
+          by === SPOT_ALL ||
+          (Number.isInteger(by) && by >= 0 && by < g.players.length)
+        )
+      )
+        throw new Error("Choose who spotted it.");
+      const marks = card.marks.map((m, i) => (i === square ? by : m));
+      return { ...g, spot: { ...card, marks }, updatedAt: stamp };
+    }
+    if (action.type === "place" && g.stage !== "finished") {
+      const place = cleanPlace(action.place);
+      const next = { ...g, updatedAt: stamp };
+      if (place) next.place = place;
+      else delete next.place;
+      return next;
+    }
+    if (action.type === "done" && g.stage === "choose")
+      return { ...g, stage: "reveal", updatedAt: stamp };
+    if (action.type === "start" && g.stage === "ready" && action.place !== undefined) {
+      const started = advanceGame(g, { type: "start", firstId: action.firstId });
+      return advanceGame(started, { type: "place", place: action.place });
+    }
+  }
   if (action.type === "start" && g.stage === "ready") {
     const first = action.firstId || g.players[0].id;
     if (!g.players.some((p) => p.id === first))
@@ -1226,7 +1427,11 @@ export function keepGame(book: Book): Book {
         ? "A small joy, learned together"
         : g.kind === "match"
           ? "Are we on the same page?"
-          : g.title || "Our unlikely adventure",
+          : g.kind === "spot"
+            ? g.place
+              ? `Spot it! on the way to ${g.place}`
+              : "Our road-trip card"
+            : g.title || "Our unlikely adventure",
     text: gameText(g),
     players: g.players,
     approvedBy: g.players.map((p) => p.id),
@@ -1253,6 +1458,13 @@ function roundMemory(g: Game): Partial<PlayRecord> {
     const { picks, guesses } = joyResult(g);
     return { joys: picks, guesses };
   }
+  if (g.kind === "spot")
+    return g.spot
+      ? {
+          spot: { squares: [...g.spot.squares], marks: [...g.spot.marks] },
+          ...(g.place ? { place: g.place } : {}),
+        }
+      : {};
   return {
     story: storyLines(g).map((l) => l.text),
     ...(g.title ? { title: g.title } : {}),
@@ -1264,7 +1476,9 @@ const memoryOf = (r: PlayRecord) =>
   r.guesses !== undefined ||
   r.story !== undefined ||
   r.title !== undefined ||
-  r.reflections !== undefined;
+  r.reflections !== undefined ||
+  r.spot !== undefined ||
+  r.place !== undefined;
 /** Answers stay on the newest ANSWERS_KEPT rounds; older records keep only names and a date. */
 function trimMemory(plays: PlayRecord[]) {
   let kept = 0;
@@ -1279,6 +1493,8 @@ function trimMemory(plays: PlayRecord[]) {
       delete rest.story;
       delete rest.title;
       delete rest.reflections;
+      delete rest.spot;
+      delete rest.place;
       return rest;
     })
     .toReversed();
@@ -1459,7 +1675,16 @@ export function isLiving(value: unknown): value is LivingState {
           ) &&
           optional(r.reflections, (x) =>
             reflectionsFit(x, r.players as Player[]),
-          ),
+          ) &&
+          // Records never check square ids against today's content, so a
+          // retired square can't stop a book from opening.
+          optional(
+            r.spot,
+            (x) =>
+              r.kind === "spot" &&
+              spotCardFits(x, (r.players as unknown[]).length, (id) => str(id, 60) && !!id),
+          ) &&
+          optional(r.place, (x) => r.kind === "spot" && placeFits(x)),
       ) ||
       value.plays.filter((r) => memoryOf(r as PlayRecord)).length > ANSWERS_KEPT
     )
@@ -1504,6 +1729,29 @@ export function isLiving(value: unknown): value is LivingState {
 }
 
 const stages = ["ready", "choose", "handoff", "reveal", "kept", "finished"];
+const placeFits = (x: unknown) => str(x, PLACE_LIMIT) && !!x.trim();
+/** Nine different squares, each mark a player's index, SPOT_ALL or null. */
+function spotCardFits(
+  value: unknown,
+  playerCount: number,
+  knownSquare: (id: unknown) => boolean,
+) {
+  return (
+    obj(value) &&
+    Array.isArray(value.squares) &&
+    value.squares.length === SPOT_SIZE &&
+    new Set(value.squares).size === SPOT_SIZE &&
+    value.squares.every(knownSquare) &&
+    Array.isArray(value.marks) &&
+    value.marks.length === SPOT_SIZE &&
+    value.marks.every(
+      (m) =>
+        m === null ||
+        m === SPOT_ALL ||
+        (Number.isInteger(m) && m >= 0 && m < playerCount),
+    )
+  );
+}
 /** At most one non-empty line per player, each from someone who played. */
 function reflectionsFit(value: unknown, players: Player[]) {
   return (
@@ -1580,6 +1828,22 @@ function isGame(g: unknown, sharedPages: unknown[]): boolean {
       !["reveal", "kept", "finished"].includes(String(g.stage)))
   )
     return false;
+  if (g.kind === "spot") {
+    // No turns: the card is the whole state, and it can end at any time.
+    const card = g.spot as SpotCard;
+    if (
+      !v2 ||
+      g.turn !== 0 ||
+      (g.answers as unknown[]).length ||
+      g.stage === "handoff" ||
+      !spotCardFits(g.spot, g.players.length, (id) => typeof id === "string" && !!spotSquare(id)) ||
+      (g.stage === "ready" && card.marks.some((m) => m !== null)) ||
+      !optional(g.place, placeFits)
+    )
+      return false;
+    return stageFits(g as Game, sharedPages);
+  }
+  if (g.spot !== undefined || g.place !== undefined) return false;
   const game = g as Game;
   const given = v2 ? (g.answers as unknown[]) : g.choices.map((c) => [c]);
   if (given.length !== game.turn) return false;
@@ -1610,6 +1874,10 @@ function isGame(g: unknown, sharedPages: unknown[]): boolean {
     (game.stage === "handoff" && game.turn === 0)
   )
     return false;
+  return stageFits(game, sharedPages);
+}
+/** What every stage needs, whatever the game: approvals, finishing and a kept page. */
+function stageFits(game: Game, sharedPages: unknown[]) {
   if (
     ["ready", "choose", "handoff"].includes(game.stage) &&
     game.approvals.some(Boolean)
