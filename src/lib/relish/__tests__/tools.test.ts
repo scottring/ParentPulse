@@ -34,6 +34,10 @@ import {
   builderPage,
   finishTracker,
   hasBingo,
+  namesList,
+  runningByTool,
+  runsStatus,
+  setMark,
   isTools,
   keepToolPage,
   sortPage,
@@ -211,6 +215,115 @@ describe("trackers", () => {
     ];
     for (const b of bad) expect(isTools(b)).toBe(false);
     expect(isBook({ ...emptyBook("A"), tools: bad[1] })).toBe(false);
+  });
+});
+
+describe("a habit with several people", () => {
+  const family = (): Book => ({
+    ...withPeople(),
+    people: [
+      ...withPeople().people,
+      { id: "ella", name: "Ella", role: "child", color: "sage", note: "", lessons: [] },
+      { id: "kaleb", name: "Kaleb", role: "child", color: "ochre", note: "", lessons: [] },
+    ],
+  });
+  const both = () => startTracker(startTracker(family(), "hellos", "ella"), "hellos", "kaleb");
+  it("runs one tracker per person, each marked and finished on its own", () => {
+    let book = both();
+    expect(isBook(book)).toBe(true);
+    const [ella, kaleb] = activeTrackers(book);
+    expect([ella.personId, kaleb.personId]).toEqual(["ella", "kaleb"]);
+    // The same person twice is still refused.
+    expect(() => startTracker(book, "hellos", "ella")).toThrow(/already in progress with them/);
+    book = setMark(book, ella.id, "2026-11-18", true);
+    // Marking twice the same day changes nothing; neither does unmarking twice.
+    expect(setMark(book, ella.id, "2026-11-18", true)).toBe(book);
+    expect(toolsOf(book).trackers.find((t) => t.id === kaleb.id)!.marks).toHaveLength(0);
+    for (let d = 1; d <= 9; d++) book = setMark(book, ella.id, `2026-11-0${d}`, true);
+    expect(trackerProgress(toolsOf(book).trackers[0]).complete).toBe(true);
+    book = setMark(book, kaleb.id, "2026-11-18", true);
+    expect(runsStatus(book, activeTrackers(book))).toBe("Ella 10 of 10 · Kaleb 1 of 10");
+    book = finishTracker(book, ella.id, "  She ran to the door every time.  ");
+    expect(isBook(book)).toBe(true);
+    const page = book.journal![0];
+    expect(page.title).toBe("Ten real hellos · Ella");
+    expect(page.people).toEqual(["ella"]);
+    expect(page.text).toContain("10 of 10 days");
+    expect(page.text.endsWith("She ran to the door every time.")).toBe(true);
+    // Kaleb carries on, still in the order he was started.
+    expect(activeTrackers(book).map((t) => t.personId)).toEqual(["kaleb"]);
+    expect(runsStatus(book, activeTrackers(book))).toBe("1 of 10");
+    // Ella can start again later; her finished run is kept with its page.
+    expect(() => startTracker(book, "hellos", "ella")).not.toThrow();
+  });
+  it("groups habits for Do something and Your book, and names people plainly", () => {
+    let book = both();
+    book = startTracker(book, "thanks-week", "anna");
+    expect(runningByTool(book).map((g) => [g.toolId, g.runs.length])).toEqual([
+      ["hellos", 2],
+      ["thanks-week", 1],
+    ]);
+    book = startTracker(book, "hellos", "anna");
+    const people = { ...book, people: [...book.people, { id: "leo", name: "Leo", role: "child", color: "rose", note: "", lessons: [] }] };
+    const four = startTracker(people, "hellos", "leo");
+    expect(runsStatus(four, runningByTool(four)[0].runs)).toBe("with 4 people");
+    expect(namesList(["Ella"])).toBe("Ella");
+    expect(namesList(["Ella", "Kaleb"])).toBe("Ella and Kaleb");
+    expect(namesList(["Ella", "Kaleb", "Leo"])).toBe("Ella, Kaleb and Leo");
+  });
+  it("keeps a habit that isn't about anyone to one at a time", () => {
+    const book = startTracker(family(), "kindness-bingo", "ella");
+    expect(() => startTracker(book, "kindness-bingo", "kaleb")).toThrow(/already in progress/);
+    const run = activeTrackers(book)[0];
+    expect(isTools({ version: 1, trackers: [run, { ...run, id: "other", personId: "kaleb" }] })).toBe(false);
+  });
+  it("accepts the old one-tracker shape and the new several-people shape, and rejects duplicates", () => {
+    // A book from before: one active hellos tracker, no new fields anywhere.
+    const old = {
+      version: 1,
+      trackers: [
+        {
+          id: "run-1",
+          toolId: "hellos",
+          personId: "kaleb",
+          startedAt: "2026-11-10T08:00:00.000Z",
+          marks: [
+            { key: "2026-11-10", at: "2026-11-10T08:00:00.000Z" },
+            { key: "2026-11-12", at: "2026-11-12T08:00:00.000Z" },
+          ],
+        },
+      ],
+    };
+    expect(isTools(old)).toBe(true);
+    expect(isBook({ ...family(), tools: old })).toBe(true);
+    // It carries on unchanged and can take a second person.
+    const book = startTracker({ ...family(), tools: old as never }, "hellos", "ella");
+    expect(toolsOf(book).trackers[0]).toEqual(old.trackers[0]);
+    expect(isTools(toolsOf(book))).toBe(true);
+    const [kaleb, ella] = toolsOf(book).trackers;
+    const bad = [
+      { version: 1, trackers: [kaleb, { ...kaleb, id: "again" }] },
+      { version: 1, trackers: [ella, { ...ella, id: "again" }] },
+      { version: 1, trackers: [kaleb, { ...ella, id: kaleb.id }] },
+      { version: 1, trackers: [kaleb, { ...ella, personId: 7 }] },
+      { version: 1, trackers: [kaleb, { ...ella, marks: [{ key: "soon", at: ella.startedAt }] }] },
+    ];
+    for (const b of bad) expect(isTools(b)).toBe(false);
+    // A finished run for the same person alongside an active one is fine.
+    expect(
+      isTools({ version: 1, trackers: [{ ...kaleb, id: "done", finishedAt: kaleb.startedAt }, kaleb, ella] }),
+    ).toBe(true);
+  });
+  it("survives an encrypt and unlock round trip", async () => {
+    let book = both();
+    const [ella] = activeTrackers(book);
+    book = setMark(book, ella.id, "2026-11-18", true, "Hug at the door");
+    const { envelope } = await createVault(book, "long testing-only passphrase");
+    const raw = JSON.stringify(envelope);
+    expect(raw).not.toContain("Hug at the door");
+    const back = (await unlockVault(raw, "long testing-only passphrase")).book;
+    expect(back).toEqual(book);
+    expect(activeTrackers(back).map((t) => t.personId)).toEqual(["ella", "kaleb"]);
   });
 });
 

@@ -5,14 +5,14 @@ import { bookPages, PLAY_RECORD, type BookPage } from "@/lib/relish/pages";
 import { cardPeople, manualOf, type ManualCard } from "@/lib/relish/manual";
 import { livingOf, pendingPractice } from "@/lib/relish/living";
 import {
-  activeTrackers,
   DAY_TOOL,
   dayStatus,
   dueCheckBacks,
   openCheckBacks,
   toolById,
+  runningByTool,
+  runsStatus,
   toolsOf,
-  trackerProgress,
   type CheckBackAnswer,
 } from "@/lib/relish/tools";
 import CheckBackCard from "./CheckBack";
@@ -189,7 +189,8 @@ export default function YourBook({
   const drafts = (book.journal || [])
     .filter((e) => e.status === "draft")
     .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  const running = activeTrackers(book);
+  // One line per habit, however many people it's with.
+  const running = runningByTool(book);
   const day = toolsOf(book).day;
   const plans = onCheckBack ? openCheckBacks(book) : [];
   const pages = pagesFor(book, who, query);
@@ -450,24 +451,24 @@ export default function YourBook({
                 </span>
               </button>
             )}
-            {running.map((run) => {
-              const t = toolById(run.toolId);
-              const p = trackerProgress(run);
+            {running.map(({ toolId, runs }) => {
+              const t = toolById(toolId);
+              const one = runs.length === 1 ? runs[0] : undefined;
               return (
                 <button
-                  key={run.id}
+                  key={toolId}
                   className="rp-going-item"
                   disabled={busy}
-                  onClick={() => onExercise(run.toolId)}
+                  onClick={() => onExercise(toolId)}
                 >
                   <Clock />
                   <span>
                     <span className="rp-going-kicker">
-                      Habit · {p.done} of {p.total}
+                      Habit · {runsStatus(book, runs)}
                     </span>
                     <span className="rp-going-title">
                       {t?.title}
-                      {run.personId ? ` · ${nameOf(run.personId)}` : ""}
+                      {one?.personId ? ` · ${nameOf(one.personId)}` : ""}
                     </span>
                   </span>
                 </button>

@@ -27,7 +27,7 @@ import {
   DAY_TOOL,
   dayStatus,
   toolsOf,
-  trackerProgress,
+  runsStatus,
 } from "@/lib/relish/tools";
 import type { NudgeAction } from "@/lib/relish/nudges";
 import Illustration from "./Illustration";
@@ -104,11 +104,8 @@ export default function DoSomething({
       const id = item.action.id;
       const day = toolsOf(book).day;
       if (id === DAY_TOOL && day) return `In progress · ${dayStatus(day)}`;
-      const run = running.find((r) => r.toolId === id);
-      if (run) {
-        const p = trackerProgress(run);
-        return `In progress · ${p.done} of ${p.total}`;
-      }
+      const runs = running.filter((r) => r.toolId === id);
+      if (runs.length) return `In progress · ${runsStatus(book, runs)}`;
     }
     return "";
   }

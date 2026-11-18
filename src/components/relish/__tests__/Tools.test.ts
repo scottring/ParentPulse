@@ -12,7 +12,7 @@ import {
 import { webcrypto } from "node:crypto";
 import { emptyBook, type Book } from "@/lib/relish/model";
 import { advanceGame, livingOf, newGame } from "@/lib/relish/living";
-import { toolsOf } from "@/lib/relish/tools";
+import { todayKey, toolsOf, type ToolsState } from "@/lib/relish/tools";
 import LivingBook from "../LivingBook";
 Object.defineProperty(globalThis, "crypto", {
   value: webcrypto,
@@ -204,10 +204,26 @@ it("runs a day-by-day checklist across visits and finishes into a page", async (
   expect(screen.getByText(/Each mark saves as you go/)).toBeTruthy();
   // Someone is required here, so "No one in particular" is not offered.
   expect(screen.queryByRole("radio", { name: "No one in particular" })).toBeNull();
-  fireEvent.click(screen.getByRole("radio", { name: "Sam" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Sam" }));
   fireEvent.click(screen.getByRole("button", { name: /Start/ }));
-  fireEvent.click(await screen.findByRole("button", { name: "I did it today" }));
-  await screen.findByRole("button", { name: /Done today/ });
+  // The active screen: who it's with, today's effort, the one instruction, ten marks.
+  await screen.findByText("With Sam");
+  expect(screen.getByText("Under a minute a day, at your own pace")).toBeTruthy();
+  expect(screen.getAllByText(/six seconds of your full attention/)).toHaveLength(1);
+  expect(screen.getByText("0 of 10 days")).toBeTruthy();
+  expect(document.querySelectorAll(".rt-days li")).toHaveLength(10);
+  // No repeated how-to-finish text, save notice or disabled finish button.
+  expect(screen.queryByText(/Finished when/)).toBeNull();
+  expect(screen.queryByText(/saves as you go/)).toBeNull();
+  expect(screen.queryByRole("button", { name: /Finish and keep/ })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Mark today" }));
+  await screen.findByText("1 of 10 days · Today marked");
+  expect(screen.queryByRole("button", { name: "Mark today" })).toBeNull();
+  expect(document.querySelectorAll('.rt-days li[data-done="true"]')).toHaveLength(1);
+  // Undo, then mark again: never two marks for one day.
+  fireEvent.click(screen.getByRole("button", { name: "Undo today" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Mark today" }));
+  await screen.findByText("1 of 10 days · Today marked");
   expect(toolsOf(app.stored()).trackers[0].marks).toHaveLength(1);
   app.unmount();
   const again = open(app.stored());
@@ -215,11 +231,106 @@ it("runs a day-by-day checklist across visits and finishes into a page", async (
     screen.getByRole("button", { name: /Ten real hellos.*In progress · 1 of 10/ }),
   );
   expect(screen.getByText(/1 of 10 days/)).toBeTruthy();
+  // Finishing early lives under Activity options.
+  fireEvent.click(screen.getByRole("button", { name: /Activity options/ }));
   fireEvent.click(screen.getByRole("button", { name: "Finish and keep a page" }));
   await screen.findByRole("heading", { name: "Kept in your book" });
   const stored = again.stored();
   expect(toolsOf(stored).trackers[0].finishedAt).toBeTruthy();
   expect(stored.journal![0].title).toBe("Ten real hellos · Sam");
+});
+const parent = (tools?: ToolsState): Book => ({
+  ...emptyBook("Scott"),
+  profile: { kind: "adult" },
+  people: [
+    { id: "ella", name: "Ella", role: "child", color: "sage", note: "", lessons: [] },
+    { id: "kaleb", name: "Kaleb", role: "child", color: "ochre", note: "", lessons: [] },
+  ],
+  ...(tools ? { tools } : {}),
+});
+/** `n` marks on earlier days, so today is still open. */
+const earlier = (n: number) =>
+  Array.from({ length: n }, (_, i) => ({
+    key: `2026-10-${String(i + 10).padStart(2, "0")}`,
+    at: "2026-10-10T08:00:00.000Z",
+  }));
+const run = (id: string, personId: string, marks = 0) => ({
+  id,
+  toolId: "hellos",
+  personId,
+  startedAt: "2026-10-09T08:00:00.000Z",
+  marks: earlier(marks),
+});
+it("does ten real hellos with two people at once, each marked on their own", async () => {
+  const app = open(parent());
+  fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos/ }));
+  // Several people can be chosen for a habit about someone.
+  fireEvent.click(screen.getByRole("checkbox", { name: "Ella" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Kaleb" }));
+  fireEvent.click(screen.getByRole("button", { name: /Start/ }));
+  await screen.findByText("With Ella and Kaleb");
+  expect(toolsOf(app.stored()).trackers.map((t) => t.personId)).toEqual(["ella", "kaleb"]);
+  // The instruction once; one row each with its own button.
+  expect(screen.getAllByText(/six seconds of your full attention/)).toHaveLength(1);
+  const rows = () => [...document.querySelectorAll<HTMLElement>(".rt-habit-row")];
+  expect(rows().map((r) => r.querySelector("strong")!.textContent)).toEqual(["Ella", "Kaleb"]);
+  fireEvent.click(screen.getByRole("button", { name: "Mark today for Ella" }));
+  await waitFor(() => expect(within(rows()[0]).getByText(/Marked today/)).toBeTruthy());
+  expect(within(rows()[0]).getByText("1 of 10 days")).toBeTruthy();
+  // Kaleb's button is untouched; order stays put.
+  expect(screen.getByRole("button", { name: "Mark today for Kaleb" })).toBeTruthy();
+  expect(rows().map((r) => r.querySelector("strong")!.textContent)).toEqual(["Ella", "Kaleb"]);
+  fireEvent.click(screen.getByRole("button", { name: "Undo today for Ella" }));
+  await screen.findByRole("button", { name: "Mark today for Ella" });
+  expect(toolsOf(app.stored()).trackers[0].marks).toHaveLength(0);
+  // Do something names both.
+  fireEvent.click(screen.getByRole("button", { name: /Back to Do something/ }));
+  expect(
+    await screen.findByRole("button", { name: /Ten real hellos.*In progress · Ella 0 of 10 · Kaleb 0 of 10/ }),
+  ).toBeTruthy();
+});
+it("lets one person finish first while the other carries on", async () => {
+  const app = open(parent({ version: 1, trackers: [run("e", "ella", 10), run("k", "kaleb", 3)] }));
+  fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos/ }));
+  await screen.findByText("Ten hellos with Ella.");
+  const [ella, kaleb] = [...document.querySelectorAll<HTMLElement>(".rt-habit-row")];
+  expect(within(kaleb).getByText("3 of 10 days")).toBeTruthy();
+  expect(within(ella).queryByRole("button", { name: /Mark today/ })).toBeNull();
+  fireEvent.change(within(ella).getByRole("textbox", { name: /Anything you want to remember/ }), {
+    target: { value: "She started waving from the window." },
+  });
+  fireEvent.click(within(ella).getByRole("button", { name: "Keep Ella’s page" }));
+  await screen.findByText(/Ella’s page is kept in your book/);
+  const stored = app.stored();
+  expect(stored.journal![0].title).toBe("Ten real hellos · Ella");
+  expect(stored.journal![0].text).toContain("She started waving from the window.");
+  // Kaleb alone now: the single-person screen, his marks intact.
+  expect(screen.getByText("With Kaleb")).toBeTruthy();
+  expect(screen.getByText("3 of 10 days")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Mark today" }));
+  await screen.findByText("4 of 10 days · Today marked");
+  expect(toolsOf(app.stored()).trackers.find((t) => t.id === "k")!.marks.at(-1)!.key).toBe(todayKey());
+});
+it("shows a habit started before this change unchanged, and can add someone mid-way", async () => {
+  const app = open(parent({ version: 1, trackers: [run("k", "kaleb", 4)] }));
+  fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos.*In progress · 4 of 10/ }));
+  await screen.findByText("With Kaleb");
+  expect(screen.getByText("4 of 10 days")).toBeTruthy();
+  expect(document.querySelectorAll('.rt-days li[data-done="true"]')).toHaveLength(4);
+  fireEvent.click(screen.getByRole("button", { name: /Activity options/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Add someone" }));
+  fireEvent.click(within(screen.getByRole("group", { name: "Add someone" })).getByRole("button", { name: "Ella" }));
+  await screen.findByText("With Kaleb and Ella");
+  expect(toolsOf(app.stored()).trackers.map((t) => [t.personId, t.marks.length])).toEqual([
+    ["kaleb", 4],
+    ["ella", 0],
+  ]);
+  // Finishing early keeps a page for whoever has days marked.
+  fireEvent.click(screen.getByRole("button", { name: /Activity options/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Finish and keep a page" }));
+  await screen.findByRole("heading", { name: "Kept in your book" });
+  expect(app.stored().journal!.map((e) => e.title)).toEqual(["Ten real hellos · Kaleb"]);
+  expect(toolsOf(app.stored()).trackers.filter((t) => !t.finishedAt)).toHaveLength(0);
 });
 it("offers children with their own books in the library, and notes the one chosen", async () => {
   const kids = [
@@ -229,9 +340,9 @@ it("offers children with their own books in the library, and notes the one chose
   const app = open({ ...emptyBook("Scott"), profile: { kind: "adult" } }, kids);
   fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos/ }));
   expect(screen.queryByText(/Add someone to your book first/)).toBeNull();
-  fireEvent.click(screen.getByRole("radio", { name: "Kaleb" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Kaleb" }));
   fireEvent.click(screen.getByRole("button", { name: /Start/ }));
-  await screen.findByRole("button", { name: "I did it today" });
+  await screen.findByRole("button", { name: "Mark today" });
   const stored = app.stored();
   const kaleb = stored.people.find((p) => p.name === "Kaleb")!;
   expect(kaleb.role).toBe("child");
