@@ -1,0 +1,184 @@
+"use client";
+import { useState, type ReactNode, type RefObject } from "react";
+import { Camera, Mic, Pencil } from "lucide-react";
+import type { Book } from "@/lib/relish/model";
+import type { Nudge, NudgeAction } from "@/lib/relish/nudges";
+import type { DoFilter } from "@/lib/relish/catalog";
+import Illustration, { Emblem } from "./Illustration";
+import {
+  emblemFor,
+  exerciseIllustration,
+  gameIllustration,
+  isPainted,
+  illustrationSrc,
+  type IllustrationName,
+} from "./illustrations";
+import { icons } from "./Home";
+
+/** The picture beside a kid suggestion. */
+function nudgeArt(action: NudgeAction): IllustrationName {
+  if (action.kind === "exercise")
+    return exerciseIllustration[action.id] ?? "do-something";
+  if (action.kind === "game") return gameIllustration[action.game] ?? "do-something";
+  if (action.kind === "reflect") return "think-it-through";
+  return "jot";
+}
+
+/** A child's own cloth-covered book: their name and emblem in gold. */
+export function KidCover({ name }: { name: string }) {
+  const emblem = emblemFor(name);
+  const painted = isPainted("kid-cover");
+  return (
+    <div
+      className={`rk-cover ${painted ? "rk-cover-painted" : ""}`}
+      aria-hidden="true"
+      style={
+        painted
+          ? { backgroundImage: `url(${illustrationSrc("kid-cover")})` }
+          : undefined
+      }
+      data-emblem={emblem}
+    >
+      <span className="rk-cover-pages" />
+      <span className="rk-cover-cloth">
+        <span className="rk-cover-name">
+          {name}’s
+          <br />
+          book
+        </span>
+        <svg className="rk-cover-emblem" viewBox="0 0 200 200" focusable="false">
+          {isPainted(`emblem-${emblem}` as IllustrationName) ? (
+            <image
+              href={illustrationSrc(`emblem-${emblem}` as IllustrationName)}
+              width="200"
+              height="200"
+            />
+          ) : (
+            <Emblem kind={emblem} />
+          )}
+        </svg>
+      </span>
+      <span className="rk-cover-ribbon" />
+    </div>
+  );
+}
+
+/**
+ * Home for a child's book: their book, three ways to add a page, one
+ * suggestion fitted to their age, and a few more things to try.
+ */
+export default function KidHome({
+  book,
+  list,
+  start,
+  busy,
+  headingRef,
+  onNudge,
+  onFilter,
+  onBook,
+  onWrite,
+  onRecord,
+  onPhoto,
+}: {
+  book: Book;
+  list: Nudge[];
+  start: number;
+  busy: boolean;
+  headingRef: RefObject<HTMLHeadingElement | null>;
+  onNudge: (action: NudgeAction) => void;
+  onFilter: (filter: DoFilter) => void;
+  onBook: () => void;
+  onWrite?: () => void;
+  onRecord?: () => void;
+  onPhoto?: () => void;
+}) {
+  const [i, setI] = useState(start);
+  const nudge = list[i % Math.max(list.length, 1)];
+  const name = book.owner.trim() || "you";
+  const more: { filter: DoFilter; label: string; icon: ReactNode }[] = [
+    { filter: "5", label: "Try an exercise", icon: icons.exercise },
+    { filter: "kids", label: "Play a game", icon: icons.game },
+    { filter: "hard", label: "Think it through", icon: icons.think },
+  ];
+  return (
+    <main className="rp-place rk-home" aria-labelledby="rk-home-title">
+      <section className="rk-hero">
+        <KidCover name={name} />
+        <div className="rk-hello">
+          <h1 id="rk-home-title" ref={headingRef} tabIndex={-1}>
+            Hi, {name}.
+          </h1>
+          <p className="rk-question">What did you notice today?</p>
+          <div className="rk-add" role="group" aria-label="Add a page">
+            {onWrite && (
+              <button type="button" disabled={busy} onClick={onWrite}>
+                <Pencil size={26} strokeWidth={1.6} aria-hidden="true" /> Write
+              </button>
+            )}
+            {onRecord && (
+              <button type="button" disabled={busy} onClick={onRecord}>
+                <Mic size={26} strokeWidth={1.6} aria-hidden="true" /> Record
+              </button>
+            )}
+            {onPhoto && (
+              <button type="button" disabled={busy} onClick={onPhoto}>
+                <Camera size={26} strokeWidth={1.6} aria-hidden="true" /> Add a
+                photo
+              </button>
+            )}
+          </div>
+          <button type="button" className="ui-link rk-open" disabled={busy} onClick={onBook}>
+            Open my book
+          </button>
+        </div>
+      </section>
+      {nudge && (
+        <section className="rk-banner" aria-label="Something to try">
+          <div className="rk-banner-art">
+            <Illustration name={nudgeArt(nudge.action)} size="100%" />
+          </div>
+          <div className="rk-banner-text">
+            <h2 aria-live="polite">{nudge.title ?? nudge.text}</h2>
+            <p>{nudge.title ? nudge.text : nudge.why}</p>
+            <div className="rk-banner-actions">
+              <button
+                type="button"
+                className="rk-start"
+                disabled={busy}
+                onClick={() => onNudge(nudge.action)}
+              >
+                {nudge.cta}
+              </button>
+              {list.length > 1 && (
+                <button
+                  type="button"
+                  className="ui-link"
+                  onClick={() => setI((n) => n + 1)}
+                >
+                  Show me another
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+      <section className="rk-more" aria-labelledby="rk-more-title">
+        <h2 id="rk-more-title">More to try</h2>
+        <div className="rk-more-links">
+          {more.map((m) => (
+            <button
+              key={m.filter}
+              type="button"
+              className="ui-link"
+              disabled={busy}
+              onClick={() => onFilter(m.filter)}
+            >
+              <span className="rk-more-icon">{m.icon}</span>
+              {m.label}
+            </button>
+          ))}
+        </div>
+      </section>
+    </main>
+  );
+}

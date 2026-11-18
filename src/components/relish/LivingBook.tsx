@@ -126,6 +126,7 @@ export default function LivingBook({
   const [capture, setCapture] = useState<{
     draft: JournalDraft;
     voice: boolean;
+    photo?: boolean;
   } | null>(null);
   const [view, setView] = useState<View>("home"),
     [closed, setClosed] = useState(false),
@@ -194,9 +195,9 @@ export default function LivingBook({
       if (alive.current) setWorking(false);
     }
   }
-  function quickEntry(voice = false, draft = newJournalDraft()) {
+  function quickEntry(voice = false, draft = newJournalDraft(), photo = false) {
     navigate("words");
-    setCapture({ draft, voice });
+    setCapture({ draft, voice, photo });
     setJournalEditing(true);
   }
   function openPage(id: string) {
@@ -724,6 +725,7 @@ export default function LivingBook({
             onQuickWrite={(text, voice) =>
               quickEntry(voice, { ...newJournalDraft(), text })
             }
+            onQuickPhoto={() => quickEntry(false, newJournalDraft(), true)}
           />
         ) : view === "do" && !sharedView ? (
           <DoSomething
@@ -819,6 +821,7 @@ export default function LivingBook({
             navigation={journalNavigation}
             initialDraft={capture?.draft}
             initialVoice={capture?.voice}
+            initialPhoto={capture?.photo}
             initialReading={reading}
             book={book}
             photos={vault.photos}

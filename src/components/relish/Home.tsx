@@ -7,6 +7,7 @@ import { pageKind, type DoFilter, type Tone } from "@/lib/relish/catalog";
 import { audienceOf } from "@/lib/relish/profiles";
 import { JOURNAL_TEXT_LIMIT } from "@/lib/relish/journal";
 import Illustration from "./Illustration";
+import KidHome from "./KidHome";
 
 export type FamilyPerson = {
   id: string;
@@ -85,6 +86,7 @@ export default function Home({
   onPage,
   onQuickSave,
   onQuickWrite,
+  onQuickPhoto,
 }: {
   book: Book;
   names: string[];
@@ -101,12 +103,30 @@ export default function Home({
   onQuickSave?: (text: string) => Promise<string>;
   /** Opens the full editor, carrying anything already typed. */
   onQuickWrite?: (text: string, voice: boolean) => void;
+  /** Opens a new page with the photo picker showing. */
+  onQuickPhoto?: () => void;
 }) {
   const list = nudgesFor(book, names);
   const [i, setI] = useState(() => nudgeStart(list.length));
   const nudge = list[i % Math.max(list.length, 1)];
   const child = audienceOf(book) !== "adult";
   const latest = bookPages(book).toReversed().slice(0, 3);
+  if (child)
+    return (
+      <KidHome
+        book={book}
+        list={list}
+        start={i}
+        busy={busy}
+        headingRef={headingRef}
+        onNudge={onNudge}
+        onFilter={onFilter}
+        onBook={onBook}
+        onWrite={onQuickWrite && (() => onQuickWrite("", false))}
+        onRecord={onQuickWrite && (() => onQuickWrite("", true))}
+        onPhoto={onQuickPhoto}
+      />
+    );
   const tiles: {
     filter: DoFilter;
     tone: Tone;

@@ -84,6 +84,7 @@ export default function Journal({
   onAlbum,
   initialDraft,
   initialVoice = false,
+  initialPhoto = false,
   initialReading,
   onBack,
   navigation,
@@ -103,6 +104,8 @@ export default function Journal({
   onAlbum?: () => void;
   initialDraft?: JournalDraft;
   initialVoice?: boolean;
+  /** Opens the new page with the photo picker showing. */
+  initialPhoto?: boolean;
   /** Opens straight onto one kept page (a BookPage id). */
   initialReading?: string;
   /** When set, "My pages" returns here instead of the page list. */
@@ -150,6 +153,7 @@ export default function Journal({
           initial={editor}
           navigation={navigation}
           initialVoice={initialVoice && editor.id === initialDraft?.id}
+          initialPhoto={initialPhoto && editor.id === initialDraft?.id}
           initialEntry={editingEntry}
           save={save}
           sample={sample}
@@ -528,10 +532,12 @@ export function JournalEditor({
   book,
   photos,
   initialVoice = false,
+  initialPhoto = false,
   navigation,
 }: {
   initial: JournalDraft;
   initialVoice?: boolean;
+  initialPhoto?: boolean;
   navigation?: JournalNavigation;
   initialEntry?: JournalEntry;
   save: Save;
@@ -544,7 +550,7 @@ export function JournalEditor({
   const [draft, setDraft] = useState<JournalDraft>(initial);
   const editorTyping = useTypingSound();
   const [panel, setPanel] = useState<"photo" | "people" | "options" | null>(
-    null,
+    initialPhoto ? "photo" : null,
   );
   const [mediaBusy, setMediaBusy] = useState(false);
   const [navigationNotice, setNavigationNotice] = useState("");

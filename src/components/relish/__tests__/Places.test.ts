@@ -1,12 +1,9 @@
 // @vitest-environment happy-dom
-import { createElement, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { webcrypto } from "node:crypto";
 import { emptyBook, sampleBook, type Book } from "@/lib/relish/model";
 import { writeJournalPage, newJournalDraft } from "@/lib/relish/journal";
-import LivingBook from "../LivingBook";
-import type { FamilyPerson } from "../Home";
 Object.defineProperty(globalThis, "crypto", {
   value: webcrypto,
   configurable: true,
@@ -18,40 +15,8 @@ vi.mock("../Sensory", () => ({
 }));
 afterEach(cleanup);
 
-export function openBook(
-  book: Book = { ...emptyBook("Robin"), profile: { kind: "adult" } },
-  extra: { family?: FamilyPerson[]; mode?: "open" | "sample" } = {},
-) {
-  let stored = book;
-  const lock = vi.fn();
-  function Harness() {
-    const [current, setCurrent] = useState(stored);
-    return createElement(LivingBook, {
-      family: extra.family,
-      vault: {
-        book: current,
-        mode: extra.mode || "open",
-        editions: [],
-        editionId: "places-test",
-        shelf: vi.fn(),
-        select: vi.fn(),
-        remove: vi.fn(),
-        busy: false,
-        error: "",
-        open: vi.fn(),
-        lock,
-        backup: vi.fn(),
-        photos: { add: vi.fn(), load: vi.fn() },
-        save: async (change) => {
-          stored = typeof change === "function" ? change(stored) : change;
-          setCurrent(stored);
-        },
-      },
-    });
-  }
-  render(createElement(Harness));
-  return { stored: () => stored, lock };
-}
+import { openBook } from "./bookHarness";
+export { openBook };
 
 it("opens on Home with one suggestion, another on request, and time tiles", () => {
   openBook();
