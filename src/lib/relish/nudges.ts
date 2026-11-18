@@ -12,6 +12,8 @@ export type NudgeAction =
   | { kind: "reflect" };
 export type Nudge = {
   id: string;
+  /** A short name for the kids' Home banner, e.g. "Kindness spotting". */
+  title?: string;
   text: string;
   why: string;
   time: string;
@@ -76,9 +78,9 @@ export const nudgeTemplates: Template[] = [
   {
     id: "hard-moment",
     audiences: adult,
-    time: "About 5 minutes",
-    text: "Is something sitting heavy? Think it through for five minutes.",
-    why: "A few questions, then one small plan. You can stop at any step.",
+    time: "About 3 minutes",
+    text: "Did something happen today that you keep thinking about? Write it down.",
+    why: "Pick what happened and write a sentence or two. You can stop there.",
     cta: "Think it through",
     action: { kind: "reflect" },
   },
@@ -113,6 +115,7 @@ export const nudgeTemplates: Template[] = [
   // Ages 13–17
   {
     id: "teen-upset",
+    title: "What helps",
     audiences: teen,
     time: "About 3 minutes",
     text: "Sort what actually helps when you’re upset, and what doesn’t.",
@@ -122,6 +125,7 @@ export const nudgeTemplates: Template[] = [
   },
   {
     id: "teen-trial",
+    title: "Thought on trial",
     audiences: teen,
     time: "About 4 minutes",
     text: "Put one harsh thought about yourself on trial.",
@@ -131,6 +135,7 @@ export const nudgeTemplates: Template[] = [
   },
   {
     id: "teen-write",
+    title: "One thing to remember",
     audiences: teen,
     time: "About 1 minute",
     text: "Write down one thing from today you’d want to remember in a year.",
@@ -140,6 +145,7 @@ export const nudgeTemplates: Template[] = [
   },
   {
     id: "teen-thanks",
+    title: "Specific thanks",
     audiences: teen,
     time: "About a minute a day",
     text: "Thank someone for something specific today.",
@@ -150,6 +156,7 @@ export const nudgeTemplates: Template[] = [
   // Ages 9–12
   {
     id: "tween-write",
+    title: "Best part of the day",
     audiences: tween,
     time: "About 1 minute",
     text: "What was the best part of your day? Write it, say it, or add a photo.",
@@ -159,6 +166,7 @@ export const nudgeTemplates: Template[] = [
   },
   {
     id: "tween-drains",
+    title: "Drains and fills",
     audiences: tween,
     time: "About 4 minutes",
     text: "Sort your week: what gave you energy, and what wore you out?",
@@ -168,6 +176,7 @@ export const nudgeTemplates: Template[] = [
   },
   {
     id: "tween-story",
+    title: "One story, many voices",
     audiences: tween,
     time: "About 10 minutes",
     text: "Build a silly story with your family. Everyone adds a part.",
@@ -177,16 +186,18 @@ export const nudgeTemplates: Template[] = [
   },
   {
     id: "tween-kindness",
+    title: "Kindness spotting",
     audiences: tween,
-    time: "Over a week",
-    text: "Go kindness spotting: notice someone being kind this week.",
-    why: "The more you look, the more you see.",
+    time: "About a week",
+    text: "See someone do something kind? Save it here.",
+    why: "Mark a square each time you spot one. The more you look, the more you see.",
     cta: "Start spotting",
     action: { kind: "exercise", id: "kindness-bingo" },
   },
   // Ages 6–8
   {
     id: "young-write",
+    title: "Something that made you smile",
     audiences: young,
     time: "About 1 minute",
     text: "What made you smile today? Draw it, say it, or write it.",
@@ -196,6 +207,7 @@ export const nudgeTemplates: Template[] = [
   },
   {
     id: "young-joy",
+    title: "Guess my small joy",
     audiences: young,
     time: "About 5 minutes",
     text: "Play “Guess my small joy” with your family.",
@@ -205,6 +217,7 @@ export const nudgeTemplates: Template[] = [
   },
   {
     id: "young-upset",
+    title: "What helps",
     audiences: young,
     time: "About 3 minutes",
     text: "What helps when you feel upset? Let’s sort some ideas.",
@@ -214,9 +227,10 @@ export const nudgeTemplates: Template[] = [
   },
   {
     id: "young-kindness",
+    title: "Kindness spotting",
     audiences: young,
-    time: "Over a week",
-    text: "Be a kindness spotter this week.",
+    time: "About a week",
+    text: "See someone do something kind? Save it here.",
     why: "Mark a square each time you see someone being kind.",
     cta: "Start spotting",
     action: { kind: "exercise", id: "kindness-bingo" },
@@ -224,6 +238,7 @@ export const nudgeTemplates: Template[] = [
   // Under 6, with a grown-up
   {
     id: "little-story",
+    title: "Story time",
     audiences: little,
     time: "About 5 minutes",
     text: "Make a story together. Everyone picks what happens next.",
@@ -233,6 +248,7 @@ export const nudgeTemplates: Template[] = [
   },
   {
     id: "little-page",
+    title: "A photo from today",
     audiences: little,
     time: "About 1 minute",
     text: "Add a photo of something you played with today.",
@@ -242,6 +258,7 @@ export const nudgeTemplates: Template[] = [
   },
   {
     id: "little-upset",
+    title: "What helps",
     audiences: little,
     time: "About 3 minutes",
     text: "What helps when you feel sad or cross? Let’s sort it together.",
@@ -260,6 +277,7 @@ export function nudgesFor(book: Book, names: string[] = []): Nudge[] {
     .filter((t) => t.audiences.includes(audience))
     .map((t) => ({
       id: t.id,
+      ...(t.title ? { title: t.title } : {}),
       why: t.why,
       time: t.time,
       cta: t.cta,

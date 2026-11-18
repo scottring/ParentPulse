@@ -108,18 +108,19 @@ async function setup(mismatch?: "account" | "key", initialPassage?: {title:strin
     });
   }
   render(createElement(Harness));
-  await screen.findByText("Connect the Fictional A edition");
+  await screen.findByText("What gets shared");
+  expect(screen.getByText("Fictional A’s book")).toBeTruthy();
   fireEvent.click(screen.getByRole("checkbox", { name: /18 or older/ }));
-  fireEvent.click(screen.getByRole("button", { name: "Connect this edition" }));
+  fireEvent.click(screen.getByRole("button", { name: "Connect this book" }));
   if (mismatch)
     await screen.findByText(
       mismatch === "account"
-        ? /This edition belongs to a different online account/
-        : /This account already has an edition/,
+        ? /This book belongs to a different online account/
+        : /This account already has a book/,
     );
   else {
     await screen.findByText("Test family");
-    fireEvent.click(screen.getByText("Share a passage"));
+    fireEvent.click(screen.getByText("Send a passage from your book"));
   }
   return {
     sent,
@@ -135,7 +136,7 @@ describe("sharing recovery", () => {
     await setup("key");
     expect(screen.queryByText("Test family")).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Connect this edition" }),
+      screen.getByRole("button", { name: "Connect this book" }),
     ).toBeTruthy();
   });
   it("never removes another edition’s identity when deleting the signed-in account", async () => {
@@ -161,6 +162,10 @@ describe("sharing recovery", () => {
       { target: { value: "A fictional passage to offer." } },
     );
     fireEvent.click(screen.getByRole("checkbox", { name: "Fictional B" }));
+    // The button names who receives the words.
+    expect(
+      screen.getByRole("button", { name: "Send passage to Fictional B" }),
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /Send passage/ }));
     await screen.findByText("Connection interrupted");
     expect(
@@ -177,7 +182,7 @@ describe("sharing recovery", () => {
     );
     state.online();
     fireEvent.click(screen.getByRole("button", { name: "Try sending again" }));
-    await screen.findByText(/Your passage was offered/);
+    await screen.findByText(/Sent. Each person chooses/);
     expect(state.sent).toHaveLength(2);
     expect(state.sent[0]).toEqual(state.sent[1]);
     expect(

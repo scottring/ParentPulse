@@ -35,7 +35,7 @@ describe("parent edition setup", () => {
       }),
     );
     const submit = screen.getByRole("button", {
-      name: "Open this edition",
+      name: "Open this book",
     }) as HTMLButtonElement;
     expect(submit.disabled).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: /A child or teen/ }));
@@ -87,7 +87,7 @@ describe("parent edition setup", () => {
     });
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(
-      screen.getByRole("button", { name: "Save edition settings" }),
+      screen.getByRole("button", { name: "Save these settings" }),
     );
     await screen.findByText(/did not match/);
     expect(save).not.toHaveBeenCalled();

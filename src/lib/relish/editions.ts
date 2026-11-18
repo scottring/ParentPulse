@@ -25,7 +25,7 @@ export function listEditions(): Edition[] {
     id,
     label:
       labels.find((x) => x.id === id)?.label.slice(0, 60) ||
-      `Private edition ${i + 1}`,
+      `Private book ${i + 1}`,
   }));
 }
 // The envelope is authoritative; a lost shelf label never loses an edition.

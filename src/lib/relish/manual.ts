@@ -30,7 +30,10 @@ export const manualOf = (book: Book): ManualState =>
 export function manualSources(book: Book, scope: ManualScope): ManualSource[] {
   const pages =
     scope === "personal"
-      ? bookPages(book).map((p) => ({
+      ? bookPages(book)
+          // Play records are only names and a date: never sent for suggestions.
+          .filter((p) => !p.record)
+          .map((p) => ({
           id: p.id,
           title: p.title,
           text: [
@@ -63,6 +66,30 @@ export function manualSources(book: Book, scope: ManualScope): ManualSource[] {
       title: p.title.slice(0, 120),
       text: p.text.slice(0, 1800),
     }));
+}
+/**
+ * Who each suggestion is about, read from the pages it came from (never from
+ * the AI): a person counts when more than half of a card's source pages are
+ * tagged with them. Pages that no longer exist count as untagged. Nothing is
+ * stored, so older books and cards need no change.
+ */
+export function cardPeople(
+  book: Book,
+  cards: ManualCard[] = manualOf(book).cards,
+): Record<string, string[]> {
+  const tags = new Map(bookPages(book).map((p) => [p.id, p.people]));
+  return Object.fromEntries(
+    cards.map((card) => [
+      card.id,
+      book.people
+        .map((p) => p.id)
+        .filter(
+          (id) =>
+            card.sources.filter((s) => tags.get(s.id)?.includes(id)).length * 2 >
+            card.sources.length,
+        ),
+    ]),
+  );
 }
 export const sourceSignature = (sources: ManualSource[]) =>
   JSON.stringify(sources);

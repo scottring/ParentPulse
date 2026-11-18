@@ -4,6 +4,8 @@ import type { Book } from "@/lib/relish/model";
 import { gameText, livingOf, type GameKind } from "@/lib/relish/living";
 import type { PhotoAccess } from "@/lib/relish/photos";
 import type { Tone } from "@/lib/relish/catalog";
+import Illustration from "./Illustration";
+import { KidCoverMark } from "./KidHome";
 import { PhotoGallery } from "./Photos";
 import { personTones, type FamilyPerson } from "./Home";
 
@@ -119,13 +121,18 @@ export default function Family({
   return (
     <main className="rp-place rp-family" aria-labelledby="rp-family-title">
       <section className="rp-stack-tight">
-        <h1 id="rp-family-title" ref={headingRef} tabIndex={-1}>
-          Your family
-        </h1>
-        <p className="rp-lede">
-          Everyone’s book, and what you’ve chosen to share. Nothing private
-          leaves a book unless you send it.
-        </p>
+        <div className="rp-place-head">
+          <div>
+            <h1 id="rp-family-title" ref={headingRef} tabIndex={-1}>
+              Your family
+            </h1>
+            <p className="rp-lede">
+              Everyone’s book, and what you’ve chosen to share. Nothing private
+              leaves a book unless you send it.
+            </p>
+          </div>
+          <Illustration name="family" size={120} eager className="rp-place-art" />
+        </div>
       </section>
 
       {finished && (
@@ -157,15 +164,21 @@ export default function Family({
             disabled={busy}
             onClick={p.onOpen}
           >
-            <span className="rp-person-dot" aria-hidden="true">
-              {p.name.trim().charAt(0).toUpperCase()}
-            </span>
+            {p.note?.endsWith("notes in your book") ? (
+              <span className="rp-person-dot" aria-hidden="true">
+                {p.name.trim().charAt(0).toUpperCase()}
+              </span>
+            ) : (
+              <span className="rp-person-dot rp-person-emblem">
+                <KidCoverMark name={p.name} />
+              </span>
+            )}
             <span className="rp-person-words">
               <span className="rp-person-name">{p.name}</span>
               <span>{p.note || "Book in your account"}</span>
               <span className="rp-person-open">
                 {p.note?.endsWith("notes in your book")
-                  ? `See what you’ve noted →`
+                  ? `See my pages about ${p.name} →`
                   : `Open ${p.name}’s book →`}
               </span>
             </span>
@@ -207,7 +220,7 @@ export default function Family({
             <div className="rp-panel-head">
               <h2 id="rp-passed-title">Passed between you</h2>
               <button className="rp-link" disabled={busy} onClick={onShare}>
-                Share a page from your book
+                Choose a page to share
               </button>
             </div>
             {passed.length ? (
@@ -282,7 +295,6 @@ export default function Family({
               page is always optional.
             </p>
           )}
-          <p className="rp-quiet">Viewing the album never locks your book.</p>
         </section>
       </div>
 

@@ -68,7 +68,7 @@ describe("living-book interaction boundaries", () => {
       screen.getByRole("button", { name: /Think it through/ }),
     );
     await screen.findByRole("alert");
-    expect(screen.queryByText("Session complete")).toBeNull();
+    expect(screen.queryByText("Your page is kept.")).toBeNull();
     fail = false;
     fireEvent.click(
       screen.getByRole("button", { name: /Think it through/ }),
@@ -76,12 +76,12 @@ describe("living-book interaction boundaries", () => {
     const textbox = await screen.findByRole("textbox", { name: "Your moment" });
     fireEvent.change(textbox, { target: { value: "One sample moment" } });
     fail = true;
-    fireEvent.click(screen.getByRole("button", { name: /Save reflection and finish/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Keep my page/ }));
     await screen.findByRole("alert");
-    expect(screen.queryByText("Session complete")).toBeNull();
+    expect(screen.queryByText("Your page is kept.")).toBeNull();
     fail = false;
-    fireEvent.click(screen.getByRole("button", { name: /Save reflection and finish/ }));
-    await screen.findByText("Session complete");
+    fireEvent.click(screen.getByRole("button", { name: /Keep my page/ }));
+    await screen.findByText("Your page is kept.");
   });
   it("keeps private content off the game screen and ends the game without locking", async () => {
     const lock = vi.fn();
@@ -110,7 +110,7 @@ describe("living-book interaction boundaries", () => {
     }
     render(createElement(Harness));
     fireEvent.click(screen.getByRole("button", { name: "Your book" }));
-    expect(screen.getByText("A confidential sample sentence")).toBeTruthy();
+    expect(screen.getAllByText("A confidential sample sentence").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "Do something" }));
     fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
     fireEvent.click(screen.getByRole("button", { name: "+ Someone visiting" }));

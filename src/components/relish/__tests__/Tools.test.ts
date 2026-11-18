@@ -75,6 +75,12 @@ it("sorts cards, picks one, and keeps the result as a page in Your pages", async
   const app = open(adult());
   fireEvent.click(screen.getByRole("button", { name: /What helps when I’m upset/ }));
   await screen.findByRole("heading", { name: "What helps when I’m upset" });
+  // The start screen asks who it is with; no one in particular is the default.
+  expect(
+    (screen.getByRole("radio", { name: "No one in particular" }) as HTMLInputElement).checked,
+  ).toBe(true);
+  expect(document.querySelector(".ui-private")?.textContent).toContain("Your private pages");
+  fireEvent.click(screen.getByRole("button", { name: /Start this exercise/ }));
   expect(screen.queryByRole("button", { name: /Keep this page/ })).toBeNull();
   const card = screen.getByRole("group", { name: "Talking it through" });
   fireEvent.click(within(card).getByRole("button", { name: "Helps me" }));
@@ -94,22 +100,23 @@ it("sorts cards, picks one, and keeps the result as a page in Your pages", async
   );
   fireEvent.click(screen.getByRole("button", { name: /A long shower/, pressed: false }));
   fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
-  await screen.findByRole("heading", { name: "Page kept" });
+  await screen.findByRole("heading", { name: "Kept in your book" });
   const page = app.stored().journal![0];
   expect(page.status).toBe("kept");
   expect(page.title).toBe("What helps when I’m upset");
   expect(page.text).toContain("Helps me: Talking it through; A long shower.");
   expect(page.text).toContain("Doesn’t help: Music.");
   expect(page.text).toContain("The one to try first next time: A long shower.");
-  fireEvent.click(screen.getByRole("button", { name: "Choose another exercise" }));
+  fireEvent.click(screen.getByRole("button", { name: "Find something else to do" }));
   await screen.findByRole("heading", { name: "What feels right?" });
 });
 it("builds a soft opener only once every part is filled in", async () => {
   const app = open(adult());
   fireEvent.click(await screen.findByRole("button", { name: /Rewrite the opener/ }));
-  fireEvent.change(screen.getByRole("combobox", { name: "Who will you say this to?" }), {
-    target: { value: "sam" },
-  });
+  expect(screen.getByText(/Nothing is saved until you choose Keep this page/)).toBeTruthy();
+  expect(screen.getByRole("group", { name: "Who will you say this to?" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("radio", { name: "Sam" }));
+  fireEvent.click(screen.getByRole("button", { name: /Start this exercise/ }));
   fireEvent.change(screen.getByRole("textbox", { name: "I feel…" }), {
     target: { value: "worn out" },
   });
@@ -126,7 +133,7 @@ it("builds a soft opener only once every part is filled in", async () => {
     ).length,
   ).toBeGreaterThan(0);
   fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
-  await screen.findByRole("heading", { name: "Page kept" });
+  await screen.findByRole("heading", { name: "Kept in your book" });
   expect(app.stored().journal![0]).toMatchObject({
     title: "Rewrite the opener · Sam",
     people: ["sam"],
@@ -137,9 +144,13 @@ it("runs a day-by-day checklist across visits and finishes into a page", async (
   fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos/ }));
   const start = screen.getByRole("button", { name: /Start/ }) as HTMLButtonElement;
   expect(start.disabled).toBe(true);
-  fireEvent.change(screen.getByRole("combobox", { name: "Who will you greet?" }), {
-    target: { value: "sam" },
-  });
+  // Today's effort and the overall length are told apart, and what saves is honest.
+  expect(screen.getByText(/Each day: under a minute/)).toBeTruthy();
+  expect(screen.getByText("Keeps going: 10 days, at your pace")).toBeTruthy();
+  expect(screen.getByText(/Each mark saves as you go/)).toBeTruthy();
+  // Someone is required here, so "No one in particular" is not offered.
+  expect(screen.queryByRole("radio", { name: "No one in particular" })).toBeNull();
+  fireEvent.click(screen.getByRole("radio", { name: "Sam" }));
   fireEvent.click(screen.getByRole("button", { name: /Start/ }));
   fireEvent.click(await screen.findByRole("button", { name: "I did it today" }));
   await screen.findByRole("button", { name: /Done today/ });
@@ -151,7 +162,7 @@ it("runs a day-by-day checklist across visits and finishes into a page", async (
   );
   expect(screen.getByText(/1 of 10 days/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Finish and keep a page" }));
-  await screen.findByRole("heading", { name: "Page kept" });
+  await screen.findByRole("heading", { name: "Kept in your book" });
   const stored = again.stored();
   expect(toolsOf(stored).trackers[0].finishedAt).toBeTruthy();
   expect(stored.journal![0].title).toBe("Ten real hellos · Sam");
@@ -194,4 +205,24 @@ it("plays Same page? with hidden answers and a shared reveal", async () => {
   fireEvent.click(second[0]);
   expect((await screen.findAllByText(/Same page: everyone chose/)).length).toBeGreaterThan(0);
   expect(livingOf(app.stored()).game?.stage).toBe("reveal");
+});
+
+it("a card sort offers one card at a time, with skip, and keeps every card changeable", async () => {
+  open(adult());
+  fireEvent.click(screen.getByRole("button", { name: /What helps when I’m upset/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /Start this exercise/ }));
+  const first = screen.getByRole("group", { name: /^Sort this card: / });
+  const name = first.getAttribute("aria-label")!.replace("Sort this card: ", "");
+  fireEvent.click(within(first).getByRole("button", { name: "Helps me" }));
+  expect(
+    within(screen.getByRole("group", { name })).getByRole("button", { name: "Helps me" })
+      .getAttribute("aria-pressed"),
+  ).toBe("true");
+  const second = screen.getByRole("group", { name: /^Sort this card: / });
+  expect(second.getAttribute("aria-label")).not.toContain(name);
+  const skippedName = second.getAttribute("aria-label")!;
+  fireEvent.click(screen.getByRole("button", { name: "Skip this one" }));
+  expect(screen.getByRole("group", { name: /^Sort this card: / }).getAttribute("aria-label")).not.toBe(
+    skippedName,
+  );
 });

@@ -144,7 +144,7 @@ export default function PassagePicker({
                 disabled={busy || !text.trim() || chosen.length > 0}
                 onClick={() => onOffer({ title, text })}
               >
-                <Send size={17} /> Offer words to another edition
+                <Send size={17} /> Offer words to another book
               </button>
             )}
           </div>

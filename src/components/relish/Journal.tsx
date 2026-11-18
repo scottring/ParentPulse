@@ -16,6 +16,8 @@ import {
   Heart,
   Leaf,
   Ellipsis,
+  FileText,
+  X,
   Image as ImageIcon,
   Lock,
   Mic,
@@ -45,6 +47,8 @@ import {
 } from "@/lib/relish/journal";
 import { useSensory } from "./Sensory";
 import { TypingSoundToggle, useTypingSound } from "./TypingSound";
+import Illustration from "./Illustration";
+import { SubHead } from "./ui";
 import "./journal.css";
 
 type Save = (change: (book: Book) => Book) => Promise<void>;
@@ -83,6 +87,7 @@ export default function Journal({
   onAlbum,
   initialDraft,
   initialVoice = false,
+  initialPhoto = false,
   initialReading,
   onBack,
   navigation,
@@ -102,6 +107,8 @@ export default function Journal({
   onAlbum?: () => void;
   initialDraft?: JournalDraft;
   initialVoice?: boolean;
+  /** Opens the new page with the photo picker showing. */
+  initialPhoto?: boolean;
   /** Opens straight onto one kept page (a BookPage id). */
   initialReading?: string;
   /** When set, "My pages" returns here instead of the page list. */
@@ -149,6 +156,7 @@ export default function Journal({
           initial={editor}
           navigation={navigation}
           initialVoice={initialVoice && editor.id === initialDraft?.id}
+          initialPhoto={initialPhoto && editor.id === initialDraft?.id}
           initialEntry={editingEntry}
           save={save}
           sample={sample}
@@ -168,36 +176,30 @@ export default function Journal({
   if (page)
     return (
       <main className={`rj-workspace rj-read rj-${page.style}`}>
-        <div className="rj-reading-top">
-          <button
-            className="lb-text"
-            onClick={() => {
+        <SubHead
+          className="rj-reading-top"
+          back={{
+            label: onBack ? "Back to your book" : "Back to my pages",
+            onClick: () => {
               if (onBack) return onBack();
               setReading(null);
               setCelebrate(false);
-            }}
-          >
-            <ArrowLeft size={17} /> {onBack ? "Back to your book" : "My pages"}
-          </button>
-          <span className="rj-private">
-            <Lock size={14} />{" "}
-            {sample ? "Fictional sample" : "Only in your edition"}
-          </span>
-        </div>
+            },
+          }}
+          note={sample ? "Fictional sample" : "Your private pages"}
+        />
         {celebrate && (
           <div className="rj-celebration" role="status">
-            <span className="rj-celebration-mark" aria-hidden="true">
-              <Sparkles size={34} />
-            </span>
+            <Illustration name="saved" size={72} eager className="rj-celebration-mark" />
             <div>
               <strong>Entry saved</strong>
-              <p>You can edit this entry, start another, or choose something else to do.</p>
+              <p>It’s in your book. That’s a good place to stop.</p>
             </div>
           </div>
         )}
-        <div className="rd-reading-spread">
+        <div className="rd-reading-spread ui-spread ui-spread-reading">
           <article
-            className="rj-paper rj-sequence-paper"
+            className="rj-paper rj-sequence-paper ui-spread-page"
             ref={prose}
             key={page.id}
           >
@@ -214,6 +216,7 @@ export default function Journal({
             />
             <p className="lb-kicker">
               {page.kind}
+              {page.exercise ? ` · ${page.exercise}` : ""}
               {page.from ? ` · From ${page.from}` : ""}
             </p>
             <div className="rj-prose">{page.text}</div>
@@ -224,7 +227,7 @@ export default function Journal({
                 <p>{section.text}</p>
               </section>
             ))}
-            {page.people.length > 0 && (
+            {page.people.length > 0 && !page.from && !page.record && (
               <p className="rj-private">
                 Thinking of{" "}
                 {page.people
@@ -246,25 +249,27 @@ export default function Journal({
                     <Feather size={16} /> Edit this page
                   </button>
                 )}
-                <button
-                  className="lb-text"
-                  onClick={() => {
-                    const selection = window.getSelection();
-                    const within =
-                      !!selection?.anchorNode &&
-                      !!selection.focusNode &&
-                      prose.current?.contains(selection.anchorNode) &&
-                      prose.current?.contains(selection.focusNode);
-                    setExcerpt(within ? selection!.toString() : "");
-                  }}
-                >
-                  <Share2 size={16} /> Choose a passage
-                </button>
+                {!page.record && (
+                  <button
+                    className="lb-text"
+                    onClick={() => {
+                      const selection = window.getSelection();
+                      const within =
+                        !!selection?.anchorNode &&
+                        !!selection.focusNode &&
+                        prose.current?.contains(selection.anchorNode) &&
+                        prose.current?.contains(selection.focusNode);
+                      setExcerpt(within ? selection!.toString() : "");
+                    }}
+                  >
+                    <Share2 size={16} /> Choose a passage
+                  </button>
+                )}
               </div>
             </div>
           </article>
           <aside
-            className="rj-paper rd-next-page"
+            className="rj-paper rd-next-page ui-spread-page"
             aria-label="The following page"
           >
             {nextPage ? (
@@ -296,7 +301,7 @@ export default function Journal({
             ) : (
               <>
                 <p className="lb-kicker">End of your entries</p>
-                <div className="rd-mountain" aria-hidden="true" />
+                <Illustration name="empty-pages" size={132} className="rd-end-art" />
                 <h2>No more entries</h2>
                 <p>You’ve reached your latest entry.</p>
                 <button
@@ -375,6 +380,12 @@ export default function Journal({
   );
   return (
     <main className="rj-workspace">
+      {onBack && (
+        <SubHead
+          back={{ label: "Back to your book", onClick: onBack }}
+          note={sample ? "Fictional sample" : "Your private pages"}
+        />
+      )}
       <header className="rj-welcome">
         <div>
           <p className="lb-kicker">Journal, reflections and shared passages</p>
@@ -396,15 +407,7 @@ export default function Journal({
               : "Encrypted in your private book."}
           </p>
         </div>
-        <div className="rj-paper-stack" aria-hidden="true">
-          <span className="rj-stack-back" />
-          <span className="rj-stack-middle" />
-          <div className="rj-stack-front">
-            <Sun size={42} />
-            <div className="rj-doodle-line" />
-            <Heart size={28} />
-          </div>
-        </div>
+        <Illustration name="your-book" size={260} eager className="rj-welcome-art" />
       </header>
       <div className="rj-capture-actions rj-browse-links">
         {onManual && (
@@ -498,7 +501,7 @@ export default function Journal({
         </section>
       ) : (
         <div className="rj-first-page">
-          <Feather size={24} />
+          <Illustration name="empty-pages" size={120} />
           <p>
             No entries yet.
             <br />
@@ -524,10 +527,12 @@ export function JournalEditor({
   book,
   photos,
   initialVoice = false,
+  initialPhoto = false,
   navigation,
 }: {
   initial: JournalDraft;
   initialVoice?: boolean;
+  initialPhoto?: boolean;
   navigation?: JournalNavigation;
   initialEntry?: JournalEntry;
   save: Save;
@@ -540,7 +545,7 @@ export function JournalEditor({
   const [draft, setDraft] = useState<JournalDraft>(initial);
   const editorTyping = useTypingSound();
   const [panel, setPanel] = useState<"photo" | "people" | "options" | null>(
-    null,
+    initialPhoto ? "photo" : null,
   );
   const [mediaBusy, setMediaBusy] = useState(false);
   const [navigationNotice, setNavigationNotice] = useState("");
@@ -706,6 +711,8 @@ export function JournalEditor({
               ? "Saved"
               : "Draft saved"
             : "";
+  const hasContent =
+    !!draft.text.trim() || !!draft.title.trim() || !!draft.photos?.length;
   const toggle = (next: "photo" | "people" | "options") =>
     setPanel((open) => (open === next ? null : next));
   return (
@@ -739,6 +746,7 @@ export function JournalEditor({
           className="rj-paper rd-writing-context"
           aria-label="Previous entry"
         >
+          <Sprig className="rj-sprig rj-sprig-bottom" />
           <p className="lb-kicker">
             {book?.owner ? `${book.owner}’s previous entry` : "Previous entry"}
           </p>
@@ -750,13 +758,14 @@ export function JournalEditor({
                 journalId={previous.journalId}
                 title={previous.title}
                 save={save}
+                compact
               />
               <div className="rj-prose rd-context-prose">{previous.text}</div>
               <PhotoGallery photos={previous.photos} access={photos} />
             </>
           ) : (
             <>
-              <div className="rd-mountain" aria-hidden="true" />
+              <Illustration name="empty-pages" size={132} className="rd-end-art" />
               <h2>No previous entries</h2>
               <p>Your first page goes on the right.</p>
             </>
@@ -766,6 +775,7 @@ export function JournalEditor({
           className="rj-paper rd-editor-page"
           aria-label="Journal editor"
         >
+          <Sprig className="rj-sprig rj-sprig-top" />
           <p className="rd-context-date">{dateLabel(draft.createdAt)}</p>
           <label className="rj-title-label rj-title-first">
             <span className="rj-sr-only">Title</span>
@@ -835,12 +845,21 @@ export function JournalEditor({
             />
           )}
           {panel === "people" && !!book?.people.length && (
+            <div className="rj-popover rj-popover-people">
+            <button
+              type="button"
+              className="rj-popover-close"
+              aria-label="Close tag people"
+              onClick={() => setPanel(null)}
+            >
+              <X size={18} />
+            </button>
             <fieldset
               className="rj-people-tags"
               disabled={finishing || mediaBusy}
             >
               <legend>
-                Tag people{" "}
+                Tag people
                 <span>Private tags · nobody is notified</span>
               </legend>
               <div>
@@ -864,9 +883,19 @@ export function JournalEditor({
                 ))}
               </div>
             </fieldset>
+            </div>
           )}
           {panel === "options" && (
-            <div className="rj-page-options">
+            <div className="rj-popover rj-page-options">
+              <button
+                type="button"
+                className="rj-popover-close"
+                aria-label="Close page options"
+                onClick={() => setPanel(null)}
+              >
+                <X size={18} />
+              </button>
+              <p className="rj-popover-title">Page options</p>
               <fieldset className="rj-style-picker" disabled={finishing}>
                 <legend>Page color</legend>
                 <div>
@@ -925,15 +954,18 @@ export function JournalEditor({
           </div>
           <div className="rj-save-row">
             <span className="rj-save-state" role="status" aria-live="polite">
-              {saveLabel}
+              <FileText size={18} aria-hidden="true" />
+              {saveLabel || (hasContent ? "Draft" : "Empty draft")}
             </span>
-            <button
-              className="lb-text"
-              disabled={finishing || mediaBusy || voiceOpen}
-              onClick={() => void finish(false)}
-            >
-              Save draft and close
-            </button>
+            {hasContent && (
+              <button
+                className="lb-text"
+                disabled={finishing || mediaBusy || voiceOpen}
+                onClick={() => void finish(false)}
+              >
+                Save draft and close
+              </button>
+            )}
             <button
               className="rj-keep"
               disabled={
@@ -960,12 +992,15 @@ function PageTitle({
   title,
   save,
   headingRef,
+  compact = false,
 }: {
   book: Book;
   journalId?: string;
   title: string;
   save: Save;
   headingRef?: RefObject<HTMLHeadingElement | null>;
+  /** Icon-only rename, for the quiet facing page. */
+  compact?: boolean;
 }) {
   const [value, setValue] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -1042,16 +1077,74 @@ function PageTitle({
       {entry && (
         <button
           type="button"
-          className="rj-rename-button"
+          className={compact ? "rj-rename-icon" : "rj-rename-button"}
+          aria-label={
+            compact
+              ? entry.title.trim()
+                ? "Rename"
+                : "Add a title"
+              : undefined
+          }
+          title={compact ? (entry.title.trim() ? "Rename" : "Add a title") : undefined}
           onClick={() => {
             setError("");
             setValue(entry.title);
           }}
         >
-          <Pencil size={16} />
-          {entry.title.trim() ? "Rename" : "Add a title"}
+          <Pencil size={compact ? 20 : 16} />
+          {!compact && (entry.title.trim() ? "Rename" : "Add a title")}
         </button>
       )}
     </div>
+  );
+}
+
+/** A painted-looking leaf sprig for the page corners. Decorative. */
+function Sprig({ className }: { className: string }) {
+  // Leaves on both sides of a curving stem, tip at top right.
+  const leaves: [number, number, number, number][] = [
+    [24, 92, -70, 1],
+    [30, 86, 10, 0.95],
+    [42, 72, -62, 1.05],
+    [50, 66, 18, 1],
+    [62, 52, -52, 1.1],
+    [70, 46, 26, 1],
+    [82, 34, -44, 1],
+    [88, 30, 34, 0.9],
+    [98, 20, -30, 0.85],
+  ];
+  return (
+    <svg
+      className={className}
+      aria-hidden="true"
+      viewBox="0 0 120 120"
+      width="120"
+      height="120"
+    >
+      <path
+        d="M10 112 C 34 90, 60 60, 108 12"
+        fill="none"
+        stroke="#7d8f6a"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        opacity="0.75"
+      />
+      {leaves.map(([x, y, r, k], i) => (
+        <g key={i} transform={`translate(${x} ${y}) rotate(${r}) scale(${k})`}>
+          <path
+            d="M0 0 C 6 -9, 20 -10, 26 -2 C 18 4, 6 5, 0 0 Z"
+            fill={i % 2 ? "#a9b896" : "#98aa84"}
+            opacity="0.62"
+          />
+          <path
+            d="M1 -0.5 C 9 -3, 16 -3.5, 24 -2"
+            fill="none"
+            stroke="#6f8160"
+            strokeWidth="0.7"
+            opacity="0.6"
+          />
+        </g>
+      ))}
+    </svg>
   );
 }

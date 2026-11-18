@@ -14,7 +14,7 @@
 }
 .lb-app .rd-page-details {
   margin: 24px 0;
-  border-top: 1px solid #768f8a40;
+  border-top: 1px solid #838f7640;
   padding-top: 10px;
 }
 .lb-app .rd-page-details summary {
@@ -25,15 +25,6 @@
 }
 .lb-app .rd-page-details .rj-style-picker {
   margin-top: 12px;
-}
-.lb-app .rd-mountain {
-  height: 180px;
-  margin: 25px -10px;
-  background: url("/illustrations/relish-alpine-landscape.jpg") center 48% /
-    cover;
-  mask-image: linear-gradient(transparent, black 25%, black 75%, transparent);
-  filter: saturate(0.2) contrast(0.65);
-  opacity: 0.65;
 }
 .lb-app .rd-context-date {
   margin-top: 34px;
@@ -71,7 +62,7 @@
     gap: 0;
     box-shadow:
       0 6px 0 -1px var(--lb-cover),
-      0 18px 36px #304f5015;
+      0 18px 36px #414a3615;
     border-radius: 5px 14px 14px 5px;
   }
   .lb-app .rd-writing-spread > .rj-paper,
@@ -93,15 +84,15 @@
     background-image: linear-gradient(
       90deg,
       transparent 92%,
-      #46676b0d 98%,
-      #46676b1c
+      #59674a0d 98%,
+      #59674a1c
     );
   }
   .lb-app .rd-editor-page,
   .lb-app .rd-next-page {
     border-radius: 0 14px 14px 0;
     border-left: 0;
-    background-image: linear-gradient(90deg, #46676b14, transparent 8%);
+    background-image: linear-gradient(90deg, #59674a14, transparent 8%);
   }
   .lb-app .rd-writing-context h2,
   .lb-app .rd-reading-spread h2 {

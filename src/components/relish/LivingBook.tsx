@@ -3,27 +3,31 @@ import { readBinding } from "@/lib/relish/book-sync";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowUpRight,
-  BookmarkCheck,
   BookOpen,
+  Check,
   Download,
   Lock,
-  Sparkles,
   Users,
 } from "lucide-react";
 import type { Book, Person } from "@/lib/relish/model";
 import {
   advanceGame,
+  beginNewMoment,
   beginVisit,
   changeLiving,
   chooseThread,
   completeVisit,
+  finishGame as finishRound,
   keepGame,
+  lastEntry,
   livingOf,
   markTried,
+  letGoPractice,
   newGame,
   nextKind,
   pauseVisit,
   pendingPractice,
+  recordRound,
   updateDraft,
   type Draft,
   type Game,
@@ -43,8 +47,11 @@ import {
 } from "@/lib/relish/journal";
 import "./duo.css";
 import "./places.css";
+import Illustration, { Emblem } from "./Illustration";
+import { BookSpread, SubHead } from "./ui";
+import { gameIllustration, topicIllustration } from "./illustrations";
 import Manual, { useManualGuide } from "./Manual";
-import { manualOf, reviewManualIdea } from "@/lib/relish/manual";
+import { reviewManualIdea } from "@/lib/relish/manual";
 import GroupPlay from "./GroupPlay";
 import Tools from "./Tools";
 import ConnectedEditions from "./ConnectedEditions";
@@ -112,7 +119,7 @@ export default function LivingBook({
   const accountManaged = !!readBinding(vault.editionId)?.accountManaged;
   const [removeName, setRemoveName] = useState("");
   const [removeError, setRemoveError] = useState("");
-  const { threads, plans, intro, cue } = guidanceFor(vault.book);
+  const { threads, plans, outcomes, words } = guidanceFor(vault.book);
   const online = canUseOnline(vault.book);
   const { book, mode } = vault,
     sample = mode === "sample",
@@ -122,6 +129,7 @@ export default function LivingBook({
   const [capture, setCapture] = useState<{
     draft: JournalDraft;
     voice: boolean;
+    photo?: boolean;
   } | null>(null);
   const [view, setView] = useState<View>("home"),
     [closed, setClosed] = useState(false),
@@ -136,7 +144,8 @@ export default function LivingBook({
     [exercise, setExercise] = useState<string | undefined>(),
     [doFilter, setDoFilter] = useState<DoFilter>("all"),
     [gameOffer, setGameOffer] = useState<Game["kind"] | undefined>(),
-    [bookWho, setBookWho] = useState<string | undefined>();
+    [bookWho, setBookWho] = useState<string | undefined>(),
+    [bookQuery, setBookQuery] = useState("");
   const journalNavigation = useRef<(() => Promise<boolean>) | null>(null);
   const operation = useRef(false),
     alive = useRef(true),
@@ -150,14 +159,46 @@ export default function LivingBook({
       alive.current = false;
     };
   }, []);
+  // Where the writer was in Your book when they opened a page, so Back can
+  // put them there again. Choosing the Your book tab starts a fresh browse.
+  const browse = useRef<{ who: string; query: string; scroll: number; page?: string } | null>(null);
+  const restoring = useRef(false);
+  // The Do something filter in use when an activity was opened from it.
+  const doReturn = useRef<DoFilter>("all");
   useEffect(() => {
     if (firstPage.current) {
       firstPage.current = false;
       return;
     }
+    if (restoring.current && browse.current) {
+      restoring.current = false;
+      const { scroll, page } = browse.current;
+      window.scrollTo({ top: scroll, left: 0, behavior: "instant" });
+      const row = page
+        ? document.querySelector<HTMLElement>(`[data-page-id="${CSS.escape(page)}"]`)
+        : null;
+      (row || heading.current)?.focus({ preventScroll: true });
+      return;
+    }
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     heading.current?.focus({ preventScroll: true });
   }, [view, pageKey]);
+  /** Back to Your book exactly as it was left: filter, search, scroll, row. */
+  function backToBook() {
+    const saved = browse.current;
+    navigate("book");
+    if (saved) {
+      restoring.current = true;
+      setBookWho(saved.who);
+      setBookQuery(saved.query);
+    }
+  }
+  /** Back to Do something with the chip that was chosen. */
+  function backToDo() {
+    const filter = doReturn.current;
+    navigate("do");
+    setDoFilter(filter);
+  }
   function navigate(next: View) {
     setJournalEditing(false);
     setCapture(null);
@@ -168,6 +209,7 @@ export default function LivingBook({
     setDoFilter("all");
     setGameOffer(undefined);
     setBookWho(undefined);
+    setBookQuery("");
     setView(next);
     setClosed(false);
     setPageKey((n) => n + 1);
@@ -190,9 +232,9 @@ export default function LivingBook({
       if (alive.current) setWorking(false);
     }
   }
-  function quickEntry(voice = false, draft = newJournalDraft()) {
+  function quickEntry(voice = false, draft = newJournalDraft(), photo = false) {
     navigate("words");
-    setCapture({ draft, voice });
+    setCapture({ draft, voice, photo });
     setJournalEditing(true);
   }
   function openPage(id: string) {
@@ -200,6 +242,7 @@ export default function LivingBook({
     setReading(id);
   }
   function openExercise(id: string) {
+    doReturn.current = view === "do" ? doFilter : "all";
     navigate("tools");
     setExercise(id);
   }
@@ -208,6 +251,7 @@ export default function LivingBook({
     setModal("connections");
   }
   function onNudge(action: NudgeAction) {
+    doReturn.current = view === "do" ? doFilter : "all";
     if (action.kind === "journal") quickEntry();
     else if (action.kind === "exercise") openExercise(action.id);
     else if (action.kind === "reflect") start();
@@ -256,7 +300,14 @@ export default function LivingBook({
     void commit(
       (b) => pauseVisit(updateDraft(b, v.id, draft)),
       () => navigate("do"),
-      "Progress saved.",
+      "Saved. Pick it up from Think it through.",
+    );
+  }
+  function newMoment(draft: Draft) {
+    if (!v) return;
+    void commit(
+      (b) => beginNewMoment(updateDraft(b, v.id, draft)),
+      () => navigate("session"),
     );
   }
   function finish(draft: Draft) {
@@ -264,7 +315,7 @@ export default function LivingBook({
     void commit(
       (b) => completeVisit(b, v.id, draft),
       () => navigate("bookmark"),
-      "This visit is complete.",
+      "Saved in your book.",
     );
   }
   // Leaving a game never locks the book; the round stays saved to resume.
@@ -289,7 +340,8 @@ export default function LivingBook({
     void commit(
       (b) =>
         changeLiving(b, (x) => ({
-          ...x,
+          // A round left at its reveal is still noted before it is replaced.
+          ...recordRound(x),
           game: newGame(
             kind,
             players,
@@ -301,11 +353,7 @@ export default function LivingBook({
   }
   function finishGame() {
     void commit(
-      (b) =>
-        changeLiving(b, (x) => {
-          if (!x.game) throw new Error("No game is open.");
-          return { ...x, game: advanceGame(x.game, { type: "finish" }) };
-        }),
+      finishRound,
       () => navigate("family"),
       "A good place to stop.",
     );
@@ -321,6 +369,8 @@ export default function LivingBook({
   const place = placeOf[view];
   // Places draw their own big heading; sub-screens keep the small running head.
   const placeScreen = view === place && !closed;
+  // Exercises and the journal draw their own back link and privacy note.
+  const ownHead = !closed && (view === "tools" || view === "words");
   const canInvite = !sample && online;
   const roster: Player[] = [
     { id: "owner", name: book.owner, audience: audienceOf(book) },
@@ -365,11 +415,8 @@ export default function LivingBook({
         : place === "do"
           ? view === "session" || view === "bookmark"
             ? {
-                title: v?.status === "complete" ? "Session complete" : "Guided reflection",
-                text:
-                  v?.status === "complete"
-                    ? plans[v.kind].next
-                    : plans[v?.kind || nextKind(book)].end,
+                title: "Think it through",
+                text: words.about,
               }
             : {
                 title: "Pick something that fits",
@@ -432,8 +479,7 @@ export default function LivingBook({
     !!privateEditorOpen || sharedView,
     sample,
   );
-  const manualCards = manualOf(book).cards;
-  const personalTitle = `The ${book.owner} edition`;
+  const personalTitle = `${book.owner}’s book`;
   const headingText = closed
     ? sharedView
       ? "Our Family pages"
@@ -456,30 +502,21 @@ export default function LivingBook({
             ? "Play together"
             : sharedView
               ? "Our Family pages"
-              : view === "bookmark"
-                ? "Guided activities"
-                : sessionOpen
-                  ? "Guided reflection"
-                  : "Your book";
+              : view === "bookmark" || view === "session"
+                ? "Think it through"
+                : "Your book";
   let right: ReactNode = null;
   const left = (
     <>
-      <p className="lb-kicker">Guided reflection</p>
-      <h2>{theme?.title || "Choose a topic"}</h2>
-      <p>
-        {online
-          ? "Choose a topic, describe an experience, then decide whether to try a related action."
-          : "Choose a topic and describe what happened or how you felt. You can skip questions or stop at any time."}
-      </p>
-      <div className="lb-thread">
-        <span className="lb-kicker">How it works</span>
-        <p>Write a reflection. Make a plan. Review what happened.</p>
-        <span className="lb-fine">Each step is a separate session. Your progress is saved.</span>
-      </div>
-      <p className="lb-fine">
-        Your private edition belongs to you. Family pages hold only chosen album
-        passages and game passages everyone approved.
-      </p>
+      <Illustration
+        name={(l.thread && topicIllustration[l.thread]) || "think-it-through"}
+        size={150}
+        eager
+        className="lb-guided-art"
+      />
+      <p className="lb-kicker">Think it through</p>
+      <h2>{theme?.title || words.welcome}</h2>
+      <p>{words.about}</p>
     </>
   );
   if (sessionOpen) {
@@ -499,118 +536,136 @@ export default function LivingBook({
             void commit(
               (b) => markTried(updateDraft(b, v.id, draft), practice.id),
               undefined,
-              "Your practice is marked as tried.",
+              "Marked as tried.",
             );
         }}
+        onNewMoment={v.kind === "reflect" ? newMoment : undefined}
+        onLetGo={
+          v.kind === "reflect"
+            ? () =>
+                void commit(
+                  (b) => letGoPractice(b),
+                  () => navigate("do"),
+                  "Plan set aside.",
+                )
+            : undefined
+        }
       />
     );
   } else if (view === "bookmark" || view === "session") {
-    if (v?.status === "complete")
-      right = (
-        <>
-          <p className="lb-kicker">Progress saved</p>
-          <h2>Session complete</h2>
-          <div className="lb-kept">
-            <BookmarkCheck size={20} />
-            <p>{v.summary}</p>
-          </div>
-          <p>
-            Your response is saved. Close this session or choose another activity.
-          </p>
-          <div className="lb-later">
-            <p className="lb-kicker">Next session</p>
-            <p>{plans[v.kind].next}</p>
-          </div>
-          <button
-            className="lb-primary"
-            onClick={() => {
-              setClosed(true);
-              sensory.play("touch");
-            }}
-          >
-            Close the book for now <BookOpen size={16} />
-          </button>
-          <div className="lb-actions">
-            <button
-              className="lb-text"
-              disabled={busy}
-              onClick={() => navigate("do")}
-            >
-              Choose another activity
-            </button>
-            <button className="lb-text" onClick={() => navigate("words")}>
-              Read saved entries
-            </button>
-            <button
-              className="lb-text"
-              disabled={busy}
-              onClick={() => start("begin")}
-            >
-              Choose another topic
-            </button>
-          </div>
-        </>
-      );
-    else if (v)
+    const entry = lastEntry(book);
+    if (v?.status === "complete") {
+      const kept =
+        v.kind === "practice"
+          ? words.planKept
+          : v.kind === "reflect"
+            ? entry?.outcome
+              ? outcomes[entry.outcome]
+              : words.howWent
+            : words.momentKept;
       right = (
         <>
           <p className="lb-kicker">
-            {v.status === "paused" ? "Paused session" : "Current session"}
+            {v.kind === "practice" ? "Plan kept" : "Kept in your book"}
           </p>
-          <h2>{plans[v.kind].title}</h2>
-          <p>
-            Your unfinished response is saved. Continue from the same step.
-          </p>
-          <div className="lb-boundary">
-            <strong>To complete this session</strong>
-            <p>{plans[v.kind].end}</p>
+          <h2>{kept}</h2>
+          {entry?.text && (
+            <blockquote className="lb-kept-words">
+              {entry.text.length > 280
+                ? entry.text.slice(0, 279).trimEnd() + "…"
+                : entry.text}
+            </blockquote>
+          )}
+          <p>{v.kind === "practice" ? words.planLater : words.stop}</p>
+          <div className="lb-actions">
+            <button
+              className="lb-primary"
+              disabled={busy}
+              onClick={() => navigate("home")}
+            >
+              Done for now <Check size={16} />
+            </button>
+            {entry && v.kind !== "practice" && (
+              <button
+                className="lb-text"
+                disabled={busy}
+                onClick={() => {
+                  browse.current = null;
+                  openPage(`moment:${entry.id}`);
+                }}
+              >
+                Open it in Your book
+              </button>
+            )}
           </div>
+          {(v.kind === "begin" || v.kind === "notice") && theme && (
+            <div className="lb-later">
+              <p className="lb-kicker">If you want a next step · about 1 minute</p>
+              <p>{theme.practice}</p>
+              <button
+                className="lb-secondary"
+                disabled={busy}
+                onClick={() => start("practice")}
+              >
+                {words.makePlan} <ArrowUpRight size={16} />
+              </button>
+            </div>
+          )}
+          {v.kind === "reflect" && (
+            <div className="lb-later">
+              <p className="lb-kicker">Whenever another one comes up</p>
+              <button
+                className="lb-secondary"
+                disabled={busy}
+                onClick={() => start("begin")}
+              >
+                Write about another moment
+              </button>
+            </div>
+          )}
+        </>
+      );
+    } else if (v)
+      right = (
+        <>
+          <p className="lb-kicker">Paused · {plans[v.kind].time}</p>
+          <h2>{plans[v.kind].title}</h2>
+          <p>Your words are saved. Pick up on the same page.</p>
           <button
             className="lb-primary"
             disabled={busy}
             onClick={() => start()}
           >
-            Continue where I paused <ArrowUpRight size={16} />
+            Pick up where I left off <ArrowUpRight size={16} />
           </button>
           <div className="lb-actions">
-            <button className="lb-text" onClick={() => setClosed(true)}>
-              Close the book for now
+            <button className="lb-text" onClick={() => backToDo()}>
+              Back to Do something
             </button>
           </div>
-          <p className="lb-fine">Continue whenever you’re ready.</p>
         </>
       );
     else {
       const kind = nextKind(book),
-        plan = plans[kind];
+        plan = plans[kind],
+        pending = pendingPractice(book);
       right = (
         <>
           <p className="lb-kicker">{plan.time}</p>
-          <h2>{plan.title}</h2>
-          <p>
-            {kind === "begin"
-              ? intro
-              : kind === "reflect"
-                ? "After you try your plan, record what happened."
-                : theme?.notice}
-          </p>
-          <div className="lb-boundary">
-            <strong>Our stopping point</strong>
+          <h2>{kind === "reflect" ? words.askTried : plan.title}</h2>
+          {kind === "reflect" && pending ? (
+            <p className="lb-recall-plan">“{pending.text}”</p>
+          ) : (
             <p>{plan.end}</p>
-          </div>
-          {cue && <p className="lb-age-cue">{cue}</p>}
+          )}
           <button
             className="lb-primary"
             disabled={busy}
             onClick={() => start()}
           >
-            Start session <ArrowUpRight size={16} />
+            {kind === "reflect" ? "Say how it went" : "Start"}{" "}
+            <ArrowUpRight size={16} />
           </button>
-          <div className="lb-actions">
-            <button className="lb-text" onClick={() => navigate("words")}>
-              Read saved entries
-            </button>
-          </div>
         </>
       );
     }
@@ -622,7 +677,7 @@ export default function LivingBook({
       {sample && (
         <div className="lb-sample">
           <span>
-            Sample book · fictional people · changes last until reload
+            Fictional sample · changes last until reload
           </span>
           <button
             disabled={headerBusy}
@@ -654,20 +709,37 @@ export default function LivingBook({
       )}
       <div className="lb-desk">
         {!placeScreen && (
-          <div className="lb-identity">
-            <h1 ref={heading} tabIndex={-1}>
+          <div className={`lb-subhead ${ownHead ? "lb-subhead-own" : ""}`}>
+            <h1 ref={heading} tabIndex={-1} className="ui-sr-only">
               {headingText}
             </h1>
-            <span>
-              {sharedView ? <Users size={14} /> : <Lock size={14} />}{" "}
-              {sharedView
-                ? "Only shared pages"
-                : sample
-                  ? "Fictional sample"
-                  : book.profile?.kind === "child"
-                    ? `${ageLabels[book.profile.ageBand]} · private book`
-                    : "Your private pages"}
-            </span>
+            {/* Exercises and the journal draw this row themselves. */}
+            {!ownHead && (
+              <SubHead
+                back={
+                  sharedView
+                    ? undefined
+                    : {
+                        label: place === "book" ? "Back to your book" : "Back to Do something",
+                        disabled: headerBusy,
+                        onClick: () =>
+                          void headerAction(() =>
+                            place === "do" ? backToDo() : navigate(place),
+                          ),
+                      }
+                }
+                noteIcon={sharedView ? <Users size={15} aria-hidden="true" /> : undefined}
+                note={
+                  sharedView
+                    ? "Only shared pages"
+                    : sample
+                      ? "Fictional sample"
+                      : book.profile?.kind === "child"
+                        ? `${ageLabels[book.profile.ageBand]} · private book`
+                        : "Your private pages"
+                }
+              />
+            )}
           </div>
         )}
         {error || vault.error ? (
@@ -679,7 +751,9 @@ export default function LivingBook({
           <div className="lb-cover-wrap">
             <div className="lb-cover">
               <span className="lb-kicker">Relish · the operating manual</span>
-              <div className="lb-cover-picture" />
+              <svg className="lb-cover-picture" viewBox="0 0 200 200" aria-hidden="true">
+                <Emblem kind="leaf" />
+              </svg>
               <h2>{sharedView ? "Our Family pages" : personalTitle}</h2>
               <span className="lb-kicker">Journal, reflections and practice plans</span>
             </div>
@@ -713,7 +787,10 @@ export default function LivingBook({
             onInvite={canInvite ? () => openInvite() : undefined}
             onFamily={() => navigate("family")}
             onBook={() => navigate("book")}
-            onPage={openPage}
+            onPage={(id) => {
+              browse.current = null;
+              openPage(id);
+            }}
             onQuickSave={async (text) => {
               const draft = { ...newJournalDraft(), text };
               await vault.save((b) => writeJournalPage(b, draft, 0, "kept"));
@@ -723,6 +800,39 @@ export default function LivingBook({
             onQuickWrite={(text, voice) =>
               quickEntry(voice, { ...newJournalDraft(), text })
             }
+            onQuickPhoto={(text, file) => {
+              const photos = vault.photos;
+              if (!photos) {
+                quickEntry(false, { ...newJournalDraft(), text }, true);
+                return;
+              }
+              setWorking(true);
+              setError("");
+              Promise.resolve()
+                .then(() => photos.add(file))
+                .then((photo) => {
+                  if (!alive.current) return;
+                  if (!photo)
+                    throw new Error("That photo couldn’t be added. Try another.");
+                  quickEntry(false, {
+                    ...newJournalDraft(),
+                    text,
+                    photos: [photo],
+                  });
+                })
+                .catch((e) => {
+                  if (!alive.current) return;
+                  setError(
+                    e instanceof Error
+                      ? e.message
+                      : "That photo couldn’t be added. Try another.",
+                  );
+                  quickEntry(false, { ...newJournalDraft(), text }, true);
+                })
+                .finally(() => {
+                  if (alive.current) setWorking(false);
+                });
+            }}
           />
         ) : view === "do" && !sharedView ? (
           <DoSomething
@@ -747,9 +857,13 @@ export default function LivingBook({
               void commit(update, after, message)
             }
             onPages={() => navigate("book")}
-            onActivities={() => navigate("do")}
+            onOpenPage={(id) => {
+              browse.current = null;
+              openPage(id);
+            }}
+            onActivities={backToDo}
             initialId={exercise}
-            onBack={exercise ? () => navigate("do") : undefined}
+            onBack={exercise ? backToDo : undefined}
           />
         ) : view === "manual" && !sharedView ? (
           <Manual
@@ -777,7 +891,8 @@ export default function LivingBook({
             onResumeGame={() => navigate("play")}
             onCloseFinished={(again) =>
               void commit(
-                (b) => changeLiving(b, (x) => ({ ...x, game: undefined })),
+                (b) =>
+                  changeLiving(b, (x) => ({ ...recordRound(x), game: undefined })),
                 again
                   ? () => {
                       navigate("do");
@@ -794,8 +909,22 @@ export default function LivingBook({
             busy={busy}
             headingRef={heading}
             initialWho={bookWho}
-            onAddPage={() => navigate("do")}
-            onOpenPage={openPage}
+            initialQuery={bookQuery}
+            onBrowse={(who, query) => {
+              // Keep the saved scroll and row until Back has used them.
+              browse.current = { scroll: 0, ...browse.current, who, query };
+            }}
+            onAddPage={() => quickEntry()}
+            onIdea={() => navigate("do")}
+            onOpenPage={(id) => {
+              browse.current = {
+                who: browse.current?.who ?? "all",
+                query: browse.current?.query ?? "",
+                scroll: window.scrollY,
+                page: id,
+              };
+              openPage(id);
+            }}
             onReview={(card, status) =>
               void commit(
                 (b) => reviewManualIdea(b, card.id, status),
@@ -817,10 +946,11 @@ export default function LivingBook({
             navigation={journalNavigation}
             initialDraft={capture?.draft}
             initialVoice={capture?.voice}
+            initialPhoto={capture?.photo}
             initialReading={reading}
             book={book}
             photos={vault.photos}
-            onBack={() => navigate("book")}
+            onBack={backToBook}
             onOffer={
               !sample && online
                 ? (passage) => {
@@ -846,12 +976,16 @@ export default function LivingBook({
           <div className="lb-play-layout">
             <aside>
               <p className="lb-kicker">Play together</p>
-              <h2>Play together</h2>
-              <p>Play one round on this device. Pass it around.</p>
-              <div className="lb-landscape-inset" />
+              <h2>Pass it around</h2>
+              <p>One round, on this device.</p>
+              <Illustration
+                name={gameIllustration[activeGame.kind] ?? "do-something"}
+                size={180}
+                className="lb-play-art"
+              />
               <p className="lb-fine">
-                Private pages stay out of the game. Anyone may pass. End the
-                game any time; the round is saved.
+                Private pages stay out of the game. End game any time; the
+                round waits for you.
               </p>
             </aside>
             <main className="lb-play-main" key={activeGame.id}>
@@ -879,47 +1013,13 @@ export default function LivingBook({
             </main>
           </div>
         ) : (
-          <>
-            <main
-              className={`lb-book ${sessionOpen ? "lb-session-book" : ""}`}
-              key={pageKey}
-            >
-              <aside className="lb-page lb-left">
-                <div className="lb-running">
-                  <span>Guided activities</span>
-                  <span>
-                    {sharedView ? "Family pages" : `${book.owner} edition`}
-                  </span>
-                </div>
-                {left}
-                <span className="lb-folio">01</span>
-              </aside>
-              <article className="lb-page lb-right">
-                <div className="lb-running">
-                  <span>
-                    {view === "bookmark"
-                      ? "Guided activities"
-                      : headingText}
-                  </span>
-                  <span>
-                    {sharedView ? "Family pages" : `${book.owner} edition`}
-                  </span>
-                </div>
-                {right}
-                <span className="lb-folio">02</span>
-              </article>
-            </main>
-          </>
-        )}
-        {!sharedView && !privateEditorOpen && view === "bookmark" && (
-          <div className="rm-bookmark-link">
-            <button className="lb-text" onClick={() => navigate("manual")}>
-              <Sparkles size={17} />
-              {manualCards.some((c) => c.status === "suggested")
-                ? "New AI suggestions are ready for review"
-                : "Review manual suggestions"}
-            </button>
-          </div>
+          <BookSpread
+            as="main"
+            key={pageKey}
+            className={`lb-guided ${sessionOpen ? "lb-session-book" : ""}`}
+            left={<div className="lb-guided-left">{left}</div>}
+            right={<div className="lb-guided-right">{right}</div>}
+          />
         )}
         <p className="lb-announcement" role="status" aria-live="polite">
           {notice}
@@ -936,7 +1036,7 @@ export default function LivingBook({
       )}
       {modal === "profile" && !sample && !sharedView && (
         <Dialog
-          title="Edition & parent settings"
+          title="Who this book is for"
           onClose={() => setModal(null)}
         >
           <EditionSetup
@@ -949,7 +1049,7 @@ export default function LivingBook({
             save={vault.save}
             onDone={() => {
               setModal(null);
-              setNotice("Edition settings saved.");
+              setNotice("Saved.");
             }}
             onCancel={() => setModal("settings")}
           />
@@ -960,7 +1060,7 @@ export default function LivingBook({
           <p className="lb-kicker">Privacy and storage</p>
           <h2>Privacy and settings</h2>
           <p>
-            Your book, drafts, session progress and games are{" "}
+            This book’s pages, drafts, plans and games are{" "}
             {sample
               ? "examples in memory only"
               : accountManaged
@@ -968,38 +1068,36 @@ export default function LivingBook({
                 : "encrypted in this browser on this device"}
             .{" "}
             {online
-              ? "On-demand AI uses a reviewed excerpt. Automatic manual suggestions have a separate opt-in; photos and private people tags are excluded from AI requests. Saving online does not give AI access to your book."
-              : "General AI chat and online passage sharing are off. Voice writing and manual suggestions, when available, need a parent’s permission and adult account."}
+              ? "AI only sees words you review and choose to send. Suggestions in Your book have their own opt-in. Photos and people tags are never sent to AI. Saving to your account doesn’t give AI access to your book."
+              : "AI chat and online passage sharing are off in this book. Voice writing and Relish suggestions, where offered, need a parent’s permission through a parent’s account."}
           </p>
           {!sample && (
             <div className="lb-boundary">
-              <h3>
-                {book.profile?.kind === "child"
-                  ? "A book for their age"
-                  : "Your adult edition"}
-              </h3>
+              <h3>Who this book is for</h3>
               <p>{ageLabels[audienceOf(book)]}</p>
               <p className="lb-fine">
                 {online
-                  ? "Optional AI and family connections are available when you choose them."
+                  ? "An adult’s book. AI help and family connections are available when you choose them."
                   : accountManaged
                     ? "This child’s book belongs to the parent account and saves automatically online. The parent account password protects age changes and access to the family library. Voice writing needs a parent’s separate permission."
-                    : "Written guidance for this age. A separate parent passphrase protects this local edition’s settings. Children have no independent account or online passage sharing."}
+                    : "Prompts are written for this age. A separate parent passphrase protects these settings. Children have no account of their own and no online passage sharing."}
               </p>
               <button
                 className="lb-secondary"
                 onClick={() => setModal("profile")}
               >
-                Edition & parent settings
+                Change who this book is for
               </button>
             </div>
           )}
           <div className="lb-boundary">
             <h3>Back up your book</h3>
             <p>
-              {accountManaged
-                ? "Your saved book is available whenever you sign in. For an extra portable copy, export a backup with a passphrase you choose and keep separately."
-                : "Browser data can be cleared. Export encrypted backups regularly and keep your passphrase separately."}
+              {sample
+                ? "The sample can’t be backed up. Create your own book to keep pages."
+                : accountManaged
+                  ? "Your saved book is available whenever you sign in. For an extra portable copy, export a backup with a passphrase you choose and keep separately."
+                  : "Browser data can be cleared. Export encrypted backups regularly and keep your passphrase separately."}
             </p>
             <button
               className="lb-primary"
@@ -1017,7 +1115,7 @@ export default function LivingBook({
                 setModal("connections");
               }}
             >
-              <Users size={16} /> Partner sharing and your online account
+              <Users size={16} /> Connected books and your account
             </button>
           )}
           <p className="lb-fine">
@@ -1027,11 +1125,11 @@ export default function LivingBook({
           </p>
           {!sample && (
             <details className="lb-boundary">
-              <summary>Remove this edition from this device</summary>
+              <summary>Remove {book.owner}’s book from this device</summary>
               <p>
-                Export a backup first if you want to keep this book. This
-                permanently removes its local copy. Online connections, other
-                editions and backups are separate.
+                This permanently deletes the copy of {book.owner}’s book on this
+                device. Export a backup first if you want to keep it. Online
+                connections, other books and backups are separate.
               </p>
               <label>
                 Type {book.owner} to confirm
@@ -1056,12 +1154,12 @@ export default function LivingBook({
                       setRemoveError(
                         e instanceof Error
                           ? e.message
-                          : "The edition could not be removed.",
+                          : "This book couldn’t be removed. It is still here.",
                       ),
                     )
                 }
               >
-                Remove this local edition
+                Remove from this device
               </button>
             </details>
           )}

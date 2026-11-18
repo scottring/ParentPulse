@@ -23,6 +23,7 @@ import { readHomeBook } from "./homeBook";
 
 const bookTones = ["sun", "clay", "sky", "sage"] as const;
 import { Dialog } from "./BookForms";
+import Illustration from "./Illustration";
 export default function AccountLibrary({
   vault,
   sync,
@@ -336,7 +337,7 @@ export default function AccountLibrary({
                         {head.label}
                         <small>
                           {head.accountManaged
-                            ? "Open book →"
+                            ? `Open ${head.label.trim() || "this"}’s book →`
                             : "Earlier book · original passphrase needed"}
                         </small>
                       </span>
@@ -556,23 +557,7 @@ export default function AccountLibrary({
           <p className="lb-wordmark">relish</p>
           <p>The operating manual for relationships</p>
         </div>
-        <svg
-          className="lb-library-sun"
-          aria-hidden="true"
-          width="120"
-          height="72"
-          viewBox="0 0 120 72"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="30" cy="36" r="16" fill="#f2d58a" />
-          <path d="M30 10v-6M30 68v-6M4 36h6M50 36h6M12 18l4 4M44 50l4 4M12 54l4-4M44 22l4-4" />
-          <path d="M70 52c6-14 18-14 24 0M84 30a6 6 0 1 0 0.1 0" fill="#e9b9a0" />
-          <path d="M100 56c3-8 10-8 13 0M106 42a4 4 0 1 0 0.1 0" fill="#cfdcc4" />
-        </svg>
+        <Illustration name="welcome" size={132} eager className="lb-library-sun" />
       </header>
       <section>{content}</section>
     </main>

@@ -6,36 +6,45 @@ import {
   samePagePrompts,
 } from "./play-content";
 
+// Adult topics are situations a parent would recognize from their own week.
+// Each keeps its original stored id (listen / ask / joy), so books written
+// before these words changed read on without a migration.
 export const threads = {
   listen: {
-    title: "Practice listening",
-    notice: "When did someone try to tell you something?",
-    practice: "Ask before offering an answer.",
+    title: "I jumped in with advice",
+    lead: "Someone wanted to talk, and I went straight to fixing it.",
+    notice: "What were they telling you, and what did you say?",
+    practice: "Ask before you offer an answer.",
     instruction:
-      "In an ordinary conversation, ask: “Would you like listening or ideas?” Then make room for the answer.",
+      "Next time someone brings you something, try: “Do you want ideas, or do you want me to listen?” Then go with their answer.",
+    planExample: "Ask “ideas or listening?” when they talk about school",
   },
   ask: {
-    title: "Say what I need more clearly",
-    notice: "When did you wish someone understood what you needed?",
-    practice: "Offer one clear, small request.",
+    title: "I wish I’d asked for what I needed",
+    lead: "I went along with it, or let it build, instead of saying what would help.",
+    notice: "What did you need in that moment, and what happened instead?",
+    practice: "Ask for one small, specific thing.",
     instruction:
-      "Try: “What would help me right now is…” Let the other person answer in their own words.",
+      "Try: “What would help me right now is…” Keep it small, and let the other person answer in their own words.",
+    planExample: "Ask for a little quiet after dinner",
   },
   joy: {
-    title: "Plan something enjoyable",
-    notice: "What did you enjoy today?",
-    practice: "Make time for one small joy.",
+    title: "I’d like more moments like that one",
+    lead: "Something went well, and I want to remember it and make room for it again.",
+    notice: "What happened? Write down the moment you’d like more of.",
+    practice: "Make room for one more like it.",
     instruction:
-      "Choose something small that brings you or someone you love a little joy. Make an invitation, without an obligation.",
+      "Pick one small way to set it up again. Offer it as an invitation, not an obligation.",
+    planExample: "Suggest another walk to the creek on Saturday",
   },
 } as const;
 export type ThreadId = keyof typeof threads;
 export type SessionKind = "begin" | "notice" | "practice" | "reflect";
 export type Outcome = "helped" | "adjust" | "time";
 export const outcomes: Record<Outcome, string> = {
-  helped: "Something helped",
-  adjust: "I learned what I would change",
-  time: "I need a little more time",
+  helped: "It helped, even a little",
+  adjust: "I learned what I’d change",
+  time: "Too soon to tell",
 };
 export type Draft = {
   text: string;
@@ -93,6 +102,20 @@ export type SharedPage = {
   approvedBy: string[];
   createdAt: string;
 };
+/**
+ * A light trace that a round was played, kept or not. It holds only the game
+ * kind, the players' names (as stored on the game) and the date: never
+ * answers, story text or anything private. `id` is the game's id.
+ */
+export type PlayRecord = {
+  id: string;
+  kind: GameKind;
+  players: { id: string; name: string }[];
+  playedAt: string;
+  /** The shared page kept for this round, when every player approved one. */
+  pageId?: string;
+};
+export const PLAY_LIMIT = 500;
 export type LivingState = {
   version: 1;
   thread?: ThreadId;
@@ -100,6 +123,8 @@ export type LivingState = {
   entries: LivingEntry[];
   sharedPages: SharedPage[];
   game?: Game;
+  /** Optional: books from before play records simply have none. */
+  plays?: PlayRecord[];
 };
 export const freshLiving = (): LivingState => ({
   version: 1,
@@ -117,28 +142,28 @@ export const plans: Record<
   { title: string; time: string; end: string; next: string }
 > = {
   begin: {
-    title: "Choose a topic and write a reflection",
+    title: "Write down one moment",
     time: "About 3 minutes",
-    end: "Choose a topic, write about an experience, then save your reflection.",
-    next: "Next, choose a practice plan or another activity.",
+    end: "Pick what happened, write it down, and save it. That can be the whole thing.",
+    next: "If you want, make a small plan to try next time.",
   },
   notice: {
-    title: "Write a reflection",
+    title: "Write down another moment",
     time: "About 2 minutes",
-    end: "Write about an experience, then save your reflection. Sharing is optional.",
-    next: "Next, choose an action to practice.",
+    end: "Write it down and save it.",
+    next: "If you want, make a small plan to try next time.",
   },
   practice: {
-    title: "Make a practice plan",
-    time: "About 1 minute here",
-    end: "Choose when to try the suggested action, then save your plan.",
-    next: "After you try it, return to record how it went.",
+    title: "Make a small plan",
+    time: "About 1 minute",
+    end: "Write what you’ll try and when, then save the plan.",
+    next: "Next time you open Think it through, it will ask how it went.",
   },
   reflect: {
-    title: "Review your practice",
+    title: "How did it go?",
     time: "About 2 minutes",
-    end: "Choose how it went, add a note if you want, then save your review.",
-    next: "Continue with this topic next time, or choose another.",
+    end: "Say whether you tried it and how it went, then save.",
+    next: "Write about another moment whenever one comes up.",
   },
 };
 export function nextKind(book: Book): SessionKind {
@@ -192,7 +217,7 @@ export function chooseThread(book: Book, thread: ThreadId): Book {
   const l = livingOf(book),
     v = l.visit;
   if (!v || v.kind !== "begin" || v.status !== "active")
-    throw new Error("Begin a new visit first.");
+    throw new Error("Start again from Think it through.");
   return changeLiving(book, (x) => ({
     ...x,
     thread,
@@ -202,7 +227,7 @@ export function chooseThread(book: Book, thread: ThreadId): Book {
 export function updateDraft(book: Book, visitId: string, draft: Draft): Book {
   const v = livingOf(book).visit;
   if (!v || v.id !== visitId || v.status === "complete")
-    throw new Error("This visit is no longer open.");
+    throw new Error("This page has changed. Open Think it through again.");
   return changeLiving(book, (x) => ({
     ...x,
     visit: { ...v, draft, updatedAt: now() },
@@ -220,15 +245,13 @@ export function completeVisit(book: Book, visitId: string, draft: Draft): Book {
   const l = livingOf(book),
     v = l.visit;
   if (!v || v.id !== visitId || v.status === "complete" || !v.thread)
-    throw new Error("Open the current visit before keeping it.");
+    throw new Error("This page has changed. Open Think it through again.");
   const stamp = now();
   let entry: LivingEntry;
   let summary: string;
   if (v.kind === "begin" || v.kind === "notice") {
     if (!draft.text.trim())
-      throw new Error(
-        "One sentence is enough. Add a moment before keeping it.",
-      );
+      throw new Error("One sentence is enough. Write a few words first.");
     entry = {
       id: id(),
       kind: "notice",
@@ -237,13 +260,10 @@ export function completeVisit(book: Book, visitId: string, draft: Draft): Book {
       perspective: draft.perspective.trim(),
       createdAt: stamp,
     };
-    summary =
-      v.kind === "begin"
-        ? "Topic selected and reflection saved."
-        : "Reflection saved.";
+    summary = "One moment kept.";
   } else if (v.kind === "practice") {
     if (!draft.opportunity.trim())
-      throw new Error("Choose a moment when you could try this.");
+      throw new Error("Write what you’ll try, in a few words.");
     entry = {
       id: id(),
       kind: "practice",
@@ -251,17 +271,14 @@ export function completeVisit(book: Book, visitId: string, draft: Draft): Book {
       text: draft.opportunity.trim(),
       createdAt: stamp,
     };
-    summary =
-      "You chose a moment to try: " +
-      draft.opportunity.trim() +
-      ". The practice is still ahead of you.";
+    summary = "Plan kept: " + draft.opportunity.trim();
   } else {
     if (!draft.outcome || !Object.hasOwn(outcomes, draft.outcome))
-      throw new Error("Choose what fits your experience.");
+      throw new Error("Choose how it went.");
     const practice = pendingPractice(book);
     if (!practice?.triedAt)
       throw new Error(
-        "Mark the practice as tried before reflecting, or pause until you have had a chance.",
+        "Say you tried it first, or come back after you’ve had a chance.",
       );
     entry = {
       id: id(),
@@ -272,10 +289,7 @@ export function completeVisit(book: Book, visitId: string, draft: Draft): Book {
       sourceId: practice.id,
       createdAt: stamp,
     };
-    summary =
-      "You kept what this experience taught you: " +
-      outcomes[draft.outcome].toLowerCase() +
-      ".";
+    summary = "How it went: " + outcomes[draft.outcome].toLowerCase() + ".";
   }
   return changeLiving(book, (x) => ({
     ...x,
@@ -290,17 +304,68 @@ export function completeVisit(book: Book, visitId: string, draft: Draft): Book {
     },
   }));
 }
+/**
+ * Sets a waiting plan aside without trying it. Stored as a reflection on the
+ * plan (no outcome), so it stops being "pending" with no schema change.
+ */
+export function letGoPractice(book: Book): Book {
+  const practice = pendingPractice(book);
+  if (!practice) throw new Error("There’s no plan waiting.");
+  const stamp = now();
+  const entry: LivingEntry = {
+    id: id(),
+    kind: "reflection",
+    thread: practice.thread,
+    text: "Let this plan go without trying it.",
+    sourceId: practice.id,
+    createdAt: stamp,
+  };
+  return changeLiving(book, (x) => ({
+    ...x,
+    entries: [...x.entries, entry],
+    visit:
+      x.visit && x.visit.status !== "complete"
+        ? {
+            ...x.visit,
+            status: "complete",
+            updatedAt: stamp,
+            completedAt: stamp,
+            summary: "Plan let go.",
+            draft: { text: "", opportunity: "", outcome: "", perspective: "" },
+          }
+        : x.visit,
+  }));
+}
 export function markTried(book: Book, entryId: string): Book {
   const entry = livingOf(book).entries.find(
     (e) => e.id === entryId && e.kind === "practice",
   );
-  if (!entry) throw new Error("This practice is no longer available.");
+  if (!entry) throw new Error("This plan is no longer in your book.");
   return changeLiving(book, (l) => ({
     ...l,
     entries: l.entries.map((e) =>
       e.id === entryId ? { ...e, triedAt: now() } : e,
     ),
   }));
+}
+/**
+ * Sets aside an open visit that holds no words yet (say, a plan nobody has
+ * had a chance to try) and starts a fresh moment. The earlier plan stays in
+ * the book; nothing written is ever dropped.
+ */
+export function beginNewMoment(book: Book): Book {
+  const v = livingOf(book).visit;
+  if (v && v.status !== "complete") {
+    const d = v.draft;
+    if (d.text.trim() || d.opportunity.trim() || d.perspective.trim())
+      throw new Error("Save or pause what you’ve written first.");
+    book = changeLiving(book, (x) => ({ ...x, visit: undefined }));
+  }
+  return beginVisit(book, "begin");
+}
+/** The latest entry kept by a finished visit, for its ending page. */
+export function lastEntry(book: Book) {
+  return livingOf(book).entries.at(-1);
 }
 export const joyChoices = [
   "An unhurried walk",
@@ -549,6 +614,39 @@ export function keepGame(book: Book): Book {
   }));
 }
 
+/**
+ * Notes that the open round was played, once per game, as soon as it has
+ * reached its reveal (whether or not a page was kept). Rounds that never
+ * reached the reveal leave no trace.
+ */
+export function recordRound(l: LivingState): LivingState {
+  const g = l.game;
+  if (!g || !["reveal", "kept", "finished"].includes(g.stage)) return l;
+  const plays = l.plays || [];
+  const record: PlayRecord = {
+    id: g.id,
+    kind: g.kind,
+    players: g.players.map((p) => ({ id: p.id, name: p.name })),
+    playedAt: g.finishedAt || g.updatedAt,
+    ...(g.savedPageId ? { pageId: g.savedPageId } : {}),
+  };
+  const previous = plays.find((r) => r.id === g.id);
+  if (previous && previous.pageId === record.pageId) return l;
+  return {
+    ...l,
+    plays: previous
+      ? plays.map((r) => (r.id === g.id ? { ...previous, ...record, playedAt: previous.playedAt } : r))
+      : [...plays, record].slice(-PLAY_LIMIT),
+  };
+}
+/** Ends the open round and notes that it was played. */
+export function finishGame(book: Book): Book {
+  return changeLiving(book, (x) => {
+    if (!x.game) throw new Error("No game is open.");
+    return recordRound({ ...x, game: advanceGame(x.game, { type: "finish" }) });
+  });
+}
+
 // Imported encrypted backups are untrusted structured data. Reject invalid states
 // before they can reach navigation, turn indexing, or completion transitions.
 const obj = (v: unknown): v is Record<string, unknown> =>
@@ -615,6 +713,29 @@ export function isLiving(value: unknown): value is LivingState {
     )
   )
     return false;
+  if (value.plays !== undefined) {
+    if (
+      !Array.isArray(value.plays) ||
+      value.plays.length > PLAY_LIMIT ||
+      new Set(value.plays.map((r) => (obj(r) ? r.id : r))).size !==
+        value.plays.length ||
+      !value.plays.every(
+        (r) =>
+          obj(r) &&
+          str(r.id, 100) &&
+          !!r.id &&
+          gameKinds.includes(r.kind as GameKind) &&
+          date(r.playedAt) &&
+          optional(r.pageId, (x) => str(x, 100) && !!x) &&
+          Array.isArray(r.players) &&
+          r.players.length >= 2 &&
+          r.players.length <= 12 &&
+          r.players.every(player) &&
+          new Set(r.players.map((x) => x.id)).size === r.players.length,
+      )
+    )
+      return false;
+  }
   const v = value.visit;
   if (v !== undefined) {
     if (

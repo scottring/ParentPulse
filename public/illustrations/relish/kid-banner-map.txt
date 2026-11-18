@@ -1,0 +1,12 @@
+Relish kids’ Home banners
+
+PNG filename                 Suggestion IDs in nudges.ts
+kid-kindness-spotting.png    tween-kindness, young-kindness
+kid-banner-2.png             teen-write, tween-write, young-write
+kid-banner-3.png             tween-story, little-story
+kid-banner-4.png             tween-drains
+kid-banner-5.png             young-joy
+kid-banner-6.png             teen-upset, young-upset, little-upset
+kid-banner-7.png             teen-trial
+kid-banner-8.png             teen-thanks
+kid-banner-9.png             little-page

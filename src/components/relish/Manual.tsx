@@ -78,7 +78,7 @@ export function useManualGuide(
       if (!config?.enabled || sample || !alive.current)
         throw new Error("AI suggestions are not enabled yet.");
       const b = latest.current;
-      if (!b.profile) throw new Error("Choose an edition age range first.");
+      if (!b.profile) throw new Error("Choose who this book is for first.");
       if (b.profile.kind === "child" && !config.children)
         throw new Error(
           "Children’s automatic reflections need the additional provider privacy setup.",
@@ -360,14 +360,14 @@ export default function Manual({
       </header>
       <div className="rm-tabs" role="group" aria-label="Choose a manual">
         <button
-          className={scope === "personal" ? "lb-primary" : "lb-secondary"}
+          className="ui-chip"
           aria-pressed={scope === "personal"}
           onClick={() => setScope("personal")}
         >
           <BookOpen size={18} /> My manual
         </button>
         <button
-          className={scope === "family" ? "lb-primary" : "lb-secondary"}
+          className="ui-chip"
           aria-pressed={scope === "family"}
           onClick={() => setScope("family")}
         >
@@ -454,7 +454,7 @@ export default function Manual({
                       ? "I’m the parent or guardian and allow this guide session. "
                       : "I’m 18 or older. "}
                     I understand that turning on a manual’s guide sends its
-                    recent kept text to OpenAI automatically while this edition
+                    recent kept text to OpenAI automatically while this book
                     is open. I can turn it off below. Standard API privacy
                     applies: no model training by default, response storage off,
                     and possible abuse-monitoring retention for up to 30 days.

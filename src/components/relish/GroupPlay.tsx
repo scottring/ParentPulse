@@ -52,25 +52,17 @@ export default function GroupPlay({
   const next = gamePlayer(g);
   return (
     <section className="lb-game" aria-label="Our game">
-      <div className="lb-session-line">
-        <div>
-          <p className="lb-kicker">
-            {finished
-              ? "Round complete"
-              : "One round"}
-          </p>
-          <p>
-            {finished
-              ? "One round complete"
-              : `Turn ${g.turn + 1} of ${total} · then reveal together`}
-          </p>
-        </div>
-        {!finished && (
+      {!finished && (
+        <div className="lb-session-line">
+          <div>
+            <p className="lb-kicker">One round</p>
+            <p>{`Turn ${g.turn + 1} of ${total} · then reveal together`}</p>
+          </div>
           <button className="lb-text" disabled={busy} onClick={onPause}>
             Pause here
           </button>
-        )}
-      </div>
+        </div>
+      )}
       {g.audience && (
         <p className="lb-fine">
           {ageLabels[g.audience]} · chosen for this round
@@ -87,10 +79,16 @@ export default function GroupPlay({
                 : "Pass the device around. Each person adds to the same story. Anyone can pass."}
           </p>
           <div className="lb-boundary">
-            <strong>Our stopping point · about 5–10 minutes</strong>
+            <strong>
+              {g.kind === "match"
+                ? "About 3–5 minutes"
+                : g.kind === "joy"
+                  ? "About 5 minutes"
+                  : "About 5–10 minutes"}
+            </strong>
             <p>
-              {total} turns, then a reveal together. A pass counts as a turn. No
-              need to save a page or play again.
+              {total} turns, then everyone sees the answers together. Passing
+              counts as a turn.
             </p>
           </div>
           <ol className="lb-turns">
@@ -140,8 +138,10 @@ export default function GroupPlay({
           <h2>Over to {next.name}.</h2>
           <p>
             {g.kind === "story"
-              ? "It is your turn to add to the story. Passing is welcome too."
-              : "The answers so far are hidden. Hand the device over before continuing."}
+              ? "Add the next part of the story, or pass."
+              : g.kind === "joy"
+                ? `Guess what ${g.players[0].name} picked, or pass. The answers so far stay hidden.`
+                : "Answer without looking at anyone else’s, or pass. The answers so far stay hidden."}
           </p>
           <button
             className="lb-primary"
@@ -205,8 +205,8 @@ export default function GroupPlay({
             {text
               ? g.kind === "story"
                 ? "Your story"
-                : "Results"
-              : "Round ended"}
+                : "Here’s what everyone chose"
+              : "Everyone passed"}
           </h2>
           {match && text ? (
             <>
@@ -253,13 +253,13 @@ export default function GroupPlay({
             <blockquote>{text}</blockquote>
           ) : (
             <p>
-              Everyone passed. No answers were saved.
+              No answers to show this time. That’s fine too.
             </p>
           )}
           <div className="lb-boundary">
-            <strong>Round complete</strong>
             <p>
-              The round is finished. You can close the game or save a shared page below.
+              That’s the round. Finish for now ends it here. Your book notes
+              that you played, without anyone’s answers.
             </p>
             <button className="lb-primary" disabled={busy} onClick={onFinish}>
               Finish for now <Check size={16} />
@@ -270,11 +270,10 @@ export default function GroupPlay({
           ) : (
             text && (
               <details className="lb-sharing">
-                <summary>Keep a shared page · optional</summary>
+                <summary>Also keep these words as a shared page · optional</summary>
                 <p>
-                  Approve these exact words, one person at a time. They will be
-                  kept in the Family pages of {book.owner}’s book on this
-                  device.
+                  Each player approves these exact words. They’ll be kept as a
+                  shared page in {book.owner}’s book. Anyone can say no.
                 </p>
                 <blockquote>{text}</blockquote>
                 <div className="lb-players">
@@ -293,7 +292,7 @@ export default function GroupPlay({
                 </div>
                 <p className="lb-fine">
                   {g.approvals.filter(Boolean).length} of {g.players.length}{" "}
-                  approved. Anyone can choose not to share.
+                  approved.
                 </p>
                 <button
                   className="lb-secondary"

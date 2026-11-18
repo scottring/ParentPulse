@@ -337,10 +337,10 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
       if (alive.current)
         setError(
           e instanceof DOMException && e.name === "NotAllowedError"
-            ? "Microphone access is off. Allow it in your browser’s site settings, then try again."
+            ? "Microphone access is off. Allow it in your browser’s site settings and try again, or close this and type your page instead."
             : e instanceof Error
               ? e.message
-              : "The microphone couldn’t start.",
+              : "The microphone couldn’t start. You can close this and type your page instead.",
         );
     } finally {
       operation.current = false;
@@ -425,7 +425,7 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
           </p>
         ) : !book.profile ? (
           <p>
-            Choose an adult or child edition in parent settings before
+            Choose an adult or child book in parent settings before
             connecting voice writing.
           </p>
         ) : !config || !accountReady ? (

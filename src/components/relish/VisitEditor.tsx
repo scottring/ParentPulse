@@ -11,6 +11,8 @@ import {
 } from "@/lib/relish/living";
 import { guidanceFor } from "@/lib/relish/guidance";
 import { canUseOnline } from "@/lib/relish/profiles";
+import Illustration from "./Illustration";
+import { topicIllustration } from "./illustrations";
 import { AIHelp } from "./AIHelp";
 import { Dialog } from "./BookForms";
 
@@ -23,6 +25,8 @@ export default function VisitEditor({
   onPause,
   onFinish,
   onTried,
+  onNewMoment,
+  onLetGo,
 }: {
   book: Book;
   visit: Visit;
@@ -32,6 +36,10 @@ export default function VisitEditor({
   onPause: (draft: Draft) => void;
   onFinish: (draft: Draft) => void;
   onTried: (draft: Draft) => void;
+  /** Sets aside an untried plan and starts a new moment. */
+  onNewMoment?: (draft: Draft) => void;
+  /** Set the waiting plan aside without trying it. */
+  onLetGo?: () => void;
 }) {
   const [draft, setDraft] = useState<Draft>(visit.draft),
     [ai, setAI] = useState(false),
@@ -56,12 +64,12 @@ export default function VisitEditor({
     if (!dirty) return;
     const rev = ++revision.current;
     timer.current = setTimeout(() => {
-      setStatus("Saving progress…");
+      setStatus("Saving…");
       void saveRef
         .current((b) => updateDraft(b, visit.id, draft))
         .then(() => {
           if (alive.current && rev === revision.current) {
-            setStatus("Progress saved.");
+            setStatus("Saved");
             setError("");
           }
         })
@@ -69,7 +77,7 @@ export default function VisitEditor({
           if (alive.current && rev === revision.current) {
             setStatus("");
             setError(
-              "Your latest words have not saved yet. Keep this page open and try again.",
+              "Your latest words haven’t saved yet. Keep this page open and try again.",
             );
           }
         });
@@ -95,6 +103,7 @@ export default function VisitEditor({
     threads,
     plans,
     outcomes,
+    words,
     cue,
     choices,
     opportunities,
@@ -105,29 +114,40 @@ export default function VisitEditor({
   const theme = visit.thread ? threads[visit.thread] : null,
     plan = plans[visit.kind],
     practice = pendingPractice(book);
-  const step =
-    visit.kind === "begin" ? `Step ${visit.step + 1} of 2` : "Guided reflection";
+  const kicker =
+    visit.kind === "begin"
+      ? `${visit.step === 0 ? "Step 1 of 2" : "Step 2 of 2"} · ${plan.time}`
+      : plan.time;
+  /** Adds a "when" to the plan, or starts it when the field is empty. */
+  const addWhen = (when: string) => {
+    const now = draft.opportunity.trim().replace(/[.\s]+$/, "");
+    setDraft({
+      ...draft,
+      opportunity: (now ? `${now} ${when}` : when).slice(0, 500),
+    });
+  };
   return (
     <div className="lb-editor">
-      <p className="lb-kicker">
-        {step} · {plan.time}
-      </p>
-      <div className="lb-boundary">
-        <strong>To complete this session</strong>
-        <p>{plan.end}</p>
-      </div>
-      {cue && <p className="lb-age-cue">{cue}</p>}
+      <p className="lb-kicker">{kicker}</p>
       {visit.kind === "begin" && visit.step === 0 ? (
         <>
-          <h2>Choose a topic</h2>
-          <div className="lb-choices">
+          <h2>{words.choose}</h2>
+          <p className="lb-fine">{words.chooseHint}</p>
+          {cue && <p className="lb-age-cue">{cue}</p>}
+          <div className="lb-topics">
             {Object.entries(threads).map(([key, t]) => (
               <button
                 key={key}
+                className="lb-topic"
                 disabled={busy}
                 onClick={() => onThread(key as ThreadId)}
               >
-                {t.title}
+                <Illustration
+                  name={topicIllustration[key] ?? "think-it-through"}
+                  size={88}
+                />
+                <span className="lb-topic-title">{t.title}</span>
+                <span className="lb-topic-lead">{t.lead}</span>
               </button>
             ))}
           </div>
@@ -135,6 +155,7 @@ export default function VisitEditor({
       ) : visit.kind === "begin" || visit.kind === "notice" ? (
         <>
           <h2>{theme?.notice}</h2>
+          {cue && <p className="lb-age-cue">{cue}</p>}
           {choices.length > 0 && (
             <div
               className="lb-feeling-choices"
@@ -144,7 +165,7 @@ export default function VisitEditor({
                 <button
                   key={choice}
                   type="button"
-                  className="lb-secondary"
+                  className="ui-chip"
                   disabled={busy}
                   onClick={() =>
                     setDraft({
@@ -172,11 +193,6 @@ export default function VisitEditor({
               placeholder={placeholder}
             />
           </label>
-          <p className="lb-fine">
-            {online
-              ? "These words stay in your private edition. Sharing is a separate choice."
-              : "These words stay in this book on this device. You do not have to show them to anyone."}
-          </p>
           {draft.perspective && (
             <div className="lb-margin">
               <p className="lb-kicker">A perspective you chose to keep</p>
@@ -195,7 +211,7 @@ export default function VisitEditor({
               disabled={busy || !draft.text.trim()}
               onClick={() => leave(onFinish)}
             >
-              Save reflection and finish <Check size={15} />
+              {words.saveMoment} <Check size={15} />
             </button>
             {online && (
               <button
@@ -203,7 +219,7 @@ export default function VisitEditor({
                 disabled={!draft.text.trim()}
                 onClick={() => setAI(true)}
               >
-                <Sparkles size={15} /> Invite AI to help
+                <Sparkles size={15} /> Get another perspective on these words
               </button>
             )}
           </div>
@@ -213,105 +229,144 @@ export default function VisitEditor({
           <h2>{theme?.practice}</h2>
           <p>{theme?.instruction}</p>
           <label>
-            A moment when I could try
-            <select
+            {words.planLabel}
+            <textarea
+              autoFocus
+              rows={2}
+              maxLength={500}
               value={draft.opportunity}
+              placeholder={theme?.planExample}
               onChange={(e) =>
                 setDraft({ ...draft, opportunity: e.target.value })
               }
-            >
-              <option value="">Choose an ordinary opportunity</option>
-              {opportunities.map((option) => (
-                <option key={option}>{option}</option>
-              ))}
-            </select>
+            />
           </label>
+          <div className="lb-feeling-choices" role="group" aria-label="Add when">
+            {opportunities.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className="ui-chip"
+                disabled={busy}
+                onClick={() => addWhen(option)}
+              >
+                + {option}
+              </button>
+            ))}
+          </div>
           <button
             className="lb-primary"
-            disabled={busy || !draft.opportunity}
+            disabled={busy || !draft.opportunity.trim()}
             onClick={() => leave(onFinish)}
           >
-            Save plan and finish
+            {words.savePlan} <Check size={15} />
           </button>
-          <p className="lb-fine">
-            This keeps a plan. Mark it tried only after it happens.
+        </>
+      ) : !practice?.triedAt ? (
+        <>
+          <h2>{words.askTried}</h2>
+          {practice && (
+            <div className="lb-margin lb-recall">
+              <p className="lb-kicker">Your plan · {theme?.title}</p>
+              <p className="lb-recall-plan">“{practice.text}”</p>
+            </div>
+          )}
+          <div className="lb-actions">
+            <button
+              className="lb-primary"
+              disabled={busy || !practice}
+              onClick={() => leave(onTried)}
+            >
+              {words.tried} <Check size={15} />
+            </button>
+            <button
+              className="lb-secondary"
+              disabled={busy}
+              onClick={() => leave(onPause)}
+            >
+              {words.notYet}
+            </button>
+            {onLetGo && practice && (
+              <button
+                className="lb-text"
+                disabled={busy}
+                onClick={onLetGo}
+              >
+                Let it go
+              </button>
+            )}
+          </div>
+          <p className="lb-fine lb-after-actions">
+            “Not yet” keeps the plan for next time.
+            {onLetGo && practice ? " “Let it go” sets it aside; nothing is lost." : ""}
           </p>
+          {onNewMoment && (
+            <button
+              className="lb-text"
+              disabled={busy}
+              onClick={() => leave(onNewMoment)}
+            >
+              Write about a different moment instead
+            </button>
+          )}
         </>
       ) : (
         <>
-          <h2>Review your practice</h2>
+          <h2>{words.howWent}</h2>
           {practice && (
-            <div className="lb-margin">
-              <p>{theme?.practice}</p>
-              <p className="lb-fine">Your opportunity: {practice.text}.</p>
-            </div>
+            <p className="lb-fine lb-recall-line">
+              Your plan: “{practice.text}”
+            </p>
           )}
-          {!practice?.triedAt ? (
-            <>
-              <p>
-                Life does not need to follow a schedule. If you have not had a
-                chance, leave this for another day.
-              </p>
+          <fieldset className="lb-outcomes">
+            <legend className="ui-sr-only">{words.howWent}</legend>
+            {Object.entries(outcomes).map(([key, value]) => (
               <button
-                className="lb-primary"
-                disabled={busy || !practice}
-                onClick={() => leave(onTried)}
+                key={key}
+                type="button"
+                className="ui-chip"
+                aria-pressed={draft.outcome === key}
+                disabled={busy}
+                onClick={() =>
+                  setDraft({ ...draft, outcome: key as Draft["outcome"] })
+                }
               >
-                I have tried it · reflect
+                {value}
               </button>
-            </>
-          ) : (
-            <>
-              <label>
-                What fits this experience?
-                <select
-                  value={draft.outcome}
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      outcome: e.target.value as Draft["outcome"],
-                    })
-                  }
-                >
-                  <option value="">Choose what fits</option>
-                  {Object.entries(outcomes).map(([key, value]) => (
-                    <option key={key} value={key}>
-                      {value}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                A sentence to remember · optional
-                <textarea
-                  value={draft.text}
-                  rows={4}
-                  maxLength={maxLength}
-                  onChange={(e) => setDraft({ ...draft, text: e.target.value })}
-                  placeholder="Next time, I might…"
-                />
-              </label>
-              <button
-                className="lb-primary"
-                disabled={busy || !draft.outcome}
-                onClick={() => leave(onFinish)}
-              >
-                Save review and finish <Check size={15} />
-              </button>
-            </>
-          )}
+            ))}
+          </fieldset>
+          <label>
+            Anything to remember? · optional
+            <textarea
+              value={draft.text}
+              rows={3}
+              maxLength={maxLength}
+              onChange={(e) => setDraft({ ...draft, text: e.target.value })}
+              placeholder="Next time, I might…"
+            />
+          </label>
+          <button
+            className="lb-primary"
+            disabled={busy || !draft.outcome}
+            onClick={() => leave(onFinish)}
+          >
+            {words.saveHow} <Check size={15} />
+          </button>
         </>
       )}
       <div className="lb-editor-foot">
-        <button
-          className="lb-text"
-          disabled={busy}
-          onClick={() => leave(onPause)}
-        >
-          <Pause size={14} /> Pause here
-        </button>
+        {/* "Not yet" already pauses a plan nobody has tried. */}
+        {!(visit.kind === "reflect" && !practice?.triedAt) && (
+          <button
+            className="lb-text"
+            disabled={busy}
+            onClick={() => leave(onPause)}
+          >
+            <Pause size={14} /> Pause here
+          </button>
+        )}
         <span className="lb-fine" role="status">
-          {dirty ? "Saving progress…" : status}
+          {dirty ? "Saving…" : status}
         </span>
       </div>
       {error && (
@@ -330,7 +385,10 @@ export default function VisitEditor({
         </p>
       )}
       {ai && online && (
-        <Dialog title="Invite AI to help" onClose={() => setAI(false)}>
+        <Dialog
+          title="Get another perspective"
+          onClose={() => setAI(false)}
+        >
           <AIHelp
             profile={book.profile}
             observation={draft.text}

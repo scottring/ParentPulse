@@ -1,4 +1,4 @@
-import type { BookPage } from "./pages";
+import { PLAY_RECORD, type BookPage } from "./pages";
 import { tools, toolsFor } from "./tools";
 import { games } from "./play-content";
 import type { NudgeAction } from "./nudges";
@@ -29,8 +29,10 @@ const isExercisePage = (title: string) =>
 
 /** How a kept page is labeled and colored in Home and Your book. */
 export function pageKind(page: BookPage): PageKind {
-  if (page.kind === "Made together") return { label: "Game", tone: "clay" };
+  if (page.kind === "Made together" || page.kind === PLAY_RECORD)
+    return { label: "Game", tone: "clay" };
   if (page.kind === "Received passage") return { label: "Shared", tone: "lilac" };
+  if (page.kind === "Exercise") return { label: "Exercise", tone: "sage" };
   if (page.kind === "Journal entry") {
     if (isExercisePage(page.title)) return { label: "Exercise", tone: "sage" };
     if (!page.text.trim() && page.photos.length)
@@ -112,9 +114,9 @@ export function doItems(audience: Audience): DoItem[] {
     {
       key: "think",
       type: "Think",
-      time: "5 min",
+      time: "3 min",
       title: "Think it through",
-      blurb: "Pick what’s on your mind, write a little, leave with one small plan.",
+      blurb: "Something on your mind? Write down the moment. A small plan is optional.",
       tags: ["hard", "5"],
       action: { kind: "reflect" },
     },

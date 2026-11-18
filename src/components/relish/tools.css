@@ -1,13 +1,6 @@
 .lb-app .rt-book {
-  max-width: 900px;
-  margin: 0 auto 24px;
-  padding: clamp(22px, 3vw, 40px);
-  background: var(--paper);
-  border-radius: 5px 14px 14px 5px;
-  box-shadow:
-    0 6px 0 -1px var(--lb-cover),
-    0 10px 0 -3px #adbbb5,
-    0 22px 35px #3f5c6020;
+  max-width: 920px;
+  margin: 0 auto 32px;
 }
 .lb-app .rt-book h2 {
   font-size: clamp(30px, 3.4vw, 44px);
@@ -26,13 +19,6 @@
 }
 .lb-app .rt-end strong {
   font-weight: 600;
-}
-.lb-app .rt-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0 0 14px;
-  font-size: 13px;
 }
 .lb-app .rt-group {
   margin-top: 26px;
@@ -54,12 +40,12 @@
   align-items: flex-start;
   gap: 6px;
   text-align: left;
-  padding: 16px 40px 16px 16px;
+  padding: 18px 44px 18px 18px;
   min-height: 44px;
-  background: #e0e5db;
-  border: 1px solid #9bb0aa55;
-  border-radius: 4px 12px 12px 4px;
-  box-shadow: 0 3px 0 #b4c2ba77;
+  background: var(--ui-card);
+  border: 1px solid var(--ui-line);
+  border-radius: 16px;
+  box-shadow: 0 6px 16px rgba(48, 56, 44, 0.08);
   color: var(--ink);
   cursor: pointer;
   transition:
@@ -81,12 +67,12 @@
   color: var(--olive);
 }
 .lb-app .rt-running {
-  background: #dce5e2;
+  background: var(--ui-sage-soft);
 }
 @media (hover: hover) {
   .lb-app .rt-card:not(:disabled):hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px #304f5018;
+    box-shadow: 0 4px 8px #414a3618;
   }
 }
 .lb-app .rt-runner {
@@ -113,9 +99,6 @@
   font-size: 16px;
   padding: 10px 12px;
   min-height: 44px;
-  border: 1px solid #9bb0aa;
-  border-radius: 8px;
-  background: #fff;
   color: var(--ink);
 }
 .lb-app .rt-progress {
@@ -137,10 +120,10 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px 16px;
-  padding: 10px 12px;
-  background: #fff8;
-  border: 1px solid #9bb0aa44;
-  border-radius: 10px;
+  padding: 12px 14px 12px 18px;
+  background: var(--ui-card);
+  border: 1px solid var(--ui-line);
+  border-radius: 14px;
 }
 .lb-app .rt-sort li > span {
   font-size: 15px;
@@ -155,13 +138,12 @@
 .lb-app .rt-sort [role="group"] button,
 .lb-app .rt-chips button,
 .lb-app .rt-bingo button {
-  font: inherit;
-  font-size: 13px;
-  min-height: 40px;
-  padding: 6px 12px;
-  border: 1px solid #9bb0aa;
+  font: 500 14px/1.25 var(--sans);
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 1.5px solid var(--ui-olive-line);
   border-radius: 999px;
-  background: transparent;
+  background: var(--ui-card);
   color: var(--ink);
   cursor: pointer;
   display: inline-flex;
@@ -171,9 +153,9 @@
 .lb-app .rt-sort [role="group"] button[aria-pressed="true"],
 .lb-app .rt-chips button[aria-pressed="true"],
 .lb-app .rt-bingo button[aria-pressed="true"] {
-  background: var(--olive);
-  border-color: var(--olive);
-  color: #fff;
+  background: var(--ui-sage);
+  border-color: var(--ui-olive);
+  color: var(--ink);
 }
 .lb-app .rt-add {
   display: flex;
@@ -213,9 +195,9 @@
   color: var(--olive);
 }
 .lb-app .rt-composed {
-  padding: 16px;
-  background: #dce5e2;
-  border-radius: 10px;
+  padding: 18px 20px;
+  background: var(--ui-sage-soft);
+  border-radius: 14px;
 }
 .lb-app .rt-composed p:last-child {
   font-size: 19px;
@@ -227,17 +209,17 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
-  padding-top: 12px;
-  border-top: 1px solid #9bb0aa55;
+  padding-top: 14px;
+  border-top: 1px solid var(--ui-line);
 }
 .lb-app .rt-preview blockquote {
   white-space: pre-wrap;
   margin: 0;
-  padding: 12px 16px;
+  padding: 14px 18px;
   border-left: 3px solid var(--olive);
-  background: #fff8;
-  font-size: 15px;
-  line-height: 1.6;
+  border-radius: 0 12px 12px 0;
+  background: var(--ui-card);
+  font: 400 17px/1.6 var(--serif);
   align-self: stretch;
 }
 .lb-app .rt-instruction {
@@ -254,10 +236,11 @@
   gap: 8px;
 }
 .lb-app .rt-days li {
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  border: 2px solid #9bb0aa;
+  border: 2px solid var(--ui-olive-line);
+  background: var(--ui-card);
 }
 .lb-app .rt-days li[data-done="true"] {
   background: var(--olive);
@@ -269,11 +252,14 @@
   gap: 8px;
 }
 .lb-app .rt-bingo button {
-  border-radius: 10px;
-  min-height: 72px;
+  border-radius: 12px;
+  min-height: 84px;
   justify-content: center;
   text-align: center;
-  padding: 8px;
+  padding: 10px;
+  border-color: var(--ui-line);
+  font-family: var(--serif);
+  font-size: 15px;
 }
 .lb-app .rt-celebrate {
   font-size: 17px;
@@ -312,4 +298,201 @@
   .lb-app .rt-card {
     transition: none;
   }
+}
+
+/* An exercise's start screen (Scott's mockup, 2026-11-18): a warm paper card
+   with the time, title, who it is with, and a drawn motif on the right. */
+.lb-app .rt-start {
+  max-width: 1100px;
+  margin: 0 auto 32px;
+  color: var(--ink, #30382c);
+}
+.lb-app .rt-start {
+  padding-top: 18px;
+}
+.lb-app .rt-start-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: clamp(20px, 4vw, 48px);
+  align-items: center;
+}
+.lb-app .rt-start-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  font-size: 15px;
+  color: var(--muted, #5f6458);
+}
+.lb-app .rt-start h2 {
+  font: 600 clamp(38px, 5vw, 60px) / 1.05 var(--serif);
+  margin: 0 0 18px;
+}
+.lb-app .rt-start-blurb {
+  font-size: 18px;
+  line-height: 1.55;
+  margin: 0 0 14px;
+}
+.lb-app .rt-start-note {
+  font-size: 15px;
+  color: var(--muted, #5f6458);
+  margin: 0 0 28px;
+}
+.lb-app .rt-who {
+  border: 0;
+  padding: 0;
+  margin: 0 0 30px;
+  min-width: 0;
+}
+.lb-app .rt-who legend {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  padding: 0;
+}
+.lb-app .rt-who > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.lb-app .rt-who label {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 18px 8px 14px;
+  border: 1.5px solid var(--ui-olive-line);
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-card);
+  font-size: 15px;
+  cursor: pointer;
+}
+.lb-app .rt-who label:has(:checked) {
+  background: var(--ui-sage);
+  border-color: var(--ui-olive);
+}
+.lb-app .rt-who label:has(:focus-visible) {
+  outline: 2px solid var(--olive, #43513a);
+  outline-offset: 2px;
+}
+.lb-app .rt-who input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--olive, #43513a);
+}
+.lb-app .rt-start-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 14px 24px;
+  font-size: 17px;
+}
+.lb-app .rt-start-go:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.lb-app .rt-start-art .ui-illustration {
+  width: 100%;
+  max-width: 440px;
+  margin-left: auto;
+}
+@media (max-width: 760px) {
+  .lb-app .rt-start-card {
+    grid-template-columns: 1fr;
+  }
+  .lb-app .rt-start-art {
+    order: -1;
+  }
+  .lb-app .rt-start-art .ui-illustration {
+    max-width: 240px;
+    margin: 0 auto;
+  }
+}
+
+/* Every exercise screen: back link and privacy above a paper card. */
+.lb-app .rt-screen,
+.lb-app .rt-start {
+  max-width: 1100px;
+  margin: 0 auto 32px;
+  padding-top: 8px;
+}
+.lb-app .rt-screen .rt-book {
+  max-width: none;
+}
+.lb-app .rt-book .rt-start-time {
+  margin-bottom: 6px;
+}
+.lb-app .rt-bingo button[aria-pressed="true"] {
+  background: var(--ui-sage);
+  box-shadow: inset 0 0 0 2px var(--ui-olive);
+}
+.lb-app .rt-kept {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px 36px;
+}
+.lb-app .rt-kept > div {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+/* Card sort: one card at a time, then the whole sort below. */
+.lb-app .rt-current {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 26px 20px 18px;
+  border-radius: 18px;
+  background: var(--ui-sage-soft);
+  text-align: center;
+}
+.lb-app .rt-current-card {
+  margin: 0;
+  padding: 26px 30px;
+  min-width: min(100%, 320px);
+  border-radius: 14px;
+  background: var(--ui-card);
+  box-shadow: 0 10px 22px rgba(48, 56, 44, 0.12);
+  transform: rotate(-1deg);
+  font: 600 clamp(22px, 2.6vw, 28px) / 1.25 var(--serif);
+}
+.lb-app .rt-current-piles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+.lb-app .rt-current-piles button {
+  min-height: 48px;
+  padding: 10px 22px;
+  border: 1.5px solid var(--ui-olive);
+  border-radius: 999px;
+  background: var(--ui-card);
+  font: 600 16px/1.2 var(--sans);
+}
+.lb-app .rt-current-piles button:not(:disabled):hover {
+  background: var(--ui-sage);
+}
+.lb-app .rt-current-done {
+  margin: 0;
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: var(--ui-sage-soft);
+  font: 400 17px/1.5 var(--serif);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lb-app .rt-current-card {
+    transform: none;
+  }
+}
+/* A habit's overall length, under today's effort. */
+.lb-app .rt-start-span {
+  display: flex;
+  margin-top: -10px;
+  padding-left: 28px;
 }

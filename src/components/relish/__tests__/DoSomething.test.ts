@@ -96,7 +96,7 @@ it("opens free writing in one click, keeps the latest words before leaving, and 
     "A small adventure, still unfolding",
   );
   fireEvent.click(screen.getByRole("button", { name: "Your book" }));
-  fireEvent.click(screen.getByRole("button", { name: /Keep writing/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Keep writing|Keep going/ }));
   expect(
     (
       screen.getByRole("textbox", {
@@ -140,7 +140,7 @@ it("returns a paused child reflection to Do something and resumes its saved step
   };
   const app = open(chooseThread(beginVisit(child), "listen"));
   fireEvent.click(
-    screen.getByRole("button", { name: /Think it through.*In progress/ }),
+    screen.getByRole("button", { name: /Think it through.*Paused/ }),
   );
   const text = await screen.findByRole("textbox", { name: "Your moment" });
   fireEvent.change(text, {
@@ -163,27 +163,74 @@ it("returns a paused child reflection to Do something and resumes its saved step
   expect(livingOf(reopened.stored()).visit?.step).toBe(1);
   expect(screen.queryByText("Ask AI")).toBeNull();
 });
-it("starts guided prompts directly and offers the next guided step after completion", async () => {
+it("saves one moment, stops cleanly, and recalls the plan in the writer's words next time", async () => {
   const app = open({ ...emptyBook("Robin"), profile: { kind: "adult" } });
   fireEvent.click(screen.getByRole("button", { name: /Think it through/ }));
   await waitFor(() => expect(livingOf(app.stored()).visit?.kind).toBe("begin"));
-  expect(
-    screen.queryByRole("button", { name: "Begin this small session" }),
-  ).toBeNull();
   expect(screen.getByText(/Step 1 of 2/)).toBeTruthy();
-  fireEvent.click(
-    screen.getByRole("button", { name: "Practice listening" }),
-  );
-  const input = await screen.findByRole("textbox", { name: "Your moment" });
-  fireEvent.change(input, { target: { value: "We took time to listen" } });
-  fireEvent.click(screen.getByRole("button", { name: /Save reflection and finish/ }));
-  await screen.findByText("Session complete");
-  fireEvent.click(
-    screen.getByRole("button", { name: "Choose another activity" }),
-  );
+  // One heading for the choice, and situations rather than topics.
+  expect(screen.getAllByRole("heading", { name: "What happened?" })).toHaveLength(1);
+  expect(screen.queryByText(/session/i)).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: /I jumped in with advice/ }));
+  // The question sits on the active page.
+  await screen.findByRole("heading", {
+    name: "What were they telling you, and what did you say?",
+  });
+  const input = screen.getByRole("textbox", { name: "Your moment" });
+  fireEvent.change(input, { target: { value: "Kit told me about recess and I fixed it" } });
+  fireEvent.click(screen.getByRole("button", { name: /Save this moment/ }));
+  await screen.findByRole("heading", { name: "That moment is kept." });
+  // A complete ending: the plan is offered, not required.
+  expect(screen.getByRole("button", { name: /Done for now/ })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Make a small plan/ }));
+  const plan = await screen.findByRole("textbox", { name: /What you’ll try/ });
+  fireEvent.change(plan, { target: { value: "Ask “ideas or listening?”" } });
+  fireEvent.click(screen.getByRole("button", { name: "+ after dinner" }));
+  expect((plan as HTMLTextAreaElement).value).toBe("Ask “ideas or listening?” after dinner");
+  fireEvent.click(screen.getByRole("button", { name: /Save my plan/ }));
+  await screen.findByRole("heading", { name: "Your plan is kept." });
+  fireEvent.click(screen.getByRole("button", { name: /Done for now/ }));
+  await screen.findByRole("heading", { name: /Hi Robin/ });
+  // Coming back: the plan, in their words, and whether they had a chance.
+  fireEvent.click(screen.getByRole("button", { name: "Do something" }));
   fireEvent.click(screen.getByRole("button", { name: /Think it through/ }));
-  await waitFor(() =>
-    expect(livingOf(app.stored()).visit?.kind).toBe("practice"),
+  await screen.findByRole("heading", { name: "Did you get a chance to try it?" });
+  expect(screen.getByText("“Ask “ideas or listening?” after dinner”")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Yes, I tried it/ }));
+  await screen.findByRole("heading", { name: "How did it go?" });
+  fireEvent.click(screen.getByRole("button", { name: "It helped, even a little" }));
+  fireEvent.click(screen.getByRole("button", { name: /Save how it went/ }));
+  await screen.findByRole("heading", { name: "It helped, even a little" });
+  const entries = livingOf(app.stored()).entries;
+  expect(entries.map((e) => e.kind)).toEqual(["notice", "practice", "reflection"]);
+  expect(entries[1].text).toBe("Ask “ideas or listening?” after dinner");
+});
+it("lets an untried plan wait while a different moment is written", async () => {
+  const app = open({ ...emptyBook("Robin"), profile: { kind: "adult" } });
+  fireEvent.click(screen.getByRole("button", { name: /Think it through/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /I wish I’d asked/ }));
+  fireEvent.change(await screen.findByRole("textbox", { name: "Your moment" }), {
+    target: { value: "I said yes to one more errand" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Save this moment/ }));
+  await screen.findByRole("heading", { name: "That moment is kept." });
+  fireEvent.click(screen.getByRole("button", { name: /Make a small plan/ }));
+  fireEvent.change(await screen.findByRole("textbox", { name: /What you’ll try/ }), {
+    target: { value: "Ask for a little quiet after dinner" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Save my plan/ }));
+  await screen.findByRole("heading", { name: "Your plan is kept." });
+  fireEvent.click(screen.getByRole("button", { name: /Done for now/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+  fireEvent.click(screen.getByRole("button", { name: /Think it through/ }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Write about a different moment instead" }),
+  );
+  await screen.findByRole("heading", { name: "What happened?" });
+  const l = livingOf(app.stored());
+  expect(l.visit?.kind).toBe("begin");
+  expect(l.entries.find((e) => e.kind === "practice")?.text).toBe(
+    "Ask for a little quiet after dinner",
   );
 });
 it("starts a game from a sheet with the family already filled in", async () => {

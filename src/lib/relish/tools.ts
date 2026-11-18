@@ -51,6 +51,8 @@ export type BuilderTool = Base & {
 export type TrackerTool = Base & {
   kind: "tracker";
   instruction: string;
+  /** How long it might keep going, apart from today's effort in `time`. */
+  span: string;
 } & (
     | { mode: "days"; target: number; notePrompt?: string }
     | { mode: "squares"; squares: string[] }
@@ -67,7 +69,7 @@ export const tools: Tool[] = [
     tags: ["5"],
     short: "3 min",
     title: "What helps when I’m upset",
-    blurb: "Sort what helps and what doesn’t. A page for your own manual.",
+    blurb: "Sort what helps when you’re upset. You’ll leave with your own list and one thing to try first.",
     time: "About 3 minutes",
     end: "Sort the cards, choose one to try first, then keep the page.",
     audiences: everyone,
@@ -102,7 +104,7 @@ export const tools: Tool[] = [
             "Music",
           ],
     picks: [{ pile: "helps", label: "The one to try first next time" }],
-    closing: "Share this page with the people who help you, if you want to.",
+    closing: "Show this page to the people who help you, if you want to.",
   },
   {
     kind: "sort",
@@ -191,7 +193,7 @@ export const tools: Tool[] = [
     tags: ["5"],
     short: "5 min",
     title: "Who carries what",
-    blurb: "Sort household jobs by who carries them now, including the noticing and planning.",
+    blurb: "Sort household jobs by who carries them now, including the noticing and planning. You’ll see the split on one page.",
     time: "About 5 minutes",
     end: "Sort the jobs, choose one to talk about, then keep the page.",
     audiences: ["adult"],
@@ -219,7 +221,7 @@ export const tools: Tool[] = [
     ],
     picks: [{ pile: "me", label: "One job to talk about sharing" }],
     closing:
-      "This is your view. The other person can sort the same list in their own edition; compare when you’re both ready.",
+      "This is your view. The other person can sort the same list in their own book; compare when you’re both ready.",
   },
   {
     kind: "builder",
@@ -227,7 +229,7 @@ export const tools: Tool[] = [
     tags: ["hard", "5"],
     short: "3 min",
     title: "Rewrite the opener",
-    blurb: "Turn a hard thing to say into a sentence that’s easier to hear.",
+    blurb: "Have a hard conversation coming up? Find a first sentence you can actually use.",
     time: "About 3 minutes",
     end: "Fill in the three parts, check the sentence, then keep the page.",
     audiences: ["adult"],
@@ -270,7 +272,7 @@ export const tools: Tool[] = [
     tags: ["hard", "5"],
     short: "4 min",
     title: "Put a thought on trial",
-    blurb: "Weigh the evidence for a harsh thought, then write a fairer one.",
+    blurb: "Weigh the evidence for a harsh thought about yourself, then write a fairer one to keep.",
     time: "About 4 minutes",
     end: "Give the evidence, reach a verdict, write a fairer thought, then keep the page.",
     audiences: ["13-17", "adult"],
@@ -307,7 +309,7 @@ export const tools: Tool[] = [
     tags: ["1"],
     short: "2 min",
     title: "Notice the unseen work",
-    blurb: "Name one thing someone does that nobody thanks them for.",
+    blurb: "Name one thing someone does that nobody thanks them for. You’ll leave with what to say to them.",
     time: "About 2 minutes",
     end: "Fill in both parts, then keep the page and say it to them.",
     audiences: ["9-12", "13-17", "adult"],
@@ -356,8 +358,9 @@ export const tools: Tool[] = [
     mode: "days",
     target: 10,
     title: "Ten real hellos",
-    blurb: "Ten days of greetings that last long enough to land.",
-    time: "Under a minute a day",
+    blurb: "Make one hello or goodbye a day last long enough to land, for ten days.",
+    time: "Under a minute",
+    span: "10 days, at your pace",
     end: "Tick each day you do it. Keep a page whenever you’re ready.",
     audiences: ["adult"],
     aboutPerson: { label: "Who will you greet?", required: true },
@@ -372,8 +375,9 @@ export const tools: Tool[] = [
     mode: "days",
     target: 7,
     title: "A week of specific thanks",
-    blurb: "One specific thank-you a day for seven days.",
-    time: "About a minute a day",
+    blurb: "Thank one person for one specific thing each day, for a week.",
+    time: "About a minute",
+    span: "7 days, at your pace",
     end: "Tick each day and note what you said. Keep a page whenever you’re ready.",
     audiences: ["9-12", "13-17", "adult"],
     aboutPerson: { label: "Who will you thank?", required: true },
@@ -388,8 +392,9 @@ export const tools: Tool[] = [
     short: "1–2 weeks",
     mode: "squares",
     title: "Repair bingo",
-    blurb: "Mark each repair move you try after friction. Find out which ones land.",
-    time: "Over a week or two",
+    blurb: "After a tense moment, mark the repair move you tried. Find out which ones land.",
+    time: "A moment, when friction happens",
+    span: "A week or two",
     end: "Mark a square each time a repair move helps. Keep a page whenever you’re ready.",
     audiences: ["adult"],
     aboutPerson: { label: "Who is this with?" },
@@ -414,8 +419,9 @@ export const tools: Tool[] = [
     short: "1 week",
     mode: "squares",
     title: "Kindness spotting",
-    blurb: "Spot kind things people in your family do this week.",
-    time: "Over a week",
+    blurb: "Spot kind things people in your family do. Try to fill a line.",
+    time: "A moment, when you spot one",
+    span: "About a week",
     end: "Mark a square when you spot one. Keep a page whenever you’re ready.",
     audiences: kids,
     instruction: "When you see someone do one of these, mark it.",
@@ -487,11 +493,22 @@ export function builderPage(
   return lines.join("\n\n");
 }
 
-export function keepToolPage(
-  book: Book,
-  page: { title: string; text: string; personId?: string },
-): Book {
+export type ToolPage = {
+  title: string;
+  text: string;
+  /** The exercise this page came from. */
+  toolId?: string;
+  /** Who the exercise was about, when it asks. */
+  personId?: string;
+  /** Who it was with, for exercises not about anyone; empty is no one in particular. */
+  people?: string[];
+};
+export function keepToolPage(book: Book, page: ToolPage): Book {
   if (!page.text.trim()) throw new Error("Finish the exercise before keeping a page.");
+  const people = [page.personId, ...(page.people || [])].filter(
+    (id, i, all): id is string =>
+      !!id && all.indexOf(id) === i && book.people.some((p) => p.id === id),
+  );
   return writeJournalPage(
     book,
     {
@@ -500,10 +517,8 @@ export function keepToolPage(
       text: page.text,
       style: "moss",
       createdAt: new Date().toISOString(),
-      people:
-        page.personId && book.people.some((p) => p.id === page.personId)
-          ? [page.personId]
-          : undefined,
+      people: people.length ? people : undefined,
+      ...(page.toolId ? { source: { kind: "exercise" as const, toolId: page.toolId } } : {}),
     },
     0,
     "kept",
@@ -632,7 +647,7 @@ const day = (key: string) =>
     day: "numeric",
   });
 
-export function trackerPage(book: Book, run: TrackerRun) {
+export function trackerPage(book: Book, run: TrackerRun): ToolPage {
   const tool = trackerTool(run.toolId);
   const person = book.people.find((p) => p.id === run.personId)?.name;
   const title = person ? `${tool.title} · ${person}` : tool.title;
@@ -652,7 +667,7 @@ export function trackerPage(book: Book, run: TrackerRun) {
     out.push(`Marked ${marked.length} of ${tool.squares.length}: ${marked.join("; ")}.`);
     if (hasBingo(run)) out.push("Bingo: a full line.");
   }
-  return { title, text: out.join("\n\n"), personId: run.personId };
+  return { title, text: out.join("\n\n"), toolId: run.toolId, personId: run.personId };
 }
 
 export function finishTracker(book: Book, runId: string): Book {

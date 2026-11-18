@@ -1,5 +1,8 @@
 import type { Book } from "./model";
-import { livingOf, outcomes } from "./living";
+import { livingOf, outcomes, type Player } from "./living";
+import { games } from "./play-content";
+import { toolById } from "./tools";
+import { guidanceFor } from "./guidance";
 import type { JournalStyle } from "./journal";
 import { isPhotos, type Photo } from "./photos";
 
@@ -24,7 +27,28 @@ export type BookPage = {
   from?: string;
   photos: Photo[];
   people: string[];
+  /** The exercise's name, for pages kept from an exercise. */
+  exercise?: string;
+  /** A trace that a game was played; it has no words of its own to share. */
+  record?: true;
 };
+/** Kind of a play record in bookPages ("Game" in Your book). */
+export const PLAY_RECORD = "Game played";
+const list = (names: string[]) =>
+  names.length < 2
+    ? names.join("")
+    : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+/** The people in this book who played: matched by id, or by name for players from other books. */
+export function playersInBook(book: Book, players: Pick<Player, "id" | "name">[]) {
+  const key = (n: string) => n.trim().toLocaleLowerCase();
+  return book.people
+    .filter((person) =>
+      players.some(
+        (p) => p.id !== "owner" && (p.id === person.id || key(p.name) === key(person.name)),
+      ),
+    )
+    .map((person) => person.id);
+}
 export function isAlbum(value: unknown): value is AlbumPassage[] {
   return (
     Array.isArray(value) &&
@@ -49,6 +73,7 @@ export function isAlbum(value: unknown): value is AlbumPassage[] {
   );
 }
 export function bookPages(book: Book): BookPage[] {
+  const situations = guidanceFor(book).threads;
   const page = (
     data: Partial<BookPage> & Pick<BookPage, "id" | "kind" | "text" | "date">,
   ): BookPage => ({
@@ -66,7 +91,10 @@ export function bookPages(book: Book): BookPage[] {
         page({
           id: `journal:${e.id}`,
           journalId: e.id,
-          kind: "Journal entry",
+          kind: e.source?.kind === "exercise" ? "Exercise" : "Journal entry",
+          ...(e.source?.kind === "exercise"
+            ? { exercise: toolById(e.source.toolId)?.title }
+            : {}),
           title: e.title.trim() || "Untitled entry",
           text: e.text,
           date: e.createdAt,
@@ -82,8 +110,15 @@ export function bookPages(book: Book): BookPage[] {
           e.kind === "notice"
             ? "Guided reflection"
             : e.kind === "practice"
-              ? "Practice plan"
-              : "Practice review",
+              ? "Plan to try"
+              : "How it went",
+        // Named by the situation it came from, so pages are told apart.
+        title:
+          e.kind === "notice"
+            ? situations[e.thread].title
+            : e.kind === "practice"
+              ? `A plan · ${situations[e.thread].title}`
+              : `How it went · ${situations[e.thread].title}`,
         text: e.text || (e.outcome ? outcomes[e.outcome] : ""),
         date: e.createdAt,
         style: e.kind === "practice" ? "moss" : "sky",
@@ -140,8 +175,34 @@ export function bookPages(book: Book): BookPage[] {
         date: p.createdAt,
         style: "moss",
         from: p.players.map((x) => x.name).join(" + "),
+        people: playersInBook(book, p.players),
       }),
     ),
+    // A round with a kept page shows that page instead of a second record.
+    ...(livingOf(book).plays || [])
+      .filter(
+        (r) =>
+          !r.pageId ||
+          !livingOf(book).sharedPages.some((p) => p.id === r.pageId),
+      )
+      .map((r) => {
+        const others = r.players.filter(
+          (p) => p.id !== "owner" && p.name.trim() !== book.owner.trim(),
+        );
+        const title = games.find((g) => g.kind === r.kind)?.title || "A game";
+        return page({
+          id: `play:${r.id}`,
+          kind: PLAY_RECORD,
+          title: `${title} with ${list((others.length ? others : r.players).map((p) => p.name))}`,
+          text: r.pageId
+            ? "One round, played together."
+            : "One round, played together. No shared page was kept.",
+          date: r.playedAt,
+          style: "moss",
+          people: playersInBook(book, r.players),
+          record: true,
+        });
+      }),
   ].sort(
     (a, b) =>
       (Date.parse(a.date) || 0) - (Date.parse(b.date) || 0) ||

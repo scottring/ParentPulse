@@ -1,11 +1,4 @@
 .r-app {
-  --paper: #f6f4ed;
-  --ink: #30382c;
-  --muted: #72766b;
-  --line: #dcded2;
-  --olive: #43513a;
-  --serif: var(--font-parent-display), Georgia, serif;
-  --sans: var(--font-parent-body), sans-serif;
   min-height: 100vh;
   background: var(--paper);
   color: var(--ink);
@@ -38,7 +31,7 @@
   outline-offset: 5px;
 }
 .r-app :focus-visible {
-  outline: 2px solid #8b612f;
+  outline: 2px solid var(--ui-olive, #43513a);
 }
 .r-app button {
   transition:
@@ -320,7 +313,7 @@
   gap: 6px;
   border: 0;
   background: none;
-  font-size: 10px !important;
+  font-size: 13px !important;
   color: #7b816f;
 }
 .r-status > span {
@@ -338,7 +331,7 @@
   border-radius: 4px;
   padding: 8px 12px;
   color: #516143;
-  font-size: 10px !important;
+  font-size: 13px !important;
 }
 .r-top-note:hover {
   background: #dde3cd;
@@ -421,7 +414,7 @@
   color: #fbfaf3;
   border-radius: 4px;
   padding: 12px 17px;
-  font-size: 11px !important;
+  font-size: 16px !important;
   line-height: 1.5;
 }
 .r-primary:hover {
@@ -471,7 +464,7 @@
   border: 0;
   padding: 3px 0;
   color: #687757;
-  font-size: 10px !important;
+  font-size: 15px !important;
   line-height: 1.5;
   text-align: left;
 }
@@ -1046,7 +1039,7 @@
   line-height: 1.45;
 }
 .r-small {
-  font-size: 11px !important;
+  font-size: 14px !important;
   color: #858d77;
   line-height: 1.7;
   display: flex;
@@ -1151,7 +1144,7 @@
   color: #5a6b49;
   background: #eff2e6;
   padding: 11px 15px;
-  font-size: 11px !important;
+  font-size: 15px !important;
 }
 .r-secondary:hover {
   background: #e1e8d4;
@@ -1166,7 +1159,7 @@
   padding: 13px 15px;
   border-radius: 4px;
   width: 100%;
-  font-size: 11px !important;
+  font-size: 15px !important;
 }
 .r-ai-invite > span {
   font-size: 9px;
@@ -1197,7 +1190,7 @@
   border: 1px solid #cfd6c2;
   padding: 8px 12px;
   border-radius: 4px;
-  font-size: 10px !important;
+  font-size: 15px !important;
   color: #788768;
 }
 .r-provider-choice > .r-selected {
@@ -1256,19 +1249,16 @@
 }
 .r-mark {
   display: inline-flex;
-  color: #7a8a60;
-  margin-bottom: 18px;
+  color: var(--olive);
+  margin-bottom: 8px;
 }
 .r-vault-form h1 {
-  font-size: 48px;
-  line-height: 1.06;
-  margin: 14px 0 20px;
+  font: 600 clamp(32px, 4.4vw, 44px) / 1.08 var(--serif);
+  margin: 6px 0 14px;
 }
 .r-vault-form > p:not(.r-eyebrow):not(.r-small):not(.r-error) {
-  font-family: var(--serif);
-  font-size: 22px;
-  line-height: 1.45;
-  color: #8a927b;
+  font: 400 17px/1.55 var(--sans);
+  color: var(--ink);
 }
 .r-vault-form > .r-primary {
   width: 100%;
@@ -1276,8 +1266,9 @@
 }
 .r-vault-form > .r-text-button {
   display: flex;
-  margin: 20px auto 0;
-  font-size: 11px !important;
+  margin: 16px auto 0;
+  min-height: 44px;
+  font-size: 15px !important;
   text-align: center;
 }
 .r-locked {
@@ -1682,7 +1673,7 @@
     font-size: 31px;
   }
   .r-section-title .r-text-button {
-    font-size: 9px !important;
+    font-size: 14px !important;
     gap: 5px;
   }
   .r-section-title .r-eyebrow {
@@ -1797,7 +1788,7 @@
     padding: 13px 18px;
   }
   .r-small {
-    font-size: 10px !important;
+    font-size: 13px !important;
   }
   .r-filter {
     gap: 7px;
