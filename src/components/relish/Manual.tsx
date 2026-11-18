@@ -360,14 +360,14 @@ export default function Manual({
       </header>
       <div className="rm-tabs" role="group" aria-label="Choose a manual">
         <button
-          className={scope === "personal" ? "lb-primary" : "lb-secondary"}
+          className="ui-chip"
           aria-pressed={scope === "personal"}
           onClick={() => setScope("personal")}
         >
           <BookOpen size={18} /> My manual
         </button>
         <button
-          className={scope === "family" ? "lb-primary" : "lb-secondary"}
+          className="ui-chip"
           aria-pressed={scope === "family"}
           onClick={() => setScope("family")}
         >

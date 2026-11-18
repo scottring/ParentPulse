@@ -46,6 +46,7 @@ import {
 import { useSensory } from "./Sensory";
 import { TypingSoundToggle, useTypingSound } from "./TypingSound";
 import Illustration from "./Illustration";
+import { SubHead } from "./ui";
 import "./journal.css";
 
 type Save = (change: (book: Book) => Book) => Promise<void>;
@@ -173,36 +174,30 @@ export default function Journal({
   if (page)
     return (
       <main className={`rj-workspace rj-read rj-${page.style}`}>
-        <div className="rj-reading-top">
-          <button
-            className="lb-text"
-            onClick={() => {
+        <SubHead
+          className="rj-reading-top"
+          back={{
+            label: onBack ? "Back to your book" : "Back to my pages",
+            onClick: () => {
               if (onBack) return onBack();
               setReading(null);
               setCelebrate(false);
-            }}
-          >
-            <ArrowLeft size={17} /> {onBack ? "Back to your book" : "My pages"}
-          </button>
-          <span className="rj-private">
-            <Lock size={14} />{" "}
-            {sample ? "Fictional sample" : "Only in your edition"}
-          </span>
-        </div>
+            },
+          }}
+          note={sample ? "Fictional sample" : "Only in your edition"}
+        />
         {celebrate && (
           <div className="rj-celebration" role="status">
-            <span className="rj-celebration-mark" aria-hidden="true">
-              <Sparkles size={34} />
-            </span>
+            <Illustration name="saved" size={72} eager className="rj-celebration-mark" />
             <div>
               <strong>Entry saved</strong>
               <p>You can edit this entry, start another, or choose something else to do.</p>
             </div>
           </div>
         )}
-        <div className="rd-reading-spread">
+        <div className="rd-reading-spread ui-spread ui-spread-reading">
           <article
-            className="rj-paper rj-sequence-paper"
+            className="rj-paper rj-sequence-paper ui-spread-page"
             ref={prose}
             key={page.id}
           >
@@ -272,7 +267,7 @@ export default function Journal({
             </div>
           </article>
           <aside
-            className="rj-paper rd-next-page"
+            className="rj-paper rd-next-page ui-spread-page"
             aria-label="The following page"
           >
             {nextPage ? (
@@ -383,6 +378,12 @@ export default function Journal({
   );
   return (
     <main className="rj-workspace">
+      {onBack && (
+        <SubHead
+          back={{ label: "Back to your book", onClick: onBack }}
+          note={sample ? "Fictional sample" : "Your private pages"}
+        />
+      )}
       <header className="rj-welcome">
         <div>
           <p className="lb-kicker">Journal, reflections and shared passages</p>
@@ -404,15 +405,7 @@ export default function Journal({
               : "Encrypted in your private book."}
           </p>
         </div>
-        <div className="rj-paper-stack" aria-hidden="true">
-          <span className="rj-stack-back" />
-          <span className="rj-stack-middle" />
-          <div className="rj-stack-front">
-            <Sun size={42} />
-            <div className="rj-doodle-line" />
-            <Heart size={28} />
-          </div>
-        </div>
+        <Illustration name="your-book" size={260} eager className="rj-welcome-art" />
       </header>
       <div className="rj-capture-actions rj-browse-links">
         {onManual && (
@@ -506,7 +499,7 @@ export default function Journal({
         </section>
       ) : (
         <div className="rj-first-page">
-          <Feather size={24} />
+          <Illustration name="empty-pages" size={120} />
           <p>
             No entries yet.
             <br />
