@@ -487,11 +487,22 @@ export function builderPage(
   return lines.join("\n\n");
 }
 
-export function keepToolPage(
-  book: Book,
-  page: { title: string; text: string; personId?: string },
-): Book {
+export type ToolPage = {
+  title: string;
+  text: string;
+  /** The exercise this page came from. */
+  toolId?: string;
+  /** Who the exercise was about, when it asks. */
+  personId?: string;
+  /** Who it was with, for exercises not about anyone; empty is no one in particular. */
+  people?: string[];
+};
+export function keepToolPage(book: Book, page: ToolPage): Book {
   if (!page.text.trim()) throw new Error("Finish the exercise before keeping a page.");
+  const people = [page.personId, ...(page.people || [])].filter(
+    (id, i, all): id is string =>
+      !!id && all.indexOf(id) === i && book.people.some((p) => p.id === id),
+  );
   return writeJournalPage(
     book,
     {
@@ -500,10 +511,8 @@ export function keepToolPage(
       text: page.text,
       style: "moss",
       createdAt: new Date().toISOString(),
-      people:
-        page.personId && book.people.some((p) => p.id === page.personId)
-          ? [page.personId]
-          : undefined,
+      people: people.length ? people : undefined,
+      ...(page.toolId ? { source: { kind: "exercise" as const, toolId: page.toolId } } : {}),
     },
     0,
     "kept",
@@ -632,7 +641,7 @@ const day = (key: string) =>
     day: "numeric",
   });
 
-export function trackerPage(book: Book, run: TrackerRun) {
+export function trackerPage(book: Book, run: TrackerRun): ToolPage {
   const tool = trackerTool(run.toolId);
   const person = book.people.find((p) => p.id === run.personId)?.name;
   const title = person ? `${tool.title} · ${person}` : tool.title;
@@ -652,7 +661,7 @@ export function trackerPage(book: Book, run: TrackerRun) {
     out.push(`Marked ${marked.length} of ${tool.squares.length}: ${marked.join("; ")}.`);
     if (hasBingo(run)) out.push("Bingo: a full line.");
   }
-  return { title, text: out.join("\n\n"), personId: run.personId };
+  return { title, text: out.join("\n\n"), toolId: run.toolId, personId: run.personId };
 }
 
 export function finishTracker(book: Book, runId: string): Book {

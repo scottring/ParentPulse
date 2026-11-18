@@ -75,6 +75,12 @@ it("sorts cards, picks one, and keeps the result as a page in Your pages", async
   const app = open(adult());
   fireEvent.click(screen.getByRole("button", { name: /What helps when I’m upset/ }));
   await screen.findByRole("heading", { name: "What helps when I’m upset" });
+  // The start screen asks who it is with; no one in particular is the default.
+  expect(
+    (screen.getByRole("radio", { name: "No one in particular" }) as HTMLInputElement).checked,
+  ).toBe(true);
+  expect(document.querySelector(".rt-start-private")?.textContent).toContain("Your private pages");
+  fireEvent.click(screen.getByRole("button", { name: /Start this exercise/ }));
   expect(screen.queryByRole("button", { name: /Keep this page/ })).toBeNull();
   const card = screen.getByRole("group", { name: "Talking it through" });
   fireEvent.click(within(card).getByRole("button", { name: "Helps me" }));
@@ -107,9 +113,9 @@ it("sorts cards, picks one, and keeps the result as a page in Your pages", async
 it("builds a soft opener only once every part is filled in", async () => {
   const app = open(adult());
   fireEvent.click(await screen.findByRole("button", { name: /Rewrite the opener/ }));
-  fireEvent.change(screen.getByRole("combobox", { name: "Who will you say this to?" }), {
-    target: { value: "sam" },
-  });
+  expect(screen.getByRole("group", { name: "Who will you say this to?" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("radio", { name: "Sam" }));
+  fireEvent.click(screen.getByRole("button", { name: /Start this exercise/ }));
   fireEvent.change(screen.getByRole("textbox", { name: "I feel…" }), {
     target: { value: "worn out" },
   });
@@ -137,9 +143,9 @@ it("runs a day-by-day checklist across visits and finishes into a page", async (
   fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos/ }));
   const start = screen.getByRole("button", { name: /Start/ }) as HTMLButtonElement;
   expect(start.disabled).toBe(true);
-  fireEvent.change(screen.getByRole("combobox", { name: "Who will you greet?" }), {
-    target: { value: "sam" },
-  });
+  // Someone is required here, so "No one in particular" is not offered.
+  expect(screen.queryByRole("radio", { name: "No one in particular" })).toBeNull();
+  fireEvent.click(screen.getByRole("radio", { name: "Sam" }));
   fireEvent.click(screen.getByRole("button", { name: /Start/ }));
   fireEvent.click(await screen.findByRole("button", { name: "I did it today" }));
   await screen.findByRole("button", { name: /Done today/ });

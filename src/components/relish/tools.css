@@ -313,3 +313,137 @@
     transition: none;
   }
 }
+
+/* An exercise's start screen (Scott's mockup, 2026-11-18): a warm paper card
+   with the time, title, who it is with, and a drawn motif on the right. */
+.lb-app .rt-start {
+  max-width: 1100px;
+  margin: 0 auto 32px;
+  color: var(--ink, #30382c);
+}
+.lb-app .rt-start-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.lb-app .rt-start-top .rt-back {
+  margin: 0;
+  font-size: 15px;
+}
+.lb-app .rt-start-private {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted, #5f6458);
+}
+.lb-app .rt-start-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: clamp(20px, 4vw, 48px);
+  align-items: center;
+  padding: clamp(24px, 4vw, 48px);
+  background: #f8f3e6;
+  border: 1px solid #e6dfcc;
+  border-radius: 6px;
+  box-shadow: 0 14px 30px #4a463a1f, 0 2px 0 #e6dfcc;
+}
+.lb-app .rt-start-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  font-size: 15px;
+  color: var(--muted, #5f6458);
+}
+.lb-app .rt-start h2 {
+  font: 600 clamp(38px, 5vw, 60px) / 1.05 var(--serif);
+  margin: 0 0 18px;
+}
+.lb-app .rt-start-blurb {
+  font-size: 18px;
+  line-height: 1.55;
+  margin: 0 0 14px;
+}
+.lb-app .rt-start-note {
+  font-size: 15px;
+  color: var(--muted, #5f6458);
+  margin: 0 0 28px;
+}
+.lb-app .rt-who {
+  border: 0;
+  padding: 0;
+  margin: 0 0 30px;
+  min-width: 0;
+}
+.lb-app .rt-who legend {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  padding: 0;
+}
+.lb-app .rt-who > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.lb-app .rt-who label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 18px;
+  border: 1px solid #b9b3a3;
+  border-radius: 8px;
+  background: #fbf8ef;
+  font-size: 15px;
+  cursor: pointer;
+}
+.lb-app .rt-who label:has(:checked) {
+  background: var(--sage, #cfdcc4);
+  border-color: #b5c3a6;
+}
+.lb-app .rt-who label:has(:focus-visible) {
+  outline: 2px solid var(--olive, #43513a);
+  outline-offset: 2px;
+}
+.lb-app .rt-who input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--olive, #43513a);
+}
+.lb-app .rt-start-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 14px 24px;
+  font-size: 17px;
+}
+.lb-app .rt-start-go:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.lb-app .rt-start-art svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 440px;
+  margin-left: auto;
+}
+@media (max-width: 760px) {
+  .lb-app .rt-start-card {
+    grid-template-columns: 1fr;
+  }
+  .lb-app .rt-start-art {
+    order: -1;
+  }
+  .lb-app .rt-start-art svg {
+    max-width: 240px;
+    margin: 0 auto;
+  }
+}

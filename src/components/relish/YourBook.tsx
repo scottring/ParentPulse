@@ -341,7 +341,12 @@ export default function YourBook({
                   onClick={() => onOpenPage(page.id)}
                 >
                   <span className="rp-page-meta">
-                    <strong>{kind.label}</strong>
+                    <strong>
+                      {kind.label}
+                      {page.exercise && !page.title.includes(page.exercise)
+                        ? ` · ${page.exercise}`
+                        : ""}
+                    </strong>
                     <span>{shortDate(page.date)}</span>
                   </span>
                   <span className="rp-page-title">{page.title}</span>

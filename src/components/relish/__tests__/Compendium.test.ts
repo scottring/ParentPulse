@@ -93,3 +93,53 @@ it("a game finished without keeping a page shows in Your book under each player"
   fireEvent.click(screen.getByRole("button", { name: "Our family" }));
   expect(everyPage().getByRole("button", { name: /Same page\? with Ella and Kaleb/ })).toBeTruthy();
 });
+
+it("an exercise started with someone is labelled Exercise and filed under them", async () => {
+  const app = openBook(family());
+  fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+  fireEvent.click(screen.getByRole("button", { name: /What helps when I’m upset/ }));
+  await screen.findByRole("heading", { name: "What helps when I’m upset" });
+  const asked = screen.getByRole("group", { name: "Who is this with?" });
+  expect(
+    (within(asked).getByRole("radio", { name: "No one in particular" }) as HTMLInputElement)
+      .checked,
+  ).toBe(true);
+  fireEvent.click(within(asked).getByRole("radio", { name: "Kaleb" }));
+  expect(
+    (within(asked).getByRole("radio", { name: "No one in particular" }) as HTMLInputElement)
+      .checked,
+  ).toBe(false);
+  fireEvent.click(screen.getByRole("button", { name: /Start this exercise/ }));
+  fireEvent.click(
+    within(screen.getByRole("group", { name: "Talking it through" })).getByRole("button", {
+      name: "Helps me",
+    }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
+  await screen.findByRole("heading", { name: "Page kept" });
+  expect(app.stored().journal![0]).toMatchObject({
+    title: "What helps when I’m upset",
+    people: ["kaleb"],
+    source: { kind: "exercise", toolId: "helps-upset" },
+  });
+  expect(app.stored().journal![0].text).not.toContain("Kaleb");
+  fireEvent.click(screen.getByRole("button", { name: "Your book" }));
+  const page = everyPage().getByRole("button", { name: /What helps when I’m upset/ });
+  expect(page.textContent).toMatch(/^Exercise/);
+  expect(page.className).toContain("rp-edge-sage");
+  fireEvent.click(screen.getByRole("button", { name: "Kaleb" }));
+  expect(everyPage().getByRole("button", { name: /What helps when I’m upset/ })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Ella" }));
+  expect(everyPage().queryByRole("button", { name: /What helps when I’m upset/ })).toBeNull();
+});
+
+it("a bingo started with someone carries them to its kept page", async () => {
+  const app = openBook(family());
+  fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+  fireEvent.click(screen.getByRole("button", { name: /Repair bingo/ }));
+  await screen.findByRole("heading", { name: "Repair bingo" });
+  fireEvent.click(screen.getByRole("radio", { name: "Ella" }));
+  fireEvent.click(screen.getByRole("button", { name: /Start bingo/ }));
+  await screen.findByRole("group", { name: "Repair bingo" });
+  expect(app.stored().tools!.trackers[0].personId).toBe("ella");
+});

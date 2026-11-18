@@ -7,6 +7,8 @@ export const journalStyles = {
   blush: { label: "Blush", note: "A little heart on the page." },
 } as const;
 export type JournalStyle = keyof typeof journalStyles;
+/** Where a page came from, when it wasn't written freehand. Optional: older pages have none. */
+export type JournalSource = { kind: "exercise"; toolId: string };
 export type JournalDraft = {
   id: string;
   title: string;
@@ -15,6 +17,7 @@ export type JournalDraft = {
   createdAt: string;
   photos?: Photo[];
   people?: string[];
+  source?: JournalSource;
 };
 export type JournalEntry = JournalDraft & {
   updatedAt: string;
@@ -25,6 +28,15 @@ export const JOURNAL_TEXT_LIMIT = 50_000;
 export const JOURNAL_TITLE_LIMIT = 120;
 const validDate = (v: unknown) =>
   typeof v === "string" && Number.isFinite(Date.parse(v));
+// A removed exercise must never stop a book from opening, so any short id is accepted.
+const isSource = (v: unknown): v is JournalSource =>
+  !!v &&
+  typeof v === "object" &&
+  !Array.isArray(v) &&
+  (v as JournalSource).kind === "exercise" &&
+  typeof (v as JournalSource).toolId === "string" &&
+  (v as JournalSource).toolId.length > 0 &&
+  (v as JournalSource).toolId.length <= 100;
 function isDraft(value: unknown): value is JournalDraft {
   if (!value || typeof value !== "object") return false;
   const e = value as JournalDraft;
@@ -38,6 +50,7 @@ function isDraft(value: unknown): value is JournalDraft {
     e.text.length <= JOURNAL_TEXT_LIMIT &&
     ["sky", "moss", "blush"].includes(e.style) &&
     (e.photos === undefined || isPhotos(e.photos)) &&
+    (e.source === undefined || isSource(e.source)) &&
     (e.people === undefined ||
       (Array.isArray(e.people) &&
         e.people.length <= 30 &&
@@ -91,6 +104,8 @@ export function writeJournalPage(
     );
   if (previous?.status === "kept" && status === "draft")
     throw new Error("A kept page cannot become an unfinished draft.");
+  // Where a page came from never changes once it is saved.
+  const source = previous ? previous.source : draft.source;
   const entry: JournalEntry = {
     id: draft.id,
     title: draft.title,
@@ -98,6 +113,7 @@ export function writeJournalPage(
     style: draft.style,
     photos: draft.photos?.map((p) => ({ ...p })),
     people: draft.people?.filter((id) => book.people.some((p) => p.id === id)),
+    ...(source ? { source: { ...source } } : {}),
     createdAt: previous?.createdAt || draft.createdAt,
     updatedAt: new Date().toISOString(),
     revision: expectedRevision + 1,

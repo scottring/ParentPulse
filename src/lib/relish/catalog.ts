@@ -32,6 +32,7 @@ export function pageKind(page: BookPage): PageKind {
   if (page.kind === "Made together" || page.kind === PLAY_RECORD)
     return { label: "Game", tone: "clay" };
   if (page.kind === "Received passage") return { label: "Shared", tone: "lilac" };
+  if (page.kind === "Exercise") return { label: "Exercise", tone: "sage" };
   if (page.kind === "Journal entry") {
     if (isExercisePage(page.title)) return { label: "Exercise", tone: "sage" };
     if (!page.text.trim() && page.photos.length)

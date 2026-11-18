@@ -5,6 +5,8 @@ import { createVault, unlockVault } from "../vault";
 import { bookPages } from "../pages";
 import { pageKind } from "../catalog";
 import { manualSources } from "../manual";
+import { isJournal, renameJournalPage, writeJournalPage } from "../journal";
+import { finishTracker, keepToolPage, startTracker, toggleMark } from "../tools";
 import {
   advanceGame,
   changeLiving,
@@ -139,6 +141,92 @@ describe("play records", () => {
   });
 });
 
+describe("exercise pages", () => {
+  it("are marked as exercises, labelled with the exercise and tagged with who it was with", () => {
+    const book = keepToolPage(family(), {
+      title: "What helps when I’m upset",
+      text: "Helps me: a walk.",
+      toolId: "helps-upset",
+      people: ["ella", "ghost", "ella"],
+    });
+    const entry = book.journal![0];
+    expect(entry.source).toEqual({ kind: "exercise", toolId: "helps-upset" });
+    expect(entry.people).toEqual(["ella"]);
+    expect(isBook(book)).toBe(true);
+    const page = bookPages(book)[0];
+    expect(page.kind).toBe("Exercise");
+    expect(page.exercise).toBe("What helps when I’m upset");
+    expect(pageKind(page)).toEqual({ label: "Exercise", tone: "sage" });
+    expect(page.people).toEqual(["ella"]);
+  });
+
+  it("“No one in particular” keeps no tags; the person an exercise is about is always included", () => {
+    const alone = keepToolPage(family(), { title: "x", text: "y", toolId: "helps-upset" });
+    expect(alone.journal![0].people).toBeUndefined();
+    const about = keepToolPage(family(), {
+      title: "x",
+      text: "y",
+      toolId: "soft-start",
+      personId: "kaleb",
+      people: ["ella", "kaleb"],
+    });
+    expect(about.journal![0].people).toEqual(["kaleb", "ella"]);
+  });
+
+  it("a finished habit keeps its exercise and who it was with", () => {
+    let book = startTracker(family(), "hellos", "ella");
+    const run = book.tools!.trackers[0];
+    book = toggleMark(book, run.id, "2026-11-18");
+    book = finishTracker(book, run.id);
+    expect(book.journal![0]).toMatchObject({
+      source: { kind: "exercise", toolId: "hellos" },
+      people: ["ella"],
+    });
+  });
+
+  it("editing or renaming an exercise page keeps where it came from", () => {
+    let book = keepToolPage(family(), { title: "x", text: "y", toolId: "helps-upset" });
+    const entry = book.journal![0];
+    book = writeJournalPage(book, { ...entry, text: "edited", source: undefined }, 1, "kept");
+    expect(book.journal![0].source).toEqual(entry.source);
+    book = renameJournalPage(book, entry.id, "A new name");
+    expect(book.journal![0].source).toEqual(entry.source);
+    expect(pageKind(bookPages(book)[0]).label).toBe("Exercise");
+  });
+
+  it("older exercise pages (no source) still read as exercises by their title", () => {
+    const old = writeJournalPage(
+      family(),
+      { id: "old", title: "What helps when I’m upset", text: "y", style: "moss", createdAt: "2026-10-01T00:00:00Z" },
+      0,
+      "kept",
+    );
+    expect(old.journal![0].source).toBeUndefined();
+    expect(pageKind(bookPages(old)[0]).label).toBe("Exercise");
+  });
+
+  it("the journal validator accepts pages with or without a source and rejects bad ones", () => {
+    const book = keepToolPage(family(), { title: "x", text: "y", toolId: "helps-upset" });
+    const entry = book.journal![0];
+    const { source: _source, ...plain } = entry;
+    void _source;
+    expect(isJournal([plain])).toBe(true);
+    expect(isJournal([entry])).toBe(true);
+    // An exercise that no longer exists never stops a book from opening.
+    expect(isJournal([{ ...entry, source: { kind: "exercise", toolId: "retired" } }])).toBe(true);
+    expect(pageKind(bookPages({ ...book, journal: [{ ...entry, source: { kind: "exercise", toolId: "retired" } }] })[0]).label).toBe("Exercise");
+    for (const source of [
+      null,
+      "exercise",
+      { kind: "game", toolId: "helps-upset" },
+      { kind: "exercise" },
+      { kind: "exercise", toolId: "" },
+      { kind: "exercise", toolId: "x".repeat(101) },
+    ])
+      expect(isJournal([{ ...entry, source }])).toBe(false);
+  });
+});
+
 describe("storage compatibility", () => {
   it("old-shape books (the sample and an empty book) still open", () => {
     expect(isBook(sampleBook())).toBe(true);
@@ -147,7 +235,12 @@ describe("storage compatibility", () => {
   });
 
   it("new-shape books survive an encrypt/decrypt round trip unchanged", async () => {
-    const book = finishGame(withGame(family(), revealed("match")));
+    const book = keepToolPage(finishGame(withGame(family(), revealed("match"))), {
+      title: "What helps when I’m upset",
+      text: "Helps me: a walk.",
+      toolId: "helps-upset",
+      people: ["kaleb"],
+    });
     const { envelope } = await createVault(book, pass);
     const raw = JSON.stringify(envelope);
     expect(raw).not.toContain("Kaleb");

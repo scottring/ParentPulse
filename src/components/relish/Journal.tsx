@@ -214,6 +214,7 @@ export default function Journal({
             />
             <p className="lb-kicker">
               {page.kind}
+              {page.exercise ? ` · ${page.exercise}` : ""}
               {page.from ? ` · From ${page.from}` : ""}
             </p>
             <div className="rj-prose">{page.text}</div>

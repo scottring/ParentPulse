@@ -1,6 +1,7 @@
 import type { Book } from "./model";
 import { livingOf, outcomes, type Player } from "./living";
 import { games } from "./play-content";
+import { toolById } from "./tools";
 import type { JournalStyle } from "./journal";
 import { isPhotos, type Photo } from "./photos";
 
@@ -25,6 +26,8 @@ export type BookPage = {
   from?: string;
   photos: Photo[];
   people: string[];
+  /** The exercise's name, for pages kept from an exercise. */
+  exercise?: string;
   /** A trace that a game was played; it has no words of its own to share. */
   record?: true;
 };
@@ -86,7 +89,10 @@ export function bookPages(book: Book): BookPage[] {
         page({
           id: `journal:${e.id}`,
           journalId: e.id,
-          kind: "Journal entry",
+          kind: e.source?.kind === "exercise" ? "Exercise" : "Journal entry",
+          ...(e.source?.kind === "exercise"
+            ? { exercise: toolById(e.source.toolId)?.title }
+            : {}),
           title: e.title.trim() || "Untitled entry",
           text: e.text,
           date: e.createdAt,
