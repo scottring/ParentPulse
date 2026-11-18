@@ -4,6 +4,7 @@ import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { emptyBook, type Book } from "@/lib/relish/model";
 import { nudgesFor } from "@/lib/relish/nudges";
 import { openBook } from "./bookHarness";
+import { coverFor } from "../covers";
 vi.mock("../Sensory", () => ({
   useSensory: () => ({ play: vi.fn() }),
   SoundControl: () => null,
@@ -28,6 +29,11 @@ it("greets a child with their own book and three ways to add a page", () => {
   expect(cover.textContent).toContain("Kaleb’s");
   expect(cover.getAttribute("data-emblem")).toBe("beetle");
   expect(cover.getAttribute("aria-hidden")).toBe("true");
+  // One book everywhere: the same rust cloth as Kaleb's cover on the shelf.
+  expect(cover.getAttribute("data-cloth")).toBe(coverFor("Kaleb").cloth);
+  expect((cover as HTMLElement).style.getPropertyValue("--cloth")).toBe(
+    coverFor("Kaleb").color,
+  );
   // The adult Home's pieces are not on a child's Home.
   expect(screen.queryByText("Or pick by how much time you have")).toBeNull();
   expect(screen.queryByText("Your people")).toBeNull();
