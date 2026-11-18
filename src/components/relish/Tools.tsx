@@ -25,6 +25,8 @@ import {
   type ToolPage,
   type TrackerTool,
 } from "@/lib/relish/tools";
+import Illustration from "./Illustration";
+import { exerciseIllustration } from "./illustrations";
 import "./journal.css";
 import "./tools.css";
 
@@ -359,46 +361,14 @@ function ExerciseStart({
   );
 }
 
-/** A small drawn motif for the start screen: a bingo card, or a card and pencil. */
+/** The exercise's picture: its watercolor, or a sketch until it arrives. */
 function ExerciseArt({ tool }: { tool: Tool }) {
-  const bingo = tool.kind === "tracker" && tool.mode === "squares";
   return (
     <div className="rt-start-art" aria-hidden="true">
-      <svg viewBox="0 0 320 300" role="presentation" focusable="false">
-        <path
-          d="M22 30 Q60 14 120 24 T236 18 Q290 22 300 40 Q308 110 298 180 T296 272 Q240 288 160 280 T30 284 Q14 220 20 150 T22 30Z"
-          fill="#cfdcc4"
-        />
-        <g transform="rotate(-8 150 150)">
-          <rect x="70" y="62" width="168" height="168" rx="4" fill="#fbf8ef" stroke="#8a8f80" strokeWidth="2" />
-          {bingo ? (
-            <>
-              <path
-                d="M126 70v152M182 70v152M78 118h152M78 174h152"
-                stroke="#8a8f80"
-                strokeWidth="2"
-              />
-              <path d="M88 95l10 10 18-22" fill="none" stroke="#7d8f3e" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M200 205l10 10 18-22" fill="none" stroke="#7d8f3e" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-              <circle cx="154" cy="146" r="17" fill="#f2d58a" stroke="#d9b24e" strokeWidth="2" />
-            </>
-          ) : (
-            <path
-              d="M92 98h124M92 126h124M92 154h96M92 182h110"
-              stroke="#b7bcae"
-              strokeWidth="3"
-              strokeLinecap="round"
-            />
-          )}
-        </g>
-        <g transform="rotate(22 262 190)">
-          <rect x="252" y="96" width="16" height="150" rx="3" fill="#56604a" />
-          <path d="M252 96l8-20 8 20z" fill="#e8d3a8" />
-          <path d="M257 83l3-7 3 7z" fill="#30382c" />
-          <rect x="252" y="236" width="16" height="12" fill="#d9b24e" />
-          <rect x="252" y="248" width="16" height="10" rx="3" fill="#cdbdb4" />
-        </g>
-      </svg>
+      <Illustration
+        name={exerciseIllustration[tool.id] ?? "think-it-through"}
+        size="100%"
+      />
     </div>
   );
 }

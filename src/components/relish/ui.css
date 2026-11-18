@@ -620,3 +620,11 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Illustration spots */
+.lb-app .rd-end-art {
+  margin: 18px 0;
+}
+.lb-app .lb-play-art {
+  margin: 24px auto;
+}

@@ -443,10 +443,8 @@
   opacity: 0.55;
   cursor: not-allowed;
 }
-.lb-app .rt-start-art svg {
-  display: block;
+.lb-app .rt-start-art .ui-illustration {
   width: 100%;
-  height: auto;
   max-width: 440px;
   margin-left: auto;
 }
@@ -457,7 +455,7 @@
   .lb-app .rt-start-art {
     order: -1;
   }
-  .lb-app .rt-start-art svg {
+  .lb-app .rt-start-art .ui-illustration {
     max-width: 240px;
     margin: 0 auto;
   }

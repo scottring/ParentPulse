@@ -45,6 +45,8 @@ import {
 } from "@/lib/relish/journal";
 import "./duo.css";
 import "./places.css";
+import Illustration from "./Illustration";
+import { gameIllustration } from "./illustrations";
 import Manual, { useManualGuide } from "./Manual";
 import { manualOf, reviewManualIdea } from "@/lib/relish/manual";
 import GroupPlay from "./GroupPlay";
@@ -848,7 +850,11 @@ export default function LivingBook({
               <p className="lb-kicker">Play together</p>
               <h2>Play together</h2>
               <p>Play one round on this device. Pass it around.</p>
-              <div className="lb-landscape-inset" />
+              <Illustration
+                name={gameIllustration[activeGame.kind] ?? "do-something"}
+                size={180}
+                className="lb-play-art"
+              />
               <p className="lb-fine">
                 Private pages stay out of the game. Anyone may pass. End the
                 game any time; the round is saved.

@@ -45,6 +45,7 @@ import {
 } from "@/lib/relish/journal";
 import { useSensory } from "./Sensory";
 import { TypingSoundToggle, useTypingSound } from "./TypingSound";
+import Illustration from "./Illustration";
 import "./journal.css";
 
 type Save = (change: (book: Book) => Book) => Promise<void>;
@@ -299,7 +300,7 @@ export default function Journal({
             ) : (
               <>
                 <p className="lb-kicker">End of your entries</p>
-                <div className="rd-mountain" aria-hidden="true" />
+                <Illustration name="empty-pages" size={132} className="rd-end-art" />
                 <h2>No more entries</h2>
                 <p>You’ve reached your latest entry.</p>
                 <button
@@ -759,7 +760,7 @@ export function JournalEditor({
             </>
           ) : (
             <>
-              <div className="rd-mountain" aria-hidden="true" />
+              <Illustration name="empty-pages" size={132} className="rd-end-art" />
               <h2>No previous entries</h2>
               <p>Your first page goes on the right.</p>
             </>

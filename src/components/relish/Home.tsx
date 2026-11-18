@@ -6,6 +6,7 @@ import { nudgeStart, nudgesFor, type NudgeAction } from "@/lib/relish/nudges";
 import { pageKind, type DoFilter, type Tone } from "@/lib/relish/catalog";
 import { audienceOf } from "@/lib/relish/profiles";
 import { JOURNAL_TEXT_LIMIT } from "@/lib/relish/journal";
+import Illustration from "./Illustration";
 
 export type FamilyPerson = {
   id: string;
@@ -156,23 +157,7 @@ export default function Home({
             Hi {book.owner}. Here’s one small thing.
           </h1>
         </div>
-        <svg
-          className="rp-sun"
-          aria-hidden="true"
-          width="120"
-          height="72"
-          viewBox="0 0 120 72"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="30" cy="36" r="16" fill="var(--sun)" />
-          <path d="M30 10v-6M30 68v-6M4 36h6M50 36h6M12 18l4 4M44 50l4 4M12 54l4-4M44 22l4-4" />
-          <path d="M70 52c6-14 18-14 24 0M84 30a6 6 0 1 0 0.1 0" fill="var(--clay)" />
-          <path d="M100 56c3-8 10-8 13 0M106 42a4 4 0 1 0 0.1 0" fill="var(--sage)" />
-        </svg>
+        <Illustration name="home" size={128} className="rp-sun" />
       </section>
       {onQuickSave && onQuickWrite && (
         <QuickJot busy={busy} onSave={onQuickSave} onWrite={onQuickWrite} onPage={onPage} />
