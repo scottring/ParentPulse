@@ -97,7 +97,13 @@ describe("local book lifecycle", () => {
     await act(async () => {
       await result.current.open("test-only long passphrase");
     });
-    act(() => vi.advanceTimersByTime(600001));
+    // Reading for 25 minutes and scrolling keeps the book open.
+    act(() => vi.advanceTimersByTime(25 * 60 * 1000));
+    expect(result.current.mode).toBe("open");
+    act(() => window.dispatchEvent(new Event("scroll")));
+    act(() => vi.advanceTimersByTime(25 * 60 * 1000));
+    expect(result.current.mode).toBe("open");
+    act(() => vi.advanceTimersByTime(5 * 60 * 1000 + 1));
     expect(result.current.mode).toBe("locked");
     expect(result.current.book.people).toEqual([]);
   });
