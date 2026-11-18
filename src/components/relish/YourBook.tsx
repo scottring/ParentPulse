@@ -2,7 +2,7 @@
 import { useState, type RefObject } from "react";
 import type { Book, Person } from "@/lib/relish/model";
 import { bookPages, PLAY_RECORD, type BookPage } from "@/lib/relish/pages";
-import { manualOf, type ManualCard } from "@/lib/relish/manual";
+import { cardPeople, manualOf, type ManualCard } from "@/lib/relish/manual";
 import { livingOf, pendingPractice } from "@/lib/relish/living";
 import { activeTrackers, toolById, trackerProgress } from "@/lib/relish/tools";
 import { pageKind, type Tone } from "@/lib/relish/catalog";
@@ -11,7 +11,14 @@ import { icons, personTones } from "./Home";
 
 /** "all", "me", "family", or a person's id. */
 export type Who = string;
-type Learned = { id: string; who: string; tone: Tone; text: string; tryThis?: string };
+type Learned = {
+  id: string;
+  /** Chips this shows under: a person's id, or for a suggestion the people it is about, then "me" or "family". */
+  who: string[];
+  tone: Tone;
+  text: string;
+  tryThis?: string;
+};
 const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 const shared = (p: BookPage) =>
@@ -94,30 +101,41 @@ export default function YourBook({
     { id: "family", label: "Our family" },
   ];
   const manual = manualOf(book).cards;
+  const about = cardPeople(book, manual);
+  // A suggestion shows under "Me" or "Our family" by its scope, and under each
+  // person most of its source pages are tagged with.
+  const cardWho = (c: ManualCard) => [
+    ...(about[c.id] || []),
+    c.scope === "family" ? "family" : "me",
+  ];
   const learned: Learned[] = [
     ...book.people.flatMap((p) =>
       p.lessons.map((text, i) => ({
         id: `${p.id}:${i}`,
-        who: p.id,
+        who: [p.id],
         tone: tone(p.id),
         text,
       })),
     ),
     ...manual
       .filter((c) => c.status === "kept")
-      .map((c) => ({
-        id: c.id,
-        who: c.scope === "family" ? "family" : "me",
-        tone: (c.scope === "family" ? "sage" : "sun") as Tone,
-        text: c.title,
-        tryThis: c.tryThis,
-      })),
-  ].filter((c) => who === "all" || c.who === who);
+      .map((c) => {
+        const whom = cardWho(c);
+        return {
+          id: c.id,
+          who: whom,
+          tone: (whom.length > 1
+            ? tone(whom[0])
+            : c.scope === "family"
+              ? "sage"
+              : "sun") as Tone,
+          text: c.title,
+          tryThis: c.tryThis,
+        };
+      }),
+  ].filter((c) => who === "all" || c.who.includes(who));
   const suggestion = manual.find(
-    (c) =>
-      c.status === "suggested" &&
-      (who === "all" ||
-        (who === "family" ? c.scope === "family" : who === "me" && c.scope === "personal")),
+    (c) => c.status === "suggested" && (who === "all" || cardWho(c).includes(who)),
   );
   const nameOf = (id: string) =>
     id === "me"
@@ -125,6 +143,14 @@ export default function YourBook({
       : id === "family"
         ? "Our family"
         : book.people.find((p) => p.id === id)?.name || "";
+  /** The people a card is about, by name, or Me / Our family. */
+  const namesOf = (ids: string[]) =>
+    ids.length > 1
+      ? ids
+          .slice(0, -1)
+          .map(nameOf)
+          .join(" & ")
+      : nameOf(ids[0]);
   const person = book.people.find((p) => p.id === who);
   const living = livingOf(book);
   const visit = living.visit && living.visit.status !== "complete" ? living.visit : undefined;
@@ -194,7 +220,11 @@ export default function YourBook({
             <div className="rp-suggestion-text">
               <span className="rp-nudge-kicker">
                 Relish noticed something ·{" "}
-                {suggestion.scope === "family" ? "Our family" : "You"}
+                {cardWho(suggestion).length > 1
+                  ? namesOf(cardWho(suggestion))
+                  : suggestion.scope === "family"
+                    ? "Our family"
+                    : "You"}
               </span>
               <span className="rp-suggestion-main">{suggestion.title}</span>
               <span className="rp-nudge-why">{suggestion.observation}</span>
@@ -228,9 +258,9 @@ export default function YourBook({
               <article key={c.id} className={`rp-learned rp-shadow-${c.tone}`}>
                 <span className="rp-learned-who">
                   <span className={`rp-dot rp-tone-${c.tone}`} aria-hidden="true">
-                    {c.who === "family" ? "★" : nameOf(c.who).charAt(0)}
+                    {c.who[0] === "family" ? "★" : nameOf(c.who[0]).charAt(0)}
                   </span>
-                  <span>{nameOf(c.who)}</span>
+                  <span>{namesOf(c.who)}</span>
                 </span>
                 <span className="rp-learned-text">{c.text}</span>
                 {c.tryThis && <span className="rp-learned-try">Try: {c.tryThis}</span>}

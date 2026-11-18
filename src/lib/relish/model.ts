@@ -102,6 +102,12 @@ export function sampleBook(): Book {
       observation:"On this walk, leaving the phones behind seemed to make conversation easier. That is one moment worth remembering, and a possibility to explore again.",
       tryThis:"If you both feel like it, try another unhurried walk and notice how it feels.",
       sourceIds:["earlier:sample1"], sources:[{id:"earlier:sample1",title:"Guided reflection",text:"We went for a walk without our phones. Somewhere between the house and the park, we started really talking."}],
+    },{
+      id:"sample-insight-leo", scope:"personal", status:"kept", createdAt:"2026-10-29T18:05:00Z",
+      title:"Endings go better with a heads-up",
+      observation:"Leaving the playground was hardest when it came as a surprise. A little warning may give him time to finish what matters to him.",
+      tryThis:"Give a five-minute heads-up and let him choose one last thing.",
+      sourceIds:["earlier:sample2"], sources:[{id:"earlier:sample2",title:"Guided reflection",text:"Leaving the playground was hard again. I was rushing, and the more I hurried him, the harder it got."}],
     }] },
     moments: [
       {

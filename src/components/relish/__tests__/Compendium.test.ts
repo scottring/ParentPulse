@@ -3,7 +3,7 @@ import { createElement, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { webcrypto } from "node:crypto";
-import { emptyBook, type Book } from "@/lib/relish/model";
+import { emptyBook, sampleBook, type Book } from "@/lib/relish/model";
 import { advanceGame, livingOf, newGame, type Game } from "@/lib/relish/living";
 import LivingBook from "../LivingBook";
 Object.defineProperty(globalThis, "crypto", {
@@ -142,4 +142,25 @@ it("a bingo started with someone carries them to its kept page", async () => {
   fireEvent.click(screen.getByRole("button", { name: /Start bingo/ }));
   await screen.findByRole("group", { name: "Repair bingo" });
   expect(app.stored().tools!.trackers[0].personId).toBe("ella");
+});
+
+it("person chips filter What you’ve learned, and a card names who it is about", () => {
+  openBook(sampleBook());
+  fireEvent.click(screen.getByRole("button", { name: "Your book" }));
+  const learned = () =>
+    within(screen.getByRole("heading", { name: "What you’ve learned" }).closest("section")!);
+  const leoCard = () => learned().queryByText("Endings go better with a heads-up");
+  expect(leoCard()?.closest("article")?.textContent).toMatch(/^LLeo/);
+  fireEvent.click(screen.getByRole("button", { name: "Leo" }));
+  expect(leoCard()).toBeTruthy();
+  // Anna's suggestion is offered under Anna, not under Leo.
+  expect(learned().queryByText("A little room to talk")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Anna" }));
+  expect(leoCard()).toBeNull();
+  expect(learned().getByText("A little room to talk")).toBeTruthy();
+  expect(learned().getByText(/Relish noticed something · Anna/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Me" }));
+  expect(leoCard()).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Our family" }));
+  expect(leoCard()).toBeNull();
 });

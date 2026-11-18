@@ -4,7 +4,7 @@ import { emptyBook, isBook, sampleBook, type Book } from "../model";
 import { createVault, unlockVault } from "../vault";
 import { bookPages } from "../pages";
 import { pageKind } from "../catalog";
-import { manualSources } from "../manual";
+import { cardPeople, isManual, manualSources, type ManualCard } from "../manual";
 import { isJournal, renameJournalPage, writeJournalPage } from "../journal";
 import { finishTracker, keepToolPage, startTracker, toggleMark } from "../tools";
 import {
@@ -224,6 +224,76 @@ describe("exercise pages", () => {
       { kind: "exercise", toolId: "x".repeat(101) },
     ])
       expect(isJournal([{ ...entry, source }])).toBe(false);
+  });
+});
+
+describe("insights about a person", () => {
+  const tagged = (id: string, people: string[]) =>
+    writeJournalPage(
+      family(),
+      { id, title: id, text: id, style: "sky", createdAt: "2026-10-01T00:00:00Z", people },
+      0,
+      "kept",
+    ).journal![0];
+  const card = (ids: string[], scope: ManualCard["scope"] = "personal"): ManualCard => ({
+    id: ids.join("+"),
+    scope,
+    status: "kept",
+    createdAt: "2026-10-02T00:00:00Z",
+    title: "t",
+    observation: "o",
+    tryThis: "",
+    sourceIds: ids,
+    sources: ids.map((id) => ({ id, title: id, text: id })),
+  });
+  const book: Book = {
+    ...family(),
+    journal: [
+      tagged("a", ["ella"]),
+      tagged("b", ["ella", "kaleb"]),
+      tagged("c", ["kaleb"]),
+      tagged("d", []),
+    ],
+  };
+  it("a card is about a person when more than half its source pages are tagged with them", () => {
+    const cards = [
+      card(["journal:a"]),
+      card(["journal:a", "journal:b"]),
+      card(["journal:a", "journal:b", "journal:c"]),
+      card(["journal:a", "journal:d"]),
+      card(["journal:d"]),
+      card(["journal:a", "journal:gone"]),
+    ];
+    expect(cardPeople(book, cards)).toEqual({
+      "journal:a": ["ella"],
+      "journal:a+journal:b": ["ella"],
+      "journal:a+journal:b+journal:c": ["ella", "kaleb"],
+      "journal:a+journal:d": [],
+      "journal:d": [],
+      "journal:a+journal:gone": [],
+    });
+  });
+  it("family insights from a game page are about its players; reading them changes nothing stored", () => {
+    let played = withGame(family(), revealed("story"));
+    for (const p of players)
+      played = changeLiving(played, (l) => ({
+        ...l,
+        game: advanceGame(l.game!, { type: "approve", playerId: p.id }),
+      }));
+    played = keepGame(played);
+    const page = livingOf(played).sharedPages[0];
+    const familyCard = card([`game:${page.id}`], "family");
+    const withManual: Book = {
+      ...played,
+      manual: { automatic: { personal: false, family: false }, fingerprints: {}, cards: [familyCard] },
+    };
+    expect(isManual(withManual.manual)).toBe(true);
+    const before = JSON.stringify(withManual);
+    expect(cardPeople(withManual)).toEqual({ [familyCard.id]: ["ella", "kaleb"] });
+    expect(JSON.stringify(withManual)).toBe(before);
+  });
+  it("the sample book has one insight about Anna and one about Leo", () => {
+    expect(Object.values(cardPeople(sampleBook()))).toEqual([["anna"], ["leo"]]);
   });
 });
 
