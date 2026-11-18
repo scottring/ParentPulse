@@ -238,6 +238,24 @@ it("offers children with their own books in the library, and notes the one chose
   expect(stored.people.map((p) => p.name)).toEqual(["Kaleb"]);
   expect(toolsOf(stored).trackers[0].personId).toBe(kaleb.id);
 });
+it("the journal can tag children who have their own books in the library", async () => {
+  const app = open({ ...emptyBook("Scott"), profile: { kind: "adult" } }, [
+    { id: "k", name: "Kaleb", onOpen: vi.fn() },
+    { id: "e", name: "Ella", onOpen: vi.fn() },
+  ]);
+  fireEvent.click(screen.getAllByRole("button", { name: /Write/ })[0]);
+  fireEvent.click(await screen.findByRole("button", { name: /Tag people/ }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Ella" }));
+  await waitFor(() => expect(app.stored().people.map((p) => p.name)).toEqual(["Ella"]));
+  const ella = app.stored().people[0];
+  // Now noted in the book, Ella shows once and is ticked; Kaleb is still offered.
+  await waitFor(() =>
+    expect((screen.getByRole("checkbox", { name: "Ella" }) as HTMLInputElement).checked).toBe(true),
+  );
+  expect(screen.getAllByRole("checkbox", { name: "Ella" })).toHaveLength(1);
+  expect(screen.getByRole("checkbox", { name: "Kaleb" })).toBeTruthy();
+  expect(ella.role).toBe("child");
+});
 it("an exercise with someone from the library starts after noting them in the book", async () => {
   const app = open({ ...emptyBook("Scott"), profile: { kind: "adult" } }, [
     { id: "e", name: "Ella", onOpen: vi.fn() },
