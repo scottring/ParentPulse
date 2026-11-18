@@ -10,6 +10,7 @@ import {
 } from "react";
 import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
 import { flipPages, reducedMotion, type FlipGeometry } from "./page-flip";
+import { playPageTurn, warmPageSound } from "./PageSound";
 
 /**
  * Moving to another entry remounts the book, so the page being left is handed
@@ -145,6 +146,7 @@ export default function ReadingBook({
   function go(to: number) {
     settle();
     if (to === current || to < 0 || to > spreads - 1) return;
+    playPageTurn();
     const f = flow.current,
       l = layer.current,
       g = geometry();
@@ -189,6 +191,7 @@ export default function ReadingBook({
     const from = carry;
     carry = null;
     if (!from || Date.now() - from.at > 1500) return;
+    playPageTurn();
     const f = flow.current,
       l = layer.current,
       g = geometry();
@@ -206,6 +209,9 @@ export default function ReadingBook({
       if (turns.current === mine) flipping.current = false;
     });
   }, [geometry]);
+
+  // Load the page sound while the reader settles in, so the first turn has it.
+  useEffect(() => warmPageSound(), []);
 
   // Arrow keys turn the page, then move between entries.
   const keys = useRef({ back, turn, previousEntry, nextEntry, canBack, canTurn });
