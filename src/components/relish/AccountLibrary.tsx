@@ -1,6 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
-import { Cloud, BookOpen, ArrowUpRight, Plus, ShieldCheck } from "lucide-react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import {
+  Cloud,
+  ArrowRight,
+  ArrowUpRight,
+  ChevronDown,
+  ShieldCheck,
+} from "lucide-react";
 import { sendPasswordResetEmail, sendEmailVerification } from "firebase/auth";
 import {
   connectAI,
@@ -20,10 +26,82 @@ import { readBinding, type SyncedEdition } from "@/lib/relish/book-sync";
 import type { useLocalBook } from "./useLocalBook";
 import type { useBookSync } from "./useBookSync";
 import { readHomeBook } from "./homeBook";
-
-const bookTones = ["sun", "clay", "sky", "sage"] as const;
 import { Dialog } from "./BookForms";
 import Illustration from "./Illustration";
+
+const bookTones = ["olive", "clay", "sky", "plum"] as const;
+
+/** Where book creation saves, verified against useBookSync.accountBook:
+ *  an encrypted copy uploads to the account and opens from any signed-in
+ *  device; children's books belong to this parent account. */
+export const OWN_BOOK_NOTE =
+  "Encrypted and saved to your account, so it opens wherever you sign in.";
+export const CHILD_BOOK_NOTE =
+  "Children use this account without a separate sign-in.";
+
+/** Account identity and Sign out, together behind one disclosure button. */
+function AccountMenu({
+  email,
+  disabled,
+  onSignOut,
+}: {
+  email: string;
+  disabled: boolean;
+  onSignOut: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  const wrap = useRef<HTMLDivElement>(null);
+  const toggle = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const outside = (e: PointerEvent) => {
+      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", outside);
+    return () => document.removeEventListener("pointerdown", outside);
+  }, [open]);
+  return (
+    <div
+      className="lb-acct"
+      ref={wrap}
+      onKeyDown={(e) => {
+        if (e.key !== "Escape" || !open) return;
+        // Close only the menu, not the dialog around it.
+        e.preventDefault();
+        e.stopPropagation();
+        setOpen(false);
+        toggle.current?.focus();
+      }}
+    >
+      <button
+        ref={toggle}
+        type="button"
+        className="lb-acct-toggle"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen(!open)}
+      >
+        Account <ChevronDown size={16} aria-hidden="true" />
+      </button>
+      {open && (
+        <div className="lb-acct-panel" id={id} role="group" aria-label="Account">
+          <p>
+            <span>Signed in as</span>
+            <strong>{email}</strong>
+          </p>
+          <p className="lb-fine">Stay signed in only on a device you trust.</p>
+          <button type="button" disabled={disabled} onClick={onSignOut}>
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+type Load = "loading" | "ready" | "failed" | "waiting";
+
 export default function AccountLibrary({
   vault,
   sync,
@@ -64,21 +142,58 @@ export default function AccountLibrary({
       startAdding ? "" : "adult",
     ),
     [parentConfirm, setParentConfirm] = useState(false);
+  // Whether the account's book list has been fetched in this view. Until it
+  // has, an empty list means "not known yet", never "no books".
+  // Kept per account, so a different sign-in never inherits "ready".
+  const [load, setLoad] = useState<{ uid: string | null; state: Load }>(
+    () => ({
+      uid: sync.user?.uid ?? null,
+      state: sync.books.length ? "ready" : "loading",
+    }),
+  );
+  const [attempt, setAttempt] = useState(0);
   const user = sync.user,
     bound = readBinding(vault.editionId),
     working = busy || sync.working;
   // The signed-in adult's own book comes first; once it exists, there is no
-  // second "Add my book".
+  // second "Create my book".
   const own = readHomeBook(user?.uid);
   const hasOwnBook = sync.books.some((b) => b.id === own && b.accountManaged);
   const books = sync.books.toSorted(
     (a, b) => Number(b.id === own) - Number(a.id === own),
   );
   useEffect(() => {
-    if (user?.emailVerified && parentReady) void sync.refresh().catch(() => {});
-    // Fetch once when this view gains authorized access.
+    if (!user?.emailVerified || !parentReady) return;
+    let alive = true;
+    const uid = user.uid;
+    sync.refresh().then(
+      () => alive && setLoad({ uid, state: "ready" }),
+      (e: unknown) => {
+        if (!alive) return;
+        // Another sync is mid-flight: wait for it, then ask again.
+        const busyNow =
+          e instanceof Error && e.message.startsWith("Sync is already running");
+        setLoad({ uid, state: busyNow ? "waiting" : "failed" });
+      },
+    );
+    return () => {
+      alive = false;
+    };
+    // Fetch once when this view gains authorized access (and on Try again).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.uid, user?.emailVerified, parentReady]);
+  }, [user?.uid, user?.emailVerified, parentReady, attempt]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- retries once the running sync finishes
+    if (load.state === "waiting" && !sync.working) setAttempt((n) => n + 1);
+  }, [load.state, sync.working]);
+  const loaded = load.uid === (user?.uid ?? null) ? load.state : "loading";
+  const view: "books" | "empty" | "failed" | "loading" = sync.books.length
+    ? "books"
+    : loaded === "ready"
+      ? "empty"
+      : loaded === "failed"
+        ? "failed"
+        : "loading";
   async function act(fn: () => Promise<unknown>) {
     setBusy(true);
     setError("");
@@ -108,449 +223,569 @@ export default function AccountLibrary({
     await sync.open(head);
     onClose();
   }
-  const content = (
-    <div className="lb-account">
-      <p className="lb-kicker">
-        <Cloud size={17} /> Relish account
-      </p>
-      <h2>
-        {user && !parentReady
-          ? "Parent sign-in"
-          : user
-            ? "Your family library."
-            : create
-              ? "Create your account"
-              : "Welcome to Relish."}
-      </h2>
-      <p>
-        {user && !parentReady
-          ? "Enter the parent password to return to the family library."
-          : user
-            ? "Choose a book to open."
-            : "Sign in once. Your entries and photos save to your account, ready wherever you open Relish."}
-      </p>
-      {!user ? (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
+  const signOut = () =>
+    void act(async () => {
+      await disconnectAI();
+      vault.lock();
+      sync.refreshUser();
+      setParentReady(false);
+    });
+  const startCreating = (who: "adult" | "child") => {
+    setAdding(true);
+    setAudience(who === "adult" ? "adult" : "");
+  };
+  const Heading = inline ? "h1" : "h2";
+  const libraryOpen = !!user && parentReady && user.emailVerified;
+  const accountMenu = user ? (
+    <AccountMenu
+      email={user.email || "this account"}
+      disabled={working}
+      onSignOut={signOut}
+    />
+  ) : null;
+
+  // "Create my book" (when this adult has none yet) and "Create a child's
+  // book", each with what creating it actually does to storage.
+  const createActions = (
+    <div className="lb-lib-create">
+      {!hasOwnBook && (
+        <div className="lb-lib-create-own">
+          <button
+            type="button"
+            className="lb-primary"
+            disabled={working}
+            onClick={() => startCreating("adult")}
+          >
+            Create my book <ArrowRight size={18} aria-hidden="true" />
+          </button>
+          <p className="lb-fine">{OWN_BOOK_NOTE}</p>
+        </div>
+      )}
+      <div className="lb-lib-create-child">
+        <button
+          type="button"
+          className={hasOwnBook ? "lb-secondary" : "lb-lib-link"}
+          disabled={working}
+          onClick={() => startCreating("child")}
+        >
+          Create a child’s book
+        </button>
+        <p className="lb-fine">{CHILD_BOOK_NOTE}</p>
+      </div>
+    </div>
+  );
+
+  const library =
+    view === "loading" ? (
+      <section className="lb-lib-state" aria-busy="true">
+        <Heading>Your family library</Heading>
+        <p role="status">Loading your books…</p>
+        <div className="lb-covers lb-covers-ghost" aria-hidden="true">
+          <span />
+          <span />
+        </div>
+      </section>
+    ) : view === "failed" ? (
+      <section className="lb-lib-state">
+        <Heading>Your family library</Heading>
+        <p role="alert" className="lb-error">
+          Your books didn’t load.{" "}
+          {sync.error || "Check your connection and try again."}
+        </p>
+        <div>
+          <button
+            type="button"
+            className="lb-primary"
+            disabled={working}
+            onClick={() => {
+              setLoad({ uid: user?.uid ?? null, state: "loading" });
+              setAttempt((n) => n + 1);
+            }}
+          >
+            Try again
+          </button>
+        </div>
+      </section>
+    ) : view === "empty" ? (
+      <section className="lb-lib-start">
+        <Illustration
+          name="welcome"
+          size="100%"
+          eager
+          className="lb-lib-start-art"
+        />
+        <div className="lb-lib-start-words">
+          <p className="lb-kicker">Family library</p>
+          <Heading>Start your book</Heading>
+          <p className="lb-lib-invite">
+            What’s one thing someone in your family did this week that you’d
+            like to remember?
+          </p>
+          {createActions}
+        </div>
+      </section>
+    ) : (
+      <section className="lb-lib-books">
+        <Heading>Your family library</Heading>
+        <ul className="lb-covers">
+          {books.map((head, i) => {
+            const label = head.label.trim() || "Untitled";
+            const mine = head.accountManaged && head.id === own;
+            return (
+              <li key={head.id}>
+                <button
+                  type="button"
+                  className="lb-cover-book"
+                  data-tone={bookTones[i % bookTones.length]}
+                  disabled={working}
+                  aria-label={
+                    head.accountManaged
+                      ? `Open ${label}’s book`
+                      : `Open ${label}’s earlier book (needs its original passphrase)`
+                  }
+                  onClick={() => void act(() => open(head))}
+                >
+                  <span className="lb-cover-face" aria-hidden="true">
+                    <span className="lb-cover-label">{label}</span>
+                  </span>
+                  <span className="lb-cover-caption" aria-hidden="true">
+                    {mine
+                      ? "Your book"
+                      : head.accountManaged
+                        ? "Open"
+                        : "Original passphrase needed"}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        {createActions}
+      </section>
+    );
+
+  const footer = libraryOpen || inline ? (
+    <footer className="lb-lib-foot">
+      {onLocal && (
+        <p>
+          Already have a book?{" "}
+          <button type="button" onClick={onLocal}>
+            Open a local book or restore a backup
+          </button>
+        </p>
+      )}
+      {onExplore && (
+        <button type="button" onClick={onExplore}>
+          Explore a sample book
+        </button>
+      )}
+      <a href="/privacy/" target="_blank" rel="noreferrer">
+        Privacy details
+      </a>
+    </footer>
+  ) : null;
+
+  const signedIn = !user ? null : !parentReady && gate ? (
+    <>
+      <p className="lb-kicker">Family library</p>
+      <Heading>Parent sign-in</Heading>
+      <p>Enter the parent password to return to the family library.</p>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void act(async () => {
+            if (!(await verifyParent(gate, parentPass)))
+              throw new Error(
+                "That parent password didn’t match. Try again, or sign out and sign in to the parent account.",
+              );
+            setParentPass("");
+            setParentReady(true);
+            setParentGate(null);
+          });
+        }}
+      >
+        <label>
+          {parentCredentialLabel(gate)}
+          <input
+            type="password"
+            autoComplete="current-password"
+            required
+            value={parentPass}
+            onChange={(e) => setParentPass(e.target.value)}
+          />
+        </label>
+        <button className="lb-primary" disabled={working}>
+          <ShieldCheck size={17} />
+          Open family library
+        </button>
+      </form>
+    </>
+  ) : !user.emailVerified ? (
+    <>
+      <p className="lb-kicker">Family library</p>
+      <Heading>Verify your email</Heading>
+      <section>
+        <p>
+          Verify <strong>{user.email}</strong> to open your account library.
+        </p>
+        <button
+          className="lb-primary"
+          disabled={working}
+          onClick={() =>
             void act(async () => {
-              if (!adult) throw new Error("An adult must manage this account.");
-              await connectAI(email, password, create);
-              setPassword("");
-              setParentReady(!gate || "accountUid" in gate);
-              // A legacy local child edition still requires its separate parent passphrase.
-              if (gate && !("accountUid" in gate)) setParentReady(false);
+              await user.reload();
+              await user.getIdToken(true);
               sync.refreshUser();
-              if (create)
-                setNotice(
-                  "Check your email for a verification link, then come back here.",
-                );
-            });
-          }}
-        >
-          <label>
-            Email
-            <input
-              type="email"
-              autoComplete="username"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </label>
-          <label>
-            Account password
-            <input
-              type="password"
-              autoComplete={create ? "new-password" : "current-password"}
-              minLength={create ? 12 : undefined}
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </label>
-          <label className="lb-account-check">
-            <input
-              type="checkbox"
-              checked={adult}
-              onChange={(e) => setAdult(e.target.checked)}
-            />
-            I’m 18 or older and manage this account.
-          </label>
-          <button className="lb-primary" disabled={working || !adult}>
-            {working ? "One moment…" : create ? "Create my account" : "Sign in"}
-            <ArrowUpRight size={17} />
-          </button>
-          <div className="lb-account-actions">
-            <button
-              type="button"
-              disabled={working}
-              onClick={() => {
-                setCreate(!create);
-                setPassword("");
-              }}
-            >
-              {create
-                ? "Already have an account? Sign in"
-                : "New here? Create an account"}
-            </button>
-            <button
-              type="button"
-              disabled={working || !email}
-              onClick={() =>
-                void act(async () => {
-                  await sendPasswordResetEmail(getAIAuth(), email.trim());
-                  setNotice(
-                    "If that email has an account, you’ll receive a password reset link.",
-                  );
-                })
-              }
-            >
-              Forgot account password?
-            </button>
-          </div>
-        </form>
-      ) : !parentReady && gate ? (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void act(async () => {
-              if (!(await verifyParent(gate, parentPass)))
+              if (!user.emailVerified)
                 throw new Error(
-                  "That parent password didn’t match. Try again, or sign out and sign in to the parent account.",
+                  "Check your email and follow its verification link first.",
                 );
-              setParentPass("");
-              setParentReady(true);
-              setParentGate(null);
-            });
-          }}
+              await sync.refresh();
+            })
+          }
         >
-          <label>
-            {parentCredentialLabel(gate)}
-            <input
-              type="password"
-              autoComplete="current-password"
-              required
-              value={parentPass}
-              onChange={(e) => setParentPass(e.target.value)}
-            />
-          </label>
-          <button className="lb-primary" disabled={working}>
-            <ShieldCheck size={17} />
-            Open family library
-          </button>
-        </form>
-      ) : !user.emailVerified ? (
-        <section>
+          I’ve verified my email
+        </button>
+        <button
+          className="lb-lib-link"
+          disabled={working}
+          onClick={() =>
+            void act(async () => {
+              await sendEmailVerification(user);
+              setNotice("Verification email sent.");
+            })
+          }
+        >
+          Resend verification email
+        </button>
+      </section>
+    </>
+  ) : (
+    <>
+      {vault.mode === "open" && !bound?.accountManaged && (
+        <section className="lb-account-current">
+          <h3>Add {vault.book.owner}’s book to your account</h3>
           <p>
-            Verify <strong>{user.email}</strong> to open your account library.
+            Add the entries, photos and progress in this book to your account.
+            After this one-time step, sign-in opens the account copy on any
+            device. Your original stays on this device.
+          </p>
+          <p className="lb-fine">
+            Your account can recover this copy. Anyone signed in to this parent
+            account can open its family books. Other accounts cannot.
           </p>
           <button
             className="lb-primary"
             disabled={working}
             onClick={() =>
               void act(async () => {
-                await user.reload();
-                await user.getIdToken(true);
-                sync.refreshUser();
-                if (!user.emailVerified)
-                  throw new Error(
-                    "Check your email and follow its verification link first.",
-                  );
-                await sync.refresh();
+                await sync.addCurrentBook();
+                onClose();
               })
             }
           >
-            I’ve verified my email
-          </button>
-          <button
-            disabled={working}
-            onClick={() =>
-              void act(async () => {
-                await sendEmailVerification(user);
-                setNotice("Verification email sent.");
-              })
-            }
-          >
-            Resend verification email
+            Add this book to my account
+            <ArrowUpRight size={17} />
           </button>
         </section>
-      ) : (
-        <>
-          <p className="lb-fine">Signed in as {user.email}</p>
-          {vault.mode === "open" && !bound?.accountManaged && (
-            <section className="lb-account-current">
-              <h3>Add {vault.book.owner}’s book to your account</h3>
-              <p>
-                Add the entries, photos and progress in this book to your
-                account. After this one-time step, sign-in opens the account
-                copy on any device. Your original stays on this device.
-              </p>
-              <p className="lb-fine">
-                Your account can recover this copy. Anyone signed in to this
-                parent account can open its family books. Other accounts cannot.
-              </p>
-              <button
-                className="lb-primary"
-                disabled={working}
-                onClick={() =>
-                  void act(async () => {
-                    await sync.addCurrentBook();
-                    onClose();
-                  })
-                }
-              >
-                Add this book to my account
-                <ArrowUpRight size={17} />
-              </button>
-            </section>
-          )}
-          {sync.conflict && (
-            <section className="lb-account-current">
-              <h3>Changes from two devices</h3>
-              <p>
-                Keep both versions so nothing gets overwritten. You can review
-                the separate copies in your library.
-              </p>
-              <button
-                className="lb-primary"
-                disabled={working}
-                onClick={() => void act(sync.keepBoth)}
-              >
-                Keep both versions
-              </button>
-            </section>
-          )}
-          {!adding && !chosen && (
+      )}
+      {sync.conflict && (
+        <section className="lb-account-current">
+          <h3>Changes from two devices</h3>
+          <p>
+            Keep both versions so nothing gets overwritten. You can review the
+            separate copies in your library.
+          </p>
+          <button
+            className="lb-primary"
+            disabled={working}
+            onClick={() => void act(sync.keepBoth)}
+          >
+            Keep both versions
+          </button>
+        </section>
+      )}
+      {!adding && !chosen && library}
+      {adding && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void act(async () => {
+              if (!audience || (audience !== "adult" && !parentConfirm))
+                throw new Error(
+                  "Choose the child’s age range and confirm you are their parent or guardian.",
+                );
+              await sync.createBook(name, audience);
+              onClose();
+            });
+          }}
+        >
+          <Heading>
+            {audience === "adult" ? "Create your book" : "Create a child’s book"}
+          </Heading>
+          <label>
+            {audience === "adult" ? "Your name" : "Child’s name"}
+            <input
+              autoFocus
+              required
+              maxLength={60}
+              autoComplete="off"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </label>
+          {audience === "adult" ? (
+            <p className="lb-fine">{OWN_BOOK_NOTE}</p>
+          ) : (
             <>
-              <div className="lb-account-books">
-                {books.map((head, i) => (
-                  <div key={head.id} data-tone={bookTones[i % bookTones.length]}>
-                    <button
-                      disabled={working}
-                      onClick={() => void act(() => open(head))}
-                    >
-                      <span className="lb-book-initial" aria-hidden="true">
-                        {head.label.trim().charAt(0).toUpperCase() || "R"}
-                      </span>
-                      <span>
-                        {head.label}
-                        <small>
-                          {head.accountManaged
-                            ? `Open ${head.label.trim() || "this"}’s book →`
-                            : "Earlier book · original passphrase needed"}
-                        </small>
-                      </span>
-                    </button>
-                  </div>
-                ))}
-              </div>
-              {!sync.books.length && (
-                <section className="lb-account-empty">
-                  <BookOpen size={30} />
-                  <h3>Your library is empty</h3>
-                  <p>
-                    Start with yours, then add the kids. Their profiles belong
-                    to this parent account—no child email or password needed.
-                  </p>
-                </section>
-              )}
-              <div className="lb-account-actions">
-                {!hasOwnBook && (
-                  <button
-                    className="lb-primary"
-                    disabled={working}
-                    onClick={() => {
-                      setAdding(true);
-                      setAudience("adult");
-                    }}
-                  >
-                    <Plus size={17} />
-                    Add my book
-                  </button>
-                )}
-                <button
-                  className="lb-secondary"
-                  disabled={working}
-                  onClick={() => {
-                    setAdding(true);
-                    setAudience("");
-                  }}
+              <label>
+                Age range
+                <select
+                  required
+                  value={audience}
+                  onChange={(e) => setAudience(e.target.value as Audience)}
                 >
-                  <Plus size={17} />
-                  Add a child
-                </button>
-              </div>
+                  <option value="">Choose an age range</option>
+                  {ageBands.map((b) => (
+                    <option key={b} value={b}>
+                      {ageLabels[b]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p>
+                Their prompts and activities will match this age range. Their
+                book belongs to your account: no child email or password.
+                Entries and photos save under your account, and a parent
+                password protects the family library and parent settings. AI
+                and sharing with other accounts still need your permission.
+              </p>
+              <label className="lb-account-check">
+                <input
+                  type="checkbox"
+                  checked={parentConfirm}
+                  onChange={(e) => setParentConfirm(e.target.checked)}
+                />
+                I’m their parent or guardian and understand this account can
+                access their book.
+              </label>
             </>
           )}
-          {adding && (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void act(async () => {
-                  if (!audience || (audience !== "adult" && !parentConfirm))
-                    throw new Error(
-                      "Choose the child’s age range and confirm you are their parent or guardian.",
-                    );
-                  await sync.createBook(name, audience);
-                  onClose();
-                });
-              }}
-            >
-              <h3>
-                {audience === "adult"
-                  ? "Create your book"
-                  : "Add a child’s book"}
-              </h3>
-              <label>
-                {audience === "adult" ? "Your name" : "Child’s name"}
-                <input
-                  autoFocus
-                  required
-                  maxLength={60}
-                  autoComplete="off"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </label>
-              {audience !== "adult" && (
-                <>
-                  <label>
-                    Age range
-                    <select
-                      required
-                      value={audience}
-                      onChange={(e) => setAudience(e.target.value as Audience)}
-                    >
-                      <option value="">Choose an age range</option>
-                      {ageBands.map((b) => (
-                        <option key={b} value={b}>
-                          {ageLabels[b]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <p>
-                    Their prompts and activities will match this age range.
-                    Their entries and photos save under your account. A parent
-                    password protects access to the family library and parent
-                    settings.
-                  </p>
-                  <label className="lb-account-check">
-                    <input
-                      type="checkbox"
-                      checked={parentConfirm}
-                      onChange={(e) => setParentConfirm(e.target.checked)}
-                    />
-                    I’m their parent or guardian and understand this account can
-                    access their book.
-                  </label>
-                </>
-              )}
-              <button
-                className="lb-primary"
-                disabled={
-                  working ||
-                  !name.trim() ||
-                  !audience ||
-                  (audience !== "adult" && !parentConfirm)
-                }
-              >
-                {working ? "Creating book…" : "Create & open book"}
-                <ArrowUpRight size={17} />
-              </button>
+          <button
+            className="lb-primary"
+            disabled={
+              working ||
+              !name.trim() ||
+              !audience ||
+              (audience !== "adult" && !parentConfirm)
+            }
+          >
+            {working ? "Creating book…" : "Create & open book"}
+            <ArrowUpRight size={17} />
+          </button>
+          <button
+            type="button"
+            className="lb-lib-link"
+            disabled={working}
+            onClick={() => setAdding(false)}
+          >
+            Back to library
+          </button>
+        </form>
+      )}
+      {chosen && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void act(async () => {
+              await sync.open(chosen, passphrase);
+              setPassphrase("");
+              onClose();
+            });
+          }}
+        >
+          <Heading>Open {chosen.label}’s earlier book</Heading>
+          <p>
+            This copy still uses its original book passphrase. Once it’s open,
+            choose Family library to add it to your account.
+          </p>
+          <label>
+            Original book passphrase
+            <input
+              type="password"
+              required
+              autoComplete="off"
+              value={passphrase}
+              onChange={(e) => setPassphrase(e.target.value)}
+            />
+          </label>
+          <button className="lb-primary" disabled={working}>
+            Open book
+          </button>
+          <button
+            type="button"
+            className="lb-lib-link"
+            onClick={() => setChosen(null)}
+          >
+            Back to library
+          </button>
+        </form>
+      )}
+    </>
+  );
+
+  const alertText =
+    error || (libraryOpen && view === "failed" ? "" : sync.error);
+  const content: ReactNode = (
+    <div className={`lb-account ${user ? "lb-lib" : ""}`}>
+      {!user ? (
+        <>
+          <p className="lb-kicker">
+            <Cloud size={17} /> Relish account
+          </p>
+          <Heading>{create ? "Create your account" : "Welcome to Relish."}</Heading>
+          <p>
+            Sign in once. Your entries and photos save to your account, ready
+            wherever you open Relish.
+          </p>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void act(async () => {
+                if (!adult) throw new Error("An adult must manage this account.");
+                await connectAI(email, password, create);
+                setPassword("");
+                setParentReady(!gate || "accountUid" in gate);
+                // A legacy local child edition still requires its separate parent passphrase.
+                if (gate && !("accountUid" in gate)) setParentReady(false);
+                sync.refreshUser();
+                if (create)
+                  setNotice(
+                    "Check your email for a verification link, then come back here.",
+                  );
+              });
+            }}
+          >
+            <label>
+              Email
+              <input
+                type="email"
+                autoComplete="username"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </label>
+            <label>
+              Account password
+              <input
+                type="password"
+                autoComplete={create ? "new-password" : "current-password"}
+                minLength={create ? 12 : undefined}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </label>
+            <label className="lb-account-check">
+              <input
+                type="checkbox"
+                checked={adult}
+                onChange={(e) => setAdult(e.target.checked)}
+              />
+              I’m 18 or older and manage this account.
+            </label>
+            <button className="lb-primary" disabled={working || !adult}>
+              {working ? "One moment…" : create ? "Create my account" : "Sign in"}
+              <ArrowUpRight size={17} />
+            </button>
+            <div className="lb-account-actions">
               <button
                 type="button"
                 disabled={working}
-                onClick={() => setAdding(false)}
+                onClick={() => {
+                  setCreate(!create);
+                  setPassword("");
+                }}
               >
-                Back to library
+                {create
+                  ? "Already have an account? Sign in"
+                  : "New here? Create an account"}
               </button>
-            </form>
-          )}
-          {chosen && (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void act(async () => {
-                  await sync.open(chosen, passphrase);
-                  setPassphrase("");
-                  onClose();
-                });
-              }}
-            >
-              <h3>Open {chosen.label}’s earlier book</h3>
-              <p>
-                This copy still uses its original book passphrase. Once it’s
-                open, choose Account to add it to your sign-in library.
-              </p>
-              <label>
-                Original book passphrase
-                <input
-                  type="password"
-                  required
-                  autoComplete="off"
-                  value={passphrase}
-                  onChange={(e) => setPassphrase(e.target.value)}
-                />
-              </label>
-              <button className="lb-primary" disabled={working}>
-                Open book
+              <button
+                type="button"
+                disabled={working || !email}
+                onClick={() =>
+                  void act(async () => {
+                    await sendPasswordResetEmail(getAIAuth(), email.trim());
+                    setNotice(
+                      "If that email has an account, you’ll receive a password reset link.",
+                    );
+                  })
+                }
+              >
+                Forgot account password?
               </button>
-              <button type="button" onClick={() => setChosen(null)}>
-                Back to library
-              </button>
-            </form>
-          )}
-          <p className="lb-fine">
-            Children’s profiles are managed by this adult account. Signing into
-            the same account on another device brings the whole library with
-            you. AI and sharing with other accounts still need your permission.
-          </p>
+            </div>
+          </form>
+        </>
+      ) : (
+        <>
+          {!inline && <div className="lb-lib-bar">{accountMenu}</div>}
+          {signedIn}
         </>
       )}
-      {(error || sync.error) && (
+      {alertText && (
         <p role="alert" className="lb-error">
-          {error || sync.error}
+          {alertText}
         </p>
       )}
-      {working && <p role="status">Working on your library…</p>}
+      {working && !(libraryOpen && view === "loading") && (
+        <p role="status">Working on your library…</p>
+      )}
       {notice && <p role="status">{notice}</p>}
-      {user && (
-        <button
-          disabled={working}
-          onClick={() =>
-            void act(async () => {
-              await disconnectAI();
-              vault.lock();
-              sync.refreshUser();
-              setParentReady(false);
-            })
-          }
-        >
-          Sign out
-        </button>
+      {!user && (
+        <footer className="lb-account-footer">
+          <p className="lb-fine">
+            Account books save automatically online. Stay signed in only on a
+            device you trust.{" "}
+            <a href="/privacy/" target="_blank" rel="noreferrer">
+              Privacy details
+            </a>
+          </p>
+          {onLocal && (
+            <button onClick={onLocal}>
+              Open a local-only book or restore a backup
+            </button>
+          )}
+          {onExplore && (
+            <button onClick={onExplore}>Explore a sample book</button>
+          )}
+        </footer>
       )}
-      <footer className="lb-account-footer">
-        <p className="lb-fine">
-          Account books save automatically online. Stay signed in only on a
-          device you trust.{" "}
-          <a href="/privacy/" target="_blank" rel="noreferrer">
-            Privacy details
-          </a>
-        </p>
-        {onLocal && (
-          <button onClick={onLocal}>
-            Open a local-only book or restore a backup
-          </button>
-        )}
-        {onExplore && (
-          <button onClick={onExplore}>Explore a sample book</button>
-        )}
-      </footer>
+      {user && !inline && footer}
     </div>
   );
-  return inline ? (
+  if (!inline)
+    return (
+      <Dialog title="Your family library" onClose={onClose} wide={user ? true : false}>
+        {content}
+      </Dialog>
+    );
+  return user ? (
+    <main className="r-app lb-app lb-library-home lb-lib-home">
+      <header className="lb-lib-head">
+        <p className="lb-wordmark">relish</p>
+        {accountMenu}
+      </header>
+      <section
+        className={`lb-lib-sheet ${libraryOpen && view === "empty" && !adding && !chosen ? "lb-lib-sheet-start" : ""}`}
+      >
+        {content}
+      </section>
+      {footer}
+    </main>
+  ) : (
     <main className="r-app lb-app lb-library-home">
       <header>
         <div>
@@ -561,9 +796,5 @@ export default function AccountLibrary({
       </header>
       <section>{content}</section>
     </main>
-  ) : (
-    <Dialog title="Your family library" onClose={onClose}>
-      {content}
-    </Dialog>
   );
 }

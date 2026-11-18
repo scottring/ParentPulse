@@ -68,7 +68,9 @@ beforeEach(() => {
 afterEach(cleanup);
 it("creates a child inside the signed-in parent library without child credentials", async () => {
   const { sync, close } = mount();
-  fireEvent.click(screen.getByRole("button", { name: "Add a child" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Create a child’s book" }),
+  );
   fireEvent.change(screen.getByLabelText("Child’s name"), {
     target: { value: "Robin" },
   });
@@ -131,7 +133,7 @@ it("keeps original passphrase protection for an earlier synced book", async () =
     expect(sync.open).toHaveBeenCalledWith(head, "original passphrase"),
   );
 });
-it("lists the adult's own book first, without a second Add my book or Refresh", () => {
+it("lists the adult's own book first, without a second Create my book or Refresh", () => {
   localStorage.setItem("relish:home-book:parent-one", "mine");
   mount({
     books: [
@@ -144,8 +146,10 @@ it("lists the adult's own book first, without a second Add my book or Refresh", 
     .map((b) => b.textContent || "")
     .filter((t) => /Ella|Scott/.test(t));
   expect(names[0]).toMatch(/Scott/);
-  expect(screen.queryByRole("button", { name: /Add my book/ })).toBeNull();
-  expect(screen.getByRole("button", { name: /Add a child/ })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Create my book/ })).toBeNull();
+  expect(
+    screen.getByRole("button", { name: "Create a child’s book" }),
+  ).toBeTruthy();
   expect(screen.queryByRole("button", { name: /Refresh library/ })).toBeNull();
   expect(screen.queryByText(/Sign in once/)).toBeNull();
   localStorage.removeItem("relish:home-book:parent-one");
@@ -160,4 +164,180 @@ it("opens straight onto the add-a-child form from Family", () => {
     } as unknown as Parameters<typeof AccountLibrary>[0]),
   );
   expect(screen.getByLabelText("Child’s name")).toBeTruthy();
+});
+
+const invitation =
+  "What’s one thing someone in your family did this week that you’d like to remember?";
+
+it("first visit: invites the adult to start a book once the empty list has loaded", async () => {
+  const onLocal = vi.fn();
+  render(
+    createElement(AccountLibrary, {
+      inline: true,
+      sync: { user, books: [], refresh: vi.fn().mockResolvedValue([]) },
+      vault: { mode: "shelf", book: emptyBook(""), editionId: "test" },
+      onClose: vi.fn(),
+      onLocal,
+    } as unknown as Parameters<typeof AccountLibrary>[0]),
+  );
+  await screen.findByRole("heading", { name: "Start your book" });
+  expect(screen.getByText(invitation)).toBeTruthy();
+  expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+  expect(screen.queryByText(/Your library is empty/)).toBeNull();
+  expect(screen.queryByText(/Signed in as/)).toBeNull();
+  expect(screen.getByText(/Encrypted and saved to your account/)).toBeTruthy();
+  expect(screen.getByText(/without a separate sign-in/)).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Open a local book or restore a backup" }),
+  );
+  expect(onLocal).toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Create my book" }));
+  expect(screen.getByLabelText("Your name")).toBeTruthy();
+  expect(screen.queryByLabelText("Age range")).toBeNull();
+});
+
+it("shows a loading state, never the invitation, while books are fetched", () => {
+  mount({ refresh: vi.fn(() => new Promise(() => {})) });
+  expect(screen.getByRole("status").textContent).toContain("Loading your books");
+  expect(screen.queryByText(invitation)).toBeNull();
+  expect(screen.queryByRole("button", { name: "Create my book" })).toBeNull();
+});
+
+it("shows a failed load with Try again instead of the invitation", async () => {
+  const refresh = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("Network unavailable."))
+    .mockResolvedValueOnce([]);
+  mount({ refresh, error: "Network unavailable." });
+  const alert = await screen.findByText(/didn’t load/);
+  expect(alert.getAttribute("role")).toBe("alert");
+  expect(alert.textContent).toContain("Network unavailable.");
+  expect(screen.getAllByRole("alert")).toHaveLength(1);
+  expect(screen.queryByText(invitation)).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+  await screen.findByRole("heading", { name: "Start your book" });
+  expect(refresh).toHaveBeenCalledTimes(2);
+});
+
+it("waits for a sync already running instead of reporting a failed load", async () => {
+  const refresh = vi
+    .fn()
+    .mockRejectedValueOnce(
+      new Error("Sync is already running. Please try again in a moment."),
+    )
+    .mockResolvedValueOnce([]);
+  mount({ refresh });
+  await screen.findByRole("heading", { name: "Start your book" });
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(refresh).toHaveBeenCalledTimes(2);
+});
+
+it("child-only library: shows the child's cover and still offers Create my book", async () => {
+  const kid = { id: "kid", label: "Ella", accountManaged: true };
+  const { sync } = mount({ books: [kid] });
+  expect(
+    screen.getByRole("heading", { name: "Your family library" }),
+  ).toBeTruthy();
+  expect(screen.queryByText(invitation)).toBeNull();
+  expect(screen.getByRole("button", { name: "Create my book" })).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Create a child’s book" }),
+  ).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Open Ella’s book" }));
+  await waitFor(() => expect(sync.open).toHaveBeenCalledWith(kid));
+});
+
+it("populated library: each cover is one named open action", () => {
+  localStorage.setItem("relish:home-book:parent-one", "mine");
+  mount({
+    books: [
+      { id: "kid", label: "Kaleb", accountManaged: true },
+      { id: "mine", label: "Scott", accountManaged: true },
+      { id: "old", label: "Ella" },
+    ],
+  });
+  const covers = screen
+    .getAllByRole("listitem")
+    .map((li) => li.querySelectorAll("button"));
+  expect(covers.every((b) => b.length === 1)).toBe(true);
+  expect(screen.getByRole("button", { name: "Open Scott’s book" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Open Kaleb’s book" })).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: /Open Ella’s earlier book/ }),
+  ).toBeTruthy();
+  expect(screen.getByText("Your book")).toBeTruthy();
+  localStorage.removeItem("relish:home-book:parent-one");
+});
+
+it("keeps account identity and Sign out together in the Account menu", async () => {
+  const lock = vi.fn();
+  const refreshUser = vi.fn();
+  render(
+    createElement(AccountLibrary, {
+      inline: true,
+      sync: {
+        user,
+        books: [],
+        refresh: vi.fn().mockResolvedValue([]),
+        refreshUser,
+      },
+      vault: { mode: "shelf", book: emptyBook(""), editionId: "test", lock },
+      onClose: vi.fn(),
+    } as unknown as Parameters<typeof AccountLibrary>[0]),
+  );
+  const toggle = screen.getByRole("button", { name: "Account" });
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
+  fireEvent.click(toggle);
+  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  const menu = screen.getByRole("group", { name: "Account" });
+  expect(menu.textContent).toContain(user.email);
+  fireEvent.keyDown(menu, { key: "Escape" });
+  expect(screen.queryByRole("group", { name: "Account" })).toBeNull();
+  fireEvent.click(toggle);
+  fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+  await waitFor(() => expect(lock).toHaveBeenCalled());
+  expect(refreshUser).toHaveBeenCalled();
+});
+
+it("works as the Family library dialog, with the menu and local books", async () => {
+  const onLocal = vi.fn();
+  render(
+    createElement(AccountLibrary, {
+      sync: {
+        user,
+        books: [{ id: "kid", label: "Ella", accountManaged: true }],
+        refresh: vi.fn().mockResolvedValue([]),
+      },
+      vault: {
+        mode: "open",
+        book: { ...emptyBook("Ella"), profile: { kind: "adult" } },
+        editionId: "test",
+      },
+      onClose: vi.fn(),
+      onLocal,
+    } as unknown as Parameters<typeof AccountLibrary>[0]),
+  );
+  expect(
+    screen.getByRole("heading", { level: 2, name: "Your family library" }),
+  ).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Account" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Open Ella’s book" })).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Open a local book or restore a backup" }),
+  );
+  expect(onLocal).toHaveBeenCalled();
+});
+
+it("keeps child-profile details and consent in child setup", async () => {
+  mount();
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Create a child’s book" }),
+  );
+  expect(screen.getByText(/no child email or password/)).toBeTruthy();
+  expect(
+    screen.getByLabelText(/I’m their parent or guardian/),
+  ).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Back to library" }));
+  expect(screen.queryByText(/no child email or password/)).toBeNull();
 });
