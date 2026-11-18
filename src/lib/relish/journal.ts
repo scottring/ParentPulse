@@ -110,3 +110,23 @@ export function writeJournalPage(
       : [...entries, entry],
   };
 }
+/** Renames a kept or draft page without touching its words, photos or tags. */
+export function renameJournalPage(book: Book, id: string, title: string): Book {
+  const next = title.trim();
+  if (next.length > JOURNAL_TITLE_LIMIT)
+    throw new Error(`Keep the title under ${JOURNAL_TITLE_LIMIT} characters.`);
+  const entries = book.journal || [];
+  const previous = entries.find((e) => e.id === id);
+  if (!previous) throw new Error("This page could not be found.");
+  if (previous.title === next) return book;
+  const entry: JournalEntry = {
+    ...previous,
+    title: next,
+    updatedAt: new Date().toISOString(),
+    revision: previous.revision + 1,
+  };
+  return {
+    ...book,
+    journal: entries.map((e) => (e.id === id ? entry : e)),
+  };
+}

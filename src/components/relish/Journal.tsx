@@ -16,6 +16,7 @@ import {
   Heart,
   Leaf,
   Lock,
+  Pencil,
   Plus,
   Search,
   Sparkles,
@@ -31,6 +32,7 @@ import {
   journalStyles,
   newJournalDraft,
   writeJournalPage,
+  renameJournalPage,
   JOURNAL_TEXT_LIMIT,
   JOURNAL_TITLE_LIMIT,
   type JournalDraft,
@@ -38,6 +40,7 @@ import {
   type JournalStyle,
 } from "@/lib/relish/journal";
 import { useSensory } from "./Sensory";
+import { TypingSoundToggle, useTypingSound } from "./TypingSound";
 import "./journal.css";
 
 type Save = (change: (book: Book) => Book) => Promise<void>;
@@ -110,6 +113,12 @@ export default function Journal({
   const [celebrate, setCelebrate] = useState(false);
   const [query, setQuery] = useState("");
   const [excerpt, setExcerpt] = useState<string | null>(null);
+  const [rename, setRename] = useState<{ id: string; title: string } | null>(
+    null,
+  );
+  const [renameError, setRenameError] = useState("");
+  const [renaming, setRenaming] = useState(false);
+  const typing = useTypingSound();
   const prose = useRef<HTMLElement>(null);
   const sensory = useSensory();
   const top = useRef<HTMLHeadingElement>(null);
@@ -198,9 +207,95 @@ export default function Journal({
               <span>{dateLabel(page.date)}</span>
               <StyleMark style={page.style} />
             </div>
-            <h2 ref={top} tabIndex={-1}>
-              {page.title}
-            </h2>
+            {page.journalId && rename?.id === page.journalId ? (
+              <form
+                className="rj-rename"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const id = page.journalId!;
+                  setRenaming(true);
+                  setRenameError("");
+                  save((b) => renameJournalPage(b, id, rename.title))
+                    .then(() => {
+                      setRename(null);
+                      sensory.play("place");
+                    })
+                    .catch((err) =>
+                      setRenameError(
+                        err instanceof Error
+                          ? err.message
+                          : "The title could not be saved.",
+                      ),
+                    )
+                    .finally(() => setRenaming(false));
+                }}
+              >
+                <label className="rj-title-label">
+                  <span className="rj-sr-only">Title</span>
+                  <input
+                    aria-label="Title"
+                    autoFocus
+                    maxLength={JOURNAL_TITLE_LIMIT}
+                    value={rename.title}
+                    disabled={renaming}
+                    onChange={(e) =>
+                      setRename({ id: rename.id, title: e.target.value })
+                    }
+                    onFocus={typing.onFocus}
+                    onKeyUp={typing.onKeyUp}
+                    onKeyDown={(e) => {
+                      typing.onKeyDown(e);
+                      if (e.key === "Escape") setRename(null);
+                    }}
+                    placeholder="Give this page a title"
+                  />
+                </label>
+                <div className="rj-rename-actions">
+                  <button className="lb-primary" disabled={renaming}>
+                    <Check size={16} /> {renaming ? "Saving…" : "Save title"}
+                  </button>
+                  <button
+                    type="button"
+                    className="lb-text"
+                    disabled={renaming}
+                    onClick={() => setRename(null)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {renameError && (
+                  <p className="lb-error" role="alert">
+                    {renameError}
+                  </p>
+                )}
+              </form>
+            ) : (
+              <div className="rj-title-row">
+                <h2 ref={top} tabIndex={-1}>
+                  {page.title}
+                </h2>
+                {page.journalId && (
+                  <button
+                    className="rj-rename-button"
+                    onClick={() => {
+                      const entry = book.journal?.find(
+                        (e) => e.id === page.journalId,
+                      );
+                      setRenameError("");
+                      setRename({
+                        id: page.journalId!,
+                        title: entry?.title || "",
+                      });
+                    }}
+                  >
+                    <Pencil size={16} />
+                    {book.journal?.find((e) => e.id === page.journalId)?.title.trim()
+                      ? "Rename"
+                      : "Add a title"}
+                  </button>
+                )}
+              </div>
+            )}
             <p className="lb-kicker">
               {page.kind}
               {page.from ? ` · From ${page.from}` : ""}
@@ -527,6 +622,7 @@ export function JournalEditor({
   photos?: PhotoAccess;
 }) {
   const [draft, setDraft] = useState<JournalDraft>(initial);
+  const editorTyping = useTypingSound();
   const [mediaBusy, setMediaBusy] = useState(false);
   const [navigationNotice, setNavigationNotice] = useState("");
   const [voiceOpen, setVoiceOpen] = useState(initialVoice);
@@ -742,6 +838,18 @@ export function JournalEditor({
             <span>{dateLabel(draft.createdAt)}</span>
             <StyleMark style={draft.style} />
           </div>
+          <label className="rj-title-label rj-title-first">
+            <span className="rj-sr-only">Title</span>
+            <input
+              aria-label="Title"
+              maxLength={JOURNAL_TITLE_LIMIT}
+              value={draft.title}
+              disabled={finishing}
+              onChange={(e) => change({ title: e.target.value })}
+              {...editorTyping}
+              placeholder="Give this page a title"
+            />
+          </label>
           {book && (
             <button
               className="rj-voice-launch"
@@ -759,10 +867,12 @@ export function JournalEditor({
               maxLength={JOURNAL_TEXT_LIMIT}
               disabled={finishing}
               onChange={(e) => change({ text: e.target.value })}
+              {...editorTyping}
               placeholder="Write your entry…"
               rows={5}
             />
           </label>
+          <TypingSoundToggle />
           <div className="rj-save-state" role="status" aria-live="polite">
             {pending > 0
               ? "Saving draft…"
@@ -831,7 +941,7 @@ export function JournalEditor({
             />
           )}
           <details className="rd-page-details">
-            <summary>Title, color and people</summary>
+            <summary>Page color</summary>
             <fieldset className="rj-style-picker" disabled={finishing}>
               <legend>Page color</legend>
               <div>
@@ -851,17 +961,6 @@ export function JournalEditor({
                 ))}
               </div>
             </fieldset>
-            <label className="rj-title-label">
-              Title <span>if you feel like it</span>
-              <input
-                aria-label="Page title (optional)"
-                maxLength={JOURNAL_TITLE_LIMIT}
-                value={draft.title}
-                disabled={finishing}
-                onChange={(e) => change({ title: e.target.value })}
-                placeholder="Entry title…"
-              />
-            </label>
           </details>
           {!!book?.people.length && (
             <fieldset

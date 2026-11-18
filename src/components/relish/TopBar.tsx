@@ -27,6 +27,7 @@ export default function TopBar({
   onPlace,
   items,
   status,
+  onWrite,
 }: {
   current: Place;
   initial: string;
@@ -34,6 +35,8 @@ export default function TopBar({
   onPlace: (place: Place) => void;
   items: MenuItem[];
   status?: string;
+  /** Opens a new journal page from anywhere. */
+  onWrite?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const menuId = useId();
@@ -81,6 +84,16 @@ export default function TopBar({
             </button>
           ))}
         </nav>
+        {onWrite && (
+          <button
+            type="button"
+            className="rp-write"
+            disabled={disabled}
+            onClick={onWrite}
+          >
+            <span aria-hidden="true">+</span> Write
+          </button>
+        )}
         <div className="rp-menu-wrap" ref={wrap}>
           <button
             ref={toggle}
