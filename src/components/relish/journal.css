@@ -1712,7 +1712,6 @@
   column-count: 2;
   column-gap: calc(var(--rd-pad-x) * 2);
   column-fill: auto;
-  transition: transform 420ms cubic-bezier(0.3, 0.7, 0.2, 1);
   color: var(--rj-ink, #30382c);
   font: 400 clamp(18px, 1.55vw, 22px) / 1.62 var(--serif);
 }
@@ -1878,8 +1877,132 @@
     gap: 6px;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .lb-app .rd-flow {
-    transition: none;
-  }
+/* The page turn (page-flip.ts): a leaf hinged at the spine, drawn with copies
+   of the columns, over a sheet that has already moved to the new pages. */
+.lb-app .rd-sheet {
+  touch-action: pan-y;
+}
+.lb-app .rd-flip-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  perspective: 2600px;
+}
+.lb-app .rd-book[data-per-spread="1"] .rd-flip-layer {
+  overflow: hidden;
+  border-radius: 8px;
+}
+.lb-app .rd-face {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  overflow: hidden;
+  background-color: var(--rj-paper, #f8f3e8);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.lb-app .rd-face-left {
+  left: 0;
+  width: 50%;
+  border-radius: 8px 0 0 8px;
+  background-image: linear-gradient(
+    to left,
+    rgba(48, 56, 44, 0.16),
+    rgba(48, 56, 44, 0.06) 2px,
+    rgba(48, 56, 44, 0) 64px
+  );
+}
+.lb-app .rd-face-right {
+  left: 50%;
+  width: 50%;
+  border-radius: 0 8px 8px 0;
+  background-image: linear-gradient(
+    to right,
+    rgba(48, 56, 44, 0.16),
+    rgba(48, 56, 44, 0.06) 2px,
+    rgba(48, 56, 44, 0) 56px
+  );
+}
+.lb-app .rd-face-full {
+  inset: 0;
+  border-radius: 8px;
+}
+.lb-app .rd-face-box {
+  position: absolute;
+  overflow: hidden;
+}
+.lb-app .rd-face-folio {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 26px;
+  text-align: center;
+  font: 400 16px/1 var(--serif);
+  color: var(--ui-ink-soft, #5d6656);
+}
+.lb-app .rd-face-shade {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: linear-gradient(
+    to right,
+    rgba(36, 42, 32, 0.55),
+    rgba(36, 42, 32, 0.18) 45%,
+    rgba(36, 42, 32, 0.4)
+  );
+}
+/* The leaf: one half of the sheet, hinged at the spine (or, on a phone, the
+   whole page hinged at its edge). Its back faces are pre-turned. */
+.lb-app .rd-leaf {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.lb-app .rd-leaf .rd-face {
+  left: 0;
+  width: 100%;
+}
+.lb-app .rd-leaf-right {
+  left: 50%;
+  width: 50%;
+  transform-origin: left center;
+}
+.lb-app .rd-leaf-left {
+  left: 0;
+  width: 50%;
+  transform-origin: right center;
+}
+.lb-app .rd-leaf-full {
+  inset: 0;
+}
+.lb-app .rd-leaf-full.is-forward {
+  transform-origin: left center;
+}
+.lb-app .rd-leaf-full.is-back {
+  transform-origin: right center;
+}
+.lb-app .rd-leaf .rd-leaf-back {
+  transform: rotateY(180deg);
+}
+/* A face drawn as the left or right page keeps its own spine shading and
+   corners, whichever half of the leaf it sits on. */
+.lb-app .rd-leaf .rd-face-left {
+  border-radius: 8px 0 0 8px;
+}
+.lb-app .rd-leaf .rd-face-right {
+  border-radius: 0 8px 8px 0;
+}
+.lb-app .rd-leaf-front {
+  box-shadow: 0 0 0 1px rgba(48, 56, 44, 0.05);
+}
+.lb-app .rd-leaf.is-forward .rd-leaf-front .rd-face-shade,
+.lb-app .rd-leaf-left .rd-leaf-back .rd-face-shade {
+  background: linear-gradient(to left, rgba(36, 42, 32, 0.5), rgba(36, 42, 32, 0.12));
+}
+.lb-app .rd-leaf.is-back .rd-leaf-front .rd-face-shade,
+.lb-app .rd-leaf-right .rd-leaf-back .rd-face-shade {
+  background: linear-gradient(to right, rgba(36, 42, 32, 0.5), rgba(36, 42, 32, 0.12));
 }
