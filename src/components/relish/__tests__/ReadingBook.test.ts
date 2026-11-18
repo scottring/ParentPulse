@@ -12,8 +12,12 @@ it("reads as a book with entry links: previous, where you are, and a new entry a
   render(
     createElement(
       ReadingBook,
-      { entryLabel: "Entry 5 of 5", onPreviousEntry, onNewEntry },
-      createElement("p", null, "We took the long way home."),
+      {
+        entryLabel: "Entry 5 of 5",
+        onPreviousEntry,
+        onNewEntry,
+        children: createElement("p", null, "We took the long way home."),
+      },
     ),
   );
   expect(screen.getByText("We took the long way home.")).toBeTruthy();
@@ -31,8 +35,12 @@ it("the first entry can't go back, and an earlier one offers the next entry inst
   render(
     createElement(
       ReadingBook,
-      { entryLabel: "Entry 1 of 3", onNextEntry, onNewEntry: vi.fn() },
-      createElement("p", null, "First."),
+      {
+        entryLabel: "Entry 1 of 3",
+        onNextEntry,
+        onNewEntry: vi.fn(),
+        children: createElement("p", null, "First."),
+      },
     ),
   );
   expect(
