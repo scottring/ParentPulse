@@ -933,16 +933,16 @@ export default function LivingBook({
           <div className="lb-play-layout">
             <aside>
               <p className="lb-kicker">Play together</p>
-              <h2>Play together</h2>
-              <p>Play one round on this device. Pass it around.</p>
+              <h2>Pass it around</h2>
+              <p>One round, on this device.</p>
               <Illustration
                 name={gameIllustration[activeGame.kind] ?? "do-something"}
                 size={180}
                 className="lb-play-art"
               />
               <p className="lb-fine">
-                Private pages stay out of the game. Anyone may pass. End the
-                game any time; the round is saved.
+                Private pages stay out of the game. End game any time; the
+                round waits for you.
               </p>
             </aside>
             <main className="lb-play-main" key={activeGame.id}>

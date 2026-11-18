@@ -257,14 +257,14 @@ export const games: {
   {
     kind: "joy",
     title: "Guess my small joy",
-    blurb: "One person picks; everyone else guesses. Reveal together.",
+    blurb: "One person picks a small joy in secret; everyone else guesses. See who knows them best.",
     short: "5 min",
     tags: ["kids", "5"],
   },
   {
     kind: "story",
     title: "One story, many voices",
-    blurb: "Build an unlikely adventure. Everyone shapes a turn.",
+    blurb: "Build a silly adventure, one part each. Read the whole story together at the end.",
     short: "5–10 min",
     tags: ["kids"],
   },
