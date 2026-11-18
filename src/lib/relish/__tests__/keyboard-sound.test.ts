@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { keySamples, strokeFor } from "../keyboard-sound";
+import { keySamples, splitStrokes, strokeFor } from "../keyboard-sound";
 
 describe("mechanical keyboard sound", () => {
   it("makes short, finite, normalized strokes", () => {
@@ -34,5 +34,23 @@ describe("mechanical keyboard sound", () => {
     expect(strokeFor("Shift")).toBeNull();
     expect(strokeFor("ArrowLeft")).toBeNull();
     expect(strokeFor("Meta")).toBeNull();
+  });
+});
+
+describe("recorded strokes", () => {
+  it("splits a file of strokes on the silent gaps", () => {
+    const rate = 48000;
+    const data = new Float32Array(rate);
+    const put = (at: number, ms: number) => {
+      for (let i = 0; i < (rate * ms) / 1000; i++)
+        data[at + i] = Math.sin(i / 3) * 0.5 * Math.exp(-i / 800);
+    };
+    put(2880, 80);
+    put(2880 + 3840 + 2880, 80);
+    put(20000, 60);
+    const strokes = splitStrokes(data, rate);
+    expect(strokes).toHaveLength(3);
+    expect(strokes[0][0]).toBeLessThanOrEqual(2880);
+    expect(strokes[0][0]).toBeGreaterThan(2800);
   });
 });

@@ -1,6 +1,6 @@
-// A mechanical keyboard, synthesized: no audio files, no network.
-// Each press is a sharp switch click, the plate bottoming out a few ms later,
-// and a short hollow "thock" from the case. Release is a softer tick.
+// Keyboard sound. Real keystrokes recorded on an HHKB (CC0, see
+// public/sounds/keyboard/README.md), loaded from this app's own origin.
+// Until they load (or if they can't), a synthesized click stands in.
 export type KeyStroke = "key" | "space" | "enter" | "delete" | "up";
 
 const VARIANTS = 8;
@@ -72,7 +72,38 @@ export function strokeFor(key: string): KeyStroke | null {
   return null;
 }
 
-export function createKeyboardEngine() {
+/** Finds strokes in a file of strokes separated by silence: [start, end) sample ranges. */
+export function splitStrokes(
+  data: Float32Array,
+  rate: number,
+  threshold = 0.004,
+): [number, number][] {
+  const quiet = Math.round(rate * 0.03);
+  const out: [number, number][] = [];
+  let start = -1,
+    lastLoud = -1;
+  for (let i = 0; i < data.length; i++) {
+    if (Math.abs(data[i]) > threshold) {
+      if (start < 0) start = Math.max(0, i - Math.round(rate * 0.0005));
+      lastLoud = i;
+    } else if (start >= 0 && i - lastLoud > quiet) {
+      out.push([start, lastLoud + 1]);
+      start = -1;
+    }
+  }
+  if (start >= 0) out.push([start, lastLoud + 1]);
+  return out.filter(([a, b]) => b - a > rate * 0.01);
+}
+
+const FILES = { key: "keys", big: "big", up: "up" } as const;
+type Group = keyof typeof FILES;
+const groupOf = (kind: KeyStroke): Group =>
+  kind === "space" || kind === "enter" ? "big" : kind === "up" ? "up" : "key";
+
+export function createKeyboardEngine(base = "/sounds/keyboard/") {
+  const recorded: Partial<Record<Group, AudioBuffer[]>> = {};
+  let loading: Promise<void> | null = null;
+  const lastPick: Partial<Record<Group, number>> = {};
   let context: AudioContext | null = null;
   const buffers = new Map<string, AudioBuffer>();
   let lastVariant = -1;
@@ -97,11 +128,32 @@ export function createKeyboardEngine() {
     }
     return b;
   }
-  /** Wake the audio context and build buffers before the first key lands. */
+  function load(c: AudioContext) {
+    loading ??= Promise.all(
+      (Object.keys(FILES) as Group[]).map(async (g) => {
+        const res = await fetch(`${base}${FILES[g]}.mp3`);
+        if (!res.ok) throw new Error("missing");
+        const audio = await c.decodeAudioData(await res.arrayBuffer());
+        const data = audio.getChannelData(0);
+        recorded[g] = splitStrokes(data, audio.sampleRate).map(([a, b]) => {
+          const part = c.createBuffer(1, b - a, audio.sampleRate);
+          part.getChannelData(0).set(data.subarray(a, b));
+          return part;
+        });
+      }),
+    )
+      .then(() => {})
+      .catch(() => {
+        loading = null; // fall back to the synthesized click; retry next focus
+      });
+    return loading;
+  }
+  /** Wake the audio context and fetch the recordings before the first key lands. */
   function warm() {
     const c = ctx();
     if (!c) return;
     if (c.state !== "running") void c.resume().catch(() => {});
+    void load(c);
     for (let v = 0; v < VARIANTS; v++) buffer(c, "key", v);
     (["space", "enter", "delete", "up"] as const).forEach((k) => buffer(c, k, 0));
   }
@@ -109,17 +161,31 @@ export function createKeyboardEngine() {
     const c = ctx();
     if (!c || document.hidden) return;
     if (c.state !== "running") void c.resume().catch(() => {});
-    let variant = 0;
-    if (kind === "key") {
-      variant = Math.floor(Math.random() * VARIANTS);
-      if (variant === lastVariant) variant = (variant + 1) % VARIANTS;
-      lastVariant = variant;
-    }
     const source = c.createBufferSource();
     const gain = c.createGain();
-    source.buffer = buffer(c, kind, variant);
-    source.playbackRate.value = 0.97 + Math.random() * 0.06;
-    gain.gain.value = volume * (0.85 + Math.random() * 0.15);
+    const group = groupOf(kind);
+    const real = recorded[group];
+    if (real?.length) {
+      let pick = Math.floor(Math.random() * real.length);
+      if (pick === lastPick[group] && real.length > 1)
+        pick = (pick + 1) % real.length;
+      lastPick[group] = pick;
+      source.buffer = real[pick];
+      source.playbackRate.value = 0.98 + Math.random() * 0.04;
+      gain.gain.value =
+        volume * (kind === "up" ? 0.5 : 1) * (0.88 + Math.random() * 0.12);
+    } else {
+      if (!loading) void load(c);
+      let variant = 0;
+      if (kind === "key") {
+        variant = Math.floor(Math.random() * VARIANTS);
+        if (variant === lastVariant) variant = (variant + 1) % VARIANTS;
+        lastVariant = variant;
+      }
+      source.buffer = buffer(c, kind, variant);
+      source.playbackRate.value = 0.97 + Math.random() * 0.06;
+      gain.gain.value = volume * (0.85 + Math.random() * 0.15);
+    }
     source.connect(gain);
     gain.connect(c.destination);
     source.onended = () => {
