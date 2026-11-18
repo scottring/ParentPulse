@@ -198,6 +198,15 @@ describe("voice writing consent and lifecycle", () => {
     expect(post[1].body).toBeInstanceOf(Blob);
     expect(post[1].headers["x-relish-consent"]).toBe("this-recording");
   });
+  it("a denied microphone says how to allow it and that typing still works", async () => {
+    media.mockRejectedValue(new DOMException("denied", "NotAllowedError"));
+    const view = show();
+    await connect();
+    fireEvent.click(screen.getByRole("button", { name: "Start recording" }));
+    await screen.findByText(/Microphone access is off.*type your page instead/);
+    expect(view.onInsert).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Start recording" })).toBeTruthy();
+  });
   it("stops recording and aborts pending upload when the edition closes", async () => {
     const view = show();
     await connect();
