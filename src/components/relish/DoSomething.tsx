@@ -22,7 +22,13 @@ import {
   type Game,
   type Player,
 } from "@/lib/relish/living";
-import { activeTrackers, trackerProgress } from "@/lib/relish/tools";
+import {
+  activeTrackers,
+  DAY_TOOL,
+  dayStatus,
+  toolsOf,
+  trackerProgress,
+} from "@/lib/relish/tools";
 import type { NudgeAction } from "@/lib/relish/nudges";
 import Illustration from "./Illustration";
 import {
@@ -96,6 +102,8 @@ export default function DoSomething({
       return "Round in progress · tap to go back to it";
     if (item.action.kind === "exercise") {
       const id = item.action.id;
+      const day = toolsOf(book).day;
+      if (id === DAY_TOOL && day) return `In progress · ${dayStatus(day)}`;
       const run = running.find((r) => r.toolId === id);
       if (run) {
         const p = trackerProgress(run);

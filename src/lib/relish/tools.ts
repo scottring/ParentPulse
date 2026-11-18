@@ -1,6 +1,7 @@
 import type { Book } from "./model";
-import { writeJournalPage, JOURNAL_TITLE_LIMIT } from "./journal";
-import type { Audience } from "./profiles";
+import { writeJournalPage, JOURNAL_TITLE_LIMIT, SOURCE_NAME_LIMIT } from "./journal";
+import { isAudience, type Audience } from "./profiles";
+import type { DayQuestion } from "./play-content";
 import type { Tag } from "./catalog";
 import { outcomes, type Outcome } from "./living";
 
@@ -58,7 +59,12 @@ export type TrackerTool = Base & {
     | { mode: "days"; target: number; notePrompt?: string }
     | { mode: "squares"; squares: string[] }
   );
-export type Tool = SortTool | BuilderTool | TrackerTool;
+/** Day's highlights: the same three questions for each person in the car. */
+export type HighlightsTool = Base & {
+  kind: "highlights";
+  questions: { id: DayQuestion; ask: string; label: string }[];
+};
+export type Tool = SortTool | BuilderTool | TrackerTool | HighlightsTool;
 
 const clean = (v: string | undefined) => (v || "").trim().replace(/[.\s]+$/, "");
 const blamey = /\byou (always|never)\b/i;
@@ -438,6 +444,22 @@ export const tools: Tool[] = [
       "Someone cheered someone on",
     ],
   },
+  {
+    kind: "highlights",
+    id: "day-highlights",
+    tags: ["trip"],
+    short: "5–10 min",
+    title: "Day’s highlights",
+    blurb: "End of a driving day? Everyone answers three quick questions out loud. Keep the day as a trip page.",
+    time: "About a minute each",
+    end: "Ask everyone the three questions, read the day back, then keep it as a trip page.",
+    audiences: everyone,
+    questions: [
+      { id: "best", ask: "best part of today?", label: "Best part" },
+      { id: "hard", ask: "hardest part of today?", label: "Hardest part" },
+      { id: "next", ask: "what are you looking forward to?", label: "Looking forward to" },
+    ],
+  },
 ];
 
 export const toolGroups: { kind: Tool["kind"]; title: string; note: string }[] = [
@@ -505,6 +527,9 @@ export type ToolPage = {
   people?: string[];
   /** For exercises that check back later: the plan, in the person's own words. */
   plan?: string;
+  /** Day's highlights: the trip and the day's place, kept with the page. */
+  trip?: string;
+  place?: string;
 };
 export function keepToolPage(book: Book, page: ToolPage): Book {
   if (!page.text.trim()) throw new Error("Finish the exercise before keeping a page.");
@@ -522,7 +547,16 @@ export function keepToolPage(book: Book, page: ToolPage): Book {
       style: "moss",
       createdAt: new Date().toISOString(),
       people: people.length ? people : undefined,
-      ...(page.toolId ? { source: { kind: "exercise" as const, toolId: page.toolId } } : {}),
+      ...(page.toolId
+        ? {
+            source: {
+              kind: "exercise" as const,
+              toolId: page.toolId,
+              ...(page.trip ? { trip: page.trip } : {}),
+              ...(page.place ? { place: page.place } : {}),
+            },
+          }
+        : {}),
     },
     0,
     "kept",
@@ -673,6 +707,8 @@ export type ToolsState = {
   trackers: TrackerRun[];
   /** Optional: books from before check-backs simply have none. */
   checkBacks?: CheckBack[];
+  /** Day's highlights under way: saved after every answer. */
+  day?: DayRun;
 };
 export const TRACKER_LIMIT = 40;
 export const NOTE_LIMIT = 500;
@@ -822,6 +858,192 @@ export function finishTracker(book: Book, runId: string): Book {
   }));
 }
 
+// ── Day's highlights ────────────────────────────────────────────────────────
+// At the end of a driving day, one person holds the phone and asks everyone
+// the same three questions out loud. Each answer is saved as it's given, so a
+// locked phone or a reload loses nothing. The day ends as an ordinary kept
+// page; pages with the same trip name number on: Day 1, Day 2…
+
+export const DAY_TOOL = "day-highlights";
+export const DAY_ANSWER_LIMIT = 300;
+export type DayPerson = { id: string; name: string; audience?: Audience };
+export type DayRun = {
+  id: string;
+  startedAt: string;
+  updatedAt: string;
+  people: DayPerson[];
+  /** answers[person][question]; "" is skipped or not asked yet. */
+  answers: string[][];
+  /** The question showing: person ⌊at / 3⌋, question at % 3; at the end, the read-back. */
+  at: number;
+};
+export function highlightsTool(): HighlightsTool {
+  const tool = toolById(DAY_TOOL);
+  if (!tool || tool.kind !== "highlights") throw new Error("This activity is not available.");
+  return tool;
+}
+const DAY_QUESTIONS = 3;
+export const dayTotal = (run: DayRun) => run.people.length * DAY_QUESTIONS;
+/** Who is being asked, and what, at this point of the run. */
+export function dayStep(run: DayRun, at = run.at) {
+  if (at >= dayTotal(run)) return undefined;
+  const person = run.people[Math.floor(at / DAY_QUESTIONS)];
+  const question = highlightsTool().questions[at % DAY_QUESTIONS];
+  return {
+    person,
+    question,
+    index: at % DAY_QUESTIONS,
+    answer: run.answers[Math.floor(at / DAY_QUESTIONS)][at % DAY_QUESTIONS],
+  };
+}
+const dayOf = (book: Book, runId: string) => {
+  const run = toolsOf(book).day;
+  if (!run || run.id !== runId) throw new Error("This day has changed. Open Day’s highlights again.");
+  return run;
+};
+const withDay = (book: Book, run: DayRun | undefined) =>
+  change(book, (s) => {
+    const next = { ...s };
+    if (run) next.day = run;
+    else delete next.day;
+    return next;
+  });
+const hasAnswers = (run: DayRun) => run.answers.some((a) => a.some((x) => x.trim()));
+export function startDay(book: Book, people: DayPerson[]): Book {
+  const open = toolsOf(book).day;
+  if (open && hasAnswers(open))
+    throw new Error("Keep or set aside the day you started first.");
+  const cleaned = people.map((p) => ({
+    id: String(p.id || ""),
+    name: String(p.name || "").trim(),
+    ...(p.audience && isAudience(p.audience) ? { audience: p.audience } : {}),
+  }));
+  if (
+    !cleaned.length ||
+    cleaned.length > 12 ||
+    new Set(cleaned.map((p) => p.id)).size !== cleaned.length ||
+    cleaned.some((p) => !p.id || p.id.length > 100 || !p.name || p.name.length > 80)
+  )
+    throw new Error("Choose between 1 and 12 people.");
+  const stamp = new Date().toISOString();
+  return withDay(book, {
+    id: crypto.randomUUID(),
+    startedAt: stamp,
+    updatedAt: stamp,
+    people: cleaned,
+    answers: cleaned.map(() => Array.from({ length: DAY_QUESTIONS }, () => "")),
+    at: 0,
+  });
+}
+/** Saves the answer to the question showing ("" skips it) and moves on. */
+export function answerDay(book: Book, runId: string, at: number, text: string): Book {
+  const run = dayOf(book, runId);
+  if (at !== run.at || at >= dayTotal(run))
+    throw new Error("This question has changed. Open Day’s highlights again.");
+  const answer = String(text || "").trim().slice(0, DAY_ANSWER_LIMIT);
+  const p = Math.floor(at / DAY_QUESTIONS),
+    q = at % DAY_QUESTIONS;
+  return withDay(book, {
+    ...run,
+    answers: run.answers.map((row, i) => (i === p ? row.map((x, j) => (j === q ? answer : x)) : row)),
+    at: at + 1,
+    updatedAt: new Date().toISOString(),
+  });
+}
+/** Goes back to an earlier question (or forward to the read-back); answers stay. */
+export function moveDay(book: Book, runId: string, at: number): Book {
+  const run = dayOf(book, runId);
+  if (!Number.isInteger(at) || at < 0 || at > dayTotal(run))
+    throw new Error("Choose a question from this day.");
+  return withDay(book, { ...run, at, updatedAt: new Date().toISOString() });
+}
+/** A few words for an unfinished day: "Leo’s turn" or "ready to keep". */
+export function dayStatus(run: DayRun) {
+  const step = dayStep(run);
+  return step ? `${step.person.name}’s turn` : "ready to read back and keep";
+}
+export function discardDay(book: Book, runId: string): Book {
+  dayOf(book, runId);
+  return withDay(book, undefined);
+}
+/** The day read back, grouped by person; people who skipped everything are left out. */
+export function dayText(run: DayRun) {
+  const questions = highlightsTool().questions;
+  return run.people
+    .flatMap((person, i) => {
+      const lines = questions.flatMap((q, j) =>
+        run.answers[i][j].trim() ? [`${q.label}: ${run.answers[i][j].trim()}`] : [],
+      );
+      return lines.length ? [[person.name, ...lines].join("\n")] : [];
+    })
+    .join("\n\n");
+}
+const tripKey = (s: string) => s.trim().toLocaleLowerCase();
+export const cleanName = (s: string | undefined) =>
+  String(s || "").trim().replace(/\s+/g, " ").slice(0, SOURCE_NAME_LIMIT).trim();
+const dayPages = (book: Book) =>
+  (book.journal || []).filter(
+    (e) => e.status === "kept" && e.source?.kind === "exercise" && e.source.toolId === DAY_TOOL,
+  );
+/** Which day of this trip today is: Day 1, Day 2… counted by calendar date. */
+export function tripDay(book: Book, trip: string, now = new Date()) {
+  const key = tripKey(trip);
+  const today = todayKey(now);
+  const earlier = new Set(
+    dayPages(book)
+      .filter((e) => e.source?.trip && tripKey(e.source.trip) === key)
+      .map((e) => todayKey(new Date(e.createdAt)))
+      .filter((d) => d < today),
+  );
+  return earlier.size + 1;
+}
+/** The trip named on a recent day's page, to carry on with; "" when none. */
+export function recentTrip(book: Book, now = new Date()) {
+  const latest = dayPages(book)
+    .filter((e) => e.source?.trip)
+    .toSorted((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  if (!latest || now.getTime() - Date.parse(latest.createdAt) > 14 * DAY) return "";
+  return latest.source!.trip!;
+}
+/** "Utah · Day 2 · Moab", "Day’s highlights · Moab" or just "Day’s highlights". */
+export function dayTitle(book: Book, trip: string, place: string, now = new Date()) {
+  const t = cleanName(trip),
+    p = cleanName(place);
+  const head = t ? `${t} · Day ${tripDay(book, t, now)}` : highlightsTool().title;
+  return p ? `${head} · ${p}` : head;
+}
+/** Keeps the day as an ordinary page in this book and clears the run. */
+export function keepDay(
+  book: Book,
+  runId: string,
+  details: { trip?: string; place?: string } = {},
+  now = new Date(),
+): Book {
+  const run = dayOf(book, runId);
+  const text = dayText(run);
+  if (!text) throw new Error("Nobody answered yet. Answer a question, or set this day aside.");
+  const trip = cleanName(details.trip),
+    place = cleanName(details.place);
+  const key = (n: string) => n.trim().toLocaleLowerCase();
+  // People in this book who were in the car, so the page shows up under them.
+  const people = book.people
+    .filter((person) =>
+      run.people.some(
+        (p) => p.id !== "owner" && (p.id === person.id || p.id === `book:${person.id}` || key(p.name) === key(person.name)),
+      ),
+    )
+    .map((person) => person.id);
+  const kept = keepToolPage(book, {
+    title: dayTitle(book, trip, place, now),
+    text,
+    toolId: DAY_TOOL,
+    people,
+    ...(trip ? { trip } : {}),
+    ...(place ? { place } : {}),
+  });
+  return withDay(kept, undefined);
+}
+
 // ── Validation (imported backups and synced books are untrusted) ────────────
 
 const obj = (v: unknown): v is Record<string, unknown> =>
@@ -836,9 +1058,43 @@ function validKey(tool: TrackerTool, key: unknown) {
   return /^\d$/.test(key) && Number(key) < tool.squares.length;
 }
 
+function isDayRun(v: unknown) {
+  if (!obj(v) || !str(v.id, 100) || !date(v.startedAt) || !date(v.updatedAt)) return false;
+  const people = v.people;
+  if (
+    !Array.isArray(people) ||
+    people.length < 1 ||
+    people.length > 12 ||
+    new Set(people.map((p) => (obj(p) ? p.id : p))).size !== people.length ||
+    !people.every(
+      (p) =>
+        obj(p) &&
+        str(p.id, 100) &&
+        str(p.name, 80) &&
+        !!p.name.trim() &&
+        (p.audience === undefined || isAudience(p.audience)),
+    )
+  )
+    return false;
+  return (
+    Array.isArray(v.answers) &&
+    v.answers.length === people.length &&
+    v.answers.every(
+      (row) =>
+        Array.isArray(row) &&
+        row.length === DAY_QUESTIONS &&
+        row.every((x) => typeof x === "string" && x.length <= DAY_ANSWER_LIMIT),
+    ) &&
+    Number.isInteger(v.at) &&
+    (v.at as number) >= 0 &&
+    (v.at as number) <= people.length * DAY_QUESTIONS
+  );
+}
+
 export function isTools(value: unknown): value is ToolsState {
   if (!obj(value) || value.version !== 1 || !Array.isArray(value.trackers))
     return false;
+  if (value.day !== undefined && !isDayRun(value.day)) return false;
   if (value.trackers.length > TRACKER_LIMIT + 20) return false;
   const ids = new Set<string>();
   const active = new Set<string>();

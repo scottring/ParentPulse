@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { webcrypto } from "node:crypto";
-import { emptyBook, isBook } from "../model";
+import { emptyBook, isBook, type Book } from "../model";
 import { createVault, unlockVault } from "../vault";
 import {
   ANSWERS_KEPT,
@@ -27,6 +27,23 @@ import {
 import { SPOT_SIZE, spotBank, spotSquare } from "../play-content";
 import { bookPages } from "../pages";
 import { doItems, matchesFilter } from "../catalog";
+import {
+  answerDay,
+  DAY_TOOL,
+  dayStatus,
+  dayText,
+  discardDay,
+  isTools,
+  keepDay,
+  moveDay,
+  recentTrip,
+  startDay,
+  toolsOf,
+  tripDay,
+  type DayRun,
+} from "../tools";
+import { dayQuickPicks } from "../play-content";
+import { isJournal } from "../journal";
 Object.defineProperty(globalThis, "crypto", {
   value: webcrypto,
   configurable: true,
@@ -261,11 +278,170 @@ describe("Spot it!: one card for the car", () => {
   });
 });
 
+describe("Day's highlights: three questions each at the end of a driving day", () => {
+  const family = (): Book => ({
+    ...emptyBook("Alex"),
+    people: [
+      { id: "leo", name: "Leo", role: "son", color: "", note: "", lessons: [] },
+      { id: "anna", name: "Anna", role: "partner", color: "", note: "", lessons: [] },
+    ],
+  });
+  const people = [
+    { id: "owner", name: "Alex", audience: "adult" as const },
+    { id: "leo", name: "Leo", audience: "6-8" as const },
+    { id: "guest", name: "Sam" },
+  ];
+  const runOf = (b: Book) => toolsOf(b).day!;
+  function answerAll(book: Book, answers: string[]) {
+    for (const a of answers) book = answerDay(book, runOf(book).id, runOf(book).at, a);
+    return book;
+  }
+
+  it("saves every answer as it's given, and anyone can skip or go back", () => {
+    let book = startDay(family(), people);
+    expect(isBook(book)).toBe(true);
+    const run = runOf(book);
+    expect(run.answers).toEqual([["", "", ""], ["", "", ""], ["", "", ""]]);
+    expect(dayStatus(run)).toBe("Alex’s turn");
+    book = answerAll(book, ["  a quiet coffee at the lookout ", "", "the lake"]);
+    expect(runOf(book).at).toBe(3);
+    expect(dayStatus(runOf(book))).toBe("Leo’s turn");
+    expect(isBook(book)).toBe(true);
+    // Back one question keeps what was said.
+    book = moveDay(book, run.id, 2);
+    expect(runOf(book).answers[0][2]).toBe("the lake");
+    book = answerDay(book, run.id, 2, "the lake, and a swim");
+    expect(() => answerDay(book, run.id, 7, "x")).toThrow("changed");
+    expect(() => answerDay(book, "other", 3, "x")).toThrow();
+    expect(() => moveDay(book, run.id, 10)).toThrow();
+    // Starting over would drop words, so it asks for a choice first.
+    expect(() => startDay(book, people)).toThrow("first");
+    expect(() => startDay(family(), [])).toThrow();
+    expect(() => startDay(family(), [people[0], people[0]])).toThrow();
+  });
+
+  it("offers kid quick picks unless the person is a teen or grown-up", () => {
+    expect(dayQuickPicks("hard", "6-8")).toContain("being stuck in the car");
+    expect(dayQuickPicks("best")).toContain("the snacks");
+    expect(dayQuickPicks("best", "adult")).not.toContain("the snacks");
+  });
+
+  it("reads the day back by person and keeps it as a dated trip page; later days number on", () => {
+    let book = startDay(family(), people);
+    book = answerAll(book, ["the lookout", "", "the lake", "the snacks", "being stuck in the car", "", "", "", ""]);
+    expect(runOf(book).at).toBe(9);
+    expect(dayStatus(runOf(book))).toBe("ready to read back and keep");
+    expect(dayText(runOf(book))).toBe(
+      "Alex\nBest part: the lookout\nLooking forward to: the lake\n\nLeo\nBest part: the snacks\nHardest part: being stuck in the car",
+    );
+    // Pages are dated when they're kept: today, then "tomorrow".
+    const day1 = new Date();
+    const later = (days: number) => new Date(day1.getTime() + days * 86_400_000);
+    book = keepDay(book, runOf(book).id, { trip: "  Maine ", place: "Bar Harbor" }, day1);
+    expect(toolsOf(book).day).toBeUndefined();
+    const [page] = book.journal!;
+    expect(page).toMatchObject({
+      title: "Maine · Day 1 · Bar Harbor",
+      status: "kept",
+      people: ["leo"],
+      source: { kind: "exercise", toolId: DAY_TOOL, trip: "Maine", place: "Bar Harbor" },
+    });
+    expect(isBook(book)).toBe(true);
+    expect(bookPages(book).find((p) => p.journalId === page.id)).toMatchObject({
+      kind: "Exercise",
+      exercise: "Day’s highlights",
+      people: ["leo"],
+    });
+    // The next day, the same trip carries on.
+    const day2 = later(1);
+    expect(recentTrip(book, day2)).toBe("Maine");
+    expect(tripDay(book, "maine", day2)).toBe(2);
+    expect(tripDay(book, "Maine", day1)).toBe(1);
+    expect(recentTrip(book, later(30))).toBe("");
+    book = startDay(book, people.slice(0, 2));
+    book = answerAll(book, ["the beach"]);
+    book = keepDay(book, runOf(book).id, { trip: "Maine" }, day2);
+    expect(book.journal![1].title).toBe("Maine · Day 2");
+    // A second page the same day is still that day.
+    expect(tripDay(book, "Maine", day1)).toBe(1);
+    // No trip name, no numbering.
+    book = startDay(book, people.slice(0, 1));
+    book = answerAll(book, ["pancakes"]);
+    book = keepDay(book, runOf(book).id, {}, day2);
+    expect(book.journal![2].title).toBe("Day’s highlights");
+    expect(book.journal![2].source).toEqual({ kind: "exercise", toolId: DAY_TOOL });
+  });
+
+  it("a day where nobody answered can be set aside, not kept", () => {
+    let book = startDay(family(), people.slice(0, 1));
+    book = answerAll(book, ["", "", ""]);
+    expect(() => keepDay(book, runOf(book).id)).toThrow("Nobody answered");
+    book = discardDay(book, runOf(book).id);
+    expect(toolsOf(book).day).toBeUndefined();
+    expect(isBook(book)).toBe(true);
+  });
+
+  it("validators accept old and new shapes and reject malformed days and trip pages", () => {
+    const run: DayRun = runOf(answerAll(startDay(family(), people), ["the lake"]));
+    const tools = (day: unknown) => isTools({ version: 1, trackers: [], day });
+    expect(isTools({ version: 1, trackers: [] })).toBe(true);
+    expect(tools(run)).toBe(true);
+    expect(tools({ ...run, at: 9 })).toBe(true);
+    for (const bad of [
+      { ...run, at: 10 },
+      { ...run, at: -1 },
+      { ...run, people: [] },
+      { ...run, people: [...run.people, run.people[0]], answers: [...run.answers, ["", "", ""]] },
+      { ...run, people: [{ id: "x", name: " " }], answers: [["", "", ""]] },
+      { ...run, people: [{ id: "x", name: "X", audience: "teen" }], answers: [["", "", ""]] },
+      { ...run, answers: run.answers.slice(1) },
+      { ...run, answers: [["a", "b"], ...run.answers.slice(1)] },
+      { ...run, answers: [["x".repeat(301), "", ""], ...run.answers.slice(1)] },
+      { ...run, answers: [[1, "", ""], ...run.answers.slice(1)] },
+      { ...run, startedAt: "never" },
+      "a day",
+    ])
+      expect(tools(bad)).toBe(false);
+
+    const page = {
+      id: "p1",
+      title: "Maine · Day 1",
+      text: "Leo\nBest part: the lake",
+      style: "moss",
+      createdAt: "2026-07-01T20:00:00.000Z",
+      updatedAt: "2026-07-01T20:00:00.000Z",
+      revision: 1,
+      status: "kept",
+    };
+    const source = { kind: "exercise", toolId: DAY_TOOL };
+    expect(isJournal([{ ...page, source }])).toBe(true);
+    expect(isJournal([{ ...page, source: { ...source, trip: "Maine", place: "Bar Harbor" } }])).toBe(true);
+    expect(isJournal([{ ...page, source: { ...source, trip: "" } }])).toBe(false);
+    expect(isJournal([{ ...page, source: { ...source, trip: "x".repeat(61) } }])).toBe(false);
+    expect(isJournal([{ ...page, source: { ...source, place: 7 } }])).toBe(false);
+  });
+
+  it("encrypts a day under way and a kept trip page through export and restore", async () => {
+    let book = answerAll(startDay(family(), people.slice(0, 1)), ["the ferry"]);
+    book = keepDay(book, runOf(book).id, { trip: "Maine" });
+    book = startDay(book, people);
+    book = answerAll(book, ["the lighthouse", "", "", "the snacks"]);
+    expect(isBook(book)).toBe(true);
+    const { envelope } = await createVault(book, "long testing-only passphrase");
+    const raw = JSON.stringify(envelope);
+    expect(raw).not.toContain("lighthouse");
+    expect(raw).not.toContain("ferry");
+    expect((await unlockVault(raw, "long testing-only passphrase")).book).toEqual(book);
+  });
+});
+
 describe("Road trip in Do something", () => {
   it("a Road trip chip shows the car activities, for grown-ups and kids alike", () => {
     for (const audience of ["adult", "under-6", "13-17"] as const) {
       const trip = doItems(audience).filter((i) => matchesFilter(i, "trip"));
-      expect(trip.map((i) => i.title)).toContain("Spot it!");
+      expect(trip.map((i) => i.title)).toEqual(
+        expect.arrayContaining(["Spot it!", "Day’s highlights"]),
+      );
     }
     expect(
       doItems("adult")

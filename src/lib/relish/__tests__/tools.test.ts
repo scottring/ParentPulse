@@ -71,7 +71,7 @@ describe("exercise catalog", () => {
         expect(t.audiences).toContain(band);
         expect(["soft-start", "repair", "load", "iceberg", "hellos", "repair-bingo"]).not.toContain(t.id);
       }
-    expect(toolsFor("under-6").map((t) => t.id)).toEqual(["helps-upset", "kindness-bingo"]);
+    expect(toolsFor("under-6").map((t) => t.id)).toEqual(["helps-upset", "kindness-bingo", "day-highlights"]);
     expect(toolsFor("adult").length).toBeGreaterThanOrEqual(10);
   });
   it("gives every square tracker a 3×3 card", () => {

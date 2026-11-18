@@ -26,7 +26,9 @@ import {
   type ToolPage,
   type TrackerTool,
 } from "@/lib/relish/tools";
+import type { Player } from "@/lib/relish/living";
 import Illustration from "./Illustration";
+import DayHighlights from "./DayHighlights";
 import { SubHead } from "./ui";
 import { exerciseIllustration } from "./illustrations";
 import "./journal.css";
@@ -47,9 +49,14 @@ export default function Tools({
   onActivities,
   initialId,
   onBack,
+  roster = [],
+  sample = false,
 }: {
   book: Book;
   busy: boolean;
+  /** Family to pick from for activities done together (Day’s highlights). */
+  roster?: Player[];
+  sample?: boolean;
   onCommit: Commit;
   onPages: () => void;
   /** Opens one kept page by its Your book id (e.g. "journal:<id>"). */
@@ -84,6 +91,7 @@ export default function Tools({
             <p className="lb-kicker">{kept.title}</p>
             <h2 id="rt-title">Kept in your book</h2>
             <p className="rt-intro">That’s a good place to stop.</p>
+            {kept.note && <p className="rt-intro">{kept.note}</p>}
             {kept.checkBack && (
               <p className="rt-intro">
                 In {kept.checkBack === 3 ? "a few" : "a couple of"} days,
@@ -131,6 +139,8 @@ export default function Tools({
         busy={busy}
         onCommit={onCommit}
         onKept={setKept}
+        roster={roster}
+        sample={sample}
         backLabel={onBack ? "Back to Do something" : "All exercises"}
         onBack={() => (onBack ? onBack() : setOpenId(null))}
       />
@@ -233,6 +243,8 @@ function OpenExercise({
   onKept,
   backLabel,
   onBack,
+  roster,
+  sample,
 }: {
   tool: Tool;
   book: Book;
@@ -241,9 +253,25 @@ function OpenExercise({
   onKept: (kept: Kept) => void;
   backLabel: string;
   onBack: () => void;
+  roster: Player[];
+  sample: boolean;
 }) {
   const [started, setStarted] = useState(false);
   const [who, setWho] = useState("");
+  if (tool.kind === "highlights")
+    return (
+      <DayHighlights
+        tool={tool}
+        book={book}
+        busy={busy}
+        sample={sample}
+        roster={roster}
+        backLabel={backLabel}
+        onBack={onBack}
+        onCommit={onCommit}
+        onKept={onKept}
+      />
+    );
   const running =
     tool.kind === "tracker" &&
     activeTrackers(book).some((t) => t.toolId === tool.id);
@@ -458,6 +486,8 @@ type Kept = {
   pageId?: string;
   /** Days until Relish asks about the plan, for exercises that check back. */
   checkBack?: number;
+  /** One more line about what was kept (a trip's day number). */
+  note?: string;
 };
 /** The journal page a change added, as a Your book page id. */
 function newJournalId(before: Book, after: Book) {
