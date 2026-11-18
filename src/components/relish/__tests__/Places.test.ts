@@ -102,3 +102,46 @@ it("falls back to family noted in the book when there are no account books", () 
   expect(screen.getByRole("button", { name: "Leo" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Invite a partner" })).toBeNull();
 });
+
+it("Your book: reviews one suggestion at a time and filters by person", async () => {
+  const app = openBook(sampleBook(), { mode: "sample" });
+  fireEvent.click(screen.getByRole("button", { name: "Your book" }));
+  expect(screen.getByRole("heading", { name: "Your book", level: 1 })).toBeTruthy();
+  expect(screen.getByText("A little room to talk")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Yes, keep it" }));
+  await screen.findByText(/Try: If you both feel like it/);
+  expect(app.stored().manual?.cards[0].status).toBe("kept");
+  expect(screen.queryByRole("button", { name: "Yes, keep it" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Leo" }));
+  expect(
+    screen.getByText("Getting down to his eye level changes the whole conversation."),
+  ).toBeTruthy();
+  expect(screen.queryByText(/An unhurried walk/)).toBeNull();
+  expect(screen.getByRole("button", { name: /Leaving the playground was hard/ })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /We went for a walk/ })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Everyone" }));
+  fireEvent.change(screen.getByRole("searchbox", { name: "Find a page" }), {
+    target: { value: "spaceship" },
+  });
+  const found = screen.getByRole("button", { name: /The blanket-fort expedition/ });
+  expect(screen.queryByRole("button", { name: /Leaving the playground/ })).toBeNull();
+  fireEvent.click(found);
+  expect(screen.getByRole("button", { name: /Back to your book/ })).toBeTruthy();
+});
+
+it("Your book: unfinished drafts are under Still going", () => {
+  const draft = { ...newJournalDraft(), title: "Half a thought", text: "and then" };
+  const book = writeJournalPage(
+    { ...emptyBook("Robin"), profile: { kind: "adult" } },
+    draft,
+    0,
+    "draft",
+  );
+  openBook(book);
+  fireEvent.click(screen.getByRole("button", { name: "Your book" }));
+  fireEvent.click(screen.getByRole("button", { name: /Keep writing: Half a thought/ }));
+  expect(
+    (screen.getByRole("textbox", { name: "Your journal entry" }) as HTMLTextAreaElement)
+      .value,
+  ).toBe("and then");
+});

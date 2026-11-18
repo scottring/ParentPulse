@@ -252,7 +252,8 @@ describe("freeform journal", () => {
     render(createElement(Harness));
     fireEvent.click(screen.getByRole("button", { name: "Your book" }));
     expect(screen.getByText("PRIVATE JOURNAL SENTENCE")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "New journal entry" }));
+    fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+    fireEvent.click(screen.getByRole("button", { name: /Jot something down/ }));
     expect(
       (
         screen.getByRole("button", {
@@ -339,8 +340,8 @@ describe("journal header navigation", () => {
       });
     }
     render(createElement(Harness));
-    fireEvent.click(screen.getByRole("button", { name: "Your book" }));
-    fireEvent.click(screen.getByRole("button", { name: "New journal entry" }));
+    fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+    fireEvent.click(screen.getByRole("button", { name: /Jot something down/ }));
     return { account, lock, shelf, interaction, save, book: () => stored };
   }
   it("keeps the header available on a blank page and leaves without creating an empty entry", async () => {

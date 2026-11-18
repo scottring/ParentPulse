@@ -559,7 +559,7 @@ export default function Manual({
               Save an entry, then enable automatic analysis above to receive suggestions. Each suggestion needs your review before you add it to your manual.
             </p>
             <button className="lb-text" onClick={onPages}>
-              Back to my pages <BookOpen size={16} />
+              Back to Your book <BookOpen size={16} />
             </button>
           </div>
         )}

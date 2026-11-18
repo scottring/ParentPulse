@@ -43,7 +43,7 @@ import { newJournalDraft, type JournalDraft } from "@/lib/relish/journal";
 import "./duo.css";
 import "./places.css";
 import Manual, { ManualCardView, useManualGuide } from "./Manual";
-import { manualOf } from "@/lib/relish/manual";
+import { manualOf, reviewManualIdea } from "@/lib/relish/manual";
 import { PhotoGallery } from "./Photos";
 import GroupPlay from "./GroupPlay";
 import Tools from "./Tools";
@@ -53,6 +53,7 @@ import { guidanceFor } from "@/lib/relish/guidance";
 import TopBar, { type MenuItem, type Place } from "./TopBar";
 import Home, { type FamilyPerson } from "./Home";
 import DoSomething from "./DoSomething";
+import YourBook from "./YourBook";
 import type { NudgeAction } from "@/lib/relish/nudges";
 import { isChild, isFamily, type DoFilter } from "@/lib/relish/catalog";
 import { canUseOnline, ageLabels, audienceOf } from "@/lib/relish/profiles";
@@ -64,8 +65,6 @@ type View =
   | "manual"
   | "session"
   | "words"
-  | "people"
-  | "practice"
   | "play"
   | "tools";
 const placeOf: Record<View, Place> = {
@@ -78,8 +77,6 @@ const placeOf: Record<View, Place> = {
   book: "book",
   words: "book",
   manual: "book",
-  people: "book",
-  practice: "book",
   family: "family",
 };
 type Modal =
@@ -139,7 +136,8 @@ export default function LivingBook({
     [reading, setReading] = useState<string | undefined>(),
     [exercise, setExercise] = useState<string | undefined>(),
     [doFilter, setDoFilter] = useState<DoFilter>("all"),
-    [gameOffer, setGameOffer] = useState<Game["kind"] | undefined>();
+    [gameOffer, setGameOffer] = useState<Game["kind"] | undefined>(),
+    [bookWho, setBookWho] = useState<string | undefined>();
   const journalNavigation = useRef<(() => Promise<boolean>) | null>(null);
   const operation = useRef(false),
     alive = useRef(true),
@@ -170,6 +168,7 @@ export default function LivingBook({
     setExercise(undefined);
     setDoFilter("all");
     setGameOffer(undefined);
+    setBookWho(undefined);
     setView(next);
     setClosed(false);
     setPageKey((n) => n + 1);
@@ -327,7 +326,8 @@ export default function LivingBook({
   const sharedView = shared || view === "play";
   const place = placeOf[view];
   // Places draw their own big heading; sub-screens keep the small running head.
-  const placeScreen = (view === "home" || view === "do") && !closed;
+  const placeScreen =
+    (view === "home" || view === "do" || view === "book") && !closed;
   const canInvite = !sample && online;
   const roster: Player[] = [
     { id: "owner", name: book.owner, audience: audienceOf(book) },
@@ -352,7 +352,10 @@ export default function LivingBook({
     : book.people.filter(isFamily).map((p) => ({
         id: p.id,
         name: p.name,
-        onOpen: () => navigate("book"),
+        onOpen: () => {
+          navigate("book");
+          setBookWho(p.id);
+        },
       }));
   const menuItems: MenuItem[] = [
     {
@@ -430,11 +433,7 @@ export default function LivingBook({
                 ? "Guided activities"
                 : sessionOpen
                   ? "Guided reflection"
-                  : view === "people"
-                    ? "Between us"
-                    : view === "practice"
-                      ? "The way we practice"
-                      : "Your book";
+                  : "Your book";
   let right: ReactNode = null,
     left: ReactNode;
   left = (
@@ -589,126 +588,6 @@ export default function LivingBook({
         </>
       );
     }
-  } else if (view === "people") {
-    left = (
-      <>
-        <p className="lb-kicker">People</p>
-        <h2>Notes about people</h2>
-        <p>
-          Keep your notes about people here. These notes do not create accounts or grant access to anyone’s book.
-        </p>
-      </>
-    );
-    right = (
-      <>
-        <p className="lb-kicker">The people in your life</p>
-        <h2>People in your book</h2>
-        <button className="lb-text" onClick={() => setModal("person")}>
-          <Plus size={16} /> Add someone
-        </button>
-        <div className="lb-people">
-          {book.people.map((p) => (
-            <article key={p.id}>
-              <span className="lb-kicker">{p.role}</span>
-              <h3>{p.name}</h3>
-              <p>
-                {p.note || "No notes added yet."}
-              </p>
-              {p.lessons.length > 0 && (
-                <ul>
-                  {p.lessons.map((lesson, i) => (
-                    <li key={i}>{lesson}</li>
-                  ))}
-                </ul>
-              )}
-              <button className="lb-text" onClick={() => setEditing(p)}>
-                Edit notes <ArrowUpRight size={14} />
-              </button>
-            </article>
-          ))}
-        </div>
-        {book.people.length === 0 && (
-          <p className="lb-fine">
-            Add a person to record notes about them. To create a child’s book, use Family library instead.
-          </p>
-        )}
-      </>
-    );
-  } else if (view === "practice") {
-    const pending = pendingPractice(book);
-    left = (
-      <>
-        <p className="lb-kicker">Practice plans</p>
-        <h2>Try a practice plan</h2>
-        <p>Choose an action to try, then record what happened.</p>
-        <div className="lb-cadence">
-          <p>
-            <span>Write a reflection</span>
-            <small>Describe an experience</small>
-          </p>
-          <p>
-            <span>Make a plan</span>
-            <small>Choose when to try it</small>
-          </p>
-          <p>
-            <span>Review the result</span>
-            <small>After you have tried</small>
-          </p>
-        </div>
-      </>
-    );
-    right = (
-      <>
-        <p className="lb-kicker">Your next plan</p>
-        <h2>{theme?.practice || "Choose a practice plan"}</h2>
-        <p>
-          {theme?.instruction ||
-            "Choose a topic to see a suggested action."}
-        </p>
-        {pending && (
-          <div className="lb-margin">
-            <p>Your opportunity: {pending.text}.</p>
-            <p className="lb-fine">
-              {pending.triedAt
-                ? "You marked this plan as tried. Record the result next."
-                : "This plan has not been marked as tried."}
-            </p>
-          </div>
-        )}
-        <div className="lb-stones" aria-hidden="true">
-          <i />
-          <i />
-          {pending?.triedAt && <i />}
-        </div>
-        <button
-          className="lb-primary"
-          disabled={busy}
-          onClick={() =>
-            start(pending ? "reflect" : theme ? "practice" : "begin")
-          }
-        >
-          {pending
-            ? "Return to this practice"
-            : theme
-              ? "Choose a moment to try"
-              : "Choose a topic"}{" "}
-          <ArrowUpRight size={16} />
-        </button>
-        {l.entries.some((e) => e.kind === "reflection") && (
-          <div className="lb-margin">
-            <p className="lb-kicker">Something learned</p>
-            {l.entries
-              .filter((e) => e.kind === "reflection")
-              .slice(-3)
-              .map((e) => (
-                <p key={e.id}>
-                  {e.text || (e.outcome ? outcomes[e.outcome] : "")}
-                </p>
-              ))}
-          </div>
-        )}
-      </>
-    );
   } else if (view === "family") {
     left = (
       <>
@@ -988,9 +867,33 @@ export default function LivingBook({
             save={vault.save}
             guide={guide}
             sample={sample}
-            onPages={() => navigate("words")}
+            onPages={() => navigate("book")}
           />
-        ) : (view === "words" || view === "book") && !sharedView ? (
+        ) : view === "book" && !sharedView ? (
+          <YourBook
+            key={pageKey}
+            book={book}
+            busy={busy}
+            headingRef={heading}
+            initialWho={bookWho}
+            onAddPage={() => navigate("do")}
+            onOpenPage={openPage}
+            onReview={(card, status) =>
+              void commit(
+                (b) => reviewManualIdea(b, card.id, status),
+                undefined,
+                status === "kept" ? "Kept in what you’ve learned." : "",
+              )
+            }
+            onManual={() => navigate("manual")}
+            onDraft={(draft) => quickEntry(false, draft)}
+            onPractice={() => start("reflect")}
+            onResumeVisit={() => start()}
+            onExercise={openExercise}
+            onAddPerson={() => setModal("person")}
+            onEditPerson={setEditing}
+          />
+        ) : view === "words" && !sharedView ? (
           <Journal
             key={pageKey}
             navigation={journalNavigation}
@@ -999,13 +902,7 @@ export default function LivingBook({
             initialReading={reading}
             book={book}
             photos={vault.photos}
-            onNotice={() => start("notice")}
-            onChapter={navigate}
-            onManual={() => navigate("manual")}
-            pendingInsights={
-              manualCards.filter((c) => c.status === "suggested").length
-            }
-            onAlbum={() => navigate("family")}
+            onBack={() => navigate("book")}
             onOffer={
               !sample && online
                 ? (passage) => {

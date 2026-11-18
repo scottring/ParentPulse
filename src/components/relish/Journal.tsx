@@ -170,7 +170,7 @@ export default function Journal({
               setCelebrate(false);
             }}
           >
-            <ArrowLeft size={17} /> {onBack ? "Your book" : "My pages"}
+            <ArrowLeft size={17} /> {onBack ? "Back to your book" : "My pages"}
           </button>
           <span className="rj-private">
             <Lock size={14} />{" "}
