@@ -45,8 +45,9 @@ import {
 } from "@/lib/relish/journal";
 import "./duo.css";
 import "./places.css";
-import Illustration from "./Illustration";
-import { gameIllustration } from "./illustrations";
+import Illustration, { Emblem } from "./Illustration";
+import { BookSpread, SubHead } from "./ui";
+import { gameIllustration, topicIllustration } from "./illustrations";
 import Manual, { useManualGuide } from "./Manual";
 import { manualOf, reviewManualIdea } from "@/lib/relish/manual";
 import GroupPlay from "./GroupPlay";
@@ -323,6 +324,8 @@ export default function LivingBook({
   const place = placeOf[view];
   // Places draw their own big heading; sub-screens keep the small running head.
   const placeScreen = view === place && !closed;
+  // Exercises and the journal draw their own back link and privacy note.
+  const ownHead = !closed && (view === "tools" || view === "words");
   const canInvite = !sample && online;
   const roster: Player[] = [
     { id: "owner", name: book.owner, audience: audienceOf(book) },
@@ -466,6 +469,12 @@ export default function LivingBook({
   let right: ReactNode = null;
   const left = (
     <>
+      <Illustration
+        name={(l.thread && topicIllustration[l.thread]) || "think-it-through"}
+        size={150}
+        eager
+        className="lb-guided-art"
+      />
       <p className="lb-kicker">Guided reflection</p>
       <h2>{theme?.title || "Choose a topic"}</h2>
       <p>
@@ -656,20 +665,34 @@ export default function LivingBook({
       )}
       <div className="lb-desk">
         {!placeScreen && (
-          <div className="lb-identity">
-            <h1 ref={heading} tabIndex={-1}>
+          <div className={`lb-subhead ${ownHead ? "lb-subhead-own" : ""}`}>
+            <h1 ref={heading} tabIndex={-1} className="ui-sr-only">
               {headingText}
             </h1>
-            <span>
-              {sharedView ? <Users size={14} /> : <Lock size={14} />}{" "}
-              {sharedView
-                ? "Only shared pages"
-                : sample
-                  ? "Fictional sample"
-                  : book.profile?.kind === "child"
-                    ? `${ageLabels[book.profile.ageBand]} · private book`
-                    : "Your private pages"}
-            </span>
+            {/* Exercises and the journal draw this row themselves. */}
+            {!ownHead && (
+              <SubHead
+                back={
+                  sharedView
+                    ? undefined
+                    : {
+                        label: place === "book" ? "Back to your book" : "Back to Do something",
+                        disabled: headerBusy,
+                        onClick: () => void headerAction(() => navigate(place)),
+                      }
+                }
+                noteIcon={sharedView ? <Users size={15} aria-hidden="true" /> : undefined}
+                note={
+                  sharedView
+                    ? "Only shared pages"
+                    : sample
+                      ? "Fictional sample"
+                      : book.profile?.kind === "child"
+                        ? `${ageLabels[book.profile.ageBand]} · private book`
+                        : "Your private pages"
+                }
+              />
+            )}
           </div>
         )}
         {error || vault.error ? (
@@ -681,7 +704,9 @@ export default function LivingBook({
           <div className="lb-cover-wrap">
             <div className="lb-cover">
               <span className="lb-kicker">Relish · the operating manual</span>
-              <div className="lb-cover-picture" />
+              <svg className="lb-cover-picture" viewBox="0 0 200 200" aria-hidden="true">
+                <Emblem kind="leaf" />
+              </svg>
               <h2>{sharedView ? "Our Family pages" : personalTitle}</h2>
               <span className="lb-kicker">Journal, reflections and practice plans</span>
             </div>
@@ -888,37 +913,13 @@ export default function LivingBook({
             </main>
           </div>
         ) : (
-          <>
-            <main
-              className={`lb-book ${sessionOpen ? "lb-session-book" : ""}`}
-              key={pageKey}
-            >
-              <aside className="lb-page lb-left">
-                <div className="lb-running">
-                  <span>Guided activities</span>
-                  <span>
-                    {sharedView ? "Family pages" : `${book.owner} edition`}
-                  </span>
-                </div>
-                {left}
-                <span className="lb-folio">01</span>
-              </aside>
-              <article className="lb-page lb-right">
-                <div className="lb-running">
-                  <span>
-                    {view === "bookmark"
-                      ? "Guided activities"
-                      : headingText}
-                  </span>
-                  <span>
-                    {sharedView ? "Family pages" : `${book.owner} edition`}
-                  </span>
-                </div>
-                {right}
-                <span className="lb-folio">02</span>
-              </article>
-            </main>
-          </>
+          <BookSpread
+            as="main"
+            key={pageKey}
+            className={`lb-guided ${sessionOpen ? "lb-session-book" : ""}`}
+            left={<div className="lb-guided-left">{left}</div>}
+            right={<div className="lb-guided-right">{right}</div>}
+          />
         )}
         {!sharedView && !privateEditorOpen && view === "bookmark" && (
           <div className="rm-bookmark-link">

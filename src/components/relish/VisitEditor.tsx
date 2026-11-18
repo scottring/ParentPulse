@@ -11,6 +11,8 @@ import {
 } from "@/lib/relish/living";
 import { guidanceFor } from "@/lib/relish/guidance";
 import { canUseOnline } from "@/lib/relish/profiles";
+import Illustration from "./Illustration";
+import { topicIllustration } from "./illustrations";
 import { AIHelp } from "./AIHelp";
 import { Dialog } from "./BookForms";
 
@@ -120,14 +122,19 @@ export default function VisitEditor({
       {visit.kind === "begin" && visit.step === 0 ? (
         <>
           <h2>Choose a topic</h2>
-          <div className="lb-choices">
+          <div className="lb-topics">
             {Object.entries(threads).map(([key, t]) => (
               <button
                 key={key}
+                className="lb-topic"
                 disabled={busy}
                 onClick={() => onThread(key as ThreadId)}
               >
-                {t.title}
+                <Illustration
+                  name={topicIllustration[key] ?? "think-it-through"}
+                  size={96}
+                />
+                <span>{t.title}</span>
               </button>
             ))}
           </div>
@@ -144,7 +151,7 @@ export default function VisitEditor({
                 <button
                   key={choice}
                   type="button"
-                  className="lb-secondary"
+                  className="ui-chip"
                   disabled={busy}
                   onClick={() =>
                     setDraft({

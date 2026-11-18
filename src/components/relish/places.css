@@ -1296,7 +1296,9 @@
   color: #d8b45c;
   text-shadow: 0 1px 0 rgba(40, 50, 25, 0.45);
 }
+img.ui-illustration.rk-cover-emblem,
 .rk-cover-painted .rk-cover-emblem {
+  mix-blend-mode: normal;
   filter: drop-shadow(0 1px 0 rgba(40, 50, 25, 0.35));
 }
 .rk-cover-name {

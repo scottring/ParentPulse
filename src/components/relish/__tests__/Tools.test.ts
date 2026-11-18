@@ -79,7 +79,7 @@ it("sorts cards, picks one, and keeps the result as a page in Your pages", async
   expect(
     (screen.getByRole("radio", { name: "No one in particular" }) as HTMLInputElement).checked,
   ).toBe(true);
-  expect(document.querySelector(".rt-start-private")?.textContent).toContain("Your private pages");
+  expect(document.querySelector(".ui-private")?.textContent).toContain("Your private pages");
   fireEvent.click(screen.getByRole("button", { name: /Start this exercise/ }));
   expect(screen.queryByRole("button", { name: /Keep this page/ })).toBeNull();
   const card = screen.getByRole("group", { name: "Talking it through" });

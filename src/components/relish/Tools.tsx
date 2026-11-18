@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, Check, Clock, Lock } from "lucide-react";
+import { ArrowRight, Check, Clock } from "lucide-react";
 import type { Book } from "@/lib/relish/model";
 import { audienceOf } from "@/lib/relish/profiles";
 import {
@@ -26,6 +26,7 @@ import {
   type TrackerTool,
 } from "@/lib/relish/tools";
 import Illustration from "./Illustration";
+import { SubHead } from "./ui";
 import { exerciseIllustration } from "./illustrations";
 import "./journal.css";
 import "./tools.css";
@@ -64,32 +65,42 @@ export default function Tools({
 
   if (kept)
     return (
-      <main className="rt-book" aria-labelledby="rt-title">
-        <p className="lb-kicker">Exercise complete</p>
-        <h2 id="rt-title">Page kept</h2>
-        <p className="rt-intro">
-          “{kept}” is in Your pages. Come back to it, or share it if you want
-          to.
-        </p>
-        <div className="rt-actions">
-          <button className="lb-primary" disabled={busy} onClick={onPages}>
-            Read your pages <ArrowRight size={16} />
-          </button>
-          <button
-            className="lb-secondary"
-            disabled={busy}
-            onClick={() => {
-              if (onBack) return onBack();
-              setKept(null);
-              setOpenId(null);
-            }}
-          >
-            Choose another exercise
-          </button>
-          <button className="lb-text" disabled={busy} onClick={onActivities}>
-            Back to Do something
-          </button>
-        </div>
+      <main className="rt-screen" aria-labelledby="rt-title">
+        <SubHead
+          back={{
+            label: "Back to Do something",
+            onClick: onActivities,
+            disabled: busy,
+          }}
+          note="Your private pages"
+        />
+        <section className="rt-book rt-kept ui-card">
+          <Illustration name="saved" size={150} eager className="rt-kept-art" />
+          <div>
+            <p className="lb-kicker">Exercise complete</p>
+            <h2 id="rt-title">Page kept</h2>
+            <p className="rt-intro">
+              “{kept}” is in Your pages. Come back to it, or share it if you
+              want to.
+            </p>
+            <div className="rt-actions">
+              <button className="lb-primary" disabled={busy} onClick={onPages}>
+                Read your pages <ArrowRight size={16} />
+              </button>
+              <button
+                className="lb-secondary"
+                disabled={busy}
+                onClick={() => {
+                  if (onBack) return onBack();
+                  setKept(null);
+                  setOpenId(null);
+                }}
+              >
+                Choose another exercise
+              </button>
+            </div>
+          </div>
+        </section>
       </main>
     );
 
@@ -108,72 +119,85 @@ export default function Tools({
     );
 
   return (
-    <main className="rt-book" aria-labelledby="rt-title">
-      <p className="lb-kicker">The {book.owner} edition · Exercises</p>
-      <h2 id="rt-title">Try an exercise</h2>
-      <p className="rt-intro">
-        Short, hands-on exercises for something that’s hard right now. Each one
-        ends with a page you can keep. Nothing is saved until you keep it.
-      </p>
-      {!!running.length && (
-        <section className="rt-group" aria-label="In progress">
-          <h3>In progress</h3>
-          <div className="rt-list">
-            {running.map((run) => {
-              const t = toolById(run.toolId)!;
-              const p = trackerProgress(run);
-              const person = book.people.find((x) => x.id === run.personId);
-              return (
-                <button
-                  key={run.id}
-                  className="rt-card rt-running"
-                  disabled={busy}
-                  onClick={() => setOpenId(t.id)}
-                >
-                  <span className="lb-kicker">
-                    {p.done} of {p.total}
-                    {t.kind === "tracker" && t.mode === "days" ? " days" : " marked"}
-                  </span>
-                  <strong>
-                    {t.title}
-                    {person ? ` · ${person.name}` : ""}
-                  </strong>
-                  <span>Continue</span>
-                  <ArrowRight size={16} />
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      )}
-      {toolGroups.map((group) => {
-        const list = available.filter((t) => t.kind === group.kind);
-        if (!list.length) return null;
-        return (
-          <section key={group.kind} className="rt-group" aria-label={group.title}>
-            <h3>{group.title}</h3>
-            <p className="lb-fine">{group.note}</p>
+    <main className="rt-screen" aria-labelledby="rt-title">
+      <SubHead
+        back={{
+          label: "Back to Do something",
+          onClick: onActivities,
+          disabled: busy,
+        }}
+        note="Your private pages"
+      />
+      <section className="rt-book ui-card">
+        <p className="lb-kicker">The {book.owner} edition · Exercises</p>
+        <h2 id="rt-title">Try an exercise</h2>
+        <p className="rt-intro">
+          Short, hands-on exercises for something that’s hard right now. Each
+          one ends with a page you can keep. Nothing is saved until you keep it.
+        </p>
+        {!!running.length && (
+          <section className="rt-group" aria-label="In progress">
+            <h3>In progress</h3>
             <div className="rt-list">
-              {list.map((t) => (
-                <button
-                  key={t.id}
-                  className="rt-card"
-                  disabled={busy}
-                  onClick={() => setOpenId(t.id)}
-                >
-                  <span className="lb-kicker">{t.time}</span>
-                  <strong>{t.title}</strong>
-                  <span>{t.blurb}</span>
-                  <ArrowRight size={16} />
-                </button>
-              ))}
+              {running.map((run) => {
+                const t = toolById(run.toolId)!;
+                const p = trackerProgress(run);
+                const person = book.people.find((x) => x.id === run.personId);
+                return (
+                  <button
+                    key={run.id}
+                    className="rt-card rt-running"
+                    disabled={busy}
+                    onClick={() => setOpenId(t.id)}
+                  >
+                    <span className="lb-kicker">
+                      {p.done} of {p.total}
+                      {t.kind === "tracker" && t.mode === "days"
+                        ? " days"
+                        : " marked"}
+                    </span>
+                    <strong>
+                      {t.title}
+                      {person ? ` · ${person.name}` : ""}
+                    </strong>
+                    <span>Continue</span>
+                    <ArrowRight size={16} />
+                  </button>
+                );
+              })}
             </div>
           </section>
-        );
-      })}
-      <button className="lb-text rt-back" disabled={busy} onClick={onActivities}>
-        <ArrowLeft size={15} /> Back to Do something
-      </button>
+        )}
+        {toolGroups.map((group) => {
+          const list = available.filter((t) => t.kind === group.kind);
+          if (!list.length) return null;
+          return (
+            <section
+              key={group.kind}
+              className="rt-group"
+              aria-label={group.title}
+            >
+              <h3>{group.title}</h3>
+              <p className="lb-fine">{group.note}</p>
+              <div className="rt-list">
+                {list.map((t) => (
+                  <button
+                    key={t.id}
+                    className="rt-card"
+                    disabled={busy}
+                    onClick={() => setOpenId(t.id)}
+                  >
+                    <span className="lb-kicker">{t.time}</span>
+                    <strong>{t.title}</strong>
+                    <span>{t.blurb}</span>
+                    <ArrowRight size={16} />
+                  </button>
+                ))}
+              </div>
+            </section>
+          );
+        })}
+      </section>
     </main>
   );
 }
@@ -202,7 +226,8 @@ function OpenExercise({
   const [started, setStarted] = useState(false);
   const [who, setWho] = useState("");
   const running =
-    tool.kind === "tracker" && activeTrackers(book).some((t) => t.toolId === tool.id);
+    tool.kind === "tracker" &&
+    activeTrackers(book).some((t) => t.toolId === tool.id);
   const keep: KeepPage = (page) =>
     onCommit(
       (b) => keepToolPage(b, page),
@@ -234,46 +259,50 @@ function OpenExercise({
   const personId = tool.aboutPerson ? who : "";
   const people = !tool.aboutPerson && who ? [who] : [];
   return (
-    <main className="rt-book" aria-labelledby="rt-title">
-      <button className="lb-text rt-back" disabled={busy} onClick={onBack}>
-        <ArrowLeft size={15} /> {backLabel}
-      </button>
-      <p className="lb-kicker">
-        {tool.time} · {toolGroups.find((g) => g.kind === tool.kind)?.title}
-      </p>
-      <h2 id="rt-title">{tool.title}</h2>
-      <p className="rt-intro">{tool.blurb}</p>
-      <p className="rt-end">
-        <strong>Finished when:</strong> {tool.end}
-      </p>
-      {tool.kind === "sort" ? (
-        <SortRunner
-          tool={tool}
-          book={book}
-          busy={busy}
-          personId={personId}
-          people={people}
-          onKeep={keep}
-        />
-      ) : tool.kind === "builder" ? (
-        <BuilderRunner
-          tool={tool}
-          book={book}
-          busy={busy}
-          personId={personId}
-          people={people}
-          onKeep={keep}
-        />
-      ) : (
-        <TrackerRunner
-          tool={tool}
-          book={book}
-          busy={busy}
-          onCommit={onCommit}
-          onKept={onKept}
-          onStopped={onBack}
-        />
-      )}
+    <main className="rt-screen" aria-labelledby="rt-title">
+      <SubHead
+        back={{ label: backLabel, onClick: onBack, disabled: busy }}
+        note="Your private pages"
+      />
+      <section className="rt-book ui-card">
+        <p className="rt-start-time">
+          <Clock size={18} aria-hidden="true" /> {tool.time} ·{" "}
+          {toolGroups.find((g) => g.kind === tool.kind)?.title}
+        </p>
+        <h2 id="rt-title">{tool.title}</h2>
+        <p className="rt-intro">{tool.blurb}</p>
+        <p className="rt-end">
+          <strong>Finished when:</strong> {tool.end}
+        </p>
+        {tool.kind === "sort" ? (
+          <SortRunner
+            tool={tool}
+            book={book}
+            busy={busy}
+            personId={personId}
+            people={people}
+            onKeep={keep}
+          />
+        ) : tool.kind === "builder" ? (
+          <BuilderRunner
+            tool={tool}
+            book={book}
+            busy={busy}
+            personId={personId}
+            people={people}
+            onKeep={keep}
+          />
+        ) : (
+          <TrackerRunner
+            tool={tool}
+            book={book}
+            busy={busy}
+            onCommit={onCommit}
+            onKept={onKept}
+            onStopped={onBack}
+          />
+        )}
+      </section>
     </main>
   );
 }
@@ -304,22 +333,20 @@ function ExerciseStart({
   ];
   return (
     <main className="rt-start" aria-labelledby="rt-title">
-      <div className="rt-start-top">
-        <button className="lb-text rt-back" disabled={busy} onClick={onBack}>
-          <ArrowLeft size={15} /> {backLabel}
-        </button>
-        <span className="rt-start-private">
-          <Lock size={14} aria-hidden="true" /> Your private pages
-        </span>
-      </div>
-      <section className="rt-start-card">
+      <SubHead
+        back={{ label: backLabel, onClick: onBack, disabled: busy }}
+        note="Your private pages"
+      />
+      <section className="rt-start-card ui-card ui-torn">
         <div className="rt-start-text">
           <p className="rt-start-time">
             <Clock size={18} aria-hidden="true" /> {tool.time}
           </p>
           <h2 id="rt-title">{tool.title}</h2>
           <p className="rt-start-blurb">{tool.blurb}</p>
-          <p className="rt-start-note">Keep a page in your book whenever you’re ready.</p>
+          <p className="rt-start-note">
+            Keep a page in your book whenever you’re ready.
+          </p>
           {required && !book.people.length ? (
             <p className="lb-fine rt-note">
               Add someone to your book first, then come back to this exercise.
@@ -327,7 +354,9 @@ function ExerciseStart({
           ) : (
             book.people.length > 0 && (
               <fieldset className="rt-who">
-                <legend>{tool.aboutPerson?.label || "Who is this with?"}</legend>
+                <legend>
+                  {tool.aboutPerson?.label || "Who is this with?"}
+                </legend>
                 <div>
                   {options.map((o) => (
                     <label key={o.id || "none"}>
@@ -541,7 +570,8 @@ function BuilderRunner({
 }) {
   const [values, setValues] = useState<Record<string, string>>({});
   const complete =
-    builderComplete(tool, values) && (!tool.aboutPerson?.required || !!personId);
+    builderComplete(tool, values) &&
+    (!tool.aboutPerson?.required || !!personId);
   const about = book.people.find((p) => p.id === personId)?.name;
   const checks = tool.checks?.(values);
   return (
@@ -632,7 +662,11 @@ function Preview({
     <div className="rt-preview">
       <p className="lb-kicker">Your page will read</p>
       <blockquote>{text}</blockquote>
-      <button className="lb-primary" disabled={busy} onClick={() => onKeep(text)}>
+      <button
+        className="lb-primary"
+        disabled={busy}
+        onClick={() => onKeep(text)}
+      >
         Keep this page <Check size={16} />
       </button>
       <p className="lb-fine">
@@ -731,7 +765,9 @@ function TrackerRunner({
                 key={sq}
                 aria-pressed={on}
                 disabled={busy}
-                onClick={() => onCommit((b) => toggleMark(b, run.id, String(i)))}
+                onClick={() =>
+                  onCommit((b) => toggleMark(b, run.id, String(i)))
+                }
               >
                 {on && <Check size={14} />} {sq}
               </button>
@@ -749,7 +785,8 @@ function TrackerRunner({
           onClick={() =>
             onCommit(
               (b) => finishTracker(b, run.id),
-              () => onKept(person ? `${tool.title} · ${person.name}` : tool.title),
+              () =>
+                onKept(person ? `${tool.title} · ${person.name}` : tool.title),
               "Page kept in Your pages.",
             )
           }
@@ -763,7 +800,11 @@ function TrackerRunner({
               className="lb-text"
               disabled={busy}
               onClick={() =>
-                onCommit((b) => stopTracker(b, run.id), onStopped, "Exercise stopped.")
+                onCommit(
+                  (b) => stopTracker(b, run.id),
+                  onStopped,
+                  "Exercise stopped.",
+                )
               }
             >
               Yes, stop
@@ -773,7 +814,11 @@ function TrackerRunner({
             </button>
           </span>
         ) : (
-          <button className="lb-text" disabled={busy} onClick={() => setConfirmStop(true)}>
+          <button
+            className="lb-text"
+            disabled={busy}
+            onClick={() => setConfirmStop(true)}
+          >
             Stop without keeping
           </button>
         )}

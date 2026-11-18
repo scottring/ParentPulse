@@ -324,19 +324,22 @@
 .ui-card-white {
   background: var(--ui-card);
 }
-/* A torn bottom edge, as in the exercise mockup. */
+/* A torn bottom edge, as in the exercise mockup: the desk shows through. */
 .ui-torn {
-  border-radius: 6px;
-  border-bottom: 0;
-  padding-bottom: calc(clamp(22px, 4vw, 44px) + 10px);
-  -webkit-mask: linear-gradient(#000 0 0) top / 100% calc(100% - 9px) no-repeat,
-    radial-gradient(circle at 6px 0, #000 5.5px, transparent 6px) bottom left /
-      12px 10px repeat-x;
-  mask: linear-gradient(#000 0 0) top / 100% calc(100% - 9px) no-repeat,
-    radial-gradient(circle at 6px 0, #000 5.5px, transparent 6px) bottom left /
-      12px 10px repeat-x;
-  filter: drop-shadow(0 12px 22px rgba(48, 56, 44, 0.12));
-  box-shadow: none;
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+  padding-bottom: calc(clamp(22px, 4vw, 44px) + 8px);
+}
+.ui-torn::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  height: 11px;
+  background: var(--ui-desk);
+  clip-path: polygon(0% 100%, 0.00% 90%, 2.08% 50%, 4.17% 55%, 6.25% 20%, 8.33% 35%, 10.42% 35%, 12.50% 90%, 14.58% 20%, 16.67% 62%, 18.75% 20%, 20.83% 35%, 22.92% 55%, 25.00% 55%, 27.08% 35%, 29.17% 62%, 31.25% 35%, 33.33% 55%, 35.42% 20%, 37.50% 35%, 39.58% 62%, 41.67% 20%, 43.75% 55%, 45.83% 20%, 47.92% 62%, 50.00% 20%, 52.08% 50%, 54.17% 78%, 56.25% 55%, 58.33% 50%, 60.42% 35%, 62.50% 78%, 64.58% 50%, 66.67% 35%, 68.75% 62%, 70.83% 90%, 72.92% 35%, 75.00% 35%, 77.08% 20%, 79.17% 62%, 81.25% 40%, 83.33% 55%, 85.42% 90%, 87.50% 40%, 89.58% 40%, 91.67% 90%, 93.75% 78%, 95.83% 62%, 97.92% 50%, 100.00% 62%, 100% 100%);
+  pointer-events: none;
 }
 .ui-tilt-left {
   transform: rotate(-0.6deg);
@@ -478,6 +481,10 @@
   height: auto;
   aspect-ratio: 1;
   object-fit: contain;
+}
+/* Paintings sit on cream paper; multiply lets the page color through. */
+img.ui-illustration {
+  mix-blend-mode: multiply;
 }
 .ui-illustration svg {
   width: 100%;
