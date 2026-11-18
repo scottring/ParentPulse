@@ -1123,3 +1123,9 @@
 .lb-app .rj-typing-toggle[aria-pressed="false"] {
   opacity: 0.75;
 }
+.lb-app .rd-writing-context .rj-title-row {
+  margin: 12px 0 20px;
+}
+.lb-app .rd-writing-context .rj-title-row h2 {
+  margin: 0;
+}
