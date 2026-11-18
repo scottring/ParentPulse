@@ -98,9 +98,12 @@ export default function DoSomething({
   return (
     <main className="rp-place rp-do" aria-labelledby="rp-do-title">
       <section className="rp-stack">
-        <h1 id="rp-do-title" ref={headingRef} tabIndex={-1}>
-          What feels right?
-        </h1>
+        <div className="rp-place-head">
+          <h1 id="rp-do-title" ref={headingRef} tabIndex={-1}>
+            What feels right?
+          </h1>
+          <Illustration name="do-something" size={110} eager className="rp-place-art" />
+        </div>
         <div
           className="rp-chips"
           role="group"

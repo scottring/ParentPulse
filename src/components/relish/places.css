@@ -1608,3 +1608,30 @@ img.ui-illustration.rk-cover-emblem,
     height: 64px !important;
   }
 }
+
+/* A place's heading with its picture on the right */
+.lb-app .rp-place-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 28px;
+}
+.lb-app .rp-place-head > div {
+  min-width: 0;
+}
+.lb-app .rp-place-art {
+  border-radius: 14px;
+}
+.lb-app .rp-person-emblem {
+  background: var(--ui-olive) !important;
+  padding: 8px;
+}
+.lb-app .rp-person-emblem .rk-mark {
+  width: 100%;
+}
+@media (max-width: 560px) {
+  .lb-app .rp-place-art {
+    width: 72px !important;
+    height: 72px !important;
+  }
+}

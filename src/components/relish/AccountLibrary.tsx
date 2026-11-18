@@ -337,7 +337,7 @@ export default function AccountLibrary({
                         {head.label}
                         <small>
                           {head.accountManaged
-                            ? "Open book →"
+                            ? `Open ${head.label.trim() || "this"}’s book →`
                             : "Earlier book · original passphrase needed"}
                         </small>
                       </span>
