@@ -10,7 +10,7 @@ import {
 } from "@testing-library/react";
 import { webcrypto } from "node:crypto";
 import { emptyBook, type Book } from "@/lib/relish/model";
-import { livingOf, newGame } from "@/lib/relish/living";
+import { advanceGame, livingOf, newGame } from "@/lib/relish/living";
 import { toolsOf } from "@/lib/relish/tools";
 import LivingBook from "../LivingBook";
 Object.defineProperty(globalThis, "crypto", {
@@ -139,6 +139,59 @@ it("builds a soft opener only once every part is filled in", async () => {
     people: ["sam"],
   });
 });
+it("a kept Plan a repair page comes back in Still going, then on Home once it's due", async () => {
+  const app = open(adult());
+  fireEvent.click(await screen.findByRole("button", { name: /Plan a repair/ }));
+  fireEvent.click(screen.getByRole("radio", { name: "Sam" }));
+  fireEvent.click(screen.getByRole("button", { name: /Start this exercise/ }));
+  for (const [label, value] of [
+    ["I’m sorry I…", "snapped about the shoes"],
+    ["What I wish I’d done…", "helped you look"],
+    ["Next time I’ll…", "say I need a minute"],
+    ["Can we…", "try again tomorrow"],
+  ])
+    fireEvent.change(screen.getByRole("textbox", { name: label }), { target: { value } });
+  fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
+  await screen.findByRole("heading", { name: "Kept in your book" });
+  expect(screen.getByText(/In a couple of days, Relish will ask how it went/)).toBeTruthy();
+  const [plan] = toolsOf(app.stored()).checkBacks!;
+  expect(plan.plan).toBe(
+    "I’m sorry I snapped about the shoes. I wish I’d helped you look. Next time I’ll say I need a minute. Can we try again tomorrow?",
+  );
+  // Not due yet: Home keeps its usual suggestion; Still going shows when it will ask.
+  fireEvent.click(screen.getByRole("button", { name: "Home" }));
+  expect(await screen.findByRole("region", { name: "Today’s suggestion" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Your book" }));
+  const item = await screen.findByRole("button", { name: /Your plan · Plan a repair · Sam/ });
+  expect(item.textContent).toMatch(/Relish asks \w+day/);
+  app.unmount();
+  cleanup();
+
+  // Two days later (stored as already due), Home asks in the person's own words.
+  const later = open({
+    ...app.stored(),
+    tools: {
+      ...toolsOf(app.stored()),
+      checkBacks: [{ ...plan, dueAt: new Date(Date.now() - 1000).toISOString() }],
+    },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Home" }));
+  const card = await screen.findByRole("region", { name: "Your plan from Plan a repair" });
+  expect(within(card).getByText("You planned to say to Sam:")).toBeTruthy();
+  expect(within(card).getByText(`“${plan.plan}”`)).toBeTruthy();
+  expect(within(card).getByText("Did you get a chance to say it?")).toBeTruthy();
+  expect(screen.queryByRole("region", { name: "Today’s suggestion" })).toBeNull();
+  fireEvent.click(within(card).getByRole("button", { name: "Yes, I did" }));
+  fireEvent.click(within(card).getByRole("button", { name: "It helped, even a little" }));
+  fireEvent.change(within(card).getByRole("textbox"), { target: { value: "We laughed about it." } });
+  fireEvent.click(within(card).getByRole("button", { name: "Save how it went" }));
+  await screen.findByRole("region", { name: "Today’s suggestion" });
+  expect(toolsOf(later.stored()).checkBacks![0]).toMatchObject({
+    status: "tried",
+    outcome: "helped",
+    note: "We laughed about it.",
+  });
+});
 it("runs a day-by-day checklist across visits and finishes into a page", async () => {
   const app = open(adult());
   fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos/ }));
@@ -191,20 +244,76 @@ it("plays Same page? with hidden answers and a shared reveal", async () => {
   const app = open({ ...book, living: { ...livingOf(book), game } });
   fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
   expect(screen.getByRole("heading", { name: "Same page?" })).toBeTruthy();
+  expect(screen.getByText(/stay with this round in Robin’s book \(never sent to AI\)/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /Let’s play/ }));
-  const choices = await screen.findAllByRole("button", { name: /./ });
-  const options = choices.filter((b) => b.closest(".lb-choices"));
-  expect(options).toHaveLength(3);
-  fireEvent.click(options[0]);
+  const options = () =>
+    screen.getAllByRole("button").filter((b) => b.closest(".lb-choices"));
+  // Robin answers five questions one at a time, passing one.
+  const first = options()[0].textContent!;
+  for (let q = 1; q <= 5; q++) {
+    await screen.findByText(new RegExp(`Robin’s turn · question ${q} of 5`));
+    expect(options()).toHaveLength(3);
+    if (q === 3) fireEvent.click(screen.getByRole("button", { name: "Pass this one" }));
+    else fireEvent.click(options()[0]);
+  }
   await screen.findByRole("heading", { name: "Over to Sam." });
-  expect(screen.queryByText(options[0].textContent!)).toBeNull();
+  expect(screen.queryByText(first)).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "I’m Sam · ready" }));
-  const second = (await screen.findAllByRole("button")).filter((b) =>
-    b.closest(".lb-choices"),
-  );
-  fireEvent.click(second[0]);
-  expect((await screen.findAllByText(/Same page: everyone chose/)).length).toBeGreaterThan(0);
+  for (let q = 1; q <= 5; q++) {
+    await screen.findByText(new RegExp(`Sam’s turn · question ${q} of 5`));
+    fireEvent.click(options()[q === 5 ? 1 : 0]);
+  }
+  expect(await screen.findByRole("heading", { name: "What each of you said" })).toBeTruthy();
+  expect(screen.getAllByText("Same page ✓")).toHaveLength(3);
+  expect(screen.getByText(/^You matched on 3 of 4\. Different on /)).toBeTruthy();
+  expect(screen.getByText("passed")).toBeTruthy();
   expect(livingOf(app.stored()).game?.stage).toBe("reveal");
+  expect(livingOf(app.stored()).game?.answers).toEqual([
+    [0, 0, null, 0, 0],
+    [0, 0, 0, 0, 1],
+  ]);
+});
+
+it("after the reveal each player can add their own line or skip, and Finish still ends it", async () => {
+  const book = emptyBook("Robin");
+  let game = advanceGame(
+    newGame("match", [
+      { id: "a", name: "Robin" },
+      { id: "b", name: "Sam" },
+      { id: "c", name: "Kai" },
+    ]),
+    { type: "start" },
+  );
+  while (game.stage !== "reveal") {
+    if (game.stage === "handoff") game = advanceGame(game, { type: "ready" });
+    game = advanceGame(game, { type: "answer", answers: [0, 0, 1, 1, 2] });
+  }
+  const app = open({ ...book, living: { ...livingOf(book), game } });
+  fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
+  fireEvent.click(await screen.findByRole("button", { name: "Add a memory" }));
+  await screen.findByRole("heading", { name: "Robin, anything to remember about this round?" });
+  fireEvent.change(screen.getByRole("textbox", { name: "Robin’s line" }), {
+    target: { value: "We all want pancakes." },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Save my line/ }));
+  await screen.findByRole("heading", { name: "Sam, anything to remember about this round?" });
+  expect((screen.getByRole("textbox", { name: "Sam’s line" }) as HTMLTextAreaElement).value).toBe("");
+  fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+  await screen.findByRole("heading", { name: "Kai, anything to remember about this round?" });
+  fireEvent.change(screen.getByRole("textbox", { name: "Kai’s line" }), {
+    target: { value: "Rainy days are for forts." },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Save my line/ }));
+  await screen.findByText("We all want pancakes.");
+  expect(screen.getByText("Rainy days are for forts.")).toBeTruthy();
+  expect(livingOf(app.stored()).game?.reflections).toEqual([
+    { playerId: "a", text: "We all want pancakes." },
+    { playerId: "c", text: "Rainy days are for forts." },
+  ]);
+  expect(screen.getByRole("heading", { name: "What you remember" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Finish round/ }));
+  await screen.findByRole("region", { name: "Game finished" });
+  expect(livingOf(app.stored()).plays?.[0].reflections).toHaveLength(2);
 });
 
 it("a card sort offers one card at a time, with skip, and keeps every card changeable", async () => {

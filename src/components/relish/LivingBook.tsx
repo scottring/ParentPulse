@@ -23,11 +23,11 @@ import {
   livingOf,
   markTried,
   letGoPractice,
-  newGame,
   nextKind,
   pauseVisit,
   pendingPractice,
   recordRound,
+  startGame,
   updateDraft,
   type Draft,
   type Game,
@@ -52,6 +52,7 @@ import { BookSpread, SubHead } from "./ui";
 import { gameIllustration, topicIllustration } from "./illustrations";
 import Manual, { useManualGuide } from "./Manual";
 import { reviewManualIdea } from "@/lib/relish/manual";
+import { answerCheckBack, type CheckBackAnswer } from "@/lib/relish/tools";
 import GroupPlay from "./GroupPlay";
 import Tools from "./Tools";
 import ConnectedEditions from "./ConnectedEditions";
@@ -336,18 +337,30 @@ export default function LivingBook({
       action.type === "approve" ? "Approval updated." : "",
     );
   }
+  // A plan kept from an exercise, asked about a few days later.
+  function answerPlan(id: string, answer: CheckBackAnswer) {
+    void commit(
+      (b) => answerCheckBack(b, id, answer),
+      undefined,
+      answer.kind === "later"
+        ? "We’ll ask again in two days."
+        : answer.kind === "let-go"
+          ? "Set aside. The page stays in Your book."
+          : "Saved with your plan.",
+    );
+  }
   function createGame(kind: Game["kind"], players: Player[]) {
     void commit(
       (b) =>
-        changeLiving(b, (x) => ({
-          // A round left at its reveal is still noted before it is replaced.
-          ...recordRound(x),
-          game: newGame(
+        // A round left at its reveal is still noted before it is replaced.
+        changeLiving(b, (x) =>
+          startGame(
+            x,
             kind,
             players,
             b.profile?.kind === "child" ? b.profile.ageBand : undefined,
           ),
-        })),
+        ),
       () => navigate("play"),
     );
   }
@@ -405,7 +418,7 @@ export default function LivingBook({
     view === "play"
       ? {
           title: "Play one round",
-          text: "Each player takes a turn or passes. Reveal together, then finish. Keeping a page needs everyone’s approval and is always optional. End game any time; the round is saved.",
+          text: "Each player takes a turn or passes. Reveal together, then finish. A line from each player and a shared page are both optional; a page needs everyone’s approval. End game any time; the round is saved.",
         }
       : place === "home"
         ? {
@@ -781,6 +794,7 @@ export default function LivingBook({
             busy={busy}
             headingRef={heading}
             onNudge={onNudge}
+            onCheckBack={answerPlan}
             onFilter={(f) => {
               navigate("do");
               setDoFilter(f);
@@ -940,6 +954,7 @@ export default function LivingBook({
             onExercise={openExercise}
             onAddPerson={() => setModal("person")}
             onEditPerson={setEditing}
+            onCheckBack={answerPlan}
           />
         ) : view === "words" && !sharedView ? (
           <Journal
@@ -974,21 +989,23 @@ export default function LivingBook({
             </button>
           </main>
         ) : view === "play" && activeGame ? (
-          <div className="lb-play-layout">
-            <aside>
-              <p className="lb-kicker">Play together</p>
-              <h2>Pass it around</h2>
-              <p>One round, on this device.</p>
-              <Illustration
-                name={gameIllustration[activeGame.kind] ?? "do-something"}
-                size={180}
-                className="lb-play-art"
-              />
-              <p className="lb-fine">
-                Private pages stay out of the game. End game any time; the
-                round waits for you.
-              </p>
-            </aside>
+          <div className={`lb-play-layout ${activeGame.stage === "ready" ? "" : "is-solo"}`}>
+            {activeGame.stage === "ready" && (
+              <aside>
+                <p className="lb-kicker">Play together</p>
+                <h2>Pass it around</h2>
+                <p>One round, on this device.</p>
+                <Illustration
+                  name={gameIllustration[activeGame.kind] ?? "do-something"}
+                  size={180}
+                  className="lb-play-art"
+                />
+                <p className="lb-fine">
+                  Private pages stay out of the game. End game any time; the
+                  round waits for you.
+                </p>
+              </aside>
+            )}
             <main className="lb-play-main" key={activeGame.id}>
               <GroupPlay
                 book={book}

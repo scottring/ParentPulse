@@ -1,7 +1,12 @@
 "use client";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import type { Book } from "@/lib/relish/model";
-import { gameText, livingOf, type GameKind } from "@/lib/relish/living";
+import {
+  gameText,
+  livingOf,
+  reflectionSections,
+  type GameKind,
+} from "@/lib/relish/living";
 import type { PhotoAccess } from "@/lib/relish/photos";
 import type { Tone } from "@/lib/relish/catalog";
 import Illustration from "./Illustration";
@@ -30,21 +35,27 @@ type AlbumItem = {
   note: string;
   date: string;
   photos?: Parameters<typeof PhotoGallery>[0]["photos"];
+  /** Players' own lines about a game round, each under their name. */
+  lines?: { label: string; text: string }[];
 };
 
 /** Everything in this book that is shared: never a private page. */
 export function albumOf(book: Book): AlbumItem[] {
   const l = livingOf(book);
   return [
-    ...l.sharedPages.map((p) => ({
-      id: `game:${p.id}`,
-      label: gameLabel[p.kind].label,
-      tone: gameLabel[p.kind].tone,
-      title: p.title,
-      text: p.text,
-      note: `${p.players.map((x) => x.name).join(" + ")} · everyone approved these words`,
-      date: p.createdAt,
-    })),
+    ...l.sharedPages.map((p) => {
+      const round = (l.plays || []).find((r) => r.pageId === p.id);
+      return {
+        id: `game:${p.id}`,
+        label: gameLabel[p.kind].label,
+        tone: gameLabel[p.kind].tone,
+        title: p.title,
+        text: p.text,
+        note: `${p.players.map((x) => x.name).join(" + ")} · everyone approved these words`,
+        date: p.createdAt,
+        lines: round ? reflectionSections(round) : [],
+      };
+    }),
     ...(book.album || []).map((p) => ({
       id: `album:${p.id}`,
       label: p.photos?.length ? "Photo" : "Passage",
@@ -141,9 +152,11 @@ export default function Family({
             <strong>A good place to stop.</strong>{" "}
             {finished.savedPageId
               ? "You finished a round and kept a page everyone approved."
-              : gameText(finished)
-                ? "You finished a round together. No shared page was saved."
-                : "Everyone passed. No shared page was saved."}
+              : !gameText(finished)
+                ? "Everyone passed. No shared page was saved."
+                : finished.contentVersion === 2
+                  ? "You finished a round together. Its answers are in Your book; no shared page was kept."
+                  : "You finished a round together. No shared page was saved."}
           </p>
           <div className="rp-finished-actions">
             <button className="rp-btn rp-btn-olive" disabled={busy} onClick={() => onCloseFinished(true)}>
@@ -285,6 +298,15 @@ export default function Family({
               <p className="rp-eyebrow">{shortDate(open.date)} · {open.label}</p>
               <h3>{open.title}</h3>
               {open.text && <blockquote>{open.text}</blockquote>}
+              {!!open.lines?.length && (
+                <div className="rp-album-lines">
+                  {open.lines.map((line, i) => (
+                    <p key={i}>
+                      <strong>{line.label}:</strong> {line.text}
+                    </p>
+                  ))}
+                </div>
+              )}
               {open.photos && <PhotoGallery photos={open.photos} access={photos} />}
               <p className="rp-quiet">{open.note}</p>
             </article>

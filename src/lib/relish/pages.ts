@@ -1,7 +1,13 @@
 import type { Book } from "./model";
-import { livingOf, outcomes, type Player } from "./living";
+import {
+  livingOf,
+  outcomes,
+  playMemory,
+  reflectionSections,
+  type Player,
+} from "./living";
 import { games } from "./play-content";
-import { toolById } from "./tools";
+import { checkBackSection, toolById } from "./tools";
 import { guidanceFor } from "./guidance";
 import type { JournalStyle } from "./journal";
 import { isPhotos, type Photo } from "./photos";
@@ -101,6 +107,10 @@ export function bookPages(book: Book): BookPage[] {
           style: e.style,
           photos: e.photos || [],
           people: e.people || [],
+          // An exercise plan that was checked back on shows how it went.
+          sections: [checkBackSection(book, e.id)].filter(
+            (x): x is { label: string; text: string } => !!x,
+          ),
         }),
       ),
     ...livingOf(book).entries.map((e) =>
@@ -166,8 +176,10 @@ export function bookPages(book: Book): BookPage[] {
         from: p.fromName,
       }),
     ),
-    ...livingOf(book).sharedPages.map((p) =>
-      page({
+    ...livingOf(book).sharedPages.map((p) => {
+      // Players' own lines about the round live on its play record.
+      const round = (livingOf(book).plays || []).find((r) => r.pageId === p.id);
+      return page({
         id: `game:${p.id}`,
         kind: "Made together",
         title: p.title,
@@ -176,8 +188,9 @@ export function bookPages(book: Book): BookPage[] {
         style: "moss",
         from: p.players.map((x) => x.name).join(" + "),
         people: playersInBook(book, p.players),
-      }),
-    ),
+        sections: round ? reflectionSections(round) : [],
+      });
+    }),
     // A round with a kept page shows that page instead of a second record.
     ...(livingOf(book).plays || [])
       .filter(
@@ -190,13 +203,17 @@ export function bookPages(book: Book): BookPage[] {
           (p) => p.id !== "owner" && p.name.trim() !== book.owner.trim(),
         );
         const title = games.find((g) => g.kind === r.kind)?.title || "A game";
+        const memory = playMemory(r);
         return page({
           id: `play:${r.id}`,
           kind: PLAY_RECORD,
           title: `${title} with ${list((others.length ? others : r.players).map((p) => p.name))}`,
-          text: r.pageId
-            ? "One round, played together."
-            : "One round, played together. No shared page was kept.",
+          text:
+            memory.summary ||
+            (r.pageId
+              ? "One round, played together."
+              : "One round, played together. No shared page was kept."),
+          sections: memory.sections,
           date: r.playedAt,
           style: "moss",
           people: playersInBook(book, r.players),

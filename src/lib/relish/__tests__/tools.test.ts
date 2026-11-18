@@ -8,15 +8,29 @@ import {
   isLiving,
   keepGame,
   livingOf,
+  freshLiving,
   newGame,
+  recentQuestions,
+  recordRound,
   samePageAgreement,
+  samePageQuestions,
+  samePageResult,
   samePageRound,
+  samePageSummary,
+  samePageTrend,
+  startGame,
   turnCount,
+  type Game,
+  type LivingState,
 } from "../living";
-import { samePagePrompts } from "../play-content";
+import { samePageBank, samePagePrompts } from "../play-content";
 import {
   activeTrackers,
+  answerCheckBack,
   builderComplete,
+  checkBackWords,
+  dueCheckBacks,
+  openCheckBacks,
   builderPage,
   finishTracker,
   hasBingo,
@@ -34,6 +48,8 @@ import {
   type BuilderTool,
   type SortTool,
 } from "../tools";
+import { bookPages } from "../pages";
+import { createVault, unlockVault } from "../vault";
 Object.defineProperty(globalThis, "crypto", {
   value: webcrypto,
   configurable: true,
@@ -204,46 +220,127 @@ describe("Same page? game", () => {
     { id: "b", name: "Sam" },
     { id: "c", name: "Kai" },
   ];
-  function play(choices: (number | null)[]) {
-    let g = advanceGame(newGame("match", players), { type: "start", firstId: "a" });
-    choices.forEach((choice, i) => {
+  function play(turns: (number | null)[][], who = players) {
+    let g = advanceGame(newGame("match", who), { type: "start", firstId: who[0].id });
+    turns.forEach((answers, i) => {
       if (i > 0) g = advanceGame(g, { type: "ready" });
-      g = advanceGame(g, { type: "choice", choice });
+      g = advanceGame(g, { type: "answer", answers });
     });
     return g;
   }
-  it("gives everyone one private answer, then reveals agreement", () => {
-    const g = play([1, 1, 1]);
+  const finishInto = (living: LivingState, g: Game) =>
+    recordRound({ ...living, game: advanceGame(g, { type: "finish" }) });
+  it("asks each player five questions in private, then counts the matches", () => {
+    const g = play([
+      [0, 1, 2, 0, 1],
+      [0, 1, 0, 0, null],
+      [0, 2, 0, 0, 1],
+    ]);
     expect(turnCount(g)).toBe(3);
     expect(g.stage).toBe("reveal");
-    const round = samePageRound(g);
-    expect(samePageAgreement(g)).toBe(`Same page: everyone chose “${round.choices[1]}”.`);
-    expect(gameText(g)).toContain(round.prompt);
-    expect(gameText(g)).toContain(`Sam: ${round.choices[1]}.`);
-    expect(samePageAgreement(play([0, 1, 1]))).toContain("2 of 3");
-    expect(samePageAgreement(play([0, 1, 2]))).toContain("different");
-    expect(samePageAgreement(play([0, null, null]))).toBe("");
+    const r = samePageResult(g);
+    expect(r.lines.map((l) => l.same)).toEqual([true, false, false, true, true]);
+    expect(r.lines[4].answered).toBe(2);
+    expect(r.matched).toBe(3);
+    expect(r.counted).toBe(5);
+    expect(samePageSummary(g)).toBe("You matched on 3 of 5.");
+    expect(r.differ).toEqual([r.lines[1].question.topic, r.lines[2].question.topic]);
+    const text = gameText(g);
+    expect(text.split("\n")[0]).toContain("You matched on 3 of 5. Different on");
+    expect(text).toContain(`${r.lines[0].question.prompt} Robin: ${r.lines[0].question.choices[0]}.`);
+    expect(samePageSummary(play([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]))).toBe(
+      "You matched on all 5.",
+    );
+    expect(samePageSummary(play([[0, 0, 0, 0, 0], [null, null, null, null, null], [null, null, null, null, null]]))).toBe("");
   });
-  it("hands the device over between private answers", () => {
+  it("hands the device over between turns and checks every answer", () => {
     let g = advanceGame(newGame("match", players), { type: "start" });
-    g = advanceGame(g, { type: "choice", choice: 2 });
-    expect(g.stage).toBe("handoff");
     expect(() => advanceGame(g, { type: "choice", choice: 0 })).toThrow();
-    expect(() =>
-      advanceGame(advanceGame(g, { type: "ready" }), { type: "choice", choice: 3 }),
-    ).toThrow();
+    expect(() => advanceGame(g, { type: "answer", answers: [0, 1, 2] })).toThrow();
+    expect(() => advanceGame(g, { type: "answer", answers: [0, 1, 2, 3, 0] })).toThrow();
+    g = advanceGame(g, { type: "choice", choice: null });
+    expect(g.answers).toEqual([[null, null, null, null, null]]);
+    expect(g.stage).toBe("handoff");
+    expect(g.choices).toEqual([]);
+    expect(() => advanceGame(g, { type: "answer", answers: [0, 0, 0, 0, 0] })).toThrow();
   });
-  it("keeps the same question across reload and uses age-appropriate prompts", () => {
+  it("fixes five age-fitted questions when the round starts", () => {
     const g = newGame("match", players);
-    expect(samePageRound(JSON.parse(JSON.stringify(g)))).toEqual(samePageRound(g));
+    expect(g.contentVersion).toBe(2);
+    expect(g.questions).toHaveLength(5);
+    expect(new Set(g.questions).size).toBe(5);
+    expect(samePageQuestions(JSON.parse(JSON.stringify(g)))).toEqual(samePageQuestions(g));
     const kid = newGame("match", [...players.slice(0, 2), { id: "k", name: "Ella", audience: "6-8" }]);
-    expect(samePagePrompts("6-8")).toContainEqual(samePageRound(kid));
-    expect(samePagePrompts("adult")).not.toContainEqual(samePageRound(kid));
-    for (const a of ["under-6", "6-8", "9-12", "13-17", "adult"] as const)
-      for (const r of samePagePrompts(a)) expect(r.choices).toHaveLength(3);
+    const young = samePageBank("6-8").map((q) => q.id);
+    expect(kid.questions!.every((id) => young.includes(id))).toBe(true);
+    const adult = newGame("match", players.map((p) => ({ ...p, audience: "adult" as const })));
+    const grown = samePageBank("adult").map((q) => q.id);
+    expect(adult.questions!.every((id) => grown.includes(id))).toBe(true);
+    const ids = new Set<string>();
+    for (const a of ["under-6", "6-8", "9-12", "13-17", "adult"] as const) {
+      expect(samePageBank(a).length).toBeGreaterThanOrEqual(10);
+      for (const q of samePageBank(a)) {
+        expect(q.choices).toHaveLength(3);
+        expect(q.topic).toBeTruthy();
+      }
+    }
+    for (const bank of [samePageBank("6-8"), samePageBank("9-12"), samePageBank("adult")])
+      for (const q of bank) {
+        expect(ids.has(q.id)).toBe(false);
+        ids.add(q.id);
+      }
   });
-  it("keeps an approved page and validates the saved state", () => {
-    let book = changeLiving(emptyBook("Robin"), (l) => ({ ...l, game: play([2, 2, 0]) }));
+  it("prefers questions these players haven't had lately", () => {
+    let living = freshLiving();
+    living = finishInto(living, play([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]));
+    const first = livingOf({ ...emptyBook("Robin"), living }).plays![0].questions!.map((q) => q.id);
+    living = startGame(living, "match", players);
+    const second = living.game!.questions!;
+    // The young bank has 12 questions, so five fresh ones are always available.
+    expect(second.some((id) => first.includes(id))).toBe(false);
+    expect(recentQuestions(living, [...players].reverse())).toEqual(first);
+  });
+  it("looks back at earlier rounds with the same players", () => {
+    let living = freshLiving();
+    const g1 = play([[0, 0, 0, 0, 0], [0, 1, 0, 1, 0], [0, 0, 0, 0, 0]]);
+    expect(samePageTrend(living, g1)).toBe("");
+    living = finishInto(living, g1);
+    const g2 = play([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]);
+    expect(samePageTrend(living, g2)).toMatch(/^Last time, on .+, you matched on 3 of 5\.$/);
+    // Different players don't count.
+    expect(samePageTrend(living, play([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], players.slice(0, 2)))).toBe("");
+    living = finishInto(living, g2);
+    living = finishInto(living, play([[0, 0, 0, 0, 0], [0, 1, 0, 0, 0], [0, 0, 0, 0, 0]]));
+    expect(samePageTrend(living, play([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]))).toMatch(
+      /^Over your last 3 rounds together, you matched on 12 of 15\./,
+    );
+  });
+  it("still plays and validates a one-question round started before this change", () => {
+    const fresh = newGame("match", players);
+    const legacy: Game = { ...fresh, contentVersion: 1, answers: undefined, questions: undefined };
+    delete legacy.answers;
+    delete legacy.questions;
+    expect(isLiving({ ...freshLiving(), game: legacy })).toBe(true);
+    let g = advanceGame(legacy, { type: "start", firstId: "a" });
+    for (const [i, choice] of [1, 1, 1].entries()) {
+      if (i > 0) g = advanceGame(g, { type: "ready" });
+      g = advanceGame(g, { type: "choice", choice });
+      expect(isLiving({ ...freshLiving(), game: g })).toBe(true);
+    }
+    expect(g.stage).toBe("reveal");
+    const round = samePageRound(g);
+    expect(samePagePrompts("6-8")).toContainEqual(round);
+    expect(samePageAgreement(g)).toBe(`Same page: everyone chose “${round.choices[1]}”.`);
+    expect(gameText(g)).toContain(`Sam: ${round.choices[1]}.`);
+    // An older round leaves a names-only record, as before.
+    const living = finishInto(freshLiving(), g);
+    expect(living.plays![0].questions).toBeUndefined();
+  });
+  it("keeps an approved page and rejects malformed rounds", () => {
+    let book = changeLiving(emptyBook("Robin"), (l) => ({
+      ...l,
+      game: play([[2, 2, 0, 1, 1], [2, 2, 0, 1, 1], [0, 2, 0, 1, 1]]),
+    }));
     expect(isLiving(livingOf(book))).toBe(true);
     for (const p of players)
       book = changeLiving(book, (l) => ({
@@ -254,9 +351,132 @@ describe("Same page? game", () => {
     const page = livingOf(book).sharedPages[0];
     expect(page.kind).toBe("match");
     expect(page.title).toBe("Are we on the same page?");
+    expect(page.text).toContain("You matched on 4 of 5.");
     expect(isLiving(livingOf(book))).toBe(true);
     expect(isBook(book)).toBe(true);
-    const tampered = { ...livingOf(book), game: { ...livingOf(book).game!, turn: 2, choices: [2, 2] } };
-    expect(isLiving(tampered)).toBe(false);
+    const g = livingOf(book).game!;
+    for (const bad of [
+      { ...g, turn: 2, choices: [2, 2] },
+      { ...g, choices: [0] },
+      { ...g, answers: g.answers!.slice(0, 2) },
+      { ...g, answers: [...g.answers!.slice(0, 2), [0, 0, 0]] },
+      { ...g, answers: [...g.answers!.slice(0, 2), [0, 0, 0, 0, 3]] },
+      { ...g, answers: [...g.answers!.slice(0, 2), [0, 0, 0, 0, "1"]] },
+      { ...g, questions: [...g.questions!.slice(0, 4), "invented"] },
+      { ...g, questions: g.questions!.slice(0, 4) },
+      { ...g, questions: [...g.questions!.slice(0, 4), g.questions![0]] },
+      { ...g, contentVersion: 3 },
+    ])
+      expect(isLiving({ ...livingOf(book), game: bad })).toBe(false);
+  });
+});
+
+describe("check-backs on kept plans", () => {
+  const withSam = (): Book => ({
+    ...emptyBook("Robin"),
+    people: [{ id: "sam", name: "Sam", role: "Son", color: "rose", note: "", lessons: [] }],
+  });
+  const repairPlan =
+    "I’m sorry I snapped. I wish I’d taken a breath. Next time I’ll say I need a minute. Can we start fresh tomorrow?";
+  const keep = (book: Book, toolId: string, plan?: string) =>
+    keepToolPage(book, {
+      title: toolId,
+      text: `Page for ${toolId}`,
+      toolId,
+      personId: "sam",
+      ...(plan !== undefined ? { plan } : {}),
+    });
+  const DAY = 86_400_000;
+  it("keeping a plan from these three exercises asks about it a few days later", () => {
+    let book = keep(withSam(), "repair", repairPlan);
+    book = keep(book, "soft-start", "I feel worn out about bedtime, and what would help is trading off.");
+    book = keep(book, "iceberg", "Tired");
+    book = keep(book, "helps-upset", "Music");
+    book = keep(book, "repair", " ");
+    const list = toolsOf(book).checkBacks!;
+    expect(list.map((c) => c.toolId)).toEqual(["repair", "soft-start", "iceberg"]);
+    const [repair, , iceberg] = list;
+    expect(repair.pageId).toBe(book.journal!.find((e) => e.source?.toolId === "repair")!.id);
+    expect(repair.personId).toBe("sam");
+    expect(Date.parse(repair.dueAt) - Date.parse(repair.createdAt)).toBe(2 * DAY);
+    expect(Date.parse(iceberg.dueAt) - Date.parse(iceberg.createdAt)).toBe(3 * DAY);
+    const kept = Date.parse(repair.createdAt);
+    expect(dueCheckBacks(book, new Date(kept + DAY))).toHaveLength(0);
+    expect(dueCheckBacks(book, new Date(kept + 2 * DAY)).map((c) => c.toolId)).toEqual([
+      "repair",
+      "soft-start",
+    ]);
+    expect(dueCheckBacks(book, new Date(kept + 3 * DAY))).toHaveLength(3);
+    expect(checkBackWords(book, repair)).toEqual({
+      lead: "You planned to say to Sam:",
+      quote: repairPlan,
+      ask: "Did you get a chance to say it?",
+    });
+    expect(checkBackWords(book, iceberg).lead).toBe(
+      "You guessed it was “Tired” for Sam, and planned to respond to that instead of the behavior.",
+    );
+    expect(isBook(book)).toBe(true);
+  });
+  it("Yes saves how it went with the plan; Not yet asks again later; Let it go sets it aside", () => {
+    let book = keep(keep(keep(withSam(), "repair", repairPlan), "soft-start", "Opener"), "iceberg", "Tired");
+    const [repair, opener, iceberg] = toolsOf(book).checkBacks!;
+    const now = new Date(Date.parse(repair.dueAt) + 1000);
+    book = answerCheckBack(book, repair.id, { kind: "tried", outcome: "helped", note: " She laughed. " }, now);
+    expect(toolsOf(book).checkBacks![0]).toMatchObject({
+      status: "tried",
+      outcome: "helped",
+      note: "She laughed.",
+      answeredAt: now.toISOString(),
+    });
+    const page = bookPages(book).find((p) => p.id === `journal:${repair.pageId}`)!;
+    expect(page.sections).toEqual([{ label: "How it went", text: "It helped, even a little. She laughed." }]);
+    book = answerCheckBack(book, opener.id, { kind: "later" }, now);
+    expect(Date.parse(toolsOf(book).checkBacks![1].dueAt)).toBe(now.getTime() + 2 * DAY);
+    expect(dueCheckBacks(book, now).map((c) => c.id)).toEqual([]);
+    book = answerCheckBack(book, iceberg.id, { kind: "let-go" }, new Date(Date.parse(iceberg.dueAt)));
+    expect(openCheckBacks(book).map((c) => c.id)).toEqual([opener.id]);
+    expect(() => answerCheckBack(book, repair.id, { kind: "let-go" })).toThrow("already");
+    expect(() =>
+      answerCheckBack(book, opener.id, { kind: "tried", outcome: "great" as never }),
+    ).toThrow();
+    expect(isBook(book)).toBe(true);
+  });
+  it("validators accept books without check-backs and reject malformed ones", () => {
+    expect(isTools({ version: 1, trackers: [] })).toBe(true);
+    const fresh = keep(withSam(), "repair", repairPlan);
+    const c = toolsOf(fresh).checkBacks![0];
+    expect(isTools(toolsOf(fresh))).toBe(true);
+    for (const bad of [
+      "nope",
+      [c, c],
+      [{ ...c, toolId: "hellos" }],
+      [{ ...c, plan: "" }],
+      [{ ...c, plan: "x".repeat(1501) }],
+      [{ ...c, dueAt: "soon" }],
+      [{ ...c, status: "done", answeredAt: c.createdAt }],
+      [{ ...c, status: "tried" }],
+      [{ ...c, answeredAt: c.createdAt }],
+      [{ ...c, outcome: "helped" }],
+      [{ ...c, status: "tried", answeredAt: c.createdAt, outcome: "great" }],
+      [{ ...c, note: "Hi" }],
+      Array.from({ length: 61 }, (_, i) => ({ ...c, id: String(i) })),
+    ])
+      expect(isTools({ ...toolsOf(fresh), checkBacks: bad })).toBe(false);
+  });
+  it("answered plans make room first, and a check-back survives an encrypt/decrypt round trip", async () => {
+    let book = withSam();
+    for (let i = 0; i < 60; i++) {
+      book = keep(book, "repair", `Plan ${i}`);
+      if (i < 59) book = answerCheckBack(book, toolsOf(book).checkBacks!.at(-1)!.id, { kind: "let-go" });
+    }
+    book = keep(book, "iceberg", "Hungry");
+    const list = toolsOf(book).checkBacks!;
+    expect(list).toHaveLength(60);
+    expect(list[0].plan).toBe("Plan 1");
+    expect(openCheckBacks(book).map((c) => c.plan)).toEqual(["Plan 59", "Hungry"]);
+    const { envelope } = await createVault(book, "long testing-only passphrase");
+    const raw = JSON.stringify(envelope);
+    expect(raw).not.toContain("Hungry");
+    expect((await unlockVault(raw, "long testing-only passphrase")).book).toEqual(book);
   });
 });

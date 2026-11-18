@@ -4,7 +4,15 @@ import type { Book, Person } from "@/lib/relish/model";
 import { bookPages, PLAY_RECORD, type BookPage } from "@/lib/relish/pages";
 import { cardPeople, manualOf, type ManualCard } from "@/lib/relish/manual";
 import { livingOf, pendingPractice } from "@/lib/relish/living";
-import { activeTrackers, toolById, trackerProgress } from "@/lib/relish/tools";
+import {
+  activeTrackers,
+  dueCheckBacks,
+  openCheckBacks,
+  toolById,
+  trackerProgress,
+  type CheckBackAnswer,
+} from "@/lib/relish/tools";
+import CheckBackCard from "./CheckBack";
 import { pageKind, type Tone } from "@/lib/relish/catalog";
 import type { JournalDraft } from "@/lib/relish/journal";
 import { icons, personTones } from "./Home";
@@ -72,6 +80,7 @@ export default function YourBook({
   onExercise,
   onAddPerson,
   onEditPerson,
+  onCheckBack,
 }: {
   book: Book;
   busy: boolean;
@@ -93,7 +102,10 @@ export default function YourBook({
   onExercise: (id: string) => void;
   onAddPerson: () => void;
   onEditPerson: (person: Person) => void;
+  /** Answers a plan kept from an exercise (Plan a repair, and others). */
+  onCheckBack?: (id: string, answer: CheckBackAnswer) => void;
 }) {
+  const [asking, setAsking] = useState<string | null>(null);
   const [who, setWho] = useState<Who>(
     initialWho === "all" ||
       initialWho === "me" ||
@@ -175,8 +187,12 @@ export default function YourBook({
     .filter((e) => e.status === "draft")
     .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const running = activeTrackers(book);
+  const plans = onCheckBack ? openCheckBacks(book) : [];
   const pages = pagesFor(book, who, query);
-  const going = drafts.length + (practice ? 1 : 0) + (visit ? 1 : 0) + running.length;
+  const going =
+    drafts.length + (practice ? 1 : 0) + (visit ? 1 : 0) + running.length + plans.length;
+  const askingPlan = plans.find((c) => c.id === asking);
+  const dueIds = new Set(dueCheckBacks(book).map((c) => c.id));
   const child = audienceOf(book) !== "adult";
   if (child)
     return (
@@ -383,6 +399,33 @@ export default function YourBook({
                 </span>
               </button>
             )}
+            {plans.map((c) => {
+              const t = toolById(c.toolId);
+              const due = dueIds.has(c.id);
+              return (
+                <button
+                  key={c.id}
+                  className="rp-going-item"
+                  disabled={busy}
+                  aria-expanded={asking === c.id}
+                  onClick={() => setAsking(asking === c.id ? null : c.id)}
+                >
+                  <Clock />
+                  <span>
+                    <span className="rp-going-kicker">
+                      Your plan · {t?.title}
+                      {c.personId ? ` · ${nameOf(c.personId)}` : ""}
+                    </span>
+                    <span className="rp-going-title">
+                      “{c.plan.length > 70 ? `${c.plan.slice(0, 68)}…` : c.plan}” ·{" "}
+                      {due
+                        ? "How did it go?"
+                        : `Relish asks ${new Date(c.dueAt).toLocaleDateString(undefined, { weekday: "long" })}`}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
             {running.map((run) => {
               const t = toolById(run.toolId);
               const p = trackerProgress(run);
@@ -409,6 +452,19 @@ export default function YourBook({
           </div>
         ) : (
           <p className="rp-quiet">Nothing half-finished. Start something new any time.</p>
+        )}
+        {askingPlan && onCheckBack && (
+          <CheckBackCard
+            key={askingPlan.id}
+            className="rp-going-open"
+            book={book}
+            item={askingPlan}
+            busy={busy}
+            onAnswer={(answer) => {
+              onCheckBack(askingPlan.id, answer);
+              setAsking(null);
+            }}
+          />
         )}
       </section>
 

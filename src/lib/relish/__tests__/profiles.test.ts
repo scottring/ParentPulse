@@ -133,8 +133,12 @@ describe("mixed-age games", () => {
     game = JSON.parse(JSON.stringify(game));
     game = advanceGame(game, { type: "ready" });
     game = advanceGame(game, { type: "choice", choice: null });
-    game = advanceGame(game, { type: "ready" });
-    game = advanceGame(game, { type: "choice", choice: 2 });
+    // Two players go around more than once: five turns, ending on the last prompt.
+    for (const choice of [0, 1, 2]) {
+      game = advanceGame(game, { type: "ready" });
+      game = advanceGame(game, { type: "choice", choice });
+    }
+    expect(game.stage).toBe("reveal");
     expect(gameText(game)).toContain(text);
     expect(gameText(game)).toContain("have a picnic");
     expect(isLiving({ ...freshLiving(), game })).toBe(true);
@@ -142,7 +146,7 @@ describe("mixed-age games", () => {
       isLiving({ ...freshLiving(), game: { ...game, audience: "invalid" } }),
     ).toBe(false);
     expect(
-      isLiving({ ...freshLiving(), game: { ...game, contentVersion: 2 } }),
+      isLiving({ ...freshLiving(), game: { ...game, contentVersion: 1 } }),
     ).toBe(false);
   });
   it("retains the original content for older saved games", () => {
@@ -152,7 +156,9 @@ describe("mixed-age games", () => {
     ]);
     delete game.audience;
     delete game.contentVersion;
+    delete game.answers;
     expect(joyOptions(game)[0]).toBe("An unhurried walk");
+    expect(joyOptions(game)).toHaveLength(4);
     expect(isLiving({ ...freshLiving(), game })).toBe(true);
   });
 });

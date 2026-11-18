@@ -2,6 +2,7 @@ import type { Book } from "./model";
 import { writeJournalPage, JOURNAL_TITLE_LIMIT } from "./journal";
 import type { Audience } from "./profiles";
 import type { Tag } from "./catalog";
+import { outcomes, type Outcome } from "./living";
 
 // Interactive exercises: card sorts, sentence builders and day-by-day trackers.
 // A finished exercise becomes an ordinary kept journal page, so it appears in
@@ -163,7 +164,7 @@ export const tools: Tool[] = [
     title: "What’s under the behavior?",
     blurb: "Name what happened, sort the likely reasons, and pick one guess to test.",
     time: "About 4 minutes",
-    end: "Describe what happened, sort the reasons, choose one to test, then keep the page.",
+    end: "Describe what happened, sort the reasons, choose one to test, then keep the page. In a few days, Relish asks how it went.",
     audiences: ["adult"],
     aboutPerson: { label: "Who is this about?" },
     subject: { label: "What happened?", placeholder: "A meltdown at homework time" },
@@ -231,7 +232,7 @@ export const tools: Tool[] = [
     title: "Rewrite the opener",
     blurb: "Have a hard conversation coming up? Find a first sentence you can actually use.",
     time: "About 3 minutes",
-    end: "Fill in the three parts, check the sentence, then keep the page.",
+    end: "Fill in the three parts, check the sentence, then keep the page. In a couple of days, Relish asks how it went.",
     audiences: ["adult"],
     aboutPerson: { label: "Who will you say this to?" },
     fields: [
@@ -333,7 +334,7 @@ export const tools: Tool[] = [
     title: "Plan a repair",
     blurb: "After a rough moment, plan what to say so the next conversation goes better.",
     time: "About 3 minutes",
-    end: "Fill in the four parts, then keep the page and choose a time to say it.",
+    end: "Fill in the four parts, then keep the page. In a couple of days, Relish asks whether you got to say it.",
     audiences: ["adult"],
     aboutPerson: { label: "Who is the repair with?", required: true },
     fields: [
@@ -502,6 +503,8 @@ export type ToolPage = {
   personId?: string;
   /** Who it was with, for exercises not about anyone; empty is no one in particular. */
   people?: string[];
+  /** For exercises that check back later: the plan, in the person's own words. */
+  plan?: string;
 };
 export function keepToolPage(book: Book, page: ToolPage): Book {
   if (!page.text.trim()) throw new Error("Finish the exercise before keeping a page.");
@@ -509,10 +512,11 @@ export function keepToolPage(book: Book, page: ToolPage): Book {
     (id, i, all): id is string =>
       !!id && all.indexOf(id) === i && book.people.some((p) => p.id === id),
   );
-  return writeJournalPage(
+  const journalId = crypto.randomUUID();
+  const kept = writeJournalPage(
     book,
     {
-      id: crypto.randomUUID(),
+      id: journalId,
       title: page.title.slice(0, JOURNAL_TITLE_LIMIT),
       text: page.text,
       style: "moss",
@@ -523,6 +527,133 @@ export function keepToolPage(book: Book, page: ToolPage): Book {
     0,
     "kept",
   );
+  const days = page.toolId ? checkBackDays[page.toolId] : undefined;
+  const plan = (page.plan || "").trim().slice(0, PLAN_LIMIT);
+  if (!days || !plan) return kept;
+  const created = new Date();
+  const checkBack: CheckBack = {
+    id: crypto.randomUUID(),
+    toolId: page.toolId!,
+    pageId: journalId,
+    plan,
+    ...(page.personId && people.includes(page.personId) ? { personId: page.personId } : {}),
+    createdAt: created.toISOString(),
+    dueAt: new Date(created.getTime() + days * DAY).toISOString(),
+  };
+  return change(kept, (s) => ({
+    ...s,
+    checkBacks: trimCheckBacks([...(s.checkBacks || []), checkBack]),
+  }));
+}
+
+// ── Check-backs ─────────────────────────────────────────────────────────────
+// A few days after keeping a plan from one of these exercises, Relish asks
+// about it in the person's own words: "You planned to say … Did you get a
+// chance?" It is the same loop Think it through uses for its plans.
+
+const DAY = 86_400_000;
+/** The exercises that check back, and how many days after keeping. */
+export const checkBackDays: Record<string, number> = {
+  repair: 2,
+  "soft-start": 2,
+  iceberg: 3,
+};
+export const PLAN_LIMIT = 1500;
+export const CHECK_BACK_LIMIT = 60;
+export type CheckBack = {
+  id: string;
+  toolId: string;
+  /** The kept journal page the plan came from. */
+  pageId: string;
+  /** The plan in the person's own words, as it was kept. */
+  plan: string;
+  personId?: string;
+  createdAt: string;
+  /** Asked about from this time on; "Not yet" moves it later. */
+  dueAt: string;
+  /** Unset while it's still waiting for an answer. */
+  status?: "tried" | "let-go";
+  outcome?: Outcome;
+  note?: string;
+  answeredAt?: string;
+};
+export type CheckBackAnswer =
+  | { kind: "tried"; outcome?: Outcome; note?: string }
+  | { kind: "later" }
+  | { kind: "let-go" };
+/** Plans still waiting for an answer, oldest first. */
+export const openCheckBacks = (book: Book) =>
+  (toolsOf(book).checkBacks || [])
+    .filter((c) => !c.status)
+    .toSorted((a, b) => a.dueAt.localeCompare(b.dueAt));
+/** Plans it's time to ask about. */
+export const dueCheckBacks = (book: Book, now = new Date()) =>
+  openCheckBacks(book).filter((c) => Date.parse(c.dueAt) <= now.getTime());
+/** Answered plans make room first; plans still waiting are never dropped. */
+function trimCheckBacks(list: CheckBack[]) {
+  let extra = list.length - CHECK_BACK_LIMIT;
+  return list.filter((c) => !(extra > 0 && c.status && extra-- > 0));
+}
+/** The words Relish uses to ask about a plan, built from what the person wrote. */
+export function checkBackWords(book: Book, c: CheckBack) {
+  const name = book.people.find((p) => p.id === c.personId)?.name;
+  if (c.toolId === "iceberg")
+    return {
+      lead: `You guessed it was “${c.plan}”${name ? ` for ${name}` : ""}, and planned to respond to that instead of the behavior.`,
+      ask: "Did you get a chance to try it?",
+    };
+  return {
+    lead:
+      c.toolId === "repair"
+        ? `You planned to say${name ? ` to ${name}` : ""}:`
+        : `You planned to start the conversation${name ? ` with ${name}` : ""} like this:`,
+    quote: c.plan,
+    ask: "Did you get a chance to say it?",
+  };
+}
+export function answerCheckBack(
+  book: Book,
+  id: string,
+  answer: CheckBackAnswer,
+  now = new Date(),
+): Book {
+  const c = openCheckBacks(book).find((x) => x.id === id);
+  if (!c) throw new Error("This plan has already been answered.");
+  const stamp = now.toISOString();
+  let next: CheckBack;
+  if (answer.kind === "later")
+    next = { ...c, dueAt: new Date(now.getTime() + 2 * DAY).toISOString() };
+  else if (answer.kind === "let-go")
+    next = { ...c, status: "let-go", answeredAt: stamp };
+  else {
+    if (answer.outcome !== undefined && !Object.hasOwn(outcomes, answer.outcome))
+      throw new Error("Choose how it went.");
+    const note = (answer.note || "").trim().slice(0, NOTE_LIMIT);
+    next = {
+      ...c,
+      status: "tried",
+      answeredAt: stamp,
+      ...(answer.outcome ? { outcome: answer.outcome } : {}),
+      ...(note ? { note } : {}),
+    };
+  }
+  return change(book, (s) => ({
+    ...s,
+    checkBacks: (s.checkBacks || []).map((x) => (x.id === id ? next : x)),
+  }));
+}
+/** What a kept exercise page shows once its plan has been answered. */
+export function checkBackSection(book: Book, journalId: string) {
+  const c = (toolsOf(book).checkBacks || []).find(
+    (x) => x.pageId === journalId && x.status === "tried",
+  );
+  if (!c) return undefined;
+  return {
+    label: "How it went",
+    text: [c.outcome ? outcomes[c.outcome] + "." : "I tried it.", c.note || ""]
+      .filter(Boolean)
+      .join(" "),
+  };
 }
 
 // ── Trackers ────────────────────────────────────────────────────────────────
@@ -537,7 +668,12 @@ export type TrackerRun = {
   finishedAt?: string;
   pageId?: string;
 };
-export type ToolsState = { version: 1; trackers: TrackerRun[] };
+export type ToolsState = {
+  version: 1;
+  trackers: TrackerRun[];
+  /** Optional: books from before check-backs simply have none. */
+  checkBacks?: CheckBack[];
+};
 export const TRACKER_LIMIT = 40;
 export const NOTE_LIMIT = 500;
 
@@ -726,6 +862,33 @@ export function isTools(value: unknown): value is ToolsState {
       keys.add(m.key as string);
       if (!date(m.at)) return false;
       if (m.note !== undefined && !str(m.note, NOTE_LIMIT)) return false;
+    }
+  }
+  if (value.checkBacks !== undefined) {
+    const list = value.checkBacks;
+    if (!Array.isArray(list) || list.length > CHECK_BACK_LIMIT) return false;
+    const seen = new Set<string>();
+    for (const c of list) {
+      if (!obj(c) || !str(c.id, 100) || seen.has(c.id)) return false;
+      seen.add(c.id);
+      if (typeof c.toolId !== "string" || !Object.hasOwn(checkBackDays, c.toolId))
+        return false;
+      if (!str(c.pageId, 100) || !str(c.plan, PLAN_LIMIT)) return false;
+      if (c.personId !== undefined && !str(c.personId, 100)) return false;
+      if (!date(c.createdAt) || !date(c.dueAt)) return false;
+      if (c.status !== undefined && c.status !== "tried" && c.status !== "let-go")
+        return false;
+      if ((c.status === undefined) !== (c.answeredAt === undefined)) return false;
+      if (c.answeredAt !== undefined && !date(c.answeredAt)) return false;
+      if (
+        c.outcome !== undefined &&
+        (c.status !== "tried" ||
+          typeof c.outcome !== "string" ||
+          !Object.hasOwn(outcomes, c.outcome))
+      )
+        return false;
+      if (c.note !== undefined && (c.status !== "tried" || !str(c.note, NOTE_LIMIT)))
+        return false;
     }
   }
   return true;

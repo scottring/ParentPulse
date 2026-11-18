@@ -9,6 +9,8 @@ import { audienceOf } from "@/lib/relish/profiles";
 import { JOURNAL_TEXT_LIMIT } from "@/lib/relish/journal";
 import Illustration from "./Illustration";
 import KidHome from "./KidHome";
+import CheckBackCard from "./CheckBack";
+import { dueCheckBacks, type CheckBackAnswer } from "@/lib/relish/tools";
 
 export type FamilyPerson = {
   id: string;
@@ -88,6 +90,7 @@ export default function Home({
   onQuickSave,
   onQuickWrite,
   onQuickPhoto,
+  onCheckBack,
 }: {
   book: Book;
   names: string[];
@@ -106,12 +109,15 @@ export default function Home({
   onQuickWrite?: (text: string, voice: boolean) => void;
   /** Opens a new page with the photo picker showing, carrying any words typed. */
   onQuickPhoto?: (text: string, file: File) => void;
+  /** Answers a kept plan that it's time to ask about. */
+  onCheckBack?: (id: string, answer: CheckBackAnswer) => void;
 }) {
   const list = nudgesFor(book, names);
   const [i, setI] = useState(() => nudgeStart(list.length));
   const nudge = list[i % Math.max(list.length, 1)];
   const child = audienceOf(book) !== "adult";
   const latest = bookPages(book).toReversed().slice(0, 3);
+  const due = dueCheckBacks(book)[0];
   if (child)
     return (
       <KidHome
@@ -189,7 +195,16 @@ export default function Home({
           onPage={onPage}
         />
       )}
-      {nudge && (
+      {/* A plan that's due takes today's one invitation; the suggestion returns once it's answered. */}
+      {onCheckBack && due ? (
+        <CheckBackCard
+          key={due.id}
+          book={book}
+          item={due}
+          busy={busy}
+          onAnswer={(answer) => onCheckBack(due.id, answer)}
+        />
+      ) : nudge && (
         <section className="rp-nudge" aria-label="Today’s suggestion">
           <div className="rp-nudge-text">
             <p className="rp-nudge-kicker">

@@ -1,6 +1,9 @@
 import type { Audience } from "./profiles";
 import type { Tag } from "./catalog";
 type Round = { prompt: string; choices: string[] };
+// Small joys: the first four of each list are what one-chooser rounds offer;
+// rounds where everyone is guessed about offer the first ten. Never reorder
+// them: open rounds store picks by position.
 const content: Record<
   Exclude<Audience, "adult">,
   { joys: string[]; rounds: Round[] }
@@ -11,6 +14,12 @@ const content: Record<
       "Building a tower",
       "A story together",
       "A quiet little rest",
+      "Splashing in the bath",
+      "Playing chase",
+      "Baking something yummy",
+      "Dancing to music",
+      "Drawing a picture",
+      "A cuddle on the couch",
     ],
     rounds: [
       {
@@ -45,6 +54,12 @@ const content: Record<
       "Making something",
       "Reading together",
       "A silly guessing game",
+      "A trip to the park",
+      "Building with blocks",
+      "Baking or cooking",
+      "A movie with snacks",
+      "Drawing or painting",
+      "A bike or scooter ride",
     ],
     rounds: [
       {
@@ -95,6 +110,12 @@ const content: Record<
       "Making or building something",
       "Time with a good friend",
       "A little time to myself",
+      "A game night",
+      "Cooking something new",
+      "Running around outside",
+      "A good book or comic",
+      "Music turned up loud",
+      "A trip out for a treat",
     ],
     rounds: [
       {
@@ -145,6 +166,12 @@ const content: Record<
       "Making something with friends",
       "An unhurried conversation",
       "Space to recharge on my own",
+      "Music and headphones",
+      "Food out with someone",
+      "Sleeping in",
+      "A show to watch together",
+      "Getting outside",
+      "Being trusted with something",
     ],
     rounds: [
       {
@@ -190,6 +217,15 @@ const content: Record<
     ],
   },
 };
+/** Grown-up small joys after the first four (which live with the older rounds). */
+export const adultJoysMore = [
+  "Coffee or tea in peace",
+  "A meal someone else cooked",
+  "An early night",
+  "Music while cooking",
+  "Time outside",
+  "A long talk with a friend",
+];
 export function childPlayContent(audience: Exclude<Audience, "adult">) {
   return content[audience];
 }
@@ -211,33 +247,88 @@ export function childStoryRounds(
   ];
 }
 
-// "Same page?" — everyone answers the same question in private, then the reveal
-// shows where the group agrees. Every prompt has exactly three choices.
-const sameYoung: Round[] = [
-  { prompt: "Our best Saturday breakfast is…", choices: ["pancakes", "cereal in our pajamas", "eggs and toast"] },
-  { prompt: "The best movie-night snack is…", choices: ["popcorn", "fruit", "something sweet"] },
-  { prompt: "Our perfect rainy day is…", choices: ["a blanket fort", "a board game", "baking something"] },
-  { prompt: "The best way to cheer someone up is…", choices: ["a hug", "a silly joke", "some quiet time"] },
+// "Same page?" — everyone answers the same questions in private, then the
+// reveal shows where the group agrees. Every question has exactly three
+// choices. Ids and choice order are stored in play records and open rounds:
+// never reorder, reword the meaning of, or remove a question; add new ones.
+export type SameQuestion = {
+  id: string;
+  /** A few words for "you differ most on …". */
+  topic: string;
+  prompt: string;
+  choices: string[];
+};
+// The first entries of each list are the one-question rounds from before
+// rounds had five questions; older open rounds still pick from these by index.
+const sameYoung: SameQuestion[] = [
+  { id: "y-breakfast", topic: "breakfast", prompt: "Our best Saturday breakfast is…", choices: ["pancakes", "cereal in our pajamas", "eggs and toast"] },
+  { id: "y-snack", topic: "movie snacks", prompt: "The best movie-night snack is…", choices: ["popcorn", "fruit", "something sweet"] },
+  { id: "y-rainy", topic: "rainy days", prompt: "Our perfect rainy day is…", choices: ["a blanket fort", "a board game", "baking something"] },
+  { id: "y-cheer", topic: "cheering someone up", prompt: "The best way to cheer someone up is…", choices: ["a hug", "a silly joke", "some quiet time"] },
 ];
-const sameOlder: Round[] = [
-  { prompt: "Our ideal family trip is…", choices: ["mountains or woods", "a big city", "a beach"] },
-  { prompt: "The fairest way to pick the movie is…", choices: ["take turns", "everyone votes", "flip a coin"] },
-  { prompt: "The house rule that matters most is…", choices: ["be kind", "tell the truth", "clean up after yourself"] },
-  { prompt: "When someone in our family is upset, the best first move is…", choices: ["give them some space", "ask what they need", "offer a hug or a snack"] },
-  { prompt: "A perfect family evening is…", choices: ["cooking together", "a game night", "everyone cozy with their own thing"] },
+const sameYoungMore: SameQuestion[] = [
+  { id: "y-movie-pick", topic: "picking the movie", prompt: "Who should pick the movie tonight?", choices: ["the youngest", "we take turns", "everyone votes"] },
+  { id: "y-bedtime", topic: "bedtime", prompt: "The best part of bedtime is…", choices: ["a story", "a song", "a cuddle and a chat"] },
+  { id: "y-park", topic: "trips to the park", prompt: "The best thing at the park is…", choices: ["the swings", "a picnic", "running races"] },
+  { id: "y-pet", topic: "pets", prompt: "If we got a pet, it should be…", choices: ["a dog", "a cat", "a fish"] },
+  { id: "y-sad", topic: "sad moments", prompt: "When I feel sad, I like it when someone…", choices: ["gives me a hug", "makes me laugh", "sits with me quietly"] },
+  { id: "y-weekend", topic: "weekend mornings", prompt: "On a weekend morning, we should…", choices: ["stay in our pajamas", "go somewhere fun", "make something together"] },
+  { id: "y-dinner", topic: "dinner", prompt: "The best dinner is…", choices: ["pizza", "pasta", "tacos"] },
+  { id: "y-help", topic: "helping at home", prompt: "The best job to help with at home is…", choices: ["setting the table", "watering plants or feeding a pet", "putting toys away"] },
 ];
-const sameAdult: Round[] = [
-  { prompt: "Bedtime is running 30 minutes late. What do we do?", choices: ["Lights out now, no extras", "Shorter routine, keep the cuddle", "Let it go tonight, reset tomorrow"] },
-  { prompt: "A child says, “I’m bored.” The best answer is…", choices: ["Boredom is fine; you’ll find something", "Offer two ideas to choose from", "Let’s do something together"] },
-  { prompt: "Screens at the dinner table?", choices: ["Never", "Only something we watch together", "Fine on special nights"] },
-  { prompt: "A free Saturday afternoon appears. We…", choices: ["get out of the house together", "each do our own thing", "tackle a project as a team"] },
-  { prompt: "A child asks for a new toy they’ve wanted for weeks.", choices: ["They save up for it", "It waits for a birthday or holiday", "Yes, if it’s small"] },
-  { prompt: "Someone says something unkind at the table. First move?", choices: ["Name it calmly, right then", "Talk to them afterwards, privately", "Let it go unless it happens again"] },
+const sameOlder: SameQuestion[] = [
+  { id: "o-trip", topic: "family trips", prompt: "Our ideal family trip is…", choices: ["mountains or woods", "a big city", "a beach"] },
+  { id: "o-movie-pick", topic: "picking the movie", prompt: "The fairest way to pick the movie is…", choices: ["take turns", "everyone votes", "flip a coin"] },
+  { id: "o-house-rule", topic: "house rules", prompt: "The house rule that matters most is…", choices: ["be kind", "tell the truth", "clean up after yourself"] },
+  { id: "o-upset", topic: "when someone is upset", prompt: "When someone in our family is upset, the best first move is…", choices: ["give them some space", "ask what they need", "offer a hug or a snack"] },
+  { id: "o-evening", topic: "family evenings", prompt: "A perfect family evening is…", choices: ["cooking together", "a game night", "everyone cozy with their own thing"] },
 ];
-export function samePagePrompts(audience: Audience): Round[] {
+const sameOlderMore: SameQuestion[] = [
+  { id: "o-screens", topic: "screen time", prompt: "On a school night, fair screen time is…", choices: ["under an hour", "an hour or two", "it depends on the night"] },
+  { id: "o-phones-dinner", topic: "phones at dinner", prompt: "Phones at the dinner table?", choices: ["never", "only to look something up together", "fine if it’s a quiet night"] },
+  { id: "o-allowance", topic: "allowance", prompt: "An allowance should be…", choices: ["earned with chores", "the same every week", "only for special things"] },
+  { id: "o-bedtime", topic: "weekend bedtime", prompt: "On weekends, bedtime should be…", choices: ["the same as school nights", "a bit later", "whenever we’re tired"] },
+  { id: "o-chores", topic: "chores", prompt: "The fairest way to split chores is…", choices: ["a chart that rotates", "everyone picks their own", "whoever’s home does it"] },
+  { id: "o-friends", topic: "friends over", prompt: "Friends over on a school night?", choices: ["sure, once homework’s done", "weekends only", "ask each time"] },
+  { id: "o-saturday", topic: "free Saturdays", prompt: "A free Saturday should be…", choices: ["out of the house together", "everyone doing their own thing", "a lazy day at home"] },
+];
+const sameAdult: SameQuestion[] = [
+  { id: "a-bedtime-late", topic: "bedtime", prompt: "Bedtime is running 30 minutes late. What do we do?", choices: ["Lights out now, no extras", "Shorter routine, keep the cuddle", "Let it go tonight, reset tomorrow"] },
+  { id: "a-bored", topic: "boredom", prompt: "A child says, “I’m bored.” The best answer is…", choices: ["Boredom is fine; you’ll find something", "Offer two ideas to choose from", "Let’s do something together"] },
+  { id: "a-screens-dinner", topic: "screens at dinner", prompt: "Screens at the dinner table?", choices: ["Never", "Only something we watch together", "Fine on special nights"] },
+  { id: "a-saturday", topic: "weekend plans", prompt: "A free Saturday afternoon appears. We…", choices: ["get out of the house together", "each do our own thing", "tackle a project as a team"] },
+  { id: "a-toy", topic: "money and treats", prompt: "A child asks for a new toy they’ve wanted for weeks.", choices: ["They save up for it", "It waits for a birthday or holiday", "Yes, if it’s small"] },
+  { id: "a-unkind", topic: "unkind words", prompt: "Someone says something unkind at the table. First move?", choices: ["Name it calmly, right then", "Talk to them afterwards, privately", "Let it go unless it happens again"] },
+];
+const sameAdultMore: SameQuestion[] = [
+  { id: "a-homework", topic: "homework", prompt: "It’s 8 pm and the homework isn’t done.", choices: ["Finish it now, then bed", "Bed now; it can wait", "Let them explain it to the teacher"] },
+  { id: "a-sleepover", topic: "sleepovers", prompt: "A first sleepover invitation arrives.", choices: ["Yes, if we know the family", "Not yet; a late pickup instead", "Talk it through with them first"] },
+  { id: "a-phone", topic: "a first phone", prompt: "When should a child get their own phone?", choices: ["Before middle school", "Around 13 or 14", "When they can pay for part of it"] },
+  { id: "a-sick", topic: "sick mornings", prompt: "A child feels sick on a school morning, but there’s no fever.", choices: ["Go in; call if it gets worse", "Stay home and rest", "A slow start, then go in late"] },
+  { id: "a-squabble", topic: "squabbles", prompt: "The kids are squabbling over one toy.", choices: ["Let them sort it out", "Step in and set a timer", "The toy takes a break"] },
+  { id: "a-grandparents", topic: "grandparents’ rules", prompt: "A grandparent gives a treat we’d usually say no to.", choices: ["Their house, their rules", "Ask them gently to check first", "Fine on special occasions"] },
+];
+/** The one-question lists older rounds were built from; keep their order. */
+export function samePagePrompts(audience: Audience): SameQuestion[] {
   if (audience === "adult") return sameAdult;
   return audience === "under-6" || audience === "6-8" ? sameYoung : sameOlder;
 }
+/** Every question a five-question round can ask this age range. */
+export function samePageBank(audience: Audience): SameQuestion[] {
+  if (audience === "adult") return [...sameAdult, ...sameAdultMore];
+  return audience === "under-6" || audience === "6-8"
+    ? [...sameYoung, ...sameYoungMore]
+    : [...sameOlder, ...sameOlderMore];
+}
+const allSame = [
+  ...sameYoung,
+  ...sameYoungMore,
+  ...sameOlder,
+  ...sameOlderMore,
+  ...sameAdult,
+  ...sameAdultMore,
+];
+export const samePageQuestion = (id: string) => allSame.find((q) => q.id === id);
 
 // The pass-and-play games as they appear in Do something.
 export const games: {
@@ -250,15 +341,15 @@ export const games: {
   {
     kind: "match",
     title: "Same page?",
-    blurb: "Everyone answers the same question in private. See where you agree.",
-    short: "3–5 min",
+    blurb: "Five quick questions, answered in private. See where you match, and where you don’t.",
+    short: "5–10 min",
     tags: ["kids", "5"],
   },
   {
     kind: "joy",
     title: "Guess my small joy",
-    blurb: "One person picks a small joy in secret; everyone else guesses. See who knows them best.",
-    short: "5 min",
+    blurb: "Everyone picks a small joy in secret, then guesses each other’s. See who knows whom best.",
+    short: "5–10 min",
     tags: ["kids", "5"],
   },
   {

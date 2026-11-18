@@ -31,7 +31,9 @@ export function manualSources(book: Book, scope: ManualScope): ManualSource[] {
   const pages =
     scope === "personal"
       ? bookPages(book)
-          // Play records are only names and a date: never sent for suggestions.
+          // Nothing a game remembers (answers, players' own lines) is ever
+          // sent for suggestions: play records are left out, and a kept game
+          // page sends only the words every player approved.
           .filter((p) => !p.record)
           .map((p) => ({
           id: p.id,
@@ -39,7 +41,9 @@ export function manualSources(book: Book, scope: ManualScope): ManualSource[] {
           text: [
             p.from ? `From ${p.from}:` : "",
             p.text,
-            ...p.sections.map((s) => `${s.label}: ${s.text}`),
+            ...(p.id.startsWith("game:") ? [] : p.sections).map(
+              (s) => `${s.label}: ${s.text}`,
+            ),
           ]
             .filter(Boolean)
             .join("\n"),

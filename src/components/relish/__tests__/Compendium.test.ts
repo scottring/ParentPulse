@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { webcrypto } from "node:crypto";
 import { emptyBook, sampleBook, type Book } from "@/lib/relish/model";
-import { advanceGame, livingOf, newGame, type Game } from "@/lib/relish/living";
+import { advanceGame, livingOf, newGame, turnPlan, type Game } from "@/lib/relish/living";
 import LivingBook from "../LivingBook";
 Object.defineProperty(globalThis, "crypto", {
   value: webcrypto,
@@ -66,7 +66,7 @@ function revealed(): Game {
   );
   while (g.stage !== "reveal") {
     if (g.stage === "handoff") g = advanceGame(g, { type: "ready" });
-    g = advanceGame(g, { type: "choice", choice: 1 });
+    g = advanceGame(g, { type: "answer", answers: turnPlan(g)[g.turn].asks.map(() => 1) });
   }
   return g;
 }
@@ -78,7 +78,7 @@ it("a game finished without keeping a page shows in Your book under each player"
   const app = openBook({ ...book, living: { ...livingOf(book), game: revealed() } });
   fireEvent.click(screen.getByRole("button", { name: "Do something" }));
   fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
-  fireEvent.click(await screen.findByRole("button", { name: /Finish for now/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /Finish round/ }));
   await screen.findByRole("status");
   expect(livingOf(app.stored()).plays).toHaveLength(1);
   fireEvent.click(screen.getByRole("button", { name: "Your book" }));
