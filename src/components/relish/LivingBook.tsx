@@ -868,6 +868,7 @@ export default function LivingBook({
             key={pageKey}
             book={book}
             busy={busy}
+            family={family}
             onCommit={(update, after, message) =>
               void commit(update, after, message)
             }

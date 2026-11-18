@@ -47,10 +47,13 @@ export default function Tools({
   onActivities,
   initialId,
   onBack,
+  family = [],
 }: {
   book: Book;
   busy: boolean;
   onCommit: Commit;
+  /** Family members with their own books in the library (e.g. the children). */
+  family?: { name: string }[];
   onPages: () => void;
   /** Opens one kept page by its Your book id (e.g. "journal:<id>"). */
   onOpenPage?: (id: string) => void;
@@ -131,6 +134,7 @@ export default function Tools({
         busy={busy}
         onCommit={onCommit}
         onKept={setKept}
+        family={family}
         backLabel={onBack ? "Back to Do something" : "All exercises"}
         onBack={() => (onBack ? onBack() : setOpenId(null))}
       />
@@ -231,6 +235,7 @@ function OpenExercise({
   busy,
   onCommit,
   onKept,
+  family,
   backLabel,
   onBack,
 }: {
@@ -239,11 +244,40 @@ function OpenExercise({
   busy: boolean;
   onCommit: Commit;
   onKept: (kept: Kept) => void;
+  family: { name: string }[];
   backLabel: string;
   onBack: () => void;
 }) {
   const [started, setStarted] = useState(false);
   const [who, setWho] = useState("");
+  // Family with their own books who aren't noted in this one yet. Choosing one
+  // notes them in this book when the exercise starts, so it can be about them.
+  const same = (a: string, b: string) =>
+    a.trim().toLowerCase() === b.trim().toLowerCase();
+  const extra = family
+    .map((f) => f.name)
+    .filter((n, i, all) => n.trim() && all.findIndex((x) => same(x, n)) === i)
+    .filter((n) => !book.people.some((p) => same(p.name, n)));
+  const choices = [
+    ...book.people.map((p) => ({ id: p.id, name: p.name })),
+    ...extra.map((name, i) => ({ id: `family:${i}`, name })),
+  ];
+  /** The chosen person, noted in the book first when they come from the library. */
+  function withWho(b: Book): [Book, string] {
+    if (!who.startsWith("family:")) return [b, who];
+    const name = extra[Number(who.slice(7))];
+    const found = b.people.find((p) => same(p.name, name));
+    if (found) return [b, found.id];
+    const person = {
+      id: crypto.randomUUID(),
+      name,
+      role: "child",
+      color: ["rose", "ochre", "sage"][Math.floor(Math.random() * 3)],
+      note: "",
+      lessons: [],
+    };
+    return [{ ...b, people: [...b.people, person] }, person.id];
+  }
   const running =
     tool.kind === "tracker" &&
     activeTrackers(book).some((t) => t.toolId === tool.id);
@@ -273,18 +307,34 @@ function OpenExercise({
         book={book}
         busy={busy}
         who={who}
+        choices={choices}
         onWho={setWho}
         backLabel={backLabel}
         onBack={onBack}
-        onStart={() =>
-          tool.kind === "tracker"
-            ? onCommit(
-                (b) => startTracker(b, tool.id, who || undefined),
-                undefined,
-                "Started. Your marks save as you go.",
-              )
-            : setStarted(true)
-        }
+        onStart={() => {
+          if (tool.kind === "tracker")
+            return onCommit(
+              (b) => {
+                const [next, id] = withWho(b);
+                return startTracker(next, tool.id, id || undefined);
+              },
+              undefined,
+              "Started. Your marks save as you go.",
+            );
+          if (!who.startsWith("family:")) return setStarted(true);
+          let id = "";
+          onCommit(
+            (b) => {
+              const [next, chosen] = withWho(b);
+              id = chosen;
+              return next;
+            },
+            () => {
+              setWho(id);
+              setStarted(true);
+            },
+          );
+        }}
       />
     );
   // Exercises about someone use the choice as that person; others only tag the page.
@@ -344,6 +394,7 @@ function ExerciseStart({
   book,
   busy,
   who,
+  choices,
   onWho,
   backLabel,
   onBack,
@@ -353,6 +404,8 @@ function ExerciseStart({
   book: Book;
   busy: boolean;
   who: string;
+  /** Everyone this could be with: people in the book, then family with their own books. */
+  choices: { id: string; name: string }[];
   onWho: (id: string) => void;
   backLabel: string;
   onBack: () => void;
@@ -361,7 +414,7 @@ function ExerciseStart({
   const required = !!tool.aboutPerson?.required;
   const options = [
     ...(required ? [] : [{ id: "", name: "No one in particular" }]),
-    ...book.people.map((p) => ({ id: p.id, name: p.name })),
+    ...choices,
   ];
   return (
     <main className="rt-start" aria-labelledby="rt-title">
@@ -394,12 +447,12 @@ function ExerciseStart({
               ? "Each mark saves as you go. Keep a page when you’re done, or stop any time."
               : "Nothing is saved until you choose Keep this page at the end."}
           </p>
-          {required && !book.people.length ? (
+          {required && !choices.length ? (
             <p className="lb-fine rt-note">
               Add someone to your book first, then come back to this exercise.
             </p>
           ) : (
-            book.people.length > 0 && (
+            choices.length > 0 && (
               <fieldset className="rt-who">
                 <legend>
                   {tool.aboutPerson?.label || "Who is this with?"}
