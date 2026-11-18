@@ -1,4 +1,4 @@
-import type { BookPage } from "./pages";
+import { PLAY_RECORD, type BookPage } from "./pages";
 import { tools, toolsFor } from "./tools";
 import { games } from "./play-content";
 import type { NudgeAction } from "./nudges";
@@ -29,7 +29,8 @@ const isExercisePage = (title: string) =>
 
 /** How a kept page is labeled and colored in Home and Your book. */
 export function pageKind(page: BookPage): PageKind {
-  if (page.kind === "Made together") return { label: "Game", tone: "clay" };
+  if (page.kind === "Made together" || page.kind === PLAY_RECORD)
+    return { label: "Game", tone: "clay" };
   if (page.kind === "Received passage") return { label: "Shared", tone: "lilac" };
   if (page.kind === "Journal entry") {
     if (isExercisePage(page.title)) return { label: "Exercise", tone: "sage" };

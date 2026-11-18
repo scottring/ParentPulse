@@ -93,6 +93,20 @@ export type SharedPage = {
   approvedBy: string[];
   createdAt: string;
 };
+/**
+ * A light trace that a round was played, kept or not. It holds only the game
+ * kind, the players' names (as stored on the game) and the date: never
+ * answers, story text or anything private. `id` is the game's id.
+ */
+export type PlayRecord = {
+  id: string;
+  kind: GameKind;
+  players: { id: string; name: string }[];
+  playedAt: string;
+  /** The shared page kept for this round, when every player approved one. */
+  pageId?: string;
+};
+export const PLAY_LIMIT = 500;
 export type LivingState = {
   version: 1;
   thread?: ThreadId;
@@ -100,6 +114,8 @@ export type LivingState = {
   entries: LivingEntry[];
   sharedPages: SharedPage[];
   game?: Game;
+  /** Optional: books from before play records simply have none. */
+  plays?: PlayRecord[];
 };
 export const freshLiving = (): LivingState => ({
   version: 1,
@@ -549,6 +565,39 @@ export function keepGame(book: Book): Book {
   }));
 }
 
+/**
+ * Notes that the open round was played, once per game, as soon as it has
+ * reached its reveal (whether or not a page was kept). Rounds that never
+ * reached the reveal leave no trace.
+ */
+export function recordRound(l: LivingState): LivingState {
+  const g = l.game;
+  if (!g || !["reveal", "kept", "finished"].includes(g.stage)) return l;
+  const plays = l.plays || [];
+  const record: PlayRecord = {
+    id: g.id,
+    kind: g.kind,
+    players: g.players.map((p) => ({ id: p.id, name: p.name })),
+    playedAt: g.finishedAt || g.updatedAt,
+    ...(g.savedPageId ? { pageId: g.savedPageId } : {}),
+  };
+  const previous = plays.find((r) => r.id === g.id);
+  if (previous && previous.pageId === record.pageId) return l;
+  return {
+    ...l,
+    plays: previous
+      ? plays.map((r) => (r.id === g.id ? { ...previous, ...record, playedAt: previous.playedAt } : r))
+      : [...plays, record].slice(-PLAY_LIMIT),
+  };
+}
+/** Ends the open round and notes that it was played. */
+export function finishGame(book: Book): Book {
+  return changeLiving(book, (x) => {
+    if (!x.game) throw new Error("No game is open.");
+    return recordRound({ ...x, game: advanceGame(x.game, { type: "finish" }) });
+  });
+}
+
 // Imported encrypted backups are untrusted structured data. Reject invalid states
 // before they can reach navigation, turn indexing, or completion transitions.
 const obj = (v: unknown): v is Record<string, unknown> =>
@@ -615,6 +664,29 @@ export function isLiving(value: unknown): value is LivingState {
     )
   )
     return false;
+  if (value.plays !== undefined) {
+    if (
+      !Array.isArray(value.plays) ||
+      value.plays.length > PLAY_LIMIT ||
+      new Set(value.plays.map((r) => (obj(r) ? r.id : r))).size !==
+        value.plays.length ||
+      !value.plays.every(
+        (r) =>
+          obj(r) &&
+          str(r.id, 100) &&
+          !!r.id &&
+          gameKinds.includes(r.kind as GameKind) &&
+          date(r.playedAt) &&
+          optional(r.pageId, (x) => str(x, 100) && !!x) &&
+          Array.isArray(r.players) &&
+          r.players.length >= 2 &&
+          r.players.length <= 12 &&
+          r.players.every(player) &&
+          new Set(r.players.map((x) => x.id)).size === r.players.length,
+      )
+    )
+      return false;
+  }
   const v = value.visit;
   if (v !== undefined) {
     if (

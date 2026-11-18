@@ -224,7 +224,7 @@ export default function Journal({
                 <p>{section.text}</p>
               </section>
             ))}
-            {page.people.length > 0 && (
+            {page.people.length > 0 && !page.from && !page.record && (
               <p className="rj-private">
                 Thinking of{" "}
                 {page.people
@@ -246,20 +246,22 @@ export default function Journal({
                     <Feather size={16} /> Edit this page
                   </button>
                 )}
-                <button
-                  className="lb-text"
-                  onClick={() => {
-                    const selection = window.getSelection();
-                    const within =
-                      !!selection?.anchorNode &&
-                      !!selection.focusNode &&
-                      prose.current?.contains(selection.anchorNode) &&
-                      prose.current?.contains(selection.focusNode);
-                    setExcerpt(within ? selection!.toString() : "");
-                  }}
-                >
-                  <Share2 size={16} /> Choose a passage
-                </button>
+                {!page.record && (
+                  <button
+                    className="lb-text"
+                    onClick={() => {
+                      const selection = window.getSelection();
+                      const within =
+                        !!selection?.anchorNode &&
+                        !!selection.focusNode &&
+                        prose.current?.contains(selection.anchorNode) &&
+                        prose.current?.contains(selection.focusNode);
+                      setExcerpt(within ? selection!.toString() : "");
+                    }}
+                  >
+                    <Share2 size={16} /> Choose a passage
+                  </button>
+                )}
               </div>
             </div>
           </article>

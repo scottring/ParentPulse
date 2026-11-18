@@ -1,7 +1,7 @@
 "use client";
 import { useState, type RefObject } from "react";
 import type { Book, Person } from "@/lib/relish/model";
-import { bookPages, type BookPage } from "@/lib/relish/pages";
+import { bookPages, PLAY_RECORD, type BookPage } from "@/lib/relish/pages";
 import { manualOf, type ManualCard } from "@/lib/relish/manual";
 import { livingOf, pendingPractice } from "@/lib/relish/living";
 import { activeTrackers, toolById, trackerProgress } from "@/lib/relish/tools";
@@ -15,7 +15,9 @@ type Learned = { id: string; who: string; tone: Tone; text: string; tryThis?: st
 const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 const shared = (p: BookPage) =>
-  p.kind === "Made together" || p.kind === "Received passage";
+  p.kind === "Made together" ||
+  p.kind === PLAY_RECORD ||
+  p.kind === "Received passage";
 
 export function pagesFor(book: Book, who: Who, query = "") {
   const q = query.trim().toLocaleLowerCase();

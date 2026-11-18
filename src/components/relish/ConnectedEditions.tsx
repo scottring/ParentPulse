@@ -230,7 +230,7 @@ function AdultConnectedEditions({
   const others = circle?.members.filter((m) => m.uid !== user?.uid) || [];
   const owner = circle?.ownerId === user?.uid;
   const sources = bookPages(book)
-    .filter((p) => p.text.trim())
+    .filter((p) => !p.record && p.text.trim())
     .map((p) => ({ id: p.id, label: p.title, text: p.text }));
   async function sendPrepared(outgoing: Outgoing) {
     await api({

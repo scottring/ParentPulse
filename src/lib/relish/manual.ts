@@ -30,7 +30,10 @@ export const manualOf = (book: Book): ManualState =>
 export function manualSources(book: Book, scope: ManualScope): ManualSource[] {
   const pages =
     scope === "personal"
-      ? bookPages(book).map((p) => ({
+      ? bookPages(book)
+          // Play records are only names and a date: never sent for suggestions.
+          .filter((p) => !p.record)
+          .map((p) => ({
           id: p.id,
           title: p.title,
           text: [

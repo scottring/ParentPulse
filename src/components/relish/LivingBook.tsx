@@ -17,6 +17,7 @@ import {
   changeLiving,
   chooseThread,
   completeVisit,
+  finishGame as finishRound,
   keepGame,
   livingOf,
   markTried,
@@ -24,6 +25,7 @@ import {
   nextKind,
   pauseVisit,
   pendingPractice,
+  recordRound,
   updateDraft,
   type Draft,
   type Game,
@@ -289,7 +291,8 @@ export default function LivingBook({
     void commit(
       (b) =>
         changeLiving(b, (x) => ({
-          ...x,
+          // A round left at its reveal is still noted before it is replaced.
+          ...recordRound(x),
           game: newGame(
             kind,
             players,
@@ -301,11 +304,7 @@ export default function LivingBook({
   }
   function finishGame() {
     void commit(
-      (b) =>
-        changeLiving(b, (x) => {
-          if (!x.game) throw new Error("No game is open.");
-          return { ...x, game: advanceGame(x.game, { type: "finish" }) };
-        }),
+      finishRound,
       () => navigate("family"),
       "A good place to stop.",
     );
@@ -777,7 +776,8 @@ export default function LivingBook({
             onResumeGame={() => navigate("play")}
             onCloseFinished={(again) =>
               void commit(
-                (b) => changeLiving(b, (x) => ({ ...x, game: undefined })),
+                (b) =>
+                  changeLiving(b, (x) => ({ ...recordRound(x), game: undefined })),
                 again
                   ? () => {
                       navigate("do");
