@@ -113,12 +113,6 @@ export default function Journal({
   const [celebrate, setCelebrate] = useState(false);
   const [query, setQuery] = useState("");
   const [excerpt, setExcerpt] = useState<string | null>(null);
-  const [rename, setRename] = useState<{ id: string; title: string } | null>(
-    null,
-  );
-  const [renameError, setRenameError] = useState("");
-  const [renaming, setRenaming] = useState(false);
-  const typing = useTypingSound();
   const prose = useRef<HTMLElement>(null);
   const sensory = useSensory();
   const top = useRef<HTMLHeadingElement>(null);
@@ -207,95 +201,13 @@ export default function Journal({
               <span>{dateLabel(page.date)}</span>
               <StyleMark style={page.style} />
             </div>
-            {page.journalId && rename?.id === page.journalId ? (
-              <form
-                className="rj-rename"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const id = page.journalId!;
-                  setRenaming(true);
-                  setRenameError("");
-                  save((b) => renameJournalPage(b, id, rename.title))
-                    .then(() => {
-                      setRename(null);
-                      sensory.play("place");
-                    })
-                    .catch((err) =>
-                      setRenameError(
-                        err instanceof Error
-                          ? err.message
-                          : "The title could not be saved.",
-                      ),
-                    )
-                    .finally(() => setRenaming(false));
-                }}
-              >
-                <label className="rj-title-label">
-                  <span className="rj-sr-only">Title</span>
-                  <input
-                    aria-label="Title"
-                    autoFocus
-                    maxLength={JOURNAL_TITLE_LIMIT}
-                    value={rename.title}
-                    disabled={renaming}
-                    onChange={(e) =>
-                      setRename({ id: rename.id, title: e.target.value })
-                    }
-                    onFocus={typing.onFocus}
-                    onKeyUp={typing.onKeyUp}
-                    onKeyDown={(e) => {
-                      typing.onKeyDown(e);
-                      if (e.key === "Escape") setRename(null);
-                    }}
-                    placeholder="Give this page a title"
-                  />
-                </label>
-                <div className="rj-rename-actions">
-                  <button className="lb-primary" disabled={renaming}>
-                    <Check size={16} /> {renaming ? "Saving…" : "Save title"}
-                  </button>
-                  <button
-                    type="button"
-                    className="lb-text"
-                    disabled={renaming}
-                    onClick={() => setRename(null)}
-                  >
-                    Cancel
-                  </button>
-                </div>
-                {renameError && (
-                  <p className="lb-error" role="alert">
-                    {renameError}
-                  </p>
-                )}
-              </form>
-            ) : (
-              <div className="rj-title-row">
-                <h2 ref={top} tabIndex={-1}>
-                  {page.title}
-                </h2>
-                {page.journalId && (
-                  <button
-                    className="rj-rename-button"
-                    onClick={() => {
-                      const entry = book.journal?.find(
-                        (e) => e.id === page.journalId,
-                      );
-                      setRenameError("");
-                      setRename({
-                        id: page.journalId!,
-                        title: entry?.title || "",
-                      });
-                    }}
-                  >
-                    <Pencil size={16} />
-                    {book.journal?.find((e) => e.id === page.journalId)?.title.trim()
-                      ? "Rename"
-                      : "Add a title"}
-                  </button>
-                )}
-              </div>
-            )}
+            <PageTitle
+              book={book}
+              journalId={page.journalId}
+              title={page.title}
+              save={save}
+              headingRef={top}
+            />
             <p className="lb-kicker">
               {page.kind}
               {page.from ? ` · From ${page.from}` : ""}
@@ -815,7 +727,12 @@ export function JournalEditor({
           {previous ? (
             <>
               <p className="rd-context-date">{dateLabel(previous.date)}</p>
-              <h2>{previous.title}</h2>
+              <PageTitle
+                book={book!}
+                journalId={previous.journalId}
+                title={previous.title}
+                save={save}
+              />
               <div className="rj-prose rd-context-prose">{previous.text}</div>
               <PhotoGallery photos={previous.photos} access={photos} />
               <p className="rd-context-foot">
@@ -1001,6 +918,109 @@ export function JournalEditor({
           </p>
         </section>
       </div>
+    </div>
+  );
+}
+
+/** A page title with Rename / Add a title for journal pages. */
+function PageTitle({
+  book,
+  journalId,
+  title,
+  save,
+  headingRef,
+}: {
+  book: Book;
+  journalId?: string;
+  title: string;
+  save: Save;
+  headingRef?: RefObject<HTMLHeadingElement | null>;
+}) {
+  const [value, setValue] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const typing = useTypingSound();
+  const sensory = useSensory();
+  const entry = journalId
+    ? book.journal?.find((e) => e.id === journalId)
+    : undefined;
+  if (entry && value !== null)
+    return (
+      <form
+        className="rj-rename"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setBusy(true);
+          setError("");
+          save((b) => renameJournalPage(b, entry.id, value))
+            .then(() => {
+              setValue(null);
+              sensory.play("place");
+            })
+            .catch((err) =>
+              setError(
+                err instanceof Error ? err.message : "The title could not be saved.",
+              ),
+            )
+            .finally(() => setBusy(false));
+        }}
+      >
+        <label className="rj-title-label">
+          <span className="rj-sr-only">Title</span>
+          <input
+            aria-label="Title"
+            autoFocus
+            maxLength={JOURNAL_TITLE_LIMIT}
+            value={value}
+            disabled={busy}
+            onChange={(e) => setValue(e.target.value)}
+            onFocus={typing.onFocus}
+            onKeyUp={typing.onKeyUp}
+            onKeyDown={(e) => {
+              typing.onKeyDown(e);
+              if (e.key === "Escape") setValue(null);
+            }}
+            placeholder="Give this page a title"
+          />
+        </label>
+        <div className="rj-rename-actions">
+          <button className="lb-primary" disabled={busy}>
+            <Check size={16} /> {busy ? "Saving…" : "Save title"}
+          </button>
+          <button
+            type="button"
+            className="lb-text"
+            disabled={busy}
+            onClick={() => setValue(null)}
+          >
+            Cancel
+          </button>
+        </div>
+        {error && (
+          <p className="lb-error" role="alert">
+            {error}
+          </p>
+        )}
+      </form>
+    );
+  return (
+    <div className="rj-title-row">
+      <h2 ref={headingRef} tabIndex={headingRef ? -1 : undefined}>
+        {title}
+      </h2>
+      {entry && (
+        <button
+          type="button"
+          className="rj-rename-button"
+          onClick={() => {
+            setError("");
+            setValue(entry.title);
+          }}
+        >
+          <Pencil size={16} />
+          {entry.title.trim() ? "Rename" : "Add a title"}
+        </button>
+      )}
     </div>
   );
 }
