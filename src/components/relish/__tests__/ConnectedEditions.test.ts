@@ -108,7 +108,8 @@ async function setup(mismatch?: "account" | "key", initialPassage?: {title:strin
     });
   }
   render(createElement(Harness));
-  await screen.findByText("Connect the Fictional A edition");
+  await screen.findByText("What gets shared");
+  expect(screen.getByText("The Fictional A edition")).toBeTruthy();
   fireEvent.click(screen.getByRole("checkbox", { name: /18 or older/ }));
   fireEvent.click(screen.getByRole("button", { name: "Connect this edition" }));
   if (mismatch)

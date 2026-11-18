@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { User } from "firebase/auth";
-import { Lock, RefreshCw, Send, Users, BookOpen, Check } from "lucide-react";
+import { Lock, RefreshCw, Send, BookOpen, Check } from "lucide-react";
 import { Dialog } from "./BookForms";
 import type { Book } from "@/lib/relish/model";
 import {
@@ -358,31 +358,16 @@ function AdultConnectedEditions({
   return (
     <Dialog
       title="Connected editions"
-      wide
+      // Narrow while connecting (Scott's mockup); wide once family tools appear.
+      wide={!!(user && connected)}
       onClose={() => void closeWithDraft()}
     >
-      <section className="lb-connections" data-verification={tick}>
-        <p className="lb-kicker">Share selected passages</p>
+      <section className="lb-connections rc-connect" data-verification={tick}>
         <h2>Connected books</h2>
-        <p>
-          Connect with another adult account to send selected passages. Recipients choose whether to save them.
+        <p className="rc-intro">
+          Connect with another adult to share passages you choose. They decide
+          whether to save them.
         </p>
-        <details className="lb-boundary">
-          <summary>
-            <Lock size={15} /> How this connection stays private
-          </summary>
-          <p>
-            Only passages you select are delivered to other accounts. Your
-            private sharing key stays inside your encrypted book.
-            Account-managed books can be opened by the account owner. Relish
-            stores account details, edition names, family membership, delivery
-            status and encrypted passages.
-          </p>
-          <p className="lb-fine">
-            A saved copy belongs to its recipient. Withdrawing an invitation or
-            leaving a family cannot erase copies someone already kept.
-          </p>
-        </details>
         {error && (
           <p className="lb-error" role="alert">
             {error}
@@ -485,10 +470,17 @@ function AdultConnectedEditions({
           </form>
         ) : (
           <>
-            <div className="lb-account-line">
-              <span>Signed in as {user.email}</span>
+            <div className="rc-edition">
+              <BookIcon />
+              <span className="rc-edition-name">
+                <strong>The {book.owner} edition</strong>
+                <span>
+                  <span className="rp-sr">Signed in as </span>
+                  {user.email}
+                </span>
+              </span>
               <button
-                className="lb-text"
+                className="lb-text rc-signout"
                 disabled={busy}
                 onClick={() => void run(disconnect)}
               >
@@ -533,13 +525,20 @@ function AdultConnectedEditions({
                 </button>
               </div>
             ) : !connected ? (
-              <div className="lb-boundary">
-                <h3>Connect the {book.owner} edition</h3>
-                <p>
-                  This publishes your edition name and public sharing key. It
-                  does not upload your writing. Keep an encrypted backup to open
-                  this same edition on another device.
-                </p>
+              <div className="rc-connect-step">
+                <div className="rc-shared">
+                  <h3>
+                    <Lock size={18} aria-hidden="true" /> What gets shared
+                  </h3>
+                  <p>
+                    Connecting publishes your edition name and public sharing
+                    key. Your writing stays on this device.
+                  </p>
+                  <p>
+                    To open this edition on another device, keep an encrypted
+                    backup.
+                  </p>
+                </div>
                 <label className="lb-consent-check">
                   <input
                     type="checkbox"
@@ -549,11 +548,11 @@ function AdultConnectedEditions({
                   I’m 18 or older and connecting my own edition.
                 </label>
                 <button
-                  className="lb-primary"
+                  className="rp-btn rp-btn-olive rc-go"
                   disabled={busy || !adult}
                   onClick={() => void run(connectEdition)}
                 >
-                  <Users size={16} /> Connect this edition
+                  Connect this edition
                 </button>
               </div>
             ) : (
@@ -1017,7 +1016,7 @@ function AdultConnectedEditions({
                 )}
               </>
             )}
-            <details className="lb-boundary">
+            <details className="rc-quiet">
               <summary>Delete my online account</summary>
               <p>
                 This permanently removes this account, its family membership and
@@ -1075,7 +1074,35 @@ function AdultConnectedEditions({
             </details>
           </>
         )}
+        <details className="rc-quiet">
+          <summary>
+            <Lock size={15} /> How this connection stays private
+          </summary>
+          <p>
+            Only passages you select are delivered to other accounts. Your
+            private sharing key stays inside your encrypted book.
+            Account-managed books can be opened by the account owner. Relish
+            stores account details, edition names, family membership, delivery
+            status and encrypted passages.
+          </p>
+          <p className="lb-fine">
+            A saved copy belongs to its recipient. Withdrawing an invitation or
+            leaving a family cannot erase copies someone already kept.
+          </p>
+        </details>
       </section>
     </Dialog>
+  );
+}
+
+/** A small green book, as in the mockup. */
+function BookIcon() {
+  return (
+    <svg className="rc-book" aria-hidden="true" width="44" height="54" viewBox="0 0 44 54">
+      <rect x="6" y="3" width="34" height="46" rx="3" fill="#8a9a6c" />
+      <rect x="6" y="3" width="7" height="46" rx="2" fill="#6f7f55" />
+      <path d="M13 49h27v3H10a4 4 0 0 1-4-4" fill="#efe8d6" />
+      <path d="M18 12h16M18 17h12" stroke="#c8d1b4" strokeWidth="2" strokeLinecap="round" />
+    </svg>
   );
 }
