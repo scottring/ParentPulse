@@ -177,7 +177,7 @@ export function guidanceFor(book: Pick<Book, "profile">) {
       end: young
         ? "Choose how it went and save your review. Extra words are optional."
         : "Choose how it went and save your review. Extra words are optional. You can choose “I need more time”.",
-      next: "Review saved. You can return to Activities.",
+      next: "Review saved. Choose something else in Do something whenever you like.",
     },
   };
   const childOutcomes: Record<Outcome, string> = young

@@ -297,10 +297,6 @@
 .lb-app .rt-note {
   margin: 0;
 }
-.lb-app .ra-tools {
-  grid-column: 1 / -1;
-  background: #dfe3e6;
-}
 .lb-app .lb-same-page {
   font-size: 17px;
   font-weight: 600;

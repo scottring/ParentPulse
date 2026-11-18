@@ -141,7 +141,6 @@ describe("living-book interaction boundaries", () => {
       book: emptyBook("A"),
       game: g,
       busy: false,
-      onCreate: vi.fn(),
       onAction: vi.fn(),
       onKeep: vi.fn(),
       onPause: vi.fn(),

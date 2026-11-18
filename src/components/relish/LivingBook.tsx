@@ -346,6 +346,39 @@ export default function LivingBook({
           setBookWho(p.id);
         },
       }));
+  const help =
+    view === "play"
+      ? {
+          title: "Play one round",
+          text: "Each player takes a turn or passes. Reveal together, then finish. Keeping a page needs everyone’s approval and is always optional. End game any time; the round is saved.",
+        }
+      : place === "home"
+        ? {
+            title: "Start here",
+            text: "Try today’s suggestion, ask for another, or pick by how much time you have. What you keep goes into Your book.",
+          }
+        : place === "do"
+          ? view === "session" || view === "bookmark"
+            ? {
+                title: v?.status === "complete" ? "Session complete" : "Guided reflection",
+                text:
+                  v?.status === "complete"
+                    ? plans[v.kind].next
+                    : plans[v?.kind || nextKind(book)].end,
+              }
+            : {
+                title: "Pick something that fits",
+                text: "Use the chips to filter by time or mood. Each card has a clear place to stop. Exercises are saved only when you keep the page; day-by-day checklists save each mark and wait for you.",
+              }
+          : place === "book"
+            ? {
+                title: "Your book",
+                text: "What you’ve learned, what’s still going, and every page you’ve kept. Tap a person to see only their pages. Drafts save as you write, even if you switch places or lock Relish.",
+              }
+            : {
+                title: "Your family",
+                text: "Open your children’s books, invite a partner, and see what’s been shared. Nothing private leaves a book unless you send it. Viewing the album never locks your book.",
+              };
   const menuItems: MenuItem[] = [
     {
       label: "Settings",
@@ -787,26 +820,30 @@ export default function LivingBook({
             onActivities={() => navigate("do")}
             onDone={() => navigate("home")}
           />
-        ) : view === "play" ? (
+        ) : view === "play" && !activeGame ? (
+          <main className="rp-place">
+            <p className="rp-lede">This round is over.</p>
+            <button className="rp-btn rp-btn-olive" onClick={() => navigate("do")}>
+              Choose something to do
+            </button>
+          </main>
+        ) : view === "play" && activeGame ? (
           <div className="lb-play-layout">
             <aside>
               <p className="lb-kicker">Play together</p>
               <h2>Play together</h2>
-              <p>
-                Select players, choose a game, and play one round on this device.
-              </p>
+              <p>Play one round on this device. Pass it around.</p>
               <div className="lb-landscape-inset" />
               <p className="lb-fine">
                 Private pages stay out of the game. Anyone may pass. End the
                 game any time; the round is saved.
               </p>
             </aside>
-            <main className="lb-play-main" key={l.game?.id || "setup"}>
+            <main className="lb-play-main" key={activeGame.id}>
               <GroupPlay
                 book={book}
                 game={activeGame}
                 busy={busy}
-                onCreate={createGame}
                 onAction={gameAction}
                 onKeep={() =>
                   void commit(
@@ -965,7 +1002,7 @@ export default function LivingBook({
                 setModal("connections");
               }}
             >
-              <Users size={16} /> Connect with family editions
+              <Users size={16} /> Partner sharing and your online account
             </button>
           )}
           <p className="lb-fine">
@@ -1078,53 +1115,30 @@ export default function LivingBook({
       )}
       {modal === "guide" && (
         <Dialog title="Help" onClose={() => setModal(null)}>
-          <p className="lb-kicker">How to use this screen</p>
-          <h2>
-            {view === "home"
-              ? "Choose an activity"
-              : view === "tools"
-                ? "Use an exercise"
-              : view === "words"
-                ? "Write and save an entry"
-                : sharedView
-                  ? "Complete one round"
-                  : v?.status === "complete"
-                    ? "Session complete"
-                    : "Complete the current step"}
-          </h2>
-          <p>
-            {view === "home"
-              ? "Write a personal journal entry for open space, choose a guided reflection for prompts, or play a game together. Each activity has its own stopping point. Unfinished pages and reflections will wait for you here."
-              : view === "tools"
-                ? "Choose an exercise, then follow its steps. Sorts and fill-in-the-blank exercises are saved only when you keep the page. Day-by-day checklists save each mark and wait for you between visits."
-              : view === "words"
-                ? "Write anything you like. Your draft saves as you go, including when you switch activities or lock your book. Select Save entry when you’re finished. You can return and edit either one."
-                : sharedView
-                  ? "Each player gets a turn or may pass. Reveal together, then finish for now. Keeping a page requires everyone’s approval; it is always optional."
-                  : v?.status === "complete"
-                    ? plans[v.kind].next
-                    : plans[v?.kind || nextKind(book)].end}
-          </p>
+          <p className="lb-kicker">How Relish is laid out</p>
+          <h2>{help.title}</h2>
+          <p>{help.text}</p>
+          <div className="lb-boundary">
+            <strong>Four places</strong>
+            <p>
+              Home suggests one small thing a day. Do something has every
+              activity, filtered by time or mood. Your book holds what you’ve
+              learned and every page you’ve kept. Family is your people and
+              what you’ve chosen to share.
+            </p>
+          </div>
           <div className="lb-boundary">
             <strong>
-              {view === "words"
-                ? "Saving and sharing"
-                : online
-                  ? "Optional AI assistance"
-                  : "Age-based prompts"}
+              {online ? "Privacy and optional AI" : "Age-based prompts"}
             </strong>
             <p>
-              {view === "words"
-                ? "Your pages stay private. Only passages you choose enter the Family album or are offered to connected editions. Voice writing sends only a recording you review. Your encrypted backup includes your pages and photos."
-                : !online
-                  ? "These are written prompts chosen for your age, not an AI conversation. Your words stay here. You can pause, pass, or ask a trusted grown-up for help."
-                  : sharedView
-                    ? "Shared play works without AI. Private writing is never included in a game."
-                    : "While writing a moment, you can invite AI to help consider another perspective. Review the exact excerpt first. You choose whether to keep its response."}
+              {!online
+                ? "These are written prompts chosen for your age, not an AI conversation. Your words stay here. You can pause, pass, or ask a trusted grown-up for help."
+                : "Your pages stay private. Only passages you choose go to the Family album or a partner’s book. Games never include private writing. AI help is optional, and you review the exact excerpt first."}
             </p>
           </div>
           <button className="lb-primary" onClick={() => setModal(null)}>
-            Back to activity
+            Close help
           </button>
         </Dialog>
       )}
