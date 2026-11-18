@@ -321,6 +321,20 @@
   margin: 0 auto 32px;
   color: var(--ink, #30382c);
 }
+/* The start screen carries its own back link and privacy note (the mockup);
+   the running head stays for screen readers and focus. */
+.lb-desk:has(.rt-start) > .lb-identity {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  margin: 0;
+}
+.lb-app .rt-start {
+  padding-top: 18px;
+}
 .lb-app .rt-start-top {
   display: flex;
   align-items: center;
@@ -391,6 +405,7 @@
   gap: 10px;
 }
 .lb-app .rt-who label {
+  margin: 0;
   display: inline-flex;
   align-items: center;
   gap: 10px;
