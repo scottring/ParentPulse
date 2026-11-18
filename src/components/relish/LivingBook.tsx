@@ -7,7 +7,6 @@ import {
   BookOpen,
   Download,
   Lock,
-  Plus,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -24,7 +23,6 @@ import {
   markTried,
   newGame,
   nextKind,
-  outcomes,
   pauseVisit,
   pendingPractice,
   updateDraft,
