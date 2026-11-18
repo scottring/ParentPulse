@@ -1121,10 +1121,11 @@ function HabitScreen({
           )}
           {solo ? (
             <>
+              {p.complete && <p className="rt-habit-done">{doneText(run)}</p>}
               <div className="rt-habit-status">
                 <p className="rt-habit-count" aria-live="polite">
-                  {p.complete ? <strong>{doneText(run)}</strong> : count(run)}
-                  {markedToday && (p.complete ? " Today marked." : " · Today marked")}
+                  {count(run)}
+                  {markedToday && " · Today marked"}
                 </p>
                 {markedToday && undo(run)}
               </div>

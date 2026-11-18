@@ -311,6 +311,19 @@ it("lets one person finish first while the other carries on", async () => {
   await screen.findByText("4 of 10 days · Today marked");
   expect(toolsOf(app.stored()).trackers.find((t) => t.id === "k")!.marks.at(-1)!.key).toBe(todayKey());
 });
+it("after the tenth day, offers a line to remember and keeps the page", async () => {
+  const app = open(parent({ version: 1, trackers: [run("k", "kaleb", 10)] }));
+  fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos/ }));
+  await screen.findByText("Ten hellos with Kaleb.");
+  expect(screen.getByText("10 of 10 days")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Mark today" })).toBeNull();
+  fireEvent.change(screen.getByRole("textbox", { name: /Anything you want to remember/ }), {
+    target: { value: "He hugs me at the door now." },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Finish and keep a page" }));
+  await screen.findByRole("heading", { name: "Kept in your book" });
+  expect(app.stored().journal![0].text).toContain("He hugs me at the door now.");
+});
 it("shows a habit started before this change unchanged, and can add someone mid-way", async () => {
   const app = open(parent({ version: 1, trackers: [run("k", "kaleb", 4)] }));
   fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos.*In progress · 4 of 10/ }));
