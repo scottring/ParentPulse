@@ -73,9 +73,8 @@ const adult = (): Book => ({
 });
 it("sorts cards, picks one, and keeps the result as a page in Your pages", async () => {
   const app = open(adult());
-  fireEvent.click(screen.getByRole("button", { name: "Choose an exercise" }));
-  await screen.findByRole("heading", { name: "Try an exercise" });
   fireEvent.click(screen.getByRole("button", { name: /What helps when I’m upset/ }));
+  await screen.findByRole("heading", { name: "What helps when I’m upset" });
   expect(screen.queryByRole("button", { name: /Keep this page/ })).toBeNull();
   const card = screen.getByRole("group", { name: "Talking it through" });
   fireEvent.click(within(card).getByRole("button", { name: "Helps me" }));
@@ -103,11 +102,10 @@ it("sorts cards, picks one, and keeps the result as a page in Your pages", async
   expect(page.text).toContain("Doesn’t help: Music.");
   expect(page.text).toContain("The one to try first next time: A long shower.");
   fireEvent.click(screen.getByRole("button", { name: "Choose another exercise" }));
-  await screen.findByRole("heading", { name: "Try an exercise" });
+  await screen.findByRole("heading", { name: "What feels right?" });
 });
 it("builds a soft opener only once every part is filled in", async () => {
   const app = open(adult());
-  fireEvent.click(screen.getByRole("button", { name: "Choose an exercise" }));
   fireEvent.click(await screen.findByRole("button", { name: /Rewrite the opener/ }));
   fireEvent.change(screen.getByRole("combobox", { name: "Who will you say this to?" }), {
     target: { value: "sam" },
@@ -136,7 +134,6 @@ it("builds a soft opener only once every part is filled in", async () => {
 });
 it("runs a day-by-day checklist across visits and finishes into a page", async () => {
   const app = open(adult());
-  fireEvent.click(screen.getByRole("button", { name: "Choose an exercise" }));
   fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos/ }));
   const start = screen.getByRole("button", { name: /Start/ }) as HTMLButtonElement;
   expect(start.disabled).toBe(true);
@@ -149,9 +146,9 @@ it("runs a day-by-day checklist across visits and finishes into a page", async (
   expect(toolsOf(app.stored()).trackers[0].marks).toHaveLength(1);
   app.unmount();
   const again = open(app.stored());
-  expect(screen.getByText("You have 1 exercise in progress.")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Continue an exercise" }));
-  fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos · Sam/ }));
+  fireEvent.click(
+    screen.getByRole("button", { name: /Ten real hellos.*In progress · 1 of 10/ }),
+  );
   expect(screen.getByText(/1 of 10 days/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Finish and keep a page" }));
   await screen.findByRole("heading", { name: "Page kept" });
@@ -168,8 +165,7 @@ it("offers only age-appropriate exercises in a young child's edition", async () 
       parentLock: { salt: "a".repeat(32), verifier: "b".repeat(64) },
     },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Choose an exercise" }));
-  await screen.findByRole("heading", { name: "Try an exercise" });
+  await screen.findByRole("heading", { name: "What feels right?" });
   expect(screen.getByRole("button", { name: /What helps when I’m upset/ })).toBeTruthy();
   expect(screen.getByRole("button", { name: /Kindness spotting/ })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /Rewrite the opener/ })).toBeNull();
@@ -182,7 +178,7 @@ it("plays Same page? with hidden answers and a shared reveal", async () => {
     { id: "b", name: "Sam" },
   ]);
   const app = open({ ...book, living: { ...livingOf(book), game } });
-  fireEvent.click(screen.getByRole("button", { name: "Continue our game" }));
+  fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
   expect(screen.getByRole("heading", { name: "Same page?" })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /Let’s play/ }));
   const choices = await screen.findAllByRole("button", { name: /./ });

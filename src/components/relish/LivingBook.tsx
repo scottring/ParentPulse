@@ -39,7 +39,6 @@ import { Dialog, EditPerson, PersonForm, VaultForm } from "./BookForms";
 import { SoundSettings, useSensory } from "./Sensory";
 import VisitEditor from "./VisitEditor";
 import Journal from "./Journal";
-import Activities from "./Activities";
 import { newJournalDraft, type JournalDraft } from "@/lib/relish/journal";
 import "./duo.css";
 import "./places.css";
@@ -53,6 +52,7 @@ import EditionSetup from "./EditionSetup";
 import { guidanceFor } from "@/lib/relish/guidance";
 import TopBar, { type MenuItem, type Place } from "./TopBar";
 import Home, { type FamilyPerson } from "./Home";
+import DoSomething from "./DoSomething";
 import type { NudgeAction } from "@/lib/relish/nudges";
 import { isChild, isFamily, type DoFilter } from "@/lib/relish/catalog";
 import { canUseOnline, ageLabels, audienceOf } from "@/lib/relish/profiles";
@@ -138,7 +138,8 @@ export default function LivingBook({
     [pageKey, setPageKey] = useState(0),
     [reading, setReading] = useState<string | undefined>(),
     [exercise, setExercise] = useState<string | undefined>(),
-    [doFilter, setDoFilter] = useState<DoFilter>("all");
+    [doFilter, setDoFilter] = useState<DoFilter>("all"),
+    [gameOffer, setGameOffer] = useState<Game["kind"] | undefined>();
   const journalNavigation = useRef<(() => Promise<boolean>) | null>(null);
   const operation = useRef(false),
     alive = useRef(true),
@@ -168,6 +169,7 @@ export default function LivingBook({
     setReading(undefined);
     setExercise(undefined);
     setDoFilter("all");
+    setGameOffer(undefined);
     setView(next);
     setClosed(false);
     setPageKey((n) => n + 1);
@@ -211,7 +213,10 @@ export default function LivingBook({
     if (action.kind === "journal") quickEntry();
     else if (action.kind === "exercise") openExercise(action.id);
     else if (action.kind === "reflect") start();
-    else openPlay();
+    else {
+      navigate("do");
+      setGameOffer(action.game);
+    }
   }
   async function commit(
     update: (b: Book) => Book,
@@ -322,8 +327,20 @@ export default function LivingBook({
   const sharedView = shared || view === "play";
   const place = placeOf[view];
   // Places draw their own big heading; sub-screens keep the small running head.
-  const placeScreen = view === "home" && !closed;
+  const placeScreen = (view === "home" || view === "do") && !closed;
   const canInvite = !sample && online;
+  const roster: Player[] = [
+    { id: "owner", name: book.owner, audience: audienceOf(book) },
+    ...(family || []).map((p) => ({ id: `book:${p.id}`, name: p.name })),
+    ...book.people.filter(isFamily).map((p) => ({ id: p.id, name: p.name })),
+  ]
+    .filter(
+      (p, i, all) =>
+        all.findIndex(
+          (q) => q.name.trim().toLowerCase() === p.name.trim().toLowerCase(),
+        ) === i,
+    )
+    .slice(0, 12);
   const familyNames = [
     ...(family || []).map((p) => p.name),
     ...book.people.filter(isChild).map((p) => p.name),
@@ -837,7 +854,6 @@ export default function LivingBook({
   return (
     <div
       className={`r-app lb-app rp-shell ${journalEditing ? "lb-capturing" : ""} rp-at-${view}`}
-      data-do-filter={doFilter}
     >
       {sample && (
         <div className="lb-sample">
@@ -940,18 +956,18 @@ export default function LivingBook({
             onPage={openPage}
           />
         ) : view === "do" && !sharedView ? (
-          <Activities
+          <DoSomething
+            key={pageKey}
             book={book}
+            filter={doFilter}
             busy={busy}
-            onWrite={quickEntry}
-            onGuided={() => start()}
-            onPlay={openPlay}
-            onPages={() => navigate("book")}
-            onManual={() => navigate("manual")}
-            onTools={() => navigate("tools")}
-            pendingInsights={
-              manualCards.filter((c) => c.status === "suggested").length
-            }
+            roster={roster}
+            headingRef={heading}
+            initialGame={gameOffer}
+            onFilter={setDoFilter}
+            onOpen={onNudge}
+            onResumeGame={() => navigate("play")}
+            onStartGame={createGame}
           />
         ) : view === "tools" && !sharedView ? (
           <Tools

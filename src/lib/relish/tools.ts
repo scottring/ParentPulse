@@ -1,6 +1,7 @@
 import type { Book } from "./model";
 import { writeJournalPage, JOURNAL_TITLE_LIMIT } from "./journal";
 import type { Audience } from "./profiles";
+import type { Tag } from "./catalog";
 
 // Interactive exercises: card sorts, sentence builders and day-by-day trackers.
 // A finished exercise becomes an ordinary kept journal page, so it appears in
@@ -17,6 +18,10 @@ type Base = {
   time: string;
   end: string;
   audiences: Audience[];
+  /** Filters in Do something: "1" and "5" minutes, "kids", "hard". */
+  tags: Tag[];
+  /** Compact time for cards, e.g. "3 min". */
+  short: string;
   aboutPerson?: { label: string; required?: boolean };
 };
 export type Pile = { id: string; label: string };
@@ -59,6 +64,8 @@ export const tools: Tool[] = [
   {
     kind: "sort",
     id: "helps-upset",
+    tags: ["5"],
+    short: "3 min",
     title: "What helps when I’m upset",
     blurb: "Sort what helps and what doesn’t. A page for your own manual.",
     time: "About 3 minutes",
@@ -100,6 +107,8 @@ export const tools: Tool[] = [
   {
     kind: "sort",
     id: "drains-fills",
+    tags: ["5"],
+    short: "4 min",
     title: "Drains and fills",
     blurb: "Sort your week by how each part leaves you. Pick one to shrink and one to grow.",
     time: "About 4 minutes",
@@ -147,6 +156,8 @@ export const tools: Tool[] = [
   {
     kind: "sort",
     id: "iceberg",
+    tags: ["hard", "5"],
+    short: "4 min",
     title: "What’s under the behavior?",
     blurb: "Name what happened, sort the likely reasons, and pick one guess to test.",
     time: "About 4 minutes",
@@ -177,6 +188,8 @@ export const tools: Tool[] = [
   {
     kind: "sort",
     id: "load",
+    tags: ["5"],
+    short: "5 min",
     title: "Who carries what",
     blurb: "Sort household jobs by who carries them now, including the noticing and planning.",
     time: "About 5 minutes",
@@ -211,6 +224,8 @@ export const tools: Tool[] = [
   {
     kind: "builder",
     id: "soft-start",
+    tags: ["hard", "5"],
+    short: "3 min",
     title: "Rewrite the opener",
     blurb: "Turn a hard thing to say into a sentence that’s easier to hear.",
     time: "About 3 minutes",
@@ -252,6 +267,8 @@ export const tools: Tool[] = [
   {
     kind: "builder",
     id: "thought-court",
+    tags: ["hard", "5"],
+    short: "4 min",
     title: "Put a thought on trial",
     blurb: "Weigh the evidence for a harsh thought, then write a fairer one.",
     time: "About 4 minutes",
@@ -287,6 +304,8 @@ export const tools: Tool[] = [
   {
     kind: "builder",
     id: "unseen",
+    tags: ["1"],
+    short: "2 min",
     title: "Notice the unseen work",
     blurb: "Name one thing someone does that nobody thanks them for.",
     time: "About 2 minutes",
@@ -307,6 +326,8 @@ export const tools: Tool[] = [
   {
     kind: "builder",
     id: "repair",
+    tags: ["hard", "5"],
+    short: "3 min",
     title: "Plan a repair",
     blurb: "After a rough moment, plan what to say so the next conversation goes better.",
     time: "About 3 minutes",
@@ -330,6 +351,8 @@ export const tools: Tool[] = [
   {
     kind: "tracker",
     id: "hellos",
+    tags: ["1"],
+    short: "1 min a day",
     mode: "days",
     target: 10,
     title: "Ten real hellos",
@@ -344,6 +367,8 @@ export const tools: Tool[] = [
   {
     kind: "tracker",
     id: "thanks-week",
+    tags: ["1"],
+    short: "1 min a day",
     mode: "days",
     target: 7,
     title: "A week of specific thanks",
@@ -359,6 +384,8 @@ export const tools: Tool[] = [
   {
     kind: "tracker",
     id: "repair-bingo",
+    tags: ["hard"],
+    short: "1–2 weeks",
     mode: "squares",
     title: "Repair bingo",
     blurb: "Mark each repair move you try after friction. Find out which ones land.",
@@ -383,6 +410,8 @@ export const tools: Tool[] = [
   {
     kind: "tracker",
     id: "kindness-bingo",
+    tags: ["1"],
+    short: "1 week",
     mode: "squares",
     title: "Kindness spotting",
     blurb: "Spot kind things people in your family do this week.",

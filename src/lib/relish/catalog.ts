@@ -1,5 +1,8 @@
 import type { BookPage } from "./pages";
-import { tools } from "./tools";
+import { tools, toolsFor } from "./tools";
+import { games } from "./play-content";
+import type { NudgeAction } from "./nudges";
+import type { Audience } from "./profiles";
 
 // Shared vocabulary for the four places: the "Do something" filters and the
 // color-coded kinds that label things to do and pages kept.
@@ -56,3 +59,93 @@ export const isChild = (p: Role) =>
 /** People noted in a book who are close family (used to pre-fill games). */
 export const isFamily = (p: Role) =>
   familyRoles.includes(p.role.trim().toLowerCase());
+
+export type DoType = "Write" | "Exercise" | "Game" | "Think" | "Habit";
+export const doTone: Record<DoType, Tone> = {
+  Write: "sun",
+  Exercise: "sage",
+  Game: "clay",
+  Think: "sky",
+  Habit: "lilac",
+};
+export type DoItem = {
+  key: string;
+  type: DoType;
+  time: string;
+  title: string;
+  blurb: string;
+  tags: Tag[];
+  action: NudgeAction;
+};
+// Interleaves kinds so the grid feels mixed rather than sorted by type.
+const order = [
+  "write",
+  "unseen",
+  "game:match",
+  "think",
+  "helps-upset",
+  "game:joy",
+  "thought-court",
+  "hellos",
+  "repair",
+  "game:story",
+  "iceberg",
+  "drains-fills",
+  "soft-start",
+  "thanks-week",
+  "load",
+  "repair-bingo",
+  "kindness-bingo",
+];
+/** Everything you can do in one place: writing, exercises, games, thinking. */
+export function doItems(audience: Audience): DoItem[] {
+  const items: DoItem[] = [
+    {
+      key: "write",
+      type: "Write",
+      time: "1 min",
+      title: "Jot something down",
+      blurb: "Type it, say it out loud, or snap a photo.",
+      tags: ["1"],
+      action: { kind: "journal" },
+    },
+    {
+      key: "think",
+      type: "Think",
+      time: "5 min",
+      title: "Think it through",
+      blurb: "Pick what’s on your mind, write a little, leave with one small plan.",
+      tags: ["hard", "5"],
+      action: { kind: "reflect" },
+    },
+    ...games.map(
+      (g): DoItem => ({
+        key: `game:${g.kind}`,
+        type: "Game",
+        time: g.short,
+        title: g.title,
+        blurb: g.blurb,
+        tags: g.tags,
+        action: { kind: "game", game: g.kind },
+      }),
+    ),
+    ...toolsFor(audience).map(
+      (t): DoItem => ({
+        key: t.id,
+        type: t.kind === "tracker" ? "Habit" : "Exercise",
+        time: t.short,
+        title: t.title,
+        blurb: t.blurb,
+        tags: t.tags,
+        action: { kind: "exercise", id: t.id },
+      }),
+    ),
+  ];
+  const rank = (k: string) => {
+    const i = order.indexOf(k);
+    return i < 0 ? order.length : i;
+  };
+  return items.toSorted((a, b) => rank(a.key) - rank(b.key));
+}
+export const matchesFilter = (item: DoItem, filter: DoFilter) =>
+  filter === "all" || item.tags.includes(filter);

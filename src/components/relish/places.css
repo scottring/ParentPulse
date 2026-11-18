@@ -162,11 +162,38 @@
 }
 
 /* Shared place layout */
-.rp-tone-sun { background: var(--sun); }
-.rp-tone-sage { background: var(--sage); }
-.rp-tone-clay { background: var(--clay); }
-.rp-tone-sky { background: var(--sky); }
-.rp-tone-lilac { background: var(--lilac); }
+.lb-app .rp-tone-sun,
+.lb-app button.rp-tone-sun:not(:disabled):hover {
+  background: var(--sun);
+}
+.lb-app .rp-tone-sage,
+.lb-app button.rp-tone-sage:not(:disabled):hover {
+  background: var(--sage);
+}
+.lb-app .rp-tone-clay,
+.lb-app button.rp-tone-clay:not(:disabled):hover {
+  background: var(--clay);
+}
+.lb-app .rp-tone-sky,
+.lb-app button.rp-tone-sky:not(:disabled):hover {
+  background: var(--sky);
+}
+.lb-app .rp-tone-lilac,
+.lb-app button.rp-tone-lilac:not(:disabled):hover {
+  background: var(--lilac);
+}
+.lb-app .rp-avatar:not(:disabled):hover,
+.lb-app .rp-row:not(:disabled):hover,
+.lb-app .rp-chips button:not(:disabled):hover {
+  background: var(--card);
+}
+.lb-app .rp-avatar:not(:disabled):hover,
+.lb-app .rp-row:not(:disabled):hover {
+  background: transparent;
+}
+.lb-app .rp-chips button[aria-pressed="true"]:not(:disabled):hover {
+  background: var(--olive);
+}
 .lb-app .rp-place {
   display: flex;
   flex-direction: column;
@@ -477,5 +504,204 @@
   .rp-panel {
     padding: 20px;
     flex-basis: 100%;
+  }
+}
+
+/* Do something */
+.rp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.lb-app .rp-chips button {
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 600;
+  background: var(--card);
+  color: var(--ink);
+  border: 2px solid var(--line);
+}
+.lb-app .rp-chips button[aria-pressed="true"] {
+  background: var(--olive);
+  color: var(--on-olive);
+  border-color: var(--olive);
+}
+.lb-app .rp-players .rp-chips button[aria-pressed="false"] {
+  color: var(--muted);
+}
+.lb-app .rp-chips .rp-chip-add {
+  border: 2px dashed var(--olive);
+  background: transparent;
+  color: var(--olive);
+}
+.rp-do {
+  gap: 28px;
+}
+.rp-do-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 18px;
+}
+.lb-app .rp-do-card {
+  border-radius: 24px;
+  padding: 22px;
+  min-height: 190px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--ink);
+  text-align: left;
+}
+.rp-do-grid > .rp-do-card:nth-child(6n + 1) { transform: rotate(-1deg); }
+.rp-do-grid > .rp-do-card:nth-child(6n + 2) { transform: rotate(0.7deg); }
+.rp-do-grid > .rp-do-card:nth-child(6n + 3) { transform: rotate(-0.4deg); }
+.rp-do-grid > .rp-do-card:nth-child(6n + 4) { transform: rotate(1deg); }
+.rp-do-grid > .rp-do-card:nth-child(6n + 5) { transform: rotate(-0.8deg); }
+.rp-do-grid > .rp-do-card:nth-child(6n + 6) { transform: rotate(0.5deg); }
+.lb-app .rp-do-grid > .rp-do-card:not(:disabled):hover {
+  transform: rotate(0) translateY(-2px);
+  filter: brightness(0.97);
+}
+.rp-do-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font-size: 13px;
+  font-weight: 600;
+}
+.rp-do-type {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 253, 247, 0.7);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+.rp-do-title {
+  font: 700 27px/1.05 var(--serif);
+}
+.rp-do-blurb {
+  font-size: 15px;
+  line-height: 1.4;
+}
+.rp-do-note {
+  margin-top: auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Bottom sheets (game, invite) */
+.rp-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(48, 56, 44, 0.35);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.lb-app .rp-sheet {
+  width: 100%;
+  max-width: 640px;
+  max-height: 92vh;
+  overflow-y: auto;
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 28px 28px 0 0;
+  padding: 28px 28px max(32px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  font-family: var(--sans);
+  line-height: 1.5;
+  outline: none;
+}
+.lb-app .rp-sheet p {
+  margin: 0;
+  font-size: 16px;
+}
+.lb-app .rp-sheet h2 {
+  margin: 4px 0;
+  font: 700 36px/1.05 var(--serif);
+}
+.rp-sheet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.lb-app .rp-close {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  font-size: 22px;
+  justify-content: center;
+}
+.lb-app .rp-players {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.lb-app .rp-players legend {
+  padding: 0;
+  margin-bottom: 10px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.lb-app .rp-players .rp-chips button {
+  padding: 12px 18px;
+}
+.rp-guest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+.lb-app .rp-guest label {
+  flex: 1 1 200px;
+}
+.lb-app .rp-ages summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--olive);
+}
+.lb-app .rp-ages label {
+  display: block;
+  margin: 8px 0;
+}
+.lb-app .rp-sheet-start {
+  padding: 16px 22px;
+  font-size: 17px;
+}
+@media (max-width: 720px) {
+  .lb-app .rp-sheet {
+    padding: 22px 18px max(24px, env(safe-area-inset-bottom));
+  }
+  .lb-app .rp-sheet h2 {
+    font-size: 30px;
+  }
+  .lb-app .rp-chips button {
+    padding: 10px 16px;
+    font-size: 15px;
   }
 }

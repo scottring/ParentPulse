@@ -100,3 +100,26 @@ describe("page kinds", () => {
     ).toBe("Photo");
   });
 });
+
+describe("Do something catalog", () => {
+  it("merges writing, thinking, games and the age-fitted exercises into one list", async () => {
+    const { doItems, matchesFilter } = await import("../catalog");
+    const adultItems = doItems("adult");
+    expect(adultItems.map((i) => i.type)).toEqual(
+      expect.arrayContaining(["Write", "Think", "Game", "Exercise", "Habit"]),
+    );
+    expect(adultItems).toHaveLength(2 + gameKinds.length + toolsFor("adult").length);
+    const little = doItems("under-6").map((i) => i.title);
+    expect(little).not.toContain("Rewrite the opener");
+    expect(little).toContain("Kindness spotting");
+    const hard = adultItems.filter((i) => matchesFilter(i, "hard"));
+    expect(hard.length).toBeGreaterThan(2);
+    expect(hard.every((i) => i.tags.includes("hard"))).toBe(true);
+    expect(adultItems.filter((i) => matchesFilter(i, "all"))).toHaveLength(
+      adultItems.length,
+    );
+    expect(
+      adultItems.filter((i) => matchesFilter(i, "kids")).every((i) => i.type === "Game"),
+    ).toBe(true);
+  });
+});

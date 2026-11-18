@@ -65,13 +65,13 @@ describe("living-book interaction boundaries", () => {
     render(createElement(Harness));
     fireEvent.click(screen.getByRole("button", { name: "Do something" }));
     fireEvent.click(
-      screen.getByRole("button", { name: "Continue guided reflection" }),
+      screen.getByRole("button", { name: /Think it through/ }),
     );
     await screen.findByRole("alert");
     expect(screen.queryByText("Session complete")).toBeNull();
     fail = false;
     fireEvent.click(
-      screen.getByRole("button", { name: "Continue guided reflection" }),
+      screen.getByRole("button", { name: /Think it through/ }),
     );
     const textbox = await screen.findByRole("textbox", { name: "Your moment" });
     fireEvent.change(textbox, { target: { value: "One sample moment" } });
@@ -112,7 +112,14 @@ describe("living-book interaction boundaries", () => {
     fireEvent.click(screen.getByRole("button", { name: "Your book" }));
     expect(screen.getByText("A confidential sample sentence")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Do something" }));
-    fireEvent.click(screen.getByRole("button", { name: "Choose a game" }));
+    fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
+    fireEvent.click(screen.getByRole("button", { name: "+ Someone visiting" }));
+    fireEvent.change(screen.getByRole("textbox", { name: /Their name/ }), {
+      target: { value: "Sam" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Start/ }));
+    await screen.findByRole("button", { name: "Unlock my edition" });
     expect(screen.queryByText("A confidential sample sentence")).toBeNull();
     expect(screen.queryByRole("button", { name: /^Menu/ })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Unlock my edition" }));

@@ -263,7 +263,14 @@ describe("freeform journal", () => {
     expect(screen.queryByText("Ask AI")).toBeNull();
     fill("Another private moment");
     fireEvent.click(screen.getByRole("button", { name: "Do something" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Choose a game" }));
+    await screen.findByRole("heading", { name: "What feels right?" });
+    fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
+    fireEvent.click(screen.getByRole("button", { name: "+ Someone visiting" }));
+    fireEvent.change(screen.getByRole("textbox", { name: /Their name/ }), {
+      target: { value: "Sam" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Start/ }));
     await screen.findByRole("heading", { name: "Play together", level: 1 });
     expect(screen.queryByText("PRIVATE JOURNAL SENTENCE")).toBeNull();
     expect(screen.queryByText("Another private moment")).toBeNull();
