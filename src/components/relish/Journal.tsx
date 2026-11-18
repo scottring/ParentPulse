@@ -15,8 +15,12 @@ import {
   Feather,
   Heart,
   Leaf,
+  Ellipsis,
+  Image as ImageIcon,
   Lock,
+  Mic,
   Pencil,
+  Users,
   Plus,
   Search,
   Sparkles,
@@ -535,6 +539,9 @@ export function JournalEditor({
 }) {
   const [draft, setDraft] = useState<JournalDraft>(initial);
   const editorTyping = useTypingSound();
+  const [panel, setPanel] = useState<"photo" | "people" | "options" | null>(
+    null,
+  );
   const [mediaBusy, setMediaBusy] = useState(false);
   const [navigationNotice, setNavigationNotice] = useState("");
   const [voiceOpen, setVoiceOpen] = useState(initialVoice);
@@ -685,17 +692,28 @@ export function JournalEditor({
         .filter((p) => p.journalId !== draft.id)
         .at(-1)
     : undefined;
+  const kept = initialEntry?.status === "kept";
+  const tagged = draft.people?.length || 0;
+  const saveLabel =
+    pending > 0
+      ? "Saving…"
+      : error
+        ? "Not saved yet"
+        : dirty
+          ? "Unsaved changes…"
+          : hasSaved
+            ? kept
+              ? "Saved"
+              : "Draft saved"
+            : "";
+  const toggle = (next: "photo" | "people" | "options") =>
+    setPanel((open) => (open === next ? null : next));
   return (
     <div className={`rj-writing rj-${draft.style}`}>
-      <div className="rj-writing-intro">
-        <div>
-          <p className="lb-kicker">Personal journal</p>
-          <h2>{initialEntry?.status === "kept" ? "Edit entry" : "New entry"}</h2>
-        </div>
-        <p>
-          Write, record your voice, or add a photo.
-          <br />
-          Drafts save automatically. Select Save entry when you’re finished.
+      <div className="rj-writing-intro rj-book-head">
+        <h2>{kept ? "Edit entry" : "New entry"}</h2>
+        <p className="rj-private">
+          <Lock size={14} /> {sample ? "Fictional sample" : "Private · encrypted"}
         </p>
       </div>
       {book && (
@@ -716,13 +734,13 @@ export function JournalEditor({
           }}
         />
       )}
-      <div className="rd-writing-spread">
+      <div className="rd-writing-spread rj-book">
         <aside
           className="rj-paper rd-writing-context"
           aria-label="Previous entry"
         >
           <p className="lb-kicker">
-            {book?.owner || "Your"} · Previous entry
+            {book?.owner ? `${book.owner}’s previous entry` : "Previous entry"}
           </p>
           {previous ? (
             <>
@@ -735,15 +753,12 @@ export function JournalEditor({
               />
               <div className="rj-prose rd-context-prose">{previous.text}</div>
               <PhotoGallery photos={previous.photos} access={photos} />
-              <p className="rd-context-foot">
-                Write your new entry on the right.
-              </p>
             </>
           ) : (
             <>
               <div className="rd-mountain" aria-hidden="true" />
               <h2>No previous entries</h2>
-              <p>Write your first entry on the right. You can also record your voice or add a photo.</p>
+              <p>Your first page goes on the right.</p>
             </>
           )}
         </aside>
@@ -751,10 +766,7 @@ export function JournalEditor({
           className="rj-paper rd-editor-page"
           aria-label="Journal editor"
         >
-          <div className="rj-paper-date">
-            <span>{dateLabel(draft.createdAt)}</span>
-            <StyleMark style={draft.style} />
-          </div>
+          <p className="rd-context-date">{dateLabel(draft.createdAt)}</p>
           <label className="rj-title-label rj-title-first">
             <span className="rj-sr-only">Title</span>
             <input
@@ -769,11 +781,12 @@ export function JournalEditor({
           </label>
           {book && (
             <button
-              className="rj-voice-launch"
+              type="button"
+              className="rj-voice-pill"
               disabled={finishing || mediaBusy}
               onClick={() => setVoiceOpen(true)}
             >
-              Record your voice <span>Record, transcribe, then review.</span>
+              <Mic size={18} /> Record your voice
             </button>
           )}
           <label className="rj-writing-label">
@@ -785,24 +798,10 @@ export function JournalEditor({
               disabled={finishing}
               onChange={(e) => change({ text: e.target.value })}
               {...editorTyping}
-              placeholder="Write your entry…"
+              placeholder="Start writing…"
               rows={5}
             />
           </label>
-          <TypingSoundToggle />
-          <div className="rj-save-state" role="status" aria-live="polite">
-            {pending > 0
-              ? "Saving draft…"
-              : error
-                ? "Not saved yet"
-                : dirty
-                  ? "Unsaved changes…"
-                  : hasSaved
-                    ? sample
-                      ? "Saved in this sample until reload."
-                      : "Saved on this device. See account sync status above."
-                    : "No text or photos added yet."}
-          </div>
           {navigationNotice && (mediaBusy || voiceOpen) && (
             <p className="lb-fine" role="status">
               {navigationNotice}
@@ -826,29 +825,7 @@ export function JournalEditor({
               </button>
             </div>
           )}
-          <div className="rj-writing-actions">
-            <button
-              className="rj-keep"
-              disabled={
-                finishing ||
-                mediaBusy ||
-                voiceOpen ||
-                (!draft.text.trim() && !draft.photos?.length)
-              }
-              onClick={() => void finish(true)}
-            >
-              {finishing ? "Saving…" : "Save entry"}
-              <Check size={20} />
-            </button>
-            <button
-              className="lb-text"
-              disabled={finishing || mediaBusy || voiceOpen}
-              onClick={() => void finish(false)}
-            >
-              Save draft and close
-            </button>
-          </div>
-          {photos && (
+          {photos && (panel === "photo" || !!draft.photos?.length) && (
             <PhotoPicker
               photos={draft.photos || []}
               access={photos}
@@ -857,29 +834,7 @@ export function JournalEditor({
               onChange={(photos) => change({ photos })}
             />
           )}
-          <details className="rd-page-details">
-            <summary>Page color</summary>
-            <fieldset className="rj-style-picker" disabled={finishing}>
-              <legend>Page color</legend>
-              <div>
-                {(Object.keys(journalStyles) as JournalStyle[]).map((style) => (
-                  <button
-                    key={style}
-                    type="button"
-                    className={`rj-style rj-${style}`}
-                    aria-pressed={draft.style === style}
-                    onClick={() => {
-                      change({ style });
-                      sensory.play("touch");
-                    }}
-                  >
-                    <StyleMark style={style} /> {journalStyles[style].label}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-          </details>
-          {!!book?.people.length && (
+          {panel === "people" && !!book?.people.length && (
             <fieldset
               className="rj-people-tags"
               disabled={finishing || mediaBusy}
@@ -910,12 +865,88 @@ export function JournalEditor({
               </div>
             </fieldset>
           )}
-          <p className="rj-private">
-            <Lock size={14} />
-            {sample
-              ? "Fictional sample · changes last until reload"
-              : "Private to this edition. Encrypted when saved."}
-          </p>
+          {panel === "options" && (
+            <div className="rj-page-options">
+              <fieldset className="rj-style-picker" disabled={finishing}>
+                <legend>Page color</legend>
+                <div>
+                  {(Object.keys(journalStyles) as JournalStyle[]).map(
+                    (style) => (
+                      <button
+                        key={style}
+                        type="button"
+                        className={`rj-style rj-${style}`}
+                        aria-pressed={draft.style === style}
+                        onClick={() => {
+                          change({ style });
+                          sensory.play("touch");
+                        }}
+                      >
+                        <StyleMark style={style} />{" "}
+                        {journalStyles[style].label}
+                      </button>
+                    ),
+                  )}
+                </div>
+              </fieldset>
+              <TypingSoundToggle />
+            </div>
+          )}
+          <div className="rj-toolbar" role="group" aria-label="Page tools">
+            {photos && (
+              <button
+                type="button"
+                aria-pressed={panel === "photo"}
+                disabled={finishing}
+                onClick={() => toggle("photo")}
+              >
+                <ImageIcon size={19} /> Photo
+                {draft.photos?.length ? ` · ${draft.photos.length}` : ""}
+              </button>
+            )}
+            {!!book?.people.length && (
+              <button
+                type="button"
+                aria-pressed={panel === "people"}
+                disabled={finishing}
+                onClick={() => toggle("people")}
+              >
+                <Users size={19} /> Tag people{tagged ? ` · ${tagged}` : ""}
+              </button>
+            )}
+            <button
+              type="button"
+              aria-pressed={panel === "options"}
+              disabled={finishing}
+              onClick={() => toggle("options")}
+            >
+              <Ellipsis size={19} /> Page options
+            </button>
+          </div>
+          <div className="rj-save-row">
+            <span className="rj-save-state" role="status" aria-live="polite">
+              {saveLabel}
+            </span>
+            <button
+              className="lb-text"
+              disabled={finishing || mediaBusy || voiceOpen}
+              onClick={() => void finish(false)}
+            >
+              Save draft and close
+            </button>
+            <button
+              className="rj-keep"
+              disabled={
+                finishing ||
+                mediaBusy ||
+                voiceOpen ||
+                (!draft.text.trim() && !draft.photos?.length)
+              }
+              onClick={() => void finish(true)}
+            >
+              {finishing ? "Saving…" : "Save entry"}
+            </button>
+          </div>
         </section>
       </div>
     </div>
