@@ -207,7 +207,9 @@ export function bookPages(book: Book): BookPage[] {
         return page({
           id: `play:${r.id}`,
           kind: PLAY_RECORD,
-          title: `${title} with ${list((others.length ? others : r.players).map((p) => p.name))}`,
+          title: r.place
+            ? `${title} on the way to ${r.place}`
+            : `${title} with ${list((others.length ? others : r.players).map((p) => p.name))}`,
           text:
             memory.summary ||
             (r.pageId

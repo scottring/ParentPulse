@@ -8,12 +8,13 @@ import type { Person } from "./model";
 // Shared vocabulary for the four places: the "Do something" filters and the
 // color-coded kinds that label things to do and pages kept.
 
-export type DoFilter = "all" | "1" | "5" | "kids" | "hard";
+export type DoFilter = "all" | "1" | "5" | "kids" | "trip" | "hard";
 export const doFilters: { id: DoFilter; label: string }[] = [
   { id: "all", label: "Everything" },
   { id: "1", label: "1 minute" },
   { id: "5", label: "5 minutes" },
   { id: "kids", label: "With the kids" },
+  { id: "trip", label: "Road trip" },
   { id: "hard", label: "Something’s hard" },
 ];
 export type Tag = Exclude<DoFilter, "all">;
@@ -128,10 +129,12 @@ const order = [
   "hellos",
   "repair",
   "game:story",
+  "game:spot",
   "iceberg",
   "drains-fills",
   "soft-start",
   "thanks-week",
+  "day-highlights",
   "load",
   "repair-bingo",
   "kindness-bingo",

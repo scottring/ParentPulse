@@ -8,7 +8,19 @@ export const journalStyles = {
 } as const;
 export type JournalStyle = keyof typeof journalStyles;
 /** Where a page came from, when it wasn't written freehand. Optional: older pages have none. */
-export type JournalSource = { kind: "exercise"; toolId: string };
+export type JournalSource = {
+  kind: "exercise";
+  toolId: string;
+  /** Day's highlights: the trip it belongs to, so later days number on. */
+  trip?: string;
+  /** Day's highlights: where the family was that day. */
+  place?: string;
+};
+/** A trip or place name on an exercise page. */
+export const SOURCE_NAME_LIMIT = 60;
+const sourceName = (v: unknown) =>
+  v === undefined ||
+  (typeof v === "string" && !!v.trim() && v.length <= SOURCE_NAME_LIMIT);
 export type JournalDraft = {
   id: string;
   title: string;
@@ -36,7 +48,9 @@ const isSource = (v: unknown): v is JournalSource =>
   (v as JournalSource).kind === "exercise" &&
   typeof (v as JournalSource).toolId === "string" &&
   (v as JournalSource).toolId.length > 0 &&
-  (v as JournalSource).toolId.length <= 100;
+  (v as JournalSource).toolId.length <= 100 &&
+  sourceName((v as JournalSource).trip) &&
+  sourceName((v as JournalSource).place);
 function isDraft(value: unknown): value is JournalDraft {
   if (!value || typeof value !== "object") return false;
   const e = value as JournalDraft;

@@ -27,7 +27,9 @@ import {
   type ToolPage,
   type TrackerTool,
 } from "@/lib/relish/tools";
+import type { Player } from "@/lib/relish/living";
 import Illustration from "./Illustration";
+import DayHighlights from "./DayHighlights";
 import { SubHead } from "./ui";
 import { exerciseIllustration } from "./illustrations";
 import "./journal.css";
@@ -48,10 +50,15 @@ export default function Tools({
   onActivities,
   initialId,
   onBack,
+  roster = [],
+  sample = false,
   family = [],
 }: {
   book: Book;
   busy: boolean;
+  /** Family to pick from for activities done together (Day’s highlights). */
+  roster?: Player[];
+  sample?: boolean;
   onCommit: Commit;
   /** Family members with their own books in the library (e.g. the children). */
   family?: { name: string }[];
@@ -88,6 +95,7 @@ export default function Tools({
             <p className="lb-kicker">{kept.title}</p>
             <h2 id="rt-title">Kept in your book</h2>
             <p className="rt-intro">That’s a good place to stop.</p>
+            {kept.note && <p className="rt-intro">{kept.note}</p>}
             {kept.checkBack && (
               <p className="rt-intro">
                 In {kept.checkBack === 3 ? "a few" : "a couple of"} days,
@@ -135,6 +143,8 @@ export default function Tools({
         busy={busy}
         onCommit={onCommit}
         onKept={setKept}
+        roster={roster}
+        sample={sample}
         family={family}
         backLabel={onBack ? "Back to Do something" : "All exercises"}
         onBack={() => (onBack ? onBack() : setOpenId(null))}
@@ -239,6 +249,8 @@ function OpenExercise({
   family,
   backLabel,
   onBack,
+  roster,
+  sample,
 }: {
   tool: Tool;
   book: Book;
@@ -248,9 +260,25 @@ function OpenExercise({
   family: { name: string }[];
   backLabel: string;
   onBack: () => void;
+  roster: Player[];
+  sample: boolean;
 }) {
   const [started, setStarted] = useState(false);
   const [who, setWho] = useState("");
+  if (tool.kind === "highlights")
+    return (
+      <DayHighlights
+        tool={tool}
+        book={book}
+        busy={busy}
+        sample={sample}
+        roster={roster}
+        backLabel={backLabel}
+        onBack={onBack}
+        onCommit={onCommit}
+        onKept={onKept}
+      />
+    );
   // Family with their own books who aren't noted in this one yet. Choosing one
   // notes them in this book when the exercise starts, so it can be about them.
   const extra = libraryOnly(book.people, family);
@@ -494,6 +522,8 @@ type Kept = {
   pageId?: string;
   /** Days until Relish asks about the plan, for exercises that check back. */
   checkBack?: number;
+  /** One more line about what was kept (a trip's day number). */
+  note?: string;
 };
 /** The journal page a change added, as a Your book page id. */
 function newJournalId(before: Book, after: Book) {

@@ -868,6 +868,8 @@ export default function LivingBook({
             key={pageKey}
             book={book}
             busy={busy}
+            roster={roster}
+            sample={sample}
             family={family}
             onCommit={(update, after, message) =>
               void commit(update, after, message)
@@ -994,9 +996,19 @@ export default function LivingBook({
           <div className={`lb-play-layout ${activeGame.stage === "ready" ? "" : "is-solo"}`}>
             {activeGame.stage === "ready" && (
               <aside>
-                <p className="lb-kicker">Play together</p>
-                <h2>Pass it around</h2>
-                <p>One round, on this device.</p>
+                {activeGame.kind === "spot" ? (
+                  <>
+                    <p className="lb-kicker">In the car</p>
+                    <h2>One phone, read aloud</h2>
+                    <p>Everyone else watches the road and calls out.</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="lb-kicker">Play together</p>
+                    <h2>Pass it around</h2>
+                    <p>One round, on this device.</p>
+                  </>
+                )}
                 <Illustration
                   name={gameIllustration[activeGame.kind] ?? "do-something"}
                   size={180}
@@ -1004,7 +1016,7 @@ export default function LivingBook({
                 />
                 <p className="lb-fine">
                   Private pages stay out of the game. End game any time; the
-                  round waits for you.
+                  {activeGame.kind === "spot" ? " card" : " round"} waits for you.
                 </p>
               </aside>
             )}

@@ -6,9 +6,12 @@ import { cardPeople, manualOf, type ManualCard } from "@/lib/relish/manual";
 import { livingOf, pendingPractice } from "@/lib/relish/living";
 import {
   activeTrackers,
+  DAY_TOOL,
+  dayStatus,
   dueCheckBacks,
   openCheckBacks,
   toolById,
+  toolsOf,
   trackerProgress,
   type CheckBackAnswer,
 } from "@/lib/relish/tools";
@@ -187,10 +190,16 @@ export default function YourBook({
     .filter((e) => e.status === "draft")
     .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const running = activeTrackers(book);
+  const day = toolsOf(book).day;
   const plans = onCheckBack ? openCheckBacks(book) : [];
   const pages = pagesFor(book, who, query);
   const going =
-    drafts.length + (practice ? 1 : 0) + (visit ? 1 : 0) + running.length + plans.length;
+    drafts.length +
+    (practice ? 1 : 0) +
+    (visit ? 1 : 0) +
+    running.length +
+    plans.length +
+    (day ? 1 : 0);
   const askingPlan = plans.find((c) => c.id === asking);
   const dueIds = new Set(dueCheckBacks(book).map((c) => c.id));
   const child = audienceOf(book) !== "adult";
@@ -426,6 +435,21 @@ export default function YourBook({
                 </button>
               );
             })}
+            {day && (
+              <button
+                className="rp-going-item"
+                disabled={busy}
+                onClick={() => onExercise(DAY_TOOL)}
+              >
+                <Clock />
+                <span>
+                  <span className="rp-going-kicker">Day’s highlights · {dayStatus(day)}</span>
+                  <span className="rp-going-title">
+                    {day.people.map((p) => p.name).join(", ")} · pick up where you left off
+                  </span>
+                </span>
+              </button>
+            )}
             {running.map((run) => {
               const t = toolById(run.toolId);
               const p = trackerProgress(run);

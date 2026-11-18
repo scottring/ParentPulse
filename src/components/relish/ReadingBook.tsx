@@ -31,7 +31,7 @@ export default function ReadingBook({
   onNextEntry,
   onNewEntry,
 }: {
-  children: ReactNode;
+  children?: ReactNode;
   /** Receives the element holding the words (for "Choose a passage"). */
   flowRef?: RefObject<HTMLElement | null>;
   /** Classes for the book itself, e.g. the page style and its arrival animation. */

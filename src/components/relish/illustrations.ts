@@ -4,6 +4,13 @@
  * at /illustrations/relish/<name>.webp (900 × 900; emblems 600 × 600).
  * A name without a file falls back to a small drawn sketch in the same spot
  * (Illustration.tsx): add the file, then list its name in `painted` below.
+ *
+ * Still to paint (2026-11-18), for the road-trip activities; each borrows the
+ * closest painting until then:
+ * - "spot-it": a car window with a cow and a water tower going by
+ *   (Spot it!; borrows "kid-kindness-spotting").
+ * - "days-highlights": a parked car at dusk with a notebook on the dashboard
+ *   (Day’s highlights; borrows "home").
  */
 export const illustrationNames = [
   // Places and screens
@@ -84,11 +91,15 @@ export const exerciseIllustration: Record<string, IllustrationName> = {
   "thanks-week": "specific-thanks",
   "repair-bingo": "repair-bingo",
   "kindness-bingo": "kid-kindness-spotting",
+  // Stand-in until a road-trip painting arrives (see the list above).
+  "day-highlights": "home",
 };
 export const gameIllustration: Record<string, IllustrationName> = {
   joy: "small-joy",
   story: "story-voices",
   match: "same-page",
+  // Stand-in until a road-trip painting arrives (see the list above).
+  spot: "kid-kindness-spotting",
 };
 
 /**
