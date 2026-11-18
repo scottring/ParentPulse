@@ -350,7 +350,7 @@ function BookGate() {
           },
         }}
         onAccount={() => setAccountOpen(true)}
-        accountLabel={sync.user ? "Family library" : "Sign in"}
+        accountLabel={sync.user ? "Switch book" : "Sign in"}
         syncStatus={sync.status}
         onInteraction={(value) => sync.setPaused(value || accountOpen)}
       />

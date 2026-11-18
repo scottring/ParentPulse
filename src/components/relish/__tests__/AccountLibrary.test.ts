@@ -108,13 +108,13 @@ it("keeps the family library behind the parent gate after a child-view reload", 
   fireEvent.change(screen.getByLabelText("Parent account password"), {
     target: { value: "incorrect" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Open family library" }));
+  fireEvent.click(screen.getByRole("button", { name: "Choose a book" }));
   await screen.findByRole("alert");
   expect(sync.refresh).not.toHaveBeenCalled();
   fireEvent.change(screen.getByLabelText("Parent account password"), {
     target: { value: "parent password" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Open family library" }));
+  fireEvent.click(screen.getByRole("button", { name: "Choose a book" }));
   await screen.findByText("Parent private book");
   expect(auth.clear).toHaveBeenCalledWith(null);
   expect(sync.refresh).toHaveBeenCalledTimes(1);
@@ -186,7 +186,8 @@ it("first visit: invites the adult to start a book once the empty list has loade
   expect(screen.queryByText(/Your library is empty/)).toBeNull();
   expect(screen.queryByText(/Signed in as/)).toBeNull();
   expect(screen.getByText(/Encrypted and saved to your account/)).toBeTruthy();
-  expect(screen.getByText(/without a separate sign-in/)).toBeTruthy();
+  // Child access is explained in the child-book form, not beside the button.
+  expect(screen.queryByText(/without a separate sign-in/)).toBeNull();
   fireEvent.click(
     screen.getByRole("button", { name: "Open a local book or restore a backup" }),
   );
@@ -236,7 +237,7 @@ it("child-only library: shows the child's cover and still offers Create my book"
   const kid = { id: "kid", label: "Ella", accountManaged: true };
   const { sync } = mount({ books: [kid] });
   expect(
-    screen.getByRole("heading", { name: "Your family library" }),
+    screen.getByRole("heading", { name: "Who’s reading?" }),
   ).toBeTruthy();
   expect(screen.queryByText(invitation)).toBeNull();
   expect(screen.getByRole("button", { name: "Create my book" })).toBeTruthy();
@@ -259,14 +260,55 @@ it("populated library: each cover is one named open action", () => {
   const covers = screen
     .getAllByRole("listitem")
     .map((li) => li.querySelectorAll("button"));
+  expect(covers).toHaveLength(3);
   expect(covers.every((b) => b.length === 1)).toBe(true);
   expect(screen.getByRole("button", { name: "Open Scott’s book" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Open Kaleb’s book" })).toBeTruthy();
+  // The older copy still says it needs its passphrase, aloud and on screen.
   expect(
-    screen.getByRole("button", { name: /Open Ella’s earlier book/ }),
+    screen.getByRole("button", {
+      name: "Open Ella’s book, an earlier copy that needs its original passphrase",
+    }),
   ).toBeTruthy();
+  expect(screen.getByText("Needs its original passphrase")).toBeTruthy();
   expect(screen.getByText("Your book")).toBeTruthy();
+  // Names are live text on the cloth; no repeated "Open" captions.
+  expect(screen.getByText("Kaleb’s book")).toBeTruthy();
+  expect(screen.queryByText("Open")).toBeNull();
   localStorage.removeItem("relish:home-book:parent-one");
+});
+
+it("draws each person's own emblem; the adult's own book is olive with the leaf", () => {
+  localStorage.setItem("relish:home-book:parent-one", "mine");
+  mount({
+    books: [
+      { id: "kid-1", label: "Kaleb", accountManaged: true },
+      { id: "mine", label: "Scott", accountManaged: true },
+      { id: "kid-2", label: "Ella", accountManaged: true },
+    ],
+  });
+  const emblemOf = (name: string) => {
+    const b = screen.getByRole("button", { name });
+    return [
+      b.querySelector("[data-cloth]")?.getAttribute("data-cloth"),
+      b.querySelector("[data-illustration]")?.getAttribute("data-illustration"),
+    ];
+  };
+  expect(emblemOf("Open Scott’s book")).toEqual(["olive", "emblem-leaf"]);
+  expect(emblemOf("Open Kaleb’s book")).toEqual(["rust", "emblem-beetle"]);
+  expect(emblemOf("Open Ella’s book")).toEqual(["blue", "emblem-star"]);
+  localStorage.removeItem("relish:home-book:parent-one");
+});
+
+it("puts Create a child’s book beside the heading and child access in its form", async () => {
+  mount({ books: [{ id: "kid", label: "Ella", accountManaged: true }] });
+  expect(screen.queryByText(/without a separate sign-in/)).toBeNull();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Create a child’s book" }),
+  );
+  expect(
+    screen.getByText(/Children use this account without a separate sign-in/),
+  ).toBeTruthy();
 });
 
 it("keeps account identity and Sign out together in the Account menu", async () => {
@@ -300,7 +342,7 @@ it("keeps account identity and Sign out together in the Account menu", async () 
   expect(refreshUser).toHaveBeenCalled();
 });
 
-it("works as the Family library dialog, with the menu and local books", async () => {
+it("works as the Who’s reading? dialog, with the menu and local books", async () => {
   const onLocal = vi.fn();
   render(
     createElement(AccountLibrary, {
@@ -319,7 +361,7 @@ it("works as the Family library dialog, with the menu and local books", async ()
     } as unknown as Parameters<typeof AccountLibrary>[0]),
   );
   expect(
-    screen.getByRole("heading", { level: 2, name: "Your family library" }),
+    screen.getByRole("heading", { level: 2, name: "Who’s reading?" }),
   ).toBeTruthy();
   expect(screen.getByRole("button", { name: "Account" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Open Ella’s book" })).toBeTruthy();

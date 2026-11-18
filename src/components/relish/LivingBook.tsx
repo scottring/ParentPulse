@@ -404,7 +404,7 @@ export default function LivingBook({
   // Account books open directly; without them, family members noted in this
   // book link to what you've written about them.
   const homePeople: FamilyPerson[] = family?.length
-    ? family
+    ? family.map((p) => ({ ...p, hasBook: true }))
     : book.people.filter(isFamily).map((p) => ({
         id: p.id,
         name: p.name,
@@ -454,15 +454,16 @@ export default function LivingBook({
     ...(onAccount
       ? [
           {
+            // In a child's book this asks for the parent password first.
             label:
-              book.profile?.kind === "child" && !sample
+              book.profile?.kind === "child" && !sample && accountLabel === "Sign in"
                 ? "Parent account"
                 : accountLabel,
             onSelect: () => void headerAction(onAccount),
           },
         ]
       : []),
-    ...(!sample && accountLabel !== "Family library"
+    ...(!sample && accountLabel !== "Switch book"
       ? [
           {
             label: "Books on this device",

@@ -447,6 +447,15 @@
 .lb-library-home.lb-lib-home > section.lb-lib-sheet:not(.lb-lib-sheet-start) {
   max-width: 920px;
 }
+/* The shelf stands on the page itself: no card, title on the header's edge. */
+.lb-library-home.lb-lib-home > section.lb-lib-sheet.lb-lib-sheet-shelf {
+  max-width: 1100px;
+  padding: 8px 0 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
 
 /* Account menu: identity and Sign out together. */
 .lb-acct {
@@ -591,109 +600,31 @@
 .lb-app .lb-account section.lb-lib-books {
   gap: 32px;
 }
-.lb-lib-books > .lb-lib-create {
-  grid-template-columns: repeat(auto-fit, minmax(240px, max-content));
-  align-items: start;
-  gap: 20px 40px;
-  padding-top: 24px;
-  border-top: 1px solid var(--ui-line);
-}
 
-/* Books as covers: one button each, named for its owner. */
-.lb-covers {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 180px));
-  gap: 28px 28px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.lb-covers > li {
-  display: grid;
-  min-width: 0;
-}
-.lb-app .lb-account .lb-cover-book {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-content: start;
-  gap: 12px;
-  width: 100%;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--ui-ink);
-  text-align: left;
-  cursor: pointer;
-}
-.lb-cover-face {
-  position: relative;
+/* The picker's heading row: the question, then Create beside it. */
+.lb-lib-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  width: 100%;
-  aspect-ratio: 3 / 4;
-  padding: 0 12% 0 16%;
-  border-radius: 4px 12px 12px 4px;
-  background-color: #4a5a3c;
-  background-image: repeating-linear-gradient(
-      45deg,
-      rgba(255, 255, 255, 0.05) 0 1px,
-      transparent 1px 3px
-    ),
-    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.07) 0 1px, transparent 1px 3px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0) 10%);
-  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.12),
-    inset 10px 0 14px rgba(0, 0, 0, 0.18), 4px 4px 0 -1px #efe7d0,
-    4px 4px 0 0 #d9cfb2, 0 14px 26px rgba(48, 56, 44, 0.2);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  justify-content: space-between;
+  gap: 16px 24px;
 }
-.lb-cover-book[data-tone="clay"] .lb-cover-face {
-  background-color: #8a5a45;
+.lb-lib-top-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
-.lb-cover-book[data-tone="sky"] .lb-cover-face {
-  background-color: #4c6675;
+.lb-app .lb-account .lb-lib-top-actions :is(.lb-primary, .lb-secondary) {
+  min-height: 46px;
+  font: 600 16px/1.2 var(--sans);
 }
-.lb-cover-book[data-tone="plum"] .lb-cover-face {
-  background-color: #66526a;
+.lb-app .lb-account .lb-lib-top-actions .lb-secondary {
+  background: transparent;
+  border-color: var(--ui-olive);
+  color: var(--ui-olive);
 }
-.lb-cover-label {
-  width: 100%;
-  padding: 10px 8px;
-  border-radius: 3px;
+.lb-app .lb-account .lb-lib-top-actions .lb-secondary:not(:disabled):hover {
   background: var(--ui-card);
-  box-shadow: inset 0 0 0 1px rgba(48, 56, 44, 0.12);
-  font: 600 clamp(18px, 2vw, 24px) / 1.1 var(--serif);
-  text-align: center;
-  overflow-wrap: anywhere;
-}
-.lb-cover-caption {
-  font: 600 14px/1.3 var(--sans);
-  color: var(--ui-muted);
-}
-.lb-cover-book:not(:disabled):hover .lb-cover-face {
-  transform: translateY(-3px);
-}
-.lb-app .lb-account .lb-cover-book:focus-visible {
-  outline: 3px solid var(--ui-olive);
-  outline-offset: 6px;
-  border-radius: 12px;
-}
-.lb-cover-book:disabled {
-  opacity: 0.6;
-  cursor: progress;
-}
-.lb-covers-ghost span {
-  width: 100%;
-  aspect-ratio: 3 / 4;
-  border-radius: 4px 12px 12px 4px;
-  background: var(--ui-line-soft);
-  animation: lb-lib-pulse 1.6s ease-in-out infinite;
-}
-@keyframes lb-lib-pulse {
-  50% {
-    opacity: 0.55;
-  }
 }
 .lb-lib-state {
   justify-items: start;
@@ -717,6 +648,15 @@
 .lb-lib-foot p {
   margin: 0;
   color: var(--ui-muted);
+}
+.lb-lib-foot-local {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 24px;
+}
+.lb-lib-sheet.lb-lib-sheet-shelf + .lb-lib-foot {
+  max-width: 1100px;
 }
 .lb-app .lb-lib-foot button,
 .lb-app .lb-lib-foot a {
@@ -751,12 +691,10 @@
   max-width: 220px;
   justify-self: start;
 }
-.r-dialog .lb-covers {
-  grid-template-columns: repeat(auto-fill, minmax(118px, 140px));
-  gap: 24px 20px;
-}
-.r-dialog .lb-cover-label {
-  font-size: 18px;
+.r-dialog .lb-bookshelf {
+  --lb-book-w: 160px;
+  --lb-shelf-gap: 32px;
+  --lb-shelf-inset: 16px;
 }
 .r-dialog .lb-account .lb-lib-start :is(h1, h2) {
   font-size: clamp(38px, 6vw, 52px);
@@ -777,10 +715,6 @@
   .lb-library-home.lb-lib-home > section.lb-lib-sheet {
     padding: 24px 20px;
   }
-  .lb-covers {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 24px 18px;
-  }
   .lb-app .lb-account .lb-lib-create .lb-primary {
     width: 100%;
   }
@@ -791,20 +725,8 @@
   .lb-app .lb-account .lb-lib-create .lb-lib-link {
     justify-self: start;
   }
-  .lb-lib-books > .lb-lib-create {
-    grid-template-columns: 1fr;
-  }
   .lb-lib-bar {
     margin-right: 36px;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .lb-cover-face,
-  .lb-covers-ghost span {
-    transition: none;
-    animation: none;
-  }
-  .lb-cover-book:not(:disabled):hover .lb-cover-face {
-    transform: none;
-  }
-}
+

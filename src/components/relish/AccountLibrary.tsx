@@ -5,6 +5,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   ChevronDown,
+  Plus,
   ShieldCheck,
 } from "lucide-react";
 import { sendPasswordResetEmail, sendEmailVerification } from "firebase/auth";
@@ -23,17 +24,18 @@ import {
   type Audience,
 } from "@/lib/relish/profiles";
 import { readBinding, type SyncedEdition } from "@/lib/relish/book-sync";
+import { coverFor } from "./covers";
 import type { useLocalBook } from "./useLocalBook";
 import type { useBookSync } from "./useBookSync";
 import { readHomeBook } from "./homeBook";
 import { Dialog } from "./BookForms";
 import Illustration from "./Illustration";
-
-const bookTones = ["olive", "clay", "sky", "plum"] as const;
+import { BookShelf, GhostShelf, ShelfBook } from "./BookCover";
 
 /** Where book creation saves, verified against useBookSync.accountBook:
  *  an encrypted copy uploads to the account and opens from any signed-in
- *  device; children's books belong to this parent account. */
+ *  device; children's books belong to this parent account (said in the
+ *  child-book form, where it matters). */
 export const OWN_BOOK_NOTE =
   "Encrypted and saved to your account, so it opens wherever you sign in.";
 export const CHILD_BOOK_NOTE =
@@ -244,8 +246,8 @@ export default function AccountLibrary({
     />
   ) : null;
 
-  // "Create my book" (when this adult has none yet) and "Create a child's
-  // book", each with what creating it actually does to storage.
+  // First visit: "Create my book" with where it saves, and "Create a
+  // child's book" (its form explains child access).
   const createActions = (
     <div className="lb-lib-create">
       {!hasOwnBook && (
@@ -264,30 +266,50 @@ export default function AccountLibrary({
       <div className="lb-lib-create-child">
         <button
           type="button"
-          className={hasOwnBook ? "lb-secondary" : "lb-lib-link"}
+          className="lb-lib-link"
           disabled={working}
           onClick={() => startCreating("child")}
         >
           Create a child’s book
         </button>
-        <p className="lb-fine">{CHILD_BOOK_NOTE}</p>
       </div>
+    </div>
+  );
+  // On the shelf: create beside the heading.
+  const shelfActions = (
+    <div className="lb-lib-top-actions">
+      {!hasOwnBook && (
+        <button
+          type="button"
+          className="lb-primary"
+          disabled={working}
+          onClick={() => startCreating("adult")}
+        >
+          Create my book <ArrowRight size={18} aria-hidden="true" />
+        </button>
+      )}
+      <button
+        type="button"
+        className="lb-secondary"
+        disabled={working}
+        onClick={() => startCreating("child")}
+      >
+        <Plus size={17} aria-hidden="true" />
+        Create a child’s book
+      </button>
     </div>
   );
 
   const library =
     view === "loading" ? (
-      <section className="lb-lib-state" aria-busy="true">
-        <Heading>Your family library</Heading>
+      <section className="lb-lib-state lb-lib-books" aria-busy="true">
+        <Heading>Who’s reading?</Heading>
         <p role="status">Loading your books…</p>
-        <div className="lb-covers lb-covers-ghost" aria-hidden="true">
-          <span />
-          <span />
-        </div>
+        <GhostShelf />
       </section>
     ) : view === "failed" ? (
       <section className="lb-lib-state">
-        <Heading>Your family library</Heading>
+        <Heading>Who’s reading?</Heading>
         <p role="alert" className="lb-error">
           Your books didn’t load.{" "}
           {sync.error || "Check your connection and try again."}
@@ -315,7 +337,7 @@ export default function AccountLibrary({
           className="lb-lib-start-art"
         />
         <div className="lb-lib-start-words">
-          <p className="lb-kicker">Family library</p>
+          <p className="lb-kicker">Relish account</p>
           <Heading>Start your book</Heading>
           <p className="lb-lib-invite">
             What’s one thing someone in your family did this week that you’d
@@ -326,59 +348,46 @@ export default function AccountLibrary({
       </section>
     ) : (
       <section className="lb-lib-books">
-        <Heading>Your family library</Heading>
-        <ul className="lb-covers">
-          {books.map((head, i) => {
-            const label = head.label.trim() || "Untitled";
+        <div className="lb-lib-top">
+          <Heading>Who’s reading?</Heading>
+          {shelfActions}
+        </div>
+        <BookShelf label="Books">
+          {books.map((head) => {
             const mine = head.accountManaged && head.id === own;
             return (
-              <li key={head.id}>
-                <button
-                  type="button"
-                  className="lb-cover-book"
-                  data-tone={bookTones[i % bookTones.length]}
-                  disabled={working}
-                  aria-label={
-                    head.accountManaged
-                      ? `Open ${label}’s book`
-                      : `Open ${label}’s earlier book (needs its original passphrase)`
-                  }
-                  onClick={() => void act(() => open(head))}
-                >
-                  <span className="lb-cover-face" aria-hidden="true">
-                    <span className="lb-cover-label">{label}</span>
-                  </span>
-                  <span className="lb-cover-caption" aria-hidden="true">
-                    {mine
-                      ? "Your book"
-                      : head.accountManaged
-                        ? "Open"
-                        : "Original passphrase needed"}
-                  </span>
-                </button>
-              </li>
+              <ShelfBook
+                key={head.id}
+                name={head.label}
+                cover={coverFor(head.label, mine)}
+                disabled={working}
+                locked={!head.accountManaged}
+                note={mine ? "Your book" : undefined}
+                onOpen={() => void act(() => open(head))}
+              />
             );
           })}
-        </ul>
-        {createActions}
+        </BookShelf>
       </section>
     );
 
   const footer = libraryOpen || inline ? (
     <footer className="lb-lib-foot">
-      {onLocal && (
-        <p>
-          Already have a book?{" "}
-          <button type="button" onClick={onLocal}>
-            Open a local book or restore a backup
+      <div className="lb-lib-foot-local">
+        {onLocal && (
+          <p>
+            {view !== "books" && "Already have a book? "}
+            <button type="button" onClick={onLocal}>
+              Open a local book or restore a backup
+            </button>
+          </p>
+        )}
+        {onExplore && (
+          <button type="button" onClick={onExplore}>
+            Explore a sample book
           </button>
-        </p>
-      )}
-      {onExplore && (
-        <button type="button" onClick={onExplore}>
-          Explore a sample book
-        </button>
-      )}
+        )}
+      </div>
       <a href="/privacy/" target="_blank" rel="noreferrer">
         Privacy details
       </a>
@@ -387,9 +396,9 @@ export default function AccountLibrary({
 
   const signedIn = !user ? null : !parentReady && gate ? (
     <>
-      <p className="lb-kicker">Family library</p>
+      <p className="lb-kicker">Switch book</p>
       <Heading>Parent sign-in</Heading>
-      <p>Enter the parent password to return to the family library.</p>
+      <p>Enter the parent password to choose another book.</p>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -416,13 +425,13 @@ export default function AccountLibrary({
         </label>
         <button className="lb-primary" disabled={working}>
           <ShieldCheck size={17} />
-          Open family library
+          Choose a book
         </button>
       </form>
     </>
   ) : !user.emailVerified ? (
     <>
-      <p className="lb-kicker">Family library</p>
+      <p className="lb-kicker">Relish account</p>
       <Heading>Verify your email</Heading>
       <section>
         <p>
@@ -554,11 +563,12 @@ export default function AccountLibrary({
                 </select>
               </label>
               <p>
-                Their prompts and activities will match this age range. Their
-                book belongs to your account: no child email or password.
-                Entries and photos save under your account, and a parent
-                password protects the family library and parent settings. AI
-                and sharing with other accounts still need your permission.
+                Their prompts and activities will match this age range.{" "}
+                {CHILD_BOOK_NOTE} Their book belongs to your account: no child
+                email or password. Entries and photos save under your account,
+                and a parent password protects switching books and parent
+                settings. AI and sharing with other accounts still need your
+                permission.
               </p>
               <label className="lb-account-check">
                 <input
@@ -607,7 +617,7 @@ export default function AccountLibrary({
           <Heading>Open {chosen.label}’s earlier book</Heading>
           <p>
             This copy still uses its original book passphrase. Once it’s open,
-            choose Family library to add it to your account.
+            choose Switch book to add it to your account.
           </p>
           <label>
             Original book passphrase
@@ -768,7 +778,7 @@ export default function AccountLibrary({
   );
   if (!inline)
     return (
-      <Dialog title="Your family library" onClose={onClose} wide={user ? true : false}>
+      <Dialog title="Who’s reading?" onClose={onClose} wide={user ? true : false}>
         {content}
       </Dialog>
     );
@@ -779,7 +789,15 @@ export default function AccountLibrary({
         {accountMenu}
       </header>
       <section
-        className={`lb-lib-sheet ${libraryOpen && view === "empty" && !adding && !chosen ? "lb-lib-sheet-start" : ""}`}
+        className={`lb-lib-sheet ${
+          libraryOpen && !adding && !chosen
+            ? view === "empty"
+              ? "lb-lib-sheet-start"
+              : view !== "failed"
+                ? "lb-lib-sheet-shelf"
+                : ""
+            : ""
+        }`}
       >
         {content}
       </section>

@@ -18,6 +18,8 @@ export type FamilyPerson = {
   onOpen: () => void;
   /** A short line under the name on Family, e.g. "Book in your account". */
   note?: string;
+  /** Their own book in this account: shown as a cover on Family. */
+  hasBook?: boolean;
 };
 export const personTones: Tone[] = ["clay", "sky", "sage", "lilac", "sun"];
 const shortDate = (iso: string) =>
