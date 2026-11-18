@@ -80,12 +80,9 @@ export default function Tools({
         <section className="rt-book rt-kept ui-card">
           <Illustration name="saved" size={150} eager className="rt-kept-art" />
           <div>
-            <p className="lb-kicker">Exercise complete</p>
+            <p className="lb-kicker">{kept.title}</p>
             <h2 id="rt-title">Kept in your book</h2>
-            <p className="rt-intro">
-              “{kept.title}” is a page in Your book now. Come back to it, or
-              share it if you want to.
-            </p>
+            <p className="rt-intro">That’s a good place to stop.</p>
             <div className="rt-actions">
               {kept.pageId && onOpenPage ? (
                 <button
@@ -109,7 +106,7 @@ export default function Tools({
                   setOpenId(null);
                 }}
               >
-                Choose another exercise
+                {onBack ? "Find something else to do" : "Choose another exercise"}
               </button>
             </div>
           </div>
@@ -142,11 +139,10 @@ export default function Tools({
         note="Your private pages"
       />
       <section className="rt-book ui-card">
-        <p className="lb-kicker">The {book.owner} edition · Exercises</p>
         <h2 id="rt-title">Try an exercise</h2>
         <p className="rt-intro">
-          Short, hands-on exercises for something that’s hard right now. Each
-          one ends with a page you can keep. Nothing is saved until you keep it.
+          Sorts and fill-in-the-blanks end with a page you choose to keep.
+          Habits save each mark as you go.
         </p>
         {!!running.length && (
           <section className="rt-group" aria-label="In progress">
@@ -268,7 +264,7 @@ function OpenExercise({
             ? onCommit(
                 (b) => startTracker(b, tool.id, who || undefined),
                 undefined,
-                "Exercise started. Come back each day.",
+                "Started. Your marks save as you go.",
               )
             : setStarted(true)
         }
@@ -285,8 +281,8 @@ function OpenExercise({
       />
       <section className="rt-book ui-card">
         <p className="rt-start-time">
-          <Clock size={18} aria-hidden="true" /> {tool.time} ·{" "}
-          {toolGroups.find((g) => g.kind === tool.kind)?.title}
+          <Clock size={18} aria-hidden="true" /> {tool.time}
+          {tool.kind === "tracker" ? ` · ${tool.span}` : ""}
         </p>
         <h2 id="rt-title">{tool.title}</h2>
         <p className="rt-intro">{tool.blurb}</p>
@@ -359,12 +355,23 @@ function ExerciseStart({
       <section className="rt-start-card ui-card ui-torn">
         <div className="rt-start-text">
           <p className="rt-start-time">
-            <Clock size={18} aria-hidden="true" /> {tool.time}
+            <Clock size={18} aria-hidden="true" />{" "}
+            {tool.kind === "tracker" ? `Today: ${tool.time.toLowerCase()}` : tool.time}
           </p>
+          {tool.kind === "tracker" && (
+            <p className="rt-start-time rt-start-span">Keeps going: {tool.span.toLowerCase()}</p>
+          )}
           <h2 id="rt-title">{tool.title}</h2>
           <p className="rt-start-blurb">{tool.blurb}</p>
+          {audienceOf(book) === "under-6" && (
+            <p className="lb-age-cue">
+              Grown-up: read each part aloud and let your child choose.
+            </p>
+          )}
           <p className="rt-start-note">
-            Keep a page in your book whenever you’re ready.
+            {tool.kind === "tracker"
+              ? "Each mark saves as you go. Keep a page when you’re done, or stop any time."
+              : "Nothing is saved until you choose Keep this page at the end."}
           </p>
           {required && !book.people.length ? (
             <p className="lb-fine rt-note">
@@ -399,7 +406,9 @@ function ExerciseStart({
           >
             {tool.kind === "tracker" && tool.mode === "squares"
               ? "Start bingo"
-              : "Start this exercise"}{" "}
+              : tool.kind === "tracker"
+                ? "Start today"
+                : "Start this exercise"}{" "}
             <ArrowRight size={17} aria-hidden="true" />
           </button>
         </div>
@@ -758,6 +767,10 @@ function TrackerRunner({
       <p className="rt-instruction">
         {person ? `With ${person.name}. ` : ""}
         {tool.instruction}
+      </p>
+      <p className="lb-fine">
+        Started {new Date(run.startedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+        {" · "}each mark saves as you go.
       </p>
       <p className="rt-progress" aria-live="polite">
         {progress.done} of {progress.total}

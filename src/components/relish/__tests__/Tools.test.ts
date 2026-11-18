@@ -107,12 +107,13 @@ it("sorts cards, picks one, and keeps the result as a page in Your pages", async
   expect(page.text).toContain("Helps me: Talking it through; A long shower.");
   expect(page.text).toContain("Doesn’t help: Music.");
   expect(page.text).toContain("The one to try first next time: A long shower.");
-  fireEvent.click(screen.getByRole("button", { name: "Choose another exercise" }));
+  fireEvent.click(screen.getByRole("button", { name: "Find something else to do" }));
   await screen.findByRole("heading", { name: "What feels right?" });
 });
 it("builds a soft opener only once every part is filled in", async () => {
   const app = open(adult());
   fireEvent.click(await screen.findByRole("button", { name: /Rewrite the opener/ }));
+  expect(screen.getByText(/Nothing is saved until you choose Keep this page/)).toBeTruthy();
   expect(screen.getByRole("group", { name: "Who will you say this to?" })).toBeTruthy();
   fireEvent.click(screen.getByRole("radio", { name: "Sam" }));
   fireEvent.click(screen.getByRole("button", { name: /Start this exercise/ }));
@@ -143,6 +144,10 @@ it("runs a day-by-day checklist across visits and finishes into a page", async (
   fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos/ }));
   const start = screen.getByRole("button", { name: /Start/ }) as HTMLButtonElement;
   expect(start.disabled).toBe(true);
+  // Today's effort and the overall length are told apart, and what saves is honest.
+  expect(screen.getByText(/Today: under a minute a day/)).toBeTruthy();
+  expect(screen.getByText("Keeps going: 10 days, at your pace")).toBeTruthy();
+  expect(screen.getByText(/Each mark saves as you go/)).toBeTruthy();
   // Someone is required here, so "No one in particular" is not offered.
   expect(screen.queryByRole("radio", { name: "No one in particular" })).toBeNull();
   fireEvent.click(screen.getByRole("radio", { name: "Sam" }));
