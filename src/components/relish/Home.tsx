@@ -4,6 +4,7 @@ import type { Book } from "@/lib/relish/model";
 import { bookPages } from "@/lib/relish/pages";
 import { nudgeStart, nudgesFor, type NudgeAction } from "@/lib/relish/nudges";
 import { pageKind, type DoFilter, type Tone } from "@/lib/relish/catalog";
+import PhotoPick from "./PhotoPick";
 import { audienceOf } from "@/lib/relish/profiles";
 import { JOURNAL_TEXT_LIMIT } from "@/lib/relish/journal";
 import Illustration from "./Illustration";
@@ -104,7 +105,7 @@ export default function Home({
   /** Opens the full editor, carrying anything already typed. */
   onQuickWrite?: (text: string, voice: boolean) => void;
   /** Opens a new page with the photo picker showing, carrying any words typed. */
-  onQuickPhoto?: (text: string) => void;
+  onQuickPhoto?: (text: string, file: File) => void;
 }) {
   const list = nudgesFor(book, names);
   const [i, setI] = useState(() => nudgeStart(list.length));
@@ -124,7 +125,7 @@ export default function Home({
         onBook={onBook}
         onWrite={onQuickWrite && (() => onQuickWrite("", false))}
         onRecord={onQuickWrite && (() => onQuickWrite("", true))}
-        onPhoto={onQuickPhoto && (() => onQuickPhoto(""))}
+        onPhoto={onQuickPhoto && ((file) => onQuickPhoto("", file))}
       />
     );
   const tiles: {
@@ -331,7 +332,7 @@ function QuickJot({
   busy: boolean;
   onSave: (text: string) => Promise<string>;
   onWrite: (text: string, voice: boolean) => void;
-  onPhoto?: (text: string) => void;
+  onPhoto?: (text: string, file: File) => void;
   onPage: (id: string) => void;
 }) {
   const [text, setText] = useState("");
@@ -396,18 +397,17 @@ function QuickJot({
           </svg>
         </button>
         {onPhoto && (
-          <button
-            type="button"
+          <PhotoPick
             className="rp-jot-mic"
-            aria-label="Add a photo"
+            label="Add a photo"
             disabled={saving || busy}
-            onClick={() => onPhoto(text)}
+            onFile={(file) => onPhoto(text, file)}
           >
             <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
               <circle cx="12" cy="13" r="3.5" />
             </svg>
-          </button>
+          </PhotoPick>
         )}
         <button className="rp-jot-save" disabled={!ready}>
           {saving ? "Saving…" : "Save"}

@@ -304,6 +304,38 @@ export function completeVisit(book: Book, visitId: string, draft: Draft): Book {
     },
   }));
 }
+/**
+ * Sets a waiting plan aside without trying it. Stored as a reflection on the
+ * plan (no outcome), so it stops being "pending" with no schema change.
+ */
+export function letGoPractice(book: Book): Book {
+  const practice = pendingPractice(book);
+  if (!practice) throw new Error("There’s no plan waiting.");
+  const stamp = now();
+  const entry: LivingEntry = {
+    id: id(),
+    kind: "reflection",
+    thread: practice.thread,
+    text: "Let this plan go without trying it.",
+    sourceId: practice.id,
+    createdAt: stamp,
+  };
+  return changeLiving(book, (x) => ({
+    ...x,
+    entries: [...x.entries, entry],
+    visit:
+      x.visit && x.visit.status !== "complete"
+        ? {
+            ...x.visit,
+            status: "complete",
+            updatedAt: stamp,
+            completedAt: stamp,
+            summary: "Plan let go.",
+            draft: { text: "", opportunity: "", outcome: "", perspective: "" },
+          }
+        : x.visit,
+  }));
+}
 export function markTried(book: Book, entryId: string): Book {
   const entry = livingOf(book).entries.find(
     (e) => e.id === entryId && e.kind === "practice",

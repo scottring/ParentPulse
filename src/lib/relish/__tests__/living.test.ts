@@ -14,6 +14,7 @@ import {
   keepGame,
   livingOf,
   markTried,
+  letGoPractice,
   newGame,
   nextKind,
   pauseVisit,
@@ -97,6 +98,25 @@ describe("bounded living-book sessions", () => {
     });
     expect(livingOf(book).entries.at(-1)?.outcome).toBe("time");
     expect(pendingPractice(book)).toBeUndefined();
+  });
+  it("lets an untried plan go without losing anything or changing the schema", () => {
+    let book = begun();
+    book = completeVisit(book, livingOf(book).visit!.id, draft);
+    book = beginVisit(book);
+    book = completeVisit(book, livingOf(book).visit!.id, draft);
+    const plan = pendingPractice(book)!;
+    book = beginVisit(book);
+    const before = livingOf(book).entries.length;
+    book = letGoPractice(book);
+    expect(pendingPractice(book)).toBeUndefined();
+    expect(livingOf(book).entries).toHaveLength(before + 1);
+    const last = livingOf(book).entries.at(-1)!;
+    expect(last.kind).toBe("reflection");
+    expect(last.sourceId).toBe(plan.id);
+    expect(last.outcome).toBeUndefined();
+    expect(livingOf(book).visit?.status).toBe("complete");
+    expect(isBook(book)).toBe(true);
+    expect(() => letGoPractice(book)).toThrow("no plan");
   });
   it("encrypts a paused draft and game state through export and restore", async () => {
     let book = begun();

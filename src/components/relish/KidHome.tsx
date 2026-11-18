@@ -6,6 +6,7 @@ import { audienceOf } from "@/lib/relish/profiles";
 import type { Nudge, NudgeAction } from "@/lib/relish/nudges";
 import type { DoFilter } from "@/lib/relish/catalog";
 import Illustration, { Emblem } from "./Illustration";
+import PhotoPick from "./PhotoPick";
 import {
   emblemFor,
   exerciseIllustration,
@@ -113,7 +114,7 @@ export default function KidHome({
   onBook: () => void;
   onWrite?: () => void;
   onRecord?: () => void;
-  onPhoto?: () => void;
+  onPhoto?: (file: File) => void;
 }) {
   const [i, setI] = useState(start);
   const nudge = list[i % Math.max(list.length, 1)];
@@ -159,10 +160,10 @@ export default function KidHome({
               </button>
             )}
             {onPhoto && (
-              <button type="button" disabled={busy} onClick={onPhoto}>
+              <PhotoPick disabled={busy} onFile={onPhoto}>
                 <Camera size={26} strokeWidth={1.6} aria-hidden="true" /> Add a
                 photo
-              </button>
+              </PhotoPick>
             )}
           </div>
           <button type="button" className="ui-link rk-open" disabled={busy} onClick={onBook}>

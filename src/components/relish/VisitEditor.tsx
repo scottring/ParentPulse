@@ -26,6 +26,7 @@ export default function VisitEditor({
   onFinish,
   onTried,
   onNewMoment,
+  onLetGo,
 }: {
   book: Book;
   visit: Visit;
@@ -37,6 +38,8 @@ export default function VisitEditor({
   onTried: (draft: Draft) => void;
   /** Sets aside an untried plan and starts a new moment. */
   onNewMoment?: (draft: Draft) => void;
+  /** Set the waiting plan aside without trying it. */
+  onLetGo?: () => void;
 }) {
   const [draft, setDraft] = useState<Draft>(visit.draft),
     [ai, setAI] = useState(false),
@@ -283,9 +286,19 @@ export default function VisitEditor({
             >
               {words.notYet}
             </button>
+            {onLetGo && practice && (
+              <button
+                className="lb-text"
+                disabled={busy}
+                onClick={onLetGo}
+              >
+                Let it go
+              </button>
+            )}
           </div>
           <p className="lb-fine lb-after-actions">
-            “Not yet” keeps the plan. It will ask again next time.
+            “Not yet” keeps the plan for next time.
+            {onLetGo && practice ? " “Let it go” sets it aside; nothing is lost." : ""}
           </p>
           {onNewMoment && (
             <button

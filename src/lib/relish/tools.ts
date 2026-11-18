@@ -221,7 +221,7 @@ export const tools: Tool[] = [
     ],
     picks: [{ pile: "me", label: "One job to talk about sharing" }],
     closing:
-      "This is your view. The other person can sort the same list in their own edition; compare when you’re both ready.",
+      "This is your view. The other person can sort the same list in their own book; compare when you’re both ready.",
   },
   {
     kind: "builder",

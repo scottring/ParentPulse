@@ -91,7 +91,7 @@ export default function EditionSetup({
         {book.profile ? "Who this book is for" : "Who is this book for?"}
       </h2>
       <p>
-        The {book.owner} edition uses this age range to select prompts and activities. Relish does not infer age from a name.
+        {book.owner}’s book uses this age range to select prompts and activities. Relish does not infer age from a name.
       </p>
       <fieldset disabled={busy}>
         <legend>This book belongs to</legend>

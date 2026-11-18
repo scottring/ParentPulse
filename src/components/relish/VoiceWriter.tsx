@@ -425,7 +425,7 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
           </p>
         ) : !book.profile ? (
           <p>
-            Choose an adult or child edition in parent settings before
+            Choose an adult or child book in parent settings before
             connecting voice writing.
           </p>
         ) : !config || !accountReady ? (

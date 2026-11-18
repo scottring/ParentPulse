@@ -51,10 +51,24 @@ it("offers Kindness spotting to 6–8s with Scott's wording", () => {
   expect(spot.action).toEqual({ kind: "exercise", id: "kindness-bingo" });
 });
 
-it("opens a new page, with the photo picker for Add a photo", () => {
+it("Add a photo opens the device's photo picker, then a new page with the photo", async () => {
   openBook(kid());
-  fireEvent.click(screen.getByRole("button", { name: "Add a photo" }));
-  expect(screen.getByRole("region", { name: "Photos on this page" })).toBeTruthy();
+  const button = screen.getByRole("button", { name: "Add a photo" });
+  const input = button.parentElement!.querySelector(
+    'input[type="file"]',
+  ) as HTMLInputElement;
+  let opened = false;
+  input.click = () => {
+    opened = true;
+  };
+  fireEvent.click(button);
+  expect(opened).toBe(true);
+  fireEvent.change(input, {
+    target: { files: [new File(["x"], "fictional.png", { type: "image/png" })] },
+  });
+  expect(
+    await screen.findByRole("region", { name: "Journal editor" }),
+  ).toBeTruthy();
 });
 
 it("More to try opens Do something filtered", () => {

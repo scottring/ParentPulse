@@ -122,11 +122,11 @@ export async function connectionAction(
   if (action === "register") {
     if (data.adultConfirmed !== true)
       fail(
-        "Online connections are for adults. Children can keep local editions.",
+        "Online connections are for adults. Children can keep local books.",
         403,
       );
     if (!clean(data.name, 60) || !isPublicKey(data.publicKey))
-      fail("Choose your edition name and key.");
+      fail("Choose your book name and key.");
     const key = data.publicKey as Member["publicKey"],
       keyId = hash(canonicalKey(key));
     // Validate the point, not just the JWK shape.
@@ -139,14 +139,14 @@ export async function connectionAction(
         [],
       );
     } catch {
-      fail("This edition key could not be read.");
+      fail("This book key could not be read.");
     }
     await db.runTransaction(async (tx) => {
       const existing = (await tx.get(profileRef)).data();
       if (existing?.deleting) fail("Account deletion is in progress.", 409);
       if (existing && existing.keyId !== keyId)
         fail(
-          "This account already belongs to another edition. Restore its encrypted backup or use a different account.",
+          "This account already belongs to another book. Restore its encrypted backup or use a different account.",
           409,
         );
       tx.set(profileRef, {
@@ -161,7 +161,7 @@ export async function connectionAction(
     return { ok: true };
   }
   const profile = (await profileRef.get()).data();
-  if (!profile) fail("Connect this edition first.", 409);
+  if (!profile) fail("Connect this book first.", 409);
   if (action === "create") {
     if (!clean(data.name, 60)) fail("Give your family book a name.");
     const circleId = randomUUID(),
@@ -202,7 +202,7 @@ export async function connectionAction(
         fail("This invitation is no longer active.", 404);
       if (current?.deleting) fail("Account deletion is in progress.", 409);
       if (current?.circleId)
-        fail("This edition already belongs to a family.", 409);
+        fail("This book already belongs to a family.", 409);
       if (circle.memberIds.length >= 12)
         fail("This family has reached its 12-member limit.", 409);
       if (action === "inspect") return { name: circle.name };
@@ -301,7 +301,7 @@ export async function connectionAction(
         Array.isArray(packets) ||
         Object.keys(packets).sort().join() !== [...recipients].sort().join()
       )
-        fail("Encrypt this passage for each chosen edition.");
+        fail("Encrypt this passage for each chosen book.");
       const members = await tx.getAll(
         ...recipients.map((u) => db.doc(`${root}_profiles/${u}`)),
       );
@@ -316,7 +316,7 @@ export async function connectionAction(
           !isPacket(p) ||
           p.keyId !== member.keyId
         )
-          fail("A member’s edition changed. Refresh before sharing.", 409);
+          fail("A member’s book changed. Refresh before sharing.", 409);
       });
       const ref = db.doc(`${root}_passages/${passageId}`),
         previous = await tx.get(ref);
@@ -362,7 +362,7 @@ export async function connectionAction(
         return { ok: true };
       }
       if (!p.recipients.includes(uid))
-        fail("This passage was not offered to your edition.", 403);
+        fail("This passage was not offered to your book.", 403);
       if (p.revoked) fail("The author withdrew this passage.", 409);
       if (!["accepted", "declined"].includes(data.status as string))
         fail("Choose whether to keep this passage.");

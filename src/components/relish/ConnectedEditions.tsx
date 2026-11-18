@@ -36,7 +36,7 @@ export default function ConnectedEditions(props: Props) {
       <Dialog title="Book on this device" onClose={props.onClose}>
         <h2>Child profile</h2>
         <p>
-          Online connections are available only in adult editions. Children can
+          Online connections are available only in adult books. Children can
           use their written guide and play together on this device.
         </p>
       </Dialog>
@@ -399,7 +399,7 @@ function AdultConnectedEditions({
             </h3>
             <p className="lb-fine">
               Each person uses their own account. Children can keep a local
-              edition and play together without an online account.
+              book and play together without an online account.
             </p>
             <label>
               Email address
@@ -479,7 +479,7 @@ function AdultConnectedEditions({
             <div className="rc-edition">
               <BookIcon />
               <span className="rc-edition-name">
-                <strong>The {book.owner} edition</strong>
+                <strong>{book.owner}’s book</strong>
                 <span>
                   <span className="rp-sr">Signed in as </span>
                   {user.email}
@@ -537,11 +537,11 @@ function AdultConnectedEditions({
                     <Lock size={18} aria-hidden="true" /> What gets shared
                   </h3>
                   <p>
-                    Connecting publishes your edition name and public sharing
+                    Connecting publishes your book name and public sharing
                     key. Your writing stays on this device.
                   </p>
                   <p>
-                    To open this edition on another device, keep an encrypted
+                    To open this book on another device, keep an encrypted
                     backup.
                   </p>
                 </div>
@@ -551,14 +551,14 @@ function AdultConnectedEditions({
                     checked={adult}
                     onChange={(e) => setAdult(e.target.checked)}
                   />
-                  I’m 18 or older and connecting my own edition.
+                  I’m 18 or older and connecting my own book.
                 </label>
                 <button
                   className="rp-btn rp-btn-olive rc-go"
                   disabled={busy || !adult}
                   onClick={() => void run(connectEdition)}
                 >
-                  Connect this edition
+                  Connect this book
                 </button>
               </div>
             ) : (
@@ -635,7 +635,7 @@ function AdultConnectedEditions({
                         <div className="lb-boundary">
                           <p>
                             Join <strong>{joinName}</strong>? Members will see
-                            your edition name and public sharing key.
+                            your book name and public sharing key.
                           </p>
                           <button
                             type="button"
@@ -663,7 +663,7 @@ function AdultConnectedEditions({
                   <>
                     <h3>{circle.name}</h3>
                     <p className="lb-fine">
-                      {circle.members.length} connected editions · one
+                      {circle.members.length} connected books · one
                       invitation per person
                     </p>
                     <div className="lb-member-list">
@@ -1099,7 +1099,7 @@ function AdultConnectedEditions({
             Only passages you select are delivered to other accounts. Your
             private sharing key stays inside your encrypted book.
             Account-managed books can be opened by the account owner. Relish
-            stores account details, edition names, family membership, delivery
+            stores account details, book names, family membership, delivery
             status and encrypted passages.
           </p>
           <p className="lb-fine">

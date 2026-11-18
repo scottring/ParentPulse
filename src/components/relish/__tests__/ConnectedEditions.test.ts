@@ -109,9 +109,9 @@ async function setup(mismatch?: "account" | "key", initialPassage?: {title:strin
   }
   render(createElement(Harness));
   await screen.findByText("What gets shared");
-  expect(screen.getByText("The Fictional A edition")).toBeTruthy();
+  expect(screen.getByText("Fictional A’s book")).toBeTruthy();
   fireEvent.click(screen.getByRole("checkbox", { name: /18 or older/ }));
-  fireEvent.click(screen.getByRole("button", { name: "Connect this edition" }));
+  fireEvent.click(screen.getByRole("button", { name: "Connect this book" }));
   if (mismatch)
     await screen.findByText(
       mismatch === "account"
@@ -136,7 +136,7 @@ describe("sharing recovery", () => {
     await setup("key");
     expect(screen.queryByText("Test family")).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Connect this edition" }),
+      screen.getByRole("button", { name: "Connect this book" }),
     ).toBeTruthy();
   });
   it("never removes another edition’s identity when deleting the signed-in account", async () => {

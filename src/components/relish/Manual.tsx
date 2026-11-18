@@ -454,7 +454,7 @@ export default function Manual({
                       ? "I’m the parent or guardian and allow this guide session. "
                       : "I’m 18 or older. "}
                     I understand that turning on a manual’s guide sends its
-                    recent kept text to OpenAI automatically while this edition
+                    recent kept text to OpenAI automatically while this book
                     is open. I can turn it off below. Standard API privacy
                     applies: no model training by default, response storage off,
                     and possible abuse-monitoring retention for up to 30 days.

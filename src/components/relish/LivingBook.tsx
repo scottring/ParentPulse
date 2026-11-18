@@ -22,6 +22,7 @@ import {
   lastEntry,
   livingOf,
   markTried,
+  letGoPractice,
   newGame,
   nextKind,
   pauseVisit,
@@ -478,7 +479,7 @@ export default function LivingBook({
     !!privateEditorOpen || sharedView,
     sample,
   );
-  const personalTitle = `The ${book.owner} edition`;
+  const personalTitle = `${book.owner}’s book`;
   const headingText = closed
     ? sharedView
       ? "Our Family pages"
@@ -539,6 +540,16 @@ export default function LivingBook({
             );
         }}
         onNewMoment={v.kind === "reflect" ? newMoment : undefined}
+        onLetGo={
+          v.kind === "reflect"
+            ? () =>
+                void commit(
+                  (b) => letGoPractice(b),
+                  () => navigate("do"),
+                  "Plan set aside.",
+                )
+            : undefined
+        }
       />
     );
   } else if (view === "bookmark" || view === "session") {
@@ -789,9 +800,39 @@ export default function LivingBook({
             onQuickWrite={(text, voice) =>
               quickEntry(voice, { ...newJournalDraft(), text })
             }
-            onQuickPhoto={(text) =>
-              quickEntry(false, { ...newJournalDraft(), text }, true)
-            }
+            onQuickPhoto={(text, file) => {
+              const photos = vault.photos;
+              if (!photos) {
+                quickEntry(false, { ...newJournalDraft(), text }, true);
+                return;
+              }
+              setWorking(true);
+              setError("");
+              Promise.resolve()
+                .then(() => photos.add(file))
+                .then((photo) => {
+                  if (!alive.current) return;
+                  if (!photo)
+                    throw new Error("That photo couldn’t be added. Try another.");
+                  quickEntry(false, {
+                    ...newJournalDraft(),
+                    text,
+                    photos: [photo],
+                  });
+                })
+                .catch((e) => {
+                  if (!alive.current) return;
+                  setError(
+                    e instanceof Error
+                      ? e.message
+                      : "That photo couldn’t be added. Try another.",
+                  );
+                  quickEntry(false, { ...newJournalDraft(), text }, true);
+                })
+                .finally(() => {
+                  if (alive.current) setWorking(false);
+                });
+            }}
           />
         ) : view === "do" && !sharedView ? (
           <DoSomething

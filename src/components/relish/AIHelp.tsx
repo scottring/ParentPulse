@@ -24,7 +24,7 @@ export function AIHelp(props: {
   if (!canUseOnline({ profile: props.profile }))
     return (
       <p className="lb-boundary">
-        AI is available only in an adult edition. This edition’s written guide
+        AI is available only in an adult book. This book’s written guide
         works without sending your words anywhere.
       </p>
     );

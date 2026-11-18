@@ -191,7 +191,7 @@ function BookGate() {
                       <ArrowUpRight size={18} />
                     </span>
                     <span className="lb-edition-title">
-                      The {e.label} edition
+                      {e.label}’s book
                     </span>
                     <small>Enter its passphrase to open</small>
                   </button>
