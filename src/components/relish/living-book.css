@@ -1323,3 +1323,70 @@
     height: 96px !important;
   }
 }
+
+/* ── Game rounds: turns of several questions, and their reveals ───────── */
+.lb-app .lb-turn-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  align-items: center;
+}
+.lb-app .lb-trend {
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-card);
+  border: 1px dashed var(--ui-olive-line);
+  font: italic 400 16px/1.5 var(--serif);
+  color: var(--ui-ink-soft);
+}
+.lb-app .lb-sp-list {
+  list-style: none;
+  padding: 0;
+  margin: 22px 0;
+  display: grid;
+  gap: 12px;
+}
+.lb-app .lb-sp-list > li {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--ui-card);
+}
+.lb-app .lb-sp-list > li.is-same {
+  background: var(--ui-sage-soft);
+  border-color: var(--ui-olive-line);
+}
+.lb-app .lb-sp-mark {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font: 600 12px/1.6 var(--sans);
+  letter-spacing: 0.02em;
+  background: var(--ui-line-soft);
+  color: var(--ui-ink);
+}
+.lb-app .lb-sp-list > li.is-same .lb-sp-mark {
+  background: var(--ui-sage);
+}
+.lb-app .lb-sp-list > li.is-different .lb-sp-mark {
+  background: var(--ui-clay);
+}
+.lb-app .lb-sp-prompt {
+  margin: 8px 0 6px;
+  font: 500 18px/1.4 var(--serif);
+}
+.lb-app .lb-sp-picks {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.lb-app .lb-sp-picks strong {
+  color: var(--ink);
+  font-weight: 600;
+}

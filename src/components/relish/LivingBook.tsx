@@ -23,11 +23,11 @@ import {
   livingOf,
   markTried,
   letGoPractice,
-  newGame,
   nextKind,
   pauseVisit,
   pendingPractice,
   recordRound,
+  startGame,
   updateDraft,
   type Draft,
   type Game,
@@ -339,15 +339,15 @@ export default function LivingBook({
   function createGame(kind: Game["kind"], players: Player[]) {
     void commit(
       (b) =>
-        changeLiving(b, (x) => ({
-          // A round left at its reveal is still noted before it is replaced.
-          ...recordRound(x),
-          game: newGame(
+        // A round left at its reveal is still noted before it is replaced.
+        changeLiving(b, (x) =>
+          startGame(
+            x,
             kind,
             players,
             b.profile?.kind === "child" ? b.profile.ageBand : undefined,
           ),
-        })),
+        ),
       () => navigate("play"),
     );
   }

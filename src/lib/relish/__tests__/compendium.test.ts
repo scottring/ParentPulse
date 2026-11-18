@@ -16,6 +16,7 @@ import {
   livingOf,
   newGame,
   recordRound,
+  turnPlan,
   type Game,
   type Player,
 } from "../living";
@@ -44,7 +45,7 @@ function revealed(kind: Game["kind"] = "match"): Game {
   let g = advanceGame(newGame(kind, players), { type: "start" });
   while (g.stage !== "reveal") {
     if (g.stage === "handoff") g = advanceGame(g, { type: "ready" });
-    g = advanceGame(g, { type: "choice", choice: 0 });
+    g = advanceGame(g, { type: "answer", answers: turnPlan(g)[g.turn].asks.map(() => 0) });
   }
   return g;
 }
@@ -52,7 +53,7 @@ const withGame = (book: Book, game: Game) =>
   changeLiving(book, (l) => ({ ...l, game }));
 
 describe("play records", () => {
-  it("a finished round without a kept page leaves a names-only record in Your book", () => {
+  it("a finished round without a kept page leaves a record with its answers in Your book", () => {
     const game = revealed("match");
     const book = finishGame(withGame(family(), game));
     const plays = livingOf(book).plays!;
@@ -66,8 +67,9 @@ describe("play records", () => {
         { id: "kaleb", name: "Kaleb" },
       ],
       playedAt: livingOf(book).game!.finishedAt,
+      questions: game.questions!.map((id) => ({ id, picks: [0, 0, 0] })),
     });
-    // No answers, prompts, story text or ages are stored in the record.
+    // Answers are kept by question id and pick: no prompt text or ages.
     expect(JSON.stringify(plays)).not.toMatch(/choices|audience|prompt/);
     expect(isBook(book)).toBe(true);
     const page = bookPages(book).find((p) => p.id === `play:${game.id}`)!;
@@ -136,8 +138,40 @@ describe("play records", () => {
       [{ ...record, pageId: 7 }],
       [{ ...record, id: "" }],
       Array.from({ length: 501 }, (_, i) => ({ ...record, id: String(i) })),
+      [{ ...record, questions: "nope" }],
+      [{ ...record, kind: "story", questions: record.questions }],
+      [{ ...record, questions: [{ id: "a-bored", picks: [0, 1] }] }],
+      [{ ...record, questions: [{ id: "a-bored", picks: [0, 1, 3] }] }],
+      [{ ...record, questions: [{ id: "", picks: [0, 1, 2] }] }],
+      // Only the newest rounds keep their answers.
+      Array.from({ length: 101 }, (_, i) => ({ ...record, id: String(i) })),
     ])
       expect(isLiving({ ...living, plays: bad })).toBe(false);
+    const namesOnly = { ...record };
+    delete namesOnly.questions;
+    expect(isLiving({ ...living, plays: [namesOnly] })).toBe(true);
+    expect(
+      isLiving({
+        ...living,
+        plays: [
+          ...Array.from({ length: 300 }, (_, i) => ({ ...namesOnly, id: `old${i}` })),
+          ...Array.from({ length: 100 }, (_, i) => ({ ...record, id: String(i) })),
+        ],
+      }),
+    ).toBe(true);
+  });
+
+  it("drops the answers of rounds older than the newest hundred, keeping their names and dates", () => {
+    let living = livingOf(family());
+    for (let i = 0; i < 102; i++)
+      living = recordRound({ ...living, game: advanceGame(revealed("match"), { type: "finish" }) });
+    const plays = living.plays!;
+    expect(plays).toHaveLength(102);
+    expect(plays.filter((r) => r.questions).length).toBe(100);
+    expect(plays[0].questions).toBeUndefined();
+    expect(plays[0].players).toHaveLength(3);
+    expect(plays[2].questions).toHaveLength(5);
+    expect(isLiving(living)).toBe(true);
   });
 });
 

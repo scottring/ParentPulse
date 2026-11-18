@@ -60,9 +60,9 @@ export const nudgeTemplates: Template[] = [
   {
     id: "same-page-tonight",
     audiences: adult,
-    time: "About 10 minutes",
-    text: "Play “Same page?” tonight. Everyone guesses, nobody is wrong.",
-    why: "A light way to hear how others see things. Passing is always allowed.",
+    time: "About 5–10 minutes",
+    text: "Play “Same page?” tonight: five quick questions, answered in private.",
+    why: "See where you match and where you don’t. Passing is always allowed.",
     cta: "Set up the game",
     action: { kind: "game", game: "match" },
   },

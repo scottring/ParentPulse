@@ -191,20 +191,34 @@ it("plays Same page? with hidden answers and a shared reveal", async () => {
   const app = open({ ...book, living: { ...livingOf(book), game } });
   fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
   expect(screen.getByRole("heading", { name: "Same page?" })).toBeTruthy();
+  expect(screen.getByText(/Relish remembers this round’s answers in Robin’s book/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /Let’s play/ }));
-  const choices = await screen.findAllByRole("button", { name: /./ });
-  const options = choices.filter((b) => b.closest(".lb-choices"));
-  expect(options).toHaveLength(3);
-  fireEvent.click(options[0]);
+  const options = () =>
+    screen.getAllByRole("button").filter((b) => b.closest(".lb-choices"));
+  // Robin answers five questions one at a time, passing one.
+  const first = options()[0].textContent!;
+  for (let q = 1; q <= 5; q++) {
+    await screen.findByText(new RegExp(`Robin’s turn · question ${q} of 5`));
+    expect(options()).toHaveLength(3);
+    if (q === 3) fireEvent.click(screen.getByRole("button", { name: "Pass this one" }));
+    else fireEvent.click(options()[0]);
+  }
   await screen.findByRole("heading", { name: "Over to Sam." });
-  expect(screen.queryByText(options[0].textContent!)).toBeNull();
+  expect(screen.queryByText(first)).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "I’m Sam · ready" }));
-  const second = (await screen.findAllByRole("button")).filter((b) =>
-    b.closest(".lb-choices"),
-  );
-  fireEvent.click(second[0]);
-  expect((await screen.findAllByText(/Same page: everyone chose/)).length).toBeGreaterThan(0);
+  for (let q = 1; q <= 5; q++) {
+    await screen.findByText(new RegExp(`Sam’s turn · question ${q} of 5`));
+    fireEvent.click(options()[q === 5 ? 1 : 0]);
+  }
+  expect(await screen.findByRole("heading", { name: "You matched on 3 of 4." })).toBeTruthy();
+  expect(screen.getAllByText("Same page ✓")).toHaveLength(3);
+  expect(screen.getByText("Different")).toBeTruthy();
+  expect(screen.getByText("Too few answers")).toBeTruthy();
   expect(livingOf(app.stored()).game?.stage).toBe("reveal");
+  expect(livingOf(app.stored()).game?.answers).toEqual([
+    [0, 0, null, 0, 0],
+    [0, 0, 0, 0, 1],
+  ]);
 });
 
 it("a card sort offers one card at a time, with skip, and keeps every card changeable", async () => {

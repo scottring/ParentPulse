@@ -221,8 +221,8 @@ export default function Journal({
             </p>
             <div className="rj-prose">{page.text}</div>
             <PhotoGallery photos={page.photos} access={photos} />
-            {page.sections.map((section) => (
-              <section className="rj-page-section" key={section.label}>
+            {page.sections.map((section, i) => (
+              <section className="rj-page-section" key={`${i}:${section.label}`}>
                 <p className="lb-kicker">{section.label}</p>
                 <p>{section.text}</p>
               </section>
@@ -281,8 +281,8 @@ export default function Journal({
                 </p>
                 <div className="rj-prose">{nextPage.text}</div>
                 <PhotoGallery photos={nextPage.photos} access={photos} />
-                {nextPage.sections.map((section) => (
-                  <section className="rj-page-section" key={section.label}>
+                {nextPage.sections.map((section, i) => (
+                  <section className="rj-page-section" key={`${i}:${section.label}`}>
                     <p className="lb-kicker">{section.label}</p>
                     <p>{section.text}</p>
                   </section>

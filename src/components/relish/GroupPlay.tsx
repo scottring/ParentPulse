@@ -1,19 +1,33 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Hand, Check, ArrowRight } from "lucide-react";
 import { ageLabels } from "@/lib/relish/profiles";
 import type { Book } from "@/lib/relish/model";
 import {
   type Game,
   type GameAction,
+  type Turn,
   gamePlayer,
   gameText,
-  joyOptions,
-  samePageAgreement,
-  samePageRound,
-  storyRounds,
-  turnCount,
+  livingOf,
+  samePageResult,
+  samePageSummary,
+  samePageTrend,
+  pickAgreement,
+  turnPlan,
 } from "@/lib/relish/living";
+
+const titles: Record<Game["kind"], string> = {
+  joy: "Guess my small joy",
+  match: "Same page?",
+  story: "One story, many voices",
+};
+const list = (items: string[]) =>
+  items.length < 2
+    ? items.join("")
+    : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+/** Rounds from contentVersion 2 keep their answers in the book. */
+const remembers = (g: Game) => g.contentVersion === 2;
 
 export default function GroupPlay({
   book,
@@ -37,26 +51,21 @@ export default function GroupPlay({
 }) {
   const [firstPlayer, setFirstPlayer] = useState(game.players[0].id);
   const g = game,
-    total = turnCount(g),
-    rounds = storyRounds(g.players.length, g.audience),
-    joyChoices = joyOptions(g),
-    match = g.kind === "match" ? samePageRound(g) : undefined,
-    title =
-      g.kind === "joy"
-        ? "Guess my small joy"
-        : g.kind === "match"
-          ? "Same page?"
-          : "One story, many voices",
+    plan = turnPlan(g),
+    total = plan.length,
+    title = titles[g.kind],
     text = gameText(g),
-    finished = ["reveal", "kept", "finished"].includes(g.stage);
+    finished = ["reveal", "kept", "finished"].includes(g.stage),
+    living = livingOf(book);
   const next = gamePlayer(g);
+  const many = (plan[0]?.asks.length || 1) > 1;
   return (
     <section className="lb-game" aria-label="Our game">
       {!finished && (
         <div className="lb-session-line">
           <div>
             <p className="lb-kicker">One round</p>
-            <p>{`Turn ${g.turn + 1} of ${total} · then reveal together`}</p>
+            <p>{`Turn ${Math.min(g.turn + 1, total)} of ${total} · then reveal together`}</p>
           </div>
           <button className="lb-text" disabled={busy} onClick={onPause}>
             Pause here
@@ -75,22 +84,38 @@ export default function GroupPlay({
             {g.kind === "joy"
               ? "One person chooses a joy in private. Pass the device so everyone else can guess. All choices are revealed together."
               : g.kind === "match"
-                ? "Everyone answers the same question in private. Pass the device between turns. All answers are revealed together."
+                ? many
+                  ? `${plan[0].asks.length} quick questions. On your turn, answer all of them in private, then pass the device. Then see where you match.`
+                  : "Everyone answers the same question in private. Pass the device between turns. All answers are revealed together."
                 : "Pass the device around. Each person adds to the same story. Anyone can pass."}
           </p>
           <div className="lb-boundary">
             <strong>
               {g.kind === "match"
-                ? "About 3–5 minutes"
+                ? many
+                  ? "About 5–10 minutes"
+                  : "About 3–5 minutes"
                 : g.kind === "joy"
                   ? "About 5 minutes"
                   : "About 5–10 minutes"}
             </strong>
             <p>
               {total} turns, then everyone sees the answers together. Passing
-              counts as a turn.
+              is always fine.
             </p>
+            {remembers(g) && (
+              <p>
+                Relish remembers this round’s answers in {book.owner}’s book
+                {g.kind === "match"
+                  ? " so you can see how you match over time"
+                  : ""}
+                . They’re never sent to AI.
+              </p>
+            )}
           </div>
+          {g.kind === "match" && samePageTrend(living, g) && (
+            <p className="lb-trend">{samePageTrend(living, g)}</p>
+          )}
           <ol className="lb-turns">
             {g.players.map((p) => (
               <li key={p.id}>{p.name}</li>
@@ -141,7 +166,9 @@ export default function GroupPlay({
               ? "Add the next part of the story, or pass."
               : g.kind === "joy"
                 ? `Guess what ${g.players[0].name} picked, or pass. The answers so far stay hidden.`
-                : "Answer without looking at anyone else’s, or pass. The answers so far stay hidden."}
+                : many
+                  ? `Answer all ${plan[g.turn].asks.length} without looking at anyone else’s. Pass any you like. The answers so far stay hidden.`
+                  : "Answer without looking at anyone else’s, or pass. The answers so far stay hidden."}
           </p>
           <button
             className="lb-primary"
@@ -151,115 +178,45 @@ export default function GroupPlay({
             I’m {next.name} · ready
           </button>
         </div>
-      ) : g.stage === "choose" ? (
-        <>
-          <p className="lb-kicker">{next.name}’s turn</p>
-          <h2>
-            {match
-              ? match.prompt
-              : g.kind === "joy"
-              ? g.turn === 0
-                ? g.audience === "under-6" || g.audience === "6-8"
-                  ? "What would you like to do?"
-                  : "What would brighten an ordinary afternoon for you?"
-                : g.audience === "under-6" || g.audience === "6-8"
-                  ? `What do you think ${g.players[0].name} would like?`
-                  : `What would brighten ${g.players[0].name}’s ordinary afternoon?`
-              : rounds[g.turn].prompt}
-          </h2>
-          {g.kind === "story" && text && (
-            <p className="lb-story-so-far">So far: {text}</p>
-          )}
-          <div className="lb-choices">
-            {(match
-              ? match.choices
-              : g.kind === "joy"
-                ? joyChoices
-                : rounds[g.turn].choices
-            ).map(
-              (choice, index) => (
-                <button
-                  key={choice}
-                  disabled={busy}
-                  onClick={() => onAction({ type: "choice", choice: index })}
-                >
-                  {choice}
-                </button>
-              ),
-            )}
-          </div>
-          <button
-            className="lb-text"
-            disabled={busy}
-            onClick={() => onAction({ type: "choice", choice: null })}
-          >
-            Pass my turn
-          </button>
-        </>
+      ) : g.stage === "choose" && plan[g.turn] ? (
+        <TurnPanel
+          key={`${g.id}:${g.turn}`}
+          turn={plan[g.turn]}
+          busy={busy}
+          onAction={onAction}
+          storySoFar={g.kind === "story" ? text : ""}
+        />
       ) : (
         <>
-          <p className="lb-kicker">
-            {g.kind === "story" ? "Your shared story" : "The reveal"}
-          </p>
-          <h2>
-            {text
-              ? g.kind === "story"
-                ? "Your story"
-                : "Here’s what everyone chose"
-              : "Everyone passed"}
-          </h2>
-          {match && text ? (
+          {g.kind === "match" ? (
+            <SamePageReveal game={g} trend={samePageTrend(living, g, true)} />
+          ) : (
             <>
-              <p className="lb-story-so-far">{match.prompt}</p>
-              <div className="lb-reveal">
-                {g.players.map((p, i) => (
-                  <div key={p.id}>
-                    <span className="lb-kicker">
-                      {p.name} {g.choices[i] === null ? "passed" : "chose"}
-                    </span>
-                    <p>
-                      {g.choices[i] === null
-                        ? "No answer"
-                        : match.choices[g.choices[i]!]}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              {samePageAgreement(g) && (
-                <p className="lb-same-page">{samePageAgreement(g)}</p>
+              <p className="lb-kicker">
+                {g.kind === "story" ? "Your shared story" : "The reveal"}
+              </p>
+              <h2>
+                {text
+                  ? g.kind === "story"
+                    ? "Your story"
+                    : "Here’s what everyone chose"
+                  : "Everyone passed"}
+              </h2>
+              {g.kind === "joy" && text ? (
+                <JoyRevealV1 game={g} />
+              ) : text ? (
+                <blockquote>{text}</blockquote>
+              ) : (
+                <p>No answers to show this time. That’s fine too.</p>
               )}
             </>
-          ) : g.kind === "joy" && text ? (
-            <div className="lb-reveal">
-              {g.players.map((p, i) => (
-                <div key={p.id}>
-                  <span className="lb-kicker">
-                    {p.name}{" "}
-                    {i === 0
-                      ? "chose"
-                      : g.choices[i] === null
-                        ? "passed"
-                        : "guessed"}
-                  </span>
-                  <p>
-                    {g.choices[i] === null
-                      ? "No guess needed"
-                      : joyChoices[g.choices[i]!]}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : text ? (
-            <blockquote>{text}</blockquote>
-          ) : (
-            <p>
-              No answers to show this time. That’s fine too.
-            </p>
           )}
           <div className="lb-boundary">
             <p>
-              That’s the round. Finish for now ends it here. Your book notes
-              that you played, without anyone’s answers.
+              That’s the round. Finish for now ends it here.{" "}
+              {remembers(g)
+                ? `Its answers stay with this round in ${book.owner}’s book.`
+                : "Your book notes that you played, without anyone’s answers."}
             </p>
             <button className="lb-primary" disabled={busy} onClick={onFinish}>
               Finish for now <Check size={16} />
@@ -307,5 +264,178 @@ export default function GroupPlay({
         </>
       )}
     </section>
+  );
+}
+
+/**
+ * One player's turn. A turn with several questions shows them one at a time;
+ * the answers are sent together at the end, so nothing is saved half-done.
+ */
+function TurnPanel({
+  turn,
+  busy,
+  onAction,
+  storySoFar,
+}: {
+  turn: Turn;
+  busy: boolean;
+  onAction: (action: GameAction) => void;
+  storySoFar: string;
+}) {
+  const [step, setStep] = useState(0);
+  const [picked, setPicked] = useState<(number | null)[]>([]);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const many = turn.asks.length > 1;
+  const ask = turn.asks[step];
+  useEffect(() => {
+    if (step > 0) heading.current?.focus();
+  }, [step]);
+  function answer(choice: number | null) {
+    const answers = [...picked.slice(0, step), choice];
+    if (step + 1 < turn.asks.length) {
+      setPicked(answers);
+      setStep(step + 1);
+      return;
+    }
+    onAction(
+      many ? { type: "answer", answers } : { type: "choice", choice },
+    );
+  }
+  return (
+    <>
+      <p className="lb-kicker">
+        {turn.player.name}’s turn
+        {many ? ` · question ${step + 1} of ${turn.asks.length}` : ""}
+      </p>
+      <h2 ref={heading} tabIndex={-1}>
+        {ask.prompt}
+      </h2>
+      {storySoFar && <p className="lb-story-so-far">So far: {storySoFar}</p>}
+      <div className="lb-choices">
+        {ask.choices.map((choice, index) => (
+          <button
+            key={choice}
+            disabled={busy}
+            aria-pressed={picked[step] === index}
+            onClick={() => answer(index)}
+          >
+            {choice}
+          </button>
+        ))}
+      </div>
+      <div className="lb-turn-foot">
+        {many && step > 0 && (
+          <button
+            className="lb-text"
+            disabled={busy}
+            onClick={() => setStep(step - 1)}
+          >
+            Back to question {step}
+          </button>
+        )}
+        <button
+          className="lb-text"
+          disabled={busy}
+          onClick={() => answer(null)}
+        >
+          {many ? "Pass this one" : "Pass my turn"}
+        </button>
+      </div>
+    </>
+  );
+}
+
+function SamePageReveal({ game: g, trend }: { game: Game; trend: string }) {
+  const r = samePageResult(g);
+  if (r.lines.length === 1) {
+    const [line] = r.lines;
+    return (
+      <>
+        <p className="lb-kicker">The reveal</p>
+        <h2>{line.answered ? "Here’s what everyone chose" : "Everyone passed"}</h2>
+        <p className="lb-story-so-far">{line.question.prompt}</p>
+        <div className="lb-reveal">
+          {g.players.map((p, i) => (
+            <div key={p.id}>
+              <span className="lb-kicker">
+                {p.name} {line.picks[i] === null ? "passed" : "chose"}
+              </span>
+              <p>
+                {line.picks[i] === null
+                  ? "No answer"
+                  : line.question.choices[line.picks[i]!]}
+              </p>
+            </div>
+          ))}
+        </div>
+        {pickAgreement(line.question.choices, line.picks) && (
+          <p className="lb-same-page">
+            {pickAgreement(line.question.choices, line.picks)}
+          </p>
+        )}
+      </>
+    );
+  }
+  return (
+    <>
+      <p className="lb-kicker">The reveal</p>
+      <h2>{samePageSummary(g) || "Not enough answers to compare"}</h2>
+      {r.differ.length > 0 && (
+        <p className="lb-same-page">Different on {list(r.differ)}.</p>
+      )}
+      {trend && <p className="lb-trend">{trend}</p>}
+      <ol className="lb-sp-list">
+        {r.lines.map((line) => (
+          <li
+            key={line.question.id}
+            className={line.answered < 2 ? "" : line.same ? "is-same" : "is-different"}
+          >
+            <span className="lb-sp-mark">
+              {line.answered < 2
+                ? "Too few answers"
+                : line.same
+                  ? "Same page ✓"
+                  : "Different"}
+            </span>
+            <p className="lb-sp-prompt">{line.question.prompt}</p>
+            <ul className="lb-sp-picks">
+              {g.players.map((p, i) => (
+                <li key={p.id}>
+                  <span>{p.name}</span>{" "}
+                  {line.picks[i] === null ? (
+                    <em>passed</em>
+                  ) : (
+                    <strong>{line.question.choices[line.picks[i]!]}</strong>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ol>
+    </>
+  );
+}
+
+/** Older one-chooser rounds: the chooser's pick and everyone's guess. */
+function JoyRevealV1({ game: g }: { game: Game }) {
+  const plan = turnPlan(g);
+  const options = plan[0].asks[0].choices;
+  return (
+    <div className="lb-reveal">
+      {g.players.map((p, i) => (
+        <div key={p.id}>
+          <span className="lb-kicker">
+            {p.name}{" "}
+            {i === 0 ? "chose" : g.choices[i] === null ? "passed" : "guessed"}
+          </span>
+          <p>
+            {g.choices[i] === null || g.choices[i] === undefined
+              ? "No guess needed"
+              : options[g.choices[i]!]}
+          </p>
+        </div>
+      ))}
+    </div>
   );
 }

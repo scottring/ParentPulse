@@ -1,5 +1,5 @@
 import type { Book } from "./model";
-import { livingOf, outcomes, type Player } from "./living";
+import { livingOf, outcomes, playMemory, type Player } from "./living";
 import { games } from "./play-content";
 import { toolById } from "./tools";
 import { guidanceFor } from "./guidance";
@@ -190,13 +190,17 @@ export function bookPages(book: Book): BookPage[] {
           (p) => p.id !== "owner" && p.name.trim() !== book.owner.trim(),
         );
         const title = games.find((g) => g.kind === r.kind)?.title || "A game";
+        const memory = playMemory(r);
         return page({
           id: `play:${r.id}`,
           kind: PLAY_RECORD,
           title: `${title} with ${list((others.length ? others : r.players).map((p) => p.name))}`,
-          text: r.pageId
-            ? "One round, played together."
-            : "One round, played together. No shared page was kept.",
+          text:
+            memory.summary ||
+            (r.pageId
+              ? "One round, played together."
+              : "One round, played together. No shared page was kept."),
+          sections: memory.sections,
           date: r.playedAt,
           style: "moss",
           people: playersInBook(book, r.players),
