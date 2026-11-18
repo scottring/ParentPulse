@@ -222,3 +222,211 @@
 .lb-library-home > section {
   padding: clamp(24px, 3vw, 36px);
 }
+
+/* ── New look (2026-11-18): matches Home / Do something / Your book / Family ── */
+.lb-library-home,
+.lb-gate,
+.lb-account-host,
+.lb-app .lb-account {
+  --paper: #f6f4ed;
+  --ink: #30382c;
+  --muted: #5f6458;
+  --line: #dcded2;
+  --olive: #43513a;
+  --lb-desk: #f6f4ed;
+  --lb-deep: #ecede4;
+  --lb-cover: #43513a;
+  --card: #fffdf7;
+  --sun: #f2d58a;
+  --clay: #e9b9a0;
+  --sky: #c9d9e3;
+  --sage: #cfdcc4;
+}
+.lb-library-home,
+.lb-gate {
+  background: var(--paper);
+  color: var(--ink);
+}
+.lb-library-home > header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 760px;
+}
+.lb-library-home .lb-wordmark {
+  font: 700 40px/1 var(--serif);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.lb-library-home > header p:last-child {
+  color: var(--muted);
+  font-size: 14px;
+}
+.lb-library-sun {
+  flex: none;
+  color: var(--olive);
+}
+.lb-library-home > section {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  box-shadow: 0 18px 50px rgba(48, 56, 44, 0.08);
+}
+.lb-app .lb-account h2,
+.lb-app .lb-library-home .lb-account h2 {
+  font: 600 clamp(38px, 6vw, 56px) / 1.02 var(--serif);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.lb-app .lb-account .lb-kicker {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+}
+.lb-app .lb-account p {
+  color: var(--ink);
+}
+.lb-app .lb-account .lb-fine {
+  color: var(--muted);
+}
+.lb-app .lb-account label:not(.lb-account-check) {
+  font-weight: 600;
+  font-size: 15px;
+}
+.lb-app .lb-account input:not([type="checkbox"]),
+.lb-account select {
+  background: var(--paper);
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  color: var(--ink);
+  padding: 12px 16px;
+  min-height: 52px;
+}
+.lb-app .lb-account input:not([type="checkbox"]):focus,
+.lb-account select:focus {
+  outline: none;
+  border-color: var(--olive);
+}
+.lb-app .lb-account .lb-account-check input[type="checkbox"] {
+  accent-color: var(--olive);
+}
+.lb-app .lb-account .lb-primary {
+  justify-content: center;
+  min-height: 52px;
+  border-radius: 999px;
+  background: var(--olive);
+  color: var(--paper);
+  border: none;
+  font-weight: 700;
+  font-size: 16px;
+  text-align: center;
+}
+.lb-app .lb-account .lb-primary:not(:disabled):hover {
+  background: var(--ink);
+}
+.lb-app .lb-account .lb-primary:disabled {
+  background: var(--line);
+  color: var(--muted);
+}
+.lb-app .lb-account .lb-secondary {
+  border-radius: 999px;
+  border: 2px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+}
+.lb-app .lb-account .lb-account-actions button,
+.lb-app .lb-account-footer button,
+.lb-app .lb-account > button:not(.lb-primary) {
+  color: var(--olive);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  background: none;
+  border: none;
+}
+.lb-app .lb-account .lb-account-actions {
+  font-size: 14px;
+}
+.lb-account-current {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--paper);
+}
+.lb-account-footer {
+  border-top: 1px solid var(--line);
+}
+
+/* Books: big colorful cards, like Family */
+.lb-account-books {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+}
+.lb-account-books > div {
+  border: none;
+  border-radius: 24px;
+  padding: 0;
+  background: var(--sun);
+  transform: rotate(-0.8deg);
+  transition: transform 0.15s ease;
+}
+.lb-account-books > div:nth-child(2n) {
+  transform: rotate(0.7deg);
+}
+.lb-account-books > div[data-tone="clay"] { background: var(--clay); }
+.lb-account-books > div[data-tone="sky"] { background: var(--sky); }
+.lb-account-books > div[data-tone="sage"] { background: var(--sage); }
+.lb-account-books > div:hover {
+  transform: rotate(0deg) translateY(-2px);
+}
+.lb-app .lb-account-books > div > button:first-child {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 170px;
+  padding: 20px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+}
+.lb-book-initial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  flex: none !important;
+  border-radius: 999px;
+  background: var(--card);
+  font: 700 28px/1 var(--serif) !important;
+}
+.lb-account-books span:not(.lb-book-initial) {
+  font: 700 30px/1 var(--serif);
+  letter-spacing: -0.01em;
+}
+.lb-account-books small {
+  font: 700 14px/1.3 var(--sans);
+  margin-top: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lb-account-books > div,
+  .lb-account-books > div:nth-child(2n),
+  .lb-account-books > div:hover {
+    transform: none;
+  }
+}
+@media (max-width: 560px) {
+  .lb-library-sun {
+    width: 84px;
+    height: 50px;
+  }
+  .lb-account-books {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .lb-app .lb-account-books > div > button:first-child {
+    min-height: 140px;
+    padding: 16px;
+  }
+}

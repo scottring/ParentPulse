@@ -95,10 +95,10 @@ export function splitStrokes(
   return out.filter(([a, b]) => b - a > rate * 0.01);
 }
 
-const FILES = { key: "keys", big: "big", up: "up" } as const;
+// Space and Enter use the same strokes as every other key (Scott, 2026-11-18).
+const FILES = { key: "keys", up: "up" } as const;
 type Group = keyof typeof FILES;
-const groupOf = (kind: KeyStroke): Group =>
-  kind === "space" || kind === "enter" ? "big" : kind === "up" ? "up" : "key";
+const groupOf = (kind: KeyStroke): Group => (kind === "up" ? "up" : "key");
 
 export function createKeyboardEngine(base = "/sounds/keyboard/") {
   const recorded: Partial<Record<Group, AudioBuffer[]>> = {};
@@ -177,12 +177,13 @@ export function createKeyboardEngine(base = "/sounds/keyboard/") {
     } else {
       if (!loading) void load(c);
       let variant = 0;
-      if (kind === "key") {
+      if (kind !== "up" && kind !== "delete") {
         variant = Math.floor(Math.random() * VARIANTS);
         if (variant === lastVariant) variant = (variant + 1) % VARIANTS;
         lastVariant = variant;
       }
-      source.buffer = buffer(c, kind, variant);
+      const same = kind === "space" || kind === "enter" ? "key" : kind;
+      source.buffer = buffer(c, same, variant);
       source.playbackRate.value = 0.97 + Math.random() * 0.06;
       gain.gain.value = volume * (0.85 + Math.random() * 0.15);
     }
