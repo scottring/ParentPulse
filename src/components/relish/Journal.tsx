@@ -32,6 +32,7 @@ import type { PhotoAccess } from "@/lib/relish/photos";
 import { PhotoGallery, PhotoPicker } from "./Photos";
 import PassagePicker from "./PassagePicker";
 import ReadingBook from "./ReadingBook";
+import { PageSoundToggle } from "./PageSound";
 import VoiceWriter from "./VoiceWriter";
 import type { Book } from "@/lib/relish/model";
 import {
@@ -301,6 +302,7 @@ export default function Journal({
           <button className="lb-text" onClick={onDone}>
             Done for now <Check size={15} />
           </button>
+          <PageSoundToggle />
         </div>
         {excerpt !== null && (
           <PassagePicker
