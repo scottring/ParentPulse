@@ -186,7 +186,7 @@ export default function Journal({
               setCelebrate(false);
             },
           }}
-          note={sample ? "Fictional sample" : "Only in your edition"}
+          note={sample ? "Fictional sample" : "Your private pages"}
         />
         {celebrate && (
           <div className="rj-celebration" role="status">

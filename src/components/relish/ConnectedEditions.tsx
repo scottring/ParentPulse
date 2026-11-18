@@ -33,7 +33,7 @@ const receiptWords: Record<string, string> = {
 export default function ConnectedEditions(props: Props) {
   if (!canUseOnline(props.book))
     return (
-      <Dialog title="Local edition" onClose={props.onClose}>
+      <Dialog title="Book on this device" onClose={props.onClose}>
         <h2>Child profile</h2>
         <p>
           Online connections are available only in adult editions. Children can
@@ -74,7 +74,7 @@ function AdultConnectedEditions({
   const [title, setTitle] = useState(
       initialPassage?.title ||
         book.connections?.draft?.title ||
-        "A passage from my edition",
+        "A passage from my book",
     ),
     [text, setText] = useState(
       initialPassage?.text || book.connections?.draft?.text || "",
@@ -105,7 +105,7 @@ function AdultConnectedEditions({
       .catch(() => {
         if (alive.current)
           setError(
-            "Online connections are unavailable. Your local edition is still here.",
+            "Online connections are unavailable. Your book is still here on this device.",
           );
       });
     return () => {
@@ -116,10 +116,10 @@ function AdultConnectedEditions({
   }, []);
   async function api(data: Record<string, unknown>, account = user) {
     if (!account || !account.emailVerified)
-      throw new Error("Verify your email to connect editions.");
+      throw new Error("Verify your email to connect books.");
     const token = await account.getIdToken();
     if (abort.current.signal.aborted)
-      throw new Error("This edition was closed.");
+      throw new Error("This book was closed.");
     const res = await fetch("/api/relish/connections/", {
       method: "POST",
       headers: {
@@ -164,13 +164,13 @@ function AdultConnectedEditions({
     if (!user) return;
     if (!adult)
       throw new Error(
-        "Online connections are for adults. Children’s editions can stay on the family’s device.",
+        "Online connections are for adults. Children’s books can stay on the family’s device.",
       );
     const next = await refresh();
     let identity = book.connections?.identity;
     if (identity && identity.uid !== user.uid)
       throw new Error(
-        "This edition belongs to a different online account. Sign in with its account, or open another edition.",
+        "This book belongs to a different online account. Sign in with that account, or open another book.",
       );
     if (
       next.profile &&
@@ -178,7 +178,7 @@ function AdultConnectedEditions({
         (await keyFingerprint(identity.publicKey)) !== next.profile.keyId)
     )
       throw new Error(
-        "This account already has an edition. Open that edition from Account & synced books, or restore its encrypted backup from the bookshelf.",
+        "This account already has a book. Open it from Account & synced books, or restore its encrypted backup from the bookshelf.",
       );
     if (!identity) {
       identity = await makeIdentity(user.uid);
@@ -199,21 +199,21 @@ function AdultConnectedEditions({
     });
     await refresh();
     setNotice(
-      "Your edition is connected. Export a fresh encrypted backup so its sharing key travels with you.",
+      "Your book is connected. Export a fresh encrypted backup so its sharing key travels with you.",
     );
   }
   async function signIn() {
     const { connectAI } = await import("@/lib/relish/ai-auth");
     if (create && !adult)
       throw new Error(
-        "Online accounts are for adults. Children can use local editions.",
+        "Online accounts are for adults. Children can use books kept on this device.",
       );
     await connectAI(email, password, create);
     setPassword("");
     setNotice(
       create
         ? "Open the verification link in your email, then return here."
-        : "Signed in. Connect this private edition when you’re ready.",
+        : "Signed in. Connect this book when you’re ready.",
     );
   }
   async function disconnect() {
@@ -222,7 +222,7 @@ function AdultConnectedEditions({
     setSnapshot(null);
     setOpened(null);
     setInvite("");
-    setNotice("Online session ended. Your private edition stays here.");
+    setNotice("Signed out. Your book stays here on this device.");
   }
   const identity = book.connections?.identity;
   const connected = !!(
@@ -256,14 +256,14 @@ function AdultConnectedEditions({
     }));
     await refresh();
     setNotice(
-      "Your passage was offered. Each person chooses whether to keep it in their edition.",
+      "Sent. Each person chooses whether to save it in their own book.",
     );
   }
   async function send() {
     if (!circle || !user) return;
     const chosen = others.filter((m) => recipients.includes(m.uid));
     if (!chosen.length || !text.trim())
-      throw new Error("Choose a passage and at least one edition.");
+      throw new Error("Choose a passage and at least one person.");
     const id = crypto.randomUUID();
     const packets = Object.fromEntries(
       await Promise.all(
@@ -363,7 +363,7 @@ function AdultConnectedEditions({
   }
   return (
     <Dialog
-      title="Connected editions"
+      title="Connected books"
       // Narrow while connecting (Scott's mockup); wide once family tools appear.
       wide={!!(user && connected)}
       onClose={() => void closeWithDraft()}
@@ -395,7 +395,7 @@ function AdultConnectedEditions({
             <h3>
               {create
                 ? "Create an optional online account"
-                : "Sign in to connect editions"}
+                : "Sign in to connect books"}
             </h3>
             <p className="lb-fine">
               Each person uses their own account. Children can keep a local
@@ -507,7 +507,7 @@ function AdultConnectedEditions({
                       setTick((n) => n + 1);
                       setNotice(
                         user.emailVerified
-                          ? "Email verified. You can connect this edition."
+                          ? "Email verified. You can connect this book."
                           : "Your email has not been verified yet.",
                       );
                     })
@@ -1081,7 +1081,7 @@ function AdultConnectedEditions({
                     await disconnect();
                     setDeleteConfirmation("");
                     setNotice(
-                      "Your online account was removed. Your private local edition and kept passages remain here.",
+                      "Your online account was removed. This book and its kept passages remain here on this device.",
                     );
                   })
                 }

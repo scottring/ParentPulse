@@ -78,7 +78,7 @@ export function useManualGuide(
       if (!config?.enabled || sample || !alive.current)
         throw new Error("AI suggestions are not enabled yet.");
       const b = latest.current;
-      if (!b.profile) throw new Error("Choose an edition age range first.");
+      if (!b.profile) throw new Error("Choose who this book is for first.");
       if (b.profile.kind === "child" && !config.children)
         throw new Error(
           "Children’s automatic reflections need the additional provider privacy setup.",

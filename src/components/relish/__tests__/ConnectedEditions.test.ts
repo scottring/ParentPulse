@@ -115,8 +115,8 @@ async function setup(mismatch?: "account" | "key", initialPassage?: {title:strin
   if (mismatch)
     await screen.findByText(
       mismatch === "account"
-        ? /This edition belongs to a different online account/
-        : /This account already has an edition/,
+        ? /This book belongs to a different online account/
+        : /This account already has a book/,
     );
   else {
     await screen.findByText("Test family");
@@ -182,7 +182,7 @@ describe("sharing recovery", () => {
     );
     state.online();
     fireEvent.click(screen.getByRole("button", { name: "Try sending again" }));
-    await screen.findByText(/Your passage was offered/);
+    await screen.findByText(/Sent. Each person chooses/);
     expect(state.sent).toHaveLength(2);
     expect(state.sent[0]).toEqual(state.sent[1]);
     expect(

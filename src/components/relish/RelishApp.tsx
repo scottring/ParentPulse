@@ -239,7 +239,7 @@ function BookGate() {
             error={vault.error}
             onSubmit={vault.open}
             onCancel={vault.shelf}
-            cancelLabel="Choose another edition"
+            cancelLabel="Choose another book"
           />
         </Gate>
       );

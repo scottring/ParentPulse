@@ -88,7 +88,7 @@ export default function EditionSetup({
         <ShieldCheck size={17} /> Profile settings
       </p>
       <h2>
-        {book.profile ? "Edition & parent settings" : "Who is this book for?"}
+        {book.profile ? "Who this book is for" : "Who is this book for?"}
       </h2>
       <p>
         The {book.owner} edition uses this age range to select prompts and activities. Relish does not infer age from a name.
