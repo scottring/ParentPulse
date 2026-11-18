@@ -1390,3 +1390,15 @@
   color: var(--ink);
   font-weight: 600;
 }
+.lb-app .lb-joys .lb-sp-picks {
+  margin-top: 10px;
+  flex-direction: column;
+  gap: 4px;
+}
+.lb-app .lb-joys .is-right strong {
+  color: var(--olive);
+}
+.lb-app .lb-tally {
+  font-size: 15px;
+  color: var(--ink);
+}

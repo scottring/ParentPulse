@@ -1,6 +1,7 @@
 import type { Book } from "./model";
 import { isAudience, youngestAudience, type Audience } from "./profiles";
 import {
+  adultJoysMore,
   childPlayContent,
   childStoryRounds,
   samePageBank,
@@ -127,6 +128,10 @@ export type PlayRecord = {
   pageId?: string;
   /** Same page?: each question's id and each player's pick, in `players` order. */
   questions?: { id: string; picks: (number | null)[] }[];
+  /** Guess my small joy: each player's own pick, in `players` order. */
+  joys?: (string | null)[];
+  /** Guess my small joy: guesses[guesser][target], null for a pass or no guess. */
+  guesses?: (string | null)[][];
 };
 export const PLAY_LIMIT = 500;
 /** Play records keep answers for the newest rounds only. */
@@ -464,9 +469,16 @@ export const turnCount = (g: Game) => turnPlan(g).length;
 // change starts a new version rather than editing this one.
 const isV2 = (g: Pick<Game, "contentVersion">) => g.contentVersion === 2;
 /** The kinds that start new rounds at contentVersion 2. */
-const roundKinds: GameKind[] = ["match"];
+const roundKinds: GameKind[] = ["match", "joy"];
 export const SAME_PAGE_COUNT = 5;
-export type Ask = { prompt: string; choices: string[]; about?: string };
+export type Ask = {
+  prompt: string;
+  choices: string[];
+  /** Whose answer this question is about (a joy guess). */
+  about?: string;
+  /** A short line under the question. */
+  hint?: string;
+};
 export type Turn = { player: Player; asks: Ask[] };
 const young = (a?: Audience) => a === "under-6" || a === "6-8";
 const list = (items: string[]) =>
@@ -494,10 +506,41 @@ export function samePageQuestions(
         .filter((q): q is SameQuestion => !!q)
     : [samePageRound(g)];
 }
-export const joyOptions = (g: Pick<Game, "audience">) =>
-  g.audience && g.audience !== "adult"
-    ? childPlayContent(g.audience).joys
-    : joyChoices;
+/** One-chooser rounds offer four small joys; everyone-guessed rounds offer ten. */
+export function joyOptions(g: Pick<Game, "audience" | "contentVersion">) {
+  const all =
+    g.audience && g.audience !== "adult"
+      ? childPlayContent(g.audience).joys
+      : [...joyChoices, ...adultJoysMore];
+  return all.slice(0, isV2(g) ? 10 : 4);
+}
+/** A repeatable shuffle, so a guess's options survive reload and sync. */
+function seededShuffle<T>(items: T[], seed: string) {
+  let h = 2166136261;
+  for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  const next = () => {
+    h = (h + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(h ^ (h >>> 15), 1 | h);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(next() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+/** The four joys offered when guessing someone's: theirs and three others. */
+function guessOptions(g: Game, target: Player, pick: number) {
+  const all = joyOptions(g);
+  const seed = `${g.id}:${target.id}`;
+  const others = seededShuffle(
+    all.filter((_, i) => i !== pick),
+    seed,
+  ).slice(0, 3);
+  return seededShuffle([all[pick], ...others], `${seed}:order`);
+}
 
 /** Every turn of this round, in order: who plays it and what they're asked. */
 export function turnPlan(g: Game): Turn[] {
@@ -508,6 +551,46 @@ export function turnPlan(g: Game): Turn[] {
       choices: q.choices,
     }));
     return g.players.map((player) => ({ player, asks }));
+  }
+  if (g.kind === "joy" && isV2(g)) {
+    // First everyone picks their own in private, then each person guesses
+    // everyone else's. Until every pick is in, the guessing turns are
+    // provisional; nobody sees them before then.
+    const options = joyOptions(g);
+    const answers = g.answers || [];
+    const picks = g.players.map((_, i) =>
+      i < answers.length ? (answers[i][0] ?? null) : 0,
+    );
+    const picking: Turn[] = g.players.map((player) => ({
+      player,
+      asks: [
+        {
+          prompt: young(g.audience)
+            ? "What would you like to do most?"
+            : "What would brighten an ordinary afternoon for you?",
+          choices: options,
+          about: player.id,
+          hint: "Pick in private. Everyone guesses after.",
+        },
+      ],
+    }));
+    const guessing: Turn[] = g.players.flatMap((player, i) => {
+      const asks = g.players.flatMap((target, j) =>
+        j === i || picks[j] === null
+          ? []
+          : [
+              {
+                prompt: young(g.audience)
+                  ? `What do you think ${target.name} picked?`
+                  : `What do you think brightens ${target.name}’s afternoon?`,
+                choices: guessOptions(g, target, picks[j]!),
+                about: target.id,
+              },
+            ],
+      );
+      return asks.length ? [{ player, asks }] : [];
+    });
+    return [...picking, ...guessing];
   }
   if (g.kind === "joy") {
     const options = joyOptions(g),
@@ -694,6 +777,17 @@ export function playMemory(r: PlayRecord): {
     });
     return { summary, sections };
   }
+  if (r.kind === "joy" && r.joys) {
+    const players = r.players as Player[];
+    const result = joyLines(players, r.joys, r.guesses || []);
+    return {
+      summary: tallyLine(result) || "Everyone passed.",
+      sections: result.lines.map((l) => ({
+        label: `${l.player.name}’s small joy`,
+        text: `${l.pick}. ${knewLine(l)}`,
+      })),
+    };
+  }
   return { summary: "", sections: [] };
 }
 /** The question ids these players were asked most recently, newest first. */
@@ -726,6 +820,93 @@ function chooseQuestions(audience: Audience, recent: string[]) {
     .sort((a, b) => recent.indexOf(b.id) - recent.indexOf(a.id));
   return [...fresh, ...stale].slice(0, SAME_PAGE_COUNT).map((q) => q.id);
 }
+
+// ── Guess my small joy results ──────────────────────────────────────────────
+export type JoyLine = {
+  player: Player;
+  pick: string;
+  guesses: { player: Player; guess: string | null; right: boolean }[];
+};
+/** Each picked joy with everyone's guesses, and each guesser's tally. */
+export function joyResult(g: Game) {
+  const plan = turnPlan(g),
+    answers = turnAnswers(g);
+  const n = g.players.length;
+  const picks = g.players.map((_, i) => {
+    if (!isV2(g) && i > 0) return null;
+    const a = answers[i]?.[0];
+    return a === null || a === undefined ? null : plan[i].asks[0].choices[a];
+  });
+  // guesses[guesser][target], as text; null for a pass or no guess.
+  const guesses: (string | null)[][] = g.players.map(() =>
+    g.players.map(() => null),
+  );
+  answers.forEach((turn, k) => {
+    if (isV2(g) ? k < n : k === 0) return;
+    const guesser = g.players.indexOf(plan[k].player);
+    plan[k].asks.forEach((ask, j) => {
+      const target = g.players.findIndex((p) => p.id === ask.about);
+      if (target >= 0 && turn[j] !== null && turn[j] !== undefined)
+        guesses[guesser][target] = ask.choices[turn[j]!];
+    });
+  });
+  return { picks, guesses, ...joyLines(g.players, picks, guesses) };
+}
+function joyLines(
+  players: Player[],
+  picks: (string | null)[],
+  guesses: (string | null)[][],
+) {
+  const lines: JoyLine[] = players.flatMap((player, t) =>
+    picks[t] === null || picks[t] === undefined
+      ? []
+      : [
+          {
+            player,
+            pick: picks[t]!,
+            guesses: players.flatMap((p, i) =>
+              i === t
+                ? []
+                : [
+                    {
+                      player: p,
+                      guess: guesses[i]?.[t] ?? null,
+                      right: guesses[i]?.[t] === picks[t],
+                    },
+                  ],
+            ),
+          },
+        ],
+  );
+  const tally = players
+    .map((player) => ({
+      player,
+      right: lines.filter((l) =>
+        l.guesses.some((x) => x.player.id === player.id && x.right),
+      ).length,
+      of: lines.filter((l) => l.player.id !== player.id).length,
+    }))
+    .filter((t) => t.of > 0);
+  return { lines, tally };
+}
+/** "Anna knew the most: 2 of 2." */
+function tallyLine({ lines, tally }: ReturnType<typeof joyLines>) {
+  if (!lines.length) return "";
+  const best = Math.max(0, ...tally.map((t) => t.right));
+  if (!best) return "Nobody guessed right this time. Now you know a little more.";
+  const top = tally.filter((t) => t.right === best);
+  const of = top[0].of;
+  if (top.length === 1)
+    return `${top[0].player.name} knew the most: ${best} of ${of}.`;
+  return top.every((t) => t.of === of)
+    ? `${list(top.map((t) => t.player.name))} each guessed ${best} of ${of}.`
+    : `${list(top.map((t) => t.player.name))} each guessed ${best} right.`;
+}
+export const joySummary = (g: Game) => tallyLine(joyResult(g));
+const knewLine = (l: JoyLine) => {
+  const knew = l.guesses.filter((x) => x.right).map((x) => x.player.name);
+  return knew.length ? `${list(knew)} guessed it.` : "Nobody guessed it.";
+};
 
 export function newGame(
   kind: Game["kind"],
@@ -809,6 +990,16 @@ export function gameText(g: Game): string {
     ]
       .filter(Boolean)
       .join("\n");
+  }
+  if (g.kind === "joy" && isV2(g)) {
+    const { lines } = joyResult(g);
+    if (!lines.length) return "";
+    return [
+      joySummary(g),
+      ...lines.map(
+        (l) => `${l.player.name}’s small joy: ${l.pick.toLowerCase()}. ${knewLine(l)}`,
+      ),
+    ].join("\n");
   }
   if (g.kind === "joy")
     return Number.isInteger(g.choices[0])
@@ -929,10 +1120,14 @@ function roundMemory(g: Game): Partial<PlayRecord> {
         picks: l.picks,
       })),
     };
+  if (g.kind === "joy") {
+    const { picks, guesses } = joyResult(g);
+    return { joys: picks, guesses };
+  }
   return {};
 }
 const memoryOf = (r: PlayRecord) =>
-  r.questions !== undefined;
+  r.questions !== undefined || r.joys !== undefined || r.guesses !== undefined;
 /** Answers stay on the newest ANSWERS_KEPT rounds; older records keep only names and a date. */
 function trimMemory(plays: PlayRecord[]) {
   let kept = 0;
@@ -942,6 +1137,8 @@ function trimMemory(plays: PlayRecord[]) {
       if (!memoryOf(r) || ++kept <= ANSWERS_KEPT) return r;
       const rest = { ...r };
       delete rest.questions;
+      delete rest.joys;
+      delete rest.guesses;
       return rest;
     })
     .toReversed();
@@ -1084,6 +1281,27 @@ export function isLiving(value: unknown): value is LivingState {
                   x.picks.every(
                     (c) => c === null || (Number.isInteger(c) && c >= 0 && c < 3),
                   ),
+              ),
+          ) &&
+          optional(
+            r.joys,
+            (j) =>
+              r.kind === "joy" &&
+              Array.isArray(j) &&
+              j.length === (r.players as unknown[]).length &&
+              j.every((x) => x === null || str(x, 80)),
+          ) &&
+          optional(
+            r.guesses,
+            (q) =>
+              r.kind === "joy" &&
+              Array.isArray(q) &&
+              q.length === (r.players as unknown[]).length &&
+              q.every(
+                (row) =>
+                  Array.isArray(row) &&
+                  row.length === (r.players as unknown[]).length &&
+                  row.every((x) => x === null || str(x, 80)),
               ),
           ),
       ) ||

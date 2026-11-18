@@ -11,6 +11,7 @@ import {
   livingOf,
   newGame,
   advanceGame,
+  turnPlan,
 } from "@/lib/relish/living";
 import LivingBook from "../LivingBook";
 import GroupPlay from "../GroupPlay";
@@ -157,5 +158,41 @@ describe("living-book interaction boundaries", () => {
     );
     expect(screen.queryByText(/A chose/)).toBeNull();
     expect(screen.getAllByText("A silly song")).toHaveLength(1);
+  });
+  it("a small joy round shows everyone's joy, who guessed it, and the tally", () => {
+    let g = advanceGame(
+      newGame("joy", [
+        { id: "a", name: "Iris", audience: "adult" },
+        { id: "b", name: "Kaleb", audience: "adult" },
+      ]),
+      { type: "start" },
+    );
+    g = advanceGame(g, { type: "choice", choice: 0 });
+    g = advanceGame(advanceGame(g, { type: "ready" }), { type: "choice", choice: 1 });
+    const plan = turnPlan(g);
+    // Iris guesses Kaleb's right; Kaleb passes.
+    g = advanceGame(advanceGame(g, { type: "ready" }), {
+      type: "choice",
+      choice: plan[2].asks[0].choices.indexOf("Making something together"),
+    });
+    g = advanceGame(advanceGame(g, { type: "ready" }), { type: "choice", choice: null });
+    render(
+      createElement(GroupPlay, {
+        book: emptyBook("Iris"),
+        game: g,
+        busy: false,
+        onAction: vi.fn(),
+        onKeep: vi.fn(),
+        onPause: vi.fn(),
+        onFinish: vi.fn(),
+        onCancel: vi.fn(),
+      }),
+    );
+    expect(screen.getByRole("heading", { name: "Iris knew the most: 1 of 1." })).toBeTruthy();
+    expect(screen.getByText("Kaleb’s small joy")).toBeTruthy();
+    expect(screen.getByText("Making something together")).toBeTruthy();
+    expect(screen.getByText("guessed it ✓")).toBeTruthy();
+    expect(screen.getByText("passed")).toBeTruthy();
+    expect(screen.getByText(/Its answers stay with this round in Iris’s book/)).toBeTruthy();
   });
 });

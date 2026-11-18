@@ -152,7 +152,9 @@ describe("mixed-age games", () => {
     ]);
     delete game.audience;
     delete game.contentVersion;
+    delete game.answers;
     expect(joyOptions(game)[0]).toBe("An unhurried walk");
+    expect(joyOptions(game)).toHaveLength(4);
     expect(isLiving({ ...freshLiving(), game })).toBe(true);
   });
 });

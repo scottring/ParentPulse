@@ -1,6 +1,9 @@
 import type { Audience } from "./profiles";
 import type { Tag } from "./catalog";
 type Round = { prompt: string; choices: string[] };
+// Small joys: the first four of each list are what one-chooser rounds offer;
+// rounds where everyone is guessed about offer the first ten. Never reorder
+// them: open rounds store picks by position.
 const content: Record<
   Exclude<Audience, "adult">,
   { joys: string[]; rounds: Round[] }
@@ -11,6 +14,12 @@ const content: Record<
       "Building a tower",
       "A story together",
       "A quiet little rest",
+      "Splashing in the bath",
+      "Playing chase",
+      "Baking something yummy",
+      "Dancing to music",
+      "Drawing a picture",
+      "A cuddle on the couch",
     ],
     rounds: [
       {
@@ -45,6 +54,12 @@ const content: Record<
       "Making something",
       "Reading together",
       "A silly guessing game",
+      "A trip to the park",
+      "Building with blocks",
+      "Baking or cooking",
+      "A movie with snacks",
+      "Drawing or painting",
+      "A bike or scooter ride",
     ],
     rounds: [
       {
@@ -95,6 +110,12 @@ const content: Record<
       "Making or building something",
       "Time with a good friend",
       "A little time to myself",
+      "A game night",
+      "Cooking something new",
+      "Running around outside",
+      "A good book or comic",
+      "Music turned up loud",
+      "A trip out for a treat",
     ],
     rounds: [
       {
@@ -145,6 +166,12 @@ const content: Record<
       "Making something with friends",
       "An unhurried conversation",
       "Space to recharge on my own",
+      "Music and headphones",
+      "Food out with someone",
+      "Sleeping in",
+      "A show to watch together",
+      "Getting outside",
+      "Being trusted with something",
     ],
     rounds: [
       {
@@ -190,6 +217,15 @@ const content: Record<
     ],
   },
 };
+/** Grown-up small joys after the first four (which live with the older rounds). */
+export const adultJoysMore = [
+  "Coffee or tea in peace",
+  "A meal someone else cooked",
+  "An early night",
+  "Music while cooking",
+  "Time outside",
+  "A long talk with a friend",
+];
 export function childPlayContent(audience: Exclude<Audience, "adult">) {
   return content[audience];
 }
@@ -312,8 +348,8 @@ export const games: {
   {
     kind: "joy",
     title: "Guess my small joy",
-    blurb: "One person picks a small joy in secret; everyone else guesses. See who knows them best.",
-    short: "5 min",
+    blurb: "Everyone picks a small joy in secret, then guesses each other’s. See who knows whom best.",
+    short: "5–10 min",
     tags: ["kids", "5"],
   },
   {

@@ -9,6 +9,8 @@ import {
   type Turn,
   gamePlayer,
   gameText,
+  joyResult,
+  joySummary,
   livingOf,
   samePageResult,
   samePageSummary,
@@ -59,6 +61,9 @@ export default function GroupPlay({
     living = livingOf(book);
   const next = gamePlayer(g);
   const many = (plan[0]?.asks.length || 1) > 1;
+  /** A joy round where everyone picks, then everyone guesses. */
+  const everyone = g.kind === "joy" && remembers(g);
+  const guessing = everyone && g.turn >= g.players.length;
   return (
     <section className="lb-game" aria-label="Our game">
       {!finished && (
@@ -81,7 +86,9 @@ export default function GroupPlay({
         <>
           <h2>{title}</h2>
           <p>
-            {g.kind === "joy"
+            {everyone
+              ? "First, everyone picks a small joy in private. Then each person guesses everyone else’s. See who knows whom best."
+              : g.kind === "joy"
               ? "One person chooses a joy in private. Pass the device so everyone else can guess. All choices are revealed together."
               : g.kind === "match"
                 ? many
@@ -95,7 +102,7 @@ export default function GroupPlay({
                 ? many
                   ? "About 5–10 minutes"
                   : "About 3–5 minutes"
-                : g.kind === "joy"
+                : g.kind === "joy" && !everyone
                   ? "About 5 minutes"
                   : "About 5–10 minutes"}
             </strong>
@@ -108,7 +115,9 @@ export default function GroupPlay({
                 Relish remembers this round’s answers in {book.owner}’s book
                 {g.kind === "match"
                   ? " so you can see how you match over time"
-                  : ""}
+                  : g.kind === "joy"
+                    ? " so you can look back at what lights each of you up"
+                    : ""}
                 . They’re never sent to AI.
               </p>
             )}
@@ -122,7 +131,9 @@ export default function GroupPlay({
             ))}
           </ol>
           <label>
-            {g.kind === "joy"
+            {everyone
+              ? "Who goes first?"
+              : g.kind === "joy"
               ? "Who chooses a joy this round?"
               : g.kind === "match"
                 ? "Who answers first?"
@@ -164,7 +175,11 @@ export default function GroupPlay({
           <p>
             {g.kind === "story"
               ? "Add the next part of the story, or pass."
-              : g.kind === "joy"
+              : guessing
+                ? `Now guess what ${plan[g.turn].asks.length === 1 ? "the other person" : "the others"} picked. Pass any you like. The answers so far stay hidden.`
+                : everyone
+                  ? "Pick your own small joy in private, or pass. The answers so far stay hidden."
+                  : g.kind === "joy"
                 ? `Guess what ${g.players[0].name} picked, or pass. The answers so far stay hidden.`
                 : many
                   ? `Answer all ${plan[g.turn].asks.length} without looking at anyone else’s. Pass any you like. The answers so far stay hidden.`
@@ -185,11 +200,14 @@ export default function GroupPlay({
           busy={busy}
           onAction={onAction}
           storySoFar={g.kind === "story" ? text : ""}
+          noun={guessing ? "guess" : "question"}
         />
       ) : (
         <>
           {g.kind === "match" ? (
             <SamePageReveal game={g} trend={samePageTrend(living, g, true)} />
+          ) : everyone ? (
+            <JoyReveal game={g} />
           ) : (
             <>
               <p className="lb-kicker">
@@ -276,11 +294,13 @@ function TurnPanel({
   busy,
   onAction,
   storySoFar,
+  noun = "question",
 }: {
   turn: Turn;
   busy: boolean;
   onAction: (action: GameAction) => void;
   storySoFar: string;
+  noun?: string;
 }) {
   const [step, setStep] = useState(0);
   const [picked, setPicked] = useState<(number | null)[]>([]);
@@ -305,11 +325,12 @@ function TurnPanel({
     <>
       <p className="lb-kicker">
         {turn.player.name}’s turn
-        {many ? ` · question ${step + 1} of ${turn.asks.length}` : ""}
+        {many ? ` · ${noun} ${step + 1} of ${turn.asks.length}` : ""}
       </p>
       <h2 ref={heading} tabIndex={-1}>
         {ask.prompt}
       </h2>
+      {ask.hint && <p className="lb-fine">{ask.hint}</p>}
       {storySoFar && <p className="lb-story-so-far">So far: {storySoFar}</p>}
       <div className="lb-choices">
         {ask.choices.map((choice, index) => (
@@ -330,7 +351,7 @@ function TurnPanel({
             disabled={busy}
             onClick={() => setStep(step - 1)}
           >
-            Back to question {step}
+            Back to {noun} {step}
           </button>
         )}
         <button
@@ -413,6 +434,53 @@ function SamePageReveal({ game: g, trend }: { game: Game; trend: string }) {
           </li>
         ))}
       </ol>
+    </>
+  );
+}
+
+/** Everyone's small joy, who guessed it, and a tally of right guesses. */
+function JoyReveal({ game: g }: { game: Game }) {
+  const { lines, tally } = joyResult(g);
+  if (!lines.length)
+    return (
+      <>
+        <p className="lb-kicker">The reveal</p>
+        <h2>Everyone passed</h2>
+        <p>No answers to show this time. That’s fine too.</p>
+      </>
+    );
+  return (
+    <>
+      <p className="lb-kicker">The reveal</p>
+      <h2>{joySummary(g)}</h2>
+      <div className="lb-reveal lb-joys">
+        {lines.map((l) => (
+          <div key={l.player.id}>
+            <span className="lb-kicker">{l.player.name}’s small joy</span>
+            <p>{l.pick}</p>
+            <ul className="lb-sp-picks">
+              {l.guesses.map((x) => (
+                <li key={x.player.id} className={x.right ? "is-right" : ""}>
+                  <span>{x.player.name}</span>{" "}
+                  {x.guess === null ? (
+                    <em>passed</em>
+                  ) : x.right ? (
+                    <strong>guessed it ✓</strong>
+                  ) : (
+                    <>guessed {x.guess.toLowerCase()}</>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+      {tally.length > 1 && (
+        <p className="lb-tally">
+          Right guesses:{" "}
+          {tally.map((t) => `${t.player.name} ${t.right} of ${t.of}`).join(" · ")}
+        </p>
+      )}
     </>
   );
 }
