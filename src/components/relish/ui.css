@@ -736,3 +736,173 @@ img.ui-illustration {
 .lb-app.rp-at-manual .lb-subhead {
   max-width: 960px;
 }
+
+/* ── Inside dialogs and gate forms ────────────────────────────────────── */
+.lb-app .r-dialog .r-eyebrow,
+.lb-gate .r-eyebrow,
+.r-dialog .r-eyebrow {
+  color: var(--ui-ink-soft);
+  font: 600 12px/1.6 var(--sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.lb-app .r-dialog .r-primary,
+.lb-gate .r-vault-form .r-primary,
+.lb-app .r-dialog .r-vault-form .r-primary {
+  min-height: 48px;
+  padding: 12px 24px;
+  border-radius: var(--ui-radius-sm);
+  font: 600 16px/1.2 var(--sans);
+}
+.lb-app .r-dialog .r-secondary {
+  min-height: 46px;
+  border-radius: var(--ui-radius-sm);
+  font: 500 15px/1.2 var(--sans);
+}
+.lb-app .r-dialog .r-text-button,
+.lb-gate .r-text-button {
+  min-height: 44px;
+  color: var(--ui-ink);
+  font: 500 15px/1.3 var(--sans);
+  text-decoration: underline;
+  text-decoration-color: var(--ui-olive-line);
+  text-underline-offset: 5px;
+}
+.lb-app .r-dialog label,
+.lb-gate .r-vault-form label {
+  font: 600 15px/1.4 var(--sans);
+  color: var(--ui-ink);
+}
+.lb-app .r-dialog .r-small,
+.lb-gate .r-small {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ui-muted);
+}
+.lb-app .r-dialog a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--ui-ink);
+  text-decoration-color: var(--ui-olive-line);
+  text-underline-offset: 5px;
+}
+/* Settings rows (sound, keyboard sound) */
+.lb-app .r-dialog .r-setting-row {
+  display: flex;
+  gap: 16px;
+  margin: 18px 0 0;
+  padding: 18px 0 0;
+  border-top: 1px solid var(--ui-line);
+}
+.lb-app .r-dialog .r-setting-row > svg {
+  flex: none;
+  margin-top: 4px;
+  color: var(--ui-olive);
+}
+.lb-app .r-dialog .r-setting-row h3 {
+  margin: 0 0 4px;
+}
+.lb-app .r-dialog .r-setting-row p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ui-muted);
+  margin: 0;
+}
+.lb-app .r-dialog details.lb-boundary summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--ui-ink);
+  font-weight: 500;
+}
+
+/* ── Before a book is open: wordmark, then one sheet of paper ─────────── */
+.lb-gate.lb-gate-one {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  min-height: 100vh;
+  padding: clamp(28px, 6vw, 64px) 16px 48px;
+}
+.lb-gate.lb-gate-one > * {
+  width: min(100%, 620px);
+}
+.lb-gate.lb-gate-wide > * {
+  width: min(100%, 860px);
+}
+.lb-gate.lb-gate-loading {
+  justify-content: center;
+}
+.lb-gate-head .lb-wordmark {
+  margin: 0;
+  font: 700 40px/1 var(--serif);
+  letter-spacing: -0.02em;
+  color: var(--ui-ink);
+}
+.lb-gate-head p:last-child {
+  margin: 6px 0 0;
+  color: var(--ui-muted);
+  font-size: 15px;
+}
+.lb-gate .lb-gate-paper {
+  background: var(--ui-card);
+  border-radius: 28px;
+}
+.lb-gate.lb-gate-one .r-vault-form,
+.lb-gate.lb-gate-one .lb-gate-paper > section {
+  max-width: none;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+}
+.lb-gate-art-img {
+  margin: 0 0 6px;
+}
+.lb-gate .lb-gate-note {
+  margin: 0 0 8px;
+}
+.lb-gate.lb-gate-one .r-vault-form .r-primary {
+  width: 100%;
+  font: 600 16px/1.2 var(--sans);
+}
+.lb-gate.lb-gate-one .r-vault-form > .r-text-button {
+  font-size: 15px !important;
+}
+.lb-gate.lb-shelf .lb-shelf-heading h1 {
+  font: 600 clamp(36px, 5vw, 52px) / 1.05 var(--serif);
+  margin: 6px 0 10px;
+}
+.lb-gate.lb-shelf .lb-edition-grid button {
+  background: var(--ui-page);
+  border: 1px solid var(--ui-line);
+  border-left: 8px solid var(--ui-olive);
+  border-radius: 6px 16px 16px 6px;
+  box-shadow: 0 8px 20px rgba(48, 56, 44, 0.08);
+}
+.lb-gate.lb-shelf .lb-edition-grid button:not(:disabled):hover {
+  background: var(--ui-card);
+  border-left-color: var(--ui-olive-dark);
+}
+.lb-gate.lb-profile-gate .lb-edition-setup h2 {
+  font: 600 clamp(32px, 4.4vw, 46px) / 1.08 var(--serif);
+}
+.lb-account-host .lb-gate-account {
+  min-height: 44px;
+}
+.lb-gate.lb-gate-one .r-mark {
+  display: none;
+}
+.lb-gate.lb-gate-one .lb-gate-note {
+  margin: 14px 0 0;
+  text-align: center;
+}
+.lb-gate.lb-profile-gate > .lb-gate-paper {
+  max-width: none;
+  border: 1px solid var(--ui-line);
+  border-radius: 28px;
+  box-shadow: var(--ui-shadow);
+  padding: clamp(22px, 4vw, 44px);
+}

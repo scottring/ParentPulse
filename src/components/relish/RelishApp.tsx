@@ -10,6 +10,9 @@ import { readHomeBook, writeHomeBook } from "./homeBook";
 import EditionSetup from "./EditionSetup";
 import AccountLibrary from "./AccountLibrary";
 import { useBookSync } from "./useBookSync";
+import Illustration from "./Illustration";
+import { PaperCard, PrivateNote } from "./ui";
+import type { ReactNode } from "react";
 import { readBinding } from "@/lib/relish/book-sync";
 import { disconnectAI, setParentGate } from "@/lib/relish/ai-auth";
 import "./relish.css";
@@ -18,6 +21,27 @@ import "./living-book.css";
 import "./account.css";
 // Loaded last: the one set of tokens and shared pieces every screen uses.
 import "./ui.css";
+
+/** Before a book is open: the wordmark, then one sheet of paper. */
+function Gate({
+  children,
+  className = "",
+  wide = false,
+}: {
+  children: ReactNode;
+  className?: string;
+  wide?: boolean;
+}) {
+  return (
+    <main className={`r-app lb-gate lb-gate-one ${wide ? "lb-gate-wide" : ""} ${className}`}>
+      <header className="lb-gate-head">
+        <p className="lb-wordmark">relish</p>
+        <p>The operating manual for relationships</p>
+      </header>
+      <PaperCard className="lb-gate-paper">{children}</PaperCard>
+    </main>
+  );
+}
 
 export default function RelishApp() {
   return (
@@ -133,18 +157,19 @@ function BookGate() {
   function content() {
     if (vault.mode === "loading" || !sync.authReady)
       return (
-        <div className="r-app lb-gate">
-          <p className="lb-wordmark">relish</p>
-          <p role="status">Opening Relish…</p>
-        </div>
+        <main className="r-app lb-gate lb-gate-one lb-gate-loading">
+          <header className="lb-gate-head">
+            <p className="lb-wordmark">relish</p>
+            <p role="status">Opening Relish…</p>
+          </header>
+        </main>
       );
     if (unauthorized || (!localMode && vault.mode !== "open"))
       return library(true);
     if (vault.mode === "shelf")
       return (
-        <main className="r-app lb-app lb-gate lb-shelf">
+        <Gate className="lb-app lb-shelf" wide>
           <section>
-            <p className="lb-wordmark">relish</p>
             <header className="lb-shelf-heading">
               <p className="lb-kicker">
                 Local books
@@ -183,18 +208,12 @@ function BookGate() {
               </p>
             </footer>
           </section>
-        </main>
+        </Gate>
       );
     if (vault.mode === "new")
       return (
-        <div className="r-app lb-gate">
-          <section>
-            <p className="lb-wordmark">relish</p>
-            <h1>Create a local book</h1>
-            <p>
-              Choose your own passphrase. Nobody else’s edition will be changed.
-            </p>
-          </section>
+        <Gate className="lb-gate-form">
+          <Illustration name="your-book" size={120} eager className="lb-gate-art-img" />
           <VaultForm
             locked={false}
             busy={vault.busy}
@@ -203,19 +222,17 @@ function BookGate() {
             onCancel={vault.shelf}
             cancelLabel="Back to the bookshelf"
           />
-        </div>
+          <p className="lb-fine lb-gate-note">
+            Choose your own passphrase. Nobody else’s edition will be changed.
+          </p>
+        </Gate>
       );
     if (vault.mode === "locked")
       return (
-        <div className="r-app lb-gate">
-          <div className="lb-gate-art">
-            <p className="lb-wordmark">relish</p>
-            <p className="lb-kicker">The operating manual for relationships</p>
-            <h1>Unlock your local book</h1>
-            <p>
-              <Lock size={15} /> Encrypted. Yours to unlock.
-            </p>
-          </div>
+        <Gate className="lb-gate-form">
+          <Illustration name="locked" size={120} eager className="lb-gate-art-img" />
+          <p className="lb-kicker">Unlock your local book</p>
+          <PrivateNote>Encrypted. Yours to unlock.</PrivateNote>
           <VaultForm
             locked
             busy={vault.busy}
@@ -224,20 +241,17 @@ function BookGate() {
             onCancel={vault.shelf}
             cancelLabel="Choose another edition"
           />
-        </div>
+        </Gate>
       );
     if (vault.mode === "open" && !vault.book.profile)
       return (
-        <div className="r-app lb-app lb-gate lb-profile-gate">
-          <section>
-            <p className="lb-wordmark">relish</p>
-            <EditionSetup
-              book={vault.book}
-              save={vault.save}
-              onCancel={vault.shelf}
-            />
-          </section>
-        </div>
+        <Gate className="lb-app lb-profile-gate" wide>
+          <EditionSetup
+            book={vault.book}
+            save={vault.save}
+            onCancel={vault.shelf}
+          />
+        </Gate>
       );
     // The other books in this parent account, shown as people in an adult
     // book. A child's book never lists or opens its siblings' books.

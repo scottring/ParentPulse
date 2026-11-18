@@ -946,27 +946,32 @@
   gap: 0.75rem;
 }
 .lb-profile-choices button {
-  border: 1px solid currentColor;
-  border-radius: 5px;
-  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  border: 1.5px solid var(--ui-line);
+  border-radius: 16px;
+  padding: 16px 18px;
   text-align: left;
   color: inherit;
-  background: transparent;
+  background: var(--ui-card);
+  font: 600 18px/1.3 var(--serif);
   transition:
     background 0.2s,
     transform 0.2s;
 }
 .lb-profile-choices button[aria-pressed="true"] {
-  background: rgba(62, 97, 100, 0.14);
-  box-shadow: inset 0 -3px currentColor;
+  background: var(--ui-sage);
+  border-color: var(--ui-olive);
+  box-shadow: none;
 }
 .lb-profile-choices button:hover {
   transform: translateY(-2px);
 }
 .lb-profile-choices span {
   display: block;
-  font-size: 0.8rem;
-  margin-top: 0.4rem;
+  font: 400 15px/1.4 var(--sans);
+  margin-top: 6px;
 }
 .lb-age-cue {
   border-left: 2px solid #677656;

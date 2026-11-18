@@ -297,7 +297,7 @@
 .lb-app .lb-account .lb-primary {
   justify-content: center;
   min-height: 52px;
-  border-radius: 999px;
+  border-radius: var(--ui-radius-sm);
   background: var(--olive);
   color: var(--paper);
   border: none;
