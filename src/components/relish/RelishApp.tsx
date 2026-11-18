@@ -339,7 +339,10 @@ function BookGate() {
             else vault.shelf();
           },
           lock: () => {
-            void disconnectAI();
+            // Signs out too; tell sync so the sign-in screen shows at once.
+            void disconnectAI().finally(() =>
+              window.dispatchEvent(new Event("relish:account")),
+            );
             vault.lock();
             setLocalMode(false);
           },
