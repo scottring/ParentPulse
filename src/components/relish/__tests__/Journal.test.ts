@@ -53,6 +53,7 @@ describe("freeform journal", () => {
     const first = render(createElement(Harness));
     fireEvent.click(screen.getByRole("button", { name: "New journal entry" }));
     fill("A secret adventure\nwith a second line");
+    fireEvent.click(screen.getByRole("button", { name: /Page options/ }));
     fireEvent.click(screen.getByRole("button", { name: "Moss" }));
     await waitFor(() =>
       expect(stored.journal?.[0]).toMatchObject({
@@ -461,6 +462,7 @@ describe("journal header navigation", () => {
         return photo;
       },
     });
+    fireEvent.click(screen.getByRole("button", { name: /^Photo/ }));
     fireEvent.change(screen.getByLabelText("Upload a photo"), {
       target: {
         files: [new File(["photo"], "photo.png", { type: "image/png" })],
