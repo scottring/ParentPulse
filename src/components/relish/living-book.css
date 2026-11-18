@@ -147,15 +147,15 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 35px;
-  font-size: 11px;
+  padding: 4px 35px;
+  font-size: 13px;
   background: var(--paper);
   color: var(--muted);
 }
 .lb-sample button {
-  font-size: 12px;
-  min-height: 32px;
-  padding: 3px 5px;
+  font-size: 13px;
+  min-height: 44px;
+  padding: 6px 8px;
 }
 .lb-book {
   display: grid;
@@ -291,9 +291,9 @@
   max-width: 100%;
   font: 400 16px/1.65 var(--sans);
   color: var(--ink);
-  background: color-mix(in srgb, var(--lb-deep) 55%, var(--paper));
-  border: 1px solid var(--line);
-  border-radius: 3px;
+  background: var(--ui-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--ui-radius-sm);
   padding: 11px 13px;
 }
 .lb-app textarea {

@@ -669,7 +669,7 @@ export default function LivingBook({
       {sample && (
         <div className="lb-sample">
           <span>
-            Sample book · fictional people · changes last until reload
+            Fictional sample · changes last until reload
           </span>
           <button
             disabled={headerBusy}

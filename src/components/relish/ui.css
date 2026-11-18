@@ -557,14 +557,9 @@ img.ui-illustration {
 }
 
 /* ── Form fields: soft paper wells ────────────────────────────────────── */
-.lb-app input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
-.lb-app textarea,
-.lb-app select,
-.lb-gate input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
-.lb-gate select,
-.r-dialog input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
-.r-dialog textarea,
-.r-dialog select {
+/* :where keeps these defaults light, so a component can restyle its own field. */
+:where(.lb-app, .lb-gate, .r-dialog)
+  :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]), textarea, select) {
   background: var(--ui-card);
   border: 1.5px solid var(--ui-line);
   border-radius: var(--ui-radius-sm);

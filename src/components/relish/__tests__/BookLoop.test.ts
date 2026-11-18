@@ -103,3 +103,39 @@ it("a child's draft offers Keep going without hiding kept pages", () => {
   expect(screen.getByRole("button", { name: "Keep going" })).toBeTruthy();
   expect(screen.getByRole("button", { name: /My first page/ })).toBeTruthy();
 });
+
+it("Repair bingo with someone survives leaving, and its page opens over an older same-titled one", async () => {
+  const older = writeJournalPage(
+    adult(),
+    { ...newJournalDraft(), title: "Repair bingo · Kaleb", text: "THE OLDER BINGO" },
+    0,
+    "kept",
+  );
+  openBook(older);
+  place("Do something");
+  fireEvent.click(screen.getByRole("button", { name: /Repair bingo/ }));
+  fireEvent.click(screen.getByRole("radio", { name: "Kaleb" }));
+  fireEvent.click(screen.getByRole("button", { name: /Start bingo/ }));
+  const squares = () => document.querySelectorAll<HTMLButtonElement>(".rt-bingo button");
+  await vi.waitFor(() => expect(squares().length).toBe(9));
+  // The start is still saving for a moment; a mark lands once it has.
+  const mark = (i: number) =>
+    vi.waitFor(() => {
+      if (squares()[i].getAttribute("aria-pressed") !== "true") fireEvent.click(squares()[i]);
+      expect(squares()[i].getAttribute("aria-pressed")).toBe("true");
+    });
+  await mark(0);
+  await mark(4);
+  await vi.waitFor(() => {
+    fireEvent.click(screen.getByRole("button", { name: /Back to Do something/ }));
+    expect(screen.getByRole("heading", { name: "What feels right?" })).toBeTruthy();
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Repair bingo/ }));
+  await vi.waitFor(() => expect(document.querySelectorAll('.rt-bingo button[aria-pressed="true"]').length).toBe(2));
+  fireEvent.click(screen.getByRole("button", { name: /Finish and keep a page/ }));
+  await screen.findByRole("heading", { name: "Kept in your book" });
+  fireEvent.click(screen.getByRole("button", { name: /Open this page/ }));
+  const page = document.querySelector(".rj-sequence-paper")!;
+  expect(page.textContent).toContain("Repair bingo · Kaleb");
+  expect(page.textContent).not.toContain("THE OLDER BINGO");
+});

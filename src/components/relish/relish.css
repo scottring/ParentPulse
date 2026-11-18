@@ -31,7 +31,7 @@
   outline-offset: 5px;
 }
 .r-app :focus-visible {
-  outline: 2px solid #8b612f;
+  outline: 2px solid var(--ui-olive, #43513a);
 }
 .r-app button {
   transition:
