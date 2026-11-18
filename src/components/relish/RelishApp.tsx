@@ -128,6 +128,9 @@ function BookGate() {
   const openHome = useRef(false);
   const fetched = useRef(false);
   const [landing, setLanding] = useState(false);
+  // Until the effect below has looked at this sign-in, assume we'll land so
+  // the library never shows for a frame first.
+  const [decided, setDecided] = useState(false);
   /* eslint-disable react-hooks/set-state-in-effect -- landing follows auth and sync state as it arrives */
   useEffect(() => {
     if (!sync.authReady) return;
@@ -141,10 +144,12 @@ function BookGate() {
       const canLand =
         !!readHomeBook(uid) && !getParentGate() && vault.mode !== "open";
       setLanding(canLand);
+      setDecided(true);
     }
     if (!uid) {
       openHome.current = false;
       setLanding(false);
+      setDecided(true);
     }
     signedIn.current = uid;
     if (!openHome.current || sync.working) return;
@@ -193,7 +198,12 @@ function BookGate() {
     if (
       vault.mode === "loading" ||
       !sync.authReady ||
-      (landing && vault.mode !== "open")
+      ((landing ||
+        (!decided &&
+          !!sync.user &&
+          !!readHomeBook(sync.user.uid) &&
+          !getParentGate())) &&
+        vault.mode !== "open")
     )
       return (
         <main className="r-app lb-gate lb-gate-one lb-gate-loading">
