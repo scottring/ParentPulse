@@ -430,3 +430,10 @@
     padding: 16px;
   }
 }
+/* Text-link buttons stay links on hover too (no grey box). */
+.lb-app .lb-account .lb-account-actions button:not(:disabled):hover,
+.lb-app .lb-account-footer button:not(:disabled):hover,
+.lb-app .lb-account > button:not(.lb-primary):not(:disabled):hover {
+  background: none;
+  color: var(--ink);
+}
