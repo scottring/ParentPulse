@@ -138,7 +138,7 @@ it("a bingo started with someone carries them to its kept page", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Do something" }));
   fireEvent.click(screen.getByRole("button", { name: /Repair bingo/ }));
   await screen.findByRole("heading", { name: "Repair bingo" });
-  fireEvent.click(screen.getByRole("radio", { name: "Ella" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Ella" }));
   fireEvent.click(screen.getByRole("button", { name: /Start bingo/ }));
   await screen.findByRole("group", { name: "Repair bingo" });
   expect(app.stored().tools!.trackers[0].personId).toBe("ella");

@@ -56,7 +56,13 @@ export type TrackerTool = Base & {
   /** How long it might keep going, apart from today's effort in `time`. */
   span: string;
 } & (
-    | { mode: "days"; target: number; notePrompt?: string }
+    | {
+        mode: "days";
+        target: number;
+        notePrompt?: string;
+        /** Said when the last day is marked: "Ten hellos" → "Ten hellos with Kaleb." */
+        doneLine?: string;
+      }
     | { mode: "squares"; squares: string[] }
   );
 /** Day's highlights: the same three questions for each person in the car. */
@@ -372,7 +378,8 @@ export const tools: Tool[] = [
     audiences: ["adult"],
     aboutPerson: { label: "Who will you greet?", required: true },
     instruction:
-      "When one of you leaves or comes home, stop what you’re doing, look at them, and make the hello or goodbye last at least six seconds.",
+      "When one of you comes home or heads out, pause what you’re doing. Give your hello or goodbye six seconds of your full attention.",
+    doneLine: "Ten hellos",
   },
   {
     kind: "tracker",
@@ -391,6 +398,7 @@ export const tools: Tool[] = [
     instruction:
       "Each day, thank them for one specific thing: “When you ___, it mattered because ___.” No “but,” and nothing asked in return.",
     notePrompt: "What did you thank them for?",
+    doneLine: "A week of thanks",
   },
   {
     kind: "tracker",
@@ -717,6 +725,43 @@ export const toolsOf = (book: Book): ToolsState =>
   book.tools ?? { version: 1, trackers: [] };
 export const activeTrackers = (book: Book) =>
   toolsOf(book).trackers.filter((t) => !t.finishedAt);
+/** One exercise's habits under way, in the order they were started (stable). */
+export const activeFor = (book: Book, toolId: string) =>
+  activeTrackers(book).filter((t) => t.toolId === toolId);
+/**
+ * Habits under way, one entry per exercise. A habit about someone can run
+ * with several people at once: one tracker each.
+ */
+export function runningByTool(book: Book) {
+  const groups: { toolId: string; runs: TrackerRun[] }[] = [];
+  for (const run of activeTrackers(book)) {
+    const group = groups.find((g) => g.toolId === run.toolId);
+    if (group) group.runs.push(run);
+    else groups.push({ toolId: run.toolId, runs: [run] });
+  }
+  return groups;
+}
+/** "4 of 10", "Kaleb 4 of 10 · Ella 2 of 10", or "with 4 people". */
+export function runsStatus(book: Book, runs: TrackerRun[]) {
+  const counts = runs.map((run) => {
+    const p = trackerProgress(run);
+    return `${p.done} of ${p.total}`;
+  });
+  if (runs.length <= 1) return counts[0] ?? "";
+  if (runs.length > 3) return `with ${runs.length} people`;
+  return runs
+    .map((run, i) => {
+      const name = book.people.find((p) => p.id === run.personId)?.name;
+      return name ? `${name} ${counts[i]}` : counts[i];
+    })
+    .join(" · ");
+}
+/** "Ella", "Ella and Kaleb", "Ella, Kaleb and Leo". */
+export function namesList(names: string[]) {
+  return names.length < 2
+    ? names.join("")
+    : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
 
 export function todayKey(d = new Date()) {
   const p = (n: number) => String(n).padStart(2, "0");
@@ -761,10 +806,21 @@ function change(book: Book, fn: (s: ToolsState) => ToolsState): Book {
   return { ...book, tools: fn(toolsOf(book)) };
 }
 
+/**
+ * A habit about someone can run with several people at once, one tracker
+ * each; any other habit runs once at a time.
+ */
+const sameRun = (tool: TrackerTool, a: { personId?: unknown }, b: { personId?: unknown }) =>
+  !tool.aboutPerson || (a.personId ?? "") === (b.personId ?? "");
+
 export function startTracker(book: Book, toolId: string, personId?: string): Book {
   const tool = trackerTool(toolId);
-  if (activeTrackers(book).some((t) => t.toolId === toolId))
-    throw new Error("This exercise is already in progress.");
+  if (activeFor(book, toolId).some((t) => sameRun(tool, t, { personId })))
+    throw new Error(
+      tool.aboutPerson && personId
+        ? "This exercise is already in progress with them."
+        : "This exercise is already in progress.",
+    );
   if (personId && !book.people.some((p) => p.id === personId))
     throw new Error("Choose someone from your book.");
   if (tool.aboutPerson?.required && !personId)
@@ -788,10 +844,27 @@ export function startTracker(book: Book, toolId: string, personId?: string): Boo
 export function toggleMark(book: Book, runId: string, key: string, note?: string): Book {
   const run = toolsOf(book).trackers.find((t) => t.id === runId && !t.finishedAt);
   if (!run) throw new Error("This exercise has finished or changed.");
+  return setMark(book, runId, key, !run.marks.some((m) => m.key === key), note);
+}
+
+/**
+ * Marks (or unmarks) one day or square. Setting a mark that is already there
+ * changes nothing, so a double tap can't mark the same day twice or undo it.
+ */
+export function setMark(
+  book: Book,
+  runId: string,
+  key: string,
+  on: boolean,
+  note?: string,
+): Book {
+  const run = toolsOf(book).trackers.find((t) => t.id === runId && !t.finishedAt);
+  if (!run) throw new Error("This exercise has finished or changed.");
   const tool = trackerTool(run.toolId);
   if (!validKey(tool, key)) throw new Error("Choose an available mark.");
   const trimmed = (note || "").trim().slice(0, NOTE_LIMIT);
   const exists = run.marks.some((m) => m.key === key);
+  if (exists === on) return book;
   const marks = exists
     ? run.marks.filter((m) => m.key !== key)
     : [
@@ -819,7 +892,7 @@ const day = (key: string) =>
     day: "numeric",
   });
 
-export function trackerPage(book: Book, run: TrackerRun): ToolPage {
+export function trackerPage(book: Book, run: TrackerRun, memory?: string): ToolPage {
   const tool = trackerTool(run.toolId);
   const person = book.people.find((p) => p.id === run.personId)?.name;
   const title = person ? `${tool.title} · ${person}` : tool.title;
@@ -839,15 +912,18 @@ export function trackerPage(book: Book, run: TrackerRun): ToolPage {
     out.push(`Marked ${marked.length} of ${tool.squares.length}: ${marked.join("; ")}.`);
     if (hasBingo(run)) out.push("Bingo: a full line.");
   }
+  const remember = (memory || "").trim().slice(0, NOTE_LIMIT);
+  if (remember) out.push(remember);
   return { title, text: out.join("\n\n"), toolId: run.toolId, personId: run.personId };
 }
 
-export function finishTracker(book: Book, runId: string): Book {
+/** Keeps a page for one habit (with an optional line to remember) and ends it. */
+export function finishTracker(book: Book, runId: string, memory?: string): Book {
   const run = toolsOf(book).trackers.find((t) => t.id === runId && !t.finishedAt);
   if (!run) throw new Error("This exercise has finished or changed.");
   if (!run.marks.length) throw new Error("Mark at least one day or square first.");
   const before = new Set((book.journal || []).map((e) => e.id));
-  const kept = keepToolPage(book, trackerPage(book, run));
+  const kept = keepToolPage(book, trackerPage(book, run, memory));
   const pageId = (kept.journal || []).find((e) => !before.has(e.id))!.id;
   const stamp = new Date().toISOString();
   return change(kept, (s) => ({
@@ -1097,6 +1173,7 @@ export function isTools(value: unknown): value is ToolsState {
   if (value.day !== undefined && !isDayRun(value.day)) return false;
   if (value.trackers.length > TRACKER_LIMIT + 20) return false;
   const ids = new Set<string>();
+  // One active run per exercise, or per exercise and person when it is about someone.
   const active = new Set<string>();
   for (const t of value.trackers) {
     if (!obj(t) || !str(t.id, 100) || ids.has(t.id)) return false;
@@ -1108,8 +1185,9 @@ export function isTools(value: unknown): value is ToolsState {
     if (t.finishedAt !== undefined && !date(t.finishedAt)) return false;
     if (t.pageId !== undefined && (!str(t.pageId, 100) || !t.finishedAt)) return false;
     if (!t.finishedAt) {
-      if (active.has(tool.id)) return false;
-      active.add(tool.id);
+      const key = tool.aboutPerson ? `${tool.id}\u0000${t.personId ?? ""}` : tool.id;
+      if (active.has(key)) return false;
+      active.add(key);
     }
     if (!Array.isArray(t.marks) || t.marks.length > 400) return false;
     const keys = new Set<string>();

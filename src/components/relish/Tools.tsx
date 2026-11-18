@@ -1,17 +1,20 @@
 "use client";
-import { useState } from "react";
-import { ArrowRight, Check, Clock } from "lucide-react";
+import { useId, useState } from "react";
+import { ArrowRight, Check, ChevronDown, Clock } from "lucide-react";
 import type { Book } from "@/lib/relish/model";
 import { audienceOf } from "@/lib/relish/profiles";
 import { libraryOnly, noteFamily } from "@/lib/relish/catalog";
 import {
-  activeTrackers,
+  activeFor,
   builderComplete,
   builderPage,
   checkBackDays,
   finishTracker,
-  hasBingo,
   keepToolPage,
+  namesList,
+  runningByTool,
+  runsStatus,
+  setMark,
   sortPage,
   startTracker,
   stopTracker,
@@ -22,6 +25,7 @@ import {
   toolsFor,
   trackerProgress,
   type BuilderTool,
+  type TrackerRun,
   type SortTool,
   type Tool,
   type ToolPage,
@@ -75,7 +79,7 @@ export default function Tools({
   const [kept, setKept] = useState<Kept | null>(null);
   const audience = audienceOf(book);
   const available = toolsFor(audience);
-  const running = activeTrackers(book);
+  const running = runningByTool(book);
   const tool = openId ? toolById(openId) : undefined;
 
   if (kept)
@@ -143,6 +147,7 @@ export default function Tools({
         busy={busy}
         onCommit={onCommit}
         onKept={setKept}
+        onOpenPage={onOpenPage}
         roster={roster}
         sample={sample}
         family={family}
@@ -171,22 +176,24 @@ export default function Tools({
           <section className="rt-group" aria-label="In progress">
             <h3>In progress</h3>
             <div className="rt-list">
-              {running.map((run) => {
-                const t = toolById(run.toolId)!;
-                const p = trackerProgress(run);
-                const person = book.people.find((x) => x.id === run.personId);
+              {running.map(({ toolId, runs }) => {
+                const t = toolById(toolId)!;
+                const one = runs.length === 1;
+                const person = one && book.people.find((x) => x.id === runs[0].personId);
                 return (
                   <button
-                    key={run.id}
+                    key={toolId}
                     className="rt-card rt-running"
                     disabled={busy}
                     onClick={() => setOpenId(t.id)}
                   >
                     <span className="lb-kicker">
-                      {p.done} of {p.total}
-                      {t.kind === "tracker" && t.mode === "days"
-                        ? " days"
-                        : " marked"}
+                      {runsStatus(book, runs)}
+                      {one
+                        ? t.kind === "tracker" && t.mode === "days"
+                          ? " days"
+                          : " marked"
+                        : ""}
                     </span>
                     <strong>
                       {t.title}
@@ -246,6 +253,7 @@ function OpenExercise({
   busy,
   onCommit,
   onKept,
+  onOpenPage,
   family,
   backLabel,
   onBack,
@@ -257,6 +265,7 @@ function OpenExercise({
   busy: boolean;
   onCommit: Commit;
   onKept: (kept: Kept) => void;
+  onOpenPage?: (id: string) => void;
   family: { name: string }[];
   backLabel: string;
   onBack: () => void;
@@ -265,6 +274,8 @@ function OpenExercise({
 }) {
   const [started, setStarted] = useState(false);
   const [who, setWho] = useState("");
+  // A habit about someone can be done with several people at once.
+  const [picked, setPicked] = useState<string[]>([]);
   if (tool.kind === "highlights")
     return (
       <DayHighlights
@@ -287,11 +298,17 @@ function OpenExercise({
     ...extra.map((name, i) => ({ id: `family:${i}`, name })),
   ];
   /** The chosen person, noted in the book first when they come from the library. */
-  const withWho = (b: Book): [Book, string] =>
-    who.startsWith("family:") ? noteFamily(b, extra[Number(who.slice(7))]) : [b, who];
-  const running =
-    tool.kind === "tracker" &&
-    activeTrackers(book).some((t) => t.toolId === tool.id);
+  const resolve = (b: Book, id: string): [Book, string] =>
+    id.startsWith("family:") ? noteFamily(b, extra[Number(id.slice(7))]) : [b, id];
+  const withWho = (b: Book) => resolve(b, who);
+  /** Starts the habit with one more person (or no one, for the first run). */
+  const startWith = (b: Book, id: string) => {
+    if (tool.kind !== "tracker") return b;
+    const [next, personId] = resolve(b, id);
+    return startTracker(next, tool.id, personId || undefined);
+  };
+  const multi = tool.kind === "tracker" && !!tool.aboutPerson;
+  const running = tool.kind === "tracker" && activeFor(book, tool.id).length > 0;
   const keep: KeepPage = (page) => {
     let pageId: string | undefined;
     onCommit(
@@ -320,17 +337,22 @@ function OpenExercise({
         who={who}
         choices={choices}
         onWho={setWho}
+        picked={multi ? picked : undefined}
+        onPick={setPicked}
         backLabel={backLabel}
         onBack={onBack}
         onStart={() => {
+          // Marks save as they're made; the habit screen shows them, so no notice.
           if (tool.kind === "tracker")
-            return onCommit(
-              (b) => {
-                const [next, id] = withWho(b);
-                return startTracker(next, tool.id, id || undefined);
-              },
-              undefined,
-              "Started. Your marks save as you go.",
+            return onCommit((b) =>
+              multi
+                ? picked.length
+                  ? choices
+                      .map((c) => c.id)
+                      .filter((id) => picked.includes(id))
+                      .reduce(startWith, b)
+                  : startWith(b, "")
+                : startWith(b, who),
             );
           if (!who.startsWith("family:")) return setStarted(true);
           let id = "";
@@ -348,6 +370,29 @@ function OpenExercise({
         }}
       />
     );
+  if (tool.kind === "tracker") {
+    const active = new Set(activeFor(book, tool.id).map((r) => r.personId));
+    return (
+      <HabitScreen
+        tool={tool}
+        book={book}
+        busy={busy}
+        onCommit={onCommit}
+        onKept={onKept}
+        onOpenPage={onOpenPage}
+        backLabel={backLabel}
+        onBack={onBack}
+        addable={
+          multi
+            ? choices.filter(
+                (c) => c.id.startsWith("family:") || !active.has(c.id),
+              )
+            : []
+        }
+        onAdd={(id) => onCommit((b) => startWith(b, id))}
+      />
+    );
+  }
   // Exercises about someone use the choice as that person; others only tag the page.
   const personId = tool.aboutPerson ? who : "";
   const people = !tool.aboutPerson && who ? [who] : [];
@@ -360,7 +405,6 @@ function OpenExercise({
       <section className="rt-book ui-card">
         <p className="rt-start-time">
           <Clock size={18} aria-hidden="true" /> {tool.time}
-          {tool.kind === "tracker" ? ` · ${tool.span}` : ""}
         </p>
         <h2 id="rt-title">{tool.title}</h2>
         <p className="rt-intro">{tool.blurb}</p>
@@ -385,16 +429,7 @@ function OpenExercise({
             people={people}
             onKeep={keep}
           />
-        ) : (
-          <TrackerRunner
-            tool={tool}
-            book={book}
-            busy={busy}
-            onCommit={onCommit}
-            onKept={onKept}
-            onStopped={onBack}
-          />
-        )}
+        ) : null}
       </section>
     </main>
   );
@@ -407,6 +442,8 @@ function ExerciseStart({
   who,
   choices,
   onWho,
+  picked,
+  onPick,
   backLabel,
   onBack,
   onStart,
@@ -418,11 +455,16 @@ function ExerciseStart({
   /** Everyone this could be with: people in the book, then family with their own books. */
   choices: { id: string; name: string }[];
   onWho: (id: string) => void;
+  /** Set for habits about someone: tick one or more people. */
+  picked?: string[];
+  onPick: (ids: string[]) => void;
   backLabel: string;
   onBack: () => void;
   onStart: () => void;
 }) {
   const required = !!tool.aboutPerson?.required;
+  const several = !!picked;
+  const chosen = several ? picked.length > 0 : !!who;
   const options = [
     ...(required ? [] : [{ id: "", name: "No one in particular" }]),
     ...choices,
@@ -467,26 +509,49 @@ function ExerciseStart({
               <fieldset className="rt-who">
                 <legend>
                   {tool.aboutPerson?.label || "Who is this with?"}
+                  {several && (
+                    <small>
+                      {" "}
+                      {required ? "Choose one or more" : "Optional · one or more"}
+                    </small>
+                  )}
                 </legend>
                 <div>
-                  {options.map((o) => (
-                    <label key={o.id || "none"}>
-                      <input
-                        type="radio"
-                        name={`rt-who-${tool.id}`}
-                        checked={who === o.id}
-                        onChange={() => onWho(o.id)}
-                      />
-                      {o.name}
-                    </label>
-                  ))}
+                  {several
+                    ? choices.map((o) => (
+                        <label key={o.id}>
+                          <input
+                            type="checkbox"
+                            checked={picked.includes(o.id)}
+                            onChange={(e) =>
+                              onPick(
+                                e.target.checked
+                                  ? [...picked, o.id]
+                                  : picked.filter((id) => id !== o.id),
+                              )
+                            }
+                          />
+                          {o.name}
+                        </label>
+                      ))
+                    : options.map((o) => (
+                        <label key={o.id || "none"}>
+                          <input
+                            type="radio"
+                            name={`rt-who-${tool.id}`}
+                            checked={who === o.id}
+                            onChange={() => onWho(o.id)}
+                          />
+                          {o.name}
+                        </label>
+                      ))}
                 </div>
               </fieldset>
             )
           )}
           <button
             className="rp-btn rp-btn-olive rt-start-go"
-            disabled={busy || (required && !who)}
+            disabled={busy || (required && !chosen)}
             onClick={onStart}
           >
             {tool.kind === "tracker" && tool.mode === "squares"
@@ -832,165 +897,403 @@ function Preview({
   );
 }
 
-function TrackerRunner({
+/**
+ * A habit under way (Scott's mockup, 2026-11-18): the title, who it is with,
+ * today's effort and the one instruction beside its picture, then progress and
+ * today's action. With several people, one compact row each, in the order
+ * they were started; each person marks and finishes on their own.
+ */
+function HabitScreen({
   tool,
   book,
   busy,
   onCommit,
   onKept,
-  onStopped,
+  onOpenPage,
+  backLabel,
+  onBack,
+  addable,
+  onAdd,
 }: {
   tool: TrackerTool;
   book: Book;
   busy: boolean;
   onCommit: Commit;
   onKept: (kept: Kept) => void;
-  onStopped: () => void;
+  onOpenPage?: (id: string) => void;
+  backLabel: string;
+  onBack: () => void;
+  /** People who could join this habit now ("Add someone"). */
+  addable: { id: string; name: string }[];
+  onAdd: (id: string) => void;
 }) {
-  const run = activeTrackers(book).find((t) => t.toolId === tool.id);
-  const [note, setNote] = useState("");
+  const runs = activeFor(book, tool.id);
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [memories, setMemories] = useState<Record<string, string>>({});
+  const [options, setOptions] = useState(false);
   const [confirmStop, setConfirmStop] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [keptNote, setKeptNote] = useState<{ name: string; pageId?: string } | null>(null);
+  const moreId = useId();
   // Started from the exercise's start screen; nothing to show once it stops.
-  if (!run) return null;
-  const progress = trackerProgress(run);
-  const person = book.people.find((p) => p.id === run.personId);
+  if (!runs.length) return null;
+  const nameOf = (run: TrackerRun) =>
+    book.people.find((p) => p.id === run.personId)?.name;
+  const names = runs.map(nameOf).filter((n): n is string => !!n);
+  const solo = runs.length === 1;
+  const days = tool.mode === "days";
   const today = todayKey();
-  const markedToday = run.marks.some((m) => m.key === today);
-  return (
-    <div className="rt-runner">
-      <p className="rt-instruction">
-        {person ? `With ${person.name}. ` : ""}
-        {tool.instruction}
-      </p>
-      <p className="lb-fine">
-        Started {new Date(run.startedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-        {" · "}each mark saves as you go.
-      </p>
-      <p className="rt-progress" aria-live="polite">
-        {progress.done} of {progress.total}
-        {tool.mode === "days" ? " days" : " marked"}
-        {progress.complete
-          ? tool.mode === "days"
-            ? " · You made it."
-            : " · Bingo: a full line."
-          : ""}
-      </p>
-      {tool.mode === "days" ? (
-        <>
-          <ol className="rt-days" aria-label="Days">
-            {Array.from({ length: tool.target }, (_, i) => (
-              <li key={i} data-done={i < run.marks.length} />
-            ))}
-          </ol>
-          {!markedToday && tool.notePrompt && (
-            <label className="rt-field">
-              {tool.notePrompt} <small>· optional</small>
-              <input
-                value={note}
-                maxLength={500}
-                onChange={(e) => setNote(e.target.value)}
-              />
-            </label>
-          )}
-          <button
-            className={markedToday ? "lb-secondary" : "lb-primary"}
-            aria-pressed={markedToday}
-            disabled={busy}
-            onClick={() =>
-              onCommit(
-                (b) => toggleMark(b, run.id, today, note),
-                () => setNote(""),
-                markedToday ? "Today unmarked." : "Today is marked.",
-              )
-            }
-          >
-            {markedToday ? (
-              <>
-                Done today <Check size={16} />
-              </>
-            ) : (
-              "I did it today"
-            )}
-          </button>
-          {markedToday && (
-            <p className="lb-fine">Marked by mistake? Tap again to undo.</p>
-          )}
-        </>
-      ) : (
-        <div className="rt-bingo" role="group" aria-label={tool.title}>
-          {tool.squares.map((sq, i) => {
-            const on = run.marks.some((m) => m.key === String(i));
-            return (
-              <button
-                key={sq}
-                aria-pressed={on}
-                disabled={busy}
-                onClick={() =>
-                  onCommit((b) => toggleMark(b, run.id, String(i)))
-                }
-              >
-                {on && <Check size={14} />} {sq}
-              </button>
-            );
-          })}
-        </div>
-      )}
-      {tool.mode === "squares" && hasBingo(run) && (
-        <p className="rt-celebrate">Bingo. Those moves work for you.</p>
-      )}
-      <div className="rt-actions">
-        <button
-          className={progress.complete ? "lb-primary" : "lb-secondary"}
-          disabled={busy || !run.marks.length}
-          onClick={() => {
-            let pageId: string | undefined;
-            onCommit(
-              (b) => {
-                const next = finishTracker(b, run.id);
-                pageId = newJournalId(b, next);
-                return next;
+  const titleFor = (run: TrackerRun) => {
+    const name = nameOf(run);
+    return name ? `${tool.title} · ${name}` : tool.title;
+  };
+  const doneText = (run: TrackerRun) => {
+    if (!days) return "Bingo: a full line.";
+    const name = nameOf(run);
+    const line = tool.doneLine ?? `All ${tool.target} days`;
+    return name ? `${line} with ${name}.` : `${line}.`;
+  };
+  const withMarks = runs.filter((r) => r.marks.length);
+
+  // Each mark saves as it's made; the row itself shows that it did.
+  const mark = (run: TrackerRun, on: boolean) =>
+    onCommit(
+      (b) => setMark(b, run.id, today, on, on ? notes[run.id] : undefined),
+      () => on && setNotes((n) => ({ ...n, [run.id]: "" })),
+    );
+  const toggleSquare = (run: TrackerRun, i: number) =>
+    onCommit((b) => toggleMark(b, run.id, String(i)));
+  /** Keeps one person's page; the others carry on. */
+  function keep(run: TrackerRun) {
+    const others = runs.length > 1;
+    const name = nameOf(run);
+    let pageId: string | undefined;
+    onCommit(
+      (b) => {
+        const next = finishTracker(b, run.id, days ? memories[run.id] : undefined);
+        pageId = newJournalId(b, next);
+        return next;
+      },
+      () =>
+        others
+          ? setKeptNote({ name: name || tool.title, pageId })
+          : onKept({ title: titleFor(run), pageId }),
+      others ? undefined : "Kept in your book.",
+    );
+  }
+  /** Finishing early: a page for everyone with something marked. */
+  function finishAll() {
+    let pageId: string | undefined;
+    onCommit(
+      (b) => {
+        let next = b;
+        for (const run of runs)
+          next = run.marks.length
+            ? finishTracker(next, run.id, days ? memories[run.id] : undefined)
+            : stopTracker(next, run.id);
+        pageId = newJournalId(b, next);
+        return next;
+      },
+      () =>
+        onKept(
+          withMarks.length === 1
+            ? { title: titleFor(withMarks[0]), pageId }
+            : {
+                title: tool.title,
+                note: `One page each for ${namesList(withMarks.map((r) => nameOf(r) || "no one in particular"))}.`,
               },
-              () =>
-                onKept({
-                  title: person ? `${tool.title} · ${person.name}` : tool.title,
-                  pageId,
-                }),
-              "Kept in your book.",
-            );
-          }}
-        >
-          Finish and keep a page
-        </button>
-        {confirmStop ? (
-          <span className="rt-confirm">
-            Stop and discard this progress?{" "}
+        ),
+      "Kept in your book.",
+    );
+  }
+
+  const marksOf = (run: TrackerRun) =>
+    days ? (
+      <ol className="rt-days" aria-hidden="true">
+        {Array.from({ length: tool.target }, (_, i) => (
+          <li key={i} data-done={i < run.marks.length} />
+        ))}
+      </ol>
+    ) : (
+      <div className="rt-bingo" role="group" aria-label={nameOf(run) && !solo ? `${tool.title} with ${nameOf(run)}` : tool.title}>
+        {tool.squares.map((sq, i) => {
+          const on = run.marks.some((m) => m.key === String(i));
+          return (
             <button
-              className="lb-text"
+              key={sq}
+              aria-pressed={on}
               disabled={busy}
-              onClick={() =>
-                onCommit(
-                  (b) => stopTracker(b, run.id),
-                  onStopped,
-                  "Exercise stopped.",
-                )
-              }
+              onClick={() => toggleSquare(run, i)}
             >
-              Yes, stop
+              {on && <Check size={14} />} {sq}
             </button>
-            <button className="lb-text" onClick={() => setConfirmStop(false)}>
-              Keep going
-            </button>
-          </span>
-        ) : (
-          <button
-            className="lb-text"
-            disabled={busy}
-            onClick={() => setConfirmStop(true)}
-          >
-            Stop without keeping
-          </button>
-        )}
+          );
+        })}
       </div>
-    </div>
+    );
+  const noteField = (run: TrackerRun) =>
+    days && tool.notePrompt ? (
+      <label className="rt-field rt-habit-field">
+        <span>
+          {tool.notePrompt} <small>· optional</small>
+        </span>
+        <input
+          value={notes[run.id] || ""}
+          maxLength={500}
+          onChange={(e) => setNotes({ ...notes, [run.id]: e.target.value })}
+        />
+      </label>
+    ) : null;
+  const memoryField = (run: TrackerRun) =>
+    days ? (
+      <label className="rt-field rt-habit-field">
+        <span>
+          Anything you want to remember? <small>· optional</small>
+        </span>
+        <input
+          value={memories[run.id] || ""}
+          maxLength={500}
+          onChange={(e) => setMemories({ ...memories, [run.id]: e.target.value })}
+        />
+      </label>
+    ) : null;
+  const undo = (run: TrackerRun) => (
+    <button
+      type="button"
+      className="rt-habit-undo"
+      disabled={busy}
+      aria-label={solo || !nameOf(run) ? "Undo today" : `Undo today for ${nameOf(run)}`}
+      onClick={() => mark(run, false)}
+    >
+      Undo
+    </button>
+  );
+
+  const run = runs[0];
+  const p = trackerProgress(run);
+  const markedToday = days && run.marks.some((m) => m.key === today);
+  const count = (r: TrackerRun) => {
+    const q = trackerProgress(r);
+    return `${q.done} of ${q.total} ${days ? "days" : "marked"}`;
+  };
+
+  return (
+    <main className="rt-screen" aria-labelledby="rt-title">
+      <SubHead
+        back={{ label: backLabel, onClick: onBack, disabled: busy }}
+        note="Your private pages"
+      />
+      <section className="rt-book ui-card rt-habit">
+        <div className="rt-habit-head">
+          <h2 id="rt-title">{tool.title}</h2>
+          {names.length > 0 && (
+            <p className="rt-habit-with">With {namesList(names)}</p>
+          )}
+          <p className="rt-habit-time">
+            {days ? `${tool.time} a day, at your own pace` : tool.time}
+          </p>
+          <p className="rt-habit-do">{tool.instruction}</p>
+          <div className="rt-habit-art" aria-hidden="true">
+            <Illustration
+              name={exerciseIllustration[tool.id] ?? "think-it-through"}
+              size="100%"
+            />
+          </div>
+        </div>
+        <div className="rt-habit-body">
+          {keptNote && (
+            <p className="rt-habit-kept" role="status">
+              {keptNote.name}’s page is kept in your book.
+              {keptNote.pageId && onOpenPage && (
+                <>
+                  {" "}
+                  <button
+                    type="button"
+                    className="ui-link"
+                    disabled={busy}
+                    onClick={() => onOpenPage(keptNote.pageId!)}
+                  >
+                    Open it
+                  </button>
+                </>
+              )}
+            </p>
+          )}
+          {solo ? (
+            <>
+              {p.complete && <p className="rt-habit-done">{doneText(run)}</p>}
+              <div className="rt-habit-status">
+                <p className="rt-habit-count" aria-live="polite">
+                  {count(run)}
+                  {markedToday && " · Today marked"}
+                </p>
+                {markedToday && undo(run)}
+              </div>
+              {marksOf(run)}
+              {p.complete ? memoryField(run) : !markedToday && noteField(run)}
+            </>
+          ) : (
+            <ul className="rt-habit-rows" aria-label="Each person">
+              {runs.map((r) => {
+                const q = trackerProgress(r);
+                const name = nameOf(r) || "No one in particular";
+                const today_ = days && r.marks.some((m) => m.key === today);
+                return (
+                  <li key={r.id} className="rt-habit-row" data-complete={q.complete}>
+                    <div className="rt-habit-who">
+                      <strong>{name}</strong>
+                      <span>{count(r)}</span>
+                    </div>
+                    <div className="rt-habit-act" aria-live="polite">
+                      {today_ ? (
+                        <>
+                          <span className="rt-habit-marked">
+                            Marked today <Check size={15} aria-hidden="true" />
+                          </span>
+                          {undo(r)}
+                        </>
+                      ) : (
+                        days &&
+                        !q.complete && (
+                          <button
+                            className="lb-primary rt-habit-mark"
+                            disabled={busy}
+                            aria-label={`Mark today for ${name}`}
+                            onClick={() => mark(r, true)}
+                          >
+                            Mark today
+                          </button>
+                        )
+                      )}
+                    </div>
+                    <div className="rt-habit-marks">{marksOf(r)}</div>
+                    {q.complete ? (
+                      <div className="rt-habit-keep">
+                        <p className="rt-habit-done">{doneText(r)}</p>
+                        {memoryField(r)}
+                        <button
+                          className="lb-primary rt-habit-mark"
+                          disabled={busy}
+                          onClick={() => keep(r)}
+                        >
+                          Keep {name === "No one in particular" ? "this" : `${name}’s`} page
+                        </button>
+                      </div>
+                    ) : (
+                      !today_ &&
+                      noteField(r) && <div className="rt-habit-keep">{noteField(r)}</div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <div className="rt-habit-foot">
+            {solo &&
+              (p.complete ? (
+                <button
+                  className="lb-primary rt-habit-mark"
+                  disabled={busy}
+                  onClick={() => keep(run)}
+                >
+                  Finish and keep a page
+                </button>
+              ) : (
+                days &&
+                !markedToday && (
+                  <button
+                    className="lb-primary rt-habit-mark"
+                    disabled={busy}
+                    onClick={() => mark(run, true)}
+                  >
+                    Mark today
+                  </button>
+                )
+              ))}
+            <button
+              type="button"
+              className="rt-habit-options"
+              aria-expanded={options}
+              aria-controls={moreId}
+              onClick={() => setOptions(!options)}
+            >
+              Activity options <ChevronDown size={16} aria-hidden="true" />
+            </button>
+          </div>
+          {options && (
+            <div className="rt-habit-more" id={moreId}>
+              {withMarks.length > 0 && !(solo && p.complete) && (
+                <div>
+                  <button className="lb-secondary" disabled={busy} onClick={finishAll}>
+                    {withMarks.length === 1 ? "Finish and keep a page" : "Finish and keep pages"}
+                  </button>
+                  {withMarks.length < runs.length && (
+                    <p className="lb-fine">
+                      Nothing marked yet for{" "}
+                      {namesList(runs.filter((r) => !r.marks.length).map((r) => nameOf(r) || "no one in particular"))}
+                      , so no page for them.
+                    </p>
+                  )}
+                </div>
+              )}
+              {confirmStop ? (
+                <span className="rt-confirm">
+                  {solo ? "Stop and discard this progress?" : "Stop and discard everyone’s progress?"}{" "}
+                  <button
+                    className="lb-text"
+                    disabled={busy}
+                    onClick={() =>
+                      onCommit(
+                        (b) => runs.reduce((x, r) => stopTracker(x, r.id), b),
+                        onBack,
+                        "Exercise stopped.",
+                      )
+                    }
+                  >
+                    Yes, stop
+                  </button>
+                  <button className="lb-text" onClick={() => setConfirmStop(false)}>
+                    Keep going
+                  </button>
+                </span>
+              ) : (
+                <button
+                  className="lb-text"
+                  disabled={busy}
+                  onClick={() => setConfirmStop(true)}
+                >
+                  Stop without keeping
+                </button>
+              )}
+              {addable.length > 0 &&
+                (adding ? (
+                  <fieldset className="rt-pick">
+                    <legend>Add someone</legend>
+                    <div className="rt-chips">
+                      {addable.map((c) => (
+                        <button
+                          key={c.id}
+                          disabled={busy}
+                          onClick={() => {
+                            setAdding(false);
+                            setOptions(false);
+                            onAdd(c.id);
+                          }}
+                        >
+                          {c.name}
+                        </button>
+                      ))}
+                    </div>
+                  </fieldset>
+                ) : (
+                  <button className="lb-text" disabled={busy} onClick={() => setAdding(true)}>
+                    Add someone
+                  </button>
+                ))}
+            </div>
+          )}
+        </div>
+      </section>
+    </main>
   );
 }

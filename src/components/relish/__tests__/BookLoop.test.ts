@@ -114,7 +114,7 @@ it("Repair bingo with someone survives leaving, and its page opens over an older
   openBook(older);
   place("Do something");
   fireEvent.click(screen.getByRole("button", { name: /Repair bingo/ }));
-  fireEvent.click(screen.getByRole("radio", { name: "Kaleb" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Kaleb" }));
   fireEvent.click(screen.getByRole("button", { name: /Start bingo/ }));
   const squares = () => document.querySelectorAll<HTMLButtonElement>(".rt-bingo button");
   await vi.waitFor(() => expect(squares().length).toBe(9));
@@ -132,6 +132,7 @@ it("Repair bingo with someone survives leaving, and its page opens over an older
   });
   fireEvent.click(screen.getByRole("button", { name: /Repair bingo/ }));
   await vi.waitFor(() => expect(document.querySelectorAll('.rt-bingo button[aria-pressed="true"]').length).toBe(2));
+  fireEvent.click(screen.getByRole("button", { name: /Activity options/ }));
   fireEvent.click(screen.getByRole("button", { name: /Finish and keep a page/ }));
   await screen.findByRole("heading", { name: "Kept in your book" });
   fireEvent.click(screen.getByRole("button", { name: /Open this page/ }));
