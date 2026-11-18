@@ -27,6 +27,7 @@ import {
   Sun,
 } from "lucide-react";
 import { bookPages } from "@/lib/relish/pages";
+import { libraryOnly, noteFamily } from "@/lib/relish/catalog";
 import type { PhotoAccess } from "@/lib/relish/photos";
 import { PhotoGallery, PhotoPicker } from "./Photos";
 import PassagePicker from "./PassagePicker";
@@ -90,8 +91,11 @@ export default function Journal({
   initialReading,
   onBack,
   navigation,
+  family,
 }: {
   book: Book;
+  /** Family with their own books in the library, so they can be tagged too. */
+  family?: { name: string }[];
   save: Save;
   sample: boolean;
   onEditingChange: (editing: boolean) => void;
@@ -160,6 +164,7 @@ export default function Journal({
           save={save}
           sample={sample}
           book={book}
+          family={family}
           photos={photos}
           onPause={leaveEditor}
           onKeep={(entry) => {
@@ -472,7 +477,9 @@ export function JournalEditor({
   initialVoice = false,
   initialPhoto = false,
   navigation,
+  family,
 }: {
+  family?: { name: string }[];
   initial: JournalDraft;
   initialVoice?: boolean;
   initialPhoto?: boolean;
@@ -486,6 +493,9 @@ export function JournalEditor({
   photos?: PhotoAccess;
 }) {
   const [draft, setDraft] = useState<JournalDraft>(initial);
+  // Family from the library who aren't in this book yet; tagging one notes them.
+  const extra = book ? libraryOnly(book.people, family) : [];
+  const canTag = !!book?.people.length || extra.length > 0;
   const editorTyping = useTypingSound();
   const [panel, setPanel] = useState<"photo" | "people" | "options" | null>(
     initialPhoto ? "photo" : null,
@@ -787,7 +797,7 @@ export function JournalEditor({
               onChange={(photos) => change({ photos })}
             />
           )}
-          {panel === "people" && !!book?.people.length && (
+          {panel === "people" && book && canTag && (
             <div className="rj-popover rj-popover-people">
             <button
               type="button"
@@ -822,6 +832,31 @@ export function JournalEditor({
                       }
                     />
                     {person.name}
+                  </label>
+                ))}
+                {extra.map((name) => (
+                  <label key={`family:${name}`}>
+                    <input
+                      type="checkbox"
+                      checked={false}
+                      onChange={(e) => {
+                        if (!e.target.checked) return;
+                        let id = "";
+                        void save((b) => {
+                          const [next, chosen] = noteFamily(b, name);
+                          id = chosen;
+                          return next;
+                        })
+                          .then(() => {
+                            if (id && !(current.current.people || []).includes(id))
+                              change({
+                                people: [...(current.current.people || []), id],
+                              });
+                          })
+                          .catch(() => setError("Could not tag. Please try again."));
+                      }}
+                    />
+                    {name}
                   </label>
                 ))}
               </div>
@@ -876,7 +911,7 @@ export function JournalEditor({
                 {draft.photos?.length ? ` · ${draft.photos.length}` : ""}
               </button>
             )}
-            {!!book?.people.length && (
+            {canTag && (
               <button
                 type="button"
                 aria-pressed={panel === "people"}

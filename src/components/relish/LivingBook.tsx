@@ -960,6 +960,7 @@ export default function LivingBook({
         ) : view === "words" && !sharedView ? (
           <Journal
             key={pageKey}
+            family={family}
             navigation={journalNavigation}
             initialDraft={capture?.draft}
             initialVoice={capture?.voice}

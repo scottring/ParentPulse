@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ArrowRight, Check, Clock } from "lucide-react";
 import type { Book } from "@/lib/relish/model";
 import { audienceOf } from "@/lib/relish/profiles";
+import { libraryOnly, noteFamily } from "@/lib/relish/catalog";
 import {
   activeTrackers,
   builderComplete,
@@ -252,32 +253,14 @@ function OpenExercise({
   const [who, setWho] = useState("");
   // Family with their own books who aren't noted in this one yet. Choosing one
   // notes them in this book when the exercise starts, so it can be about them.
-  const same = (a: string, b: string) =>
-    a.trim().toLowerCase() === b.trim().toLowerCase();
-  const extra = family
-    .map((f) => f.name)
-    .filter((n, i, all) => n.trim() && all.findIndex((x) => same(x, n)) === i)
-    .filter((n) => !book.people.some((p) => same(p.name, n)));
+  const extra = libraryOnly(book.people, family);
   const choices = [
     ...book.people.map((p) => ({ id: p.id, name: p.name })),
     ...extra.map((name, i) => ({ id: `family:${i}`, name })),
   ];
   /** The chosen person, noted in the book first when they come from the library. */
-  function withWho(b: Book): [Book, string] {
-    if (!who.startsWith("family:")) return [b, who];
-    const name = extra[Number(who.slice(7))];
-    const found = b.people.find((p) => same(p.name, name));
-    if (found) return [b, found.id];
-    const person = {
-      id: crypto.randomUUID(),
-      name,
-      role: "child",
-      color: ["rose", "ochre", "sage"][Math.floor(Math.random() * 3)],
-      note: "",
-      lessons: [],
-    };
-    return [{ ...b, people: [...b.people, person] }, person.id];
-  }
+  const withWho = (b: Book): [Book, string] =>
+    who.startsWith("family:") ? noteFamily(b, extra[Number(who.slice(7))]) : [b, who];
   const running =
     tool.kind === "tracker" &&
     activeTrackers(book).some((t) => t.toolId === tool.id);
