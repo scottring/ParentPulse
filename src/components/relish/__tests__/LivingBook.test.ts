@@ -83,7 +83,7 @@ describe("living-book interaction boundaries", () => {
     fireEvent.click(screen.getByRole("button", { name: /Save reflection and finish/ }));
     await screen.findByText("Session complete");
   });
-  it("puts private content away for shared play and locks before returning to it", async () => {
+  it("keeps private content off the game screen and ends the game without locking", async () => {
     const lock = vi.fn();
     function Harness() {
       const [book, setBook] = useState(completeBook);
@@ -119,11 +119,12 @@ describe("living-book interaction boundaries", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
     fireEvent.click(screen.getByRole("button", { name: /^Start/ }));
-    await screen.findByRole("button", { name: "Unlock my edition" });
+    await screen.findByRole("button", { name: "End game" });
     expect(screen.queryByText("A confidential sample sentence")).toBeNull();
     expect(screen.queryByRole("button", { name: /^Menu/ })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Unlock my edition" }));
-    expect(lock).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "End game" }));
+    expect(lock).not.toHaveBeenCalled();
+    await screen.findByRole("heading", { name: "What feels right?" });
   });
   it("does not render the chooser’s answer on a handoff or another person’s turn", () => {
     const g = advanceGame(

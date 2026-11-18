@@ -10,6 +10,11 @@ import {
 } from "@testing-library/react";
 import AccountLibrary from "../AccountLibrary";
 import { emptyBook } from "@/lib/relish/model";
+import { Window } from "happy-dom";
+Object.defineProperty(globalThis, "localStorage", {
+  value: new Window({ url: "http://localhost" }).localStorage,
+  configurable: true,
+});
 const auth = vi.hoisted(() => ({
   gate: null as null | { accountUid: string },
   verify: vi.fn(),
@@ -125,4 +130,34 @@ it("keeps original passphrase protection for an earlier synced book", async () =
   await waitFor(() =>
     expect(sync.open).toHaveBeenCalledWith(head, "original passphrase"),
   );
+});
+it("lists the adult's own book first, without a second Add my book or Refresh", () => {
+  localStorage.setItem("relish:home-book:parent-one", "mine");
+  mount({
+    books: [
+      { id: "kid", label: "Ella", accountManaged: true },
+      { id: "mine", label: "Scott", accountManaged: true },
+    ],
+  });
+  const names = screen
+    .getAllByRole("button")
+    .map((b) => b.textContent || "")
+    .filter((t) => /Ella|Scott/.test(t));
+  expect(names[0]).toMatch(/Scott/);
+  expect(screen.queryByRole("button", { name: /Add my book/ })).toBeNull();
+  expect(screen.getByRole("button", { name: /Add a child/ })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Refresh library/ })).toBeNull();
+  expect(screen.queryByText(/Sign in once/)).toBeNull();
+  localStorage.removeItem("relish:home-book:parent-one");
+});
+it("opens straight onto the add-a-child form from Family", () => {
+  render(
+    createElement(AccountLibrary, {
+      sync: { user, books: [], refresh: vi.fn().mockResolvedValue([]) },
+      vault: { mode: "open", book: { ...emptyBook("Scott"), profile: { kind: "adult" } }, editionId: "test" },
+      onClose: vi.fn(),
+      startAdding: "child",
+    } as unknown as Parameters<typeof AccountLibrary>[0]),
+  );
+  expect(screen.getByLabelText("Child’s name")).toBeTruthy();
 });

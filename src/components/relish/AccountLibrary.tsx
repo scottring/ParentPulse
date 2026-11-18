@@ -19,6 +19,7 @@ import {
 import { readBinding, type SyncedEdition } from "@/lib/relish/book-sync";
 import type { useLocalBook } from "./useLocalBook";
 import type { useBookSync } from "./useBookSync";
+import { readHomeBook } from "./homeBook";
 import { Dialog } from "./BookForms";
 export default function AccountLibrary({
   vault,
@@ -63,6 +64,13 @@ export default function AccountLibrary({
   const user = sync.user,
     bound = readBinding(vault.editionId),
     working = busy || sync.working;
+  // The signed-in adult's own book comes first; once it exists, there is no
+  // second "Add my book".
+  const own = readHomeBook(user?.uid);
+  const hasOwnBook = sync.books.some((b) => b.id === own && b.accountManaged);
+  const books = sync.books.toSorted(
+    (a, b) => Number(b.id === own) - Number(a.id === own),
+  );
   useEffect(() => {
     if (user?.emailVerified && parentReady) void sync.refresh().catch(() => {});
     // Fetch once when this view gains authorized access.
@@ -114,7 +122,9 @@ export default function AccountLibrary({
       <p>
         {user && !parentReady
           ? "Enter the parent password to return to the family library."
-          : "Sign in once. Your entries and photos save to your account, ready wherever you open Relish."}
+          : user
+            ? "Choose a book to open."
+            : "Sign in once. Your entries and photos save to your account, ready wherever you open Relish."}
       </p>
       {!user ? (
         <form
@@ -311,7 +321,7 @@ export default function AccountLibrary({
           {!adding && !chosen && (
             <>
               <div className="lb-account-books">
-                {sync.books.map((head) => (
+                {books.map((head) => (
                   <div key={head.id}>
                     <button
                       disabled={working}
@@ -342,17 +352,19 @@ export default function AccountLibrary({
                 </section>
               )}
               <div className="lb-account-actions">
-                <button
-                  className="lb-primary"
-                  disabled={working}
-                  onClick={() => {
-                    setAdding(true);
-                    setAudience("adult");
-                  }}
-                >
-                  <Plus size={17} />
-                  Add my book
-                </button>
+                {!hasOwnBook && (
+                  <button
+                    className="lb-primary"
+                    disabled={working}
+                    onClick={() => {
+                      setAdding(true);
+                      setAudience("adult");
+                    }}
+                  >
+                    <Plus size={17} />
+                    Add my book
+                  </button>
+                )}
                 <button
                   className="lb-secondary"
                   disabled={working}
@@ -491,9 +503,6 @@ export default function AccountLibrary({
             the same account on another device brings the whole library with
             you. AI and sharing with other accounts still need your permission.
           </p>
-          <button disabled={working} onClick={() => void act(sync.refresh)}>
-            Refresh library
-          </button>
         </>
       )}
       {(error || sync.error) && (

@@ -122,7 +122,6 @@ export default function LivingBook({
     [closed, setClosed] = useState(false),
     [modal, setModal] = useState<Modal>(null),
     [editing, setEditing] = useState<Person | null>(null),
-    [shared, setShared] = useState(false),
     [journalEditing, setJournalEditing] = useState(false),
     [working, setWorking] = useState(false),
     [error, setError] = useState(""),
@@ -263,11 +262,10 @@ export default function LivingBook({
       "This visit is complete.",
     );
   }
-  function leaveShared() {
-    if (sample) {
-      setShared(false);
-      navigate("home");
-    } else vault.lock();
+  // Leaving a game never locks the book; the round stays saved to resume.
+  function endGame() {
+    navigate("do");
+    if (activeGame) setNotice("Your round is saved. Pick it up from Do something.");
   }
   function gameAction(action: GameAction) {
     const gameId = l.game?.id;
@@ -313,7 +311,8 @@ export default function LivingBook({
   const headerBusy =
     working || !!sessionOpen || (!journalEditing && vault.busy);
   const activeGame = l.game && l.game.stage !== "finished" ? l.game : undefined;
-  const sharedView = shared || view === "play";
+  // A game in progress gets the whole screen: no top bar, just End game.
+  const sharedView = view === "play";
   const place = placeOf[view];
   // Places draw their own big heading; sub-screens keep the small running head.
   const placeScreen = view === place && !closed;
@@ -599,13 +598,8 @@ export default function LivingBook({
         <header className="rp-topbar rp-topbar-focused">
           <div className="rp-topbar-inner">
             <span className="rp-wordmark">relish</span>
-            <button
-              className="rp-end"
-              disabled={busy}
-              onClick={leaveShared}
-            >
-              <Lock size={15} />{" "}
-              {sample ? "My sample edition" : "Unlock my edition"}
+            <button className="rp-end" disabled={busy} onClick={endGame}>
+              End game
             </button>
           </div>
         </header>
@@ -803,8 +797,8 @@ export default function LivingBook({
               </p>
               <div className="lb-landscape-inset" />
               <p className="lb-fine">
-                Private pages are put away. Anyone may pass. Returning to your
-                private edition requires unlocking it.
+                Private pages stay out of the game. Anyone may pass. End the
+                game any time; the round is saved.
               </p>
             </aside>
             <main className="lb-play-main" key={l.game?.id || "setup"}>
@@ -821,11 +815,12 @@ export default function LivingBook({
                     "Everyone approved. A shared page is kept.",
                   )
                 }
-                onPause={() => navigate("family")}
+                onPause={endGame}
                 onFinish={finishGame}
                 onCancel={() =>
-                  void commit((b) =>
-                    changeLiving(b, (x) => ({ ...x, game: undefined })),
+                  void commit(
+                    (b) => changeLiving(b, (x) => ({ ...x, game: undefined })),
+                    () => navigate("do"),
                   )
                 }
               />

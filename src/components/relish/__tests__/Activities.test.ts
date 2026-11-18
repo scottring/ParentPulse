@@ -216,7 +216,7 @@ it("starts a game from a sheet with the family already filled in", async () => {
     "Gran",
   ]);
 });
-it("resumes the same group round and requires unlocking before returning to private activities", () => {
+it("resumes the same group round full-screen and ends the game without locking", () => {
   const book = emptyBook("Robin");
   const game = newGame("joy", [
     { id: "a", name: "Robin" },
@@ -227,6 +227,11 @@ it("resumes the same group round and requires unlocking before returning to priv
   expect(livingOf(app.stored()).game?.id).toBe(game.id);
   expect(screen.queryByRole("button", { name: "Do something" })).toBeNull();
   expect(screen.queryByRole("button", { name: /Jot something down/ })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Unlock my edition" }));
-  expect(app.lock).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole("button", { name: "End game" }));
+  expect(app.lock).not.toHaveBeenCalled();
+  expect(screen.getByRole("heading", { name: "What feels right?" })).toBeTruthy();
+  expect(livingOf(app.stored()).game?.id).toBe(game.id);
+  expect(
+    screen.getByRole("button", { name: /Guess my small joy.*Round in progress/ }),
+  ).toBeTruthy();
 });

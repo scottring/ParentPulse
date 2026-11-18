@@ -208,7 +208,7 @@ describe("freeform journal", () => {
     expect(calls).toBe(1);
     expect(onPause).not.toHaveBeenCalled();
   });
-  it("lets children leave the journal for shared play without exposing private pages", async () => {
+  it("lets children leave the journal for a game without exposing private pages", async () => {
     const lock = vi.fn();
     function Harness() {
       const initial = {
@@ -276,8 +276,9 @@ describe("freeform journal", () => {
     expect(screen.queryByText("PRIVATE JOURNAL SENTENCE")).toBeNull();
     expect(screen.queryByText("Another private moment")).toBeNull();
     expect(screen.queryByRole("button", { name: "Your book" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Unlock my edition" }));
-    expect(lock).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "End game" }));
+    expect(lock).not.toHaveBeenCalled();
+    await screen.findByRole("heading", { name: "What feels right?" });
   });
 });
 

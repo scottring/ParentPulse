@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Lock, Plus, Cloud } from "lucide-react";
 import { useLocalBook } from "./useLocalBook";
 import { SensoryProvider } from "./Sensory";
 import { Dialog, VaultForm } from "./BookForms";
 import LivingBook from "./LivingBook";
 import type { FamilyPerson } from "./Home";
+import { readHomeBook, writeHomeBook } from "./homeBook";
 import EditionSetup from "./EditionSetup";
 import AccountLibrary from "./AccountLibrary";
 import { useBookSync } from "./useBookSync";
@@ -82,6 +83,40 @@ function BookGate() {
     />
   );
 
+  // Remember the signed-in adult's own book whenever it is open.
+  const ownBook =
+    vault.mode === "open" &&
+    managed &&
+    vault.book.profile?.kind === "adult" &&
+    !!sync.user &&
+    binding?.uid === sync.user.uid
+      ? binding.remoteId
+      : null;
+  useEffect(() => {
+    if (ownBook && sync.user) writeHomeBook(sync.user.uid, ownBook);
+  }, [ownBook, sync.user]);
+  // After a fresh sign-in (not a reload, not after Lock), open that book on
+  // Home instead of stopping at the family library.
+  const signedIn = useRef<string | null | undefined>(undefined);
+  const openHome = useRef(false);
+  useEffect(() => {
+    if (!sync.authReady) return;
+    const uid = sync.user?.uid ?? null;
+    if (signedIn.current === null && uid) openHome.current = true;
+    signedIn.current = uid;
+    if (!openHome.current || sync.working) return;
+    if (vault.mode === "open") {
+      openHome.current = false;
+      return;
+    }
+    if (!sync.user?.emailVerified || !sync.books.length) return;
+    openHome.current = false;
+    const home = readHomeBook(sync.user.uid);
+    const head = sync.books.find((b) => b.id === home && b.accountManaged);
+    if (head) void sync.open(head).catch(() => {});
+    // Acts once per sign-in; sync.open is recreated every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sync.authReady, sync.user, sync.working, sync.books, vault.mode]);
   useEffect(() => {
     const close = () => setAccountOpen(false);
     window.addEventListener("relish:locked", close);
