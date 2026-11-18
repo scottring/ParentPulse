@@ -789,7 +789,9 @@ export default function LivingBook({
             onQuickWrite={(text, voice) =>
               quickEntry(voice, { ...newJournalDraft(), text })
             }
-            onQuickPhoto={() => quickEntry(false, newJournalDraft(), true)}
+            onQuickPhoto={(text) =>
+              quickEntry(false, { ...newJournalDraft(), text }, true)
+            }
           />
         ) : view === "do" && !sharedView ? (
           <DoSomething

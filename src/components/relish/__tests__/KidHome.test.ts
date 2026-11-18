@@ -66,3 +66,17 @@ it("More to try opens Do something filtered", () => {
   expect(cards.length).toBeGreaterThan(0);
   expect(cards.every((c) => c.textContent?.includes("Game"))).toBe(true);
 });
+
+it("fits the Home invitation to the age band, with a read-aloud cue for the youngest", () => {
+  const book = (ageBand: "under-6" | "13-17"): Book => ({
+    ...emptyBook("Ella"),
+    profile: { kind: "child", ageBand, parentLock: { accountUid: "parent-uid" } },
+  });
+  openBook(book("under-6"));
+  expect(screen.getByText("What did you play today?")).toBeTruthy();
+  expect(screen.getByText(/Grown-up: read this aloud/)).toBeTruthy();
+  cleanup();
+  openBook(book("13-17"));
+  expect(screen.getByText("Anything from today worth keeping?")).toBeTruthy();
+  expect(screen.queryByText(/Grown-up: read this aloud/)).toBeNull();
+});

@@ -2,6 +2,7 @@
 import { useState, type ReactNode, type RefObject } from "react";
 import { Camera, Mic, Pencil } from "lucide-react";
 import type { Book } from "@/lib/relish/model";
+import { audienceOf } from "@/lib/relish/profiles";
 import type { Nudge, NudgeAction } from "@/lib/relish/nudges";
 import type { DoFilter } from "@/lib/relish/catalog";
 import Illustration, { Emblem } from "./Illustration";
@@ -117,6 +118,15 @@ export default function KidHome({
   const [i, setI] = useState(start);
   const nudge = list[i % Math.max(list.length, 1)];
   const name = book.owner.trim() || "you";
+  const audience = audienceOf(book);
+  // One invitation per age: a four-year-old's grown-up does the writing,
+  // a teenager gets a question that doesn't talk down.
+  const question =
+    audience === "under-6"
+      ? "What did you play today?"
+      : audience === "13-17"
+        ? "Anything from today worth keeping?"
+        : "What did you notice today?";
   const more: { filter: DoFilter; label: string; icon: ReactNode }[] = [
     { filter: "5", label: "Try an exercise", icon: icons.exercise },
     { filter: "kids", label: "Play a game", icon: icons.game },
@@ -130,7 +140,13 @@ export default function KidHome({
           <h1 id="rk-home-title" ref={headingRef} tabIndex={-1}>
             Hi, {name}.
           </h1>
-          <p className="rk-question">What did you notice today?</p>
+          <p className="rk-question">{question}</p>
+          {audience === "under-6" && (
+            <p className="lb-age-cue rk-cue">
+              Grown-up: read this aloud, then write down what they say, or add
+              a photo of it.
+            </p>
+          )}
           <div className="rk-add" role="group" aria-label="Add a page">
             {onWrite && (
               <button type="button" disabled={busy} onClick={onWrite}>

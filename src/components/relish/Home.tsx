@@ -103,8 +103,8 @@ export default function Home({
   onQuickSave?: (text: string) => Promise<string>;
   /** Opens the full editor, carrying anything already typed. */
   onQuickWrite?: (text: string, voice: boolean) => void;
-  /** Opens a new page with the photo picker showing. */
-  onQuickPhoto?: () => void;
+  /** Opens a new page with the photo picker showing, carrying any words typed. */
+  onQuickPhoto?: (text: string) => void;
 }) {
   const list = nudgesFor(book, names);
   const [i, setI] = useState(() => nudgeStart(list.length));
@@ -124,7 +124,7 @@ export default function Home({
         onBook={onBook}
         onWrite={onQuickWrite && (() => onQuickWrite("", false))}
         onRecord={onQuickWrite && (() => onQuickWrite("", true))}
-        onPhoto={onQuickPhoto}
+        onPhoto={onQuickPhoto && (() => onQuickPhoto(""))}
       />
     );
   const tiles: {
@@ -180,7 +180,13 @@ export default function Home({
         <Illustration name="home" size={128} eager className="rp-sun" />
       </section>
       {onQuickSave && onQuickWrite && (
-        <QuickJot busy={busy} onSave={onQuickSave} onWrite={onQuickWrite} onPage={onPage} />
+        <QuickJot
+          busy={busy}
+          onSave={onQuickSave}
+          onWrite={onQuickWrite}
+          onPhoto={onQuickPhoto}
+          onPage={onPage}
+        />
       )}
       {nudge && (
         <section className="rp-nudge" aria-label="Today’s suggestion">
@@ -319,11 +325,13 @@ function QuickJot({
   busy,
   onSave,
   onWrite,
+  onPhoto,
   onPage,
 }: {
   busy: boolean;
   onSave: (text: string) => Promise<string>;
   onWrite: (text: string, voice: boolean) => void;
+  onPhoto?: (text: string) => void;
   onPage: (id: string) => void;
 }) {
   const [text, setText] = useState("");
@@ -387,6 +395,20 @@ function QuickJot({
             <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
           </svg>
         </button>
+        {onPhoto && (
+          <button
+            type="button"
+            className="rp-jot-mic"
+            aria-label="Add a photo"
+            disabled={saving || busy}
+            onClick={() => onPhoto(text)}
+          >
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+              <circle cx="12" cy="13" r="3.5" />
+            </svg>
+          </button>
+        )}
         <button className="rp-jot-save" disabled={!ready}>
           {saving ? "Saving…" : "Save"}
         </button>
@@ -396,9 +418,9 @@ function QuickJot({
           <span className="lb-error">{error}</span>
         ) : saved ? (
           <>
-            <span>Saved to your book.</span>
+            <span>Kept in your book.</span>
             <button type="button" className="lb-text" onClick={() => onPage(saved)}>
-              Add a title
+              Open it to add a title
             </button>
           </>
         ) : (

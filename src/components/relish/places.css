@@ -1331,6 +1331,10 @@ img.ui-illustration.rk-cover-emblem,
   font: 400 clamp(26px, 3.4vw, 40px) / 1.2 var(--serif);
   color: var(--ink);
 }
+.lb-app .rk-hello .rk-cue {
+  margin: -16px 0 22px;
+  max-width: 34em;
+}
 .lb-app .rk-add {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

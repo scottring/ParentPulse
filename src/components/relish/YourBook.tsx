@@ -218,9 +218,6 @@ export default function YourBook({
                   Give me an idea
                 </button>
               )}
-              <button className="ui-link" disabled={busy} onClick={onAddPerson}>
-                + Add someone to your book
-              </button>
             </div>
           </div>
         </section>
@@ -359,7 +356,7 @@ export default function YourBook({
                 <span>
                   <span className="rp-going-kicker">Draft</span>
                   <span className="rp-going-title">
-                    Keep writing: {d.title.trim() || "an unfinished page"}
+                    Keep writing: {d.title.trim() || d.text.trim().split("\n")[0].slice(0, 60) || "an unfinished page"}
                   </span>
                 </span>
               </button>
@@ -368,7 +365,7 @@ export default function YourBook({
               <button className="rp-going-item" disabled={busy} onClick={onResumeVisit}>
                 {icons.think}
                 <span>
-                  <span className="rp-going-kicker">Guided reflection · paused</span>
+                  <span className="rp-going-kicker">Think it through · paused</span>
                   <span className="rp-going-title">Pick up where you left off</span>
                 </span>
               </button>
@@ -378,10 +375,10 @@ export default function YourBook({
                 <Clock />
                 <span>
                   <span className="rp-going-kicker">
-                    Practice plan · {practice.triedAt ? "tried" : "not tried yet"}
+                    Your plan · {practice.triedAt ? "tried" : "not tried yet"}
                   </span>
                   <span className="rp-going-title">
-                    {practice.text ? `${practice.text}. ` : ""}How did it go? Tap to note it.
+                    {practice.text ? `“${practice.text}” · ` : ""}How did it go?
                   </span>
                 </span>
               </button>
