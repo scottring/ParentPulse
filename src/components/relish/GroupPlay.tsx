@@ -11,7 +11,9 @@ import {
   gameText,
   joyResult,
   joySummary,
+  joyTally,
   livingOf,
+  pickGroups,
   samePageResult,
   samePageSummary,
   samePageTrend,
@@ -32,6 +34,7 @@ const list = (items: string[]) =>
   items.length < 2
     ? items.join("")
     : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+const words = ["", "one", "two", "three", "four", "five", "six"];
 /** Rounds from contentVersion 2 keep their answers in the book. */
 const remembers = (g: Game) => g.contentVersion === 2;
 
@@ -58,6 +61,7 @@ export default function GroupPlay({
   const [firstPlayer, setFirstPlayer] = useState(game.players[0].id);
   /** Whose turn it is to add a line about the round, once it's revealed. */
   const [reflecting, setReflecting] = useState<number | null>(null);
+  const [sharing, setSharing] = useState(false);
   const g = game,
     plan = turnPlan(g),
     total = plan.length,
@@ -72,7 +76,7 @@ export default function GroupPlay({
   const guessing = everyone && g.turn >= g.players.length;
   return (
     <section className="lb-game" aria-label="Our game">
-      {!finished && (
+      {!finished && g.stage !== "ready" && (
         <div className="lb-session-line">
           <div>
             <p className="lb-kicker">One round</p>
@@ -83,69 +87,33 @@ export default function GroupPlay({
           </button>
         </div>
       )}
-      {g.audience && (
-        <p className="lb-fine">
-          {ageLabels[g.audience]} · chosen for this round
-        </p>
-      )}
       {g.stage === "ready" ? (
         <>
           <h2>{title}</h2>
           <p>
             {everyone
-              ? "First, everyone picks a small joy in private. Then each person guesses everyone else’s. See who knows whom best."
+              ? "Everyone picks a small joy in private, then guesses everyone else’s."
               : g.kind === "joy"
-              ? "One person chooses a joy in private. Pass the device so everyone else can guess. All choices are revealed together."
-              : g.kind === "match"
-                ? many
-                  ? `${plan[0].asks.length} quick questions. On your turn, answer all of them in private, then pass the device. Then see where you match.`
-                  : "Everyone answers the same question in private. Pass the device between turns. All answers are revealed together."
-                : remembers(g)
-                  ? "Pass the device around. Each person picks what happens next in the same story; anyone can pass. At the end, read it back and give it a title together."
-                  : "Pass the device around. Each person adds to the same story. Anyone can pass."}
+                ? `One person picks a small joy, then everyone else guesses it.`
+                : g.kind === "match"
+                  ? many
+                    ? `Answer ${words[plan[0].asks.length] ?? plan[0].asks.length} questions each, then pass the device and compare.`
+                    : "Everyone answers one question in private, then you compare."
+                  : remembers(g)
+                    ? "Take turns adding to one story, then read it back and give it a title."
+                    : "Take turns adding to one story. Anyone can pass."}
           </p>
-          <div className="lb-boundary">
-            <strong>
-              {g.kind === "match"
-                ? many
-                  ? "About 5–10 minutes"
-                  : "About 3–5 minutes"
-                : g.kind === "joy" && !everyone
-                  ? "About 5 minutes"
-                  : "About 5–10 minutes"}
-            </strong>
-            <p>
-              {total} turns, then everyone sees the answers together. Passing
-              is always fine.
-            </p>
-            {remembers(g) && (
-              <p>
-                Relish remembers this round’s answers in {book.owner}’s book
-                {g.kind === "match"
-                  ? " so you can see how you match over time"
-                  : g.kind === "joy"
-                    ? " so you can look back at what lights each of you up"
-                    : " so you can read it again later"}
-                . They’re never sent to AI.
-              </p>
-            )}
-          </div>
           {g.kind === "match" && samePageTrend(living, g) && (
             <p className="lb-trend">{samePageTrend(living, g)}</p>
           )}
-          <ol className="lb-turns">
-            {g.players.map((p) => (
-              <li key={p.id}>{p.name}</li>
-            ))}
-          </ol>
           <label>
             {everyone
               ? "Who goes first?"
               : g.kind === "joy"
-              ? "Who chooses a joy this round?"
-              : g.kind === "match"
-                ? "Who answers first?"
-                : "Who starts the story?"}
+                ? "Who chooses a joy this round?"
+                : g.kind === "match"
+                  ? "Who answers first?"
+                  : "Who starts the story?"}
             <select
               value={firstPlayer || g.players[0].id}
               onChange={(e) => setFirstPlayer(e.target.value)}
@@ -174,6 +142,16 @@ export default function GroupPlay({
               Change group or game
             </button>
           </div>
+          <p className="lb-fine lb-setup-note">
+            Answers stay hidden until the reveal
+            {remembers(g)
+              ? `, then stay with this round in ${book.owner}’s book (never sent to AI)`
+              : ""}
+            . Passing is always fine.
+            {g.audience
+              ? ` Questions picked for ${g.audience === "under-6" ? "under-6s" : g.audience === "adult" ? "adults" : ageLabels[g.audience].toLowerCase()}.`
+              : ""}
+          </p>
         </>
       ) : g.stage === "handoff" ? (
         <div className="lb-handoff">
@@ -188,10 +166,10 @@ export default function GroupPlay({
                 : everyone
                   ? "Pick your own small joy in private, or pass. The answers so far stay hidden."
                   : g.kind === "joy"
-                ? `Guess what ${g.players[0].name} picked, or pass. The answers so far stay hidden.`
-                : many
-                  ? `Answer all ${plan[g.turn].asks.length} without looking at anyone else’s. Pass any you like. The answers so far stay hidden.`
-                  : "Answer without looking at anyone else’s, or pass. The answers so far stay hidden."}
+                    ? `Guess what ${g.players[0].name} picked, or pass. The answers so far stay hidden.`
+                    : many
+                      ? `Answer all ${plan[g.turn].asks.length} without looking at anyone else’s. Pass any you like. The answers so far stay hidden.`
+                      : "Answer without looking at anyone else’s, or pass. The answers so far stay hidden."}
           </p>
           <button
             className="lb-primary"
@@ -218,13 +196,18 @@ export default function GroupPlay({
           busy={busy}
           onSave={(text) => {
             const player = g.players[reflecting];
-            const had = g.reflections?.find((r) => r.playerId === player.id)?.text || "";
+            const had =
+              g.reflections?.find((r) => r.playerId === player.id)?.text || "";
             if (text.trim() !== had)
               onAction({ type: "reflect", playerId: player.id, text });
-            setReflecting(reflecting + 1 < g.players.length ? reflecting + 1 : null);
+            setReflecting(
+              reflecting + 1 < g.players.length ? reflecting + 1 : null,
+            );
           }}
           onSkip={() =>
-            setReflecting(reflecting + 1 < g.players.length ? reflecting + 1 : null)
+            setReflecting(
+              reflecting + 1 < g.players.length ? reflecting + 1 : null,
+            )
           }
           onDone={() => setReflecting(null)}
         />
@@ -247,61 +230,74 @@ export default function GroupPlay({
               )}
             </>
           )}
-          <RoundNotes
-            game={g}
-            owner={book.owner}
-            busy={busy}
-            onStart={() => setReflecting(0)}
-          />
-          <div className="lb-boundary">
-            <p>
-              That’s the round. Finish for now ends it here.{" "}
+          <RoundNotes game={g} />
+          <div className="lb-round-end">
+            <p className="lb-fine">
               {remembers(g)
-                ? `Its answers stay with this round in ${book.owner}’s book.`
+                ? `This round is kept in ${book.owner}’s book.`
                 : "Your book notes that you played, without anyone’s answers."}
+              {g.savedPageId
+                ? " A shared page was kept with everyone’s approval."
+                : ""}
             </p>
             <button className="lb-primary" disabled={busy} onClick={onFinish}>
-              Finish for now <Check size={16} />
+              Finish round <Check size={16} />
             </button>
-          </div>
-          {g.savedPageId ? (
-            <p className="lb-fine">A page was kept with everyone’s approval.</p>
-          ) : (
-            text && (
-              <details className="lb-sharing">
-                <summary>Also keep these words as a shared page · optional</summary>
-                <p>
-                  Each player approves these exact words. They’ll be kept as a
-                  shared page in {book.owner}’s book. Anyone can say no.
-                </p>
-                <blockquote>{text}</blockquote>
-                <div className="lb-players">
-                  {g.players.map((p, i) => (
-                    <button
-                      key={p.id}
-                      disabled={busy}
-                      aria-pressed={g.approvals[i]}
-                      onClick={() =>
-                        onAction({ type: "approve", playerId: p.id })
-                      }
-                    >
-                      {p.name} {g.approvals[i] ? "approved ✓" : "approves"}
-                    </button>
-                  ))}
-                </div>
-                <p className="lb-fine">
-                  {g.approvals.filter(Boolean).length} of {g.players.length}{" "}
-                  approved.
-                </p>
+            <div className="lb-round-more">
+              <button
+                className="lb-text"
+                disabled={busy}
+                onClick={() => setReflecting(0)}
+              >
+                {g.reflections?.length
+                  ? "Add or change a memory"
+                  : "Add a memory"}
+              </button>
+              {text && !g.savedPageId && (
                 <button
-                  className="lb-secondary"
-                  disabled={busy || !g.approvals.every(Boolean)}
-                  onClick={onKeep}
+                  className="lb-text"
+                  disabled={busy}
+                  aria-expanded={sharing}
+                  onClick={() => setSharing(!sharing)}
                 >
-                  Keep in our Family pages
+                  Create a shared page
                 </button>
-              </details>
-            )
+              )}
+            </div>
+          </div>
+          {sharing && text && !g.savedPageId && (
+            <section className="lb-sharing" aria-label="Create a shared page">
+              <p>
+                Each player approves these exact words. They’ll be kept as a
+                shared page in {book.owner}’s book. Anyone can say no.
+              </p>
+              <blockquote>{text}</blockquote>
+              <div className="lb-players">
+                {g.players.map((p, i) => (
+                  <button
+                    key={p.id}
+                    disabled={busy}
+                    aria-pressed={g.approvals[i]}
+                    onClick={() =>
+                      onAction({ type: "approve", playerId: p.id })
+                    }
+                  >
+                    {p.name} {g.approvals[i] ? "approved ✓" : "approves"}
+                  </button>
+                ))}
+              </div>
+              <p className="lb-fine">
+                {g.approvals.filter(Boolean).length} of {g.players.length}{" "}
+                approved.
+              </p>
+              <button
+                className="lb-secondary"
+                disabled={busy || !g.approvals.every(Boolean)}
+                onClick={onKeep}
+              >
+                Keep in our Family pages
+              </button>
+            </section>
           )}
         </>
       )}
@@ -341,9 +337,7 @@ function TurnPanel({
       setStep(step + 1);
       return;
     }
-    onAction(
-      many ? { type: "answer", answers } : { type: "choice", choice },
-    );
+    onAction(many ? { type: "answer", answers } : { type: "choice", choice });
   }
   return (
     <>
@@ -397,7 +391,9 @@ function SamePageReveal({ game: g, trend }: { game: Game; trend: string }) {
     return (
       <>
         <p className="lb-kicker">The reveal</p>
-        <h2>{line.answered ? "Here’s what everyone chose" : "Everyone passed"}</h2>
+        <h2>
+          {line.answered ? "Here’s what everyone chose" : "Everyone passed"}
+        </h2>
         <p className="lb-story-so-far">{line.question.prompt}</p>
         <div className="lb-reveal">
           {g.players.map((p, i) => (
@@ -421,83 +417,74 @@ function SamePageReveal({ game: g, trend }: { game: Game; trend: string }) {
       </>
     );
   }
+  const summary = samePageSummary(g);
   return (
     <>
       <p className="lb-kicker">The reveal</p>
-      <h2>{samePageSummary(g) || "Not enough answers to compare"}</h2>
-      {r.differ.length > 0 && (
-        <p className="lb-same-page">Different on {list(r.differ)}.</p>
-      )}
-      {trend && <p className="lb-trend">{trend}</p>}
+      <h2>What each of you said</h2>
       <ol className="lb-sp-list">
-        {r.lines.map((line) => (
-          <li
-            key={line.question.id}
-            className={line.answered < 2 ? "" : line.same ? "is-same" : "is-different"}
-          >
-            <span className="lb-sp-mark">
-              {line.answered < 2
-                ? "Too few answers"
-                : line.same
-                  ? "Same page ✓"
-                  : "Different"}
-            </span>
-            <p className="lb-sp-prompt">{line.question.prompt}</p>
-            <ul className="lb-sp-picks">
-              {g.players.map((p, i) => (
-                <li key={p.id}>
-                  <span>{p.name}</span>{" "}
-                  {line.picks[i] === null ? (
-                    <em>passed</em>
-                  ) : (
-                    <strong>{line.question.choices[line.picks[i]!]}</strong>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </li>
-        ))}
+        {r.lines.map((line) => {
+          const { groups, passed } = pickGroups(line, g.players);
+          return (
+            <li
+              key={line.question.id}
+              className={
+                line.answered < 2 ? "" : line.same ? "is-same" : "is-different"
+              }
+            >
+              <p className="lb-sp-prompt">{line.question.prompt}</p>
+              <ul className="lb-sp-picks">
+                {groups.map((x) => (
+                  <li key={x.choice}>
+                    <span>
+                      {line.same &&
+                      groups.length === 1 &&
+                      x.names.length === g.players.length
+                        ? "Everyone"
+                        : list(x.names)}
+                    </span>{" "}
+                    <strong>{x.choice}</strong>
+                  </li>
+                ))}
+                {passed.length > 0 && (
+                  <li>
+                    <span>{list(passed)}</span> <em>passed</em>
+                  </li>
+                )}
+              </ul>
+              {line.answered >= 2 && line.same && (
+                <span className="lb-sp-mark">Same page ✓</span>
+              )}
+            </li>
+          );
+        })}
       </ol>
+      <p className="lb-tally">
+        {summary || "Not enough answers to compare this time."}
+        {r.differ.length > 0 && ` Different on ${list(r.differ)}.`}
+      </p>
+      {trend && <p className="lb-trend">{trend}</p>}
     </>
   );
 }
 
-/** "Anything to remember about this round?": an offer, never a step you must take. */
-function RoundNotes({
-  game: g,
-  owner,
-  busy,
-  onStart,
-}: {
-  game: Game;
-  owner: string;
-  busy: boolean;
-  onStart: () => void;
-}) {
+/** The lines players wrote about the round, under each name. Nothing when none. */
+function RoundNotes({ game: g }: { game: Game }) {
   const lines = g.players.flatMap((p) => {
     const text = g.reflections?.find((r) => r.playerId === p.id)?.text;
     return text ? [{ player: p, text }] : [];
   });
+  if (!lines.length) return null;
   return (
     <section className="lb-notes" aria-labelledby="lb-notes-title">
-      <h3 id="lb-notes-title">Anything to remember about this round?</h3>
-      {lines.length ? (
-        <ul>
-          {lines.map((l) => (
-            <li key={l.player.id}>
-              <strong>{l.player.name}:</strong> {l.text}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>
-          Each player can add a line, or skip. Lines are kept with this round
-          in {owner}’s book, under each name, for everyone who played.
-        </p>
-      )}
-      <button className="lb-secondary" disabled={busy} onClick={onStart}>
-        {lines.length ? "Add or change a line" : "Add a line each"}
-      </button>
+      <h3 id="lb-notes-title">What you remember</h3>
+      <ul>
+        {lines.map((l) => (
+          <li key={l.player.id}>
+            <strong>{l.player.name}:</strong> {l.text}
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -599,7 +586,9 @@ function StoryReveal({
       {remembers(g) && (
         <fieldset className="lb-title-pick">
           <legend>
-            {g.title ? "Your title. Change it if you like." : "Give it a title together"}
+            {g.title
+              ? "Your title. Change it if you like."
+              : "Give it a title together"}
           </legend>
           <div className="lb-title-choices">
             {titles.map((t) => (
@@ -657,7 +646,7 @@ function JoyReveal({ game: g }: { game: Game }) {
   return (
     <>
       <p className="lb-kicker">The reveal</p>
-      <h2>{joySummary(g)}</h2>
+      <h2>What lights each of you up</h2>
       <div className="lb-reveal lb-joys">
         {lines.map((l) => (
           <div key={l.player.id}>
@@ -680,12 +669,12 @@ function JoyReveal({ game: g }: { game: Game }) {
           </div>
         ))}
       </div>
-      {tally.length > 1 && (
-        <p className="lb-tally">
-          Right guesses:{" "}
-          {tally.map((t) => `${t.player.name} ${t.right} of ${t.of}`).join(" · ")}
-        </p>
-      )}
+      <p className="lb-tally">
+        {joySummary(g)}
+        {tally.length > 1 && tally.some((t) => t.right > 0) && (
+          <span className="lb-tally-all">{joyTally(g)}</span>
+        )}
+      </p>
     </>
   );
 }

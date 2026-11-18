@@ -78,7 +78,7 @@ it("a game finished without keeping a page shows in Your book under each player"
   const app = openBook({ ...book, living: { ...livingOf(book), game: revealed() } });
   fireEvent.click(screen.getByRole("button", { name: "Do something" }));
   fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
-  fireEvent.click(await screen.findByRole("button", { name: /Finish for now/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /Finish round/ }));
   await screen.findByRole("status");
   expect(livingOf(app.stored()).plays).toHaveLength(1);
   fireEvent.click(screen.getByRole("button", { name: "Your book" }));

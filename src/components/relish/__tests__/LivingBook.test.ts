@@ -188,11 +188,21 @@ describe("living-book interaction boundaries", () => {
         onCancel: vi.fn(),
       }),
     );
-    expect(screen.getByRole("heading", { name: "Iris knew the most: 1 of 1." })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "What lights each of you up" })).toBeTruthy();
+    expect(screen.getByText("Iris knew the most: 1 of 1.")).toBeTruthy();
+    // A pass is a pass, never a score of 0.
+    expect(screen.getByText("Iris 1 of 1 · Kaleb passed")).toBeTruthy();
     expect(screen.getByText("Kaleb’s small joy")).toBeTruthy();
     expect(screen.getByText("Making something together")).toBeTruthy();
     expect(screen.getByText("guessed it ✓")).toBeTruthy();
     expect(screen.getByText("passed")).toBeTruthy();
-    expect(screen.getByText(/Its answers stay with this round in Iris’s book/)).toBeTruthy();
+    expect(screen.getByText(/This round is kept in Iris’s book/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Finish round/ })).toBeTruthy();
+    // A shared page is a quiet offer: approvals appear only when asked for.
+    expect(screen.queryByRole("button", { name: "Keep in our Family pages" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Create a shared page" }));
+    expect(
+      (screen.getByRole("button", { name: "Keep in our Family pages" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 });

@@ -920,9 +920,14 @@ function joyLines(
       right: lines.filter((l) =>
         l.guesses.some((x) => x.player.id === player.id && x.right),
       ).length,
-      of: lines.filter((l) => l.player.id !== player.id).length,
+      /** Guesses actually made: a pass is not a wrong guess. */
+      of: lines.filter((l) =>
+        l.guesses.some((x) => x.player.id === player.id && x.guess !== null),
+      ).length,
+      /** Joys this player could have guessed. */
+      could: lines.filter((l) => l.player.id !== player.id).length,
     }))
-    .filter((t) => t.of > 0);
+    .filter((t) => t.could > 0);
   return { lines, tally };
 }
 /** "Anna knew the most: 2 of 2." */
@@ -939,6 +944,32 @@ function tallyLine({ lines, tally }: ReturnType<typeof joyLines>) {
     : `${list(top.map((t) => t.player.name))} each guessed ${best} right.`;
 }
 export const joySummary = (g: Game) => tallyLine(joyResult(g));
+/** Every guesser's score, with a pass said as a pass: "Alex 2 of 2 · Leo passed". */
+export function joyTally(g: Game) {
+  return joyResult(g)
+    .tally.map((t) =>
+      t.of ? `${t.player.name} ${t.right} of ${t.of}` : `${t.player.name} passed`,
+    )
+    .join(" · ");
+}
+/**
+ * One question's answers grouped by choice, so the reveal can say what the
+ * family chose: [{ choice: "pizza", names: ["Alex", "Anna"] }, …].
+ */
+export function pickGroups(line: SamePageLine, players: Pick<Player, "name">[]) {
+  const groups: { choice: string; names: string[] }[] = [];
+  line.picks.forEach((c, i) => {
+    if (c === null) return;
+    const choice = line.question.choices[c];
+    const found = groups.find((x) => x.choice === choice);
+    if (found) found.names.push(players[i].name);
+    else groups.push({ choice, names: [players[i].name] });
+  });
+  return {
+    groups,
+    passed: players.filter((_, i) => line.picks[i] === null).map((p) => p.name),
+  };
+}
 const knewLine = (l: JoyLine) => {
   const knew = l.guesses.filter((x) => x.right).map((x) => x.player.name);
   return knew.length ? `${list(knew)} guessed it.` : "Nobody guessed it.";

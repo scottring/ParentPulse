@@ -1477,3 +1477,41 @@
   font: 600 14px/1.5 var(--sans);
   font-style: normal;
 }
+
+/* Setup uses the illustrated split; play and the reveal read as one column. */
+.lb-app .lb-play-layout.is-solo {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 760px;
+}
+@media (max-width: 719px) {
+  /* On phones the title comes first: no side panel before the first turn. */
+  .lb-app .lb-play-layout > aside {
+    display: none;
+  }
+}
+.lb-app .lb-setup-note {
+  margin-top: 14px;
+}
+.lb-app .lb-round-end {
+  margin: 28px 0 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.lb-app .lb-round-end > .lb-fine {
+  margin: 0 0 12px;
+}
+.lb-app .lb-round-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin-top: 10px;
+}
+.lb-app .lb-tally-all {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.lb-app .lb-sp-list > li .lb-sp-mark {
+  margin-top: 8px;
+}

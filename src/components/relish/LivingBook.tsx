@@ -989,21 +989,23 @@ export default function LivingBook({
             </button>
           </main>
         ) : view === "play" && activeGame ? (
-          <div className="lb-play-layout">
-            <aside>
-              <p className="lb-kicker">Play together</p>
-              <h2>Pass it around</h2>
-              <p>One round, on this device.</p>
-              <Illustration
-                name={gameIllustration[activeGame.kind] ?? "do-something"}
-                size={180}
-                className="lb-play-art"
-              />
-              <p className="lb-fine">
-                Private pages stay out of the game. End game any time; the
-                round waits for you.
-              </p>
-            </aside>
+          <div className={`lb-play-layout ${activeGame.stage === "ready" ? "" : "is-solo"}`}>
+            {activeGame.stage === "ready" && (
+              <aside>
+                <p className="lb-kicker">Play together</p>
+                <h2>Pass it around</h2>
+                <p>One round, on this device.</p>
+                <Illustration
+                  name={gameIllustration[activeGame.kind] ?? "do-something"}
+                  size={180}
+                  className="lb-play-art"
+                />
+                <p className="lb-fine">
+                  Private pages stay out of the game. End game any time; the
+                  round waits for you.
+                </p>
+              </aside>
+            )}
             <main className="lb-play-main" key={activeGame.id}>
               <GroupPlay
                 book={book}

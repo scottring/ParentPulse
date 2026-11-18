@@ -244,7 +244,7 @@ it("plays Same page? with hidden answers and a shared reveal", async () => {
   const app = open({ ...book, living: { ...livingOf(book), game } });
   fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
   expect(screen.getByRole("heading", { name: "Same page?" })).toBeTruthy();
-  expect(screen.getByText(/Relish remembers this round’s answers in Robin’s book/)).toBeTruthy();
+  expect(screen.getByText(/stay with this round in Robin’s book \(never sent to AI\)/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /Let’s play/ }));
   const options = () =>
     screen.getAllByRole("button").filter((b) => b.closest(".lb-choices"));
@@ -263,10 +263,10 @@ it("plays Same page? with hidden answers and a shared reveal", async () => {
     await screen.findByText(new RegExp(`Sam’s turn · question ${q} of 5`));
     fireEvent.click(options()[q === 5 ? 1 : 0]);
   }
-  expect(await screen.findByRole("heading", { name: "You matched on 3 of 4." })).toBeTruthy();
+  expect(await screen.findByRole("heading", { name: "What each of you said" })).toBeTruthy();
   expect(screen.getAllByText("Same page ✓")).toHaveLength(3);
-  expect(screen.getByText("Different")).toBeTruthy();
-  expect(screen.getByText("Too few answers")).toBeTruthy();
+  expect(screen.getByText(/^You matched on 3 of 4\. Different on /)).toBeTruthy();
+  expect(screen.getByText("passed")).toBeTruthy();
   expect(livingOf(app.stored()).game?.stage).toBe("reveal");
   expect(livingOf(app.stored()).game?.answers).toEqual([
     [0, 0, null, 0, 0],
@@ -290,8 +290,7 @@ it("after the reveal each player can add their own line or skip, and Finish stil
   }
   const app = open({ ...book, living: { ...livingOf(book), game } });
   fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
-  await screen.findByRole("heading", { name: "Anything to remember about this round?" });
-  fireEvent.click(screen.getByRole("button", { name: "Add a line each" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Add a memory" }));
   await screen.findByRole("heading", { name: "Robin, anything to remember about this round?" });
   fireEvent.change(screen.getByRole("textbox", { name: "Robin’s line" }), {
     target: { value: "We all want pancakes." },
@@ -311,7 +310,8 @@ it("after the reveal each player can add their own line or skip, and Finish stil
     { playerId: "a", text: "We all want pancakes." },
     { playerId: "c", text: "Rainy days are for forts." },
   ]);
-  fireEvent.click(screen.getByRole("button", { name: /Finish for now/ }));
+  expect(screen.getByRole("heading", { name: "What you remember" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Finish round/ }));
   await screen.findByRole("region", { name: "Game finished" });
   expect(livingOf(app.stored()).plays?.[0].reflections).toHaveLength(2);
 });
