@@ -42,6 +42,7 @@ export default function Tools({
   busy,
   onCommit,
   onPages,
+  onOpenPage,
   onActivities,
   initialId,
   onBack,
@@ -50,6 +51,8 @@ export default function Tools({
   busy: boolean;
   onCommit: Commit;
   onPages: () => void;
+  /** Opens one kept page by its Your book id (e.g. "journal:<id>"). */
+  onOpenPage?: (id: string) => void;
   onActivities: () => void;
   /** Opens straight into one exercise (from Do something or Home). */
   initialId?: string;
@@ -57,7 +60,7 @@ export default function Tools({
   onBack?: () => void;
 }) {
   const [openId, setOpenId] = useState<string | null>(initialId ?? null);
-  const [kept, setKept] = useState<string | null>(null);
+  const [kept, setKept] = useState<Kept | null>(null);
   const audience = audienceOf(book);
   const available = toolsFor(audience);
   const running = activeTrackers(book);
@@ -78,15 +81,25 @@ export default function Tools({
           <Illustration name="saved" size={150} eager className="rt-kept-art" />
           <div>
             <p className="lb-kicker">Exercise complete</p>
-            <h2 id="rt-title">Page kept</h2>
+            <h2 id="rt-title">Kept in your book</h2>
             <p className="rt-intro">
-              “{kept}” is in Your pages. Come back to it, or share it if you
-              want to.
+              “{kept.title}” is a page in Your book now. Come back to it, or
+              share it if you want to.
             </p>
             <div className="rt-actions">
-              <button className="lb-primary" disabled={busy} onClick={onPages}>
-                Read your pages <ArrowRight size={16} />
-              </button>
+              {kept.pageId && onOpenPage ? (
+                <button
+                  className="lb-primary"
+                  disabled={busy}
+                  onClick={() => onOpenPage(kept.pageId!)}
+                >
+                  Open this page <ArrowRight size={16} />
+                </button>
+              ) : (
+                <button className="lb-primary" disabled={busy} onClick={onPages}>
+                  Open Your book <ArrowRight size={16} />
+                </button>
+              )}
               <button
                 className="lb-secondary"
                 disabled={busy}
@@ -219,7 +232,7 @@ function OpenExercise({
   book: Book;
   busy: boolean;
   onCommit: Commit;
-  onKept: (title: string) => void;
+  onKept: (kept: Kept) => void;
   backLabel: string;
   onBack: () => void;
 }) {
@@ -228,12 +241,18 @@ function OpenExercise({
   const running =
     tool.kind === "tracker" &&
     activeTrackers(book).some((t) => t.toolId === tool.id);
-  const keep: KeepPage = (page) =>
+  const keep: KeepPage = (page) => {
+    let pageId: string | undefined;
     onCommit(
-      (b) => keepToolPage(b, page),
-      () => onKept(page.title),
-      "Page kept in Your pages.",
+      (b) => {
+        const next = keepToolPage(b, page);
+        pageId = newJournalId(b, next);
+        return next;
+      },
+      () => onKept({ title: page.title, pageId }),
+      "Kept in your book.",
     );
+  };
   if (!started && !running)
     return (
       <ExerciseStart
@@ -403,6 +422,14 @@ function ExerciseArt({ tool }: { tool: Tool }) {
 }
 
 type KeepPage = (page: ToolPage) => void;
+/** What was just kept: its title and, once saved, its Your book page id. */
+type Kept = { title: string; pageId?: string };
+/** The journal page a change added, as a Your book page id. */
+function newJournalId(before: Book, after: Book) {
+  const had = new Set((before.journal || []).map((e) => e.id));
+  const added = (after.journal || []).find((e) => !had.has(e.id));
+  return added ? `journal:${added.id}` : undefined;
+}
 const titled = (tool: Tool, book: Book, personId: string) => {
   const name = book.people.find((p) => p.id === personId)?.name;
   return name ? `${tool.title} · ${name}` : tool.title;
@@ -670,7 +697,7 @@ function Preview({
         Keep this page <Check size={16} />
       </button>
       <p className="lb-fine">
-        It is saved privately in Your pages. Sharing is a separate choice.
+        It is saved privately in Your book. Sharing is a separate choice.
       </p>
     </div>
   );
@@ -688,7 +715,7 @@ function TrackerRunner({
   book: Book;
   busy: boolean;
   onCommit: Commit;
-  onKept: (title: string) => void;
+  onKept: (kept: Kept) => void;
   onStopped: () => void;
 }) {
   const run = activeTrackers(book).find((t) => t.toolId === tool.id);
@@ -782,14 +809,22 @@ function TrackerRunner({
         <button
           className={progress.complete ? "lb-primary" : "lb-secondary"}
           disabled={busy || !run.marks.length}
-          onClick={() =>
+          onClick={() => {
+            let pageId: string | undefined;
             onCommit(
-              (b) => finishTracker(b, run.id),
+              (b) => {
+                const next = finishTracker(b, run.id);
+                pageId = newJournalId(b, next);
+                return next;
+              },
               () =>
-                onKept(person ? `${tool.title} · ${person.name}` : tool.title),
-              "Page kept in Your pages.",
-            )
-          }
+                onKept({
+                  title: person ? `${tool.title} · ${person.name}` : tool.title,
+                  pageId,
+                }),
+              "Kept in your book.",
+            );
+          }}
         >
           Finish and keep a page
         </button>

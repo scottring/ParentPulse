@@ -252,7 +252,7 @@ describe("freeform journal", () => {
     }
     render(createElement(Harness));
     fireEvent.click(screen.getByRole("button", { name: "Your book" }));
-    expect(screen.getByText("PRIVATE JOURNAL SENTENCE")).toBeTruthy();
+    expect(screen.getAllByText("PRIVATE JOURNAL SENTENCE").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "Do something" }));
     fireEvent.click(screen.getByRole("button", { name: /Jot something down/ }));
     expect(

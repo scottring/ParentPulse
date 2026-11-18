@@ -75,6 +75,16 @@ export function KidCover({ name }: { name: string }) {
   );
 }
 
+/** The emblem alone, for the inside cover of a child's Your book. */
+export function KidCoverMark({ name }: { name: string }) {
+  const emblem = emblemFor(name);
+  return (
+    <span className="rk-mark" aria-hidden="true" data-emblem={emblem}>
+      <Illustration name={`emblem-${emblem}` as IllustrationName} size="100%" eager />
+    </span>
+  );
+}
+
 /**
  * Home for a child's book: their book, three ways to add a page, one
  * suggestion fitted to their age, and a few more things to try.

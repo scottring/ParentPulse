@@ -96,7 +96,7 @@ it("opens free writing in one click, keeps the latest words before leaving, and 
     "A small adventure, still unfolding",
   );
   fireEvent.click(screen.getByRole("button", { name: "Your book" }));
-  fireEvent.click(screen.getByRole("button", { name: /Keep writing/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Keep writing|Keep going/ }));
   expect(
     (
       screen.getByRole("textbox", {

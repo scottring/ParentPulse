@@ -1,5 +1,5 @@
 "use client";
-import { useState, type RefObject } from "react";
+import { useEffect, useState, type RefObject } from "react";
 import type { Book, Person } from "@/lib/relish/model";
 import { bookPages, PLAY_RECORD, type BookPage } from "@/lib/relish/pages";
 import { cardPeople, manualOf, type ManualCard } from "@/lib/relish/manual";
@@ -8,6 +8,10 @@ import { activeTrackers, toolById, trackerProgress } from "@/lib/relish/tools";
 import { pageKind, type Tone } from "@/lib/relish/catalog";
 import type { JournalDraft } from "@/lib/relish/journal";
 import { icons, personTones } from "./Home";
+import { audienceOf, canUseOnline } from "@/lib/relish/profiles";
+import { KidCoverMark } from "./KidHome";
+import { BookSpread } from "./ui";
+import Illustration from "./Illustration";
 
 /** "all", "me", "family", or a person's id. */
 export type Who = string;
@@ -55,7 +59,10 @@ export default function YourBook({
   busy,
   headingRef,
   initialWho = "all",
+  initialQuery = "",
+  onBrowse,
   onAddPage,
+  onIdea,
   onOpenPage,
   onReview,
   onManual,
@@ -70,7 +77,13 @@ export default function YourBook({
   busy: boolean;
   headingRef: RefObject<HTMLHeadingElement | null>;
   initialWho?: Who;
+  initialQuery?: string;
+  /** Reports the filter and search so Back from a page can restore them. */
+  onBrowse?: (who: Who, query: string) => void;
+  /** Opens the journal composer straight away. */
   onAddPage: () => void;
+  /** A separate trip to the age-fitted catalog. */
+  onIdea?: () => void;
   onOpenPage: (id: string) => void;
   onReview: (card: ManualCard, status: "kept" | "dismissed") => void;
   onManual: () => void;
@@ -89,7 +102,10 @@ export default function YourBook({
       ? initialWho
       : "all",
   );
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
+  useEffect(() => {
+    onBrowse?.(who, query);
+  }, [who, query, onBrowse]);
   const tone = (id: string) =>
     personTones[
       Math.max(0, book.people.findIndex((p) => p.id === id)) % personTones.length
@@ -161,6 +177,56 @@ export default function YourBook({
   const running = activeTrackers(book);
   const pages = pagesFor(book, who, query);
   const going = drafts.length + (practice ? 1 : 0) + (visit ? 1 : 0) + running.length;
+  const child = audienceOf(book) !== "adult";
+  if (child)
+    return (
+      <ChildBook
+        book={book}
+        busy={busy}
+        headingRef={headingRef}
+        query={query}
+        onQuery={setQuery}
+        drafts={drafts}
+        onAddPage={onAddPage}
+        onIdea={onIdea}
+        onOpenPage={onOpenPage}
+        onDraft={onDraft}
+      />
+    );
+  const allPages = bookPages(book);
+  const filtered = who !== "all" || !!query.trim();
+  // A genuinely empty adult book gets one invitation, not three empty sections.
+  if (!filtered && !learned.length && !going && !allPages.length && !suggestion)
+    return (
+      <main className="rp-place rp-book" aria-labelledby="rp-book-title">
+        <section className="rp-book-empty ui-card">
+          <Illustration name="empty-pages" size={170} eager />
+          <div>
+            <h1 id="rp-book-title" ref={headingRef} tabIndex={-1}>
+              Your book
+            </h1>
+            <p className="rp-lede">
+              Nothing kept yet. Your first page can be a few words, a photo or
+              your voice.
+            </p>
+            <div className="rp-book-empty-actions">
+              <button className="ui-btn" disabled={busy} onClick={onAddPage}>
+                + Add a page
+              </button>
+              {onIdea && (
+                <button className="ui-link" disabled={busy} onClick={onIdea}>
+                  Give me an idea
+                </button>
+              )}
+              <button className="ui-link" disabled={busy} onClick={onAddPerson}>
+                + Add someone to your book
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  const showSuggestion = !!suggestion && canUseOnline(book);
   return (
     <main className="rp-place rp-book" aria-labelledby="rp-book-title">
       <section className="rp-stack">
@@ -173,9 +239,16 @@ export default function YourBook({
               What you’ve learned about your people, and every page you’ve kept.
             </p>
           </div>
-          <button className="rp-btn rp-btn-olive" disabled={busy} onClick={onAddPage}>
-            + Add a page
-          </button>
+          <div className="rp-head-actions">
+            <button className="rp-btn rp-btn-olive" disabled={busy} onClick={onAddPage}>
+              + Add a page
+            </button>
+            {onIdea && (
+              <button className="ui-link" disabled={busy} onClick={onIdea}>
+                Give me an idea
+              </button>
+            )}
+          </div>
         </div>
         <div className="rp-chips" role="group" aria-label="Show pages about">
           {chips.map((c) => (
@@ -215,7 +288,7 @@ export default function YourBook({
             {suggestion ? "All suggestions" : "Suggestions from Relish"}
           </button>
         </div>
-        {suggestion && (
+        {showSuggestion && suggestion && (
           <div className="rp-suggestion">
             <div className="rp-suggestion-text">
               <span className="rp-nudge-kicker">
@@ -367,6 +440,7 @@ export default function YourBook({
                 <button
                   key={page.id}
                   className={`rp-page rp-edge-${kind.tone}`}
+                  data-page-id={page.id}
                   disabled={busy}
                   onClick={() => onOpenPage(page.id)}
                 >
@@ -388,11 +462,25 @@ export default function YourBook({
             })}
           </div>
         ) : (
-          <p className="rp-quiet">
-            {query
-              ? "No pages match that yet. Try another word."
-              : "No pages here yet. Add one when you’re ready."}
-          </p>
+          <div className="rp-quiet rp-empty-filter">
+            <p>
+              {query
+                ? "No pages match that yet. Try another word."
+                : filtered
+                  ? "No pages here for this filter yet."
+                  : "No pages here yet. Add one when you’re ready."}
+            </p>
+            {query && (
+              <button className="ui-link" onClick={() => setQuery("")}>
+                Clear search
+              </button>
+            )}
+            {who !== "all" && (
+              <button className="ui-link" onClick={() => setWho("all")}>
+                Clear filter
+              </button>
+            )}
+          </div>
         )}
       </section>
     </main>
@@ -405,5 +493,172 @@ function Clock() {
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v5l3 2" />
     </svg>
+  );
+}
+
+/**
+ * A child's Your book: their own cover on the left leaf; on the right, the
+ * first-page invitation, the draft to keep going, or their latest kept page.
+ * No AI suggestions or adult sharing controls appear here.
+ */
+function ChildBook({
+  book,
+  busy,
+  headingRef,
+  query,
+  onQuery,
+  drafts,
+  onAddPage,
+  onIdea,
+  onOpenPage,
+  onDraft,
+}: {
+  book: Book;
+  busy: boolean;
+  headingRef: RefObject<HTMLHeadingElement | null>;
+  query: string;
+  onQuery: (q: string) => void;
+  drafts: JournalDraft[];
+  onAddPage: () => void;
+  onIdea?: () => void;
+  onOpenPage: (id: string) => void;
+  onDraft: (draft: JournalDraft) => void;
+}) {
+  const name = book.owner.trim() || "My";
+  const all = bookPages(book).toReversed();
+  const latest = all[0];
+  const draft = drafts[0];
+  const pages = pagesFor(book, "all", query);
+  const right = draft ? (
+    <>
+      <p className="lb-kicker">A page in progress</p>
+      <h2>{draft.title.trim() || "Your unfinished page"}</h2>
+      {draft.text.trim() && <p className="rp-child-excerpt">{draft.text.split("\n")[0]}</p>}
+      <div className="rp-child-actions">
+        <button className="ui-btn" disabled={busy} onClick={() => onDraft(draft)}>
+          Keep going
+        </button>
+        <button className="ui-link" disabled={busy} onClick={onAddPage}>
+          Make a new page
+        </button>
+      </div>
+    </>
+  ) : latest ? (
+    <>
+      <p className="lb-kicker">Your latest page · {shortDate(latest.date)}</p>
+      <h2>{latest.title}</h2>
+      <p className="rp-child-excerpt">{latest.text.split("\n")[0] || "Photo entry"}</p>
+      <div className="rp-child-actions">
+        <button
+          className="ui-btn-quiet"
+          disabled={busy}
+          data-page-id={latest.id}
+          onClick={() => onOpenPage(latest.id)}
+        >
+          Open this page
+        </button>
+        <button className="ui-btn" disabled={busy} onClick={onAddPage}>
+          + Make a page
+        </button>
+      </div>
+    </>
+  ) : (
+    <>
+      <p className="lb-kicker">Your first page</p>
+      <h2>What would you like to keep?</h2>
+      <p className="rp-child-excerpt">A few words, a photo, or your voice.</p>
+      <div className="rp-child-actions">
+        <button className="ui-btn" disabled={busy} onClick={onAddPage}>
+          + Make a page
+        </button>
+        {onIdea && (
+          <button className="ui-link" disabled={busy} onClick={onIdea}>
+            Give me an idea
+          </button>
+        )}
+      </div>
+    </>
+  );
+  return (
+    <main className="rp-place rp-book rp-child-book" aria-labelledby="rp-book-title">
+      <BookSpread
+        className="rp-child-spread"
+        left={
+          <div className="rp-child-cover">
+            <KidCoverMark name={name} />
+            <h1 id="rp-book-title" ref={headingRef} tabIndex={-1}>
+              {name}’s book
+            </h1>
+          </div>
+        }
+        right={<div className="rp-child-leaf">{right}</div>}
+      />
+      {drafts.length > 1 && (
+        <section className="rp-stack" aria-labelledby="rp-going">
+          <h2 id="rp-going">Still going</h2>
+          <div className="rp-going">
+            {drafts.slice(1).map((d) => (
+              <button key={d.id} className="rp-going-item" disabled={busy} onClick={() => onDraft(d)}>
+                {icons.write}
+                <span>
+                  <span className="rp-going-kicker">Draft</span>
+                  <span className="rp-going-title">
+                    Keep going: {d.title.trim() || "an unfinished page"}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+      {all.length > 0 && (
+        <section className="rp-stack" aria-labelledby="rp-every">
+          <div className="rp-panel-head rp-every-head">
+            <h2 id="rp-every">Every page</h2>
+            <label className="rp-search">
+              <span className="rp-sr">Find a page</span>
+              <input
+                type="search"
+                placeholder="Find a page…"
+                value={query}
+                onChange={(e) => onQuery(e.target.value)}
+              />
+            </label>
+          </div>
+          {pages.length ? (
+            <div className="rp-pages">
+              {pages.map((page) => {
+                const kind = pageKind(page);
+                return (
+                  <button
+                    key={page.id}
+                    className={`rp-page rp-edge-${kind.tone}`}
+                    data-page-id={page.id}
+                    disabled={busy}
+                    onClick={() => onOpenPage(page.id)}
+                  >
+                    <span className="rp-page-meta">
+                      <strong>{kind.label}</strong>
+                      <span>{shortDate(page.date)}</span>
+                    </span>
+                    <span className="rp-page-title">{page.title}</span>
+                    <span className="rp-page-excerpt">
+                      {page.text.split("\n")[0] || "Photo entry"}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rp-quiet rp-empty-filter">
+              <p>No pages match that yet. Try another word.</p>
+              <button className="ui-link" onClick={() => onQuery("")}>
+                Clear search
+              </button>
+            </div>
+          )}
+        </section>
+      )}
+    </main>
   );
 }

@@ -116,7 +116,7 @@ it("an exercise started with someone is labelled Exercise and filed under them",
     }),
   );
   fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
-  await screen.findByRole("heading", { name: "Page kept" });
+  await screen.findByRole("heading", { name: "Kept in your book" });
   expect(app.stored().journal![0]).toMatchObject({
     title: "What helps when I’m upset",
     people: ["kaleb"],

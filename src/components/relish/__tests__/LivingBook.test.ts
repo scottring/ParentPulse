@@ -110,7 +110,7 @@ describe("living-book interaction boundaries", () => {
     }
     render(createElement(Harness));
     fireEvent.click(screen.getByRole("button", { name: "Your book" }));
-    expect(screen.getByText("A confidential sample sentence")).toBeTruthy();
+    expect(screen.getAllByText("A confidential sample sentence").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "Do something" }));
     fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
     fireEvent.click(screen.getByRole("button", { name: "+ Someone visiting" }));

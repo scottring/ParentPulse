@@ -142,7 +142,8 @@ export default function LivingBook({
     [exercise, setExercise] = useState<string | undefined>(),
     [doFilter, setDoFilter] = useState<DoFilter>("all"),
     [gameOffer, setGameOffer] = useState<Game["kind"] | undefined>(),
-    [bookWho, setBookWho] = useState<string | undefined>();
+    [bookWho, setBookWho] = useState<string | undefined>(),
+    [bookQuery, setBookQuery] = useState("");
   const journalNavigation = useRef<(() => Promise<boolean>) | null>(null);
   const operation = useRef(false),
     alive = useRef(true),
@@ -156,14 +157,46 @@ export default function LivingBook({
       alive.current = false;
     };
   }, []);
+  // Where the writer was in Your book when they opened a page, so Back can
+  // put them there again. Choosing the Your book tab starts a fresh browse.
+  const browse = useRef<{ who: string; query: string; scroll: number; page?: string } | null>(null);
+  const restoring = useRef(false);
+  // The Do something filter in use when an activity was opened from it.
+  const doReturn = useRef<DoFilter>("all");
   useEffect(() => {
     if (firstPage.current) {
       firstPage.current = false;
       return;
     }
+    if (restoring.current && browse.current) {
+      restoring.current = false;
+      const { scroll, page } = browse.current;
+      window.scrollTo({ top: scroll, left: 0, behavior: "instant" });
+      const row = page
+        ? document.querySelector<HTMLElement>(`[data-page-id="${CSS.escape(page)}"]`)
+        : null;
+      (row || heading.current)?.focus({ preventScroll: true });
+      return;
+    }
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     heading.current?.focus({ preventScroll: true });
   }, [view, pageKey]);
+  /** Back to Your book exactly as it was left: filter, search, scroll, row. */
+  function backToBook() {
+    const saved = browse.current;
+    navigate("book");
+    if (saved) {
+      restoring.current = true;
+      setBookWho(saved.who);
+      setBookQuery(saved.query);
+    }
+  }
+  /** Back to Do something with the chip that was chosen. */
+  function backToDo() {
+    const filter = doReturn.current;
+    navigate("do");
+    setDoFilter(filter);
+  }
   function navigate(next: View) {
     setJournalEditing(false);
     setCapture(null);
@@ -174,6 +207,7 @@ export default function LivingBook({
     setDoFilter("all");
     setGameOffer(undefined);
     setBookWho(undefined);
+    setBookQuery("");
     setView(next);
     setClosed(false);
     setPageKey((n) => n + 1);
@@ -206,6 +240,7 @@ export default function LivingBook({
     setReading(id);
   }
   function openExercise(id: string) {
+    doReturn.current = view === "do" ? doFilter : "all";
     navigate("tools");
     setExercise(id);
   }
@@ -214,6 +249,7 @@ export default function LivingBook({
     setModal("connections");
   }
   function onNudge(action: NudgeAction) {
+    doReturn.current = view === "do" ? doFilter : "all";
     if (action.kind === "journal") quickEntry();
     else if (action.kind === "exercise") openExercise(action.id);
     else if (action.kind === "reflect") start();
@@ -678,7 +714,10 @@ export default function LivingBook({
                     : {
                         label: place === "book" ? "Back to your book" : "Back to Do something",
                         disabled: headerBusy,
-                        onClick: () => void headerAction(() => navigate(place)),
+                        onClick: () =>
+                          void headerAction(() =>
+                            place === "do" ? backToDo() : navigate(place),
+                          ),
                       }
                 }
                 noteIcon={sharedView ? <Users size={15} aria-hidden="true" /> : undefined}
@@ -740,7 +779,10 @@ export default function LivingBook({
             onInvite={canInvite ? () => openInvite() : undefined}
             onFamily={() => navigate("family")}
             onBook={() => navigate("book")}
-            onPage={openPage}
+            onPage={(id) => {
+              browse.current = null;
+              openPage(id);
+            }}
             onQuickSave={async (text) => {
               const draft = { ...newJournalDraft(), text };
               await vault.save((b) => writeJournalPage(b, draft, 0, "kept"));
@@ -775,9 +817,13 @@ export default function LivingBook({
               void commit(update, after, message)
             }
             onPages={() => navigate("book")}
-            onActivities={() => navigate("do")}
+            onOpenPage={(id) => {
+              browse.current = null;
+              openPage(id);
+            }}
+            onActivities={backToDo}
             initialId={exercise}
-            onBack={exercise ? () => navigate("do") : undefined}
+            onBack={exercise ? backToDo : undefined}
           />
         ) : view === "manual" && !sharedView ? (
           <Manual
@@ -823,8 +869,22 @@ export default function LivingBook({
             busy={busy}
             headingRef={heading}
             initialWho={bookWho}
-            onAddPage={() => navigate("do")}
-            onOpenPage={openPage}
+            initialQuery={bookQuery}
+            onBrowse={(who, query) => {
+              // Keep the saved scroll and row until Back has used them.
+              browse.current = { scroll: 0, ...browse.current, who, query };
+            }}
+            onAddPage={() => quickEntry()}
+            onIdea={() => navigate("do")}
+            onOpenPage={(id) => {
+              browse.current = {
+                who: browse.current?.who ?? "all",
+                query: browse.current?.query ?? "",
+                scroll: window.scrollY,
+                page: id,
+              };
+              openPage(id);
+            }}
             onReview={(card, status) =>
               void commit(
                 (b) => reviewManualIdea(b, card.id, status),
@@ -850,7 +910,7 @@ export default function LivingBook({
             initialReading={reading}
             book={book}
             photos={vault.photos}
-            onBack={() => navigate("book")}
+            onBack={backToBook}
             onOffer={
               !sample && online
                 ? (passage) => {

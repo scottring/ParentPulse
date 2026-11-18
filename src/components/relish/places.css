@@ -1480,3 +1480,87 @@ img.ui-illustration.rk-cover-emblem,
     transform: none;
   }
 }
+
+/* ── Your book: actions, empty and filtered states, a child's book ── */
+.lb-app .rp-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+}
+.lb-app .rp-book-empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px 40px;
+}
+.lb-app .rp-book-empty > div {
+  flex: 1 1 320px;
+}
+.lb-app .rp-book-empty h1 {
+  margin: 0 0 8px;
+}
+.lb-app .rp-book-empty-actions,
+.lb-app .rp-child-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 22px;
+  margin-top: 18px;
+}
+.lb-app .rp-empty-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 20px;
+}
+.lb-app .rp-empty-filter p {
+  margin: 0;
+}
+.lb-app .rp-child-spread {
+  min-height: 380px;
+}
+.lb-app .rp-child-cover {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+}
+.lb-app .rp-child-cover h1 {
+  margin: 0;
+  font: 600 clamp(32px, 4vw, 46px) / 1.1 var(--serif);
+}
+.rk-mark {
+  display: block;
+  width: 120px;
+}
+.rk-mark img.ui-illustration {
+  mix-blend-mode: normal;
+}
+.lb-app .rp-child-leaf {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
+}
+.lb-app .rp-child-leaf h2 {
+  margin: 4px 0 10px;
+  font: 600 clamp(28px, 3.4vw, 40px) / 1.12 var(--serif);
+}
+.lb-app .rp-child-excerpt {
+  margin: 0;
+  font: 400 18px/1.55 var(--serif);
+  color: var(--ui-ink-soft);
+}
+@media (max-width: 719px) {
+  /* On a phone the active leaf comes first. */
+  .lb-app .rp-child-spread > .ui-spread-page:last-child {
+    order: -1;
+  }
+  .lb-app .rp-child-spread {
+    min-height: 0;
+  }
+}

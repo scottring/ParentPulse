@@ -100,7 +100,7 @@ it("sorts cards, picks one, and keeps the result as a page in Your pages", async
   );
   fireEvent.click(screen.getByRole("button", { name: /A long shower/, pressed: false }));
   fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
-  await screen.findByRole("heading", { name: "Page kept" });
+  await screen.findByRole("heading", { name: "Kept in your book" });
   const page = app.stored().journal![0];
   expect(page.status).toBe("kept");
   expect(page.title).toBe("What helps when I’m upset");
@@ -132,7 +132,7 @@ it("builds a soft opener only once every part is filled in", async () => {
     ).length,
   ).toBeGreaterThan(0);
   fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
-  await screen.findByRole("heading", { name: "Page kept" });
+  await screen.findByRole("heading", { name: "Kept in your book" });
   expect(app.stored().journal![0]).toMatchObject({
     title: "Rewrite the opener · Sam",
     people: ["sam"],
@@ -157,7 +157,7 @@ it("runs a day-by-day checklist across visits and finishes into a page", async (
   );
   expect(screen.getByText(/1 of 10 days/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Finish and keep a page" }));
-  await screen.findByRole("heading", { name: "Page kept" });
+  await screen.findByRole("heading", { name: "Kept in your book" });
   const stored = again.stored();
   expect(toolsOf(stored).trackers[0].finishedAt).toBeTruthy();
   expect(stored.journal![0].title).toBe("Ten real hellos · Sam");
