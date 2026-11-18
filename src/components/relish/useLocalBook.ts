@@ -37,6 +37,11 @@ import {
   type SyncedEdition,
   type EncryptedSnapshot,
 } from "@/lib/relish/book-sync";
+
+// An open book locks after 30 minutes without a tap, key or scroll,
+// or 15 minutes after the tab or app is put away.
+export const IDLE_LOCK_MS = 30 * 60 * 1000;
+export const HIDDEN_LOCK_MS = 15 * 60 * 1000;
 async function withVaultWrite<T>(operation: () => Promise<T>): Promise<T> {
   if (!navigator.locks?.request)
     throw new Error(
@@ -97,24 +102,26 @@ export function useLocalBook() {
     let timer: ReturnType<typeof setTimeout>;
     const reset = () => {
       clearTimeout(timer);
-      timer = setTimeout(lock, 10 * 60 * 1000);
+      timer = setTimeout(lock, IDLE_LOCK_MS);
     };
     const change = (e: StorageEvent) => {
       if (e.key === editionKey(selected.current) || e.key === null) lock();
     };
     const visibility = () => {
       clearTimeout(timer);
-      timer = setTimeout(lock, document.hidden ? 60_000 : 600_000);
+      timer = setTimeout(lock, document.hidden ? HIDDEN_LOCK_MS : IDLE_LOCK_MS);
     };
     reset();
     window.addEventListener("pointerdown", reset);
     window.addEventListener("keydown", reset);
+    window.addEventListener("scroll", reset, { passive: true });
     window.addEventListener("storage", change);
     document.addEventListener("visibilitychange", visibility);
     return () => {
       clearTimeout(timer);
       window.removeEventListener("pointerdown", reset);
       window.removeEventListener("keydown", reset);
+      window.removeEventListener("scroll", reset);
       window.removeEventListener("storage", change);
       document.removeEventListener("visibilitychange", visibility);
     };

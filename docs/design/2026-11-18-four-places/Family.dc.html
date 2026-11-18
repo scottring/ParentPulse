@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Relish — Family</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#f6f4ed}
+a{color:#43513a}a:hover{color:#30382c}
+button,input{font-family:inherit}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #f6f4ed; color: #30382c; font-family: 'DM Sans', sans-serif;">
+
+  <!-- TOP BAR -->
+  <header style="border-bottom: 1px solid #dcded2; background: #f6f4ed;">
+    <div style="max-width: 1120px; margin: 0 auto; padding: 14px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px;">
+      <a href="Main.dc.html" style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 30px; font-weight: 700; color: #30382c; text-decoration: none; letter-spacing: -0.5px;">relish</a>
+      <nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 auto;">
+        <a href="Main.dc.html" style="padding: 10px 16px; border-radius: 999px; color: #30382c; font-size: 15px; font-weight: 500; text-decoration: none;">Home</a>
+        <a href="DoSomething.dc.html" style="padding: 10px 16px; border-radius: 999px; color: #30382c; font-size: 15px; font-weight: 500; text-decoration: none;">Do something</a>
+        <a href="YourBook.dc.html" style="padding: 10px 16px; border-radius: 999px; color: #30382c; font-size: 15px; font-weight: 500; text-decoration: none;">Your book</a>
+        <a href="#" aria-current="page" style="padding: 10px 16px; border-radius: 999px; background: #43513a; color: #f6f4ed; font-size: 15px; font-weight: 600; text-decoration: none;">Family</a>
+      </nav>
+      <button type="button" aria-label="Menu: settings, sound, lock, help" style="width: 44px; height: 44px; border-radius: 999px; border: 2px solid #43513a; background: #f2d58a; color: #30382c; font-size: 17px; font-weight: 700; cursor: pointer;">S</button>
+    </div>
+  </header>
+
+  <main style="max-width: 1120px; margin: 0 auto; padding: 40px 24px 64px; display: flex; flex-direction: column; gap: 40px;">
+
+    <section style="display: flex; flex-direction: column; gap: 6px;">
+      <h1 style="margin: 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 56px; line-height: 1.02; font-weight: 600;">Your family</h1>
+      <p style="margin: 0; font-size: 17px; color: #5f6458;">Everyone&#39;s book, and what you&#39;ve chosen to share. Nothing private leaves a book unless you send it.</p>
+    </section>
+
+    <!-- PEOPLE -->
+    <section aria-label="People" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px;">
+      <a href="#" style="background: #e9b9a0; border-radius: 26px; padding: 24px; min-height: 210px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; color: #30382c; text-decoration: none; transform: rotate(-0.8deg);">
+        <span style="width: 72px; height: 72px; border-radius: 999px; background: #fffdf7; display: flex; align-items: center; justify-content: center; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 34px; font-weight: 700;">E</span>
+        <span style="display: flex; flex-direction: column; gap: 4px;">
+          <span style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 32px; font-weight: 700; line-height: 1;">Ella</span>
+          <span style="font-size: 15px;">Kid&#39;s book · in your account</span>
+          <span style="font-size: 15px; font-weight: 700; margin-top: 6px;">Open Ella&#39;s book →</span>
+        </span>
+      </a>
+      <a href="#" style="background: #c9d9e3; border-radius: 26px; padding: 24px; min-height: 210px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; color: #30382c; text-decoration: none; transform: rotate(0.7deg);">
+        <span style="width: 72px; height: 72px; border-radius: 999px; background: #fffdf7; display: flex; align-items: center; justify-content: center; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 34px; font-weight: 700;">K</span>
+        <span style="display: flex; flex-direction: column; gap: 4px;">
+          <span style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 32px; font-weight: 700; line-height: 1;">Kaleb</span>
+          <span style="font-size: 15px;">Kid&#39;s book · in your account</span>
+          <span style="font-size: 15px; font-weight: 700; margin-top: 6px;">Open Kaleb&#39;s book →</span>
+        </span>
+      </a>
+      <button type="button" onClick="{{openInvite}}" style="background: #fffdf7; border: 2.5px dashed #43513a; border-radius: 26px; padding: 24px; min-height: 210px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 14px; color: #30382c; cursor: pointer; transform: rotate(-0.4deg); text-align: left;">
+        <span style="width: 72px; height: 72px; border-radius: 999px; background: #f2d58a; display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: 600;">+</span>
+        <span style="display: flex; flex-direction: column; gap: 4px;">
+          <span style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 32px; font-weight: 700; line-height: 1;">Invite a partner</span>
+          <span style="font-size: 15px;">They get their own private book. You each choose what to share.</span>
+        </span>
+      </button>
+      <a href="#" style="background: transparent; border: 1.5px solid #dcded2; border-radius: 26px; padding: 24px; min-height: 210px; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; color: #30382c; text-decoration: none;">
+        <span style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 26px; font-weight: 700; line-height: 1;">+ Add a child</span>
+        <span style="font-size: 14px; color: #5f6458;">Their book lives in your account. No login needed.</span>
+      </a>
+    </section>
+
+    <!-- SHARED BETWEEN YOU -->
+    <div style="display: flex; flex-wrap: wrap; gap: 24px;">
+      <section style="flex: 3 1 460px; min-width: 0; background: #fffdf7; border: 1px solid #dcded2; border-radius: 24px; padding: 24px 28px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 10px;">
+          <h2 style="margin: 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 30px; font-weight: 600;">Passed between you</h2>
+          <a href="YourBook.dc.html" style="font-size: 15px; font-weight: 600;">Share a page from your book</a>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 16px; background: #f6f4ed;">
+            <span style="flex: none; padding: 4px 10px; border-radius: 999px; background: #cfdcc4; font-size: 12px; font-weight: 700;">From [partner]</span>
+            <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 16px; font-weight: 600;">[Shared passage title]</span><span style="font-size: 14px; color: #5f6458;">[First line…] · [date]</span></span>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 16px; background: #f6f4ed;">
+            <span style="flex: none; padding: 4px 10px; border-radius: 999px; background: #f2d58a; font-size: 12px; font-weight: 700;">You sent</span>
+            <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 16px; font-weight: 600;">[Shared passage title]</span><span style="font-size: 14px; color: #5f6458;">[First line…] · [date]</span></span>
+          </div>
+        </div>
+        <p style="margin: 0; font-size: 14px; color: #5f6458;">Shows up once a partner joins. Until then, this is where their shared pages will land.</p>
+      </section>
+
+      <!-- FAMILY ALBUM -->
+      <section style="flex: 2 1 320px; min-width: 0; background: #fffdf7; border: 1px solid #dcded2; border-radius: 24px; padding: 24px 28px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px;">
+          <h2 style="margin: 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 30px; font-weight: 600;">Family album</h2>
+          <a href="DoSomething.dc.html" style="font-size: 15px; font-weight: 600;">Play a game</a>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+          <div style="background: #e9b9a0; border-radius: 16px; padding: 14px; min-height: 92px; display: flex; flex-direction: column; justify-content: space-between; transform: rotate(-1deg);">
+            <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;">Same page?</span>
+            <span style="font-size: 15px; font-weight: 600;">[Game result]</span>
+          </div>
+          <div style="background: #f2d58a; border-radius: 16px; padding: 14px; min-height: 92px; display: flex; flex-direction: column; justify-content: space-between; transform: rotate(0.8deg);">
+            <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;">Small joy</span>
+            <span style="font-size: 15px; font-weight: 600;">[Game result]</span>
+          </div>
+          <div style="background: #cfdcc4; border-radius: 16px; padding: 14px; min-height: 92px; display: flex; flex-direction: column; justify-content: space-between; transform: rotate(0.5deg);">
+            <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;">Story</span>
+            <span style="font-size: 15px; font-weight: 600;">[Game result]</span>
+          </div>
+          <div style="background: #e7e8de; border-radius: 16px; padding: 14px; min-height: 92px; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #5f6458; transform: rotate(-0.6deg);">[shared photo]</div>
+        </div>
+        <p style="margin: 0; font-size: 14px; color: #5f6458;">Viewing the album never locks your book.</p>
+      </section>
+    </div>
+
+  </main>
+
+  <!-- INVITE SHEET -->
+  <sc-if value="{{inviteOpen}}" hint-placeholder-val="{{false}}">
+    <div style="position: fixed; inset: 0; background: rgba(48,56,44,0.35); display: flex; align-items: flex-end; justify-content: center; z-index: 10;">
+      <div role="dialog" aria-label="Invite a partner" style="width: 100%; max-width: 600px; background: #fffdf7; border-radius: 28px 28px 0 0; padding: 28px 28px 32px; display: flex; flex-direction: column; gap: 18px; box-sizing: border-box;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+          <span style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 36px; font-weight: 700; line-height: 1.05;">Invite a partner</span>
+          <button type="button" onClick="{{closeInvite}}" aria-label="Close" style="flex: none; width: 44px; height: 44px; border-radius: 999px; border: 1px solid #dcded2; background: #f6f4ed; font-size: 20px; cursor: pointer;">×</button>
+        </div>
+        <ol style="margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 8px; font-size: 16px; line-height: 1.45;">
+          <li>Send them this link. They make their own Relish account.</li>
+          <li>Their book stays private, just like yours.</li>
+          <li>Either of you can share a page with the other, one page at a time.</li>
+        </ol>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 12px 12px 18px; border-radius: 999px; background: #f6f4ed; border: 1.5px solid #dcded2;">
+          <span style="flex: 1 1 200px; font-size: 15px; color: #5f6458; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">app.relish.my/join/[code]</span>
+          <button type="button" onClick="{{copy}}" style="padding: 12px 20px; border-radius: 999px; background: #43513a; color: #f6f4ed; border: none; font-weight: 700; font-size: 15px; cursor: pointer;">{{copyLabel}}</button>
+        </div>
+        <span style="font-size: 14px; color: #5f6458;">The link works for 7 days. You can cancel it any time.</span>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1300}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { invite: false, copied: false };
+  }
+  renderVals() {
+    var self = this;
+    return {
+      inviteOpen: this.state.invite,
+      openInvite: function () { self.setState({ invite: true, copied: false }); },
+      closeInvite: function () { self.setState({ invite: false }); },
+      copy: function () { self.setState({ copied: true }); },
+      copyLabel: this.state.copied ? 'Copied ✓' : 'Copy link'
+    };
+  }
+}
+</script>
+</body>
+</html>

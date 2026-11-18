@@ -180,13 +180,8 @@
   }
 }
 @media (max-width: 639px) {
-  .lb-app.lb-capturing .lb-identity,
-  .lb-app.lb-capturing .lb-tagline {
+  .lb-app.lb-capturing .lb-identity {
     display: none;
-  }
-  .lb-app.lb-capturing .lb-header {
-    padding-bottom: 9px;
-    margin-bottom: 14px;
   }
   .lb-app.lb-capturing .lb-wordmark {
     font-size: 29px;

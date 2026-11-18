@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Relish home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#f6f4ed}
+a{color:#43513a}a:hover{color:#30382c}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #f6f4ed; color: #30382c; font-family: 'DM Sans', sans-serif;">
+
+  <!-- TOP BAR: logo + 4 places + one menu -->
+  <header style="border-bottom: 1px solid #dcded2; background: #f6f4ed;">
+    <div style="max-width: 1120px; margin: 0 auto; padding: 14px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px;">
+      <a href="#" style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 30px; font-weight: 700; color: #30382c; text-decoration: none; letter-spacing: -0.5px;">relish</a>
+      <nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 auto;">
+        <a href="#" aria-current="page" style="padding: 10px 16px; border-radius: 999px; background: #43513a; color: #f6f4ed; font-size: 15px; font-weight: 600; text-decoration: none;">Home</a>
+        <a href="DoSomething.dc.html" style="padding: 10px 16px; border-radius: 999px; color: #30382c; font-size: 15px; font-weight: 500; text-decoration: none;">Do something</a>
+        <a href="YourBook.dc.html" style="padding: 10px 16px; border-radius: 999px; color: #30382c; font-size: 15px; font-weight: 500; text-decoration: none;">Your book</a>
+        <a href="Family.dc.html" style="padding: 10px 16px; border-radius: 999px; color: #30382c; font-size: 15px; font-weight: 500; text-decoration: none;">Family</a>
+      </nav>
+      <div style="position: relative;">
+        <button type="button" onClick="{{toggleMenu}}" aria-label="Menu: settings, sound, lock, help" aria-expanded="{{menuOpen}}" style="width: 44px; height: 44px; border-radius: 999px; border: 2px solid #43513a; background: #f2d58a; color: #30382c; font-size: 17px; font-weight: 700; cursor: pointer;">S</button>
+        <sc-if value="{{menuOpen}}" hint-placeholder-val="{{false}}">
+          <div style="position: absolute; right: 0; top: 54px; width: 220px; background: #fffdf7; border: 1px solid #dcded2; border-radius: 16px; box-shadow: 0 12px 32px rgba(48,56,44,0.14); padding: 8px; z-index: 5; display: flex; flex-direction: column;">
+            <a href="#" style="padding: 12px 14px; border-radius: 10px; color: #30382c; text-decoration: none; font-size: 15px;">Settings</a>
+            <a href="#" style="padding: 12px 14px; border-radius: 10px; color: #30382c; text-decoration: none; font-size: 15px;">Sound: on</a>
+            <a href="#" style="padding: 12px 14px; border-radius: 10px; color: #30382c; text-decoration: none; font-size: 15px;">Help</a>
+            <div style="height: 1px; background: #dcded2; margin: 4px 8px;"></div>
+            <a href="#" style="padding: 12px 14px; border-radius: 10px; color: #30382c; text-decoration: none; font-size: 15px;">Lock Relish</a>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </header>
+
+  <main style="max-width: 1120px; margin: 0 auto; padding: 40px 24px 64px; display: flex; flex-direction: column; gap: 40px;">
+
+    <!-- GREETING -->
+    <section style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <p style="margin: 0; font-size: 14px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: #5f6458;">Wednesday evening</p>
+        <h1 style="margin: 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 56px; line-height: 1.02; font-weight: 600;">Hi Scott. Here&#39;s one small thing.</h1>
+      </div>
+      <svg aria-hidden="true" width="120" height="72" viewBox="0 0 120 72" fill="none" stroke="#43513a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="30" cy="36" r="16" fill="#f2d58a"></circle>
+        <path d="M30 10v-6M30 68v-6M4 36h6M50 36h6M12 18l4 4M44 50l4 4M12 54l4-4M44 22l4-4"></path>
+        <path d="M70 52c6-14 18-14 24 0M84 30a6 6 0 1 0 0.1 0" fill="#e9b9a0"></path>
+        <path d="M100 56c3-8 10-8 13 0M106 42a4 4 0 1 0 0.1 0" fill="#cfdcc4"></path>
+      </svg>
+    </section>
+
+    <!-- TODAY'S NUDGE: the gentle guidance -->
+    <section aria-label="Today's suggestion" style="background: #43513a; color: #f6f4ed; border-radius: 28px; padding: 36px 40px; display: flex; flex-wrap: wrap; gap: 28px; align-items: center; justify-content: space-between;">
+      <div style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 14px;">
+        <p style="margin: 0; display: flex; gap: 10px; align-items: center; font-size: 14px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: #f2d58a;">
+          <span>Try this today</span><span aria-hidden="true">·</span><span>{{nudge.time}}</span>
+        </p>
+        <p style="margin: 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 38px; line-height: 1.12; font-weight: 600;">{{nudge.text}}</p>
+        <p style="margin: 0; font-size: 16px; line-height: 1.5; color: #dfe4d6;">{{nudge.why}}</p>
+      </div>
+      <div style="flex: 1 1 220px; display: flex; flex-direction: column; gap: 10px; align-items: stretch;">
+        <a href="#" style="padding: 16px 22px; border-radius: 999px; background: #f2d58a; color: #30382c; font-weight: 700; font-size: 16px; text-align: center; text-decoration: none;">{{nudge.cta}}</a>
+        <button type="button" onClick="{{nextNudge}}" style="padding: 14px 22px; border-radius: 999px; background: transparent; border: 1.5px solid #9fae92; color: #f6f4ed; font-weight: 600; font-size: 15px; cursor: pointer;">Show me another</button>
+      </div>
+    </section>
+
+    <!-- GOT A MINUTE? doors sorted by time / mood -->
+    <section style="display: flex; flex-direction: column; gap: 16px;">
+      <h2 style="margin: 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 32px; font-weight: 600;">Or pick by how much time you have</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+        <a href="#" style="background: #f2d58a; border-radius: 24px; padding: 24px; min-height: 170px; display: flex; flex-direction: column; justify-content: space-between; gap: 18px; color: #30382c; text-decoration: none; transform: rotate(-1deg);">
+          <svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#30382c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">1 minute</span>
+            <span style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 28px; font-weight: 700; line-height: 1.05;">Jot something down</span>
+            <span style="font-size: 15px;">Type it, say it, or snap a photo.</span>
+          </div>
+        </a>
+        <a href="#" style="background: #cfdcc4; border-radius: 24px; padding: 24px; min-height: 170px; display: flex; flex-direction: column; justify-content: space-between; gap: 18px; color: #30382c; text-decoration: none; transform: rotate(0.8deg);">
+          <svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#30382c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="11" height="14" rx="2"></rect><path d="M9 3h9a2 2 0 0 1 2 2v12"></path><path d="M7.5 10h4M7.5 13.5h4"></path></svg>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">5 minutes</span>
+            <span style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 28px; font-weight: 700; line-height: 1.05;">Try an exercise</span>
+            <span style="font-size: 15px;">Card sorts and little checklists.</span>
+          </div>
+        </a>
+        <a href="#" style="background: #e9b9a0; border-radius: 24px; padding: 24px; min-height: 170px; display: flex; flex-direction: column; justify-content: space-between; gap: 18px; color: #30382c; text-decoration: none; transform: rotate(-0.6deg);">
+          <svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#30382c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3"></circle><circle cx="17" cy="9" r="2.5"></circle><path d="M3 20c0-3.3 2.2-6 5-6s5 2.7 5 6"></path><path d="M14 20c0-2.6 1.3-5 3-5s3.5 2.4 3.5 5"></path></svg>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">With the kids · 10 min</span>
+            <span style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 28px; font-weight: 700; line-height: 1.05;">Play a game</span>
+            <span style="font-size: 15px;">Everyone takes a turn. Passing is fine.</span>
+          </div>
+        </a>
+        <a href="#" style="background: #c9d9e3; border-radius: 24px; padding: 24px; min-height: 170px; display: flex; flex-direction: column; justify-content: space-between; gap: 18px; color: #30382c; text-decoration: none; transform: rotate(1deg);">
+          <svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#30382c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15c2-4 5-6 8-6s6 2 8 6"></path><path d="M12 9V4M8 5l1.5 2.5M16 5l-1.5 2.5"></path><path d="M3 19h18"></path></svg>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">Something&#39;s hard</span>
+            <span style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 28px; font-weight: 700; line-height: 1.05;">Think it through</span>
+            <span style="font-size: 15px;">A few questions, then one small plan.</span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- FAMILY + LATELY -->
+    <div style="display: flex; flex-wrap: wrap; gap: 24px;">
+      <section style="flex: 1 1 340px; min-width: 0; background: #fffdf7; border: 1px solid #dcded2; border-radius: 24px; padding: 24px 28px; display: flex; flex-direction: column; gap: 18px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px;">
+          <h2 style="margin: 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 28px; font-weight: 600;">Your people</h2>
+          <a href="Family.dc.html" style="font-size: 15px; font-weight: 600;">See family</a>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
+          <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 8px; color: #30382c; text-decoration: none; width: 72px;">
+            <span style="width: 64px; height: 64px; border-radius: 999px; background: #e9b9a0; display: flex; align-items: center; justify-content: center; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 28px; font-weight: 700;">E</span>
+            <span style="font-size: 15px; font-weight: 600;">Ella</span>
+          </a>
+          <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 8px; color: #30382c; text-decoration: none; width: 72px;">
+            <span style="width: 64px; height: 64px; border-radius: 999px; background: #c9d9e3; display: flex; align-items: center; justify-content: center; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 28px; font-weight: 700;">K</span>
+            <span style="font-size: 15px; font-weight: 600;">Kaleb</span>
+          </a>
+          <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 8px; color: #30382c; text-decoration: none; width: 96px;">
+            <span style="width: 64px; height: 64px; border-radius: 999px; border: 2px dashed #43513a; display: flex; align-items: center; justify-content: center; font-size: 30px; color: #43513a;">+</span>
+            <span style="font-size: 15px; font-weight: 600; text-align: center;">Invite a partner</span>
+          </a>
+        </div>
+      </section>
+      <section style="flex: 2 1 420px; min-width: 0; background: #fffdf7; border: 1px solid #dcded2; border-radius: 24px; padding: 24px 28px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px;">
+          <h2 style="margin: 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 28px; font-weight: 600;">Lately in your book</h2>
+          <a href="YourBook.dc.html" style="font-size: 15px; font-weight: 600;">Open your book</a>
+        </div>
+        <a href="#" style="display: flex; gap: 14px; align-items: center; padding: 12px 0; border-top: 1px solid #ecede4; color: #30382c; text-decoration: none;">
+          <span style="flex: none; padding: 4px 10px; border-radius: 999px; background: #f2d58a; font-size: 12px; font-weight: 700;">Journal</span>
+          <span style="flex: 1 1 auto; font-size: 16px;">[Most recent page title]</span>
+          <span style="font-size: 14px; color: #5f6458;">[date]</span>
+        </a>
+        <a href="#" style="display: flex; gap: 14px; align-items: center; padding: 12px 0; border-top: 1px solid #ecede4; color: #30382c; text-decoration: none;">
+          <span style="flex: none; padding: 4px 10px; border-radius: 999px; background: #e9b9a0; font-size: 12px; font-weight: 700;">Game</span>
+          <span style="flex: 1 1 auto; font-size: 16px;">[Next page title]</span>
+          <span style="font-size: 14px; color: #5f6458;">[date]</span>
+        </a>
+        <a href="#" style="display: flex; gap: 14px; align-items: center; padding: 12px 0; border-top: 1px solid #ecede4; color: #30382c; text-decoration: none;">
+          <span style="flex: none; padding: 4px 10px; border-radius: 999px; background: #cfdcc4; font-size: 12px; font-weight: 700;">Exercise</span>
+          <span style="flex: 1 1 auto; font-size: 16px;">[Next page title]</span>
+          <span style="font-size: 14px; color: #5f6458;">[date]</span>
+        </a>
+      </section>
+    </div>
+
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1240}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { i: 0, menuOpen: false };
+  }
+  renderVals() {
+    var nudges = [
+      { time: 'About 2 minutes', text: 'At dinner, ask Kaleb: what was the best part of today, and the weirdest?', why: 'Two questions, no follow-up needed. Jot down whatever comes back.', cta: 'Got it — jot down the answer' },
+      { time: 'About 1 minute', text: 'Write down one thing Ella did this week that made you laugh.', why: 'Small, specific moments are what you will want to remember later.', cta: 'Write it now' },
+      { time: 'About 10 minutes', text: 'Play “Same page?” with the kids tonight. Everyone guesses, nobody is wrong.', why: 'A light way to hear how they see things. Passing is always allowed.', cta: 'Set up the game' }
+    ];
+    var self = this;
+    return {
+      nudge: nudges[this.state.i % nudges.length],
+      nextNudge: function () { self.setState({ i: self.state.i + 1 }); },
+      menuOpen: this.state.menuOpen,
+      toggleMenu: function () { self.setState({ menuOpen: !self.state.menuOpen }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

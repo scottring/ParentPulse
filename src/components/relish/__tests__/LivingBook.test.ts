@@ -63,14 +63,15 @@ describe("living-book interaction boundaries", () => {
       });
     }
     render(createElement(Harness));
+    fireEvent.click(screen.getByRole("button", { name: "Do something" }));
     fireEvent.click(
-      screen.getByRole("button", { name: "Continue guided reflection" }),
+      screen.getByRole("button", { name: /Think it through/ }),
     );
     await screen.findByRole("alert");
     expect(screen.queryByText("Session complete")).toBeNull();
     fail = false;
     fireEvent.click(
-      screen.getByRole("button", { name: "Continue guided reflection" }),
+      screen.getByRole("button", { name: /Think it through/ }),
     );
     const textbox = await screen.findByRole("textbox", { name: "Your moment" });
     fireEvent.change(textbox, { target: { value: "One sample moment" } });
@@ -82,7 +83,7 @@ describe("living-book interaction boundaries", () => {
     fireEvent.click(screen.getByRole("button", { name: /Save reflection and finish/ }));
     await screen.findByText("Session complete");
   });
-  it("puts private content away for shared play and locks before returning to it", async () => {
+  it("keeps private content off the game screen and ends the game without locking", async () => {
     const lock = vi.fn();
     function Harness() {
       const [book, setBook] = useState(completeBook);
@@ -108,15 +109,22 @@ describe("living-book interaction boundaries", () => {
       });
     }
     render(createElement(Harness));
-    fireEvent.click(screen.getByRole("button", { name: "Read your pages" }));
+    fireEvent.click(screen.getByRole("button", { name: "Your book" }));
     expect(screen.getByText("A confidential sample sentence")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Play together" }));
+    fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+    fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
+    fireEvent.click(screen.getByRole("button", { name: "+ Someone visiting" }));
+    fireEvent.change(screen.getByRole("textbox", { name: /Their name/ }), {
+      target: { value: "Sam" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Start/ }));
+    await screen.findByRole("button", { name: "End game" });
     expect(screen.queryByText("A confidential sample sentence")).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: "Privacy and settings" }),
-    ).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Unlock my edition" }));
-    expect(lock).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("button", { name: /^Menu/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "End game" }));
+    expect(lock).not.toHaveBeenCalled();
+    await screen.findByRole("heading", { name: "What feels right?" });
   });
   it("does not render the chooser’s answer on a handoff or another person’s turn", () => {
     const g = advanceGame(
@@ -133,7 +141,6 @@ describe("living-book interaction boundaries", () => {
       book: emptyBook("A"),
       game: g,
       busy: false,
-      onCreate: vi.fn(),
       onAction: vi.fn(),
       onKeep: vi.fn(),
       onPause: vi.fn(),

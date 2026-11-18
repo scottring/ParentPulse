@@ -1,18 +1,11 @@
 "use client";
 import { useState } from "react";
-import { Hand, Check, Users, ArrowRight } from "lucide-react";
-import {
-  ageBands,
-  ageLabels,
-  audienceOf,
-  youngestAudience,
-  type Audience,
-} from "@/lib/relish/profiles";
+import { Hand, Check, ArrowRight } from "lucide-react";
+import { ageLabels } from "@/lib/relish/profiles";
 import type { Book } from "@/lib/relish/model";
 import {
   type Game,
   type GameAction,
-  type Player,
   gamePlayer,
   gameText,
   joyOptions,
@@ -26,7 +19,6 @@ export default function GroupPlay({
   book,
   game,
   busy,
-  onCreate,
   onAction,
   onKeep,
   onPause,
@@ -34,219 +26,16 @@ export default function GroupPlay({
   onCancel,
 }: {
   book: Book;
-  game?: Game;
+  /** Players and the game are chosen in Do something's game sheet. */
+  game: Game;
   busy: boolean;
-  onCreate: (kind: Game["kind"], players: Player[]) => void;
   onAction: (action: GameAction) => void;
   onKeep: () => void;
   onPause: () => void;
   onFinish: () => void;
   onCancel: () => void;
 }) {
-  const people: Player[] = [
-    { id: "owner", name: book.owner, audience: audienceOf(book) },
-    ...book.people.map((p) => ({ id: p.id, name: p.name })),
-  ];
-  const family = people.filter(
-    (p) =>
-      p.id === "owner" ||
-      book.people.some(
-        (person) =>
-          person.id === p.id &&
-          [
-            "partner",
-            "child",
-            "parent",
-            "sibling",
-            "son",
-            "daughter",
-            "mother",
-            "father",
-          ].includes(person.role.toLowerCase()),
-      ),
-  );
-  const [guests, setGuests] = useState<Player[]>([]),
-    [selected, setSelected] = useState(family.map((p) => p.id)),
-    [name, setName] = useState(""),
-    [error, setError] = useState("");
-  const [firstPlayer, setFirstPlayer] = useState(game?.players[0].id || "");
-  const [ages, setAges] = useState<Record<string, Audience | "">>({});
-  const roster = [...people, ...guests].map((p) => ({
-      ...p,
-      audience: p.id === "owner" ? p.audience : ages[p.id] || undefined,
-    })),
-    players = roster.filter((p) => selected.includes(p.id));
-  const audience = youngestAudience([
-    ...players,
-    ...(book.profile?.kind === "child"
-      ? [{ audience: book.profile.ageBand }]
-      : []),
-  ]);
-  function addGuest() {
-    const value = name.trim();
-    if (
-      !value ||
-      roster.some((p) => p.name.toLowerCase() === value.toLowerCase())
-    ) {
-      setError("Choose a distinct name so each turn is clear.");
-      return;
-    }
-    if (roster.length >= 12) {
-      setError("This game supports up to 12 players.");
-      return;
-    }
-    const guest = { id: crypto.randomUUID(), name: value };
-    setGuests([...guests, guest]);
-    setSelected([...selected, guest.id]);
-    setName("");
-    setError("");
-  }
-  if (!game)
-    return (
-      <section className="lb-play-setup">
-        <p className="lb-kicker">Pass & play · one device</p>
-        <h2>Choose players and a game</h2>
-        <p>
-          Select 2–12 players, then choose a game. Pass this device between players.
-        </p>
-        <fieldset>
-          <legend>Who’s playing?</legend>
-          <div className="lb-actions">
-            <button
-              className="lb-text"
-              onClick={() => setSelected(family.map((p) => p.id))}
-            >
-              Whole family · {family.length}
-            </button>
-            <span className="lb-fine">{selected.length} selected</span>
-          </div>
-          <div className="lb-players">
-            {roster.map((p) => (
-              <button
-                key={p.id}
-                aria-pressed={selected.includes(p.id)}
-                onClick={() =>
-                  setSelected(
-                    selected.includes(p.id)
-                      ? selected.filter((id) => id !== p.id)
-                      : [...selected, p.id],
-                  )
-                }
-              >
-                {selected.includes(p.id) ? (
-                  <Check size={15} />
-                ) : (
-                  <Users size={15} />
-                )}{" "}
-                {p.name}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-        <form
-          className="lb-guest"
-          onSubmit={(e) => {
-            e.preventDefault();
-            addGuest();
-          }}
-        >
-          <label>
-            Someone else is joining
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={60}
-              placeholder="Name for this game"
-            />
-          </label>
-          <button className="lb-secondary" disabled={!name.trim()}>
-            Add player
-          </button>
-        </form>
-        <fieldset>
-          <legend>Player age ranges</legend>
-          <div className="lb-player-ages">
-            {players.map((p) => (
-              <label key={p.id}>
-                {p.name} · age range
-                <select
-                  aria-label={`Age range for ${p.name}`}
-                  value={p.audience || ""}
-                  disabled={p.id === "owner"}
-                  onChange={(e) =>
-                    setAges({
-                      ...ages,
-                      [p.id]: e.target.value as Audience | "",
-                    })
-                  }
-                >
-                  <option value="">Not specified · simplest prompts</option>
-                  {[...ageBands, "adult" as const].map((a) => (
-                    <option key={a} value={a}>
-                      {ageLabels[a]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ))}
-          </div>
-          <p className="lb-age-cue">
-            {ageLabels[audience]} · This round uses the youngest selected range.
-            An unspecified age uses our simplest prompts. For little ones, a
-            grown-up reads and helps them choose; anyone can pass.
-          </p>
-        </fieldset>
-        {error && (
-          <p className="lb-error" role="alert">
-            {error}
-          </p>
-        )}
-        <div className="lb-game-options">
-          <button
-            disabled={busy || players.length < 2 || players.length > 12}
-            onClick={() => onCreate("joy", players)}
-          >
-            <span className="lb-kicker">About 5 minutes</span>
-            <h3>Guess my small joy</h3>
-            <p>One person chooses; everyone else guesses. Reveal together.</p>
-            <ArrowRight size={18} />
-          </button>
-          <button
-            disabled={busy || players.length < 2 || players.length > 12}
-            onClick={() => onCreate("story", players)}
-          >
-            <span className="lb-kicker">About 5–10 minutes</span>
-            <h3>One story, many voices</h3>
-            <p>
-              Build an unlikely adventure. Everyone gets a turn to shape it.
-            </p>
-            <ArrowRight size={18} />
-          </button>
-          <button
-            disabled={busy || players.length < 2 || players.length > 12}
-            onClick={() => onCreate("match", players)}
-          >
-            <span className="lb-kicker">About 3–5 minutes</span>
-            <h3>Same page?</h3>
-            <p>
-              Everyone answers the same question in private. See where you
-              agree.
-            </p>
-            <ArrowRight size={18} />
-          </button>
-        </div>
-        {players.length < 2 && (
-          <p className="lb-fine">
-            Choose at least two people to begin. Add a player above if someone
-            is visiting.
-          </p>
-        )}
-        <p className="lb-fine">
-          Adding a player does not create an account or open their private
-          pages.
-        </p>
-      </section>
-    );
+  const [firstPlayer, setFirstPlayer] = useState(game.players[0].id);
   const g = game,
     total = turnCount(g),
     rounds = storyRounds(g.players.length, g.audience),

@@ -1,10 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Lock, Plus, Cloud } from "lucide-react";
 import { useLocalBook } from "./useLocalBook";
 import { SensoryProvider } from "./Sensory";
 import { Dialog, VaultForm } from "./BookForms";
 import LivingBook from "./LivingBook";
+import type { FamilyPerson } from "./Home";
+import { readHomeBook, writeHomeBook } from "./homeBook";
 import EditionSetup from "./EditionSetup";
 import AccountLibrary from "./AccountLibrary";
 import { useBookSync } from "./useBookSync";
@@ -26,6 +28,7 @@ function BookGate() {
   const vault = useLocalBook();
   const sync = useBookSync(vault);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [addChild, setAddChild] = useState(false);
   const [localMode, setLocalMode] = useState(false);
   const [exportOpen, setExportOpen] = useState(false),
     [exportPass, setExportPass] = useState("");
@@ -56,6 +59,7 @@ function BookGate() {
   const closeAccount = () => {
     sync.cancel();
     setAccountOpen(false);
+    setAddChild(false);
     setLocalMode(false);
   };
   const library = (inline = false) => (
@@ -64,6 +68,7 @@ function BookGate() {
       sync={sync}
       onClose={closeAccount}
       inline={inline}
+      startAdding={!inline && addChild ? "child" : undefined}
       onLocal={
         inline
           ? () => {
@@ -78,6 +83,40 @@ function BookGate() {
     />
   );
 
+  // Remember the signed-in adult's own book whenever it is open.
+  const ownBook =
+    vault.mode === "open" &&
+    managed &&
+    vault.book.profile?.kind === "adult" &&
+    !!sync.user &&
+    binding?.uid === sync.user.uid
+      ? binding.remoteId
+      : null;
+  useEffect(() => {
+    if (ownBook && sync.user) writeHomeBook(sync.user.uid, ownBook);
+  }, [ownBook, sync.user]);
+  // After a fresh sign-in (not a reload, not after Lock), open that book on
+  // Home instead of stopping at the family library.
+  const signedIn = useRef<string | null | undefined>(undefined);
+  const openHome = useRef(false);
+  useEffect(() => {
+    if (!sync.authReady) return;
+    const uid = sync.user?.uid ?? null;
+    if (signedIn.current === null && uid) openHome.current = true;
+    signedIn.current = uid;
+    if (!openHome.current || sync.working) return;
+    if (vault.mode === "open") {
+      openHome.current = false;
+      return;
+    }
+    if (!sync.user?.emailVerified || !sync.books.length) return;
+    openHome.current = false;
+    const home = readHomeBook(sync.user.uid);
+    const head = sync.books.find((b) => b.id === home && b.accountManaged);
+    if (head) void sync.open(head).catch(() => {});
+    // Acts once per sign-in; sync.open is recreated every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sync.authReady, sync.user, sync.working, sync.books, vault.mode]);
   useEffect(() => {
     const close = () => setAccountOpen(false);
     window.addEventListener("relish:locked", close);
@@ -196,9 +235,36 @@ function BookGate() {
           </section>
         </div>
       );
+    // The other books in this parent account, shown as people in an adult
+    // book. A child's book never lists or opens its siblings' books.
+    const family: FamilyPerson[] =
+      vault.book.profile?.kind === "adult" &&
+      managed &&
+      sync.user?.emailVerified &&
+      binding?.uid === sync.user.uid
+        ? sync.books
+            .filter(
+              (h) =>
+                h.accountManaged &&
+                h.id !== binding.remoteId &&
+                !h.label.endsWith("— device copy"),
+            )
+            .map((h) => ({
+              id: h.id,
+              name: h.label,
+              note: "Book in your account",
+              onOpen: () =>
+                void sync.open(h).catch(() => setAccountOpen(true)),
+            }))
+        : [];
     return (
       <LivingBook
         key={`${vault.mode}:${vault.editionId}`}
+        family={family}
+        onAddChild={() => {
+          setAddChild(true);
+          setAccountOpen(true);
+        }}
         vault={{
           ...vault,
           shelf: () => {

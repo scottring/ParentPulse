@@ -38,14 +38,20 @@ export default function Tools({
   onCommit,
   onPages,
   onActivities,
+  initialId,
+  onBack,
 }: {
   book: Book;
   busy: boolean;
   onCommit: Commit;
   onPages: () => void;
   onActivities: () => void;
+  /** Opens straight into one exercise (from Do something or Home). */
+  initialId?: string;
+  /** Where "All exercises" goes when opened straight into one. */
+  onBack?: () => void;
 }) {
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(initialId ?? null);
   const [kept, setKept] = useState<string | null>(null);
   const audience = audienceOf(book);
   const available = toolsFor(audience);
@@ -69,6 +75,7 @@ export default function Tools({
             className="lb-secondary"
             disabled={busy}
             onClick={() => {
+              if (onBack) return onBack();
               setKept(null);
               setOpenId(null);
             }}
@@ -76,7 +83,7 @@ export default function Tools({
             Choose another exercise
           </button>
           <button className="lb-text" disabled={busy} onClick={onActivities}>
-            Back to Activities
+            Back to Do something
           </button>
         </div>
       </main>
@@ -88,9 +95,9 @@ export default function Tools({
         <button
           className="lb-text rt-back"
           disabled={busy}
-          onClick={() => setOpenId(null)}
+          onClick={() => (onBack ? onBack() : setOpenId(null))}
         >
-          <ArrowLeft size={15} /> All exercises
+          <ArrowLeft size={15} /> {onBack ? "Back to Do something" : "All exercises"}
         </button>
         <p className="lb-kicker">
           {tool.time} · {toolGroups.find((g) => g.kind === tool.kind)?.title}
@@ -136,7 +143,7 @@ export default function Tools({
             busy={busy}
             onCommit={onCommit}
             onKept={setKept}
-            onStopped={() => setOpenId(null)}
+            onStopped={() => (onBack ? onBack() : setOpenId(null))}
           />
         )}
       </main>
@@ -207,7 +214,7 @@ export default function Tools({
         );
       })}
       <button className="lb-text rt-back" disabled={busy} onClick={onActivities}>
-        <ArrowLeft size={15} /> Back to Activities
+        <ArrowLeft size={15} /> Back to Do something
       </button>
     </main>
   );

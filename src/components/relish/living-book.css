@@ -144,55 +144,9 @@
   );
   pointer-events: none;
 }
-.lb-header {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 20px;
-  align-items: center;
-  max-width: 1360px;
-  margin: auto;
-  padding-bottom: 18px;
-  border-bottom: 1px solid var(--line);
-}
-.lb-brand {
-  min-width: 0;
-}
 .lb-wordmark {
   font: 500 37px/1.15 var(--serif);
   letter-spacing: -0.065em;
-}
-.lb-tagline {
-  display: block;
-  margin-top: 4px;
-  font-size: 10px;
-  color: var(--muted);
-}
-.lb-main-nav,
-.lb-tools {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.lb-main-nav {
-  justify-content: center;
-}
-.lb-tools {
-  justify-content: flex-end;
-  padding-left: 16px;
-  border-left: 1px solid var(--line);
-}
-.lb-header button {
-  min-width: 44px;
-  font-size: 12px;
-  white-space: nowrap;
-  padding: 9px 10px;
-}
-.lb-header button[aria-current="page"] {
-  background: color-mix(in srgb, var(--paper) 65%, transparent);
-}
-.lb-header .r-sound-toggle {
-  border: 0;
-  color: var(--ink);
 }
 .lb-identity {
   display: flex;
@@ -350,45 +304,6 @@
 .lb-later p:last-child {
   margin: 0;
 }
-.lb-chapters {
-  display: flex;
-  justify-content: flex-end;
-  gap: 4px;
-  max-width: 1360px;
-  margin: 0 auto;
-}
-.lb-chapters button {
-  padding: 11px 18px;
-  border-radius: 4px 4px 0 0;
-  font-size: 12px;
-  background: var(--lb-deep);
-}
-.lb-chapters button span {
-  opacity: 0.65;
-  font-size: 10px;
-}
-.lb-chapters button[aria-current="page"] {
-  background: var(--paper);
-}
-.lb-book-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  max-width: 1360px;
-  margin: 18px auto 0;
-  font-size: 12px;
-  color: var(--muted);
-}
-.lb-book-footer > div {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.lb-book-footer button {
-  width: 44px;
-  padding: 10px;
-}
 .lb-announcement {
   max-width: 1360px;
   margin: 15px auto 0 !important;
@@ -458,13 +373,6 @@
 .lb-margin p:last-child {
   margin-bottom: 0;
 }
-.lb-entries > article {
-  border-bottom: 1px solid var(--line);
-  padding: 25px 0;
-}
-.lb-entries > article:last-child {
-  border: 0;
-}
 .lb-app blockquote {
   font: 400 22px/1.6 var(--serif);
   margin: 15px 0;
@@ -478,62 +386,6 @@
 }
 .lb-app details p {
   font-size: 14px;
-}
-.lb-empty {
-  padding: 30px 0;
-}
-.lb-people article {
-  padding: 26px 0;
-  border-bottom: 1px solid var(--line);
-}
-.lb-people article:last-child {
-  border: 0;
-}
-.lb-people ul {
-  padding-left: 19px;
-  margin: 15px 0;
-}
-.lb-people li {
-  margin: 8px 0;
-}
-.lb-cadence {
-  margin: 30px 0;
-}
-.lb-cadence p {
-  display: flex;
-  flex-direction: column;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--line);
-}
-.lb-cadence small {
-  color: var(--muted);
-}
-.lb-stones {
-  display: flex;
-  align-items: flex-end;
-  gap: 5px;
-  height: 70px;
-  margin: 24px 0;
-}
-.lb-stones i {
-  display: block;
-  height: 17px;
-  width: 38px;
-  border-radius: 44% 56% 42% 58%;
-  background: #819992;
-  transform: rotate(-8deg);
-}
-.lb-stones i:nth-child(2) {
-  width: 29px;
-  height: 21px;
-  background: #a2b2aa;
-  transform: rotate(10deg);
-}
-.lb-stones i:nth-child(3) {
-  width: 34px;
-  height: 15px;
-  background: #627d78;
-  animation: lb-stone-settle 0.5s ease-out;
 }
 .lb-play-layout {
   display: grid;
@@ -563,14 +415,6 @@
   filter: saturate(0.2) contrast(0.7);
   mask-image: linear-gradient(transparent, #000 20% 75%, transparent);
 }
-.lb-play-setup fieldset {
-  border: 0;
-  padding: 0;
-  margin: 25px 0;
-}
-.lb-play-setup legend {
-  font: 500 19px/1.4 var(--serif);
-}
 .lb-players {
   display: flex;
   flex-wrap: wrap;
@@ -585,38 +429,6 @@
   background: var(--lb-cover);
   color: #f2f4ee;
   border-color: var(--lb-cover);
-}
-.lb-guest {
-  display: flex;
-  gap: 12px;
-  align-items: flex-end;
-}
-.lb-guest label {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-}
-.lb-guest button {
-  flex-shrink: 0;
-  margin-bottom: 1px;
-}
-.lb-game-options {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin: 30px 0;
-}
-.lb-game-options > button {
-  display: block;
-  align-self: stretch;
-  padding: 22px;
-  border: 1px solid var(--line);
-}
-.lb-game-options p {
-  font-size: 13px;
-}
-.lb-game-options h3 {
-  font-size: 24px;
 }
 .lb-session-line {
   display: flex;
@@ -847,32 +659,12 @@
     transform: translateY(0) rotate(-8deg);
   }
 }
-@media (max-width: 1180px) {
-  .lb-header {
-    grid-template-columns: auto 1fr;
-    gap: 14px 20px;
-    padding-bottom: 14px;
-  }
-  .lb-tools {
-    grid-column: 2;
-    grid-row: 1;
-    flex-wrap: wrap;
-    border-left: 0;
-    padding-left: 0;
-  }
-  .lb-main-nav {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    justify-content: flex-start;
-  }
-}
 @media (max-width: 1100px) {
   .lb-page {
     padding: 28px 28px 60px;
   }
 }
 @media (max-width: 900px) {
-  .lb-header,
   .lb-identity {
     max-width: 720px;
   }
@@ -897,13 +689,6 @@
   .lb-play-main {
     padding: 30px 35px;
   }
-  .lb-chapters {
-    max-width: 720px;
-    justify-content: stretch;
-  }
-  .lb-chapters button {
-    flex: 1;
-  }
   .lb-app h2 {
     font-size: 30px;
   }
@@ -924,24 +709,6 @@
 @media (max-width: 560px) {
   .lb-desk {
     padding: 20px 14px 25px;
-  }
-  .lb-header {
-    gap: 12px 8px;
-  }
-  .lb-header button {
-    padding: 8px;
-    font-size: 11px;
-  }
-  .lb-tools {
-    gap: 2px;
-  }
-  .lb-main-nav button {
-    flex: 1;
-  }
-  .lb-tagline,
-  .lb-tool-label,
-  .lb-connection-label {
-    display: none;
   }
   .lb-identity {
     gap: 10px;
@@ -966,9 +733,6 @@
     font-size: 9px;
     margin-bottom: 25px;
   }
-  .lb-game-options {
-    grid-template-columns: 1fr;
-  }
   .lb-play-main {
     padding: 25px 21px;
   }
@@ -981,27 +745,11 @@
   .lb-session-line p {
     font-size: 13px;
   }
-  .lb-guest {
-    flex-wrap: wrap;
-  }
-  .lb-guest label {
-    min-width: 100%;
-  }
   .lb-players button {
     flex-grow: 1;
   }
-  .lb-chapters button {
-    padding: 9px 7px;
-    font-size: 10px;
-  }
-  .lb-chapters button span {
-    display: none;
-  }
   .lb-sample {
     padding: 9px 16px;
-  }
-  .lb-book-footer > span {
-    max-width: 50%;
   }
   .lb-app .r-dialog {
     padding: 38px 22px 25px;
@@ -1030,7 +778,6 @@
     transform: none;
   }
 }
-
 .lb-app .lb-identity h1:focus {
   outline: none;
 }
@@ -1039,13 +786,11 @@
     min-height: 44px;
   }
 }
-
 .lb-app .r-dialog .r-primary:not(:disabled):hover,
 .lb-app .lb-players button[aria-pressed="true"]:not(:disabled):hover {
   background: #385b60;
   color: #f2f4ee;
 }
-
 .lb-shelf {
   display: block;
   padding: clamp(28px, 5vw, 72px) clamp(22px, 6vw, 80px) 64px;
@@ -1141,7 +886,6 @@
     transform: none;
   }
 }
-
 .lb-connections .lb-boundary {
   margin: 24px 0;
 }
@@ -1219,7 +963,6 @@
     grid-template-columns: 1fr;
   }
 }
-
 .lb-connections summary {
   cursor: pointer;
 }
@@ -1228,7 +971,6 @@
   vertical-align: middle;
   margin: 0 6px 0 0;
 }
-
 /* Reader settings use the same quiet paper and tactile controls as the book. */
 .lb-profile-gate > section {
   width: min(100%, 680px);
@@ -1289,29 +1031,8 @@
   gap: 0.6rem;
   margin-block: 1rem;
 }
-.lb-player-ages {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.8rem;
-  margin-block: 1rem;
-}
-.lb-player-ages label {
-  display: grid;
-  gap: 0.4rem;
-  font-size: 0.85rem;
-}
-.lb-player-ages select {
-  width: 100%;
-  min-height: 44px;
-  padding: 0.55rem;
-  color: inherit;
-  border: 1px solid #98aaa7;
-  border-radius: 4px;
-  background: transparent;
-}
 @media (max-width: 520px) {
-  .lb-profile-choices,
-  .lb-player-ages {
+  .lb-profile-choices {
     grid-template-columns: 1fr;
   }
 }
@@ -1356,18 +1077,4 @@
 }
 .lb-edition-setup > .lb-text {
   margin-top: 12px;
-}
-
-@media (max-width: 560px) {
-  .lb-main-nav button {
-    flex-direction: column;
-    gap: 4px;
-    padding: 7px 3px;
-  }
-}
-@media (max-width: 360px) {
-  .lb-tools {
-    display: grid;
-    grid-template-columns: repeat(3, 44px);
-  }
 }

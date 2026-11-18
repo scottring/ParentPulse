@@ -2,20 +2,11 @@
 import { readBinding } from "@/lib/relish/book-sync";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  ArrowLeft,
-  ArrowRight,
   ArrowUpRight,
-  Bookmark,
   BookmarkCheck,
   BookOpen,
   Download,
-  Feather,
   Lock,
-  Compass,
-  Cloud,
-  CircleHelp,
-  Plus,
-  Settings2,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -26,13 +17,11 @@ import {
   changeLiving,
   chooseThread,
   completeVisit,
-  gameText,
   keepGame,
   livingOf,
   markTried,
   newGame,
   nextKind,
-  outcomes,
   pauseVisit,
   pendingPractice,
   updateDraft,
@@ -44,61 +33,73 @@ import {
 } from "@/lib/relish/living";
 import type { useLocalBook } from "./useLocalBook";
 import { Dialog, EditPerson, PersonForm, VaultForm } from "./BookForms";
-import { SoundControl, SoundSettings, useSensory } from "./Sensory";
+import { SoundSettings, useSensory } from "./Sensory";
 import VisitEditor from "./VisitEditor";
 import Journal from "./Journal";
-import Activities from "./Activities";
 import { newJournalDraft, type JournalDraft } from "@/lib/relish/journal";
 import "./duo.css";
-import Manual, { ManualCardView, useManualGuide } from "./Manual";
-import { manualOf } from "@/lib/relish/manual";
-import { PhotoGallery } from "./Photos";
+import "./places.css";
+import Manual, { useManualGuide } from "./Manual";
+import { manualOf, reviewManualIdea } from "@/lib/relish/manual";
 import GroupPlay from "./GroupPlay";
 import Tools from "./Tools";
 import ConnectedEditions from "./ConnectedEditions";
 import EditionSetup from "./EditionSetup";
 import { guidanceFor } from "@/lib/relish/guidance";
+import TopBar, { type MenuItem, type Place } from "./TopBar";
+import Home, { type FamilyPerson } from "./Home";
+import DoSomething from "./DoSomething";
+import YourBook from "./YourBook";
+import Family from "./Family";
+import type { NudgeAction } from "@/lib/relish/nudges";
+import { isChild, isFamily, type DoFilter } from "@/lib/relish/catalog";
 import { canUseOnline, ageLabels, audienceOf } from "@/lib/relish/profiles";
 
+// Four places, plus the sub-screens that open inside them.
 type View =
-  | "activities"
+  | Place
   | "bookmark"
   | "manual"
   | "session"
   | "words"
-  | "people"
-  | "practice"
-  | "family"
   | "play"
   | "tools";
+const placeOf: Record<View, Place> = {
+  home: "home",
+  do: "do",
+  tools: "do",
+  session: "do",
+  bookmark: "do",
+  play: "do",
+  book: "book",
+  words: "book",
+  manual: "book",
+  family: "family",
+};
 type Modal =
   "settings" | "create" | "person" | "guide" | "connections" | "profile" | null;
 type Vault = Omit<
   ReturnType<typeof useLocalBook>,
   "syncSnapshot" | "openSynced" | "receiveSynced" | "accountSnapshot"
 >;
-const chapters = [
-  { id: "words", label: "Your pages" },
-  { id: "people", label: "Between us" },
-  { id: "practice", label: "The way we practice" },
-] as const;
-const shortDate = (iso: string) =>
-  new Date(iso).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
 export default function LivingBook({
   vault,
   onAccount,
   accountLabel = "Sign in",
   syncStatus,
   onInteraction,
+  family,
+  onAddChild,
 }: {
   vault: Vault;
   onAccount?: () => void;
   accountLabel?: string;
   syncStatus?: string;
   onInteraction?: (paused: boolean) => void;
+  /** Other books in this account (children), opened through the library. */
+  family?: FamilyPerson[];
+  /** Opens the family library's add-a-child form. */
+  onAddChild?: () => void;
 }) {
   const [offered, setOffered] = useState<
     { title: string; text: string } | undefined
@@ -117,16 +118,20 @@ export default function LivingBook({
     draft: JournalDraft;
     voice: boolean;
   } | null>(null);
-  const [view, setView] = useState<View>("activities"),
+  const [view, setView] = useState<View>("home"),
     [closed, setClosed] = useState(false),
     [modal, setModal] = useState<Modal>(null),
     [editing, setEditing] = useState<Person | null>(null),
-    [shared, setShared] = useState(false),
     [journalEditing, setJournalEditing] = useState(false),
     [working, setWorking] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
-    [pageKey, setPageKey] = useState(0);
+    [pageKey, setPageKey] = useState(0),
+    [reading, setReading] = useState<string | undefined>(),
+    [exercise, setExercise] = useState<string | undefined>(),
+    [doFilter, setDoFilter] = useState<DoFilter>("all"),
+    [gameOffer, setGameOffer] = useState<Game["kind"] | undefined>(),
+    [bookWho, setBookWho] = useState<string | undefined>();
   const journalNavigation = useRef<(() => Promise<boolean>) | null>(null);
   const operation = useRef(false),
     alive = useRef(true),
@@ -153,6 +158,11 @@ export default function LivingBook({
     setCapture(null);
     setModal(null);
     setEditing(null);
+    setReading(undefined);
+    setExercise(undefined);
+    setDoFilter("all");
+    setGameOffer(undefined);
+    setBookWho(undefined);
     setView(next);
     setClosed(false);
     setPageKey((n) => n + 1);
@@ -179,6 +189,27 @@ export default function LivingBook({
     navigate("words");
     setCapture({ draft, voice });
     setJournalEditing(true);
+  }
+  function openPage(id: string) {
+    navigate("words");
+    setReading(id);
+  }
+  function openExercise(id: string) {
+    navigate("tools");
+    setExercise(id);
+  }
+  function openInvite() {
+    setOffered(undefined);
+    setModal("connections");
+  }
+  function onNudge(action: NudgeAction) {
+    if (action.kind === "journal") quickEntry();
+    else if (action.kind === "exercise") openExercise(action.id);
+    else if (action.kind === "reflect") start();
+    else {
+      navigate("do");
+      setGameOffer(action.game);
+    }
   }
   async function commit(
     update: (b: Book) => Book,
@@ -219,7 +250,7 @@ export default function LivingBook({
     if (!v) return;
     void commit(
       (b) => pauseVisit(updateDraft(b, v.id, draft)),
-      () => navigate("activities"),
+      () => navigate("do"),
       "Progress saved.",
     );
   }
@@ -231,16 +262,10 @@ export default function LivingBook({
       "This visit is complete.",
     );
   }
-  function openPlay() {
-    setShared(true);
-    navigate("play");
-    window.dispatchEvent(new Event("relish:locked"));
-  }
-  function leaveShared() {
-    if (sample) {
-      setShared(false);
-      navigate("activities");
-    } else vault.lock();
+  // Leaving a game never locks the book; the round stays saved to resume.
+  function endGame() {
+    navigate("do");
+    if (activeGame) setNotice("Your round is saved. Pick it up from Do something.");
   }
   function gameAction(action: GameAction) {
     const gameId = l.game?.id;
@@ -285,9 +310,113 @@ export default function LivingBook({
   // Journal navigation queues behind autosave; guided visits still use their pause action.
   const headerBusy =
     working || !!sessionOpen || (!journalEditing && vault.busy);
-  const chapterIndex = chapters.findIndex((c) => c.id === view);
   const activeGame = l.game && l.game.stage !== "finished" ? l.game : undefined;
-  const sharedView = shared || view === "play" || view === "family";
+  // A game in progress gets the whole screen: no top bar, just End game.
+  const sharedView = view === "play";
+  const place = placeOf[view];
+  // Places draw their own big heading; sub-screens keep the small running head.
+  const placeScreen = view === place && !closed;
+  const canInvite = !sample && online;
+  const roster: Player[] = [
+    { id: "owner", name: book.owner, audience: audienceOf(book) },
+    ...(family || []).map((p) => ({ id: `book:${p.id}`, name: p.name })),
+    ...book.people.filter(isFamily).map((p) => ({ id: p.id, name: p.name })),
+  ]
+    .filter(
+      (p, i, all) =>
+        all.findIndex(
+          (q) => q.name.trim().toLowerCase() === p.name.trim().toLowerCase(),
+        ) === i,
+    )
+    .slice(0, 12);
+  const familyNames = [
+    ...(family || []).map((p) => p.name),
+    ...book.people.filter(isChild).map((p) => p.name),
+  ].filter((n, i, all) => all.indexOf(n) === i);
+  // Account books open directly; without them, family members noted in this
+  // book link to what you've written about them.
+  const homePeople: FamilyPerson[] = family?.length
+    ? family
+    : book.people.filter(isFamily).map((p) => ({
+        id: p.id,
+        name: p.name,
+        note: `${p.role} · notes in your book`,
+        onOpen: () => {
+          navigate("book");
+          setBookWho(p.id);
+        },
+      }));
+  const help =
+    view === "play"
+      ? {
+          title: "Play one round",
+          text: "Each player takes a turn or passes. Reveal together, then finish. Keeping a page needs everyone’s approval and is always optional. End game any time; the round is saved.",
+        }
+      : place === "home"
+        ? {
+            title: "Start here",
+            text: "Try today’s suggestion, ask for another, or pick by how much time you have. What you keep goes into Your book.",
+          }
+        : place === "do"
+          ? view === "session" || view === "bookmark"
+            ? {
+                title: v?.status === "complete" ? "Session complete" : "Guided reflection",
+                text:
+                  v?.status === "complete"
+                    ? plans[v.kind].next
+                    : plans[v?.kind || nextKind(book)].end,
+              }
+            : {
+                title: "Pick something that fits",
+                text: "Use the chips to filter by time or mood. Each card has a clear place to stop. Exercises are saved only when you keep the page; day-by-day checklists save each mark and wait for you.",
+              }
+          : place === "book"
+            ? {
+                title: "Your book",
+                text: "What you’ve learned, what’s still going, and every page you’ve kept. Tap a person to see only their pages. Drafts save as you write, even if you switch places or lock Relish.",
+              }
+            : {
+                title: "Your family",
+                text: "Open your children’s books, invite a partner, and see what’s been shared. Nothing private leaves a book unless you send it. Viewing the album never locks your book.",
+              };
+  const menuItems: MenuItem[] = [
+    {
+      label: "Settings",
+      onSelect: () => void headerAction(() => setModal("settings")),
+    },
+    "sound",
+    { label: "Help", onSelect: () => setModal("guide") },
+    ...(onAccount
+      ? [
+          {
+            label:
+              book.profile?.kind === "child" && !sample
+                ? "Parent account"
+                : accountLabel,
+            onSelect: () => void headerAction(onAccount),
+          },
+        ]
+      : []),
+    ...(!sample && accountLabel !== "Family library"
+      ? [
+          {
+            label: "Books on this device",
+            onSelect: () => void headerAction(vault.shelf),
+          },
+        ]
+      : []),
+    sample
+      ? {
+          label: "Create my private book",
+          divider: true,
+          onSelect: () => void headerAction(() => setModal("create")),
+        }
+      : {
+          label: "Lock Relish",
+          divider: true,
+          onSelect: () => void headerAction(vault.lock),
+        },
+  ];
   useEffect(() => {
     onInteraction?.(privateEditorOpen || sharedView || modal !== null);
   }, [privateEditorOpen, sharedView, modal, onInteraction]);
@@ -304,9 +433,15 @@ export default function LivingBook({
     ? sharedView
       ? "Our Family pages"
       : personalTitle
-    : view === "activities"
-      ? "Activities"
-      : view === "tools"
+    : view === "home"
+      ? "Home"
+      : view === "do"
+        ? "Do something"
+        : view === "book"
+          ? "Your book"
+          : view === "family"
+            ? "Family album"
+            : view === "tools"
         ? "Exercises"
         : view === "manual"
         ? "Your living manual"
@@ -320,10 +455,9 @@ export default function LivingBook({
                 ? "Guided activities"
                 : sessionOpen
                   ? "Guided reflection"
-                  : chapters.find((c) => c.id === view)?.label || "Your book";
-  let right: ReactNode = null,
-    left: ReactNode;
-  left = (
+                  : "Your book";
+  let right: ReactNode = null;
+  const left = (
     <>
       <p className="lb-kicker">Guided reflection</p>
       <h2>{theme?.title || "Choose a topic"}</h2>
@@ -395,7 +529,7 @@ export default function LivingBook({
             <button
               className="lb-text"
               disabled={busy}
-              onClick={() => navigate("activities")}
+              onClick={() => navigate("do")}
             >
               Choose another activity
             </button>
@@ -475,271 +609,10 @@ export default function LivingBook({
         </>
       );
     }
-  } else if (view === "people") {
-    left = (
-      <>
-        <p className="lb-kicker">People</p>
-        <h2>Notes about people</h2>
-        <p>
-          Keep your notes about people here. These notes do not create accounts or grant access to anyone’s book.
-        </p>
-      </>
-    );
-    right = (
-      <>
-        <p className="lb-kicker">The people in your life</p>
-        <h2>People in your book</h2>
-        <button className="lb-text" onClick={() => setModal("person")}>
-          <Plus size={16} /> Add someone
-        </button>
-        <div className="lb-people">
-          {book.people.map((p) => (
-            <article key={p.id}>
-              <span className="lb-kicker">{p.role}</span>
-              <h3>{p.name}</h3>
-              <p>
-                {p.note || "No notes added yet."}
-              </p>
-              {p.lessons.length > 0 && (
-                <ul>
-                  {p.lessons.map((lesson, i) => (
-                    <li key={i}>{lesson}</li>
-                  ))}
-                </ul>
-              )}
-              <button className="lb-text" onClick={() => setEditing(p)}>
-                Edit notes <ArrowUpRight size={14} />
-              </button>
-            </article>
-          ))}
-        </div>
-        {book.people.length === 0 && (
-          <p className="lb-fine">
-            Add a person to record notes about them. To create a child’s book, use Family library instead.
-          </p>
-        )}
-      </>
-    );
-  } else if (view === "practice") {
-    const pending = pendingPractice(book);
-    left = (
-      <>
-        <p className="lb-kicker">Practice plans</p>
-        <h2>Try a practice plan</h2>
-        <p>Choose an action to try, then record what happened.</p>
-        <div className="lb-cadence">
-          <p>
-            <span>Write a reflection</span>
-            <small>Describe an experience</small>
-          </p>
-          <p>
-            <span>Make a plan</span>
-            <small>Choose when to try it</small>
-          </p>
-          <p>
-            <span>Review the result</span>
-            <small>After you have tried</small>
-          </p>
-        </div>
-      </>
-    );
-    right = (
-      <>
-        <p className="lb-kicker">Your next plan</p>
-        <h2>{theme?.practice || "Choose a practice plan"}</h2>
-        <p>
-          {theme?.instruction ||
-            "Choose a topic to see a suggested action."}
-        </p>
-        {pending && (
-          <div className="lb-margin">
-            <p>Your opportunity: {pending.text}.</p>
-            <p className="lb-fine">
-              {pending.triedAt
-                ? "You marked this plan as tried. Record the result next."
-                : "This plan has not been marked as tried."}
-            </p>
-          </div>
-        )}
-        <div className="lb-stones" aria-hidden="true">
-          <i />
-          <i />
-          {pending?.triedAt && <i />}
-        </div>
-        <button
-          className="lb-primary"
-          disabled={busy}
-          onClick={() =>
-            start(pending ? "reflect" : theme ? "practice" : "begin")
-          }
-        >
-          {pending
-            ? "Return to this practice"
-            : theme
-              ? "Choose a moment to try"
-              : "Choose a topic"}{" "}
-          <ArrowUpRight size={16} />
-        </button>
-        {l.entries.some((e) => e.kind === "reflection") && (
-          <div className="lb-margin">
-            <p className="lb-kicker">Something learned</p>
-            {l.entries
-              .filter((e) => e.kind === "reflection")
-              .slice(-3)
-              .map((e) => (
-                <p key={e.id}>
-                  {e.text || (e.outcome ? outcomes[e.outcome] : "")}
-                </p>
-              ))}
-          </div>
-        )}
-      </>
-    );
-  } else if (view === "family") {
-    left = (
-      <>
-        <p className="lb-kicker">Family album</p>
-        <h2>Shared entries and game results</h2>
-        <p>
-          View selected journal passages and game results approved by every player.
-        </p>
-        <p className="lb-fine">
-          These shared entries are part of {book.owner}’s book. Account books sync to the parent account; local books stay on this device. Other accounts receive only passages you explicitly send.
-        </p>
-      </>
-    );
-    if (l.game?.stage === "finished")
-      right = (
-        <>
-          <p className="lb-kicker">Progress saved</p>
-          <h2>Session complete</h2>
-          <div className="lb-kept">
-            <BookmarkCheck size={20} />
-            <p>
-              {l.game.savedPageId
-                ? "You finished a round and kept a page everyone approved."
-                : gameText(l.game)
-                  ? "You finished one round together. No shared page was saved."
-                  : "Everyone passed. No shared page was saved."}
-            </p>
-          </div>
-          <p>The game is finished. Close it or choose another activity.</p>
-          <div className="lb-later">
-            <p className="lb-kicker">Next session</p>
-            <p>
-              When you feel like playing again, someone else can start. One
-              round is enough each time.
-            </p>
-          </div>
-          <button
-            className="lb-primary"
-            onClick={() => {
-              setClosed(true);
-              sensory.play("touch");
-            }}
-          >
-            Close the book for now <BookOpen size={16} />
-          </button>
-          <div className="lb-actions">
-            <button
-              className="lb-text"
-              disabled={busy}
-              onClick={() =>
-                void commit(
-                  (b) => changeLiving(b, (x) => ({ ...x, game: undefined })),
-                  () => navigate("family"),
-                )
-              }
-            >
-              Read our Family pages
-            </button>
-            <button
-              className="lb-text"
-              disabled={busy}
-              onClick={() =>
-                void commit(
-                  (b) => changeLiving(b, (x) => ({ ...x, game: undefined })),
-                  () => navigate("play"),
-                )
-              }
-            >
-              Choose another game
-            </button>
-          </div>
-        </>
-      );
-    else
-      right = (
-        <>
-          <p className="lb-kicker">Saved family content</p>
-          <h2>Family album</h2>
-          {activeGame && (
-            <div className="lb-boundary">
-              <strong>Unfinished game</strong>
-              <p>You can continue the same round, at the same turn.</p>
-              <button className="lb-primary" onClick={() => navigate("play")}>
-                Resume our round <ArrowUpRight size={16} />
-              </button>
-            </div>
-          )}
-          {manualCards
-            .filter((c) => c.scope === "family" && c.status === "kept")
-            .map((card) => (
-              <ManualCardView key={card.id} card={card} />
-            ))}
-          {!!book.album?.length && (
-            <div className="lb-entries">
-              {book.album.toReversed().map((p) => (
-                <article key={p.id}>
-                  <p className="lb-kicker">
-                    {shortDate(p.createdAt)} · Chosen by {p.fromName}
-                  </p>
-                  <h3>{p.title}</h3>
-                  <blockquote>{p.text}</blockquote>
-                  <PhotoGallery photos={p.photos || []} access={vault.photos} />
-                  <p className="lb-fine">
-                    A chosen passage from {shortDate(p.sourceDate)}. The
-                    original page stays private.
-                  </p>
-                </article>
-              ))}
-            </div>
-          )}
-          {l.sharedPages.length ? (
-            <div className="lb-entries">
-              {l.sharedPages.toReversed().map((p) => (
-                <article key={p.id}>
-                  <p className="lb-kicker">
-                    {shortDate(p.createdAt)} · Made together
-                  </p>
-                  <h3>{p.title}</h3>
-                  <blockquote>{p.text}</blockquote>
-                  <p className="lb-fine">
-                    {p.players.map((x) => x.name).join(" + ")} · everyone
-                    approved these words
-                  </p>
-                </article>
-              ))}
-            </div>
-          ) : !book.album?.length ? (
-            <div className="lb-empty">
-              <p>No shared entries yet.</p>
-              <p className="lb-fine">
-                A game can be enough on its own. Keeping a page is always
-                optional.
-              </p>
-            </div>
-          ) : null}
-          <button className="lb-text" onClick={() => navigate("play")}>
-            <Users size={16} />{" "}
-            {activeGame ? "Return to our game" : "Play one round together"}
-          </button>
-        </>
-      );
   }
   return (
     <div
-      className={`r-app lb-app ${journalEditing ? "lb-capturing" : ""} ${view === "activities" && !closed ? "lb-activities" : ""}`}
+      className={`r-app lb-app rp-shell ${journalEditing ? "lb-capturing" : ""} rp-at-${view}`}
     >
       {sample && (
         <div className="lb-sample">
@@ -754,151 +627,41 @@ export default function LivingBook({
           </button>
         </div>
       )}
-      <div className="lb-desk">
-        <header className="lb-header">
-          <div className="lb-brand">
-            <span className="lb-wordmark">relish</span>
-            <span className="lb-tagline">
-              The operating manual for relationships
-            </span>
-          </div>
-          <nav className="lb-main-nav" aria-label="Your book">
-            {!sharedView ? (
-              <button
-                disabled={headerBusy}
-                onClick={() => void headerAction(() => navigate("activities"))}
-                aria-current={
-                  view === "activities" && !closed ? "page" : undefined
-                }
-              >
-                <Compass size={16} /> Activities
-              </button>
-            ) : (
-              <button disabled={busy} onClick={() => navigate("family")}>
-                <Bookmark size={16} /> Family pages
-              </button>
-            )}
-            {!sharedView && (
-              <button
-                disabled={headerBusy}
-                onClick={() => void headerAction(() => navigate("words"))}
-                aria-current={view === "words" ? "page" : undefined}
-              >
-                <Feather size={16} /> Your pages
-              </button>
-            )}
-            <button
-              disabled={headerBusy}
-              onClick={() => void headerAction(openPlay)}
-            >
-              <Users size={16} /> Play together
+      {sharedView ? (
+        <header className="rp-topbar rp-topbar-focused">
+          <div className="rp-topbar-inner">
+            <span className="rp-wordmark">relish</span>
+            <button className="rp-end" disabled={busy} onClick={endGame}>
+              End game
             </button>
-            <button onClick={() => setModal("guide")}>
-              <CircleHelp size={16} /> Help
-            </button>
-          </nav>
-          <div className="lb-tools" role="group" aria-label="Edition tools">
-            {!sharedView && onAccount && (
-              <button
-                className={
-                  sample
-                    ? "lb-account-trigger lb-account-sample"
-                    : "lb-account-trigger"
-                }
-                disabled={headerBusy}
-                onClick={() => void headerAction(onAccount)}
-              >
-                <Cloud size={16} />
-                {book.profile?.kind === "child" && !sample
-                  ? "Parent account"
-                  : accountLabel}
-              </button>
-            )}
-            {!sample && !sharedView && (
-              <button
-                disabled={headerBusy}
-                onClick={() => void headerAction(vault.shelf)}
-                aria-label="Editions"
-                title="Editions"
-              >
-                <BookOpen size={16} />{" "}
-                <span className="lb-tool-label">Editions</span>
-              </button>
-            )}
-            {!sample && !sharedView && online && (
-              <button
-                disabled={headerBusy}
-                onClick={() =>
-                  void headerAction(() => {
-                    setOffered(undefined);
-                    setModal("connections");
-                  })
-                }
-                aria-label="Connect editions"
-                title="Connect editions"
-              >
-                <Users size={16} />{" "}
-                <span className="lb-connection-label">Connect editions</span>
-              </button>
-            )}
-            <SoundControl />
-            {!sharedView && (
-              <button
-                disabled={headerBusy}
-                onClick={() => void headerAction(() => setModal("settings"))}
-                aria-label="Privacy and settings"
-              >
-                <Settings2 size={17} />
-              </button>
-            )}
-            {sharedView ? (
-              <button disabled={busy} onClick={leaveShared}>
-                <Lock size={15} />{" "}
-                {sample ? "My sample edition" : "Unlock my edition"}
-              </button>
-            ) : (
-              !sample && (
-                <button
-                  disabled={headerBusy}
-                  onClick={() => void headerAction(vault.lock)}
-                  aria-label="Lock"
-                  title="Lock"
-                >
-                  <Lock size={15} /> <span className="lb-tool-label">Lock</span>
-                </button>
-              )
-            )}
           </div>
         </header>
-        <div className="lb-identity">
-          <h1 ref={heading} tabIndex={-1}>
-            {headingText}
-          </h1>
-          <span>
-            {sharedView ? <Users size={14} /> : <Lock size={14} />}{" "}
-            {sharedView
-              ? "Only shared pages"
-              : sample
-                ? "Fictional sample"
-                : book.profile?.kind === "child"
-                  ? `${ageLabels[book.profile.ageBand]} · private book`
-                  : "Your private pages"}
-          </span>
-        </div>
-        {!sample && !sharedView && onAccount && syncStatus && (
-          <div className="lb-sync-status">
-            <span>{syncStatus}</span>
-            <button
-              disabled={headerBusy}
-              onClick={() => void headerAction(onAccount)}
-            >
-              <Cloud size={14} />{" "}
-              {book.profile?.kind === "child"
-                ? "Parent account"
-                : accountLabel === "Sign in"
-                  ? "Sign in"
-                  : "Family library"}
-            </button>
+      ) : (
+        <TopBar
+          current={place}
+          initial={book.owner}
+          disabled={headerBusy}
+          status={!sample && onAccount ? syncStatus : undefined}
+          onPlace={(next) => void headerAction(() => navigate(next))}
+          items={menuItems}
+        />
+      )}
+      <div className="lb-desk">
+        {!placeScreen && (
+          <div className="lb-identity">
+            <h1 ref={heading} tabIndex={-1}>
+              {headingText}
+            </h1>
+            <span>
+              {sharedView ? <Users size={14} /> : <Lock size={14} />}{" "}
+              {sharedView
+                ? "Only shared pages"
+                : sample
+                  ? "Fictional sample"
+                  : book.profile?.kind === "child"
+                    ? `${ageLabels[book.profile.ageBand]} · private book`
+                    : "Your private pages"}
+            </span>
           </div>
         )}
         {error || vault.error ? (
@@ -929,29 +692,49 @@ export default function LivingBook({
               </button>
             )}
           </div>
-        ) : view === "activities" && !sharedView ? (
-          <Activities
+        ) : view === "home" && !sharedView ? (
+          <Home
             book={book}
+            names={familyNames}
+            people={homePeople}
             busy={busy}
-            onWrite={quickEntry}
-            onGuided={() => start()}
-            onPlay={openPlay}
-            onPages={() => navigate("words")}
-            onManual={() => navigate("manual")}
-            onTools={() => navigate("tools")}
-            pendingInsights={
-              manualCards.filter((c) => c.status === "suggested").length
-            }
+            headingRef={heading}
+            onNudge={onNudge}
+            onFilter={(f) => {
+              navigate("do");
+              setDoFilter(f);
+            }}
+            onInvite={canInvite ? () => openInvite() : undefined}
+            onFamily={() => navigate("family")}
+            onBook={() => navigate("book")}
+            onPage={openPage}
+          />
+        ) : view === "do" && !sharedView ? (
+          <DoSomething
+            key={pageKey}
+            book={book}
+            filter={doFilter}
+            busy={busy}
+            roster={roster}
+            headingRef={heading}
+            initialGame={gameOffer}
+            onFilter={setDoFilter}
+            onOpen={onNudge}
+            onResumeGame={() => navigate("play")}
+            onStartGame={createGame}
           />
         ) : view === "tools" && !sharedView ? (
           <Tools
+            key={pageKey}
             book={book}
             busy={busy}
             onCommit={(update, after, message) =>
               void commit(update, after, message)
             }
-            onPages={() => navigate("words")}
-            onActivities={() => navigate("activities")}
+            onPages={() => navigate("book")}
+            onActivities={() => navigate("do")}
+            initialId={exercise}
+            onBack={exercise ? () => navigate("do") : undefined}
           />
         ) : view === "manual" && !sharedView ? (
           <Manual
@@ -959,7 +742,59 @@ export default function LivingBook({
             save={vault.save}
             guide={guide}
             sample={sample}
-            onPages={() => navigate("words")}
+            onPages={() => navigate("book")}
+          />
+        ) : view === "family" && !sharedView ? (
+          <Family
+            book={book}
+            people={homePeople}
+            busy={busy}
+            headingRef={heading}
+            photos={vault.photos}
+            canShare={!sample && online}
+            onInvite={canInvite ? openInvite : undefined}
+            onAddChild={!sample && online ? onAddChild : undefined}
+            onShare={() => navigate("book")}
+            onPlay={() => {
+              navigate("do");
+              setDoFilter("kids");
+            }}
+            onResumeGame={() => navigate("play")}
+            onCloseFinished={(again) =>
+              void commit(
+                (b) => changeLiving(b, (x) => ({ ...x, game: undefined })),
+                again
+                  ? () => {
+                      navigate("do");
+                      setDoFilter("kids");
+                    }
+                  : undefined,
+              )
+            }
+          />
+        ) : view === "book" && !sharedView ? (
+          <YourBook
+            key={pageKey}
+            book={book}
+            busy={busy}
+            headingRef={heading}
+            initialWho={bookWho}
+            onAddPage={() => navigate("do")}
+            onOpenPage={openPage}
+            onReview={(card, status) =>
+              void commit(
+                (b) => reviewManualIdea(b, card.id, status),
+                undefined,
+                status === "kept" ? "Kept in what you’ve learned." : "",
+              )
+            }
+            onManual={() => navigate("manual")}
+            onDraft={(draft) => quickEntry(false, draft)}
+            onPractice={() => start("reflect")}
+            onResumeVisit={() => start()}
+            onExercise={openExercise}
+            onAddPerson={() => setModal("person")}
+            onEditPerson={setEditing}
           />
         ) : view === "words" && !sharedView ? (
           <Journal
@@ -967,19 +802,10 @@ export default function LivingBook({
             navigation={journalNavigation}
             initialDraft={capture?.draft}
             initialVoice={capture?.voice}
+            initialReading={reading}
             book={book}
             photos={vault.photos}
-            onNotice={() => start("notice")}
-            onChapter={navigate}
-            onManual={() => navigate("manual")}
-            pendingInsights={
-              manualCards.filter((c) => c.status === "suggested").length
-            }
-            onAlbum={() => {
-              setShared(true);
-              navigate("family");
-              window.dispatchEvent(new Event("relish:locked"));
-            }}
+            onBack={() => navigate("book")}
             onOffer={
               !sample && online
                 ? (passage) => {
@@ -991,32 +817,33 @@ export default function LivingBook({
             save={vault.save}
             sample={sample}
             onEditingChange={setJournalEditing}
-            onActivities={() => navigate("activities")}
-            onDone={() => {
-              navigate("activities");
-              setClosed(true);
-            }}
+            onActivities={() => navigate("do")}
+            onDone={() => navigate("home")}
           />
-        ) : view === "play" ? (
+        ) : view === "play" && !activeGame ? (
+          <main className="rp-place">
+            <p className="rp-lede">This round is over.</p>
+            <button className="rp-btn rp-btn-olive" onClick={() => navigate("do")}>
+              Choose something to do
+            </button>
+          </main>
+        ) : view === "play" && activeGame ? (
           <div className="lb-play-layout">
             <aside>
               <p className="lb-kicker">Play together</p>
               <h2>Play together</h2>
-              <p>
-                Select players, choose a game, and play one round on this device.
-              </p>
+              <p>Play one round on this device. Pass it around.</p>
               <div className="lb-landscape-inset" />
               <p className="lb-fine">
-                Private pages are put away. Anyone may pass. Returning to your
-                private edition requires unlocking it.
+                Private pages stay out of the game. Anyone may pass. End the
+                game any time; the round is saved.
               </p>
             </aside>
-            <main className="lb-play-main" key={l.game?.id || "setup"}>
+            <main className="lb-play-main" key={activeGame.id}>
               <GroupPlay
                 book={book}
                 game={activeGame}
                 busy={busy}
-                onCreate={createGame}
                 onAction={gameAction}
                 onKeep={() =>
                   void commit(
@@ -1025,11 +852,12 @@ export default function LivingBook({
                     "Everyone approved. A shared page is kept.",
                   )
                 }
-                onPause={() => navigate("family")}
+                onPause={endGame}
                 onFinish={finishGame}
                 onCancel={() =>
-                  void commit((b) =>
-                    changeLiving(b, (x) => ({ ...x, game: undefined })),
+                  void commit(
+                    (b) => changeLiving(b, (x) => ({ ...x, game: undefined })),
+                    () => navigate("do"),
                   )
                 }
               />
@@ -1037,20 +865,6 @@ export default function LivingBook({
           </div>
         ) : (
           <>
-            {!sharedView && view !== "bookmark" && view !== "session" && (
-              <nav className="lb-chapters" aria-label="Chapters">
-                {chapters.map((c, i) => (
-                  <button
-                    key={c.id}
-                    aria-current={view === c.id ? "page" : undefined}
-                    onClick={() => navigate(c.id)}
-                  >
-                    <span>0{i + 1}</span>
-                    {c.label}
-                  </button>
-                ))}
-              </nav>
-            )}
             <main
               className={`lb-book ${sessionOpen ? "lb-session-book" : ""}`}
               key={pageKey}
@@ -1080,28 +894,6 @@ export default function LivingBook({
                 <span className="lb-folio">02</span>
               </article>
             </main>
-            {chapterIndex >= 0 && !sharedView && (
-              <footer className="lb-book-footer">
-                <span>Your progress is saved after each step.</span>
-                <div>
-                  <button
-                    aria-label="Previous chapter"
-                    disabled={chapterIndex === 0}
-                    onClick={() => navigate(chapters[chapterIndex - 1].id)}
-                  >
-                    <ArrowLeft size={16} />
-                  </button>
-                  <span>0{chapterIndex + 1} / 03</span>
-                  <button
-                    aria-label="Next chapter"
-                    disabled={chapterIndex === 2}
-                    onClick={() => navigate(chapters[chapterIndex + 1].id)}
-                  >
-                    <ArrowRight size={16} />
-                  </button>
-                </div>
-              </footer>
-            )}
           </>
         )}
         {!sharedView && !privateEditorOpen && view === "bookmark" && (
@@ -1210,7 +1002,7 @@ export default function LivingBook({
                 setModal("connections");
               }}
             >
-              <Users size={16} /> Connect with family editions
+              <Users size={16} /> Partner sharing and your online account
             </button>
           )}
           <p className="lb-fine">
@@ -1323,53 +1115,30 @@ export default function LivingBook({
       )}
       {modal === "guide" && (
         <Dialog title="Help" onClose={() => setModal(null)}>
-          <p className="lb-kicker">How to use this screen</p>
-          <h2>
-            {view === "activities"
-              ? "Choose an activity"
-              : view === "tools"
-                ? "Use an exercise"
-              : view === "words"
-                ? "Write and save an entry"
-                : sharedView
-                  ? "Complete one round"
-                  : v?.status === "complete"
-                    ? "Session complete"
-                    : "Complete the current step"}
-          </h2>
-          <p>
-            {view === "activities"
-              ? "Write a personal journal entry for open space, choose a guided reflection for prompts, or play a game together. Each activity has its own stopping point. Unfinished pages and reflections will wait for you here."
-              : view === "tools"
-                ? "Choose an exercise, then follow its steps. Sorts and fill-in-the-blank exercises are saved only when you keep the page. Day-by-day checklists save each mark and wait for you between visits."
-              : view === "words"
-                ? "Write anything you like. Your draft saves as you go, including when you switch activities or lock your book. Select Save entry when you’re finished. You can return and edit either one."
-                : sharedView
-                  ? "Each player gets a turn or may pass. Reveal together, then finish for now. Keeping a page requires everyone’s approval; it is always optional."
-                  : v?.status === "complete"
-                    ? plans[v.kind].next
-                    : plans[v?.kind || nextKind(book)].end}
-          </p>
+          <p className="lb-kicker">How Relish is laid out</p>
+          <h2>{help.title}</h2>
+          <p>{help.text}</p>
+          <div className="lb-boundary">
+            <strong>Four places</strong>
+            <p>
+              Home suggests one small thing a day. Do something has every
+              activity, filtered by time or mood. Your book holds what you’ve
+              learned and every page you’ve kept. Family is your people and
+              what you’ve chosen to share.
+            </p>
+          </div>
           <div className="lb-boundary">
             <strong>
-              {view === "words"
-                ? "Saving and sharing"
-                : online
-                  ? "Optional AI assistance"
-                  : "Age-based prompts"}
+              {online ? "Privacy and optional AI" : "Age-based prompts"}
             </strong>
             <p>
-              {view === "words"
-                ? "Your pages stay private. Only passages you choose enter the Family album or are offered to connected editions. Voice writing sends only a recording you review. Your encrypted backup includes your pages and photos."
-                : !online
-                  ? "These are written prompts chosen for your age, not an AI conversation. Your words stay here. You can pause, pass, or ask a trusted grown-up for help."
-                  : sharedView
-                    ? "Shared play works without AI. Private writing is never included in a game."
-                    : "While writing a moment, you can invite AI to help consider another perspective. Review the exact excerpt first. You choose whether to keep its response."}
+              {!online
+                ? "These are written prompts chosen for your age, not an AI conversation. Your words stay here. You can pause, pass, or ask a trusted grown-up for help."
+                : "Your pages stay private. Only passages you choose go to the Family album or a partner’s book. Games never include private writing. AI help is optional, and you review the exact excerpt first."}
             </p>
           </div>
           <button className="lb-primary" onClick={() => setModal(null)}>
-            Back to activity
+            Close help
           </button>
         </Dialog>
       )}

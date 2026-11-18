@@ -1,4 +1,5 @@
 import type { Audience } from "./profiles";
+import type { Tag } from "./catalog";
 type Round = { prompt: string; choices: string[] };
 const content: Record<
   Exclude<Audience, "adult">,
@@ -237,3 +238,34 @@ export function samePagePrompts(audience: Audience): Round[] {
   if (audience === "adult") return sameAdult;
   return audience === "under-6" || audience === "6-8" ? sameYoung : sameOlder;
 }
+
+// The pass-and-play games as they appear in Do something.
+export const games: {
+  kind: "joy" | "story" | "match";
+  title: string;
+  blurb: string;
+  short: string;
+  tags: Tag[];
+}[] = [
+  {
+    kind: "match",
+    title: "Same page?",
+    blurb: "Everyone answers the same question in private. See where you agree.",
+    short: "3–5 min",
+    tags: ["kids", "5"],
+  },
+  {
+    kind: "joy",
+    title: "Guess my small joy",
+    blurb: "One person picks; everyone else guesses. Reveal together.",
+    short: "5 min",
+    tags: ["kids", "5"],
+  },
+  {
+    kind: "story",
+    title: "One story, many voices",
+    blurb: "Build an unlikely adventure. Everyone shapes a turn.",
+    short: "5–10 min",
+    tags: ["kids"],
+  },
+];

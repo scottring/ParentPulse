@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Relish — Do something</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#f6f4ed}
+a{color:#43513a}a:hover{color:#30382c}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #f6f4ed; color: #30382c; font-family: 'DM Sans', sans-serif;">
+
+  <!-- TOP BAR (same as Home) -->
+  <header style="border-bottom: 1px solid #dcded2; background: #f6f4ed;">
+    <div style="max-width: 1120px; margin: 0 auto; padding: 14px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px;">
+      <a href="Main.dc.html" style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 30px; font-weight: 700; color: #30382c; text-decoration: none; letter-spacing: -0.5px;">relish</a>
+      <nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 auto;">
+        <a href="Main.dc.html" style="padding: 10px 16px; border-radius: 999px; color: #30382c; font-size: 15px; font-weight: 500; text-decoration: none;">Home</a>
+        <a href="#" aria-current="page" style="padding: 10px 16px; border-radius: 999px; background: #43513a; color: #f6f4ed; font-size: 15px; font-weight: 600; text-decoration: none;">Do something</a>
+        <a href="YourBook.dc.html" style="padding: 10px 16px; border-radius: 999px; color: #30382c; font-size: 15px; font-weight: 500; text-decoration: none;">Your book</a>
+        <a href="Family.dc.html" style="padding: 10px 16px; border-radius: 999px; color: #30382c; font-size: 15px; font-weight: 500; text-decoration: none;">Family</a>
+      </nav>
+      <button type="button" aria-label="Menu: settings, sound, lock, help" style="width: 44px; height: 44px; border-radius: 999px; border: 2px solid #43513a; background: #f2d58a; color: #30382c; font-size: 17px; font-weight: 700; cursor: pointer;">S</button>
+    </div>
+  </header>
+
+  <main style="max-width: 1120px; margin: 0 auto; padding: 40px 24px 64px; display: flex; flex-direction: column; gap: 28px;">
+
+    <section style="display: flex; flex-direction: column; gap: 18px;">
+      <h1 style="margin: 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 56px; line-height: 1.02; font-weight: 600;">What feels right?</h1>
+      <div role="group" aria-label="Filter by time or mood" style="display: flex; flex-wrap: wrap; gap: 10px;">
+        <sc-for list="{{chips}}" as="chip" hint-placeholder-count="5">
+          <button type="button" onClick="{{chip.pick}}" aria-pressed="{{chip.on}}" style="{{chip.style}}">{{chip.label}}</button>
+        </sc-for>
+      </div>
+      <p style="margin: 0; font-size: 16px; color: #5f6458;">{{countLine}}</p>
+    </section>
+
+    <section aria-label="Things to do" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px;">
+      <sc-for list="{{shown}}" as="item" hint-placeholder-count="8">
+        <button type="button" onClick="{{item.open}}" style="{{item.style}}">
+          <span style="display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%;">
+            <span style="padding: 4px 10px; border-radius: 999px; background: rgba(255,253,247,0.7); font-size: 12px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase;">{{item.type}}</span>
+            <span style="font-size: 13px; font-weight: 600;">{{item.time}}</span>
+          </span>
+          <span style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 27px; font-weight: 700; line-height: 1.05; text-align: left;">{{item.title}}</span>
+          <span style="font-size: 15px; line-height: 1.4; text-align: left;">{{item.desc}}</span>
+        </button>
+      </sc-for>
+    </section>
+
+  </main>
+
+  <!-- GAME SHEET: game first, family already filled in -->
+  <sc-if value="{{sheetOpen}}" hint-placeholder-val="{{false}}">
+    <div style="position: fixed; inset: 0; background: rgba(48,56,44,0.35); display: flex; align-items: flex-end; justify-content: center; z-index: 10;">
+      <div role="dialog" aria-label="Start a game" style="width: 100%; max-width: 640px; background: #fffdf7; border-radius: 28px 28px 0 0; padding: 28px 28px 32px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #5f6458;">Game · {{game.time}}</span>
+            <span style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 36px; font-weight: 700; line-height: 1.05;">{{game.title}}</span>
+            <span style="font-size: 16px;">{{game.desc}}</span>
+          </div>
+          <button type="button" onClick="{{closeSheet}}" aria-label="Close" style="flex: none; width: 44px; height: 44px; border-radius: 999px; border: 1px solid #dcded2; background: #f6f4ed; font-size: 20px; cursor: pointer;">×</button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-size: 15px; font-weight: 600;">Who&#39;s playing? Tap to leave someone out.</span>
+          <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+            <sc-for list="{{players}}" as="p" hint-placeholder-count="3">
+              <button type="button" onClick="{{p.toggle}}" aria-pressed="{{p.on}}" style="{{p.style}}">{{p.label}}</button>
+            </sc-for>
+            <button type="button" style="padding: 12px 18px; border-radius: 999px; border: 2px dashed #43513a; background: transparent; color: #43513a; font-size: 15px; font-weight: 600; cursor: pointer;">+ Someone visiting</button>
+          </div>
+          <span style="font-size: 14px; color: #5f6458;">Prompts fit the youngest player. Anyone can pass.</span>
+        </div>
+        <a href="#" style="padding: 16px 22px; border-radius: 999px; background: #43513a; color: #f6f4ed; font-weight: 700; font-size: 17px; text-align: center; text-decoration: none;">Start — pass the device around</a>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1400}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { filter: 'all', game: null, out: {} };
+  }
+  renderVals() {
+    var self = this;
+    var colors = { Write: '#f2d58a', Exercise: '#cfdcc4', Game: '#e9b9a0', Think: '#c9d9e3', Habit: '#e4d6ea' };
+    var tilts = ['-1deg', '0.7deg', '-0.4deg', '1deg', '-0.8deg', '0.5deg'];
+    var items = [
+      { type: 'Write', time: '1 min', title: 'Jot something down', desc: 'Type it, say it out loud, or snap a photo.', tags: ['1'] },
+      { type: 'Exercise', time: '2 min', title: 'Notice the unseen work', desc: 'Name one thing someone does that nobody thanks them for.', tags: ['1'] },
+      { type: 'Game', time: '3–5 min', title: 'Same page?', desc: 'Everyone answers the same question in private. See where you agree.', tags: ['kids', '5'] },
+      { type: 'Think', time: '5 min', title: 'Think it through', desc: 'Pick what’s on your mind, write a little, leave with one small plan.', tags: ['hard', '5'] },
+      { type: 'Exercise', time: '3 min', title: 'What helps when I’m upset', desc: 'Sort what helps and what doesn’t. A page for your own manual.', tags: ['5'] },
+      { type: 'Game', time: '5 min', title: 'Guess my small joy', desc: 'One person picks; everyone else guesses. Reveal together.', tags: ['kids', '5'] },
+      { type: 'Exercise', time: '4 min', title: 'Put a thought on trial', desc: 'Weigh the evidence for a harsh thought, then write a fairer one.', tags: ['hard', '5'] },
+      { type: 'Habit', time: '1 min a day', title: 'Ten real hellos', desc: 'Ten days of greetings that last long enough to land.', tags: ['1'] },
+      { type: 'Exercise', time: '3 min', title: 'Plan a repair', desc: 'After a rough moment, plan what to say so the next talk goes better.', tags: ['hard', '5'] },
+      { type: 'Game', time: '5–10 min', title: 'One story, many voices', desc: 'Build an unlikely adventure. Everyone shapes a turn.', tags: ['kids'] },
+      { type: 'Exercise', time: '4 min', title: 'What’s under the behavior?', desc: 'Name what happened, sort the likely reasons, pick one guess to test.', tags: ['hard', '5'] },
+      { type: 'Exercise', time: '4 min', title: 'Drains and fills', desc: 'Sort your week by how each part leaves you.', tags: ['5'] },
+      { type: 'Exercise', time: '3 min', title: 'Rewrite the opener', desc: 'Turn a hard thing to say into a sentence that’s easier to hear.', tags: ['hard', '5'] },
+      { type: 'Habit', time: '1 min a day', title: 'A week of specific thanks', desc: 'One specific thank-you a day for seven days.', tags: ['1'] },
+      { type: 'Exercise', time: '5 min', title: 'Who carries what', desc: 'Sort household jobs by who carries them, including the noticing.', tags: ['5'] },
+      { type: 'Habit', time: '1–2 weeks', title: 'Repair bingo', desc: 'Mark each repair move you try. Find out which ones land.', tags: ['hard'] }
+    ];
+    var chipDefs = [
+      { id: 'all', label: 'Everything' },
+      { id: '1', label: '1 minute' },
+      { id: '5', label: '5 minutes' },
+      { id: 'kids', label: 'With the kids' },
+      { id: 'hard', label: 'Something’s hard' }
+    ];
+    var f = this.state.filter;
+    var chipBase = 'padding: 12px 20px; border-radius: 999px; font-size: 16px; font-weight: 600; cursor: pointer; ';
+    var chips = chipDefs.map(function (c) {
+      var on = c.id === f;
+      return {
+        label: c.label, on: on,
+        style: chipBase + (on ? 'background: #43513a; color: #f6f4ed; border: 2px solid #43513a;' : 'background: #fffdf7; color: #30382c; border: 2px solid #dcded2;'),
+        pick: function () { self.setState({ filter: c.id }); }
+      };
+    });
+    var shown = items.filter(function (it) { return f === 'all' || it.tags.indexOf(f) >= 0; }).map(function (it, i) {
+      return Object.assign({}, it, {
+        style: 'background: ' + colors[it.type] + '; border: none; border-radius: 24px; padding: 22px; min-height: 190px; display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start; gap: 12px; color: #30382c; cursor: pointer; font-family: inherit; transform: rotate(' + tilts[i % tilts.length] + ');',
+        open: function () { if (it.type === 'Game') self.setState({ game: it, out: {} }); }
+      });
+    });
+    var g = this.state.game;
+    var out = this.state.out;
+    var pBase = 'padding: 12px 18px; border-radius: 999px; font-size: 16px; font-weight: 600; cursor: pointer; ';
+    var players = ['Ella', 'Kaleb', 'Scott'].map(function (n) {
+      var on = !out[n];
+      return {
+        label: (on ? '✓ ' : '') + n, on: on,
+        style: pBase + (on ? 'background: #43513a; color: #f6f4ed; border: 2px solid #43513a;' : 'background: #fffdf7; color: #5f6458; border: 2px solid #dcded2;'),
+        toggle: function () { var o = Object.assign({}, self.state.out); o[n] = !o[n]; self.setState({ out: o }); }
+      };
+    });
+    return {
+      chips: chips,
+      shown: shown,
+      countLine: f === 'all' ? 'Everything in one place. Tap a game to see how starting one works.' : shown.length + ' things that fit.',
+      sheetOpen: !!g,
+      game: g || { title: '', desc: '', time: '' },
+      players: players,
+      closeSheet: function () { self.setState({ game: null }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

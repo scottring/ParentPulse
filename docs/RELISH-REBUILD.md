@@ -18,6 +18,8 @@ npm audit --omit=dev
 
 ## A living book with a stopping point
 
+> Navigation and the shared-play lock described here are superseded by **Four places (November 18, 2026)** at the end of this file.
+
 Each edition opens with Activities: personal journal, guided reflection, or play together. A personal bookmark tracks the ongoing chapter. A short visit has an explicit purpose, estimated duration and finishing condition: choose a direction and notice a moment, plan a small practice, or return and keep an honest reflection. A visit completes only after the encrypted write succeeds. Private drafts and paused sessions can be resumed. Three chapters collect personal words, relationships and practices.
 
 Two family games support 2–12 selected players, including guests. Players choose who starts and may pass. The handoff screen hides the preceding answer. Everyone must approve before a shared game page is kept; finishing without saving is valid. Private chapters and online sessions are put away during play. Returning to a private edition requires unlocking it. Game approvals are in-person choices, not authenticated signatures. Games are on one device, not remote multiplayer.
@@ -134,6 +136,8 @@ Verified in Device Hub’s iPhone Duo simulator: outer quick entry, typed fictio
 
 ## Clear activities at the opening (November 1, 2026)
 
+> Superseded: books now open on Home, and Activities merged into Do something. See **Four places** below.
+
 Every unlocked edition opens to Activities: personal journal, guided reflection, or play together. Each choice names an approximate duration and a stopping point. Journal and microphone controls open the existing editor directly; guided reflection begins the next age-appropriate step or resumes the unfinished visit. Games resume an existing round instead of replacing it. Reading pages and reviewing available manual suggestions remain secondary choices.
 
 Save for later and Pause here return to Activities only after persistence succeeds. The most recently updated journal draft has a direct resume action; up to three unfinished pages appear below, with access to the full list. Kept pages and completed guided visits offer Choose another activity alongside the existing finish/close action. View changes return to the beginning of the screen; resizing never remounts the editor. Shared play still removes private activities and requires unlocking before returning to an actual private edition.
@@ -164,6 +168,8 @@ Operational email repair (2026-11-01): Firebase project `parentpulse-d68ba` used
 
 
 ### Journal navigation while writing
+
+> The header is now the four-place top bar plus a menu; the save-before-leaving behavior below is unchanged. See **Four places** below.
 
 Opening a journal no longer disables the header. The compact layout keeps the activity navigation visible and does not hide controls during saves. Activities, Your pages, Play together, Sign in, Editions, connections, settings, and Lock first ask the mounted editor to finish its save queue. Unfinished writing stays a draft; an untouched blank page is not created. Account/settings dialogs keep the editor mounted, and incoming sync/manual analysis remain paused while it is open. A failed save keeps the writer available for retry. Pending photo attachment or voice review keeps the page open with an explanation. Shared play still removes private content and requires unlocking before returning. Guided visits retain their existing Pause here behavior.
 
@@ -199,3 +205,16 @@ Sorts and fill-in exercises are not stored until **Keep this page**. A finished 
 Play together adds **Same page?**: every player answers one question privately, the device is handed over between turns with earlier answers hidden, and the reveal shows where the group agrees. The question comes from an age-appropriate set and is derived from the game ID, so it survives reload and restore without a new stored field. Kept pages still require every player’s approval.
 
 Validation: 228 focused Relish tests (20 new: catalog age filtering, page text, tracker lifecycle and tamper rejection, Same page? flow and validation, and UI tests for sorting, building, a checklist across visits, child filtering and a full Same page? round), TypeScript, targeted ESLint and the production build. Browser check on the sample book at desktop and 390px widths.
+
+## Four places (November 18, 2026)
+
+A book used to have ten views, six dialogs and the family library. It now has four places in one top bar: the `relish` wordmark (goes Home), **Home**, **Do something**, **Your book**, **Family**, and one round initial button with a small menu (Settings, Sound, Help, the account/library entry, Lock). Sub-screens (an open exercise, the journal editor and reader, a guided reflection, the manual, a game) still exist and highlight their parent place. Approved mockups: `docs/design/2026-11-18-four-places/`; plan: `docs/plans/2026-11-18-four-places.md`.
+
+- **Home** (default): a greeting, one *Try this today* suggestion with *Show me another*, four time/mood tiles that open Do something pre-filtered, *Your people* and the three latest kept pages. Suggestions come from `src/lib/relish/nudges.ts`, a hand-written list fitted to the book's age range and rotated daily (no AI); each opens an existing flow (journal entry, a specific exercise, a game sheet, guided reflection). Family names fill in when known.
+- **Do something** (`DoSomething.tsx`): one color-coded grid (Write, Exercise, Game, Think, Habit) built by `doItems()` in `catalog.ts`, with filter chips (Everything, 1 minute, 5 minutes, With the kids, Something's hard). Filter tags live with the catalog data (`tags` and `short` on each tool in `tools.ts`, `games` in `play-content.ts`). Exercises open straight into the existing Tools flow (`initialId`); Think it through starts guided reflection; games open a bottom sheet with the family pre-filled (owner, account books, family noted in the book), tap to leave someone out, *+ Someone visiting*, and optional ages. In-progress items say so on their card.
+- **Your book** (`YourBook.tsx`): person chips (Everyone, Me, each person, Our family). *What you've learned* shows people notes and kept manual cards, plus one pending AI suggestion at a time (*Yes, keep it* / *Not quite* via `reviewManualIdea`); the AI opt-in stays on the Manual screen, linked from here. *Still going* collects drafts, a paused reflection, the pending practice plan and running habits. *Every page* is color-coded by kind (`pageKind`) with search and opens the existing reader. The People and Practice-plan views folded in here; people notes are edited from a person chip.
+- **Family** (`Family.tsx`): person cards for the other books in the parent account, passed from `useBookSync().books` by `RelishApp` and opened with the same `sync.open` the library uses. A child's book never lists or opens its siblings' books. *Invite a partner* is a 3-step sheet leading into the existing ConnectedEditions invitation flow; *+ Add a child* opens the library's existing add-a-child form. *Passed between you* lists received and sent passages; the *Family album* shows approved game pages and chosen passages and resumes an unfinished game. Leaving a family and deleting the online account stay inside the connections dialog, reached from Settings.
+- **No lock for play or the album.** A game in progress takes the whole screen with an *End game* control back to Do something; the round stays saved. Viewing the album is an ordinary place. Lock stays in the menu and auto-lock (30 minutes idle, 15 hidden) still applies.
+- **Landing and library.** After a fresh sign-in (not a reload or Lock), Relish opens the adult's own account book on Home. Which book is "own" is remembered on the device (`homeBook.ts`, key `relish:home-book:<uid>`, holding only the remote book id) whenever the adult's account book is open; if it is not known yet, sign-in stops at the library as before. The library lists that book first, hides *Add my book* once it exists, drops *Refresh library* and the sign-in copy when signed in.
+
+No storage-schema, encryption, sync-protocol, Firestore-rule or AI-behavior changes. Activities.tsx, the chapter navigation, the old header tools and the GroupPlay setup screen were removed along with their CSS.

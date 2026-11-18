@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Relish — Your book</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#f6f4ed}
+a{color:#43513a}a:hover{color:#30382c}
+button,input{font-family:inherit}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #f6f4ed; color: #30382c; font-family: 'DM Sans', sans-serif;">
+
+  <!-- TOP BAR (same as Home) -->
+  <header style="border-bottom: 1px solid #dcded2; background: #f6f4ed;">
+    <div style="max-width: 1120px; margin: 0 auto; padding: 14px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px;">
+      <a href="Main.dc.html" style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 30px; font-weight: 700; color: #30382c; text-decoration: none; letter-spacing: -0.5px;">relish</a>
+      <nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 auto;">
+        <a href="Main.dc.html" style="padding: 10px 16px; border-radius: 999px; color: #30382c; font-size: 15px; font-weight: 500; text-decoration: none;">Home</a>
+        <a href="DoSomething.dc.html" style="padding: 10px 16px; border-radius: 999px; color: #30382c; font-size: 15px; font-weight: 500; text-decoration: none;">Do something</a>
+        <a href="#" aria-current="page" style="padding: 10px 16px; border-radius: 999px; background: #43513a; color: #f6f4ed; font-size: 15px; font-weight: 600; text-decoration: none;">Your book</a>
+        <a href="Family.dc.html" style="padding: 10px 16px; border-radius: 999px; color: #30382c; font-size: 15px; font-weight: 500; text-decoration: none;">Family</a>
+      </nav>
+      <button type="button" aria-label="Menu: settings, sound, lock, help" style="width: 44px; height: 44px; border-radius: 999px; border: 2px solid #43513a; background: #f2d58a; color: #30382c; font-size: 17px; font-weight: 700; cursor: pointer;">S</button>
+    </div>
+  </header>
+
+  <main style="max-width: 1120px; margin: 0 auto; padding: 40px 24px 64px; display: flex; flex-direction: column; gap: 40px;">
+
+    <!-- HEADER + WHO FILTER -->
+    <section style="display: flex; flex-direction: column; gap: 18px;">
+      <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px;">
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <h1 style="margin: 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 56px; line-height: 1.02; font-weight: 600;">Your book</h1>
+          <p style="margin: 0; font-size: 17px; color: #5f6458;">What you&#39;ve learned about your people, and every page you&#39;ve kept.</p>
+        </div>
+        <a href="DoSomething.dc.html" style="padding: 14px 22px; border-radius: 999px; background: #43513a; color: #f6f4ed; font-weight: 700; font-size: 16px; text-decoration: none;">+ Add a page</a>
+      </div>
+      <div role="group" aria-label="Show pages about" style="display: flex; flex-wrap: wrap; gap: 10px;">
+        <sc-for list="{{people}}" as="p" hint-placeholder-count="5">
+          <button type="button" onClick="{{p.pick}}" aria-pressed="{{p.on}}" style="{{p.style}}">{{p.label}}</button>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- WHAT YOU'VE LEARNED: the manual, front and center -->
+    <section style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px;">
+        <h2 style="margin: 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 34px; font-weight: 600;">What you&#39;ve learned</h2>
+        <span style="font-size: 14px; color: #5f6458;">Example cards. Real ones come from pages you keep.</span>
+      </div>
+
+      <sc-if value="{{hasSuggestion}}" hint-placeholder-val="{{true}}">
+        <div style="background: #43513a; color: #f6f4ed; border-radius: 24px; padding: 24px 28px; display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between;">
+          <div style="flex: 999 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-size: 13px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #f2d58a;">Relish noticed something · {{suggestion.who}}</span>
+            <span style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 30px; font-weight: 600; line-height: 1.1;">{{suggestion.text}}</span>
+            <span style="font-size: 15px; color: #dfe4d6;">From {{suggestion.from}}. Is that right?</span>
+          </div>
+          <div style="flex: 1 1 200px; display: flex; gap: 10px; flex-wrap: wrap;">
+            <button type="button" onClick="{{keep}}" style="flex: 1 1 auto; padding: 14px 20px; border-radius: 999px; background: #f2d58a; color: #30382c; border: none; font-weight: 700; font-size: 16px; cursor: pointer;">Yes, keep it</button>
+            <button type="button" onClick="{{toss}}" style="flex: 1 1 auto; padding: 14px 20px; border-radius: 999px; background: transparent; color: #f6f4ed; border: 1.5px solid #9fae92; font-weight: 600; font-size: 15px; cursor: pointer;">Not quite</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 18px;">
+        <sc-for list="{{learned}}" as="c" hint-placeholder-count="4">
+          <article style="{{c.style}}">
+            <span style="display: flex; align-items: center; gap: 10px;">
+              <span style="{{c.dot}}">{{c.initial}}</span>
+              <span style="font-size: 14px; font-weight: 700;">{{c.who}}</span>
+            </span>
+            <span style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 25px; font-weight: 700; line-height: 1.12;">{{c.text}}</span>
+            <span style="font-size: 14px; color: #4b5145;">{{c.try}}</span>
+          </article>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- IN PROGRESS -->
+    <section style="display: flex; flex-direction: column; gap: 14px;">
+      <h2 style="margin: 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 30px; font-weight: 600;">Still going</h2>
+      <div style="display: flex; flex-wrap: wrap; gap: 14px;">
+        <a href="#" style="flex: 1 1 300px; display: flex; gap: 14px; align-items: center; padding: 18px 20px; border-radius: 20px; background: #fffdf7; border: 1.5px dashed #9fae92; color: #30382c; text-decoration: none;">
+          <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#43513a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+          <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #5f6458;">Draft</span><span style="font-size: 16px; font-weight: 600;">Keep writing: [draft title]</span></span>
+        </a>
+        <a href="#" style="flex: 1 1 300px; display: flex; gap: 14px; align-items: center; padding: 18px 20px; border-radius: 20px; background: #fffdf7; border: 1.5px dashed #9fae92; color: #30382c; text-decoration: none;">
+          <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#43513a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+          <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #5f6458;">Practice plan · day 3 of 7</span><span style="font-size: 16px; font-weight: 600;">How did it go? Tap to note it.</span></span>
+        </a>
+      </div>
+    </section>
+
+    <!-- ALL PAGES -->
+    <section style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;">
+        <h2 style="margin: 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 30px; font-weight: 600;">Every page</h2>
+        <label style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; background: #fffdf7; border: 1.5px solid #dcded2; min-width: 240px;">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5f6458" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+          <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Find a page</span>
+          <input type="search" placeholder="Find a page…" style="border: none; background: transparent; font-size: 15px; outline: none; flex: 1; color: #30382c;">
+        </label>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px;">
+        <a href="#" style="background: #fffdf7; border: 1px solid #dcded2; border-top: 8px solid #f2d58a; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 8px; color: #30382c; text-decoration: none; min-height: 130px;">
+          <span style="display: flex; justify-content: space-between; font-size: 13px; color: #5f6458;"><span style="font-weight: 700;">Journal</span><span>[date]</span></span>
+          <span style="font-size: 17px; font-weight: 600;">[Page title]</span>
+          <span style="font-size: 14px; color: #5f6458;">[First line of the entry…]</span>
+        </a>
+        <a href="#" style="background: #fffdf7; border: 1px solid #dcded2; border-top: 8px solid #e9b9a0; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 8px; color: #30382c; text-decoration: none; min-height: 130px;">
+          <span style="display: flex; justify-content: space-between; font-size: 13px; color: #5f6458;"><span style="font-weight: 700;">Game</span><span>[date]</span></span>
+          <span style="font-size: 17px; font-weight: 600;">[Page title]</span>
+          <span style="font-size: 14px; color: #5f6458;">[Who played, what came up…]</span>
+        </a>
+        <a href="#" style="background: #fffdf7; border: 1px solid #dcded2; border-top: 8px solid #cfdcc4; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 8px; color: #30382c; text-decoration: none; min-height: 130px;">
+          <span style="display: flex; justify-content: space-between; font-size: 13px; color: #5f6458;"><span style="font-weight: 700;">Exercise</span><span>[date]</span></span>
+          <span style="font-size: 17px; font-weight: 600;">[Page title]</span>
+          <span style="font-size: 14px; color: #5f6458;">[What you sorted or wrote…]</span>
+        </a>
+        <a href="#" style="background: #fffdf7; border: 1px solid #dcded2; border-top: 8px solid #c9d9e3; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 8px; color: #30382c; text-decoration: none; min-height: 130px;">
+          <span style="display: flex; justify-content: space-between; font-size: 13px; color: #5f6458;"><span style="font-weight: 700;">Photo</span><span>[date]</span></span>
+          <span style="height: 56px; border-radius: 10px; background: #e7e8de; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #5f6458;">[photo]</span>
+          <span style="font-size: 17px; font-weight: 600;">[Caption]</span>
+        </a>
+      </div>
+    </section>
+
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1500}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { who: 'all', s: 0 };
+  }
+  renderVals() {
+    var self = this;
+    var colors = { Me: '#f2d58a', Ella: '#e9b9a0', Kaleb: '#c9d9e3', Family: '#cfdcc4' };
+    var tilts = ['-0.8deg', '0.6deg', '-0.4deg', '0.9deg'];
+    var cards = [
+      { who: 'Kaleb', text: 'Switching activities goes better with a five-minute heads-up.', try: 'Try: give the warning, then a one-minute reminder.' },
+      { who: 'Ella', text: 'Talks more in the car than across a table.', try: 'Try: save the big questions for a drive.' },
+      { who: 'Me', text: 'I get short when I skip the afternoon break.', try: 'Try: a 10-minute walk before pickup.' },
+      { who: 'Family', text: 'Dinner games land best on Fridays, not school nights.', try: 'Try: “Same page?” on Friday.' },
+      { who: 'Kaleb', text: 'Likes to be asked for help, not told what to do.', try: 'Try: “Want to help me with…?”' }
+    ];
+    var suggestions = [
+      { who: 'Ella', text: 'Ella seems calmer after time outside.', from: '3 of your pages' },
+      { who: 'Me', text: 'You write most on Sunday nights.', from: '5 of your pages' }
+    ];
+    var w = this.state.who;
+    var defs = [{ id: 'all', label: 'Everyone' }, { id: 'Me', label: 'Me' }, { id: 'Ella', label: 'Ella' }, { id: 'Kaleb', label: 'Kaleb' }, { id: 'Family', label: 'Our family' }];
+    var base = 'padding: 12px 20px; border-radius: 999px; font-size: 16px; font-weight: 600; cursor: pointer; ';
+    var people = defs.map(function (d) {
+      var on = d.id === w;
+      return { label: d.label, on: on, style: base + (on ? 'background: #43513a; color: #f6f4ed; border: 2px solid #43513a;' : 'background: #fffdf7; color: #30382c; border: 2px solid #dcded2;'), pick: function () { self.setState({ who: d.id }); } };
+    });
+    var learned = cards.filter(function (c) { return w === 'all' || c.who === w; }).map(function (c, i) {
+      return Object.assign({}, c, {
+        initial: c.who === 'Family' ? '★' : c.who.charAt(0),
+        style: 'background: #fffdf7; border: 1px solid #dcded2; border-radius: 22px; padding: 22px; min-height: 170px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 6px 0 ' + colors[c.who] + '; transform: rotate(' + tilts[i % tilts.length] + ');',
+        dot: 'width: 32px; height: 32px; border-radius: 999px; background: ' + colors[c.who] + '; display: flex; align-items: center; justify-content: center; font-family: Cormorant Garamond, Georgia, serif; font-weight: 700; font-size: 17px;'
+      });
+    });
+    var s = this.state.s;
+    var next = function () { self.setState({ s: self.state.s + 1 }); };
+    return {
+      people: people,
+      learned: learned,
+      hasSuggestion: s < suggestions.length,
+      suggestion: suggestions[Math.min(s, suggestions.length - 1)],
+      keep: next,
+      toss: next
+    };
+  }
+}
+</script>
+</body>
+</html>

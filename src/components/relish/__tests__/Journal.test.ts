@@ -208,7 +208,7 @@ describe("freeform journal", () => {
     expect(calls).toBe(1);
     expect(onPause).not.toHaveBeenCalled();
   });
-  it("lets children leave the journal for shared play without exposing private pages", async () => {
+  it("lets children leave the journal for a game without exposing private pages", async () => {
     const lock = vi.fn();
     function Harness() {
       const initial = {
@@ -250,28 +250,44 @@ describe("freeform journal", () => {
       });
     }
     render(createElement(Harness));
-    fireEvent.click(screen.getByRole("button", { name: "Your pages" }));
+    fireEvent.click(screen.getByRole("button", { name: "Your book" }));
     expect(screen.getByText("PRIVATE JOURNAL SENTENCE")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "New journal entry" }));
+    fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+    fireEvent.click(screen.getByRole("button", { name: /Jot something down/ }));
     expect(
       (
         screen.getByRole("button", {
-          name: "Play together",
+          name: "Home",
         }) as HTMLButtonElement
       ).disabled,
     ).toBe(false);
     expect(screen.queryByText("Ask AI")).toBeNull();
     fill("Another private moment");
-    fireEvent.click(screen.getByRole("button", { name: "Play together" }));
+    fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+    await screen.findByRole("heading", { name: "What feels right?" });
+    fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
+    fireEvent.click(screen.getByRole("button", { name: "+ Someone visiting" }));
+    fireEvent.change(screen.getByRole("textbox", { name: /Their name/ }), {
+      target: { value: "Sam" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Start/ }));
     await screen.findByRole("heading", { name: "Play together", level: 1 });
     expect(screen.queryByText("PRIVATE JOURNAL SENTENCE")).toBeNull();
     expect(screen.queryByText("Another private moment")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Your pages" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Unlock my edition" }));
-    expect(lock).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("button", { name: "Your book" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "End game" }));
+    expect(lock).not.toHaveBeenCalled();
+    await screen.findByRole("heading", { name: "What feels right?" });
   });
 });
 
+const openMenu = () =>
+  fireEvent.click(screen.getByRole("button", { name: /^Menu/ }));
+const menuItem = (name: string) => {
+  openMenu();
+  fireEvent.click(screen.getByRole("button", { name }));
+};
 describe("journal header navigation", () => {
   function setup(
     options: {
@@ -325,29 +341,31 @@ describe("journal header navigation", () => {
       });
     }
     render(createElement(Harness));
-    fireEvent.click(screen.getByRole("button", { name: "Your pages" }));
-    fireEvent.click(screen.getByRole("button", { name: "New journal entry" }));
+    fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+    fireEvent.click(screen.getByRole("button", { name: /Jot something down/ }));
     return { account, lock, shelf, interaction, save, book: () => stored };
   }
   it("keeps the header available on a blank page and leaves without creating an empty entry", async () => {
     const qa = setup();
-    for (const name of [
-      "Activities",
-      "Your pages",
-      "Play together",
-      "Sign in",
-      "Editions",
-      "Connect editions",
-      "Privacy and settings",
-      "Lock",
-    ]) {
+    for (const name of ["Home", "Do something", "Your book", "Family"]) {
       expect(
-        (screen.getAllByRole("button", { name })[0] as HTMLButtonElement)
-          .disabled,
+        (screen.getByRole("button", { name }) as HTMLButtonElement).disabled,
       ).toBe(false);
     }
-    fireEvent.click(screen.getByRole("button", { name: "Activities" }));
-    await screen.findByRole("heading", { name: "Activities" });
+    openMenu();
+    for (const name of [
+      "Settings",
+      "Help",
+      "Sign in",
+      "Books on this device",
+      "Lock Relish",
+    ]) {
+      expect(
+        (screen.getByRole("button", { name }) as HTMLButtonElement).disabled,
+      ).toBe(false);
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Home" }));
+    await screen.findByRole("heading", { name: /one small thing/ });
     expect(qa.save).not.toHaveBeenCalled();
     expect(qa.book().journal || []).toHaveLength(0);
     expect(qa.interaction).toHaveBeenLastCalledWith(false);
@@ -355,7 +373,7 @@ describe("journal header navigation", () => {
   it("keeps the newest words as a draft when navigating before the autosave timer", async () => {
     const qa = setup();
     fill("These words were just typed.");
-    fireEvent.click(screen.getByRole("button", { name: "Your pages" }));
+    fireEvent.click(screen.getByRole("button", { name: "Your book" }));
     const resume = await screen.findByRole("button", { name: /Keep writing:/ });
     expect(qa.book().journal?.[0]).toMatchObject({
       text: "These words were just typed.",
@@ -370,7 +388,7 @@ describe("journal header navigation", () => {
     const qa = setup();
     const editor = input();
     fill("My draft stays here while I sign in.");
-    fireEvent.click(screen.getAllByRole("button", { name: "Sign in" })[0]);
+    menuItem("Sign in");
     await waitFor(() => expect(qa.account).toHaveBeenCalledOnce());
     expect(input()).toBe(editor);
     expect(qa.book().journal?.[0].text).toBe(
@@ -378,7 +396,7 @@ describe("journal header navigation", () => {
     );
     expect(qa.interaction).toHaveBeenLastCalledWith(true);
     fill("And I can carry on afterward.");
-    fireEvent.click(screen.getByRole("button", { name: "Editions" }));
+    menuItem("Books on this device");
     await waitFor(() => expect(qa.shelf).toHaveBeenCalledOnce());
     expect(qa.book().journal?.[0].text).toBe("And I can carry on afterward.");
   });
@@ -393,10 +411,11 @@ describe("journal header navigation", () => {
     fill("First version");
     await waitFor(() => expect(calls).toBe(1));
     fill("Newest version before locking");
-    const lock = screen.getByRole("button", { name: "Lock" });
+    openMenu();
+    const lock = screen.getByRole("button", { name: "Lock Relish" });
     expect((lock as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(lock);
-    fireEvent.click(lock);
+    menuItem("Lock Relish");
     expect(qa.lock).not.toHaveBeenCalled();
     await act(async () => slow.resolve());
     await waitFor(() => expect(qa.lock).toHaveBeenCalledOnce());
@@ -414,14 +433,14 @@ describe("journal header navigation", () => {
       },
     });
     fill("Words that must survive a failed save");
-    fireEvent.click(screen.getByRole("button", { name: "Lock" }));
+    menuItem("Lock Relish");
     await screen.findByRole("alert");
     expect(qa.lock).not.toHaveBeenCalled();
     expect((input() as HTMLTextAreaElement).value).toBe(
       "Words that must survive a failed save",
     );
     failing = false;
-    fireEvent.click(screen.getByRole("button", { name: "Lock" }));
+    menuItem("Lock Relish");
     await waitFor(() => expect(qa.lock).toHaveBeenCalledOnce());
     expect(qa.book().journal?.[0].text).toBe(
       "Words that must survive a failed save",
@@ -447,14 +466,14 @@ describe("journal header navigation", () => {
         files: [new File(["photo"], "photo.png", { type: "image/png" })],
       },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Activities" }));
+    fireEvent.click(screen.getByRole("button", { name: "Home" }));
     await screen.findByText(
       "Your photo is still being added. Give it a moment, then try again.",
     );
     expect(input()).toBeTruthy();
     await act(async () => slow.resolve());
-    fireEvent.click(screen.getByRole("button", { name: "Activities" }));
-    await screen.findByRole("heading", { name: "Activities" });
+    fireEvent.click(screen.getByRole("button", { name: "Home" }));
+    await screen.findByRole("heading", { name: /one small thing/ });
     expect(qa.book().journal?.[0].photos).toEqual([photo]);
   });
 });
