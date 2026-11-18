@@ -1635,3 +1635,30 @@ img.ui-illustration.rk-cover-emblem,
     height: 72px !important;
   }
 }
+
+/* Tabs: an underline, not a filled pill (Scott's mockups). */
+.lb-app .rp-places button {
+  border-radius: 0;
+  padding: 10px 2px;
+  margin: 0 14px;
+  background: transparent;
+  border-bottom: 2.5px solid transparent;
+  font-size: 16px;
+}
+.lb-app .rp-places button[aria-current="page"],
+.lb-app .rp-places button[aria-current="page"]:not(:disabled):hover {
+  background: transparent;
+  color: var(--ink);
+  border-bottom-color: var(--olive);
+  font-weight: 600;
+}
+.lb-app .rp-places button:not([aria-current]):not(:disabled):hover {
+  background: transparent;
+  border-bottom-color: #c9ccbe;
+}
+@media (max-width: 720px) {
+  .lb-app .rp-places button {
+    margin: 0 8px;
+    font-size: 15px;
+  }
+}

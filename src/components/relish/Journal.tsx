@@ -16,6 +16,8 @@ import {
   Heart,
   Leaf,
   Ellipsis,
+  FileText,
+  X,
   Image as ImageIcon,
   Lock,
   Mic,
@@ -709,6 +711,8 @@ export function JournalEditor({
               ? "Saved"
               : "Draft saved"
             : "";
+  const hasContent =
+    !!draft.text.trim() || !!draft.title.trim() || !!draft.photos?.length;
   const toggle = (next: "photo" | "people" | "options") =>
     setPanel((open) => (open === next ? null : next));
   return (
@@ -742,6 +746,7 @@ export function JournalEditor({
           className="rj-paper rd-writing-context"
           aria-label="Previous entry"
         >
+          <Sprig className="rj-sprig rj-sprig-bottom" />
           <p className="lb-kicker">
             {book?.owner ? `${book.owner}’s previous entry` : "Previous entry"}
           </p>
@@ -753,6 +758,7 @@ export function JournalEditor({
                 journalId={previous.journalId}
                 title={previous.title}
                 save={save}
+                compact
               />
               <div className="rj-prose rd-context-prose">{previous.text}</div>
               <PhotoGallery photos={previous.photos} access={photos} />
@@ -769,6 +775,7 @@ export function JournalEditor({
           className="rj-paper rd-editor-page"
           aria-label="Journal editor"
         >
+          <Sprig className="rj-sprig rj-sprig-top" />
           <p className="rd-context-date">{dateLabel(draft.createdAt)}</p>
           <label className="rj-title-label rj-title-first">
             <span className="rj-sr-only">Title</span>
@@ -838,12 +845,21 @@ export function JournalEditor({
             />
           )}
           {panel === "people" && !!book?.people.length && (
+            <div className="rj-popover rj-popover-people">
+            <button
+              type="button"
+              className="rj-popover-close"
+              aria-label="Close tag people"
+              onClick={() => setPanel(null)}
+            >
+              <X size={18} />
+            </button>
             <fieldset
               className="rj-people-tags"
               disabled={finishing || mediaBusy}
             >
               <legend>
-                Tag people{" "}
+                Tag people
                 <span>Private tags · nobody is notified</span>
               </legend>
               <div>
@@ -867,9 +883,19 @@ export function JournalEditor({
                 ))}
               </div>
             </fieldset>
+            </div>
           )}
           {panel === "options" && (
-            <div className="rj-page-options">
+            <div className="rj-popover rj-page-options">
+              <button
+                type="button"
+                className="rj-popover-close"
+                aria-label="Close page options"
+                onClick={() => setPanel(null)}
+              >
+                <X size={18} />
+              </button>
+              <p className="rj-popover-title">Page options</p>
               <fieldset className="rj-style-picker" disabled={finishing}>
                 <legend>Page color</legend>
                 <div>
@@ -928,15 +954,18 @@ export function JournalEditor({
           </div>
           <div className="rj-save-row">
             <span className="rj-save-state" role="status" aria-live="polite">
-              {saveLabel}
+              <FileText size={18} aria-hidden="true" />
+              {saveLabel || (hasContent ? "Draft" : "Empty draft")}
             </span>
-            <button
-              className="lb-text"
-              disabled={finishing || mediaBusy || voiceOpen}
-              onClick={() => void finish(false)}
-            >
-              Save draft and close
-            </button>
+            {hasContent && (
+              <button
+                className="lb-text"
+                disabled={finishing || mediaBusy || voiceOpen}
+                onClick={() => void finish(false)}
+              >
+                Save draft and close
+              </button>
+            )}
             <button
               className="rj-keep"
               disabled={
@@ -963,12 +992,15 @@ function PageTitle({
   title,
   save,
   headingRef,
+  compact = false,
 }: {
   book: Book;
   journalId?: string;
   title: string;
   save: Save;
   headingRef?: RefObject<HTMLHeadingElement | null>;
+  /** Icon-only rename, for the quiet facing page. */
+  compact?: boolean;
 }) {
   const [value, setValue] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -1045,16 +1077,74 @@ function PageTitle({
       {entry && (
         <button
           type="button"
-          className="rj-rename-button"
+          className={compact ? "rj-rename-icon" : "rj-rename-button"}
+          aria-label={
+            compact
+              ? entry.title.trim()
+                ? "Rename"
+                : "Add a title"
+              : undefined
+          }
+          title={compact ? (entry.title.trim() ? "Rename" : "Add a title") : undefined}
           onClick={() => {
             setError("");
             setValue(entry.title);
           }}
         >
-          <Pencil size={16} />
-          {entry.title.trim() ? "Rename" : "Add a title"}
+          <Pencil size={compact ? 20 : 16} />
+          {!compact && (entry.title.trim() ? "Rename" : "Add a title")}
         </button>
       )}
     </div>
+  );
+}
+
+/** A painted-looking leaf sprig for the page corners. Decorative. */
+function Sprig({ className }: { className: string }) {
+  // Leaves on both sides of a curving stem, tip at top right.
+  const leaves: [number, number, number, number][] = [
+    [24, 92, -70, 1],
+    [30, 86, 10, 0.95],
+    [42, 72, -62, 1.05],
+    [50, 66, 18, 1],
+    [62, 52, -52, 1.1],
+    [70, 46, 26, 1],
+    [82, 34, -44, 1],
+    [88, 30, 34, 0.9],
+    [98, 20, -30, 0.85],
+  ];
+  return (
+    <svg
+      className={className}
+      aria-hidden="true"
+      viewBox="0 0 120 120"
+      width="120"
+      height="120"
+    >
+      <path
+        d="M10 112 C 34 90, 60 60, 108 12"
+        fill="none"
+        stroke="#7d8f6a"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        opacity="0.75"
+      />
+      {leaves.map(([x, y, r, k], i) => (
+        <g key={i} transform={`translate(${x} ${y}) rotate(${r}) scale(${k})`}>
+          <path
+            d="M0 0 C 6 -9, 20 -10, 26 -2 C 18 4, 6 5, 0 0 Z"
+            fill={i % 2 ? "#a9b896" : "#98aa84"}
+            opacity="0.62"
+          />
+          <path
+            d="M1 -0.5 C 9 -3, 16 -3.5, 24 -2"
+            fill="none"
+            stroke="#6f8160"
+            strokeWidth="0.7"
+            opacity="0.6"
+          />
+        </g>
+      ))}
+    </svg>
   );
 }
