@@ -52,25 +52,17 @@ export default function GroupPlay({
   const next = gamePlayer(g);
   return (
     <section className="lb-game" aria-label="Our game">
-      <div className="lb-session-line">
-        <div>
-          <p className="lb-kicker">
-            {finished
-              ? "Round complete"
-              : "One round"}
-          </p>
-          <p>
-            {finished
-              ? "One round complete"
-              : `Turn ${g.turn + 1} of ${total} · then reveal together`}
-          </p>
-        </div>
-        {!finished && (
+      {!finished && (
+        <div className="lb-session-line">
+          <div>
+            <p className="lb-kicker">One round</p>
+            <p>{`Turn ${g.turn + 1} of ${total} · then reveal together`}</p>
+          </div>
           <button className="lb-text" disabled={busy} onClick={onPause}>
             Pause here
           </button>
-        )}
-      </div>
+        </div>
+      )}
       {g.audience && (
         <p className="lb-fine">
           {ageLabels[g.audience]} · chosen for this round
@@ -213,8 +205,8 @@ export default function GroupPlay({
             {text
               ? g.kind === "story"
                 ? "Your story"
-                : "Results"
-              : "Round ended"}
+                : "Here’s what everyone chose"
+              : "Everyone passed"}
           </h2>
           {match && text ? (
             <>
@@ -261,7 +253,7 @@ export default function GroupPlay({
             <blockquote>{text}</blockquote>
           ) : (
             <p>
-              Everyone passed. No answers were saved.
+              No answers to show this time. That’s fine too.
             </p>
           )}
           <div className="lb-boundary">

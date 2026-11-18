@@ -139,7 +139,7 @@ export default function EditionSetup({
             <div className="lb-boundary">
               <strong>A private book, with guidance for their age.</strong>
               <p>
-                Prompts, small practices and session length follow this range.
+                Prompts, small practices and how long each one takes follow this range.
                 Under 6, read and choose together. Children and teens can always
                 pause or pass.
               </p>

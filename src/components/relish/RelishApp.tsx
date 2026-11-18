@@ -199,11 +199,11 @@ function BookGate() {
             </div>
             <footer className="lb-shelf-footer">
               <button className="lb-primary" onClick={() => vault.select()}>
-                <Plus size={16} aria-hidden="true" /> Add an edition or restore
-                a backup
+                <Plus size={16} aria-hidden="true" /> Add a book or restore a
+                backup
               </button>
               <p className="lb-fine">
-                Edition names are visible on this device. Writing, games and
+                Book names are visible on this device. Writing, games and
                 private keys stay encrypted.
               </p>
             </footer>
@@ -223,7 +223,7 @@ function BookGate() {
             cancelLabel="Back to the bookshelf"
           />
           <p className="lb-fine lb-gate-note">
-            Choose your own passphrase. Nobody else’s edition will be changed.
+            Choose your own passphrase. Other books on this device aren’t changed.
           </p>
         </Gate>
       );

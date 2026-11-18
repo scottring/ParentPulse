@@ -492,5 +492,7 @@
 }
 /* A habit's overall length, under today's effort. */
 .lb-app .rt-start-span {
-  margin-top: -6px;
+  display: flex;
+  margin-top: -10px;
+  padding-left: 28px;
 }

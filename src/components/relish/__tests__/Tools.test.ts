@@ -145,7 +145,7 @@ it("runs a day-by-day checklist across visits and finishes into a page", async (
   const start = screen.getByRole("button", { name: /Start/ }) as HTMLButtonElement;
   expect(start.disabled).toBe(true);
   // Today's effort and the overall length are told apart, and what saves is honest.
-  expect(screen.getByText(/Today: under a minute a day/)).toBeTruthy();
+  expect(screen.getByText(/Each day: under a minute/)).toBeTruthy();
   expect(screen.getByText("Keeps going: 10 days, at your pace")).toBeTruthy();
   expect(screen.getByText(/Each mark saves as you go/)).toBeTruthy();
   // Someone is required here, so "No one in particular" is not offered.

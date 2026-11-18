@@ -196,7 +196,9 @@ export default function Tools({
                     disabled={busy}
                     onClick={() => setOpenId(t.id)}
                   >
-                    <span className="lb-kicker">{t.time}</span>
+                    <span className="lb-kicker">
+                      {t.kind === "tracker" ? `${t.time} · ${t.span}` : t.time}
+                    </span>
                     <strong>{t.title}</strong>
                     <span>{t.blurb}</span>
                     <ArrowRight size={16} />
@@ -356,10 +358,14 @@ function ExerciseStart({
         <div className="rt-start-text">
           <p className="rt-start-time">
             <Clock size={18} aria-hidden="true" />{" "}
-            {tool.kind === "tracker" ? `Today: ${tool.time.toLowerCase()}` : tool.time}
+            {tool.kind === "tracker"
+              ? `${tool.mode === "days" ? "Each day" : "Each time"}: ${tool.time.toLowerCase()}`
+              : tool.time}
           </p>
           {tool.kind === "tracker" && (
-            <p className="rt-start-time rt-start-span">Keeps going: {tool.span.toLowerCase()}</p>
+            <p className="rt-start-time rt-start-span">
+              Keeps going: {tool.span.toLowerCase()}
+            </p>
           )}
           <h2 id="rt-title">{tool.title}</h2>
           <p className="rt-start-blurb">{tool.blurb}</p>

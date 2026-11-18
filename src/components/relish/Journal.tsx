@@ -193,7 +193,7 @@ export default function Journal({
             <Illustration name="saved" size={72} eager className="rj-celebration-mark" />
             <div>
               <strong>Entry saved</strong>
-              <p>You can edit this entry, start another, or choose something else to do.</p>
+              <p>It’s in your book. That’s a good place to stop.</p>
             </div>
           </div>
         )}

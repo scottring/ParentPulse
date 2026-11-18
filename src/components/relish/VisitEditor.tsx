@@ -126,11 +126,11 @@ export default function VisitEditor({
   return (
     <div className="lb-editor">
       <p className="lb-kicker">{kicker}</p>
-      {cue && <p className="lb-age-cue">{cue}</p>}
       {visit.kind === "begin" && visit.step === 0 ? (
         <>
           <h2>{words.choose}</h2>
           <p className="lb-fine">{words.chooseHint}</p>
+          {cue && <p className="lb-age-cue">{cue}</p>}
           <div className="lb-topics">
             {Object.entries(threads).map(([key, t]) => (
               <button
@@ -152,6 +152,7 @@ export default function VisitEditor({
       ) : visit.kind === "begin" || visit.kind === "notice" ? (
         <>
           <h2>{theme?.notice}</h2>
+          {cue && <p className="lb-age-cue">{cue}</p>}
           {choices.length > 0 && (
             <div
               className="lb-feeling-choices"
