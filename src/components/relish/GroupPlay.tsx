@@ -16,6 +16,7 @@ import {
   samePageSummary,
   samePageTrend,
   pickAgreement,
+  REFLECTION_LIMIT,
   storyLines,
   storyTitles,
   TITLE_LIMIT,
@@ -55,6 +56,8 @@ export default function GroupPlay({
   onCancel: () => void;
 }) {
   const [firstPlayer, setFirstPlayer] = useState(game.players[0].id);
+  /** Whose turn it is to add a line about the round, once it's revealed. */
+  const [reflecting, setReflecting] = useState<number | null>(null);
   const g = game,
     plan = turnPlan(g),
     total = plan.length,
@@ -207,6 +210,24 @@ export default function GroupPlay({
           storySoFar={g.kind === "story" ? text : ""}
           noun={guessing ? "guess" : "question"}
         />
+      ) : reflecting !== null && g.stage !== "finished" ? (
+        <ReflectStep
+          key={g.players[reflecting].id}
+          game={g}
+          index={reflecting}
+          busy={busy}
+          onSave={(text) => {
+            const player = g.players[reflecting];
+            const had = g.reflections?.find((r) => r.playerId === player.id)?.text || "";
+            if (text.trim() !== had)
+              onAction({ type: "reflect", playerId: player.id, text });
+            setReflecting(reflecting + 1 < g.players.length ? reflecting + 1 : null);
+          }}
+          onSkip={() =>
+            setReflecting(reflecting + 1 < g.players.length ? reflecting + 1 : null)
+          }
+          onDone={() => setReflecting(null)}
+        />
       ) : (
         <>
           {g.kind === "match" ? (
@@ -226,6 +247,12 @@ export default function GroupPlay({
               )}
             </>
           )}
+          <RoundNotes
+            game={g}
+            owner={book.owner}
+            busy={busy}
+            onStart={() => setReflecting(0)}
+          />
           <div className="lb-boundary">
             <p>
               That’s the round. Finish for now ends it here.{" "}
@@ -432,6 +459,108 @@ function SamePageReveal({ game: g, trend }: { game: Game; trend: string }) {
         ))}
       </ol>
     </>
+  );
+}
+
+/** "Anything to remember about this round?": an offer, never a step you must take. */
+function RoundNotes({
+  game: g,
+  owner,
+  busy,
+  onStart,
+}: {
+  game: Game;
+  owner: string;
+  busy: boolean;
+  onStart: () => void;
+}) {
+  const lines = g.players.flatMap((p) => {
+    const text = g.reflections?.find((r) => r.playerId === p.id)?.text;
+    return text ? [{ player: p, text }] : [];
+  });
+  return (
+    <section className="lb-notes" aria-labelledby="lb-notes-title">
+      <h3 id="lb-notes-title">Anything to remember about this round?</h3>
+      {lines.length ? (
+        <ul>
+          {lines.map((l) => (
+            <li key={l.player.id}>
+              <strong>{l.player.name}:</strong> {l.text}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>
+          Each player can add a line, or skip. Lines are kept with this round
+          in {owner}’s book, under each name, for everyone who played.
+        </p>
+      )}
+      <button className="lb-secondary" disabled={busy} onClick={onStart}>
+        {lines.length ? "Add or change a line" : "Add a line each"}
+      </button>
+    </section>
+  );
+}
+
+/** One player at a time writes their own line, or skips. */
+function ReflectStep({
+  game: g,
+  index,
+  busy,
+  onSave,
+  onSkip,
+  onDone,
+}: {
+  game: Game;
+  index: number;
+  busy: boolean;
+  onSave: (text: string) => void;
+  onSkip: () => void;
+  onDone: () => void;
+}) {
+  const player = g.players[index];
+  const [text, setText] = useState(
+    g.reflections?.find((r) => r.playerId === player.id)?.text || "",
+  );
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    heading.current?.focus();
+  }, []);
+  return (
+    <div className="lb-reflect">
+      <p className="lb-kicker">
+        Anything to remember? · {index + 1} of {g.players.length}
+      </p>
+      <h2 ref={heading} tabIndex={-1}>
+        {player.name}, anything to remember about this round?
+      </h2>
+      <p>One line, in your own words. Skipping is fine.</p>
+      <label>
+        {player.name}’s line
+        <textarea
+          rows={3}
+          maxLength={REFLECTION_LIMIT}
+          value={text}
+          placeholder="Who knew I’d pick the beach?"
+          onChange={(e) => setText(e.target.value)}
+        />
+      </label>
+      <div className="lb-actions">
+        <button
+          className="lb-primary"
+          disabled={busy || !text.trim()}
+          onClick={() => onSave(text)}
+        >
+          Save my line <Check size={16} />
+        </button>
+        <button className="lb-secondary" disabled={busy} onClick={onSkip}>
+          Skip
+        </button>
+        <button className="lb-text" disabled={busy} onClick={onDone}>
+          Back to the round
+        </button>
+      </div>
+    </div>
   );
 }
 

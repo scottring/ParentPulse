@@ -80,6 +80,9 @@ export type LivingEntry = {
   createdAt: string;
 };
 export type Player = { id: string; name: string; audience?: Audience };
+/** One player's own line about a finished round. */
+export type Reflection = { playerId: string; text: string };
+export const REFLECTION_LIMIT = 280;
 export type GameKind = "joy" | "story" | "match";
 export const gameKinds: GameKind[] = ["joy", "story", "match"];
 export type Game = {
@@ -99,6 +102,8 @@ export type Game = {
   questions?: string[];
   /** contentVersion 2 story: the title the group picked at the end. */
   title?: string;
+  /** After the reveal, each player may add one line of their own. */
+  reflections?: Reflection[];
   approvals: boolean[];
   startedAt: string;
   updatedAt: string;
@@ -137,6 +142,8 @@ export type PlayRecord = {
   /** One story: its lines in order, and the title the group picked. */
   story?: string[];
   title?: string;
+  /** Each player's own line about the round, when they wrote one. */
+  reflections?: Reflection[];
 };
 export const PLAY_LIMIT = 500;
 /** Play records keep answers for the newest rounds only. */
@@ -750,8 +757,19 @@ export function samePageTrend(l: LivingState, g: Game, includeThisRound = false)
   const [topic, times] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] || [];
   return topic && times >= 2 ? `${line} You differ most on ${topic}.` : line;
 }
-/** What Your book shows for a remembered round, worked out from its answers. */
-export function playMemory(r: PlayRecord): {
+/** Each player's own line about the round, labelled with their name. */
+export function reflectionSections(r: Pick<PlayRecord, "players" | "reflections">) {
+  return (r.reflections || []).flatMap((x) => {
+    const name = r.players.find((p) => p.id === x.playerId)?.name;
+    return name ? [{ label: `${name} remembers`, text: x.text }] : [];
+  });
+}
+/** What Your book shows for a remembered round: its result and each player's line. */
+export function playMemory(r: PlayRecord) {
+  const memory = roundSummary(r);
+  return { ...memory, sections: [...memory.sections, ...reflectionSections(r)] };
+}
+function roundSummary(r: PlayRecord): {
   summary: string;
   sections: { label: string; text: string }[];
 } {
@@ -1070,7 +1088,9 @@ export type GameAction =
   | { type: "answer"; answers: (number | null)[] }
   | { type: "approve"; playerId: string }
   /** A story's title, picked together after the last line; "" clears it. */
-  | { type: "title"; title: string };
+  | { type: "title"; title: string }
+  /** One player's own line about the round; "" takes it back. */
+  | { type: "reflect"; playerId: string; text: string };
 export function advanceGame(g: Game, action: GameAction): Game {
   const stamp = now();
   if (action.type === "start" && g.stage === "ready") {
@@ -1140,6 +1160,24 @@ export function advanceGame(g: Game, action: GameAction): Game {
     else delete next.title;
     return next;
   }
+  if (action.type === "reflect" && ["reveal", "kept"].includes(g.stage)) {
+    if (!g.players.some((p) => p.id === action.playerId))
+      throw new Error("This person is not playing.");
+    const text = String(action.text || "").trim().slice(0, REFLECTION_LIMIT);
+    const others = (g.reflections || []).filter((r) => r.playerId !== action.playerId);
+    // Kept in player order, so the round reads the same however it was written.
+    const reflections = g.players.flatMap((p) =>
+      p.id === action.playerId
+        ? text
+          ? [{ playerId: p.id, text }]
+          : []
+        : others.filter((r) => r.playerId === p.id),
+    );
+    const next = { ...g, updatedAt: stamp };
+    if (reflections.length) next.reflections = reflections;
+    else delete next.reflections;
+    return next;
+  }
   if (action.type === "finish" && ["reveal", "kept"].includes(g.stage))
     return { ...g, stage: "finished", finishedAt: stamp, updatedAt: stamp };
   throw new Error("That action is not available at this point in the game.");
@@ -1194,7 +1232,8 @@ const memoryOf = (r: PlayRecord) =>
   r.joys !== undefined ||
   r.guesses !== undefined ||
   r.story !== undefined ||
-  r.title !== undefined;
+  r.title !== undefined ||
+  r.reflections !== undefined;
 /** Answers stay on the newest ANSWERS_KEPT rounds; older records keep only names and a date. */
 function trimMemory(plays: PlayRecord[]) {
   let kept = 0;
@@ -1208,6 +1247,7 @@ function trimMemory(plays: PlayRecord[]) {
       delete rest.guesses;
       delete rest.story;
       delete rest.title;
+      delete rest.reflections;
       return rest;
     })
     .toReversed();
@@ -1230,6 +1270,7 @@ export function recordRound(l: LivingState): LivingState {
     playedAt: previous?.playedAt || g.finishedAt || g.updatedAt,
     ...(g.savedPageId ? { pageId: g.savedPageId } : {}),
     ...roundMemory(g),
+    ...(g.reflections?.length ? { reflections: g.reflections } : {}),
   };
   if (previous && JSON.stringify(previous) === JSON.stringify(record)) return l;
   return {
@@ -1384,6 +1425,9 @@ export function isLiving(value: unknown): value is LivingState {
           optional(
             r.title,
             (t) => r.kind === "story" && str(t, TITLE_LIMIT) && !!t.trim(),
+          ) &&
+          optional(r.reflections, (x) =>
+            reflectionsFit(x, r.players as Player[]),
           ),
       ) ||
       value.plays.filter((r) => memoryOf(r as PlayRecord)).length > ANSWERS_KEPT
@@ -1429,6 +1473,22 @@ export function isLiving(value: unknown): value is LivingState {
 }
 
 const stages = ["ready", "choose", "handoff", "reveal", "kept", "finished"];
+/** At most one non-empty line per player, each from someone who played. */
+function reflectionsFit(value: unknown, players: Player[]) {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.length <= players.length &&
+    new Set(value.map((r) => (obj(r) ? r.playerId : r))).size === value.length &&
+    value.every(
+      (r) =>
+        obj(r) &&
+        players.some((p) => p.id === r.playerId) &&
+        str(r.text, REFLECTION_LIMIT) &&
+        !!r.text.trim(),
+    )
+  );
+}
 function isGame(g: unknown, sharedPages: unknown[]): boolean {
   if (
     !obj(g) ||
@@ -1481,6 +1541,12 @@ function isGame(g: unknown, sharedPages: unknown[]): boolean {
     g.answers !== undefined ||
     g.questions !== undefined ||
     g.title !== undefined
+  )
+    return false;
+  if (
+    g.reflections !== undefined &&
+    (!reflectionsFit(g.reflections, g.players as Player[]) ||
+      !["reveal", "kept", "finished"].includes(String(g.stage)))
   )
     return false;
   const game = g as Game;

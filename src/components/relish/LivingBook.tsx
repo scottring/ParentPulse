@@ -405,7 +405,7 @@ export default function LivingBook({
     view === "play"
       ? {
           title: "Play one round",
-          text: "Each player takes a turn or passes. Reveal together, then finish. Keeping a page needs everyone’s approval and is always optional. End game any time; the round is saved.",
+          text: "Each player takes a turn or passes. Reveal together, then finish. A line from each player and a shared page are both optional; a page needs everyone’s approval. End game any time; the round is saved.",
         }
       : place === "home"
         ? {

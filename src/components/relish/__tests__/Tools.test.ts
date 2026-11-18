@@ -10,7 +10,7 @@ import {
 } from "@testing-library/react";
 import { webcrypto } from "node:crypto";
 import { emptyBook, type Book } from "@/lib/relish/model";
-import { livingOf, newGame } from "@/lib/relish/living";
+import { advanceGame, livingOf, newGame } from "@/lib/relish/living";
 import { toolsOf } from "@/lib/relish/tools";
 import LivingBook from "../LivingBook";
 Object.defineProperty(globalThis, "crypto", {
@@ -219,6 +219,48 @@ it("plays Same page? with hidden answers and a shared reveal", async () => {
     [0, 0, null, 0, 0],
     [0, 0, 0, 0, 1],
   ]);
+});
+
+it("after the reveal each player can add their own line or skip, and Finish still ends it", async () => {
+  const book = emptyBook("Robin");
+  let game = advanceGame(
+    newGame("match", [
+      { id: "a", name: "Robin" },
+      { id: "b", name: "Sam" },
+      { id: "c", name: "Kai" },
+    ]),
+    { type: "start" },
+  );
+  while (game.stage !== "reveal") {
+    if (game.stage === "handoff") game = advanceGame(game, { type: "ready" });
+    game = advanceGame(game, { type: "answer", answers: [0, 0, 1, 1, 2] });
+  }
+  const app = open({ ...book, living: { ...livingOf(book), game } });
+  fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
+  await screen.findByRole("heading", { name: "Anything to remember about this round?" });
+  fireEvent.click(screen.getByRole("button", { name: "Add a line each" }));
+  await screen.findByRole("heading", { name: "Robin, anything to remember about this round?" });
+  fireEvent.change(screen.getByRole("textbox", { name: "Robin’s line" }), {
+    target: { value: "We all want pancakes." },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Save my line/ }));
+  await screen.findByRole("heading", { name: "Sam, anything to remember about this round?" });
+  expect((screen.getByRole("textbox", { name: "Sam’s line" }) as HTMLTextAreaElement).value).toBe("");
+  fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+  await screen.findByRole("heading", { name: "Kai, anything to remember about this round?" });
+  fireEvent.change(screen.getByRole("textbox", { name: "Kai’s line" }), {
+    target: { value: "Rainy days are for forts." },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Save my line/ }));
+  await screen.findByText("We all want pancakes.");
+  expect(screen.getByText("Rainy days are for forts.")).toBeTruthy();
+  expect(livingOf(app.stored()).game?.reflections).toEqual([
+    { playerId: "a", text: "We all want pancakes." },
+    { playerId: "c", text: "Rainy days are for forts." },
+  ]);
+  fireEvent.click(screen.getByRole("button", { name: /Finish for now/ }));
+  await screen.findByRole("region", { name: "Game finished" });
+  expect(livingOf(app.stored()).plays?.[0].reflections).toHaveLength(2);
 });
 
 it("a card sort offers one card at a time, with skip, and keeps every card changeable", async () => {

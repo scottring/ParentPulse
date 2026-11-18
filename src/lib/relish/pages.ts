@@ -1,5 +1,11 @@
 import type { Book } from "./model";
-import { livingOf, outcomes, playMemory, type Player } from "./living";
+import {
+  livingOf,
+  outcomes,
+  playMemory,
+  reflectionSections,
+  type Player,
+} from "./living";
 import { games } from "./play-content";
 import { toolById } from "./tools";
 import { guidanceFor } from "./guidance";
@@ -166,8 +172,10 @@ export function bookPages(book: Book): BookPage[] {
         from: p.fromName,
       }),
     ),
-    ...livingOf(book).sharedPages.map((p) =>
-      page({
+    ...livingOf(book).sharedPages.map((p) => {
+      // Players' own lines about the round live on its play record.
+      const round = (livingOf(book).plays || []).find((r) => r.pageId === p.id);
+      return page({
         id: `game:${p.id}`,
         kind: "Made together",
         title: p.title,
@@ -176,8 +184,9 @@ export function bookPages(book: Book): BookPage[] {
         style: "moss",
         from: p.players.map((x) => x.name).join(" + "),
         people: playersInBook(book, p.players),
-      }),
-    ),
+        sections: round ? reflectionSections(round) : [],
+      });
+    }),
     // A round with a kept page shows that page instead of a second record.
     ...(livingOf(book).plays || [])
       .filter(

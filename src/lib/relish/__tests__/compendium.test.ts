@@ -4,6 +4,7 @@ import { emptyBook, isBook, sampleBook, type Book } from "../model";
 import { createVault, unlockVault } from "../vault";
 import { bookPages } from "../pages";
 import { pageKind } from "../catalog";
+import { albumOf } from "@/components/relish/Family";
 import { cardPeople, isManual, manualSources, type ManualCard } from "../manual";
 import { isJournal, renameJournalPage, writeJournalPage } from "../journal";
 import { finishTracker, keepToolPage, startTracker, toggleMark } from "../tools";
@@ -348,6 +349,110 @@ describe("storage compatibility", () => {
     const { envelope } = await createVault(book, pass);
     const raw = JSON.stringify(envelope);
     expect(raw).not.toContain("Kaleb");
+    expect((await unlockVault(raw, pass)).book).toEqual(book);
+  });
+});
+
+describe("players' own lines about a round", () => {
+  const reflect = (g: Game, playerId: string, text: string) =>
+    advanceGame(g, { type: "reflect", playerId, text });
+  it("each player adds, changes or takes back only their own line, after the reveal", () => {
+    let g = revealed("joy");
+    g = reflect(g, "kaleb", "  I knew Ella would pick that.  ");
+    g = reflect(g, "owner", "Kaleb surprised me.");
+    expect(g.reflections).toEqual([
+      { playerId: "owner", text: "Kaleb surprised me." },
+      { playerId: "kaleb", text: "I knew Ella would pick that." },
+    ]);
+    g = reflect(g, "owner", "Changed my mind.");
+    expect(g.reflections![0].text).toBe("Changed my mind.");
+    expect(reflect(g, "kaleb", "x".repeat(400)).reflections![1].text).toHaveLength(280);
+    g = reflect(g, "owner", " ");
+    expect(g.reflections).toEqual([{ playerId: "kaleb", text: "I knew Ella would pick that." }]);
+    expect(reflect(g, "kaleb", "").reflections).toBeUndefined();
+    expect(() => reflect(g, "stranger", "Hi")).toThrow();
+    expect(() =>
+      reflect(advanceGame(newGame("joy", players), { type: "start" }), "owner", "Too soon"),
+    ).toThrow();
+    expect(isLiving({ ...livingOf(family()), game: g })).toBe(true);
+    // A round finished with lines keeps them; Your book shows them by name.
+    const book = finishGame(withGame(family(), g));
+    const record = livingOf(book).plays![0];
+    expect(record.reflections).toEqual(g.reflections);
+    const page = bookPages(book).find((p) => p.id === `play:${g.id}`)!;
+    expect(page.sections.at(-1)).toEqual({
+      label: "Kaleb remembers",
+      text: "I knew Ella would pick that.",
+    });
+  });
+  it("lines show on a kept page and in the Family album, and never reach suggestions", () => {
+    let book = withGame(family(), revealed("story"));
+    for (const p of players)
+      book = changeLiving(book, (l) => ({
+        ...l,
+        game: advanceGame(l.game!, { type: "approve", playerId: p.id }),
+      }));
+    book = keepGame(book);
+    book = changeLiving(book, (l) => ({
+      ...l,
+      game: reflect(l.game!, "ella", "The dragon was my idea."),
+    }));
+    book = finishGame(book);
+    const pageId = livingOf(book).sharedPages[0].id;
+    const page = bookPages(book).find((p) => p.id === `game:${pageId}`)!;
+    expect(page.sections).toEqual([{ label: "Ella remembers", text: "The dragon was my idea." }]);
+    expect(albumOf(book)[0].lines).toEqual(page.sections);
+    const sources = JSON.stringify([
+      ...manualSources(book, "personal"),
+      ...manualSources(book, "family"),
+    ]);
+    expect(sources).not.toContain("dragon was my idea");
+    // The kept page still sends only the words everyone approved, as before.
+    const sent = manualSources(book, "personal").find((s) => s.id === `game:${pageId}`)!;
+    expect(sent.text).toBe(`From Alex + Ella + Kaleb:\n${livingOf(book).sharedPages[0].text}`);
+  });
+  it("validators accept rounds and records with lines and reject malformed ones", () => {
+    const g = reflect(revealed("match"), "ella", "Pancakes forever.");
+    const living = { ...livingOf(family()), game: g };
+    expect(isLiving(living)).toBe(true);
+    for (const bad of [
+      [],
+      "nope",
+      [{ playerId: "ella", text: "" }],
+      [{ playerId: "ella", text: "x".repeat(281) }],
+      [{ playerId: "nobody", text: "Hi" }],
+      [
+        { playerId: "ella", text: "One" },
+        { playerId: "ella", text: "Two" },
+      ],
+      [{ playerId: "ella" }],
+    ]) {
+      expect(isLiving({ ...living, game: { ...g, reflections: bad } })).toBe(false);
+      const record = { ...recordRound(living).plays![0], reflections: bad };
+      expect(isLiving({ ...living, plays: [record] })).toBe(false);
+    }
+    // Lines only exist once a round is revealed.
+    const early = advanceGame(newGame("match", players), { type: "start" });
+    expect(isLiving({ ...living, game: { ...early, reflections: g.reflections } })).toBe(false);
+  });
+  it("every new shape survives an encrypt/decrypt round trip unchanged", async () => {
+    let book = family();
+    for (const kind of ["match", "joy", "story"] as const) {
+      let g = reflect(revealed(kind), "kaleb", `A line about ${kind}.`);
+      if (kind === "story") g = advanceGame(g, { type: "title", title: "The fox" });
+      book = finishGame(withGame(book, g));
+    }
+    book = withGame(book, reflect(revealed("joy"), "ella", "Still open."));
+    expect(isBook(book)).toBe(true);
+    const plays = livingOf(book).plays!;
+    expect(plays.map((r) => r.kind)).toEqual(["match", "joy", "story"]);
+    expect(plays[0].questions).toHaveLength(5);
+    expect(plays[1].joys).toHaveLength(3);
+    expect(plays[2].title).toBe("The fox");
+    const { envelope } = await createVault(book, pass);
+    const raw = JSON.stringify(envelope);
+    expect(raw).not.toContain("A line about");
+    expect(raw).not.toContain("Still open");
     expect((await unlockVault(raw, pass)).book).toEqual(book);
   });
 });
