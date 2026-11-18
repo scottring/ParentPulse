@@ -2,20 +2,12 @@
 import { readBinding } from "@/lib/relish/book-sync";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  ArrowLeft,
-  ArrowRight,
   ArrowUpRight,
-  Bookmark,
   BookmarkCheck,
   BookOpen,
   Download,
-  Feather,
   Lock,
-  Compass,
-  Cloud,
-  CircleHelp,
   Plus,
-  Settings2,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -44,12 +36,13 @@ import {
 } from "@/lib/relish/living";
 import type { useLocalBook } from "./useLocalBook";
 import { Dialog, EditPerson, PersonForm, VaultForm } from "./BookForms";
-import { SoundControl, SoundSettings, useSensory } from "./Sensory";
+import { SoundSettings, useSensory } from "./Sensory";
 import VisitEditor from "./VisitEditor";
 import Journal from "./Journal";
 import Activities from "./Activities";
 import { newJournalDraft, type JournalDraft } from "@/lib/relish/journal";
 import "./duo.css";
+import "./places.css";
 import Manual, { ManualCardView, useManualGuide } from "./Manual";
 import { manualOf } from "@/lib/relish/manual";
 import { PhotoGallery } from "./Photos";
@@ -58,30 +51,40 @@ import Tools from "./Tools";
 import ConnectedEditions from "./ConnectedEditions";
 import EditionSetup from "./EditionSetup";
 import { guidanceFor } from "@/lib/relish/guidance";
+import TopBar, { type MenuItem, type Place } from "./TopBar";
 import { canUseOnline, ageLabels, audienceOf } from "@/lib/relish/profiles";
 
+// Four places, plus the sub-screens that open inside them.
 type View =
-  | "activities"
+  | Place
   | "bookmark"
   | "manual"
   | "session"
   | "words"
   | "people"
   | "practice"
-  | "family"
   | "play"
   | "tools";
+const placeOf: Record<View, Place> = {
+  home: "home",
+  do: "do",
+  tools: "do",
+  session: "do",
+  bookmark: "do",
+  play: "do",
+  book: "book",
+  words: "book",
+  manual: "book",
+  people: "book",
+  practice: "book",
+  family: "family",
+};
 type Modal =
   "settings" | "create" | "person" | "guide" | "connections" | "profile" | null;
 type Vault = Omit<
   ReturnType<typeof useLocalBook>,
   "syncSnapshot" | "openSynced" | "receiveSynced" | "accountSnapshot"
 >;
-const chapters = [
-  { id: "words", label: "Your pages" },
-  { id: "people", label: "Between us" },
-  { id: "practice", label: "The way we practice" },
-] as const;
 const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, {
     month: "short",
@@ -117,7 +120,7 @@ export default function LivingBook({
     draft: JournalDraft;
     voice: boolean;
   } | null>(null);
-  const [view, setView] = useState<View>("activities"),
+  const [view, setView] = useState<View>("home"),
     [closed, setClosed] = useState(false),
     [modal, setModal] = useState<Modal>(null),
     [editing, setEditing] = useState<Person | null>(null),
@@ -219,7 +222,7 @@ export default function LivingBook({
     if (!v) return;
     void commit(
       (b) => pauseVisit(updateDraft(b, v.id, draft)),
-      () => navigate("activities"),
+      () => navigate("home"),
       "Progress saved.",
     );
   }
@@ -239,7 +242,7 @@ export default function LivingBook({
   function leaveShared() {
     if (sample) {
       setShared(false);
-      navigate("activities");
+      navigate("home");
     } else vault.lock();
   }
   function gameAction(action: GameAction) {
@@ -285,9 +288,49 @@ export default function LivingBook({
   // Journal navigation queues behind autosave; guided visits still use their pause action.
   const headerBusy =
     working || !!sessionOpen || (!journalEditing && vault.busy);
-  const chapterIndex = chapters.findIndex((c) => c.id === view);
   const activeGame = l.game && l.game.stage !== "finished" ? l.game : undefined;
-  const sharedView = shared || view === "play" || view === "family";
+  const sharedView = shared || view === "play";
+  const place = placeOf[view];
+  // Places draw their own big heading; sub-screens keep the small running head.
+  const placeScreen = false;
+  const menuItems: MenuItem[] = [
+    {
+      label: "Settings",
+      onSelect: () => void headerAction(() => setModal("settings")),
+    },
+    "sound",
+    { label: "Help", onSelect: () => setModal("guide") },
+    ...(onAccount
+      ? [
+          {
+            label:
+              book.profile?.kind === "child" && !sample
+                ? "Parent account"
+                : accountLabel,
+            onSelect: () => void headerAction(onAccount),
+          },
+        ]
+      : []),
+    ...(!sample && accountLabel !== "Family library"
+      ? [
+          {
+            label: "Books on this device",
+            onSelect: () => void headerAction(vault.shelf),
+          },
+        ]
+      : []),
+    sample
+      ? {
+          label: "Create my private book",
+          divider: true,
+          onSelect: () => void headerAction(() => setModal("create")),
+        }
+      : {
+          label: "Lock Relish",
+          divider: true,
+          onSelect: () => void headerAction(vault.lock),
+        },
+  ];
   useEffect(() => {
     onInteraction?.(privateEditorOpen || sharedView || modal !== null);
   }, [privateEditorOpen, sharedView, modal, onInteraction]);
@@ -304,9 +347,15 @@ export default function LivingBook({
     ? sharedView
       ? "Our Family pages"
       : personalTitle
-    : view === "activities"
-      ? "Activities"
-      : view === "tools"
+    : view === "home"
+      ? "Home"
+      : view === "do"
+        ? "Do something"
+        : view === "book"
+          ? "Your book"
+          : view === "family"
+            ? "Family album"
+            : view === "tools"
         ? "Exercises"
         : view === "manual"
         ? "Your living manual"
@@ -320,7 +369,11 @@ export default function LivingBook({
                 ? "Guided activities"
                 : sessionOpen
                   ? "Guided reflection"
-                  : chapters.find((c) => c.id === view)?.label || "Your book";
+                  : view === "people"
+                    ? "Between us"
+                    : view === "practice"
+                      ? "The way we practice"
+                      : "Your book";
   let right: ReactNode = null,
     left: ReactNode;
   left = (
@@ -395,7 +448,7 @@ export default function LivingBook({
             <button
               className="lb-text"
               disabled={busy}
-              onClick={() => navigate("activities")}
+              onClick={() => navigate("home")}
             >
               Choose another activity
             </button>
@@ -659,7 +712,7 @@ export default function LivingBook({
               onClick={() =>
                 void commit(
                   (b) => changeLiving(b, (x) => ({ ...x, game: undefined })),
-                  () => navigate("play"),
+                  openPlay,
                 )
               }
             >
@@ -677,7 +730,7 @@ export default function LivingBook({
             <div className="lb-boundary">
               <strong>Unfinished game</strong>
               <p>You can continue the same round, at the same turn.</p>
-              <button className="lb-primary" onClick={() => navigate("play")}>
+              <button className="lb-primary" onClick={openPlay}>
                 Resume our round <ArrowUpRight size={16} />
               </button>
             </div>
@@ -730,7 +783,7 @@ export default function LivingBook({
               </p>
             </div>
           ) : null}
-          <button className="lb-text" onClick={() => navigate("play")}>
+          <button className="lb-text" onClick={openPlay}>
             <Users size={16} />{" "}
             {activeGame ? "Return to our game" : "Play one round together"}
           </button>
@@ -739,7 +792,7 @@ export default function LivingBook({
   }
   return (
     <div
-      className={`r-app lb-app ${journalEditing ? "lb-capturing" : ""} ${view === "activities" && !closed ? "lb-activities" : ""}`}
+      className={`r-app lb-app rp-shell ${journalEditing ? "lb-capturing" : ""} rp-at-${view}`}
     >
       {sample && (
         <div className="lb-sample">
@@ -754,151 +807,46 @@ export default function LivingBook({
           </button>
         </div>
       )}
-      <div className="lb-desk">
-        <header className="lb-header">
-          <div className="lb-brand">
-            <span className="lb-wordmark">relish</span>
-            <span className="lb-tagline">
-              The operating manual for relationships
-            </span>
-          </div>
-          <nav className="lb-main-nav" aria-label="Your book">
-            {!sharedView ? (
-              <button
-                disabled={headerBusy}
-                onClick={() => void headerAction(() => navigate("activities"))}
-                aria-current={
-                  view === "activities" && !closed ? "page" : undefined
-                }
-              >
-                <Compass size={16} /> Activities
-              </button>
-            ) : (
-              <button disabled={busy} onClick={() => navigate("family")}>
-                <Bookmark size={16} /> Family pages
-              </button>
-            )}
-            {!sharedView && (
-              <button
-                disabled={headerBusy}
-                onClick={() => void headerAction(() => navigate("words"))}
-                aria-current={view === "words" ? "page" : undefined}
-              >
-                <Feather size={16} /> Your pages
-              </button>
-            )}
+      {sharedView ? (
+        <header className="rp-topbar rp-topbar-focused">
+          <div className="rp-topbar-inner">
+            <span className="rp-wordmark">relish</span>
             <button
-              disabled={headerBusy}
-              onClick={() => void headerAction(openPlay)}
+              className="rp-end"
+              disabled={busy}
+              onClick={leaveShared}
             >
-              <Users size={16} /> Play together
+              <Lock size={15} />{" "}
+              {sample ? "My sample edition" : "Unlock my edition"}
             </button>
-            <button onClick={() => setModal("guide")}>
-              <CircleHelp size={16} /> Help
-            </button>
-          </nav>
-          <div className="lb-tools" role="group" aria-label="Edition tools">
-            {!sharedView && onAccount && (
-              <button
-                className={
-                  sample
-                    ? "lb-account-trigger lb-account-sample"
-                    : "lb-account-trigger"
-                }
-                disabled={headerBusy}
-                onClick={() => void headerAction(onAccount)}
-              >
-                <Cloud size={16} />
-                {book.profile?.kind === "child" && !sample
-                  ? "Parent account"
-                  : accountLabel}
-              </button>
-            )}
-            {!sample && !sharedView && (
-              <button
-                disabled={headerBusy}
-                onClick={() => void headerAction(vault.shelf)}
-                aria-label="Editions"
-                title="Editions"
-              >
-                <BookOpen size={16} />{" "}
-                <span className="lb-tool-label">Editions</span>
-              </button>
-            )}
-            {!sample && !sharedView && online && (
-              <button
-                disabled={headerBusy}
-                onClick={() =>
-                  void headerAction(() => {
-                    setOffered(undefined);
-                    setModal("connections");
-                  })
-                }
-                aria-label="Connect editions"
-                title="Connect editions"
-              >
-                <Users size={16} />{" "}
-                <span className="lb-connection-label">Connect editions</span>
-              </button>
-            )}
-            <SoundControl />
-            {!sharedView && (
-              <button
-                disabled={headerBusy}
-                onClick={() => void headerAction(() => setModal("settings"))}
-                aria-label="Privacy and settings"
-              >
-                <Settings2 size={17} />
-              </button>
-            )}
-            {sharedView ? (
-              <button disabled={busy} onClick={leaveShared}>
-                <Lock size={15} />{" "}
-                {sample ? "My sample edition" : "Unlock my edition"}
-              </button>
-            ) : (
-              !sample && (
-                <button
-                  disabled={headerBusy}
-                  onClick={() => void headerAction(vault.lock)}
-                  aria-label="Lock"
-                  title="Lock"
-                >
-                  <Lock size={15} /> <span className="lb-tool-label">Lock</span>
-                </button>
-              )
-            )}
           </div>
         </header>
-        <div className="lb-identity">
-          <h1 ref={heading} tabIndex={-1}>
-            {headingText}
-          </h1>
-          <span>
-            {sharedView ? <Users size={14} /> : <Lock size={14} />}{" "}
-            {sharedView
-              ? "Only shared pages"
-              : sample
-                ? "Fictional sample"
-                : book.profile?.kind === "child"
-                  ? `${ageLabels[book.profile.ageBand]} · private book`
-                  : "Your private pages"}
-          </span>
-        </div>
-        {!sample && !sharedView && onAccount && syncStatus && (
-          <div className="lb-sync-status">
-            <span>{syncStatus}</span>
-            <button
-              disabled={headerBusy}
-              onClick={() => void headerAction(onAccount)}
-            >
-              <Cloud size={14} />{" "}
-              {book.profile?.kind === "child"
-                ? "Parent account"
-                : accountLabel === "Sign in"
-                  ? "Sign in"
-                  : "Family library"}
-            </button>
+      ) : (
+        <TopBar
+          current={place}
+          initial={book.owner}
+          disabled={headerBusy}
+          status={!sample && onAccount ? syncStatus : undefined}
+          onPlace={(next) => void headerAction(() => navigate(next))}
+          items={menuItems}
+        />
+      )}
+      <div className="lb-desk">
+        {!placeScreen && (
+          <div className="lb-identity">
+            <h1 ref={heading} tabIndex={-1}>
+              {headingText}
+            </h1>
+            <span>
+              {sharedView ? <Users size={14} /> : <Lock size={14} />}{" "}
+              {sharedView
+                ? "Only shared pages"
+                : sample
+                  ? "Fictional sample"
+                  : book.profile?.kind === "child"
+                    ? `${ageLabels[book.profile.ageBand]} · private book`
+                    : "Your private pages"}
+            </span>
           </div>
         )}
         {error || vault.error ? (
@@ -929,7 +877,7 @@ export default function LivingBook({
               </button>
             )}
           </div>
-        ) : view === "activities" && !sharedView ? (
+        ) : view === "home" && !sharedView ? (
           <Activities
             book={book}
             busy={busy}
@@ -943,7 +891,7 @@ export default function LivingBook({
               manualCards.filter((c) => c.status === "suggested").length
             }
           />
-        ) : view === "tools" && !sharedView ? (
+        ) : (view === "tools" || view === "do") && !sharedView ? (
           <Tools
             book={book}
             busy={busy}
@@ -951,7 +899,7 @@ export default function LivingBook({
               void commit(update, after, message)
             }
             onPages={() => navigate("words")}
-            onActivities={() => navigate("activities")}
+            onActivities={() => navigate("home")}
           />
         ) : view === "manual" && !sharedView ? (
           <Manual
@@ -961,7 +909,7 @@ export default function LivingBook({
             sample={sample}
             onPages={() => navigate("words")}
           />
-        ) : view === "words" && !sharedView ? (
+        ) : (view === "words" || view === "book") && !sharedView ? (
           <Journal
             key={pageKey}
             navigation={journalNavigation}
@@ -975,11 +923,7 @@ export default function LivingBook({
             pendingInsights={
               manualCards.filter((c) => c.status === "suggested").length
             }
-            onAlbum={() => {
-              setShared(true);
-              navigate("family");
-              window.dispatchEvent(new Event("relish:locked"));
-            }}
+            onAlbum={() => navigate("family")}
             onOffer={
               !sample && online
                 ? (passage) => {
@@ -991,9 +935,9 @@ export default function LivingBook({
             save={vault.save}
             sample={sample}
             onEditingChange={setJournalEditing}
-            onActivities={() => navigate("activities")}
+            onActivities={() => navigate("home")}
             onDone={() => {
-              navigate("activities");
+              navigate("home");
               setClosed(true);
             }}
           />
@@ -1037,20 +981,6 @@ export default function LivingBook({
           </div>
         ) : (
           <>
-            {!sharedView && view !== "bookmark" && view !== "session" && (
-              <nav className="lb-chapters" aria-label="Chapters">
-                {chapters.map((c, i) => (
-                  <button
-                    key={c.id}
-                    aria-current={view === c.id ? "page" : undefined}
-                    onClick={() => navigate(c.id)}
-                  >
-                    <span>0{i + 1}</span>
-                    {c.label}
-                  </button>
-                ))}
-              </nav>
-            )}
             <main
               className={`lb-book ${sessionOpen ? "lb-session-book" : ""}`}
               key={pageKey}
@@ -1080,28 +1010,6 @@ export default function LivingBook({
                 <span className="lb-folio">02</span>
               </article>
             </main>
-            {chapterIndex >= 0 && !sharedView && (
-              <footer className="lb-book-footer">
-                <span>Your progress is saved after each step.</span>
-                <div>
-                  <button
-                    aria-label="Previous chapter"
-                    disabled={chapterIndex === 0}
-                    onClick={() => navigate(chapters[chapterIndex - 1].id)}
-                  >
-                    <ArrowLeft size={16} />
-                  </button>
-                  <span>0{chapterIndex + 1} / 03</span>
-                  <button
-                    aria-label="Next chapter"
-                    disabled={chapterIndex === 2}
-                    onClick={() => navigate(chapters[chapterIndex + 1].id)}
-                  >
-                    <ArrowRight size={16} />
-                  </button>
-                </div>
-              </footer>
-            )}
           </>
         )}
         {!sharedView && !privateEditorOpen && view === "bookmark" && (
@@ -1325,7 +1233,7 @@ export default function LivingBook({
         <Dialog title="Help" onClose={() => setModal(null)}>
           <p className="lb-kicker">How to use this screen</p>
           <h2>
-            {view === "activities"
+            {view === "home"
               ? "Choose an activity"
               : view === "tools"
                 ? "Use an exercise"
@@ -1338,7 +1246,7 @@ export default function LivingBook({
                     : "Complete the current step"}
           </h2>
           <p>
-            {view === "activities"
+            {view === "home"
               ? "Write a personal journal entry for open space, choose a guided reflection for prompts, or play a game together. Each activity has its own stopping point. Unfinished pages and reflections will wait for you here."
               : view === "tools"
                 ? "Choose an exercise, then follow its steps. Sorts and fill-in-the-blank exercises are saved only when you keep the page. Day-by-day checklists save each mark and wait for you between visits."

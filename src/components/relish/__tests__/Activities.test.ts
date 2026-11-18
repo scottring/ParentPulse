@@ -80,11 +80,11 @@ it("opens free writing in one click, keeps the latest words before leaving, and 
     target: { value: "A small adventure, still unfolding" },
   });
   expect(
-    (screen.getByRole("button", { name: "Activities" }) as HTMLButtonElement)
+    (screen.getByRole("button", { name: "Home" }) as HTMLButtonElement)
       .disabled,
   ).toBe(false);
   app.fail(true);
-  fireEvent.click(screen.getByRole("button", { name: "Activities" }));
+  fireEvent.click(screen.getByRole("button", { name: "Home" }));
   await screen.findByRole("alert");
   expect(
     screen.queryByRole("heading", { name: "What would you like to do?" }),
@@ -93,7 +93,7 @@ it("opens free writing in one click, keeps the latest words before leaving, and 
     input,
   );
   app.fail(false);
-  fireEvent.click(screen.getByRole("button", { name: "Activities" }));
+  fireEvent.click(screen.getByRole("button", { name: "Home" }));
   await screen.findByRole("heading", { name: "What would you like to do?" });
   expect(app.stored().journal?.[0].text).toBe(
     "A small adventure, still unfolding",
@@ -193,7 +193,7 @@ it("resumes the same group round and requires unlocking before returning to priv
   const app = open({ ...book, living: { ...livingOf(book), game } });
   fireEvent.click(screen.getByRole("button", { name: "Continue our game" }));
   expect(livingOf(app.stored()).game?.id).toBe(game.id);
-  expect(screen.queryByRole("button", { name: "Activities" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Home" })).toBeNull();
   expect(
     screen.queryByRole("button", { name: "Write a journal entry" }),
   ).toBeNull();

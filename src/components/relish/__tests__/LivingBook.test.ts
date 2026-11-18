@@ -110,11 +110,10 @@ describe("living-book interaction boundaries", () => {
     render(createElement(Harness));
     fireEvent.click(screen.getByRole("button", { name: "Read your pages" }));
     expect(screen.getByText("A confidential sample sentence")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Play together" }));
+    fireEvent.click(screen.getByRole("button", { name: "Home" }));
+    fireEvent.click(screen.getByRole("button", { name: "Choose a game" }));
     expect(screen.queryByText("A confidential sample sentence")).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: "Privacy and settings" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Menu/ })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Unlock my edition" }));
     expect(lock).toHaveBeenCalledOnce();
   });
