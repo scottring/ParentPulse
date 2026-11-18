@@ -464,7 +464,8 @@ export default function LivingBook({
           onSelect: () => void headerAction(() => setModal("create")),
         }
       : {
-          label: "Lock Relish",
+          // An account book: locking also signs out, so say so.
+          label: accountManaged ? "Sign out" : "Lock Relish",
           divider: true,
           onSelect: () => void headerAction(vault.lock),
         },
