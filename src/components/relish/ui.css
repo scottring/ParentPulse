@@ -663,6 +663,10 @@ img.ui-illustration {
     border: 1px solid var(--ui-line);
     border-radius: 14px;
   }
+  /* The page being read is the cream writing leaf on a phone too. */
+  .lb-app .ui-spread.ui-spread-reading > .ui-spread-page:first-child {
+    background: var(--rj-paper, var(--ui-page));
+  }
 }
 .lb-app .rj-read .rj-paper-date {
   font: italic 400 16px/1.4 var(--serif);
