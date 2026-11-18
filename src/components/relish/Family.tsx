@@ -178,7 +178,7 @@ export default function Family({
               <span>{p.note || "Book in your account"}</span>
               <span className="rp-person-open">
                 {p.note?.endsWith("notes in your book")
-                  ? `See what you’ve noted →`
+                  ? `See my pages about ${p.name} →`
                   : `Open ${p.name}’s book →`}
               </span>
             </span>
@@ -220,7 +220,7 @@ export default function Family({
             <div className="rp-panel-head">
               <h2 id="rp-passed-title">Passed between you</h2>
               <button className="rp-link" disabled={busy} onClick={onShare}>
-                Share a page from your book
+                Choose a page to share
               </button>
             </div>
             {passed.length ? (
@@ -295,7 +295,6 @@ export default function Family({
               page is always optional.
             </p>
           )}
-          <p className="rp-quiet">Viewing the album never locks your book.</p>
         </section>
       </div>
 

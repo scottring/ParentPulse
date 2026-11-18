@@ -120,7 +120,7 @@ async function setup(mismatch?: "account" | "key", initialPassage?: {title:strin
     );
   else {
     await screen.findByText("Test family");
-    fireEvent.click(screen.getByText("Share a passage"));
+    fireEvent.click(screen.getByText("Send a passage from your book"));
   }
   return {
     sent,
@@ -162,6 +162,10 @@ describe("sharing recovery", () => {
       { target: { value: "A fictional passage to offer." } },
     );
     fireEvent.click(screen.getByRole("checkbox", { name: "Fictional B" }));
+    // The button names who receives the words.
+    expect(
+      screen.getByRole("button", { name: "Send passage to Fictional B" }),
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /Send passage/ }));
     await screen.findByText("Connection interrupted");
     expect(

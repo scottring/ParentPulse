@@ -24,6 +24,12 @@ type Props = {
   onClose: () => void;
   initialPassage?: { title: string; text: string };
 };
+/** What a recipient has done with a passage, in plain words. */
+const receiptWords: Record<string, string> = {
+  pending: "not read yet",
+  accepted: "saved it",
+  declined: "passed",
+};
 export default function ConnectedEditions(props: Props) {
   if (!canUseOnline(props.book))
     return (
@@ -758,10 +764,9 @@ function AdultConnectedEditions({
                       className="lb-boundary"
                       open={initialPassage ? true : undefined}
                     >
-                      <summary>Share a passage</summary>
+                      <summary>Send a passage from your book</summary>
                       <p>
-                        Choose the exact words and the editions that may receive
-                        them.{" "}
+                        Choose the exact words and who receives them.{" "}
                         {initialPassage && book.connections?.draft
                           ? "Your earlier unfinished draft stays in your book. Send this selection before closing to keep edits to it; its original page is always kept."
                           : "Closing this window keeps your text as an encrypted local draft. Choose recipients again when you return."}
@@ -816,7 +821,7 @@ function AdultConnectedEditions({
                           />
                         </label>
                         <fieldset>
-                          <legend>Choose recipients</legend>
+                          <legend>Who receives it</legend>
                           {others.map((m) => (
                             <label key={m.uid} className="lb-consent-check">
                               <input
@@ -836,8 +841,8 @@ function AdultConnectedEditions({
                         </fieldset>
                         {others.length === 0 && (
                           <p>
-                            Invite another member to connect their edition
-                            first.
+                            Invite someone to this family first. Once they join,
+                            you can send to them.
                           </p>
                         )}
                         <button
@@ -849,8 +854,19 @@ function AdultConnectedEditions({
                             !recipients.length
                           }
                         >
-                          <Send size={16} /> Send passage
+                          <Send size={16} />{" "}
+                          {recipients.length
+                            ? `Send passage to ${others
+                                .filter((m) => recipients.includes(m.uid))
+                                .map((m) => m.name)
+                                .join(", ")}`
+                            : "Send passage"}
                         </button>
+                        <p className="lb-fine">
+                          Each person gets an invitation to read it and decide
+                          whether to save it in their own book. You can
+                          withdraw it until they do.
+                        </p>
                       </form>
                     </details>
                     {(book.connections?.outgoing || [])
@@ -901,7 +917,7 @@ function AdultConnectedEditions({
                             disabled={busy}
                             onClick={() => void run(() => inspect(d))}
                           >
-                            <BookOpen size={16} /> Read this invitation
+                            <BookOpen size={16} /> Read the passage
                           </button>
                           <button
                             className="lb-text"
@@ -929,8 +945,9 @@ function AdultConnectedEditions({
                         <h3>{opened.title}</h3>
                         <blockquote>{opened.text}</blockquote>
                         <p>
-                          Keep this in your private edition? It will not be
-                          added to the shared game pages or sent to AI.
+                          Save this passage in your own book? It stays with
+                          your private pages. It isn’t added to shared game
+                          pages or sent to AI.
                         </p>
                         <button
                           className="lb-primary"
@@ -957,7 +974,7 @@ function AdultConnectedEditions({
                             <p>
                               {book.connections?.outgoing?.find(
                                 (o) => o.id === d.id,
-                              )?.title || "A passage from your edition"}
+                              )?.title || "A passage from your book"}
                             </p>
                             <p className="lb-fine">
                               {d.revoked
@@ -965,7 +982,7 @@ function AdultConnectedEditions({
                                 : d.recipients
                                     .map(
                                       (u) =>
-                                        `${circle.members.find((m) => m.uid === u)?.name || "Former member"}: ${d.receipts[u]}`,
+                                        `${circle.members.find((m) => m.uid === u)?.name || "Former member"}: ${receiptWords[d.receipts[u]] ?? d.receipts[u]}`,
                                     )
                                     .join(" · ")}
                             </p>

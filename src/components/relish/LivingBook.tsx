@@ -995,7 +995,7 @@ export default function LivingBook({
       )}
       {modal === "profile" && !sample && !sharedView && (
         <Dialog
-          title="Edition & parent settings"
+          title="Who this book is for"
           onClose={() => setModal(null)}
         >
           <EditionSetup
@@ -1008,7 +1008,7 @@ export default function LivingBook({
             save={vault.save}
             onDone={() => {
               setModal(null);
-              setNotice("Edition settings saved.");
+              setNotice("Saved.");
             }}
             onCancel={() => setModal("settings")}
           />
@@ -1019,7 +1019,7 @@ export default function LivingBook({
           <p className="lb-kicker">Privacy and storage</p>
           <h2>Privacy and settings</h2>
           <p>
-            Your book, drafts, session progress and games are{" "}
+            This book’s pages, drafts, plans and games are{" "}
             {sample
               ? "examples in memory only"
               : accountManaged
@@ -1027,38 +1027,36 @@ export default function LivingBook({
                 : "encrypted in this browser on this device"}
             .{" "}
             {online
-              ? "On-demand AI uses a reviewed excerpt. Automatic manual suggestions have a separate opt-in; photos and private people tags are excluded from AI requests. Saving online does not give AI access to your book."
-              : "General AI chat and online passage sharing are off. Voice writing and manual suggestions, when available, need a parent’s permission and adult account."}
+              ? "AI only sees words you review and choose to send. Suggestions in Your book have their own opt-in. Photos and people tags are never sent to AI. Saving to your account doesn’t give AI access to your book."
+              : "AI chat and online passage sharing are off in this book. Voice writing and Relish suggestions, where offered, need a parent’s permission through a parent’s account."}
           </p>
           {!sample && (
             <div className="lb-boundary">
-              <h3>
-                {book.profile?.kind === "child"
-                  ? "A book for their age"
-                  : "Your adult edition"}
-              </h3>
+              <h3>Who this book is for</h3>
               <p>{ageLabels[audienceOf(book)]}</p>
               <p className="lb-fine">
                 {online
-                  ? "Optional AI and family connections are available when you choose them."
+                  ? "An adult’s book. AI help and family connections are available when you choose them."
                   : accountManaged
                     ? "This child’s book belongs to the parent account and saves automatically online. The parent account password protects age changes and access to the family library. Voice writing needs a parent’s separate permission."
-                    : "Written guidance for this age. A separate parent passphrase protects this local edition’s settings. Children have no independent account or online passage sharing."}
+                    : "Prompts are written for this age. A separate parent passphrase protects these settings. Children have no account of their own and no online passage sharing."}
               </p>
               <button
                 className="lb-secondary"
                 onClick={() => setModal("profile")}
               >
-                Edition & parent settings
+                Change who this book is for
               </button>
             </div>
           )}
           <div className="lb-boundary">
             <h3>Back up your book</h3>
             <p>
-              {accountManaged
-                ? "Your saved book is available whenever you sign in. For an extra portable copy, export a backup with a passphrase you choose and keep separately."
-                : "Browser data can be cleared. Export encrypted backups regularly and keep your passphrase separately."}
+              {sample
+                ? "The sample can’t be backed up. Create your own book to keep pages."
+                : accountManaged
+                  ? "Your saved book is available whenever you sign in. For an extra portable copy, export a backup with a passphrase you choose and keep separately."
+                  : "Browser data can be cleared. Export encrypted backups regularly and keep your passphrase separately."}
             </p>
             <button
               className="lb-primary"
@@ -1076,7 +1074,7 @@ export default function LivingBook({
                 setModal("connections");
               }}
             >
-              <Users size={16} /> Partner sharing and your online account
+              <Users size={16} /> Connected books and your account
             </button>
           )}
           <p className="lb-fine">
@@ -1086,11 +1084,11 @@ export default function LivingBook({
           </p>
           {!sample && (
             <details className="lb-boundary">
-              <summary>Remove this edition from this device</summary>
+              <summary>Remove {book.owner}’s book from this device</summary>
               <p>
-                Export a backup first if you want to keep this book. This
-                permanently removes its local copy. Online connections, other
-                editions and backups are separate.
+                This permanently deletes the copy of {book.owner}’s book on this
+                device. Export a backup first if you want to keep it. Online
+                connections, other books and backups are separate.
               </p>
               <label>
                 Type {book.owner} to confirm
@@ -1115,12 +1113,12 @@ export default function LivingBook({
                       setRemoveError(
                         e instanceof Error
                           ? e.message
-                          : "The edition could not be removed.",
+                          : "This book couldn’t be removed. It is still here.",
                       ),
                     )
                 }
               >
-                Remove this local edition
+                Remove from this device
               </button>
             </details>
           )}
