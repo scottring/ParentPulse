@@ -33,7 +33,7 @@
 .lb-account input:not([type="checkbox"]) {
   width: 100%;
   min-height: 48px;
-  border: 1px solid #667c7c70;
+  border: 1px solid #727c6670;
   border-radius: 0.5rem;
   padding: 0.8rem;
   background: #ffffff55;
@@ -62,16 +62,16 @@
 }
 .lb-account-current {
   padding: 1.25rem;
-  border: 1px solid #667c7c50;
+  border: 1px solid #727c6650;
   border-radius: 0.8rem;
-  background: #49686a09;
+  background: #5a684b09;
 }
 .lb-account-books {
   display: grid;
   gap: 16px;
 }
 .lb-account-books > div {
-  border: 1px solid #667c7c50;
+  border: 1px solid #727c6650;
   border-radius: 0.7rem;
   padding: 0.8rem 1rem;
 }
@@ -93,7 +93,7 @@
 .lb-account-conflict {
   display: grid;
   gap: 16px;
-  border-top: 1px solid #667c7c50;
+  border-top: 1px solid #727c6650;
   padding-top: 1rem;
 }
 .lb-gate-account {
@@ -161,9 +161,9 @@
   margin: auto;
   padding: clamp(24px, 4vw, 52px);
   background: #e6ebe7ed;
-  border: 1px solid #47646730;
+  border: 1px solid #58654930;
   border-radius: 12px;
-  box-shadow: 0 16px 60px #2443440d;
+  box-shadow: 0 16px 60px #353c2c0d;
 }
 .lb-account-empty {
   padding: 20px 0;
@@ -171,7 +171,7 @@
 .lb-account-footer {
   display: grid;
   gap: 8px;
-  border-top: 1px solid #667c7c40;
+  border-top: 1px solid #727c6640;
   padding-top: 24px;
   margin-top: 4px;
 }
@@ -181,7 +181,7 @@
   font: inherit;
   color: inherit;
   background: #ffffff55;
-  border: 1px solid #667c7c70;
+  border: 1px solid #727c6670;
   border-radius: 8px;
   width: 100%;
 }
@@ -207,7 +207,7 @@
   flex: 0 0 18px;
   padding: 0;
   margin: 3px 0 0;
-  accent-color: #42676b;
+  accent-color: #576449;
 }
 .lb-account {
   min-width: 0;
@@ -224,24 +224,6 @@
 }
 
 /* ── New look (2026-11-18): matches Home / Do something / Your book / Family ── */
-.lb-library-home,
-.lb-gate,
-.lb-account-host,
-.lb-app .lb-account {
-  --paper: #f6f4ed;
-  --ink: #30382c;
-  --muted: #5f6458;
-  --line: #dcded2;
-  --olive: #43513a;
-  --lb-desk: #f6f4ed;
-  --lb-deep: #ecede4;
-  --lb-cover: #43513a;
-  --card: #fffdf7;
-  --sun: #f2d58a;
-  --clay: #e9b9a0;
-  --sky: #c9d9e3;
-  --sage: #cfdcc4;
-}
 .lb-library-home,
 .lb-gate {
   background: var(--paper);

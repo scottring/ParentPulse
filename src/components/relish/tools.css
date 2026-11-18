@@ -6,8 +6,8 @@
   border-radius: 5px 14px 14px 5px;
   box-shadow:
     0 6px 0 -1px var(--lb-cover),
-    0 10px 0 -3px #adbbb5,
-    0 22px 35px #3f5c6020;
+    0 10px 0 -3px #b4bbad,
+    0 22px 35px #505c4320;
 }
 .lb-app .rt-book h2 {
   font-size: clamp(30px, 3.4vw, 44px);
@@ -57,9 +57,9 @@
   padding: 16px 40px 16px 16px;
   min-height: 44px;
   background: #e0e5db;
-  border: 1px solid #9bb0aa55;
+  border: 1px solid #a6b09b55;
   border-radius: 4px 12px 12px 4px;
-  box-shadow: 0 3px 0 #b4c2ba77;
+  box-shadow: 0 3px 0 #bbc2b477;
   color: var(--ink);
   cursor: pointer;
   transition:
@@ -81,12 +81,12 @@
   color: var(--olive);
 }
 .lb-app .rt-running {
-  background: #dce5e2;
+  background: #e1e5dc;
 }
 @media (hover: hover) {
   .lb-app .rt-card:not(:disabled):hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px #304f5018;
+    box-shadow: 0 4px 8px #414a3618;
   }
 }
 .lb-app .rt-runner {
@@ -113,7 +113,7 @@
   font-size: 16px;
   padding: 10px 12px;
   min-height: 44px;
-  border: 1px solid #9bb0aa;
+  border: 1px solid #a6b09b;
   border-radius: 8px;
   background: #fff;
   color: var(--ink);
@@ -139,7 +139,7 @@
   gap: 8px 16px;
   padding: 10px 12px;
   background: #fff8;
-  border: 1px solid #9bb0aa44;
+  border: 1px solid #a6b09b44;
   border-radius: 10px;
 }
 .lb-app .rt-sort li > span {
@@ -159,7 +159,7 @@
   font-size: 13px;
   min-height: 40px;
   padding: 6px 12px;
-  border: 1px solid #9bb0aa;
+  border: 1px solid #a6b09b;
   border-radius: 999px;
   background: transparent;
   color: var(--ink);
@@ -214,7 +214,7 @@
 }
 .lb-app .rt-composed {
   padding: 16px;
-  background: #dce5e2;
+  background: #e1e5dc;
   border-radius: 10px;
 }
 .lb-app .rt-composed p:last-child {
@@ -228,7 +228,7 @@
   align-items: flex-start;
   gap: 10px;
   padding-top: 12px;
-  border-top: 1px solid #9bb0aa55;
+  border-top: 1px solid #a6b09b55;
 }
 .lb-app .rt-preview blockquote {
   white-space: pre-wrap;
@@ -257,7 +257,7 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  border: 2px solid #9bb0aa;
+  border: 2px solid #a6b09b;
 }
 .lb-app .rt-days li[data-done="true"] {
   background: var(--olive);

@@ -1,11 +1,4 @@
 .r-app {
-  --paper: #f6f4ed;
-  --ink: #30382c;
-  --muted: #72766b;
-  --line: #dcded2;
-  --olive: #43513a;
-  --serif: var(--font-parent-display), Georgia, serif;
-  --sans: var(--font-parent-body), sans-serif;
   min-height: 100vh;
   background: var(--paper);
   color: var(--ink);

@@ -1,24 +1,6 @@
 /* The four places: Home, Do something, Your book, Family.
    Colors come from relish.css tokens plus the approved mockup accents. */
 .lb-app.rp-shell {
-  --paper: #f6f4ed;
-  --ink: #30382c;
-  --muted: #5f6458;
-  --line: #dcded2;
-  --olive: #43513a;
-  --card: #fffdf7;
-  --line-soft: #ecede4;
-  --sun: #f2d58a;
-  --sage: #cfdcc4;
-  --clay: #e9b9a0;
-  --sky: #c9d9e3;
-  --lilac: #e4d6ea;
-  --olive-line: #9fae92;
-  --on-olive: #f6f4ed;
-  --on-olive-muted: #dfe4d6;
-  --lb-desk: var(--paper);
-  --lb-deep: var(--line-soft);
-  --lb-cover: var(--olive);
   background: var(--paper);
   min-height: 100vh;
 }
