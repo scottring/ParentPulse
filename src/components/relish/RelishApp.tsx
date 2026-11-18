@@ -14,7 +14,7 @@ import Illustration from "./Illustration";
 import { PaperCard, PrivateNote } from "./ui";
 import type { ReactNode } from "react";
 import { readBinding } from "@/lib/relish/book-sync";
-import { disconnectAI, setParentGate } from "@/lib/relish/ai-auth";
+import { disconnectAI, getParentGate, setParentGate } from "@/lib/relish/ai-auth";
 import "./relish.css";
 import "./experience.css";
 import "./living-book.css";
@@ -122,29 +122,64 @@ function BookGate() {
     if (ownBook && sync.user) writeHomeBook(sync.user.uid, ownBook);
   }, [ownBook, sync.user]);
   // Land on that book's Home instead of stopping at the family library.
+  // While that's under way, show the quiet opening screen, not a library
+  // that flashes "empty" and then a list before the book opens.
   const signedIn = useRef<string | null | undefined>(undefined);
   const openHome = useRef(false);
+  const fetched = useRef(false);
+  const [landing, setLanding] = useState(false);
+  /* eslint-disable react-hooks/set-state-in-effect -- landing follows auth and sync state as it arrives */
   useEffect(() => {
     if (!sync.authReady) return;
     const uid = sync.user?.uid ?? null;
     // Open your own book after signing in and whenever Relish first loads
-    // signed in (a reload, a new tab, the iPhone app). Not after Lock.
-    if ((signedIn.current === null || signedIn.current === undefined) && uid)
+    // signed in (a reload, a new tab, the iPhone app). Not after Lock, and
+    // never past a parent gate left by a child's book.
+    if ((signedIn.current === null || signedIn.current === undefined) && uid) {
       openHome.current = true;
+      fetched.current = false;
+      const canLand =
+        !!readHomeBook(uid) && !getParentGate() && vault.mode !== "open";
+      setLanding(canLand);
+    }
+    if (!uid) {
+      openHome.current = false;
+      setLanding(false);
+    }
     signedIn.current = uid;
     if (!openHome.current || sync.working) return;
     if (vault.mode === "open") {
       openHome.current = false;
+      setLanding(false);
       return;
     }
-    if (!sync.user?.emailVerified || !sync.books.length) return;
+    if (!sync.user?.emailVerified) {
+      setLanding(false);
+      return;
+    }
+    if (!sync.books.length) {
+      if (landing && !fetched.current) {
+        fetched.current = true;
+        void sync.refresh().catch(() => setLanding(false));
+      } else if (fetched.current) setLanding(false);
+      return;
+    }
     openHome.current = false;
     const home = readHomeBook(sync.user.uid);
     const head = sync.books.find((b) => b.id === home && b.accountManaged);
-    if (head) void sync.open(head).catch(() => {});
-    // Acts once per sign-in; sync.open is recreated every render.
+    if (head && !getParentGate())
+      void sync.open(head).catch(() => setLanding(false));
+    else setLanding(false);
+    // Acts once per sign-in; sync.open/refresh are recreated every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sync.authReady, sync.user, sync.working, sync.books, vault.mode]);
+  }, [sync.authReady, sync.user, sync.working, sync.books, vault.mode, landing]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+  // Never strand someone on the opening screen: after 8 s, show the library.
+  useEffect(() => {
+    if (!landing) return;
+    const t = window.setTimeout(() => setLanding(false), 8000);
+    return () => window.clearTimeout(t);
+  }, [landing]);
   useEffect(() => {
     const close = () => setAccountOpen(false);
     window.addEventListener("relish:locked", close);
@@ -155,7 +190,11 @@ function BookGate() {
       window.dispatchEvent(new Event("relish:locked"));
   }, [vault.mode]);
   function content() {
-    if (vault.mode === "loading" || !sync.authReady)
+    if (
+      vault.mode === "loading" ||
+      !sync.authReady ||
+      (landing && vault.mode !== "open")
+    )
       return (
         <main className="r-app lb-gate lb-gate-one lb-gate-loading">
           <header className="lb-gate-head">
