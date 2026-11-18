@@ -26,7 +26,11 @@ import {
 import { samePageBank, samePagePrompts } from "../play-content";
 import {
   activeTrackers,
+  answerCheckBack,
   builderComplete,
+  checkBackWords,
+  dueCheckBacks,
+  openCheckBacks,
   builderPage,
   finishTracker,
   hasBingo,
@@ -44,6 +48,8 @@ import {
   type BuilderTool,
   type SortTool,
 } from "../tools";
+import { bookPages } from "../pages";
+import { createVault, unlockVault } from "../vault";
 Object.defineProperty(globalThis, "crypto", {
   value: webcrypto,
   configurable: true,
@@ -362,5 +368,115 @@ describe("Same page? game", () => {
       { ...g, contentVersion: 3 },
     ])
       expect(isLiving({ ...livingOf(book), game: bad })).toBe(false);
+  });
+});
+
+describe("check-backs on kept plans", () => {
+  const withSam = (): Book => ({
+    ...emptyBook("Robin"),
+    people: [{ id: "sam", name: "Sam", role: "Son", color: "rose", note: "", lessons: [] }],
+  });
+  const repairPlan =
+    "I’m sorry I snapped. I wish I’d taken a breath. Next time I’ll say I need a minute. Can we start fresh tomorrow?";
+  const keep = (book: Book, toolId: string, plan?: string) =>
+    keepToolPage(book, {
+      title: toolId,
+      text: `Page for ${toolId}`,
+      toolId,
+      personId: "sam",
+      ...(plan !== undefined ? { plan } : {}),
+    });
+  const DAY = 86_400_000;
+  it("keeping a plan from these three exercises asks about it a few days later", () => {
+    let book = keep(withSam(), "repair", repairPlan);
+    book = keep(book, "soft-start", "I feel worn out about bedtime, and what would help is trading off.");
+    book = keep(book, "iceberg", "Tired");
+    book = keep(book, "helps-upset", "Music");
+    book = keep(book, "repair", " ");
+    const list = toolsOf(book).checkBacks!;
+    expect(list.map((c) => c.toolId)).toEqual(["repair", "soft-start", "iceberg"]);
+    const [repair, , iceberg] = list;
+    expect(repair.pageId).toBe(book.journal!.find((e) => e.source?.toolId === "repair")!.id);
+    expect(repair.personId).toBe("sam");
+    expect(Date.parse(repair.dueAt) - Date.parse(repair.createdAt)).toBe(2 * DAY);
+    expect(Date.parse(iceberg.dueAt) - Date.parse(iceberg.createdAt)).toBe(3 * DAY);
+    const kept = Date.parse(repair.createdAt);
+    expect(dueCheckBacks(book, new Date(kept + DAY))).toHaveLength(0);
+    expect(dueCheckBacks(book, new Date(kept + 2 * DAY)).map((c) => c.toolId)).toEqual([
+      "repair",
+      "soft-start",
+    ]);
+    expect(dueCheckBacks(book, new Date(kept + 3 * DAY))).toHaveLength(3);
+    expect(checkBackWords(book, repair)).toEqual({
+      lead: "You planned to say to Sam:",
+      quote: repairPlan,
+      ask: "Did you get a chance to say it?",
+    });
+    expect(checkBackWords(book, iceberg).lead).toBe(
+      "You guessed it was “Tired” for Sam, and planned to respond to that instead of the behavior.",
+    );
+    expect(isBook(book)).toBe(true);
+  });
+  it("Yes saves how it went with the plan; Not yet asks again later; Let it go sets it aside", () => {
+    let book = keep(keep(keep(withSam(), "repair", repairPlan), "soft-start", "Opener"), "iceberg", "Tired");
+    const [repair, opener, iceberg] = toolsOf(book).checkBacks!;
+    const now = new Date(Date.parse(repair.dueAt) + 1000);
+    book = answerCheckBack(book, repair.id, { kind: "tried", outcome: "helped", note: " She laughed. " }, now);
+    expect(toolsOf(book).checkBacks![0]).toMatchObject({
+      status: "tried",
+      outcome: "helped",
+      note: "She laughed.",
+      answeredAt: now.toISOString(),
+    });
+    const page = bookPages(book).find((p) => p.id === `journal:${repair.pageId}`)!;
+    expect(page.sections).toEqual([{ label: "How it went", text: "It helped, even a little. She laughed." }]);
+    book = answerCheckBack(book, opener.id, { kind: "later" }, now);
+    expect(Date.parse(toolsOf(book).checkBacks![1].dueAt)).toBe(now.getTime() + 2 * DAY);
+    expect(dueCheckBacks(book, now).map((c) => c.id)).toEqual([]);
+    book = answerCheckBack(book, iceberg.id, { kind: "let-go" }, new Date(Date.parse(iceberg.dueAt)));
+    expect(openCheckBacks(book).map((c) => c.id)).toEqual([opener.id]);
+    expect(() => answerCheckBack(book, repair.id, { kind: "let-go" })).toThrow("already");
+    expect(() =>
+      answerCheckBack(book, opener.id, { kind: "tried", outcome: "great" as never }),
+    ).toThrow();
+    expect(isBook(book)).toBe(true);
+  });
+  it("validators accept books without check-backs and reject malformed ones", () => {
+    expect(isTools({ version: 1, trackers: [] })).toBe(true);
+    const fresh = keep(withSam(), "repair", repairPlan);
+    const c = toolsOf(fresh).checkBacks![0];
+    expect(isTools(toolsOf(fresh))).toBe(true);
+    for (const bad of [
+      "nope",
+      [c, c],
+      [{ ...c, toolId: "hellos" }],
+      [{ ...c, plan: "" }],
+      [{ ...c, plan: "x".repeat(1501) }],
+      [{ ...c, dueAt: "soon" }],
+      [{ ...c, status: "done", answeredAt: c.createdAt }],
+      [{ ...c, status: "tried" }],
+      [{ ...c, answeredAt: c.createdAt }],
+      [{ ...c, outcome: "helped" }],
+      [{ ...c, status: "tried", answeredAt: c.createdAt, outcome: "great" }],
+      [{ ...c, note: "Hi" }],
+      Array.from({ length: 61 }, (_, i) => ({ ...c, id: String(i) })),
+    ])
+      expect(isTools({ ...toolsOf(fresh), checkBacks: bad })).toBe(false);
+  });
+  it("answered plans make room first, and a check-back survives an encrypt/decrypt round trip", async () => {
+    let book = withSam();
+    for (let i = 0; i < 60; i++) {
+      book = keep(book, "repair", `Plan ${i}`);
+      if (i < 59) book = answerCheckBack(book, toolsOf(book).checkBacks!.at(-1)!.id, { kind: "let-go" });
+    }
+    book = keep(book, "iceberg", "Hungry");
+    const list = toolsOf(book).checkBacks!;
+    expect(list).toHaveLength(60);
+    expect(list[0].plan).toBe("Plan 1");
+    expect(openCheckBacks(book).map((c) => c.plan)).toEqual(["Plan 59", "Hungry"]);
+    const { envelope } = await createVault(book, "long testing-only passphrase");
+    const raw = JSON.stringify(envelope);
+    expect(raw).not.toContain("Hungry");
+    expect((await unlockVault(raw, "long testing-only passphrase")).book).toEqual(book);
   });
 });

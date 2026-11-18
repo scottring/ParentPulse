@@ -139,6 +139,59 @@ it("builds a soft opener only once every part is filled in", async () => {
     people: ["sam"],
   });
 });
+it("a kept Plan a repair page comes back in Still going, then on Home once it's due", async () => {
+  const app = open(adult());
+  fireEvent.click(await screen.findByRole("button", { name: /Plan a repair/ }));
+  fireEvent.click(screen.getByRole("radio", { name: "Sam" }));
+  fireEvent.click(screen.getByRole("button", { name: /Start this exercise/ }));
+  for (const [label, value] of [
+    ["I’m sorry I…", "snapped about the shoes"],
+    ["What I wish I’d done…", "helped you look"],
+    ["Next time I’ll…", "say I need a minute"],
+    ["Can we…", "try again tomorrow"],
+  ])
+    fireEvent.change(screen.getByRole("textbox", { name: label }), { target: { value } });
+  fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
+  await screen.findByRole("heading", { name: "Kept in your book" });
+  expect(screen.getByText(/In a couple of days, Relish will ask how it went/)).toBeTruthy();
+  const [plan] = toolsOf(app.stored()).checkBacks!;
+  expect(plan.plan).toBe(
+    "I’m sorry I snapped about the shoes. I wish I’d helped you look. Next time I’ll say I need a minute. Can we try again tomorrow?",
+  );
+  // Not due yet: Home keeps its usual suggestion; Still going shows when it will ask.
+  fireEvent.click(screen.getByRole("button", { name: "Home" }));
+  expect(await screen.findByRole("region", { name: "Today’s suggestion" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Your book" }));
+  const item = await screen.findByRole("button", { name: /Your plan · Plan a repair · Sam/ });
+  expect(item.textContent).toMatch(/Relish asks \w+day/);
+  app.unmount();
+  cleanup();
+
+  // Two days later (stored as already due), Home asks in the person's own words.
+  const later = open({
+    ...app.stored(),
+    tools: {
+      ...toolsOf(app.stored()),
+      checkBacks: [{ ...plan, dueAt: new Date(Date.now() - 1000).toISOString() }],
+    },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Home" }));
+  const card = await screen.findByRole("region", { name: "Your plan from Plan a repair" });
+  expect(within(card).getByText("You planned to say to Sam:")).toBeTruthy();
+  expect(within(card).getByText(`“${plan.plan}”`)).toBeTruthy();
+  expect(within(card).getByText("Did you get a chance to say it?")).toBeTruthy();
+  expect(screen.queryByRole("region", { name: "Today’s suggestion" })).toBeNull();
+  fireEvent.click(within(card).getByRole("button", { name: "Yes, I did" }));
+  fireEvent.click(within(card).getByRole("button", { name: "It helped, even a little" }));
+  fireEvent.change(within(card).getByRole("textbox"), { target: { value: "We laughed about it." } });
+  fireEvent.click(within(card).getByRole("button", { name: "Save how it went" }));
+  await screen.findByRole("region", { name: "Today’s suggestion" });
+  expect(toolsOf(later.stored()).checkBacks![0]).toMatchObject({
+    status: "tried",
+    outcome: "helped",
+    note: "We laughed about it.",
+  });
+});
 it("runs a day-by-day checklist across visits and finishes into a page", async () => {
   const app = open(adult());
   fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos/ }));

@@ -7,7 +7,7 @@ import {
   type Player,
 } from "./living";
 import { games } from "./play-content";
-import { toolById } from "./tools";
+import { checkBackSection, toolById } from "./tools";
 import { guidanceFor } from "./guidance";
 import type { JournalStyle } from "./journal";
 import { isPhotos, type Photo } from "./photos";
@@ -107,6 +107,10 @@ export function bookPages(book: Book): BookPage[] {
           style: e.style,
           photos: e.photos || [],
           people: e.people || [],
+          // An exercise plan that was checked back on shows how it went.
+          sections: [checkBackSection(book, e.id)].filter(
+            (x): x is { label: string; text: string } => !!x,
+          ),
         }),
       ),
     ...livingOf(book).entries.map((e) =>

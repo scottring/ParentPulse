@@ -52,6 +52,7 @@ import { BookSpread, SubHead } from "./ui";
 import { gameIllustration, topicIllustration } from "./illustrations";
 import Manual, { useManualGuide } from "./Manual";
 import { reviewManualIdea } from "@/lib/relish/manual";
+import { answerCheckBack, type CheckBackAnswer } from "@/lib/relish/tools";
 import GroupPlay from "./GroupPlay";
 import Tools from "./Tools";
 import ConnectedEditions from "./ConnectedEditions";
@@ -334,6 +335,18 @@ export default function LivingBook({
         }),
       undefined,
       action.type === "approve" ? "Approval updated." : "",
+    );
+  }
+  // A plan kept from an exercise, asked about a few days later.
+  function answerPlan(id: string, answer: CheckBackAnswer) {
+    void commit(
+      (b) => answerCheckBack(b, id, answer),
+      undefined,
+      answer.kind === "later"
+        ? "We’ll ask again in two days."
+        : answer.kind === "let-go"
+          ? "Set aside. The page stays in Your book."
+          : "Saved with your plan.",
     );
   }
   function createGame(kind: Game["kind"], players: Player[]) {
@@ -781,6 +794,7 @@ export default function LivingBook({
             busy={busy}
             headingRef={heading}
             onNudge={onNudge}
+            onCheckBack={answerPlan}
             onFilter={(f) => {
               navigate("do");
               setDoFilter(f);
@@ -940,6 +954,7 @@ export default function LivingBook({
             onExercise={openExercise}
             onAddPerson={() => setModal("person")}
             onEditPerson={setEditing}
+            onCheckBack={answerPlan}
           />
         ) : view === "words" && !sharedView ? (
           <Journal

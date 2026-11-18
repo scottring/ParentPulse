@@ -1679,3 +1679,52 @@ img.ui-illustration.rk-cover-emblem,
     font-size: 15px;
   }
 }
+
+/* ── Check-backs: a kept plan, asked about a few days later ───────────── */
+.lb-app .rp-checkback .rp-nudge-text {
+  gap: 10px;
+}
+.lb-app .rp-checkback-lead {
+  margin: 0;
+  font: 500 20px/1.4 var(--serif);
+  color: var(--on-olive);
+}
+.lb-app .rp-checkback-quote {
+  margin: 0;
+  padding-left: 14px;
+  border-left: 3px solid var(--sun);
+  font: italic 400 21px/1.5 var(--serif);
+  color: var(--on-olive);
+  white-space: pre-wrap;
+}
+.lb-app .rp-checkback-ask {
+  margin: 4px 0 0;
+  font: 600 26px/1.2 var(--serif);
+  color: var(--on-olive);
+}
+.lb-app .rp-checkback-outcomes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lb-app .rp-checkback-note {
+  color: var(--on-olive-muted);
+  margin: 6px 0 0;
+}
+.lb-app .rp-checkback-fine {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--on-olive-muted);
+}
+.lb-app .rp-going-open {
+  margin-top: 12px;
+}
+@media (max-width: 719px) {
+  .lb-app .rp-checkback-ask {
+    font-size: 23px;
+  }
+  .lb-app .rp-checkback-quote {
+    font-size: 18px;
+  }
+}

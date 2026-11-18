@@ -7,6 +7,7 @@ import {
   activeTrackers,
   builderComplete,
   builderPage,
+  checkBackDays,
   finishTracker,
   hasBingo,
   keepToolPage,
@@ -83,6 +84,13 @@ export default function Tools({
             <p className="lb-kicker">{kept.title}</p>
             <h2 id="rt-title">Kept in your book</h2>
             <p className="rt-intro">That’s a good place to stop.</p>
+            {kept.checkBack && (
+              <p className="rt-intro">
+                In {kept.checkBack === 3 ? "a few" : "a couple of"} days,
+                Relish will ask how it went, in your own words. It shows on
+                Home, and in Your book under Still going.
+              </p>
+            )}
             <div className="rt-actions">
               {kept.pageId && onOpenPage ? (
                 <button
@@ -247,7 +255,14 @@ function OpenExercise({
         pageId = newJournalId(b, next);
         return next;
       },
-      () => onKept({ title: page.title, pageId }),
+      () =>
+        onKept({
+          title: page.title,
+          pageId,
+          ...(page.plan && page.toolId && checkBackDays[page.toolId]
+            ? { checkBack: checkBackDays[page.toolId] }
+            : {}),
+        }),
       "Kept in your book.",
     );
   };
@@ -438,7 +453,12 @@ function ExerciseArt({ tool }: { tool: Tool }) {
 
 type KeepPage = (page: ToolPage) => void;
 /** What was just kept: its title and, once saved, its Your book page id. */
-type Kept = { title: string; pageId?: string };
+type Kept = {
+  title: string;
+  pageId?: string;
+  /** Days until Relish asks about the plan, for exercises that check back. */
+  checkBack?: number;
+};
 /** The journal page a change added, as a Your book page id. */
 function newJournalId(before: Book, after: Book) {
   const had = new Set((before.journal || []).map((e) => e.id));
@@ -611,6 +631,7 @@ function SortRunner({
               toolId: tool.id,
               personId: personId || undefined,
               people,
+              plan: checkBackDays[tool.id] ? picks[tool.picks[0]?.pile] : undefined,
             })
           }
         />
@@ -708,6 +729,7 @@ function BuilderRunner({
                 toolId: tool.id,
                 personId: personId || undefined,
                 people,
+                plan: checkBackDays[tool.id] ? tool.compose(values) : undefined,
               })
             }
           />
