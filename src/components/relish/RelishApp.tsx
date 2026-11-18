@@ -95,14 +95,12 @@ function BookGate() {
       onClose={closeAccount}
       inline={inline}
       startAdding={!inline && addChild ? "child" : undefined}
-      onLocal={
-        inline
-          ? () => {
-              setLocalMode(true);
-              vault.shelf();
-            }
-          : undefined
-      }
+      onLocal={() => {
+        // From the dialog, close it first; the open book locks on the shelf.
+        if (!inline) closeAccount();
+        setLocalMode(true);
+        vault.shelf();
+      }}
       onExplore={
         inline && vault.mode === "sample" ? () => setLocalMode(true) : undefined
       }
