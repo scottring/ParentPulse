@@ -7,6 +7,7 @@ import {
   render,
   screen,
   within,
+  waitFor,
 } from "@testing-library/react";
 import { webcrypto } from "node:crypto";
 import { emptyBook, type Book } from "@/lib/relish/model";
@@ -23,7 +24,7 @@ vi.mock("../Sensory", () => ({
   SoundSettings: () => null,
 }));
 afterEach(cleanup);
-function open(book = emptyBook("Robin")) {
+function open(book = emptyBook("Robin"), family?: { id: string; name: string; onOpen: () => void }[]) {
   let stored = book;
   let fail = false;
   const lock = vi.fn();
@@ -49,7 +50,7 @@ function open(book = emptyBook("Robin")) {
           stored = typeof change === "function" ? change(stored) : change;
           setCurrent(stored);
         },
-      },
+      },      family,
     });
   }
   const mounted = render(createElement(Harness));
@@ -219,6 +220,53 @@ it("runs a day-by-day checklist across visits and finishes into a page", async (
   const stored = again.stored();
   expect(toolsOf(stored).trackers[0].finishedAt).toBeTruthy();
   expect(stored.journal![0].title).toBe("Ten real hellos · Sam");
+});
+it("offers children with their own books in the library, and notes the one chosen", async () => {
+  const kids = [
+    { id: "k", name: "Kaleb", onOpen: vi.fn() },
+    { id: "e", name: "Ella", onOpen: vi.fn() },
+  ];
+  const app = open({ ...emptyBook("Scott"), profile: { kind: "adult" } }, kids);
+  fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos/ }));
+  expect(screen.queryByText(/Add someone to your book first/)).toBeNull();
+  fireEvent.click(screen.getByRole("radio", { name: "Kaleb" }));
+  fireEvent.click(screen.getByRole("button", { name: /Start/ }));
+  await screen.findByRole("button", { name: "I did it today" });
+  const stored = app.stored();
+  const kaleb = stored.people.find((p) => p.name === "Kaleb")!;
+  expect(kaleb.role).toBe("child");
+  expect(stored.people.map((p) => p.name)).toEqual(["Kaleb"]);
+  expect(toolsOf(stored).trackers[0].personId).toBe(kaleb.id);
+});
+it("the journal can tag children who have their own books in the library", async () => {
+  const app = open({ ...emptyBook("Scott"), profile: { kind: "adult" } }, [
+    { id: "k", name: "Kaleb", onOpen: vi.fn() },
+    { id: "e", name: "Ella", onOpen: vi.fn() },
+  ]);
+  fireEvent.click(screen.getAllByRole("button", { name: /Write/ })[0]);
+  fireEvent.click(await screen.findByRole("button", { name: /Tag people/ }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Ella" }));
+  await waitFor(() => expect(app.stored().people.map((p) => p.name)).toEqual(["Ella"]));
+  const ella = app.stored().people[0];
+  // Now noted in the book, Ella shows once and is ticked; Kaleb is still offered.
+  await waitFor(() =>
+    expect((screen.getByRole("checkbox", { name: "Ella" }) as HTMLInputElement).checked).toBe(true),
+  );
+  expect(screen.getAllByRole("checkbox", { name: "Ella" })).toHaveLength(1);
+  expect(screen.getByRole("checkbox", { name: "Kaleb" })).toBeTruthy();
+  expect(ella.role).toBe("child");
+});
+it("an exercise with someone from the library starts after noting them in the book", async () => {
+  const app = open({ ...emptyBook("Scott"), profile: { kind: "adult" } }, [
+    { id: "e", name: "Ella", onOpen: vi.fn() },
+  ]);
+  fireEvent.click(screen.getByRole("button", { name: /What helps when I’m upset/ }));
+  await screen.findByRole("heading", { name: "What helps when I’m upset" });
+  fireEvent.click(screen.getByRole("radio", { name: "Ella" }));
+  const before = document.body.textContent;
+  fireEvent.click(screen.getByRole("button", { name: /Start/ }));
+  await waitFor(() => expect(document.body.textContent).not.toBe(before));
+  expect(app.stored().people.map((p) => p.name)).toEqual(["Ella"]);
 });
 it("offers only age-appropriate exercises in a young child's edition", async () => {
   open({

@@ -3,6 +3,7 @@ import { tools, toolsFor } from "./tools";
 import { games } from "./play-content";
 import type { NudgeAction } from "./nudges";
 import type { Audience } from "./profiles";
+import type { Person } from "./model";
 
 // Shared vocabulary for the four places: the "Do something" filters and the
 // color-coded kinds that label things to do and pages kept.
@@ -62,6 +63,42 @@ export const isChild = (p: Role) =>
 /** People noted in a book who are close family (used to pre-fill games). */
 export const isFamily = (p: Role) =>
   familyRoles.includes(p.role.trim().toLowerCase());
+
+const sameName = (a: string, b: string) =>
+  a.trim().toLowerCase() === b.trim().toLowerCase();
+/**
+ * Family with their own books in the library who aren't noted in this book
+ * yet (e.g. a parent's children), so they can still be chosen or tagged.
+ */
+export function libraryOnly(
+  people: { name: string }[],
+  family: { name: string }[] = [],
+) {
+  return family
+    .map((f) => f.name.trim())
+    .filter((n, i, all) => n && all.findIndex((x) => sameName(x, n)) === i)
+    .filter((n) => !people.some((p) => sameName(p.name, n)));
+}
+/**
+ * Notes a family member from the library in this book (as a child), or finds
+ * them if they're already there. Returns the book and their id.
+ */
+export function noteFamily<B extends { people: Person[] }>(
+  b: B,
+  name: string,
+): [B, string] {
+  const found = b.people.find((p) => sameName(p.name, name));
+  if (found) return [b, found.id];
+  const person: Person = {
+    id: crypto.randomUUID(),
+    name: name.trim(),
+    role: "child",
+    color: ["rose", "ochre", "sage"][Math.floor(Math.random() * 3)],
+    note: "",
+    lessons: [],
+  };
+  return [{ ...b, people: [...b.people, person] }, person.id];
+}
 
 export type DoType = "Write" | "Exercise" | "Game" | "Think" | "Habit";
 export const doTone: Record<DoType, Tone> = {

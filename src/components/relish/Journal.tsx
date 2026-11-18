@@ -7,8 +7,6 @@ import {
   type RefObject,
 } from "react";
 import {
-  ArrowLeft,
-  ArrowRight,
   Share2,
   ArrowUpRight,
   Check,
@@ -29,9 +27,11 @@ import {
   Sun,
 } from "lucide-react";
 import { bookPages } from "@/lib/relish/pages";
+import { libraryOnly, noteFamily } from "@/lib/relish/catalog";
 import type { PhotoAccess } from "@/lib/relish/photos";
 import { PhotoGallery, PhotoPicker } from "./Photos";
 import PassagePicker from "./PassagePicker";
+import ReadingBook from "./ReadingBook";
 import VoiceWriter from "./VoiceWriter";
 import type { Book } from "@/lib/relish/model";
 import {
@@ -91,8 +91,11 @@ export default function Journal({
   initialReading,
   onBack,
   navigation,
+  family,
 }: {
   book: Book;
+  /** Family with their own books in the library, so they can be tagged too. */
+  family?: { name: string }[];
   save: Save;
   sample: boolean;
   onEditingChange: (editing: boolean) => void;
@@ -161,6 +164,7 @@ export default function Journal({
           save={save}
           sample={sample}
           book={book}
+          family={family}
           photos={photos}
           onPause={leaveEditor}
           onKeep={(entry) => {
@@ -197,150 +201,107 @@ export default function Journal({
             </div>
           </div>
         )}
-        <div className="rd-reading-spread ui-spread ui-spread-reading">
-          <article
-            className="rj-paper rj-sequence-paper ui-spread-page"
-            ref={prose}
-            key={page.id}
-          >
-            <div className="rj-paper-date">
-              <span>{dateLabel(page.date)}</span>
+        <ReadingBook
+          key={page.id}
+          flowRef={prose}
+          className={`rj-sequence-paper rj-${page.style}`}
+          entryLabel={`Entry ${pageIndex + 1} of ${entries.length}`}
+          onPreviousEntry={
+            pageIndex > 0
+              ? () => {
+                  setReading(entries[pageIndex - 1].id);
+                  setCelebrate(false);
+                  sensory.play("touch");
+                }
+              : undefined
+          }
+          onNextEntry={
+            nextPage
+              ? () => {
+                  setReading(nextPage.id);
+                  setCelebrate(false);
+                  sensory.play("touch");
+                }
+              : undefined
+          }
+          onNewEntry={() => edit(newJournalDraft())}
+        >
+          <header className="rd-head">
+            <p className="rd-date">
+              {dateLabel(page.date)}
               <StyleMark style={page.style} />
-            </div>
+            </p>
             <PageTitle
               book={book}
               journalId={page.journalId}
               title={page.title}
               save={save}
               headingRef={top}
+              compact
             />
-            <p className="lb-kicker">
-              {page.kind}
-              {page.exercise ? ` · ${page.exercise}` : ""}
-              {page.from ? ` · From ${page.from}` : ""}
-            </p>
-            <div className="rj-prose">{page.text}</div>
-            <PhotoGallery photos={page.photos} access={photos} />
-            {page.sections.map((section, i) => (
-              <section className="rj-page-section" key={`${i}:${section.label}`}>
-                <p className="lb-kicker">{section.label}</p>
-                <p>{section.text}</p>
-              </section>
-            ))}
-            {page.people.length > 0 && !page.from && !page.record && (
-              <p className="rj-private">
-                Thinking of{" "}
-                {page.people
-                  .map((id) => book.people.find((p) => p.id === id)?.name)
-                  .filter(Boolean)
-                  .join(", ")}{" "}
-                · private tags
+            {(page.kind !== "Journal entry" || page.exercise || page.from) && (
+              <p className="lb-kicker">
+                {page.kind}
+                {page.exercise ? ` · ${page.exercise}` : ""}
+                {page.from ? ` · From ${page.from}` : ""}
               </p>
             )}
-            <div className="rj-paper-footer">
-              <div className="rj-capture-actions">
-                {page.journalId && (
-                  <button
-                    className="lb-text"
-                    onClick={() =>
-                      edit(book.journal!.find((e) => e.id === page.journalId)!)
-                    }
-                  >
-                    <Feather size={16} /> Edit this page
-                  </button>
-                )}
-                {!page.record && (
-                  <button
-                    className="lb-text"
-                    onClick={() => {
-                      const selection = window.getSelection();
-                      const within =
-                        !!selection?.anchorNode &&
-                        !!selection.focusNode &&
-                        prose.current?.contains(selection.anchorNode) &&
-                        prose.current?.contains(selection.focusNode);
-                      setExcerpt(within ? selection!.toString() : "");
-                    }}
-                  >
-                    <Share2 size={16} /> Choose a passage
-                  </button>
-                )}
-              </div>
-            </div>
-          </article>
-          <aside
-            className="rj-paper rd-next-page ui-spread-page"
-            aria-label="The following page"
-          >
-            {nextPage ? (
-              <>
-                <p className="lb-kicker">Next entry</p>
-                <h2>{nextPage.title}</h2>
-                <p className="lb-kicker">
-                  {dateLabel(nextPage.date)} · {nextPage.kind}
-                </p>
-                <div className="rj-prose">{nextPage.text}</div>
-                <PhotoGallery photos={nextPage.photos} access={photos} />
-                {nextPage.sections.map((section, i) => (
-                  <section className="rj-page-section" key={`${i}:${section.label}`}>
-                    <p className="lb-kicker">{section.label}</p>
-                    <p>{section.text}</p>
-                  </section>
-                ))}
-                <button
-                  className="lb-text"
-                  onClick={() => {
-                    setReading(nextPage.id);
-                    setCelebrate(false);
-                    sensory.play("touch");
-                  }}
-                >
-                  Open this page <ArrowRight size={16} />
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="lb-kicker">End of your entries</p>
-                <Illustration name="empty-pages" size={132} className="rd-end-art" />
-                <h2>No more entries</h2>
-                <p>You’ve reached your latest entry.</p>
-                <button
-                  className="lb-text"
-                  onClick={() => edit(newJournalDraft())}
-                >
-                  New entry <Plus size={16} />
-                </button>
-              </>
-            )}
-          </aside>
+          </header>
+          <div className="rj-prose">{page.text}</div>
+          <PhotoGallery photos={page.photos} access={photos} />
+          {page.sections.map((section, i) => (
+            <section className="rj-page-section" key={`${i}:${section.label}`}>
+              <p className="lb-kicker">{section.label}</p>
+              <p>{section.text}</p>
+            </section>
+          ))}
+          {page.people.length > 0 && !page.from && !page.record && (
+            <p className="rj-private">
+              Thinking of{" "}
+              {page.people
+                .map((id) => book.people.find((p) => p.id === id)?.name)
+                .filter(Boolean)
+                .join(", ")}{" "}
+              · private tags
+            </p>
+          )}
+        </ReadingBook>
+        <div className="rd-tools">
+          {page.journalId && (
+            <button
+              className="lb-text"
+              onClick={() =>
+                edit(book.journal!.find((e) => e.id === page.journalId)!)
+              }
+            >
+              <Feather size={15} /> Edit this page
+            </button>
+          )}
+          {!page.record && (
+            <button
+              className="lb-text"
+              onClick={() => {
+                const selection = window.getSelection();
+                const within =
+                  !!selection?.anchorNode &&
+                  !!selection.focusNode &&
+                  prose.current?.contains(selection.anchorNode) &&
+                  prose.current?.contains(selection.focusNode);
+                setExcerpt(within ? selection!.toString() : "");
+              }}
+            >
+              <Share2 size={15} /> Choose a passage
+            </button>
+          )}
+          {onActivities && (
+            <button className="lb-text" onClick={onActivities}>
+              Choose another activity
+            </button>
+          )}
+          <button className="lb-text" onClick={onDone}>
+            Done for now <Check size={15} />
+          </button>
         </div>
-        <nav className="rj-sequence" aria-label="Pages in order">
-          <button
-            className="lb-secondary"
-            disabled={pageIndex === 0}
-            onClick={() => {
-              setReading(entries[pageIndex - 1].id);
-              setCelebrate(false);
-              sensory.play("touch");
-            }}
-          >
-            <ArrowLeft size={18} /> Previous page
-          </button>
-          <span>
-            Page {pageIndex + 1} of {entries.length}
-          </span>
-          <button
-            className="lb-secondary"
-            disabled={pageIndex === entries.length - 1}
-            onClick={() => {
-              setReading(entries[pageIndex + 1].id);
-              setCelebrate(false);
-              sensory.play("touch");
-            }}
-          >
-            Next page <ArrowRight size={18} />
-          </button>
-        </nav>
         {excerpt !== null && (
           <PassagePicker
             page={page}
@@ -358,19 +319,6 @@ export default function Journal({
             onClose={() => setExcerpt(null)}
           />
         )}
-        <div className="rj-finish-actions">
-          <button className="lb-primary" onClick={onDone}>
-            Done for now <Check size={17} />
-          </button>
-          {onActivities && (
-            <button className="lb-text" onClick={onActivities}>
-              Choose another activity <ArrowRight size={16} />
-            </button>
-          )}
-          <button className="lb-text" onClick={() => edit(newJournalDraft())}>
-            New entry <Plus size={16} />
-          </button>
-        </div>
       </main>
     );
   const matching = entries.filter((e) =>
@@ -529,7 +477,9 @@ export function JournalEditor({
   initialVoice = false,
   initialPhoto = false,
   navigation,
+  family,
 }: {
+  family?: { name: string }[];
   initial: JournalDraft;
   initialVoice?: boolean;
   initialPhoto?: boolean;
@@ -543,6 +493,9 @@ export function JournalEditor({
   photos?: PhotoAccess;
 }) {
   const [draft, setDraft] = useState<JournalDraft>(initial);
+  // Family from the library who aren't in this book yet; tagging one notes them.
+  const extra = book ? libraryOnly(book.people, family) : [];
+  const canTag = !!book?.people.length || extra.length > 0;
   const editorTyping = useTypingSound();
   const [panel, setPanel] = useState<"photo" | "people" | "options" | null>(
     initialPhoto ? "photo" : null,
@@ -844,7 +797,7 @@ export function JournalEditor({
               onChange={(photos) => change({ photos })}
             />
           )}
-          {panel === "people" && !!book?.people.length && (
+          {panel === "people" && book && canTag && (
             <div className="rj-popover rj-popover-people">
             <button
               type="button"
@@ -879,6 +832,31 @@ export function JournalEditor({
                       }
                     />
                     {person.name}
+                  </label>
+                ))}
+                {extra.map((name) => (
+                  <label key={`family:${name}`}>
+                    <input
+                      type="checkbox"
+                      checked={false}
+                      onChange={(e) => {
+                        if (!e.target.checked) return;
+                        let id = "";
+                        void save((b) => {
+                          const [next, chosen] = noteFamily(b, name);
+                          id = chosen;
+                          return next;
+                        })
+                          .then(() => {
+                            if (id && !(current.current.people || []).includes(id))
+                              change({
+                                people: [...(current.current.people || []), id],
+                              });
+                          })
+                          .catch(() => setError("Could not tag. Please try again."));
+                      }}
+                    />
+                    {name}
                   </label>
                 ))}
               </div>
@@ -933,7 +911,7 @@ export function JournalEditor({
                 {draft.photos?.length ? ` · ${draft.photos.length}` : ""}
               </button>
             )}
-            {!!book?.people.length && (
+            {canTag && (
               <button
                 type="button"
                 aria-pressed={panel === "people"}

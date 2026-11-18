@@ -870,6 +870,7 @@ export default function LivingBook({
             busy={busy}
             roster={roster}
             sample={sample}
+            family={family}
             onCommit={(update, after, message) =>
               void commit(update, after, message)
             }
@@ -961,6 +962,7 @@ export default function LivingBook({
         ) : view === "words" && !sharedView ? (
           <Journal
             key={pageKey}
+            family={family}
             navigation={journalNavigation}
             initialDraft={capture?.draft}
             initialVoice={capture?.voice}
