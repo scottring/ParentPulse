@@ -187,6 +187,23 @@ export default function PrivacyPage() {
         puts private pages away. Returning to an account book requires signing
         back in; local-only books require their passphrase.
       </p>
+      <p>
+        Notes from a game. When a round ends in a parent’s book, Relish lists
+        what came out of it about each player (for example, a favorite thing
+        someone typed) for the parent to review. Notes from typed answers are
+        worked out on your device. Listen is off unless an adult turns it on
+        for a round: it records what is said at the table in pieces under two
+        minutes, sends each piece through Relish to OpenAI for transcription,
+        and keeps the text only in that browser tab’s memory. When the round
+        ends, that text and the round’s typed answers are sent once to OpenAI
+        to suggest notes, with response storage disabled; then the text is let
+        go. Recordings and transcripts are never saved in your book, on
+        Relish’s server or in backups. Only the notes the parent keeps are
+        saved, encrypted, in that parent’s own book, under each person. They
+        are not added to Our family book or to a child’s book. Rounds with a
+        child playing can only use Listen once provider Zero Data Retention is
+        verified; until then, their notes come from typed answers alone.
+      </p>
       <h2>Storage and control</h2>
       <p>
         Export an encrypted backup from Privacy and settings. Use Connected

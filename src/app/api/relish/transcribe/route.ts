@@ -49,7 +49,11 @@ export async function POST(request: NextRequest) {
     if (
       (!local && !hosted) ||
       request.headers.get("origin") !== origin ||
-      request.headers.get("x-relish-consent") !== "this-recording"
+      // One take reviewed before sending, or Listen during a game (each
+      // piece is sent as it's recorded; the person who turned it on agreed).
+      !["this-recording", "this-game"].includes(
+        request.headers.get("x-relish-consent") || "",
+      )
     )
       throw new AIError(
         "Open Relish and choose the recording you want to turn into words.",

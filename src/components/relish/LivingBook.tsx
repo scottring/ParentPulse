@@ -61,6 +61,7 @@ import { guidanceFor } from "@/lib/relish/guidance";
 import { TypingSoundSetting } from "./TypingSound";
 import TopBar, { type MenuItem, type Place, type Space } from "./TopBar";
 import { inviteFriend, inviteNotice } from "@/lib/relish/invite";
+import { keepNotes } from "@/lib/relish/game-notes";
 import Home, { type FamilyPerson } from "./Home";
 import DoSomething from "./DoSomething";
 import YourBook from "./YourBook";
@@ -1202,6 +1203,24 @@ export default function LivingBook({
                 }
                 onPause={endGame}
                 onFinish={finishGame}
+                onKeepNotes={
+                  book.profile?.kind === "child"
+                    ? undefined
+                    : async (notes) => {
+                        try {
+                          await vault.save((b) => keepNotes(b, notes));
+                          sensory.play("place");
+                          return true;
+                        } catch (e) {
+                          setError(
+                            e instanceof Error
+                              ? e.message
+                              : "The notes couldn’t be kept. Please try again.",
+                          );
+                          return false;
+                        }
+                      }
+                }
                 onCancel={() =>
                   void commit(
                     (b) => changeLiving(b, (x) => ({ ...x, game: undefined })),

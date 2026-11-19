@@ -1961,7 +1961,7 @@ export function keepGame(book: Book): Book {
 }
 
 /** What a finished round remembers: its answers, for contentVersion 2 rounds. */
-function roundMemory(g: Game): Partial<PlayRecord> {
+export function roundMemory(g: Game): Partial<PlayRecord> {
   if (ownWords(g))
     return {
       said: saidSoFar(g).map((s) => ({

@@ -1862,3 +1862,106 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }
+
+/* ── Listen and notes from a game (2026-11-19) ── */
+.lb-app .lb-listen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin: 0 0 18px;
+}
+.lb-app .lb-listen-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1.5px solid #838f7655;
+  background: transparent;
+  color: var(--ink);
+  font: 600 14px/1 var(--sans);
+}
+.lb-app .lb-listen-toggle.is-on {
+  border-color: transparent;
+  background: #f4e3dc;
+  color: #7a3b2a;
+}
+.lb-app .lb-listen-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #c4553a;
+  animation: lb-listen-pulse 1.6s ease-in-out infinite;
+}
+@keyframes lb-listen-pulse {
+  50% { opacity: 0.35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lb-app .lb-listen-dot { animation: none; }
+}
+.lb-app .lb-listen-status,
+.lb-app .lb-listen-error {
+  font: 400 13px/1.4 var(--sans);
+  color: var(--ui-muted, #6b6f63);
+  margin: 0;
+}
+.lb-app .lb-listen-error {
+  flex-basis: 100%;
+  color: #8a3b2a;
+}
+.lb-app .lb-listen-ask {
+  flex-basis: 100%;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: #f1efe4;
+}
+.lb-app .lb-listen-ask p {
+  margin: 0 0 12px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.lb-app .lb-notes {
+  margin: 26px 0 0;
+  padding: 18px 20px;
+  border-radius: 20px;
+  background: #f1efe4;
+}
+.lb-app .lb-notes h3 {
+  margin: 2px 0 12px;
+}
+.lb-app .lb-notes-person {
+  border: 0;
+  padding: 0;
+  margin: 0 0 14px;
+  min-width: 0;
+}
+.lb-app .lb-notes-person legend {
+  font: 600 15px/1.3 var(--sans);
+  margin-bottom: 6px;
+}
+.lb-app .lb-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 15px;
+  line-height: 1.45;
+}
+.lb-app .lb-note input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.lb-app .lb-note small {
+  display: block;
+  font: 600 11px/1.4 var(--sans);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ui-muted, #6b6f63);
+}
+.lb-app .lb-notes .lb-actions {
+  align-items: center;
+}
