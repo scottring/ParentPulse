@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { render, cleanup, screen } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent, act } from "@testing-library/react";
 import { Window } from "happy-dom";
 import { emptyBook } from "@/lib/relish/model";
 Object.defineProperty(globalThis, "localStorage", {
@@ -11,6 +11,7 @@ Object.defineProperty(globalThis, "localStorage", {
 const state = vi.hoisted(() => ({
   sync: {} as Record<string, unknown>,
   gate: null as unknown,
+  vault: {} as Record<string, unknown>,
 }));
 vi.mock("../useLocalBook", () => ({
   useLocalBook: () => ({
@@ -20,6 +21,7 @@ vi.mock("../useLocalBook", () => ({
     editions: [],
     lock: vi.fn(),
     shelf: vi.fn(),
+    ...state.vault,
   }),
 }));
 vi.mock("../useBookSync", () => ({ useBookSync: () => state.sync }));
@@ -59,6 +61,7 @@ beforeEach(() => {
     refresh: vi.fn().mockResolvedValue([]),
   };
   state.gate = null;
+  state.vault = {};
 });
 afterEach(() => {
   cleanup();
@@ -110,4 +113,68 @@ it("stops at the library when a child's book left a parent gate", () => {
   render(createElement(RelishApp));
   expect(state.sync.open).not.toHaveBeenCalled();
   expect(screen.queryByText("Opening Relish…")).toBeNull();
+});
+
+// The book locks itself after a while away; coming back reopens it.
+const openBook = {
+  mode: "open",
+  book: { ...emptyBook(""), profile: { kind: "adult", name: "Scott" } },
+};
+function lockedAfterOpen(autoLocked: boolean) {
+  state.vault = openBook;
+  state.sync = sync({ user: parent, books });
+  const view = render(createElement(RelishApp));
+  expect(state.sync.open).not.toHaveBeenCalled();
+  state.vault = { mode: "locked", autoLocked };
+  view.rerender(createElement(RelishApp));
+  return view;
+}
+
+it("reopens your own book when you come back after it locked by itself", () => {
+  lockedAfterOpen(true);
+  expect(screen.getByRole("status").textContent).toContain("Tap to open it");
+  expect(state.sync.open).not.toHaveBeenCalled();
+  act(() => {
+    fireEvent.pointerDown(window);
+  });
+  expect(state.sync.open).toHaveBeenCalledWith(books[1]);
+  expect(screen.getByRole("status").textContent).toContain("Opening Relish");
+});
+
+it("waits until the tab or app is showing again before reopening", () => {
+  lockedAfterOpen(true);
+  const hidden = vi.spyOn(document, "hidden", "get").mockReturnValue(true);
+  act(() => {
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  expect(state.sync.open).not.toHaveBeenCalled();
+  hidden.mockReturnValue(false);
+  act(() => {
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  expect(state.sync.open).toHaveBeenCalledWith(books[1]);
+  hidden.mockRestore();
+});
+
+it("does not reopen after Lock, Sign out or an account change", () => {
+  lockedAfterOpen(false);
+  act(() => {
+    fireEvent.pointerDown(window);
+  });
+  expect(state.sync.open).not.toHaveBeenCalled();
+  expect(screen.queryByText(/Tap to open it/)).toBeNull();
+});
+
+it("does not reopen past a child's parent gate", () => {
+  state.vault = openBook;
+  state.sync = sync({ user: parent, books });
+  const view = render(createElement(RelishApp));
+  state.gate = { accountUid: "parent-one" };
+  state.vault = { mode: "locked", autoLocked: true };
+  view.rerender(createElement(RelishApp));
+  act(() => {
+    fireEvent.pointerDown(window);
+  });
+  expect(state.sync.open).not.toHaveBeenCalled();
+  expect(screen.queryByText(/Tap to open it/)).toBeNull();
 });
