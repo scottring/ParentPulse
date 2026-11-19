@@ -1120,8 +1120,30 @@
   font: 600 13px/1 var(--sans);
   cursor: pointer;
 }
+.lb-app .rj-typing-toggle[aria-pressed="true"] {
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--rj-accent, #5f7a4e);
+  background: #e7ecdc;
+  color: #34452b;
+}
 .lb-app .rj-typing-toggle[aria-pressed="false"] {
-  opacity: 0.75;
+  opacity: 0.8;
+}
+.rj-typing-voices {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.rj-typing-voices legend {
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+.rj-typing-voices > div,
+.r-sound-options.rj-typing-voices {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 .lb-app .rd-writing-context .rj-title-row {
   margin: 12px 0 20px;

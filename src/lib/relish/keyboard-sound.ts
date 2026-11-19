@@ -1,6 +1,7 @@
-// Keyboard sound. Real keystrokes recorded on an HHKB (CC0, see
-// public/sounds/keyboard/README.md), loaded from this app's own origin.
-// Until they load (or if they can't), a synthesized click stands in.
+// Typing sounds. Real keystrokes recorded on an HHKB, or pencil strokes on
+// paper (both CC0, see public/sounds/*/README.md), loaded from this app's own
+// origin. Until the keyboard loads (or if it can't), a synthesized click
+// stands in; the pencil stays quiet until its strokes load.
 export type KeyStroke = "key" | "space" | "enter" | "delete" | "up";
 
 const VARIANTS = 8;
@@ -96,11 +97,32 @@ export function splitStrokes(
 }
 
 // Space and Enter use the same strokes as every other key (Scott, 2026-11-18).
-const FILES = { key: "keys", up: "up" } as const;
-type Group = keyof typeof FILES;
+type Group = "key" | "up";
 const groupOf = (kind: KeyStroke): Group => (kind === "up" ? "up" : "key");
 
-export function createKeyboardEngine(base = "/sounds/keyboard/") {
+export type SoundSet = {
+  base: string;
+  /** The recording for each group of strokes (file name without .mp3). */
+  files: Partial<Record<Group, string>>;
+  /** Stand in with a synthesized click until the recordings load. */
+  synth: boolean;
+};
+export const KEYBOARD: SoundSet = {
+  base: "/sounds/keyboard/",
+  files: { key: "keys", up: "up" },
+  synth: true,
+};
+// A pencil on paper (CC0, see public/sounds/pencil/README.md). Each stroke is a
+// short scratch; typed letters run them together like writing a word. No
+// synthesized stand-in: a keyboard click would be the wrong sound.
+export const PENCIL: SoundSet = {
+  base: "/sounds/pencil/",
+  files: { key: "strokes" },
+  synth: false,
+};
+
+export function createKeyboardEngine(set: SoundSet = KEYBOARD) {
+  const { base, files: FILES, synth } = set;
   const recorded: Partial<Record<Group, AudioBuffer[]>> = {};
   let loading: Promise<void> | null = null;
   const lastPick: Partial<Record<Group, number>> = {};
@@ -131,6 +153,7 @@ export function createKeyboardEngine(base = "/sounds/keyboard/") {
   function load(c: AudioContext) {
     loading ??= Promise.all(
       (Object.keys(FILES) as Group[]).map(async (g) => {
+        if (!FILES[g]) return;
         const res = await fetch(`${base}${FILES[g]}.mp3`);
         if (!res.ok) throw new Error("missing");
         const audio = await c.decodeAudioData(await res.arrayBuffer());
@@ -154,6 +177,7 @@ export function createKeyboardEngine(base = "/sounds/keyboard/") {
     if (!c) return;
     if (c.state !== "running") void c.resume().catch(() => {});
     void load(c);
+    if (!synth) return;
     for (let v = 0; v < VARIANTS; v++) buffer(c, "key", v);
     (["space", "enter", "delete", "up"] as const).forEach((k) => buffer(c, k, 0));
   }
@@ -161,17 +185,24 @@ export function createKeyboardEngine(base = "/sounds/keyboard/") {
     const c = ctx();
     if (!c || document.hidden) return;
     if (c.state !== "running") void c.resume().catch(() => {});
+    const real = recorded[groupOf(kind)];
+    if (!synth && !real?.length) {
+      if (!loading) void load(c);
+      return;
+    }
     const source = c.createBufferSource();
     const gain = c.createGain();
     const group = groupOf(kind);
-    const real = recorded[group];
     if (real?.length) {
       let pick = Math.floor(Math.random() * real.length);
       if (pick === lastPick[group] && real.length > 1)
         pick = (pick + 1) % real.length;
       lastPick[group] = pick;
       source.buffer = real[pick];
-      source.playbackRate.value = 0.98 + Math.random() * 0.04;
+      // Pencil strokes vary more, so one letter never sounds like the last.
+      source.playbackRate.value = synth
+        ? 0.98 + Math.random() * 0.04
+        : 0.9 + Math.random() * 0.2;
       gain.gain.value =
         volume * (kind === "up" ? 0.5 : 1) * (0.88 + Math.random() * 0.12);
     } else {

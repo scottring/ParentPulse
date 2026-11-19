@@ -54,3 +54,12 @@ describe("recorded strokes", () => {
     expect(strokes[0][0]).toBeGreaterThan(2800);
   });
 });
+
+describe("sound sets", () => {
+  it("the pencil has strokes only, and no synthesized keyboard stand-in", async () => {
+    const { PENCIL, KEYBOARD } = await import("../keyboard-sound");
+    expect(PENCIL).toEqual({ base: "/sounds/pencil/", files: { key: "strokes" }, synth: false });
+    expect(KEYBOARD.synth).toBe(true);
+    expect(KEYBOARD.files).toEqual({ key: "keys", up: "up" });
+  });
+});
