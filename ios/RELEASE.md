@@ -26,7 +26,7 @@ Relish 1.0.0 (2), bundle `my.relish.book`, iOS 27.1+, iPhone and iPad. The nativ
 ## App Store Connect preparation
 
 Proposed name: **Relish — Family Journal** (confirm availability before saving).
-Subtitle: **Journals, photos and games**.
+Subtitle: **The journal you keep together** (29 of Apple's 30 characters; the web tagline "The journal your family keeps together" is 38, and the name already says "Family Journal").
 Primary category: Lifestyle. The account holder is an adult; children use parent-managed profiles. Do not select the Kids Category or claim unrestricted child AI. Complete Apple's age-rating questionnaire from the actual features; do not infer a numeric rating from the youngest profile age.
 Privacy URL: https://app.relish.my/privacy/
 Beta description: Relish is a private family library for journal entries, photos, guided reflection and shared games. Each person has a book. On iPhone Duo, capture a moment on the outer display, then unfold into a full spread. Entries saved to your parent account are available on other signed-in devices. Children use parent-managed profiles; sharing and online AI are optional.
