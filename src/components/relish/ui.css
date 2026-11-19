@@ -906,7 +906,7 @@ img.ui-illustration {
   padding: clamp(22px, 4vw, 44px);
 }
 
-/* ── Book covers on a shelf: the Family tab and the “Who’s reading?” picker ── */
+/* ── Book covers on a shelf: Family, and first-time setup on a new device ── */
 /* The shelf: clothbound covers, each one button named for its owner. One
    cover size for one book or six; every row of covers rests on a thin
    ledge that spans the shelf, so the heading and ledge share a left edge. */
@@ -1061,17 +1061,6 @@ img.ui-illustration.lb-cloth-emblem {
   transform: translateY(-3px);
 }
 
-/* Loading: two plain boards on the shelf. */
-.lb-bookshelf-ghost .lb-cloth {
-  border-radius: 3px 7px 2px 3px;
-  background: var(--ui-line-soft);
-  animation: lb-lib-pulse 1.6s ease-in-out infinite;
-}
-@keyframes lb-lib-pulse {
-  50% {
-    opacity: 0.55;
-  }
-}
 @media (max-width: 560px) {
   .lb-bookshelf {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1080,10 +1069,8 @@ img.ui-illustration.lb-cloth-emblem {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .lb-cloth,
-  .lb-bookshelf-ghost .lb-cloth {
+  .lb-cloth {
     transition: none;
-    animation: none;
   }
   .lb-bookshelf-book:not(:disabled):hover .lb-cloth {
     transform: none;

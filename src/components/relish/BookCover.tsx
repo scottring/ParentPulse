@@ -95,17 +95,3 @@ export function ShelfBook({
     </li>
   );
 }
-
-/** A loading shelf: plain boards, same size as real covers. */
-export function GhostShelf({ count = 2 }: { count?: number }) {
-  return (
-    <div className="lb-bookshelf lb-bookshelf-ghost" aria-hidden="true">
-      {Array.from({ length: count }, (_, i) => (
-        <span key={i} className="lb-bookshelf-slot">
-          <span className="lb-cloth" />
-          <span className="lb-bookshelf-ledge" />
-        </span>
-      ))}
-    </div>
-  );
-}

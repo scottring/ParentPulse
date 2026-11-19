@@ -40,7 +40,7 @@ const user = {
   email: "parent@example.invalid",
   emailVerified: true,
 };
-function mount(overrides = {}) {
+function mount(overrides = {}, props = {}) {
   const sync = {
     user,
     books: [],
@@ -57,6 +57,7 @@ function mount(overrides = {}) {
       sync,
       vault: { mode: "shelf", book: emptyBook(""), editionId: "test" },
       onClose: close,
+      ...props,
     } as unknown as Parameters<typeof AccountLibrary>[0]),
   );
   return { sync, close };
@@ -66,7 +67,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 afterEach(cleanup);
-it("creates a child inside the signed-in parent library without child credentials", async () => {
+it("creates a child inside the signed-in parent account without child credentials", async () => {
   const { sync, close } = mount();
   fireEvent.click(
     await screen.findByRole("button", { name: "Create a child’s book" }),
@@ -95,7 +96,7 @@ it("opens an account book with one click and no book passphrase", async () => {
   await waitFor(() => expect(sync.open).toHaveBeenCalledWith(head));
   expect(screen.queryByLabelText(/passphrase/i)).toBeNull();
 });
-it("keeps the family library behind the parent gate after a child-view reload", async () => {
+it("keeps the account's books behind the parent gate after a child-view reload", async () => {
   auth.gate = { accountUid: "parent-one" };
   auth.verify.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
   const { sync } = mount({
@@ -108,16 +109,41 @@ it("keeps the family library behind the parent gate after a child-view reload", 
   fireEvent.change(screen.getByLabelText("Parent account password"), {
     target: { value: "incorrect" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Choose a book" }));
+  fireEvent.click(screen.getByRole("button", { name: "Open my book" }));
   await screen.findByRole("alert");
   expect(sync.refresh).not.toHaveBeenCalled();
   fireEvent.change(screen.getByLabelText("Parent account password"), {
     target: { value: "parent password" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Choose a book" }));
+  fireEvent.click(screen.getByRole("button", { name: "Open my book" }));
+  // This device doesn't know the adult's book: setup, with the account's
+  // books below it.
   await screen.findByText("Parent private book");
+  expect(screen.getByRole("heading", { name: "Start your book" })).toBeTruthy();
   expect(auth.clear).toHaveBeenCalledWith(null);
   expect(sync.refresh).toHaveBeenCalledTimes(1);
+  expect(sync.open).not.toHaveBeenCalled();
+});
+
+it("after the parent password, goes straight back to the adult's own book", async () => {
+  localStorage.setItem("relish:home-book:parent-one", "mine");
+  auth.gate = { accountUid: "parent-one" };
+  auth.verify.mockResolvedValueOnce(true);
+  const mine = { id: "mine", label: "Scott", accountManaged: true };
+  const onSwitchHome = vi.fn();
+  const { sync, close } = mount(
+    { books: [{ id: "kid", label: "Kaleb", accountManaged: true }, mine] },
+    { onSwitchHome },
+  );
+  fireEvent.change(screen.getByLabelText("Parent account password"), {
+    target: { value: "parent password" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Open my book" }));
+  await waitFor(() => expect(sync.open).toHaveBeenCalledWith(mine));
+  expect(onSwitchHome).toHaveBeenCalledWith(mine);
+  await waitFor(() => expect(close).toHaveBeenCalled());
+  expect(screen.queryByRole("list")).toBeNull();
+  localStorage.removeItem("relish:home-book:parent-one");
 });
 it("keeps original passphrase protection for an earlier synced book", async () => {
   const head = { id: "old", label: "Earlier Robin" };
@@ -133,7 +159,7 @@ it("keeps original passphrase protection for an earlier synced book", async () =
     expect(sync.open).toHaveBeenCalledWith(head, "original passphrase"),
   );
 });
-it("lists the adult's own book first, without a second Create my book or Refresh", () => {
+it("if opening the adult's book on sign-in didn't work, it's below without a second Create my book", () => {
   localStorage.setItem("relish:home-book:parent-one", "mine");
   mount({
     books: [
@@ -141,11 +167,8 @@ it("lists the adult's own book first, without a second Create my book or Refresh
       { id: "mine", label: "Scott", accountManaged: true },
     ],
   });
-  const names = screen
-    .getAllByRole("button")
-    .map((b) => b.textContent || "")
-    .filter((t) => /Ella|Scott/.test(t));
-  expect(names[0]).toMatch(/Scott/);
+  expect(screen.getByRole("heading", { name: "Open your book" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Open Scott’s book" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /Create my book/ })).toBeNull();
   expect(
     screen.getByRole("button", { name: "Create a child’s book" }),
@@ -233,21 +256,20 @@ it("waits for a sync already running instead of reporting a failed load", async 
   expect(refresh).toHaveBeenCalledTimes(2);
 });
 
-it("child-only library: shows the child's cover and still offers Create my book", async () => {
+it("child-only account: setup for the adult's book, with the child's book below", async () => {
   const kid = { id: "kid", label: "Ella", accountManaged: true };
   const { sync } = mount({ books: [kid] });
-  expect(
-    screen.getByRole("heading", { name: "Who’s reading?" }),
-  ).toBeTruthy();
-  expect(screen.queryByText(invitation)).toBeNull();
+  expect(screen.getByRole("heading", { name: "Start your book" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Create my book" })).toBeTruthy();
   expect(
     screen.getByRole("button", { name: "Create a child’s book" }),
   ).toBeTruthy();
+  expect(
+    screen.getByRole("heading", { name: "Books already in this account" }),
+  ).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Open Ella’s book" }));
   await waitFor(() => expect(sync.open).toHaveBeenCalledWith(kid));
 });
-
 it("populated library: each cover is one named open action", () => {
   localStorage.setItem("relish:home-book:parent-one", "mine");
   mount({
@@ -300,7 +322,7 @@ it("draws each person's own emblem; the adult's own book is olive with the leaf"
   localStorage.removeItem("relish:home-book:parent-one");
 });
 
-it("puts Create a child’s book beside the heading and child access in its form", async () => {
+it("explains child access in the child-book form, not beside the button", async () => {
   mount({ books: [{ id: "kid", label: "Ella", accountManaged: true }] });
   expect(screen.queryByText(/without a separate sign-in/)).toBeNull();
   fireEvent.click(
@@ -310,7 +332,6 @@ it("puts Create a child’s book beside the heading and child access in its form
     screen.getByText(/Children use this account without a separate sign-in/),
   ).toBeTruthy();
 });
-
 it("keeps account identity and Sign out together in the Account menu", async () => {
   const lock = vi.fn();
   const refreshUser = vi.fn();
@@ -342,7 +363,7 @@ it("keeps account identity and Sign out together in the Account menu", async () 
   expect(refreshUser).toHaveBeenCalled();
 });
 
-it("works as the Who’s reading? dialog, with the menu and local books", async () => {
+it("from an adult's book: the account panel, with local books and privacy but no list of books", async () => {
   const onLocal = vi.fn();
   render(
     createElement(AccountLibrary, {
@@ -353,7 +374,7 @@ it("works as the Who’s reading? dialog, with the menu and local books", async 
       },
       vault: {
         mode: "open",
-        book: { ...emptyBook("Ella"), profile: { kind: "adult" } },
+        book: { ...emptyBook("Scott"), profile: { kind: "adult" } },
         editionId: "test",
       },
       onClose: vi.fn(),
@@ -361,16 +382,51 @@ it("works as the Who’s reading? dialog, with the menu and local books", async 
     } as unknown as Parameters<typeof AccountLibrary>[0]),
   );
   expect(
-    screen.getByRole("heading", { level: 2, name: "Who’s reading?" }),
+    screen.getByRole("heading", { level: 2, name: "Account" }),
   ).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Account" })).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Open Ella’s book" })).toBeTruthy();
+  expect(screen.getByText(user.email)).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Ella’s book/ })).toBeNull();
+  expect(screen.queryByRole("list")).toBeNull();
+  expect(screen.getByRole("link", { name: "Privacy details" })).toBeTruthy();
   fireEvent.click(
     screen.getByRole("button", { name: "Open a local book or restore a backup" }),
   );
   expect(onLocal).toHaveBeenCalled();
 });
 
+it("opens an older book from Family straight onto its passphrase form", async () => {
+  const old = { id: "old", label: "Iris" };
+  const close = vi.fn();
+  const sync = {
+    user,
+    books: [old],
+    refresh: vi.fn().mockResolvedValue([]),
+    open: vi.fn().mockResolvedValue(undefined),
+  };
+  render(
+    createElement(AccountLibrary, {
+      sync,
+      vault: {
+        mode: "open",
+        book: { ...emptyBook("Scott"), profile: { kind: "adult" } },
+        editionId: "test",
+      },
+      onClose: close,
+      opening: old,
+    } as unknown as Parameters<typeof AccountLibrary>[0]),
+  );
+  expect(
+    screen.getByRole("heading", { name: "Open Iris’s earlier book" }),
+  ).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Original book passphrase"), {
+    target: { value: "original passphrase" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Open book" }));
+  await waitFor(() =>
+    expect(sync.open).toHaveBeenCalledWith(old, "original passphrase"),
+  );
+  await waitFor(() => expect(close).toHaveBeenCalled());
+});
 it("keeps child-profile details and consent in child setup", async () => {
   mount();
   fireEvent.click(
@@ -380,6 +436,6 @@ it("keeps child-profile details and consent in child setup", async () => {
   expect(
     screen.getByLabelText(/I’m their parent or guardian/),
   ).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Back to library" }));
+  fireEvent.click(screen.getByRole("button", { name: "Back" }));
   expect(screen.queryByText(/no child email or password/)).toBeNull();
 });

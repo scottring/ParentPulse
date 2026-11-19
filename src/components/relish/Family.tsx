@@ -184,6 +184,7 @@ export default function Family({
                   name={p.name}
                   cover={coverFor(p.name)}
                   disabled={busy}
+                  locked={p.locked}
                   onOpen={p.onOpen}
                 />
               ))}

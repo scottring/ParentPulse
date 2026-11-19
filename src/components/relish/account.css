@@ -420,7 +420,7 @@
   color: var(--ink);
 }
 
-/* ── Family library, signed in (2026-11-18 redesign) ─────────────────── */
+/* ── Account screens, signed in (2026-11-18 redesign) ─────────────────── */
 .lb-app .lb-account :is(h1, h2) {
   margin: 0;
   font: 600 clamp(36px, 5vw, 52px) / 1.04 var(--serif);
@@ -446,15 +446,6 @@
 }
 .lb-library-home.lb-lib-home > section.lb-lib-sheet:not(.lb-lib-sheet-start) {
   max-width: 920px;
-}
-/* The shelf stands on the page itself: no card, title on the header's edge. */
-.lb-library-home.lb-lib-home > section.lb-lib-sheet.lb-lib-sheet-shelf {
-  max-width: 1100px;
-  padding: 8px 0 0;
-  background: none;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
 }
 
 /* Account menu: identity and Sign out together. */
@@ -597,34 +588,23 @@
   color: var(--ui-ink);
   background: none;
 }
-.lb-app .lb-account section.lb-lib-books {
-  gap: 32px;
+/* Only when this device doesn't know the adult's book yet: the books
+   already in the account, small and below the invitation. */
+.lb-app .lb-account .lb-lib-others {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 4px;
+  padding-top: 24px;
+  border-top: 1px solid var(--ui-line);
 }
-
-/* The picker's heading row: the question, then Create beside it. */
-.lb-lib-top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px 24px;
+.lb-app .lb-account .lb-lib-others h2 {
+  font: 600 20px/1.3 var(--serif);
+  letter-spacing: 0;
 }
-.lb-lib-top-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-.lb-app .lb-account .lb-lib-top-actions :is(.lb-primary, .lb-secondary) {
-  min-height: 46px;
-  font: 600 16px/1.2 var(--sans);
-}
-.lb-app .lb-account .lb-lib-top-actions .lb-secondary {
-  background: transparent;
-  border-color: var(--ui-olive);
-  color: var(--ui-olive);
-}
-.lb-app .lb-account .lb-lib-top-actions .lb-secondary:not(:disabled):hover {
-  background: var(--ui-card);
+.lb-lib-others .lb-bookshelf {
+  --lb-book-w: 150px;
+  --lb-shelf-gap: 32px;
+  justify-content: start;
 }
 .lb-lib-state {
   justify-items: start;
@@ -655,9 +635,6 @@
   align-items: center;
   gap: 0 24px;
 }
-.lb-lib-sheet.lb-lib-sheet-shelf + .lb-lib-foot {
-  max-width: 1100px;
-}
 .lb-app .lb-lib-foot button,
 .lb-app .lb-lib-foot a {
   display: inline-flex;
@@ -683,7 +660,7 @@
   border-top: 1px solid var(--ui-line);
 }
 
-/* Inside the Family library dialog: one column, smaller painting. */
+/* Inside the account dialog: one column, smaller painting. */
 .r-dialog .lb-account section.lb-lib-start {
   grid-template-columns: 1fr;
 }

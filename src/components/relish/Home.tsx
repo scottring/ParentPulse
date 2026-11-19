@@ -20,6 +20,8 @@ export type FamilyPerson = {
   note?: string;
   /** Their own book in this account: shown as a cover on Family. */
   hasBook?: boolean;
+  /** An older copy that still needs its original passphrase. */
+  locked?: boolean;
 };
 export const personTones: Tone[] = ["clay", "sky", "sage", "lilac", "sun"];
 const shortDate = (iso: string) =>

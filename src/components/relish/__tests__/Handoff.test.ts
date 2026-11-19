@@ -28,7 +28,10 @@ const world = vi.hoisted(() => ({
 const heads = vi.hoisted(() => ({
   scott: { id: "r-scott", label: "Scott", accountManaged: true as const },
   kaleb: { id: "r-kaleb", label: "Kaleb", accountManaged: true as const },
+  ella: { id: "r-ella", label: "Ella", accountManaged: true as const },
+  iris: { id: "r-iris", label: "Iris" },
 }));
+const editionOf = (remoteId: string) => remoteId.replace(/^r-/, "ed-");
 const notify = () => world.listeners.forEach((l) => l());
 
 vi.mock("../Sensory", () => ({
@@ -54,7 +57,7 @@ vi.mock("@/lib/relish/book-sync", async () => ({
   ...(await vi.importActual("@/lib/relish/book-sync")),
   readBinding: (editionId: string) => ({
     uid: "parent-one",
-    remoteId: editionId === "ed-scott" ? "r-scott" : "r-kaleb",
+    remoteId: editionId.replace(/^ed-/, "r-"),
     revision: "1",
     fingerprint: null,
     accountManaged: true,
@@ -70,6 +73,14 @@ vi.mock("../useLocalBook", async () => {
       profile: {
         kind: "child",
         ageBand: "6-8",
+        parentLock: { accountUid: "parent-one" },
+      },
+    },
+    "ed-ella": {
+      ...emptyBook("Ella"),
+      profile: {
+        kind: "child",
+        ageBand: "9-12",
         parentLock: { accountUid: "parent-one" },
       },
     },
@@ -109,13 +120,13 @@ vi.mock("../useBookSync", () => ({
     (world.sync ??= {
       authReady: true,
       user: { uid: "parent-one", email: "parent@example.invalid", emailVerified: true },
-      books: [heads.scott, heads.kaleb],
+      books: [heads.scott, heads.iris, heads.kaleb, heads.ella],
       working: false,
       status: "",
       error: "",
       conflict: null,
       open: vi.fn(async (head: { id: string }) => {
-        world.edition = head.id === "r-scott" ? "ed-scott" : "ed-kaleb";
+        world.edition = editionOf(head.id);
         notify();
       }),
       refresh: vi.fn().mockResolvedValue([]),
@@ -138,41 +149,59 @@ afterEach(() => {
   localStorage.clear();
 });
 
-it("hands a shared device from Scott's book to Kaleb's and back through the parent unlock", async () => {
+it("hands a shared device from Scott's book to Kaleb's and back to Family, then on to Ella's", async () => {
   render(createElement(RelishApp));
   const sync = world.sync as FakeSync;
 
-  // Scott's book: Family shows Kaleb's cover, which opens without a password.
+  // Scott's book: Family lists the children's books first, then the older
+  // copy that needs its passphrase. Kaleb's opens without a password.
   fireEvent.click(screen.getByRole("button", { name: "Family" }));
-  const shelf = screen.getByRole("list", { name: "Family books" });
+  let shelf = screen.getByRole("list", { name: "Family books" });
+  expect(
+    within(shelf)
+      .getAllByRole("button")
+      .map((b) => b.getAttribute("aria-label")),
+  ).toEqual([
+    "Open Kaleb’s book",
+    "Open Ella’s book",
+    "Open Iris’s book, an earlier copy that needs its original passphrase",
+  ]);
+  expect(within(shelf).queryByRole("button", { name: /Scott’s book/ })).toBeNull();
   fireEvent.click(within(shelf).getByRole("button", { name: "Open Kaleb’s book" }));
   expect(sync.open).toHaveBeenLastCalledWith(heads.kaleb);
   expect(screen.queryByLabelText(/password|passphrase/i)).toBeNull();
 
-  // Kaleb's book: no way to Scott's book from Family, and his lock is set.
+  // Kaleb's book: no way to other books from Family, and his lock is set.
   await screen.findByRole("heading", { name: /Kaleb/ });
   expect(world.gate).toEqual({ accountUid: "parent-one" });
   fireEvent.click(screen.getByRole("button", { name: "Family" }));
-  expect(screen.queryByRole("button", { name: /Scott’s book/ })).toBeNull();
+  expect(screen.queryByRole("list", { name: "Family books" })).toBeNull();
 
-  // Switch book asks for the parent password before any cover shows.
+  // Switch book asks for the parent password; a wrong one is rejected.
   fireEvent.click(screen.getByRole("button", { name: /^Menu/ }));
   fireEvent.click(screen.getByRole("button", { name: "Switch book" }));
   expect(screen.getByRole("heading", { name: "Parent sign-in" })).toBeTruthy();
-  expect(screen.queryByRole("button", { name: /Open Scott’s book/ })).toBeNull();
   const password = screen.getByLabelText("Parent account password");
   fireEvent.change(password, { target: { value: "a guess" } });
-  fireEvent.click(screen.getByRole("button", { name: "Choose a book" }));
+  fireEvent.click(screen.getByRole("button", { name: "Open my book" }));
   await screen.findByText(/parent password didn’t match/);
-  expect(screen.queryByRole("button", { name: /Open Scott’s book/ })).toBeNull();
+  expect(sync.open).toHaveBeenLastCalledWith(heads.kaleb);
   fireEvent.change(password, { target: { value: "parent password" } });
-  fireEvent.click(screen.getByRole("button", { name: "Choose a book" }));
+  fireEvent.click(screen.getByRole("button", { name: "Open my book" }));
 
-  // Unlocked: the "Who’s reading?" picker, then back to Scott's book.
-  await screen.findByRole("heading", { name: "Who’s reading?" });
-  fireEvent.click(await screen.findByRole("button", { name: "Open Scott’s book" }));
-  await screen.findByRole("heading", { name: /Scott/ });
+  // Scott's book opens straight onto Family: no list of books in between.
+  await screen.findByRole("heading", { name: "Your family", level: 1 });
   expect(sync.open).toHaveBeenLastCalledWith(heads.scott);
-  expect(screen.queryByRole("heading", { name: "Who’s reading?" })).toBeNull();
+  expect(
+    screen.getByRole("button", { name: "Family" }).getAttribute("aria-current"),
+  ).toBe("page");
   expect(world.gate).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Parent sign-in" })).toBeNull();
+
+  // And on to Ella's book, again without a password.
+  shelf = screen.getByRole("list", { name: "Family books" });
+  fireEvent.click(within(shelf).getByRole("button", { name: "Open Ella’s book" }));
+  expect(sync.open).toHaveBeenLastCalledWith(heads.ella);
+  await screen.findByRole("heading", { name: /Ella/ });
+  expect(world.gate).toEqual({ accountUid: "parent-one" });
 });

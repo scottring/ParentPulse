@@ -1,7 +1,7 @@
 import { emblemFor, type Emblem } from "./illustrations";
 
-// Cloth covers for the family shelf (Family) and the "Who’s reading?"
-// picker. Library items carry no color or emblem (book contents are
+// Cloth covers for the family shelf on Family (and a child's own cover on
+// their Home). Library items carry no color or emblem (book contents are
 // encrypted), so a cover comes from the person: the emblem is emblemFor(name),
 // the same one their book shows everywhere else, and the cloth follows the
 // emblem, so a person looks the same in both places. The signed-in adult's

@@ -103,16 +103,19 @@ export default function LivingBook({
   onInteraction,
   family,
   onAddChild,
+  startView,
 }: {
   vault: Vault;
   onAccount?: () => void;
   accountLabel?: string;
   syncStatus?: string;
   onInteraction?: (paused: boolean) => void;
-  /** Other books in this account (children), opened through the library. */
+  /** Other books in this account (children), shown as covers on Family. */
   family?: FamilyPerson[];
-  /** Opens the family library's add-a-child form. */
+  /** Opens the add-a-child form. */
   onAddChild?: () => void;
+  /** Where the book opens, e.g. Family after switching back from a child's book. */
+  startView?: "family";
 }) {
   const [offered, setOffered] = useState<
     { title: string; text: string } | undefined
@@ -132,7 +135,7 @@ export default function LivingBook({
     voice: boolean;
     photo?: boolean;
   } | null>(null);
-  const [view, setView] = useState<View>("home"),
+  const [view, setView] = useState<View>(startView ?? "home"),
     [closed, setClosed] = useState(false),
     [modal, setModal] = useState<Modal>(null),
     [editing, setEditing] = useState<Person | null>(null),
@@ -463,7 +466,7 @@ export default function LivingBook({
           },
         ]
       : []),
-    ...(!sample && accountLabel !== "Switch book"
+    ...(!sample && accountLabel === "Sign in"
       ? [
           {
             label: "Books on this device",
@@ -1112,7 +1115,7 @@ export default function LivingBook({
                 {online
                   ? "An adult’s book. AI help and family connections are available when you choose them."
                   : accountManaged
-                    ? "This child’s book belongs to the parent account and saves automatically online. The parent account password protects age changes and access to the family library. Voice writing needs a parent’s separate permission."
+                    ? "This child’s book belongs to the parent account and saves automatically online. The parent account password protects age changes and switching to other books. Voice writing needs a parent’s separate permission."
                     : "Prompts are written for this age. A separate parent passphrase protects these settings. Children have no account of their own and no online passage sharing."}
               </p>
               <button
