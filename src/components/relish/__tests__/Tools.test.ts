@@ -521,7 +521,7 @@ it("plays Same page? in your own words: answer, guess in private, judge, then th
   expect(screen.getByText("Sam got it ✓")).toBeTruthy();
   expect(screen.getByText(`Kai guessed “${idea.textContent}”`)).toBeTruthy();
   expect(screen.getByText("You got 1 of 2 right.")).toBeTruthy();
-  expect(screen.getByText("Sam got 1 of 1; Kai got none of 1.")).toBeTruthy();
+  expect(screen.getByText("Sam got 1 of 1; Kai didn’t get it this time.")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /Finish round/ }));
   await screen.findByRole("region", { name: "Game finished" });
   const record = livingOf(app.stored()).plays![0];

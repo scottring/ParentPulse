@@ -606,7 +606,7 @@ describe("Same page? in your own words", () => {
     g = playWords([{ answer: "a hug", guesses: ["hug", "jokes"], marks: ["got", "not"] }, { answer: null }], family, g);
     expect(g.stage).toBe("reveal");
     expect(g.turn).toBe(5);
-    expect(saidTally(saidResult(g), g.players)).toBe("Alex got none of 1; Leo got 1 of 1.");
+    expect(saidTally(saidResult(g), g.players)).toBe("Alex didn’t get it this time; Leo got 1 of 1.");
   });
 
   it("the reveal says who got it, who was close and who knew whom best", () => {

@@ -909,7 +909,7 @@ export function saidTally(lines: SaidLine[], players: Pick<Player, "id" | "name"
         `${p.name} got ${got} of ${judged.length}${close ? ` and was close ${times(close)}` : ""}`,
       ];
     if (close) return [`${p.name} was close ${times(close)}`];
-    return [`${p.name} got none of ${judged.length}`];
+    return [`${p.name} didn’t get ${judged.length === 1 ? "it" : "any"} this time`];
   });
   // A line of passes alone says nothing new.
   return parts.every((x) => x.endsWith(" passed")) ? "" : `${parts.join("; ")}.`;
