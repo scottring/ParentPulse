@@ -4,8 +4,10 @@ import { ArrowRight } from "lucide-react";
 import { ageLabels } from "@/lib/relish/profiles";
 import type { Book } from "@/lib/relish/model";
 import {
+  cleanSquare,
   PLACE_LIMIT,
   SPOT_ALL,
+  SQUARE_LIMIT,
   spotLines,
   spotResult,
   spotSummary,
@@ -64,6 +66,94 @@ function PlaceInput({
   );
 }
 
+/**
+ * One square in your own words: "A purple car". The card's other squares
+ * can't go on twice; an empty field is not a square.
+ */
+function SquareEditor({
+  game: g,
+  square,
+  label,
+  busy,
+  onAction,
+  onClose,
+}: {
+  game: Game;
+  square: number;
+  label: string;
+  busy: boolean;
+  onAction: (action: GameAction) => void;
+  onClose: () => void;
+}) {
+  const squares = spotResult(g.players, g.spot!).squares;
+  const sq = squares[square];
+  const [text, setText] = useState(sq.own ? sq.text : "");
+  const field = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    field.current?.focus();
+  }, []);
+  const clean = cleanSquare(text);
+  const taken =
+    !!clean &&
+    squares.some(
+      (x, i) => i !== square && x.text.toLocaleLowerCase() === clean.toLocaleLowerCase(),
+    );
+  return (
+    <form
+      className="lb-spot-edit"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!clean || taken || busy) return;
+        if (clean !== (sq.own ? sq.text : "")) onAction({ type: "write", square, text: clean });
+        onClose();
+      }}
+    >
+      <label>
+        <span>{label}</span>
+        <input
+          ref={field}
+          value={text}
+          maxLength={SQUARE_LIMIT}
+          placeholder={sq.own ? "" : sq.text}
+          autoComplete="off"
+          disabled={busy}
+          onChange={(e) => setText(e.target.value)}
+        />
+      </label>
+      <p className="lb-fine" aria-live="polite">
+        {taken
+          ? "That one is already on the card."
+          : g.stage === "choose" && sq.by !== null
+            ? sq.by === SPOT_ALL
+              ? "Something new to spot, so nobody has spotted it yet."
+              : `Something new to spot, so ${sq.who} hasn’t spotted it yet.`
+            : "Anything you might see on the way, in a few words."}
+      </p>
+      <div className="lb-turn-foot">
+        <button className="lb-primary" disabled={busy || !clean || taken}>
+          Use this
+        </button>
+        {sq.own && (
+          <button
+            type="button"
+            className="lb-text"
+            disabled={busy}
+            onClick={() => {
+              onAction({ type: "write", square, text: "" });
+              onClose();
+            }}
+          >
+            Put the card’s square back
+          </button>
+        )}
+        <button type="button" className="lb-text" disabled={busy} onClick={onClose}>
+          Never mind
+        </button>
+      </div>
+    </form>
+  );
+}
+
 /** The card before anyone starts: swap any square, say where you're headed. */
 export function SpotSetup({
   game: g,
@@ -80,6 +170,8 @@ export function SpotSetup({
 }) {
   const { squares } = spotResult(g.players, g.spot!);
   const [place, setPlace] = useState(g.place || "");
+  /** The square being changed to the family's own words. */
+  const [editing, setEditing] = useState<number | null>(null);
   return (
     <>
       <h2>Spot it!</h2>
@@ -88,20 +180,46 @@ export function SpotSetup({
       </p>
       <ol className="lb-spot-card is-setup" aria-label="Your card">
         {squares.map((sq, i) => (
-          <li key={sq.id}>
+          <li key={sq.id} className={[sq.own ? "is-own" : "", editing === i ? "is-editing" : ""].join(" ").trim() || undefined}>
             <span className="lb-spot-text">{sq.text}</span>
-            <button
-              type="button"
-              className="lb-spot-swap"
-              disabled={busy}
-              aria-label={`Swap this one: ${sq.text}`}
-              onClick={() => onAction({ type: "swap", square: i })}
-            >
-              Swap<span className="lb-spot-wide"> this one</span>
-            </button>
+            <span className="lb-spot-tools">
+              <button
+                type="button"
+                className="lb-spot-swap"
+                disabled={busy}
+                aria-label={`Swap this one: ${sq.text}`}
+                onClick={() => {
+                  setEditing(null);
+                  onAction({ type: "swap", square: i });
+                }}
+              >
+                Swap
+              </button>
+              <button
+                type="button"
+                className="lb-spot-swap"
+                disabled={busy}
+                aria-label={`Change this square: ${sq.text}`}
+                aria-expanded={editing === i}
+                onClick={() => setEditing(editing === i ? null : i)}
+              >
+                Change
+              </button>
+            </span>
           </li>
         ))}
       </ol>
+      {editing !== null && (
+        <SquareEditor
+          key={editing}
+          game={g}
+          square={editing}
+          label={`Instead of “${squares[editing].text}”`}
+          busy={busy}
+          onAction={onAction}
+          onClose={() => setEditing(null)}
+        />
+      )}
       <div className="lb-spot-place">
         <PlaceInput value={place} busy={busy} onChange={setPlace} />
       </div>
@@ -143,6 +261,8 @@ export function SpotBoard({
 }) {
   const card = g.spot!;
   const [picking, setPicking] = useState<number | null>(null);
+  /** Changing the open square to the family's own words. */
+  const [changing, setChanging] = useState(false);
   const returnTo = useRef<number | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const squareRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -158,6 +278,7 @@ export function SpotBoard({
   }, [picking]);
   function close(square: number) {
     returnTo.current = square;
+    setChanging(false);
     setPicking(null);
   }
   if (picking !== null) {
@@ -166,11 +287,26 @@ export function SpotBoard({
       if (by !== sq.by) onAction({ type: "spot", square: picking, by });
       close(picking);
     };
+    if (changing)
+      return (
+        <div className="lb-spot-who">
+          <p className="lb-kicker">Spot it! · {sq.text}</p>
+          <h2>Change this square</h2>
+          <SquareEditor
+            game={g}
+            square={picking}
+            label="Your own square"
+            busy={busy}
+            onAction={onAction}
+            onClose={() => close(picking)}
+          />
+        </div>
+      );
     return (
       <div className="lb-spot-who">
         <p className="lb-kicker">Spot it! · {sq.text}</p>
         <h2 ref={heading} tabIndex={-1}>
-          Who spotted {lower(sq.text)}?
+          Who spotted {sq.own ? sq.text : lower(sq.text)}?
         </h2>
         <div className="lb-spot-names" role="group" aria-label="Who spotted it">
           {g.players.map((p, i) => (
@@ -197,6 +333,9 @@ export function SpotBoard({
               Not spotted yet
             </button>
           )}
+          <button className="lb-text" disabled={busy} onClick={() => setChanging(true)}>
+            Change this square
+          </button>
           <button className="lb-text" disabled={busy} onClick={() => close(picking)}>
             Back to the card
           </button>
@@ -309,7 +448,7 @@ export function SpotReveal({
             {spotted} of {squares.length} spotted
             {together ? ` · ${together} together` : ""}
             {missed.length && missed.length <= 4
-              ? ` · still out there: ${list(missed.map((x) => lower(x.text)))}`
+              ? ` · still out there: ${list(missed.map((x) => (x.own ? x.text : lower(x.text))))}`
               : ""}
           </span>
         </p>

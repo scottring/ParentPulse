@@ -1,5 +1,5 @@
 "use client";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ArrowRight, Check, ChevronDown, Clock } from "lucide-react";
 import type { Book } from "@/lib/relish/model";
 import { audienceOf } from "@/lib/relish/profiles";
@@ -14,8 +14,12 @@ import {
   namesList,
   runningByTool,
   runsStatus,
+  cleanTrackerSquare,
   setMark,
   sortPage,
+  squaresOf,
+  TRACKER_SQUARE_LIMIT,
+  writeTrackerSquare,
   startTracker,
   stopTracker,
   todayKey,
@@ -933,6 +937,8 @@ function HabitScreen({
   const [options, setOptions] = useState(false);
   const [confirmStop, setConfirmStop] = useState(false);
   const [adding, setAdding] = useState(false);
+  /** Bingo: changing a square to the family's own words. */
+  const [changing, setChanging] = useState(false);
   const [keptNote, setKeptNote] = useState<{ name: string; pageId?: string } | null>(null);
   const moreId = useId();
   // Started from the exercise's start screen; nothing to show once it stops.
@@ -1016,11 +1022,12 @@ function HabitScreen({
       </ol>
     ) : (
       <div className="rt-bingo" role="group" aria-label={nameOf(run) && !solo ? `${tool.title} with ${nameOf(run)}` : tool.title}>
-        {tool.squares.map((sq, i) => {
+        {squaresOf(run).map((sq, i) => {
           const on = run.marks.some((m) => m.key === String(i));
           return (
             <button
-              key={sq}
+              key={i}
+              data-own={!!run.own?.[i] || undefined}
               aria-pressed={on}
               disabled={busy}
               onClick={() => toggleSquare(run, i)}
@@ -1265,6 +1272,19 @@ function HabitScreen({
                   Stop without keeping
                 </button>
               )}
+              {!days &&
+                (changing ? (
+                  <SquareChanger
+                    runs={runs}
+                    busy={busy}
+                    onCommit={onCommit}
+                    onDone={() => setChanging(false)}
+                  />
+                ) : (
+                  <button className="lb-text" disabled={busy} onClick={() => setChanging(true)}>
+                    Change a square
+                  </button>
+                ))}
               {addable.length > 0 &&
                 (adding ? (
                   <fieldset className="rt-pick">
@@ -1295,5 +1315,115 @@ function HabitScreen({
         </div>
       </section>
     </main>
+  );
+}
+
+/**
+ * Bingo in your own words: pick a square, then say what goes there instead.
+ * It changes for everyone doing this habit; a mark on it clears, since it's
+ * something new to try.
+ */
+function SquareChanger({
+  runs,
+  busy,
+  onCommit,
+  onDone,
+}: {
+  runs: TrackerRun[];
+  busy: boolean;
+  onCommit: Commit;
+  onDone: () => void;
+}) {
+  const [square, setSquare] = useState<number | null>(null);
+  const [text, setText] = useState("");
+  const field = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (square !== null) field.current?.focus();
+  }, [square]);
+  const squares = squaresOf(runs[0]);
+  const own = square !== null && runs.some((r) => !!r.own?.[square]);
+  const clean = cleanTrackerSquare(text);
+  const taken =
+    square !== null &&
+    !!clean &&
+    runs.some((r) =>
+      squaresOf(r).some(
+        (sq, i) => i !== square && sq.toLocaleLowerCase() === clean.toLocaleLowerCase(),
+      ),
+    );
+  const marked =
+    square !== null && runs.some((r) => r.marks.some((m) => m.key === String(square)));
+  const save = (value: string) =>
+    onCommit(
+      (b) => writeTrackerSquare(b, runs.map((r) => r.id), square!, value),
+      onDone,
+      value ? "Square changed." : "The card’s square is back.",
+    );
+  return (
+    <fieldset className="rt-pick rt-square-change">
+      <legend>Change a square</legend>
+      {square === null ? (
+        <>
+          <p className="lb-fine">Which one? Put your own in its place.</p>
+          <div className="rt-chips">
+            {squares.map((sq, i) => (
+              <button
+                key={i}
+                disabled={busy}
+                onClick={() => {
+                  setSquare(i);
+                  setText(runs[0].own?.[i] || "");
+                }}
+              >
+                {sq}
+              </button>
+            ))}
+          </div>
+          <button className="lb-text" disabled={busy} onClick={onDone}>
+            Never mind
+          </button>
+        </>
+      ) : (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (clean && !taken && !busy) save(clean);
+          }}
+        >
+          <label className="rt-field">
+            Instead of “{squares[square]}”
+            <input
+              ref={field}
+              value={text}
+              maxLength={TRACKER_SQUARE_LIMIT}
+              autoComplete="off"
+              disabled={busy}
+              onChange={(e) => setText(e.target.value)}
+            />
+          </label>
+          <p className="lb-fine" aria-live="polite">
+            {taken
+              ? "That one is already on the card."
+              : marked
+                ? "It’s something new, so its mark clears."
+                : "A few words, in your own way."}
+            {runs.length > 1 ? " It changes for everyone doing this." : ""}
+          </p>
+          <div className="rt-actions">
+            <button className="lb-primary" disabled={busy || !clean || taken}>
+              Use this
+            </button>
+            {own && (
+              <button type="button" className="lb-text" disabled={busy} onClick={() => save("")}>
+                Put the card’s square back
+              </button>
+            )}
+            <button type="button" className="lb-text" disabled={busy} onClick={() => setSquare(null)}>
+              Back
+            </button>
+          </div>
+        </form>
+      )}
+    </fieldset>
   );
 }

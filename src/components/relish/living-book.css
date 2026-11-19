@@ -1619,6 +1619,51 @@
   color: var(--olive);
 }
 
+/* ── Your own answer: "Something else…" at the end of a list ─────────── */
+.lb-app .lb-choices .lb-choice-more {
+  border-style: dashed;
+  border-color: var(--ui-olive-line);
+  background: transparent;
+  color: var(--ui-ink-soft);
+}
+.lb-app .lb-choices .lb-choice-more:not(:disabled):hover {
+  background: transparent;
+  border-color: var(--ui-olive);
+  color: var(--ui-ink);
+}
+.lb-app .lb-choice-own {
+  margin: -13px 0 22px;
+  padding: 14px 16px 16px;
+  border: 1.5px dashed var(--ui-olive-line);
+  border-radius: 14px;
+  background: var(--ui-card);
+}
+.lb-app .lb-choice-own label {
+  margin: 0;
+  font-size: 15px;
+}
+.lb-app .lb-choice-own textarea {
+  font: 500 19px/1.4 var(--serif);
+  resize: none;
+}
+.lb-app .lb-choice-own .lb-fine {
+  margin: 6px 0 0;
+}
+.lb-app .lb-choice-own .lb-turn-foot {
+  margin-top: 12px;
+}
+.lb-app .lb-joy-judge + .lb-joy-judge {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.lb-app .lb-joy-judge h3.lb-said {
+  font-size: 26px;
+}
+.lb-app .lb-joys .is-close {
+  color: var(--ui-ink);
+}
+
 /* ── Spot it!: one card, read aloud in the car ────────────────────────── */
 .lb-app .lb-spot-rule {
   font: italic 400 19px/1.5 var(--serif);
@@ -1657,6 +1702,41 @@
   padding-bottom: 12px;
   background: var(--ui-sage-soft);
   border-color: var(--ui-olive-line);
+}
+.lb-app .lb-spot-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+}
+.lb-app .lb-spot-card.is-setup > li.is-own {
+  border-style: dashed;
+  border-color: var(--ui-olive-line);
+}
+.lb-app .lb-spot-card.is-setup > li.is-editing {
+  border-color: var(--ui-olive);
+  box-shadow: 0 0 0 1px var(--ui-olive);
+}
+.lb-app .lb-spot-edit {
+  margin: 8px 0 18px;
+  padding: 14px 16px 16px;
+  border: 1.5px dashed var(--ui-olive-line);
+  border-radius: 14px;
+  background: var(--ui-card);
+}
+.lb-app .lb-spot-edit label {
+  margin: 0;
+}
+.lb-app .lb-spot-edit label > span {
+  font: 600 15px/1.4 var(--sans);
+  color: var(--ink);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.lb-app .lb-spot-edit input {
+  font: 500 19px/1.4 var(--serif);
+}
+.lb-app .lb-spot-edit .lb-fine {
+  margin: 6px 0 10px;
 }
 .lb-app .lb-spot-swap {
   justify-content: flex-start;

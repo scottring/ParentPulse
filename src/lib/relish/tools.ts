@@ -711,9 +711,16 @@ export type TrackerRun = {
   personId?: string;
   startedAt: string;
   marks: Mark[];
+  /**
+   * Bingo: a square in the family's own words, own[i] in place of the card's
+   * square i. Absent (or null) keeps the card's.
+   */
+  own?: (string | null)[];
   finishedAt?: string;
   pageId?: string;
 };
+/** A bingo square in your own words: a few words, like the card's. */
+export const TRACKER_SQUARE_LIMIT = 60;
 export type ToolsState = {
   version: 1;
   trackers: TrackerRun[];
@@ -787,6 +794,59 @@ const lines = [
   [0, 4, 8],
   [2, 4, 6],
 ];
+/** A bingo card's squares as this run shows them, own words included. */
+export function squaresOf(run: TrackerRun): string[] {
+  const tool = trackerTool(run.toolId);
+  if (tool.mode !== "squares") return [];
+  return tool.squares.map((sq, i) => run.own?.[i] || sq);
+}
+/** A square in your own words: one line, a few words. "" when nothing is left. */
+export const cleanTrackerSquare = (text: string) =>
+  String(text || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, TRACKER_SQUARE_LIMIT)
+    .trim();
+/**
+ * Changes one bingo square to the family's own words ("" puts the card's back)
+ * on these runs. A marked square is something new to try, so its mark clears.
+ */
+export function writeTrackerSquare(
+  book: Book,
+  runIds: string[],
+  square: number,
+  text: string,
+): Book {
+  const runs = toolsOf(book).trackers.filter((t) => runIds.includes(t.id) && !t.finishedAt);
+  if (!runs.length || runs.length !== new Set(runIds).size)
+    throw new Error("This exercise has finished or changed.");
+  const clean = cleanTrackerSquare(text);
+  for (const run of runs) {
+    const squares = squaresOf(run);
+    if (!Number.isInteger(square) || square < 0 || square >= squares.length)
+      throw new Error("Choose a square on the card.");
+    if (
+      clean &&
+      squares.some((sq, i) => i !== square && sq.toLocaleLowerCase() === clean.toLocaleLowerCase())
+    )
+      throw new Error("That one is already on the card.");
+  }
+  return change(book, (s) => ({
+    ...s,
+    trackers: s.trackers.map((t) => {
+      if (!runIds.includes(t.id)) return t;
+      if ((t.own?.[square] || "") === clean) return t;
+      const own = squaresOf(t).map((_, i) => (i === square ? clean || null : t.own?.[i] ?? null));
+      const next: TrackerRun = {
+        ...t,
+        own,
+        marks: t.marks.filter((m) => m.key !== String(square)),
+      };
+      if (!own.some(Boolean)) delete next.own;
+      return next;
+    }),
+  }));
+}
 export function hasBingo(run: TrackerRun) {
   const marked = new Set(run.marks.map((m) => Number(m.key)));
   return lines.some((line) => line.every((i) => marked.has(i)));
@@ -912,7 +972,7 @@ export function trackerPage(book: Book, run: TrackerRun, memory?: string): ToolP
     const marked = run.marks
       .map((m) => Number(m.key))
       .toSorted((a, b) => a - b)
-      .map((i) => tool.squares[i]);
+      .map((i) => squaresOf(run)[i]);
     out.push(`Marked ${marked.length} of ${tool.squares.length}: ${marked.join("; ")}.`);
     if (hasBingo(run)) out.push("Bingo: a full line.");
   }
@@ -1194,6 +1254,14 @@ export function isTools(value: unknown): value is ToolsState {
       active.add(key);
     }
     if (!Array.isArray(t.marks) || t.marks.length > 400) return false;
+    if (
+      t.own !== undefined &&
+      (tool.mode !== "squares" ||
+        !Array.isArray(t.own) ||
+        t.own.length !== tool.squares.length ||
+        !t.own.every((x) => x === null || (str(x, TRACKER_SQUARE_LIMIT) && !!x.trim())))
+    )
+      return false;
     const keys = new Set<string>();
     for (const m of t.marks) {
       if (!obj(m) || !validKey(tool, m.key) || keys.has(m.key as string)) return false;

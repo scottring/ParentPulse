@@ -93,8 +93,18 @@ export const gameKinds: GameKind[] = ["joy", "story", "match", "spot"];
  * who spotted it: a player's index in `players`, SPOT_ALL for "We all did",
  * or null while it's still waiting.
  */
-export type SpotCard = { squares: string[]; marks: (number | null)[] };
+export type SpotCard = {
+  squares: string[];
+  marks: (number | null)[];
+  /**
+   * The family's own words for a square, in place of the card's: own[i] is
+   * shown instead of square i. Absent (or null) keeps the card's square.
+   */
+  own?: (string | null)[];
+};
 export const SPOT_ALL = -1;
+/** A Spot it! square in your own words: a few words, like the card's. */
+export const SQUARE_LIMIT = 40;
 /** "Where were you headed?" — a few words, e.g. "Grandma’s". */
 export const PLACE_LIMIT = 60;
 /** Same page? in your own words: an answer or a guess, a few words long. */
@@ -109,6 +119,19 @@ export type SaidGuess = { playerId: string; text: string | null; mark?: SaidMark
  * guess in turn order (text null for a pass; no guesses when the answer passed).
  */
 export type Said = { by: string; answer: string | null; guesses: SaidGuess[] };
+/**
+ * Guess my small joy and One story (contentVersion 2): an answer in the
+ * player's own words instead of one from the list. Its place in `answers`
+ * (turn, then question in that turn) holds null, so a round read without it
+ * sees a pass. Text is at most SAID_LIMIT long.
+ */
+export type OwnAnswer = {
+  turn: number;
+  ask: number;
+  text: string;
+  /** A guess at a small joy written in its own words: how close it came, judged by whoever picked it. */
+  mark?: SaidMark;
+};
 export type Game = {
   audience?: Audience;
   /**
@@ -119,13 +142,18 @@ export type Game = {
   id: string;
   kind: GameKind;
   players: Player[];
-  /** "judge": contentVersion 3 Same page?, everyone sees one answer and its guesses. */
+  /**
+   * "judge": contentVersion 3 Same page?, everyone sees one answer and its
+   * guesses; or a small joy round where someone wrote their own, before the reveal.
+   */
   stage: "ready" | "choose" | "handoff" | "judge" | "reveal" | "kept" | "finished";
   turn: number;
   /** contentVersion 1 (or none): one answer per turn. Empty from version 2. */
   choices: (number | null)[];
   /** contentVersion 2: each finished turn's answers, one per question asked. */
   answers?: (number | null)[][];
+  /** contentVersion 2 joy and story: answers written in the players' own words. */
+  own?: OwnAnswer[];
   /** Same page? from contentVersion 2: the question ids, fixed when the round starts. */
   questions?: string[];
   /** contentVersion 3 Same page?: each question played so far, in order. */
@@ -175,6 +203,10 @@ export type PlayRecord = {
   joys?: (string | null)[];
   /** Guess my small joy: guesses[guesser][target], null for a pass or no guess. */
   guesses?: (string | null)[][];
+  /** Guess my small joy: which players wrote their own joy, when anyone did. */
+  ownJoys?: boolean[];
+  /** Guess my small joy: marks[guesser][target] for guesses at a joy someone wrote. */
+  marks?: (SaidMark | null)[][];
   /** One story: its lines in order, and the title the group picked. */
   story?: string[];
   title?: string;
@@ -527,6 +559,9 @@ const isV2 = (g: Pick<Game, "contentVersion">) => g.contentVersion === 2;
 /** A Same page? round answered in the players' own words (contentVersion 3). */
 export const ownWords = (g: Pick<Game, "kind" | "contentVersion">) =>
   g.kind === "match" && g.contentVersion === 3;
+/** The words written for question `ask` of turn `turn`, if any (joy and story). */
+export const ownAnswer = (g: Pick<Game, "own">, turn: number, ask: number) =>
+  g.own?.find((o) => o.turn === turn && o.ask === ask);
 /** The kinds that start new rounds at contentVersion 2. */
 const roundKinds: GameKind[] = ["match", "joy", "story", "spot"];
 /** A story runs at least this many turns, so two players go around more than once. */
@@ -553,7 +588,13 @@ export const cleanSaid = (text: string) =>
     .trim();
 export type Ask = {
   prompt: string;
+  /** The list to pick from; with `write: "only"`, ideas to tap. */
   choices: string[];
+  /**
+   * "also": pick from the list or write your own. "only": answer in your own
+   * words (a guess at a joy someone wrote), with the list as ideas.
+   */
+  write?: "also" | "only";
   /** Whose answer this question is about (a joy guess). */
   about?: string;
   /** A short line under the question. */
@@ -656,10 +697,16 @@ export function turnPlan(g: Game): Turn[] {
     // First everyone picks their own in private, then each person guesses
     // everyone else's. Until every pick is in, the guessing turns are
     // provisional; nobody sees them before then.
+    // Someone who writes their own joy is guessed in words: dropped into a
+    // list of four, it would be the one nobody had seen before.
     const options = joyOptions(g);
     const answers = g.answers || [];
     const picks = g.players.map((_, i) =>
-      i < answers.length ? (answers[i][0] ?? null) : 0,
+      i < answers.length
+        ? ownAnswer(g, i, 0)
+          ? ("own" as const)
+          : (answers[i][0] ?? null)
+        : 0,
     );
     const picking: Turn[] = g.players.map((player) => ({
       player,
@@ -669,25 +716,31 @@ export function turnPlan(g: Game): Turn[] {
             ? "What would you like to do most?"
             : "What would brighten an ordinary afternoon for you?",
           choices: options,
+          write: "also",
           about: player.id,
           hint: "Pick in private. Everyone guesses after.",
         },
       ],
     }));
     const guessing: Turn[] = g.players.flatMap((player, i) => {
-      const asks = g.players.flatMap((target, j) =>
-        j === i || picks[j] === null
-          ? []
-          : [
-              {
-                prompt: young(g.audience)
-                  ? `What do you think ${target.name} picked?`
-                  : `What do you think brightens ${target.name}’s afternoon?`,
-                choices: guessOptions(g, target, picks[j]!),
+      const asks = g.players.flatMap((target, j): Ask[] => {
+        const pick = picks[j];
+        if (j === i || pick === null) return [];
+        const prompt = young(g.audience)
+          ? `What do you think ${target.name} picked?`
+          : `What do you think brightens ${target.name}’s afternoon?`;
+        return [
+          pick === "own"
+            ? {
+                prompt,
+                choices: options,
+                write: "only",
                 about: target.id,
-              },
-            ],
-      );
+                hint: `${target.name} wrote their own. Guess in your own words.`,
+              }
+            : { prompt, choices: guessOptions(g, target, pick), about: target.id },
+        ];
+      });
       return asks.length ? [{ player, asks }] : [];
     });
     return [...picking, ...guessing];
@@ -726,7 +779,11 @@ export function turnPlan(g: Game): Turn[] {
   }
   return storyRounds(isV2(g) ? Math.max(STORY_TURNS, n) : n, g.audience).map((r, i) => ({
     player: g.players[i % n],
-    asks: [{ prompt: r.prompt, choices: r.choices }],
+    asks: [
+      isV2(g)
+        ? { prompt: r.prompt, choices: r.choices, write: "also" as const }
+        : { prompt: r.prompt, choices: r.choices },
+    ],
   }));
 }
 /** Each finished turn's answers, one per question asked in that turn. */
@@ -1046,7 +1103,7 @@ function roundSummary(r: PlayRecord): {
   }
   if (r.kind === "joy" && r.joys) {
     const players = r.players as Player[];
-    const result = joyLines(players, r.joys, r.guesses || []);
+    const result = joyLines(players, r.joys, r.guesses || [], r.ownJoys, r.marks);
     return {
       summary: tallyLine(result) || "Everyone passed.",
       sections: result.lines.map((l) => ({
@@ -1113,9 +1170,12 @@ export function spotLines(card: SpotCard) {
 export function spotResult(players: Pick<Player, "id" | "name">[], card: SpotCard) {
   const squares = card.squares.map((id, i) => {
     const by = card.marks[i] ?? null;
+    const own = card.own?.[i] || "";
     return {
       id,
-      text: spotSquare(id)?.text || "",
+      text: own || spotSquare(id)?.text || "",
+      /** The family wrote this square themselves. */
+      own: !!own,
       by,
       who:
         by === null
@@ -1144,6 +1204,20 @@ export function spotSummary(players: Pick<Player, "id" | "name">[], card: SpotCa
     ? `${top[0].player.name} spotted the most: ${best}.`
     : `${list(top.map((t) => t.player.name))} each spotted ${best}.`;
 }
+/** A square in your own words: one line, a few words. "" when nothing is left. */
+export const cleanSquare = (text: string) =>
+  String(text || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, SQUARE_LIMIT)
+    .trim();
+/** The card with square i in the family's own words ("" goes back to the card's). */
+function writeSquare(card: SpotCard, i: number, text: string): SpotCard {
+  const own = card.squares.map((_, k) => (k === i ? text || null : card.own?.[k] ?? null));
+  const next: SpotCard = { ...card, own };
+  if (!own.some(Boolean)) delete next.own;
+  return next;
+}
 /** "Grandma’s" from "on the way to Grandma’s", trimmed to fit. */
 export function cleanPlace(text: string) {
   return String(text || "")
@@ -1168,18 +1242,36 @@ function chooseSquares(audience: Audience, recent: string[]) {
 }
 
 // ── Guess my small joy results ──────────────────────────────────────────────
+/**
+ * How one guess went. A guess at a joy picked from the list is right or not;
+ * a guess at a joy someone wrote is judged by them, and stays "open" when
+ * judging was skipped (unless it matches word for word).
+ */
+export type JoyGuessResult = "right" | "close" | "missed" | "open" | "passed";
 export type JoyLine = {
   player: Player;
   pick: string;
-  guesses: { player: Player; guess: string | null; right: boolean }[];
+  /** The pick was written in the player's own words. */
+  own: boolean;
+  guesses: {
+    player: Player;
+    guess: string | null;
+    right: boolean;
+    result: JoyGuessResult;
+    mark?: SaidMark;
+  }[];
 };
 /** Each picked joy with everyone's guesses, and each guesser's tally. */
 export function joyResult(g: Game) {
   const plan = turnPlan(g),
     answers = turnAnswers(g);
   const n = g.players.length;
+  const v2 = isV2(g);
+  const ownJoys = g.players.map((_, i) => v2 && !!ownAnswer(g, i, 0));
   const picks = g.players.map((_, i) => {
-    if (!isV2(g) && i > 0) return null;
+    if (!v2 && i > 0) return null;
+    const own = v2 ? ownAnswer(g, i, 0) : undefined;
+    if (own) return own.text;
     const a = answers[i]?.[0];
     return a === null || a === undefined ? null : plan[i].asks[0].choices[a];
   });
@@ -1187,21 +1279,50 @@ export function joyResult(g: Game) {
   const guesses: (string | null)[][] = g.players.map(() =>
     g.players.map(() => null),
   );
+  const marks: (SaidMark | null)[][] = g.players.map(() =>
+    g.players.map(() => null),
+  );
   answers.forEach((turn, k) => {
-    if (isV2(g) ? k < n : k === 0) return;
+    if (v2 ? k < n : k === 0) return;
     const guesser = g.players.indexOf(plan[k].player);
     plan[k].asks.forEach((ask, j) => {
       const target = g.players.findIndex((p) => p.id === ask.about);
-      if (target >= 0 && turn[j] !== null && turn[j] !== undefined)
+      if (target < 0) return;
+      const own = v2 ? ownAnswer(g, k, j) : undefined;
+      if (own) {
+        guesses[guesser][target] = own.text;
+        marks[guesser][target] = own.mark ?? null;
+      } else if (turn[j] !== null && turn[j] !== undefined)
         guesses[guesser][target] = ask.choices[turn[j]!];
     });
   });
-  return { picks, guesses, ...joyLines(g.players, picks, guesses) };
+  return {
+    picks,
+    guesses,
+    ownJoys,
+    marks,
+    ...joyLines(g.players, picks, guesses, ownJoys, marks),
+  };
+}
+const sameWords = (a: string, b: string) =>
+  a.trim().toLocaleLowerCase() === b.trim().toLocaleLowerCase();
+function joyGuess(
+  pick: string,
+  guess: string | null,
+  own: boolean,
+  mark: SaidMark | null | undefined,
+): JoyGuessResult {
+  if (guess === null) return "passed";
+  if (mark) return mark === "got" ? "right" : mark === "close" ? "close" : "missed";
+  if (own ? sameWords(guess, pick) : guess === pick) return "right";
+  return own ? "open" : "missed";
 }
 function joyLines(
   players: Player[],
   picks: (string | null)[],
   guesses: (string | null)[][],
+  ownJoys: boolean[] = [],
+  marks: (SaidMark | null)[][] = [],
 ) {
   const lines: JoyLine[] = players.flatMap((player, t) =>
     picks[t] === null || picks[t] === undefined
@@ -1210,33 +1331,43 @@ function joyLines(
           {
             player,
             pick: picks[t]!,
-            guesses: players.flatMap((p, i) =>
-              i === t
-                ? []
-                : [
-                    {
-                      player: p,
-                      guess: guesses[i]?.[t] ?? null,
-                      right: guesses[i]?.[t] === picks[t],
-                    },
-                  ],
-            ),
+            own: !!ownJoys[t],
+            guesses: players.flatMap((p, i) => {
+              if (i === t) return [];
+              const guess = guesses[i]?.[t] ?? null,
+                mark = marks[i]?.[t] ?? null;
+              const result = joyGuess(picks[t]!, guess, !!ownJoys[t], mark);
+              return [
+                {
+                  player: p,
+                  guess,
+                  right: result === "right",
+                  result,
+                  ...(mark ? { mark } : {}),
+                },
+              ];
+            }),
           },
         ],
   );
+  const mine = (player: Player) =>
+    lines.flatMap((l) => l.guesses.filter((x) => x.player.id === player.id));
   const tally = players
-    .map((player) => ({
-      player,
-      right: lines.filter((l) =>
-        l.guesses.some((x) => x.player.id === player.id && x.right),
-      ).length,
-      /** Guesses actually made: a pass is not a wrong guess. */
-      of: lines.filter((l) =>
-        l.guesses.some((x) => x.player.id === player.id && x.guess !== null),
-      ).length,
-      /** Joys this player could have guessed. */
-      could: lines.filter((l) => l.player.id !== player.id).length,
-    }))
+    .map((player) => {
+      const results = mine(player).map((x) => x.result);
+      const count = (r: JoyGuessResult) => results.filter((x) => x === r).length;
+      return {
+        player,
+        right: count("right"),
+        close: count("close"),
+        /** Guesses with an answer: a pass is not a wrong guess, nor is one left unjudged. */
+        of: count("right") + count("close") + count("missed"),
+        /** Guesses made, judged or not. */
+        guessed: results.filter((x) => x !== "passed").length,
+        /** Joys this player could have guessed. */
+        could: lines.filter((l) => l.player.id !== player.id).length,
+      };
+    })
     .filter((t) => t.could > 0);
   return { lines, tally };
 }
@@ -1244,7 +1375,12 @@ function joyLines(
 function tallyLine({ lines, tally }: ReturnType<typeof joyLines>) {
   if (!lines.length) return "";
   const best = Math.max(0, ...tally.map((t) => t.right));
-  if (!best) return "Nobody guessed right this time. Now you know a little more.";
+  if (!best) {
+    const close = tally.filter((t) => t.close > 0).map((t) => t.player.name);
+    if (close.length)
+      return `Nobody got it exactly, but ${list(close)} came close.`;
+    return "Nobody guessed right this time. Now you know a little more.";
+  }
   const top = tally.filter((t) => t.right === best);
   const of = top[0].of;
   if (top.length === 1)
@@ -1254,14 +1390,50 @@ function tallyLine({ lines, tally }: ReturnType<typeof joyLines>) {
     : `${list(top.map((t) => t.player.name))} each guessed ${best} right.`;
 }
 export const joySummary = (g: Game) => tallyLine(joyResult(g));
-/** Every guesser's score, with a pass said as a pass: "Alex 2 of 2 · Leo passed". */
+/**
+ * Every guesser's score, with a pass said as a pass and a near miss as close:
+ * "Ella 1 of 2 · Kaleb got close · Leo passed".
+ */
 export function joyTally(g: Game) {
-  return joyResult(g)
-    .tally.map((t) =>
-      t.of ? `${t.player.name} ${t.right} of ${t.of}` : `${t.player.name} passed`,
-    )
+  return joyTallyOf(joyResult(g).tally);
+}
+function joyTallyOf(tally: ReturnType<typeof joyLines>["tally"]) {
+  return tally
+    .flatMap((t) => {
+      if (!t.guessed) return [`${t.player.name} passed`];
+      // Only guesses nobody judged: nothing to score.
+      if (!t.of) return [];
+      if (t.right)
+        return [
+          `${t.player.name} ${t.right} of ${t.of}${t.close ? ` and close ${times(t.close)}` : ""}`,
+        ];
+      if (t.close)
+        return [`${t.player.name} got close${t.close > 1 ? ` ${times(t.close)}` : ""}`];
+      return [`${t.player.name} ${t.right} of ${t.of}`];
+    })
     .join(" · ");
 }
+/**
+ * The joys someone wrote in their own words, each with the guesses at it:
+ * what the person who wrote it judges before the reveal.
+ */
+export function joyJudging(g: Game) {
+  if (g.kind !== "joy" || !isV2(g)) return [];
+  return joyResult(g).lines.flatMap((l) =>
+    l.own && l.guesses.length
+      ? [
+          {
+            player: l.player,
+            pick: l.pick,
+            guesses: l.guesses.map((x) => ({ player: x.player, text: x.guess, mark: x.mark })),
+          },
+        ]
+      : [],
+  );
+}
+/** Guesses at a written joy still waiting for Got it, Close or Not quite. */
+export const joyJudgePending = (g: Game) =>
+  joyJudging(g).some((t) => t.guesses.some((x) => x.text !== null && !x.mark));
 /**
  * One question's answers grouped by choice, so the reveal can say what the
  * family chose: [{ choice: "pizza", names: ["Alex", "Anna"] }, …].
@@ -1282,7 +1454,12 @@ export function pickGroups(line: SamePageLine, players: Pick<Player, "name">[]) 
 }
 const knewLine = (l: JoyLine) => {
   const knew = l.guesses.filter((x) => x.right).map((x) => x.player.name);
-  return knew.length ? `${list(knew)} guessed it.` : "Nobody guessed it.";
+  const close = l.guesses.filter((x) => x.result === "close").map((x) => x.player.name);
+  const near = close.length
+    ? `${list(close)} ${close.length === 1 ? "was" : "were"} close.`
+    : "";
+  if (knew.length) return [`${list(knew)} guessed it.`, near].filter(Boolean).join(" ");
+  return near || "Nobody guessed it.";
 };
 
 // ── One story results ───────────────────────────────────────────────────────
@@ -1291,16 +1468,18 @@ export function storyLines(g: Game) {
   const plan = turnPlan(g);
   return turnAnswers(g).flatMap((turn, i) => {
     const ask = plan[i]?.asks[0],
-      c = turn[0];
-    return ask && c !== null && c !== undefined
-      ? [
-          {
-            player: plan[i].player,
-            text: `${ask.prompt.replace(/…$/, "")} ${ask.choices[c]}.`,
-          },
-        ]
-      : [];
+      part = storyPart(g, i, ask, turn[0]);
+    if (!ask || !part) return [];
+    // Written lines keep their own ending: "…we found a goose!".
+    const end = /[.!?…]$/.test(part) ? "" : ".";
+    return [{ player: plan[i].player, text: `${ask.prompt.replace(/…$/, "")} ${part}${end}` }];
   });
+}
+/** What turn i added to the story: its choice, or the words written instead; "" for a pass. */
+function storyPart(g: Game, i: number, ask: Ask | undefined, c: number | null | undefined) {
+  const own = isV2(g) ? ownAnswer(g, i, 0) : undefined;
+  if (own) return own.text;
+  return ask && c !== null && c !== undefined ? ask.choices[c] || "" : "";
 }
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 /** A few titles worked out from the story's own lines, to pick from. */
@@ -1308,9 +1487,9 @@ export function storyTitles(g: Game) {
   const plan = turnPlan(g),
     answers = turnAnswers(g);
   const from = (i: number) => {
-    const c = answers[i]?.[0];
-    if (c === null || c === undefined || !plan[i]) return "";
-    return capital(`the ${plan[i].asks[0].choices[c].replace(/^(a|an|the|some) /i, "")}`);
+    const part = plan[i] ? storyPart(g, i, plan[i].asks[0], answers[i]?.[0]) : "";
+    if (!part) return "";
+    return capital(`the ${part.replace(/[.!?…]+$/, "").replace(/^(a|an|the|some) /i, "")}`);
   };
   return [
     from(0),
@@ -1452,7 +1631,8 @@ export function gameText(g: Game): string {
     return [
       joySummary(g),
       ...lines.map(
-        (l) => `${l.player.name}’s small joy: ${l.pick.toLowerCase()}. ${knewLine(l)}`,
+        (l) =>
+          `${l.player.name}’s small joy: ${l.own ? l.pick : l.pick.toLowerCase()}. ${knewLine(l)}`,
       ),
     ].join("\n");
   }
@@ -1468,14 +1648,23 @@ export type GameAction =
   /** Spot it! can say where the car is headed as it starts. */
   | { type: "start"; firstId?: string; place?: string }
   | { type: "ready" | "finish" }
-  /** One answer, for a turn with one question; null passes the whole turn. */
-  | { type: "choice"; choice: number | null }
-  /** Every answer in a turn with several questions; null passes one. */
-  | { type: "answer"; answers: (number | null)[] }
+  /**
+   * One answer, for a turn with one question; null passes the whole turn.
+   * `text` is an answer in your own words instead (with choice null).
+   */
+  | { type: "choice"; choice: number | null; text?: string }
+  /**
+   * Every answer in a turn with several questions; null passes one.
+   * texts[j] is question j answered in your own words (with answers[j] null).
+   */
+  | { type: "answer"; answers: (number | null)[]; texts?: (string | null)[] }
   /** Same page? in your own words: an answer or a guess; null passes. */
   | { type: "say"; text: string | null }
-  /** The one who answered says how close a guess came; null clears it. */
-  | { type: "judge"; playerId: string; mark: SaidMark | null }
+  /**
+   * The one who answered says how close a guess came; null clears it. In a
+   * small joy round, `about` is whose joy the guess was about.
+   */
+  | { type: "judge"; playerId: string; mark: SaidMark | null; about?: string }
   /** On to the next question; `skip` leaves guesses unjudged. */
   | { type: "next"; skip?: boolean }
   | { type: "approve"; playerId: string }
@@ -1485,6 +1674,8 @@ export type GameAction =
   | { type: "reflect"; playerId: string; text: string }
   /** Spot it! setup: a fresh square in place of this one. */
   | { type: "swap"; square: number }
+  /** Spot it!: this square in your own words, before or during play; "" puts the card's back. */
+  | { type: "write"; square: number; text: string }
   /** Spot it!: who spotted this square (a player index or SPOT_ALL); null clears it. */
   | { type: "spot"; square: number; by: number | null }
   /** Spot it!: where the car is headed; "" clears it. */
@@ -1506,7 +1697,22 @@ export function advanceGame(g: Game, action: GameAction): Game {
       const squares = card.squares.map((id, i) =>
         i === square ? pool[random(pool.length)].id : id,
       );
-      return { ...g, spot: { ...card, squares }, updatedAt: stamp };
+      return { ...g, spot: writeSquare({ ...card, squares }, square, ""), updatedAt: stamp };
+    }
+    if (action.type === "write" && (g.stage === "ready" || g.stage === "choose")) {
+      if (!onCard) throw new Error("Choose a square on the card.");
+      const text = cleanSquare(action.text);
+      const shown = spotResult(g.players, card).squares;
+      if (
+        text &&
+        shown.some((x, i) => i !== square && x.text.toLocaleLowerCase() === text.toLocaleLowerCase())
+      )
+        throw new Error("That one is already on the card.");
+      if (text === (card.own?.[square] || "")) return g;
+      // Something new to spot: whoever spotted the old square hasn't spotted this.
+      const written = writeSquare(card, square, text);
+      const marks = card.marks.map((m, i) => (i === square ? null : m));
+      return { ...g, spot: { ...written, marks }, updatedAt: stamp };
     }
     if (action.type === "spot" && g.stage === "choose") {
       const by = action.by;
@@ -1570,19 +1776,71 @@ export function advanceGame(g: Game, action: GameAction): Game {
       answers.some(
         (a, j) =>
           a !== null &&
-          (!Number.isInteger(a) || a < 0 || a >= asks[j].choices.length),
+          (asks[j].write === "only" ||
+            !Number.isInteger(a) ||
+            a < 0 ||
+            a >= asks[j].choices.length),
       )
     )
       throw new Error("Choose an available answer.");
+    const texts =
+      action.type === "answer"
+        ? action.texts
+        : action.text !== undefined
+          ? [action.text]
+          : undefined;
+    const written: OwnAnswer[] = [];
+    if (texts !== undefined) {
+      if (!Array.isArray(texts) || texts.length !== asks.length)
+        throw new Error("Choose an available answer.");
+      texts.forEach((t, j) => {
+        if (t === null || t === undefined) return;
+        if (!asks[j].write || answers[j] !== null)
+          throw new Error("Choose an available answer.");
+        const text = cleanSaid(t);
+        if (!text) throw new Error("Write a few words, or pass.");
+        written.push({ turn: g.turn, ask: j, text });
+      });
+    }
     const turn = g.turn + 1;
     const next: Game = isV2(g)
       ? { ...g, answers: [...(g.answers || []), [...answers]], turn }
       : { ...g, choices: [...g.choices, answers[0]], turn };
+    if (written.length) next.own = [...(g.own || []), ...written];
+    const over = turn >= turnCount(next);
     return {
       ...next,
-      stage: turn >= turnCount(next) ? "reveal" : "handoff",
+      // Joys someone wrote are judged before the reveal.
+      stage: over ? (joyJudging(next).length ? "judge" : "reveal") : "handoff",
       updatedAt: stamp,
     };
+  }
+  if (action.type === "judge" && g.kind === "joy" && g.stage === "judge") {
+    const plan = turnPlan(g);
+    const k = (g.own || []).findIndex((o) => {
+      const ask = plan[o.turn]?.asks[o.ask];
+      return (
+        ask?.write === "only" &&
+        ask.about === action.about &&
+        plan[o.turn].player.id === action.playerId
+      );
+    });
+    if (k < 0) throw new Error("Choose a guess to judge.");
+    if (action.mark !== null && !saidMarks.includes(action.mark))
+      throw new Error("Choose Got it, Close or Not quite.");
+    const own = g.own!.map((o, i) => {
+      if (i !== k) return o;
+      const marked = { ...o };
+      if (action.mark) marked.mark = action.mark;
+      else delete marked.mark;
+      return marked;
+    });
+    return { ...g, own, updatedAt: stamp };
+  }
+  if (action.type === "next" && g.kind === "joy" && g.stage === "judge") {
+    if (!action.skip && joyJudgePending(g))
+      throw new Error("Judge each guess, or skip judging.");
+    return { ...g, stage: "reveal", updatedAt: stamp };
   }
   if (action.type === "approve" && g.stage === "reveal" && gameText(g)) {
     const index = g.players.findIndex((p) => p.id === action.playerId);
@@ -1722,13 +1980,22 @@ function roundMemory(g: Game): Partial<PlayRecord> {
       })),
     };
   if (g.kind === "joy") {
-    const { picks, guesses } = joyResult(g);
-    return { joys: picks, guesses };
+    const { picks, guesses, ownJoys, marks } = joyResult(g);
+    // Only rounds where someone wrote their own need to say so.
+    return {
+      joys: picks,
+      guesses,
+      ...(ownJoys.some(Boolean) ? { ownJoys, marks } : {}),
+    };
   }
   if (g.kind === "spot")
     return g.spot
       ? {
-          spot: { squares: [...g.spot.squares], marks: [...g.spot.marks] },
+          spot: {
+            squares: [...g.spot.squares],
+            marks: [...g.spot.marks],
+            ...(g.spot.own ? { own: [...g.spot.own] } : {}),
+          },
           ...(g.place ? { place: g.place } : {}),
         }
       : {};
@@ -1759,6 +2026,8 @@ function trimMemory(plays: PlayRecord[]) {
       delete rest.said;
       delete rest.joys;
       delete rest.guesses;
+      delete rest.ownJoys;
+      delete rest.marks;
       delete rest.story;
       delete rest.title;
       delete rest.reflections;
@@ -1945,6 +2214,28 @@ export function isLiving(value: unknown): value is LivingState {
                   row.every((x) => x === null || str(x, 80)),
               ),
           ) &&
+          // Without joys (an older version trimmed them) these say nothing, but harm nothing.
+          optional(
+            r.ownJoys,
+            (o) =>
+              r.kind === "joy" &&
+              Array.isArray(o) &&
+              o.length === (r.players as unknown[]).length &&
+              o.every((x) => typeof x === "boolean"),
+          ) &&
+          optional(
+            r.marks,
+            (q) =>
+              r.kind === "joy" &&
+              Array.isArray(q) &&
+              q.length === (r.players as unknown[]).length &&
+              q.every(
+                (row) =>
+                  Array.isArray(row) &&
+                  row.length === (r.players as unknown[]).length &&
+                  row.every((x) => x === null || saidMarks.includes(x as SaidMark)),
+              ),
+          ) &&
           optional(
             r.story,
             (lines) =>
@@ -2052,6 +2343,7 @@ function wordsGameFits(g: Record<string, unknown>, sharedPages: unknown[]) {
   if (
     game.kind !== "match" ||
     g.answers !== undefined ||
+    g.own !== undefined ||
     game.choices.length ||
     g.title !== undefined ||
     g.spot !== undefined ||
@@ -2091,7 +2383,11 @@ function wordsGameFits(g: Record<string, unknown>, sharedPages: unknown[]) {
   return fits && stageFits(game, sharedPages);
 }
 const placeFits = (x: unknown) => str(x, PLACE_LIMIT) && !!x.trim();
-/** Nine different squares, each mark a player's index, SPOT_ALL or null. */
+const squareText = (x: unknown) => str(x, SQUARE_LIMIT) && !!x.trim();
+/**
+ * Nine different squares, each mark a player's index, SPOT_ALL or null, and
+ * any square in the family's own words a few words long.
+ */
 function spotCardFits(
   value: unknown,
   playerCount: number,
@@ -2110,6 +2406,13 @@ function spotCardFits(
         m === null ||
         m === SPOT_ALL ||
         (Number.isInteger(m) && m >= 0 && m < playerCount),
+    ) &&
+    optional(
+      value.own,
+      (own) =>
+        Array.isArray(own) &&
+        own.length === SPOT_SIZE &&
+        own.every((x) => x === null || squareText(x)),
     )
   );
 }
@@ -2163,9 +2466,14 @@ function isGame(g: unknown, sharedPages: unknown[]): boolean {
   )
     return false;
   if (g.contentVersion === 3) return wordsGameFits(g, sharedPages);
-  // Only own-words rounds judge, or keep words in `said`.
-  if (g.stage === "judge" || g.said !== undefined) return false;
   const v2 = g.contentVersion === 2;
+  // Only own-words Same page? keeps words in `said`; only it and small joy
+  // rounds where someone wrote their own judge.
+  if ((g.stage === "judge" && !(v2 && g.kind === "joy")) || g.said !== undefined)
+    return false;
+  // Words in place of a choice: newer small joy and story rounds only.
+  if (g.own !== undefined && !(v2 && (g.kind === "joy" || g.kind === "story")))
+    return false;
   if (v2) {
     if (!Array.isArray(g.answers) || g.choices.length) return false;
     if (g.kind === "match") {
@@ -2211,10 +2519,19 @@ function isGame(g: unknown, sharedPages: unknown[]): boolean {
   const game = g as Game;
   const given = v2 ? (g.answers as unknown[]) : g.choices.map((c) => [c]);
   if (given.length !== game.turn) return false;
+  const own = g.own === undefined ? [] : g.own;
+  if (!Array.isArray(own) || !own.every(ownFits)) return false;
+  const placed = own.map((o) => `${o.turn}:${o.ask}`);
+  if (new Set(placed).size !== placed.length) return false;
+  const judging = ["judge", "reveal", "kept", "finished"].includes(game.stage);
   // Each turn's answers must fit what that turn asked, given the turns before it.
   for (let i = 0; i < given.length; i++) {
     const before: Game = v2
-      ? { ...game, answers: (given as (number | null)[][]).slice(0, i) }
+      ? {
+          ...game,
+          answers: (given as (number | null)[][]).slice(0, i),
+          own: own.filter((o) => o.turn < i),
+        }
       : { ...game, choices: game.choices.slice(0, i) };
     const asks = turnPlan(before)[i]?.asks;
     const answers = given[i];
@@ -2225,20 +2542,48 @@ function isGame(g: unknown, sharedPages: unknown[]): boolean {
       !answers.every(
         (c, j) =>
           c === null ||
-          (Number.isInteger(c) && c >= 0 && c < asks[j].choices.length),
-      )
+          (asks[j].write !== "only" &&
+            Number.isInteger(c) &&
+            c >= 0 &&
+            c < asks[j].choices.length),
+      ) ||
+      // Words go only where a question took them, in place of a choice;
+      // only a guess at a written joy is judged, and only once guessing is over.
+      !own
+        .filter((o) => o.turn === i)
+        .every(
+          (o) =>
+            o.ask < asks.length &&
+            !!asks[o.ask].write &&
+            answers[o.ask] === null &&
+            (o.mark === undefined || (asks[o.ask].write === "only" && judging)),
+        )
     )
       return false;
   }
+  if (own.some((o) => o.turn >= given.length)) return false;
   const done = game.turn === turnCount(game);
   if (
     game.turn > turnCount(game) ||
-    ["reveal", "kept", "finished"].includes(game.stage) !== done ||
+    judging !== done ||
+    (game.stage === "judge" && !joyJudging(game).length) ||
     (game.stage === "ready" && game.turn !== 0) ||
     (game.stage === "handoff" && game.turn === 0)
   )
     return false;
   return stageFits(game, sharedPages);
+}
+/** One answer in your own words: where it goes, a few words, and how close it came. */
+function ownFits(o: unknown): o is OwnAnswer {
+  return (
+    obj(o) &&
+    Number.isInteger(o.turn) &&
+    (o.turn as number) >= 0 &&
+    Number.isInteger(o.ask) &&
+    (o.ask as number) >= 0 &&
+    saidText(o.text) &&
+    (o.mark === undefined || saidMarks.includes(o.mark as SaidMark))
+  );
 }
 /** What every stage needs, whatever the game: approvals, finishing and a kept page. */
 function stageFits(game: Game, sharedPages: unknown[]) {
