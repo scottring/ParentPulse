@@ -1,4 +1,5 @@
 import { isManual, type ManualState } from "./manual";
+import { isPersonNote, type PersonNote } from "./game-notes";
 import { isAlbum, type AlbumPassage } from "./pages";
 import { isJournal, type JournalEntry } from "./journal";
 import { isEditionProfile, type EditionProfile } from "./profiles";
@@ -13,6 +14,8 @@ export type Person = {
   color: string;
   note: string;
   lessons: string[];
+  /** What came out of games about this person, kept by a parent (game-notes.ts). */
+  notes?: PersonNote[];
 };
 export type Moment = {
   id: string;
@@ -216,7 +219,9 @@ export function isBook(value: unknown): value is Book {
           (k) => typeof p[k as keyof Person] === "string",
         ) &&
         Array.isArray(p.lessons) &&
-        p.lessons.every((x) => typeof x === "string"),
+        p.lessons.every((x) => typeof x === "string") &&
+        (p.notes === undefined ||
+          (Array.isArray(p.notes) && p.notes.length <= 2000 && p.notes.every(isPersonNote))),
     ) &&
     Array.isArray(b.moments) &&
     b.moments.every(

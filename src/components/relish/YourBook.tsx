@@ -148,6 +148,15 @@ export default function YourBook({
         text,
       })),
     ),
+    // What came out of games about each person, kept by a parent.
+    ...book.people.flatMap((p) =>
+      (p.notes || []).map((n) => ({
+        id: `${p.id}:note:${n.id}`,
+        who: [p.id],
+        tone: tone(p.id),
+        text: n.text,
+      })),
+    ),
     ...manual
       .filter((c) => c.status === "kept")
       .map((c) => {

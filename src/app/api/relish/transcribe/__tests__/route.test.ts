@@ -107,6 +107,10 @@ describe("hosted transcription boundary", () => {
     expect(failed.status).toBe(502);
     expect(await failed.text()).not.toContain("internal");
   });
+  it("accepts Listen's pieces from a game, and nothing without consent", async () => {
+    expect((await POST(request({ "x-relish-consent": "this-game" }))).status).toBe(200);
+    expect((await POST(request({ "x-relish-consent": "anything" }))).status).toBe(403);
+  });
   it("requires adult authentication even for a parent-assisted recording", async () => {
     vi.mocked(authorizeAI).mockRejectedValue(new AIError("Sign in", 401));
     expect(

@@ -1,4 +1,7 @@
 "use client";
+import type { NoteDraft } from "@/lib/relish/game-notes";
+import { ListenBar, useListen } from "./GameListen";
+import GameNotes, { canListen, useNotesConfig } from "./GameNotes";
 import { useEffect, useRef, useState } from "react";
 import { Hand, Check, ArrowRight } from "lucide-react";
 import { ageLabels } from "@/lib/relish/profiles";
@@ -76,6 +79,7 @@ export default function GroupPlay({
   onPause,
   onFinish,
   onCancel,
+  onKeepNotes,
 }: {
   book: Book;
   /** Players and the game are chosen in Do something's game sheet. */
@@ -86,6 +90,8 @@ export default function GroupPlay({
   onPause: () => void;
   onFinish: () => void;
   onCancel: () => void;
+  /** A parent's book keeps notes about the players; children's books don't. */
+  onKeepNotes?: (notes: NoteDraft[]) => Promise<boolean>;
 }) {
   const [firstPlayer, setFirstPlayer] = useState(game.players[0].id);
   /** Whose turn it is to add a line about the round, once it's revealed. */
@@ -98,6 +104,11 @@ export default function GroupPlay({
     text = gameText(g),
     finished = ["reveal", "kept", "finished"].includes(g.stage),
     living = livingOf(book);
+  const notesOn = !!onKeepNotes;
+  const notesConfig = useNotesConfig(!notesOn);
+  const listen = useListen(g);
+  const listenable = notesOn && canListen(g, notesConfig);
+  const aiNote = listenable ? "sent to AI only if you turn on Listen" : "never sent to AI";
   const next = gamePlayer(g);
   const many = (plan[0]?.asks.length || 1) > 1;
   /** A joy round where everyone picks, then everyone guesses. */
@@ -114,6 +125,7 @@ export default function GroupPlay({
       : null;
   return (
     <section className="lb-game" aria-label="Our game">
+      {listenable && g.stage !== "finished" && <ListenBar listen={listen} busy={busy} />}
       {!finished && g.stage !== "ready" && !spot && (
         <div className="lb-session-line">
           <div>
@@ -200,10 +212,10 @@ export default function GroupPlay({
           </div>
           <p className="lb-fine lb-setup-note">
             {inWords
-              ? `Each answer stays hidden until everyone has guessed. The answers and guesses stay with this round in ${book.owner}’s book (never sent to AI)`
+              ? `Each answer stays hidden until everyone has guessed. The answers and guesses stay with this round in ${book.owner}’s book (${aiNote})`
               : "Answers stay hidden until the reveal"}
             {remembers(g) && !inWords
-              ? `, then stay with this round in ${book.owner}’s book (never sent to AI)`
+              ? `, then stay with this round in ${book.owner}’s book (${aiNote})`
               : ""}
             . Passing is always fine.
             {g.audience
@@ -319,6 +331,16 @@ export default function GroupPlay({
             </>
           )}
           <RoundNotes game={g} />
+          {onKeepNotes && (
+            <GameNotes
+              game={g}
+              owner={book.owner}
+              config={notesConfig}
+              listen={listenable ? listen : null}
+              busy={busy}
+              onKeep={onKeepNotes}
+            />
+          )}
           <div className="lb-round-end">
             <p className="lb-fine">
               {spot
