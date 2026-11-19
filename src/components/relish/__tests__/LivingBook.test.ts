@@ -64,7 +64,7 @@ describe("living-book interaction boundaries", () => {
       });
     }
     render(createElement(Harness));
-    fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+    fireEvent.click(screen.getByRole("button", { name: "Activities" }));
     fireEvent.click(
       screen.getByRole("button", { name: /Think it through/ }),
     );
@@ -110,9 +110,9 @@ describe("living-book interaction boundaries", () => {
       });
     }
     render(createElement(Harness));
-    fireEvent.click(screen.getByRole("button", { name: "Your book" }));
+    fireEvent.click(screen.getByRole("button", { name: "Book" }));
     expect(screen.getAllByText("A confidential sample sentence").length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+    fireEvent.click(screen.getByRole("button", { name: "Activities" }));
     fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
     fireEvent.click(screen.getByRole("button", { name: "+ Someone visiting" }));
     fireEvent.change(screen.getByRole("textbox", { name: /Their name/ }), {

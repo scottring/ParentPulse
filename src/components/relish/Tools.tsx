@@ -91,7 +91,7 @@ export default function Tools({
       <main className="rt-screen" aria-labelledby="rt-title">
         <SubHead
           back={{
-            label: "Back to Do something",
+            label: "Back to Activities",
             onClick: onActivities,
             disabled: busy,
           }}
@@ -155,7 +155,7 @@ export default function Tools({
         roster={roster}
         sample={sample}
         family={family}
-        backLabel={onBack ? "Back to Do something" : "All exercises"}
+        backLabel={onBack ? "Back to Activities" : "All exercises"}
         onBack={() => (onBack ? onBack() : setOpenId(null))}
       />
     );
@@ -164,7 +164,7 @@ export default function Tools({
     <main className="rt-screen" aria-labelledby="rt-title">
       <SubHead
         back={{
-          label: "Back to Do something",
+          label: "Back to Activities",
           onClick: onActivities,
           disabled: busy,
         }}

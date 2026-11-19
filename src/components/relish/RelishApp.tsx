@@ -10,6 +10,7 @@ import { readHomeBook, writeHomeBook } from "./homeBook";
 import EditionSetup from "./EditionSetup";
 import AccountLibrary from "./AccountLibrary";
 import { useBookSync } from "./useBookSync";
+import { useAccountFamily } from "./useFamilyBook";
 import Illustration from "./Illustration";
 import { PaperCard, PrivateNote } from "./ui";
 import type { ReactNode } from "react";
@@ -70,6 +71,20 @@ function BookGate() {
     vault.mode === "open" &&
     sync.authReady &&
     binding?.uid !== sync.user?.uid;
+  // Our family book lives in the account while a signed-in account book is
+  // open, the adult's or a child's; otherwise inside the open book.
+  const accountFamily = useAccountFamily(
+    vault.mode === "open" &&
+      managed &&
+      !unauthorized &&
+      !!sync.user?.emailVerified &&
+      binding?.uid === sync.user.uid &&
+      (vault.book.profile?.kind === "adult" ||
+        vault.book.profile?.kind === "child")
+      ? sync.family
+      : null,
+    binding?.remoteId ?? vault.editionId,
+  );
   useEffect(() => {
     if (unauthorized) {
       vault.lock();
@@ -340,6 +355,7 @@ function BookGate() {
       <LivingBook
         key={`${vault.mode}:${vault.editionId}`}
         family={family}
+        familyBook={accountFamily}
         startView={startOn && binding?.remoteId === startOn ? "family" : undefined}
         onAddChild={() => {
           setAddChild(true);

@@ -12,6 +12,12 @@ export function openBook(
 ) {
   let stored = book;
   const lock = vi.fn();
+  // Just me / Our family is remembered per book; each test starts in Just me.
+  try {
+    localStorage.removeItem("relish.space.v1:places-test");
+  } catch {
+    /* no storage in this environment */
+  }
   function Harness() {
     const [current, setCurrent] = useState(stored);
     return createElement(LivingBook, {

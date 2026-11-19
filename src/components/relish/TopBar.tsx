@@ -2,12 +2,18 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { SoundControl } from "./Sensory";
 
-export type Place = "home" | "do" | "book" | "family";
+export type Place = "home" | "book" | "journal" | "do";
 export const places: { id: Place; label: string }[] = [
   { id: "home", label: "Home" },
-  { id: "do", label: "Do something" },
-  { id: "book", label: "Your book" },
-  { id: "family", label: "Family" },
+  { id: "book", label: "Book" },
+  { id: "journal", label: "Journal" },
+  { id: "do", label: "Activities" },
+];
+/** Whose pages: your own, or the whole family's. Remembered per book. */
+export type Space = "me" | "family";
+export const spaces: { id: Space; label: string }[] = [
+  { id: "me", label: "Just me" },
+  { id: "family", label: "Our family" },
 ];
 
 export type MenuItem =
@@ -19,7 +25,7 @@ export type MenuItem =
     }
   | "sound";
 
-/** The one top bar: wordmark, the four places, and a small menu. */
+/** The one top bar: wordmark, the four places, whose pages, and a small menu. */
 export default function TopBar({
   current,
   initial,
@@ -28,8 +34,13 @@ export default function TopBar({
   items,
   status,
   onWrite,
+  space,
+  onSpace,
 }: {
   current: Place;
+  /** Just me or Our family; the switch shows when both are given. */
+  space?: Space;
+  onSpace?: (space: Space) => void;
   initial: string;
   disabled: boolean;
   onPlace: (place: Place) => void;
@@ -84,6 +95,21 @@ export default function TopBar({
             </button>
           ))}
         </nav>
+        {space && onSpace && (
+          <div className="rp-space" role="group" aria-label="Whose pages">
+            {spaces.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                disabled={disabled}
+                aria-pressed={space === s.id}
+                onClick={() => space !== s.id && onSpace(s.id)}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
         {onWrite && (
           <button
             type="button"
@@ -91,7 +117,8 @@ export default function TopBar({
             disabled={disabled}
             onClick={onWrite}
           >
-            <span aria-hidden="true">+</span> Write
+            <span aria-hidden="true">+</span>{" "}
+            <span className="rp-write-word">Write</span>
           </button>
         )}
         <div className="rp-menu-wrap" ref={wrap}>

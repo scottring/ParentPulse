@@ -1,0 +1,917 @@
+/* Our family book, its members, and Share with our family
+   (Scott's mockups 33, 38 and 39). Colors come from ui.css tokens, plus the
+   cloth cover's green and gold and the kept passage's butter yellow. */
+.lb-app.rp-shell .rp-fb {
+  --fb-cloth: #3d4c33;
+  --fb-cloth-deep: #33402b;
+  --fb-gold: #d9b75f;
+  --fb-cream: #f4ead0;
+  --fb-butter: #f7eac3;
+  --fb-butter-line: #ead9a6;
+  gap: 22px;
+  padding-top: 28px;
+}
+
+/* ── The cloth cover ─────────────────────────────────────────────────── */
+.lb-app.rp-shell .rp-fb-cover {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 150px;
+  padding: 26px 40px 28px 64px;
+  border-radius: 14px;
+  overflow: hidden;
+  color: var(--fb-cream);
+  background-color: var(--fb-cloth);
+  /* Linen: fine warp and weft lines, then a soft noise, all in CSS. */
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.07) 0 1px, transparent 1px 3px),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1  0 0 0 0 0.12  0 0 0 0 0.08  0 0 0 0.35 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>"),
+    radial-gradient(120% 140% at 30% 10%, rgba(255, 255, 255, 0.07), rgba(0, 0, 0, 0.12));
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 2px 0 var(--fb-cloth-deep),
+    0 10px 24px rgba(48, 56, 44, 0.16);
+}
+/* The gold spine line. */
+.lb-app.rp-shell .rp-fb-cover::before {
+  content: "";
+  position: absolute;
+  left: 22px;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(var(--fb-gold), #c8a34d);
+  opacity: 0.9;
+}
+.lb-app.rp-shell .rp-fb-cover h1 {
+  margin: 0;
+  color: var(--fb-cream);
+  font: 600 clamp(36px, 5.4vw, 60px) / 1.05 var(--serif);
+  letter-spacing: -0.01em;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+}
+.lb-app.rp-shell .rp-fb-cover h1:focus {
+  outline: none;
+}
+.lb-app.rp-shell .rp-fb-cover p {
+  margin: 14px 0 0 4px;
+  color: #e7dfc6;
+  font: 400 18px/1.3 var(--sans);
+  letter-spacing: 0.01em;
+}
+.lb-app.rp-shell .rp-fb-cover-sprig {
+  flex: none;
+  width: 118px;
+  height: 118px;
+  transform: rotate(-12deg);
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.25));
+}
+
+/* ── Chips, Family members, Find a page ──────────────────────────────── */
+.lb-app.rp-shell .rp-fb-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+}
+.lb-app.rp-shell .rp-fb-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lb-app.rp-shell .rp-fb-chips button {
+  min-height: 44px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--ui-line);
+  background: var(--card);
+  color: var(--ink);
+  font: 500 16px/1 var(--sans);
+  box-shadow: 0 1px 1px rgba(48, 56, 44, 0.04);
+}
+.lb-app.rp-shell .rp-fb-chips button[aria-pressed="true"],
+.lb-app.rp-shell .rp-fb-chips button[aria-pressed="true"]:not(:disabled):hover {
+  background: var(--olive);
+  border-color: var(--olive);
+  color: var(--on-olive);
+}
+.lb-app.rp-shell .rp-fb-chips button:not([aria-pressed="true"]):not(:disabled):hover {
+  background: var(--ui-sage-soft);
+  transform: none;
+}
+.lb-app.rp-shell .rp-fb-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--ui-line);
+}
+.lb-app.rp-shell .rp-fb-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px 18px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.lb-app.rp-shell .rp-fb-members-wrap {
+  position: relative;
+}
+.lb-app.rp-shell .rp-fb-members-link {
+  gap: 10px;
+  padding: 6px 2px;
+  color: var(--ink);
+  font: 500 16px/1.2 var(--sans);
+}
+.lb-app.rp-shell .rp-fb-members-link span {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+.lb-app.rp-shell .rp-fb-members-link:not(:disabled):hover {
+  background: transparent;
+  transform: none;
+}
+.lb-app.rp-shell .rp-fb-search {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  width: min(100%, 226px);
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--ui-line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ui-muted);
+}
+.lb-app.rp-shell .rp-fb-search input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  min-height: 0;
+  box-shadow: none;
+  border: 0;
+  background: transparent;
+  padding: 10px 0;
+  color: var(--ink);
+  font: 400 16px/1.2 var(--sans);
+  outline: none;
+}
+.lb-app.rp-shell .rp-fb-search input::placeholder {
+  color: var(--ui-muted);
+  opacity: 1;
+}
+.lb-app.rp-shell .rp-fb-search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+.lb-app.rp-shell .rp-fb-search:focus-within {
+  outline: 2px solid var(--olive);
+  outline-offset: 2px;
+}
+
+/* ── Family members: a popover on desktop, a sheet on a phone ─────────── */
+.lb-app.rp-shell .rp-fb-members {
+  position: absolute;
+  z-index: 35;
+  top: calc(100% + 12px);
+  left: -64px;
+  width: 284px;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--ui-line);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 14px 34px rgba(48, 56, 44, 0.18), 0 2px 6px rgba(48, 56, 44, 0.06);
+  outline: none;
+}
+/* The little arrow under the link. */
+.lb-app.rp-shell .rp-fb-members::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 94px;
+  width: 12px;
+  height: 12px;
+  background: var(--card);
+  border-left: 1px solid var(--ui-line);
+  border-top: 1px solid var(--ui-line);
+  transform: rotate(45deg);
+}
+.lb-app.rp-shell .rp-fb-members-backdrop,
+.lb-app.rp-shell .rp-fb-grab {
+  display: none;
+}
+.lb-app.rp-shell .rp-fb-members-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.lb-app.rp-shell .rp-fb-members h2 {
+  margin: 0;
+  font: 600 20px/1.2 var(--serif);
+}
+.lb-app.rp-shell .rp-fb-x {
+  width: 44px;
+  height: 44px;
+  margin: -8px -10px -8px 0;
+  padding: 0;
+  border-radius: 999px;
+  color: var(--ink);
+}
+.lb-app.rp-shell .rp-fb-members ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.lb-app.rp-shell .rp-fb-member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--ui-line-soft);
+}
+.lb-app.rp-shell .rp-fb-emblem {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(48, 56, 44, 0.12);
+  overflow: hidden;
+}
+.lb-app.rp-shell .rp-fb-emblem .rk-mark {
+  display: block;
+  width: 28px;
+  height: 28px;
+}
+.lb-app.rp-shell .rp-fb-emblem .rk-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+.lb-app.rp-shell .rp-fb-member-words {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 2px;
+  min-width: 0;
+  font: 400 15px/1.25 var(--sans);
+}
+.lb-app.rp-shell .rp-fb-member-name {
+  color: var(--ink);
+}
+.lb-app.rp-shell .rp-fb-member-link {
+  min-height: 44px;
+  padding: 4px 2px;
+  color: var(--olive);
+  font: 500 14px/1.2 var(--sans);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.lb-app.rp-shell .rp-fb-member-link:not(:disabled):hover {
+  background: transparent;
+  transform: none;
+  color: var(--ink);
+}
+.lb-app.rp-shell .rp-fb-member-note {
+  flex-basis: 100%;
+  color: var(--ui-muted);
+  font-size: 13px;
+  margin: -6px 0 6px;
+}
+.lb-app.rp-shell .rp-fb-members-add {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding-top: 4px;
+}
+.lb-app.rp-shell .rp-fb-members-add button {
+  gap: 10px;
+  padding: 6px 2px;
+  color: var(--ink);
+  font: 500 15px/1.2 var(--sans);
+}
+.lb-app.rp-shell .rp-fb-members-add button:not(:disabled):hover {
+  background: transparent;
+  transform: none;
+  text-decoration: underline;
+}
+.lb-app.rp-shell .rp-fb-members-add span {
+  color: var(--ui-muted);
+  font-size: 18px;
+}
+
+/* ── Pages ───────────────────────────────────────────────────────────── */
+.lb-app.rp-shell .rp-fb-grid {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.lb-app.rp-shell .rp-fb-grid > li {
+  display: flex;
+  min-width: 0;
+}
+.lb-app.rp-shell .rp-fb-featured {
+  grid-column: span 2;
+}
+.lb-app.rp-shell .rp-fb-card {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 6px;
+  min-height: 150px;
+  width: 100%;
+  padding: 20px 22px 22px;
+  border: 1px solid var(--ui-line);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--ink);
+  text-align: left;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(48, 56, 44, 0.05);
+}
+.lb-app.rp-shell .rp-fb-card:not(:disabled):hover {
+  background: var(--card);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(48, 56, 44, 0.1);
+}
+.lb-app.rp-shell .rp-fb-date {
+  color: var(--ui-ink-soft);
+  font: 500 14px/1.3 var(--sans);
+}
+.lb-app.rp-shell .rp-fb-title {
+  margin-top: 2px;
+  font: 600 25px/1.2 var(--serif);
+  letter-spacing: -0.005em;
+}
+.lb-app.rp-shell .rp-fb-text {
+  color: var(--ui-ink-soft);
+  font: 400 16px/1.45 var(--sans);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* The newest page with a picture: large, its watercolor filling the foot. */
+.lb-app.rp-shell .rp-fb-card-featured {
+  min-height: 300px;
+  padding: 24px 24px 0;
+}
+.lb-app.rp-shell .rp-fb-card-featured .rp-fb-title {
+  font-size: clamp(26px, 3vw, 32px);
+}
+.lb-app.rp-shell .rp-fb-card-featured .rp-fb-text {
+  font-size: 17px;
+  -webkit-line-clamp: 2;
+  max-width: 34em;
+}
+.lb-app.rp-shell .rp-fb-art {
+  position: relative;
+  display: block;
+  flex: 1 0 170px;
+  margin: 0 -24px 0;
+  min-height: 170px;
+  overflow: hidden;
+}
+.lb-app.rp-shell .rp-fb-art img,
+.lb-app.rp-shell .rp-fb-art .ui-illustration {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  object-position: center 52%;
+  /* Let the watercolor melt into the card at the top. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 34%);
+  mask-image: linear-gradient(to bottom, transparent, #000 34%);
+}
+
+/* A kept passage: butter yellow, a large italic quote and a sprig. */
+.lb-app.rp-shell .rp-fb-quote {
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 230px;
+  padding: 26px 26px 22px;
+  background: var(--fb-butter);
+  border-color: var(--fb-butter-line);
+}
+.lb-app.rp-shell .rp-fb-quote:not(:disabled):hover {
+  background: var(--fb-butter);
+}
+.lb-app.rp-shell .rp-fb-quote-text {
+  padding-right: 8px;
+  color: var(--ink);
+  font: italic 400 clamp(22px, 2.5vw, 29px) / 1.32 var(--serif);
+}
+.lb-app.rp-shell .rp-fb-grid > li:not(.rp-fb-quote-cell) .rp-fb-quote-text {
+  font-size: 22px;
+}
+.lb-app.rp-shell .rp-fb-caption {
+  padding-right: 64px;
+  color: var(--ui-ink-soft);
+  font: 400 14px/1.3 var(--sans);
+}
+.lb-app.rp-shell .rp-fb-quote-sprig {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  width: 76px;
+  height: 76px;
+  transform: rotate(4deg);
+}
+
+/* Unfinished game, errors, footnote, empty */
+.lb-app.rp-shell .rp-fb-resume {
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 14px 20px;
+  border: 1px dashed var(--olive-line);
+  border-radius: 14px;
+  background: var(--ui-sage-soft);
+  color: var(--ink);
+  font: 600 17px/1.3 var(--sans);
+}
+.lb-app.rp-shell .rp-fb-kind {
+  color: var(--ui-muted);
+  font: 600 12px/1 var(--sans);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.lb-app.rp-shell .rp-fb-error {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--ui-error-bg);
+  color: var(--ui-error);
+}
+.lb-app.rp-shell .rp-fb-none {
+  margin: 8px 0;
+}
+.lb-app.rp-shell .rp-fb-empty {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 26px 28px;
+  border: 1px solid var(--ui-line);
+  border-radius: 14px;
+  background: var(--card);
+}
+.lb-app.rp-shell .rp-fb-empty h2 {
+  margin: 0 0 6px;
+  font: 600 26px/1.2 var(--serif);
+}
+.lb-app.rp-shell .rp-fb-empty p {
+  margin: 0 0 8px;
+  max-width: 40em;
+}
+.lb-app.rp-shell .rp-fb-empty-art {
+  flex: none;
+  border-radius: 12px;
+}
+.lb-app.rp-shell .rp-fb-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 20px;
+  padding-top: 4px;
+}
+.lb-app.rp-shell .rp-fb-foot p {
+  margin: 0;
+  font-size: 14px;
+}
+.r-dialog .rp-fb-reader .rp-fb-caption,
+.lb-app.rp-shell .rp-fb-reader .rp-fb-caption {
+  padding: 0;
+  margin: -6px 0 12px;
+}
+.r-dialog .rp-fb-takeout,
+.lb-app.rp-shell .rp-fb-takeout {
+  align-self: flex-start;
+  margin-top: 6px;
+  color: var(--ui-muted);
+  font-size: 14px;
+}
+
+@media (max-width: 860px) {
+  .lb-app.rp-shell .rp-fb-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .lb-app.rp-shell .rp-fb-featured {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 640px) {
+  .lb-app.rp-shell .rp-fb {
+    gap: 14px;
+    padding-top: 14px;
+  }
+  .lb-app.rp-shell .rp-fb-cover {
+    min-height: 0;
+    padding: 14px 18px 16px 30px;
+    border-radius: 10px;
+  }
+  .lb-app.rp-shell .rp-fb-cover::before {
+    left: 13px;
+    top: 9px;
+    bottom: 9px;
+  }
+  .lb-app.rp-shell .rp-fb-cover h1 {
+    font-size: 27px;
+  }
+  .lb-app.rp-shell .rp-fb-cover p {
+    margin-top: 4px;
+    font-size: 13.5px;
+  }
+  .lb-app.rp-shell .rp-fb-cover-sprig {
+    width: 52px;
+    height: 52px;
+  }
+  .lb-app.rp-shell .rp-fb-bar {
+    gap: 8px;
+  }
+  .lb-app.rp-shell .rp-fb-chips {
+    gap: 6px;
+    flex-wrap: nowrap;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .lb-app.rp-shell .rp-fb-chips button {
+    flex: none;
+    padding: 6px 14px;
+    font-size: 14px;
+  }
+  .lb-app.rp-shell .rp-fb-divider {
+    display: none;
+  }
+  .lb-app.rp-shell .rp-fb-tools {
+    width: 100%;
+    gap: 10px;
+  }
+  .lb-app.rp-shell .rp-fb-members-link {
+    font-size: 14px;
+    gap: 6px;
+  }
+  .lb-app.rp-shell .rp-fb-search {
+    flex: 1;
+    width: auto;
+    padding: 0 12px;
+  }
+  .lb-app.rp-shell .rp-fb-search input {
+    font-size: 14px;
+  }
+  .lb-app.rp-shell .rp-fb-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .lb-app.rp-shell .rp-fb-card {
+    min-height: 0;
+    padding: 16px 18px 18px;
+  }
+  .lb-app.rp-shell .rp-fb-card-featured {
+    padding: 16px 18px 0;
+  }
+  .lb-app.rp-shell .rp-fb-card-featured .rp-fb-title,
+  .lb-app.rp-shell .rp-fb-title {
+    font-size: 21px;
+  }
+  .lb-app.rp-shell .rp-fb-card-featured .rp-fb-text,
+  .lb-app.rp-shell .rp-fb-text {
+    font-size: 15px;
+  }
+  .lb-app.rp-shell .rp-fb-art {
+    margin: 4px -18px 0;
+    flex-basis: 130px;
+    min-height: 130px;
+  }
+  .lb-app.rp-shell .rp-fb-quote {
+    min-height: 0;
+    padding: 18px 18px 14px;
+  }
+  .lb-app.rp-shell .rp-fb-quote-cell .rp-fb-quote-text,
+  .lb-app.rp-shell .rp-fb-quote-text {
+    font-size: 20px;
+  }
+  .lb-app.rp-shell .rp-fb-quote-sprig {
+    width: 52px;
+    height: 52px;
+  }
+  .lb-app.rp-shell .rp-fb-empty {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px;
+  }
+  /* Family members as a sheet from the bottom of the screen. */
+  .lb-app.rp-shell .rp-fb-members-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 34;
+    background: rgba(48, 56, 44, 0.28);
+  }
+  .lb-app.rp-shell .rp-fb-members {
+    position: fixed;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    max-height: 86vh;
+    overflow-y: auto;
+    padding: 10px 22px max(22px, env(safe-area-inset-bottom));
+    border-radius: 22px 22px 0 0;
+    border-bottom: 0;
+  }
+  .lb-app.rp-shell .rp-fb-members::before {
+    display: none;
+  }
+  .lb-app.rp-shell .rp-fb-grab {
+    display: block;
+    width: 44px;
+    height: 5px;
+    margin: 0 auto 10px;
+    border-radius: 999px;
+    background: var(--ui-line);
+  }
+  .lb-app.rp-shell .rp-fb-members h2 {
+    font-size: 22px;
+  }
+  .lb-app.rp-shell .rp-fb-emblem {
+    width: 42px;
+    height: 42px;
+  }
+  .lb-app.rp-shell .rp-fb-emblem .rk-mark {
+    width: 34px;
+    height: 34px;
+  }
+  .lb-app.rp-shell .rp-fb-member {
+    gap: 12px;
+    padding: 4px 0;
+  }
+  .lb-app.rp-shell .rp-fb-member-words {
+    font-size: 16px;
+  }
+  .lb-app.rp-shell .rp-fb-member-link {
+    font-size: 15px;
+  }
+}
+
+/* ── Share with our family: a modal on desktop, a sheet on a phone ────── */
+.lb-app.rp-shell .rp-share-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(48, 56, 44, 0.42);
+}
+.lb-app.rp-shell .rp-share {
+  --fb-butter: #f7eac3;
+  --fb-butter-line: #ead9a6;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(100%, 460px);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 26px 28px 22px;
+  border-radius: 16px;
+  border: 1.5px solid var(--olive);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 24px 60px rgba(30, 36, 26, 0.32);
+  font-family: var(--sans);
+}
+.lb-app.rp-shell .rp-share .rp-fb-grab {
+  display: none;
+}
+.lb-app.rp-shell .rp-share-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.lb-app.rp-shell .rp-share h2 {
+  margin: 0;
+  font: 600 30px/1.15 var(--serif);
+}
+.lb-app.rp-shell .rp-share-who {
+  margin: -6px 0 2px;
+  color: var(--ink);
+  font: 400 16px/1.4 var(--serif);
+}
+.lb-app.rp-shell .rp-share-kind {
+  display: inline-flex;
+  align-self: center;
+  padding: 2px;
+  border: 1.5px solid var(--olive);
+  border-radius: 999px;
+}
+.lb-app.rp-shell .rp-share-kind button {
+  position: relative;
+  min-width: 128px;
+  min-height: 40px;
+  padding: 6px 18px;
+  border-radius: 999px;
+  color: var(--ink);
+  font: 600 16px/1 var(--sans);
+  justify-content: center;
+}
+.lb-app.rp-shell .rp-share-kind button::after {
+  content: "";
+  position: absolute;
+  inset: -4px 0;
+}
+.lb-app.rp-shell .rp-share-kind button[aria-pressed="true"],
+.lb-app.rp-shell .rp-share-kind button[aria-pressed="true"]:not(:disabled):hover {
+  background: var(--olive);
+  color: var(--on-olive);
+}
+.lb-app.rp-shell .rp-share-kind button:not([aria-pressed="true"]):not(:disabled):hover {
+  background: var(--ui-sage-soft);
+  transform: none;
+}
+.lb-app.rp-shell .rp-share-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 22px 14px;
+  border: 1px solid var(--fb-butter-line);
+  border-radius: 12px;
+  background: var(--fb-butter);
+}
+.lb-app.rp-shell .rp-share-card blockquote {
+  margin: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  font: italic 400 21px/1.35 var(--serif);
+  white-space: pre-wrap;
+}
+.lb-app.rp-shell .rp-share-card blockquote.rp-share-page {
+  font-size: 17px;
+  font-style: normal;
+}
+.lb-app.rp-shell .rp-share-page strong {
+  display: block;
+  margin-bottom: 6px;
+  font: 600 20px/1.25 var(--serif);
+}
+.lb-app.rp-shell .rp-share-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(48, 56, 44, 0.16);
+}
+.lb-app.rp-shell .rp-share-caption {
+  display: block;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+.lb-app.rp-shell .rp-share-caption input {
+  border-radius: 0;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 0;
+  border: 0;
+  border-bottom: 1px dashed transparent;
+  background: transparent;
+  color: var(--ink);
+  font: italic 400 15px/1.3 var(--serif);
+}
+.lb-app.rp-shell .rp-share-caption input:hover,
+.lb-app.rp-shell .rp-share-caption input:focus {
+  border-bottom-color: rgba(48, 56, 44, 0.35);
+  outline: none;
+}
+.lb-app.rp-shell .rp-share-by {
+  flex: none;
+  color: var(--ink);
+  font: italic 400 15px/1.3 var(--serif);
+}
+.lb-app.rp-shell .rp-share-choose {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font: 600 14px/1.3 var(--sans);
+}
+.lb-app.rp-shell .rp-share-choose textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--fb-butter-line);
+  border-radius: 8px;
+  background: #fffdf2;
+  color: var(--ink);
+  font: italic 400 18px/1.4 var(--serif);
+  resize: vertical;
+}
+.lb-app.rp-shell .rp-share-hint {
+  color: var(--ui-ink-soft);
+  font: 400 14px/1.4 var(--sans);
+}
+.lb-app.rp-shell .rp-share-link {
+  min-height: 44px;
+  padding: 4px 2px;
+  color: var(--ink);
+  font: 600 16px/1.2 var(--serif);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.lb-app.rp-shell .rp-share-hint .rp-share-link {
+  min-height: 0;
+  font: 600 14px/1.4 var(--sans);
+}
+.lb-app.rp-shell .rp-share-link:not(:disabled):hover {
+  background: transparent;
+  transform: none;
+}
+.lb-app.rp-shell .rp-share-change {
+  align-self: center;
+  margin: -6px 0 -4px;
+}
+.lb-app.rp-shell .rp-share-add {
+  width: 100%;
+  min-height: 52px;
+  border-radius: 999px;
+  background: var(--olive);
+  color: var(--on-olive);
+  font: 600 19px/1.1 var(--sans);
+}
+.lb-app.rp-shell .rp-share-add:not(:disabled):hover {
+  background: var(--ink);
+  transform: none;
+}
+.lb-app.rp-shell .rp-share-fine {
+  margin: -4px 0 0;
+  text-align: center;
+  color: var(--ink);
+  font: 400 16px/1.4 var(--serif);
+}
+@media (max-width: 640px) {
+  .lb-app.rp-shell .rp-share-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .lb-app.rp-shell .rp-share {
+    width: 100%;
+    max-height: 92vh;
+    padding: 10px 20px max(22px, env(safe-area-inset-bottom));
+    border-radius: 24px 24px 0 0;
+    border: 0;
+  }
+  .lb-app.rp-shell .rp-share .rp-fb-grab {
+    display: block;
+    width: 44px;
+    height: 5px;
+    margin: 0 auto 2px;
+    border-radius: 999px;
+    background: var(--ui-line);
+  }
+  .lb-app.rp-shell .rp-share h2 {
+    font-size: 25px;
+  }
+  .lb-app.rp-shell .rp-share-who {
+    font-size: 14.5px;
+  }
+  .lb-app.rp-shell .rp-share-kind button {
+    min-width: 108px;
+    font-size: 15px;
+  }
+  .lb-app.rp-shell .rp-share-card {
+    padding: 16px 18px 10px;
+  }
+  .lb-app.rp-shell .rp-share-card blockquote {
+    font-size: 19px;
+  }
+  .lb-app.rp-shell .rp-share-caption input,
+  .lb-app.rp-shell .rp-share-by {
+    font-size: 13.5px;
+  }
+  .lb-app.rp-shell .rp-share-add {
+    font-size: 17px;
+  }
+  .lb-app.rp-shell .rp-share-fine {
+    font-size: 14.5px;
+  }
+}

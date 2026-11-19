@@ -14,7 +14,9 @@ export type ParentLock =
   { salt: string; verifier: string } | { accountUid: string };
 export type EditionProfile =
   | { kind: "adult" }
-  | { kind: "child"; ageBand: AgeBand; parentLock: ParentLock };
+  | { kind: "child"; ageBand: AgeBand; parentLock: ParentLock }
+  /** Our family book: shared pages only, never opened as a book of its own. */
+  | { kind: "family" };
 export const isAgeBand = (x: unknown): x is AgeBand =>
   ageBands.includes(x as AgeBand);
 export const isAudience = (x: unknown): x is Audience =>
@@ -22,7 +24,7 @@ export const isAudience = (x: unknown): x is Audience =>
 export function isEditionProfile(x: unknown): x is EditionProfile {
   if (!x || typeof x !== "object") return false;
   const p = x as EditionProfile;
-  if (p.kind === "adult") return Object.keys(p).length === 1;
+  if (p.kind === "adult" || p.kind === "family") return Object.keys(p).length === 1;
   return (
     p.kind === "child" &&
     Object.keys(p).length === 3 &&
@@ -43,7 +45,11 @@ export function isEditionProfile(x: unknown): x is EditionProfile {
 export const canUseOnline = (book: Pick<Book, "profile">) =>
   book.profile?.kind === "adult";
 export const audienceOf = (book: Pick<Book, "profile">): Audience =>
-  book.profile?.kind === "adult" ? "adult" : book.profile?.ageBand || "under-6";
+  book.profile?.kind === "adult"
+    ? "adult"
+    : book.profile?.kind === "child"
+      ? book.profile.ageBand
+      : "under-6";
 export function youngestAudience(players: { audience?: Audience }[]): Audience {
   const order: Audience[] = [...ageBands, "adult"];
   return order[

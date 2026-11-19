@@ -2,6 +2,7 @@
 import {
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
   type RefObject,
@@ -49,10 +50,18 @@ import {
 import { useSensory } from "./Sensory";
 import { TypingSoundToggle, useTypingSound } from "./TypingSound";
 import Illustration from "./Illustration";
+import Sprig from "./Sprig";
+import ShareSheet from "./ShareSheet";
+import type { Space } from "./TopBar";
+import type { FamilyPage } from "@/lib/relish/family-pages";
 import { SubHead } from "./ui";
 import "./journal.css";
 
 type Save = (change: (book: Book) => Book) => Promise<void>;
+export type FamilyAdd = (
+  page: Pick<FamilyPage, "kind" | "text"> &
+    Partial<Pick<FamilyPage, "title" | "caption" | "activity">>,
+) => Promise<void>;
 export type JournalNavigation = RefObject<(() => Promise<boolean>) | null>;
 const dateLabel = (date: string) =>
   new Date(date).toLocaleDateString(undefined, {
@@ -93,8 +102,23 @@ export default function Journal({
   onBack,
   navigation,
   family,
+  space = "me",
+  familyNames = [],
+  onFamilyAdd,
+  initialCelebrate = false,
+  onKept,
 }: {
   book: Book;
+  /** Just me or Our family: who a saved page is for. */
+  space?: Space;
+  /** The rest of the family, named in Share with our family. */
+  familyNames?: string[];
+  /** Adds a page or passage to Our family book. */
+  onFamilyAdd?: FamilyAdd;
+  /** Opens on a just-saved page with "Entry saved". */
+  initialCelebrate?: boolean;
+  /** After Save to my book: show the page in Book instead of here. */
+  onKept?: (journalId: string, problem?: string) => void;
   /** Family with their own books in the library, so they can be tagged too. */
   family?: { name: string }[];
   save: Save;
@@ -125,7 +149,7 @@ export default function Journal({
   const [reading, setReading] = useState<string | null>(
     initialReading ?? null,
   );
-  const [celebrate, setCelebrate] = useState(false);
+  const [celebrate, setCelebrate] = useState(initialCelebrate);
   const [query, setQuery] = useState("");
   const [excerpt, setExcerpt] = useState<string | null>(null);
   const prose = useRef<HTMLElement>(null);
@@ -167,8 +191,16 @@ export default function Journal({
           book={book}
           family={family}
           photos={photos}
+          space={space}
+          familyNames={familyNames}
+          onFamilyAdd={onFamilyAdd}
           onPause={leaveEditor}
-          onKeep={(entry) => {
+          onKeep={(entry, problem) => {
+            if (onKept) {
+              onEditingChange(false);
+              onKept(entry.id, problem);
+              return;
+            }
             onEditingChange(false);
             setEditor(null);
             setReading(`journal:${entry.id}`);
@@ -480,8 +512,14 @@ export function JournalEditor({
   initialPhoto = false,
   navigation,
   family,
+  space = "me",
+  familyNames = [],
+  onFamilyAdd,
 }: {
   family?: { name: string }[];
+  space?: Space;
+  familyNames?: string[];
+  onFamilyAdd?: FamilyAdd;
   initial: JournalDraft;
   initialVoice?: boolean;
   initialPhoto?: boolean;
@@ -490,7 +528,7 @@ export function JournalEditor({
   save: Save;
   sample: boolean;
   onPause: () => void;
-  onKeep: (entry: JournalEntry) => void;
+  onKeep: (entry: JournalEntry, problem?: string) => void;
   book?: Book;
   photos?: PhotoAccess;
 }) {
@@ -510,6 +548,9 @@ export function JournalEditor({
   const [hasSaved, setHasSaved] = useState(!!initialEntry);
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState("");
+  const [showPrevious, setShowPrevious] = useState(false);
+  const [sharing, setSharing] = useState<string | null>(null);
+  const body = useRef<HTMLTextAreaElement>(null);
   const current = useRef(initial),
     revision = useRef(initialEntry?.revision || 0),
     status = useRef(initialEntry?.status || "draft");
@@ -612,8 +653,22 @@ export function JournalEditor({
       }
       const entry = await persist(current.current, keep);
       if (!alive.current) return;
-      if (keep) onKeep(entry);
-      else onPause();
+      if (!keep) return onPause();
+      // Our family: the whole page also goes into Our family book.
+      let problem: string | undefined;
+      if (space === "family" && onFamilyAdd) {
+        const page = current.current;
+        if (!page.text.trim())
+          problem = "A page needs words to go in Our family book.";
+        else
+          try {
+            await onFamilyAdd({ kind: "page", title: pageTitle(page), text: page.text });
+          } catch (e) {
+            problem =
+              e instanceof Error ? e.message : "Our family book couldn’t be reached.";
+          }
+      }
+      if (alive.current) onKeep(entry, problem);
     } catch {
       /* Keep the writer open with the last words and a retry action. */
     } finally {
@@ -670,13 +725,49 @@ export function JournalEditor({
     !!draft.text.trim() || !!draft.title.trim() || !!draft.photos?.length;
   const toggle = (next: "photo" | "people" | "options") =>
     setPanel((open) => (open === next ? null : next));
+  const forFamily = space === "family";
+  // The page grows with the words instead of scrolling inside itself.
+  useLayoutEffect(() => {
+    const el = body.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight + 2}px`;
+  }, [draft.text]);
+  const taggedPeople = (draft.people || [])
+    .map((id) => book?.people.find((p) => p.id === id))
+    .filter((p): p is NonNullable<typeof p> => !!p);
+  const canShare = !!onFamilyAdd && !!draft.text.trim();
+  function openShare() {
+    const el = body.current;
+    const picked =
+      el && el.selectionEnd > el.selectionStart
+        ? el.value.slice(el.selectionStart, el.selectionEnd)
+        : "";
+    setSharing(picked);
+  }
+  const busyNow = finishing || mediaBusy || voiceOpen;
   return (
-    <div className={`rj-writing rj-${draft.style}`}>
-      <div className="rj-writing-intro rj-book-head">
-        <h2>{kept ? "Edit entry" : "New entry"}</h2>
-        <p className="rj-private">
-          <Lock size={14} /> {sample ? "Fictional sample" : "Private · encrypted"}
-        </p>
+    <div className={`rj-writing rj-${draft.style} rj-${space}`}>
+      <div className="rj-writing-intro rj-book-head rj-one-head">
+        <h2 className="ui-sr-only">{kept ? "Edit entry" : "New entry"}</h2>
+        {hasContent && (
+          <button
+            type="button"
+            className="rj-previous-link rj-close-link"
+            disabled={busyNow}
+            onClick={() => void finish(false)}
+          >
+            Save draft and close
+          </button>
+        )}
+        <button
+          type="button"
+          className="rj-previous-link"
+          aria-expanded={showPrevious}
+          onClick={() => setShowPrevious(!showPrevious)}
+        >
+          {showPrevious ? "Hide previous entry" : "Previous entry"}
+        </button>
       </div>
       {book && (
         <VoiceWriter
@@ -696,42 +787,66 @@ export function JournalEditor({
           }}
         />
       )}
-      <div className="rd-writing-spread rj-book">
-        <aside
-          className="rj-paper rd-writing-context"
-          aria-label="Previous entry"
-        >
-          <Sprig className="rj-sprig rj-sprig-bottom" />
-          <p className="lb-kicker">
-            {book?.owner ? `${book.owner}’s previous entry` : "Previous entry"}
-          </p>
-          {previous ? (
-            <>
-              <p className="rd-context-date">{dateLabel(previous.date)}</p>
-              <PageTitle
-                book={book!}
-                journalId={previous.journalId}
-                title={previous.title}
-                save={save}
-                compact
-              />
-              <div className="rj-prose rd-context-prose">{previous.text}</div>
-              <PhotoGallery photos={previous.photos} access={photos} />
-            </>
-          ) : (
-            <>
-              <Illustration name="empty-pages" size={132} className="rd-end-art" />
-              <h2>No previous entries</h2>
-              <p>Your first page goes on the right.</p>
-            </>
-          )}
-        </aside>
+      <div
+        className={`rd-writing-spread rj-book ${showPrevious ? "rj-with-previous" : "rj-one-page"}`}
+      >
+        {showPrevious && (
+          <aside
+            className="rj-paper rd-writing-context"
+            aria-label="Previous entry"
+          >
+            <Sprig className="rj-sprig rj-sprig-bottom" />
+            <p className="lb-kicker">
+              {book?.owner ? `${book.owner}’s previous entry` : "Previous entry"}
+            </p>
+            {previous ? (
+              <>
+                <p className="rd-context-date">{dateLabel(previous.date)}</p>
+                <PageTitle
+                  book={book!}
+                  journalId={previous.journalId}
+                  title={previous.title}
+                  save={save}
+                  compact
+                />
+                <div className="rj-prose rd-context-prose">{previous.text}</div>
+                <PhotoGallery photos={previous.photos} access={photos} />
+              </>
+            ) : (
+              <>
+                <Illustration name="empty-pages" size={132} className="rd-end-art" />
+                <h2>No previous entries</h2>
+                <p>Your first page goes on the right.</p>
+              </>
+            )}
+          </aside>
+        )}
         <section
           className="rj-paper rd-editor-page"
           aria-label="Journal editor"
         >
           <Sprig className="rj-sprig rj-sprig-top" />
-          <p className="rd-context-date">{dateLabel(draft.createdAt)}</p>
+          <div className="rj-page-meta">
+            <p className="rd-context-date">{dateLabel(draft.createdAt)}</p>
+            <span className="rj-meta-rule" aria-hidden="true" />
+            <span className={`rj-audience ${forFamily ? "rj-audience-family" : ""}`}>
+              {forFamily ? (
+                <>
+                  <Users size={15} aria-hidden="true" /> Our family
+                </>
+              ) : (
+                <>
+                  <Lock size={14} aria-hidden="true" /> Only me
+                </>
+              )}
+            </span>
+          </div>
+          {forFamily && (
+            <p className="rj-audience-note">
+              Saving keeps this page in your book and adds the whole page to
+              Our family book, where everyone in the family can read it.
+            </p>
+          )}
           <label className="rj-title-label rj-title-first">
             <span className="rj-sr-only">Title</span>
             <input
@@ -744,19 +859,10 @@ export function JournalEditor({
               placeholder="Give this page a title"
             />
           </label>
-          {book && (
-            <button
-              type="button"
-              className="rj-voice-pill"
-              disabled={finishing || mediaBusy}
-              onClick={() => setVoiceOpen(true)}
-            >
-              <Mic size={18} /> Record your voice
-            </button>
-          )}
           <label className="rj-writing-label">
             <span className="rj-sr-only">Your journal entry</span>
             <textarea
+              ref={body}
               aria-label="Your journal entry"
               value={draft.text}
               maxLength={JOURNAL_TEXT_LIMIT}
@@ -902,6 +1008,16 @@ export function JournalEditor({
             </div>
           )}
           <div className="rj-toolbar" role="group" aria-label="Page tools">
+            {book && (
+              <button
+                type="button"
+                aria-label="Voice: record your voice"
+                disabled={finishing || mediaBusy}
+                onClick={() => setVoiceOpen(true)}
+              >
+                <Mic size={19} aria-hidden="true" /> Voice
+              </button>
+            )}
             {photos && (
               <button
                 type="button"
@@ -925,42 +1041,91 @@ export function JournalEditor({
             )}
             <button
               type="button"
+              className="rj-toolbar-quiet"
               aria-pressed={panel === "options"}
               disabled={finishing}
               onClick={() => toggle("options")}
             >
-              <Ellipsis size={19} /> Page options
+              <Ellipsis size={19} aria-hidden="true" />{" "}
+              <span className="rj-toolbar-word">Page options</span>
             </button>
           </div>
+          {taggedPeople.length > 0 && (
+            <div className="rj-tag-chips">
+              {taggedPeople.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="rj-tag-chip"
+                  aria-label={`Untag ${p.name}`}
+                  disabled={finishing}
+                  onClick={() =>
+                    change({
+                      people: (current.current.people || []).filter((id) => id !== p.id),
+                    })
+                  }
+                >
+                  {p.name} <X size={13} aria-hidden="true" />
+                </button>
+              ))}
+              <span className="rj-tag-note">Tags are private</span>
+            </div>
+          )}
           <div className="rj-save-row">
             <span className="rj-save-state" role="status" aria-live="polite">
               <FileText size={18} aria-hidden="true" />
               {saveLabel || (hasContent ? "Draft" : "Empty draft")}
             </span>
-            {hasContent && (
+            {onFamilyAdd && (
               <button
-                className="lb-text"
-                disabled={finishing || mediaBusy || voiceOpen}
-                onClick={() => void finish(false)}
+                type="button"
+                className="rj-share"
+                disabled={busyNow || !canShare}
+                onClick={openShare}
               >
-                Save draft and close
+                Share a passage
               </button>
             )}
             <button
               className="rj-keep"
               disabled={
-                finishing ||
-                mediaBusy ||
-                voiceOpen ||
-                (!draft.text.trim() && !draft.photos?.length)
+                busyNow || (!draft.text.trim() && !draft.photos?.length)
               }
               onClick={() => void finish(true)}
             >
-              {finishing ? "Saving…" : "Save entry"}
+              {finishing
+                ? "Saving…"
+                : forFamily
+                  ? "Add to our family book"
+                  : "Save to my book"}
             </button>
           </div>
         </section>
       </div>
+      {sharing !== null && onFamilyAdd && (
+        <ShareSheet
+          title={pageTitle(draft)}
+          text={draft.text}
+          selected={sharing}
+          owner={book?.owner || ""}
+          others={familyNames}
+          caption={
+            taggedPeople[0]?.name ??
+            familyNames.find((n) =>
+              new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(draft.text),
+            ) ??
+            ""
+          }
+          onClose={() => setSharing(null)}
+          onAdd={async (page) => {
+            if (timer.current) clearTimeout(timer.current);
+            // An unsaved draft is saved to your book first.
+            if (dirty || revision.current === 0) await persist(current.current);
+            await onFamilyAdd(page);
+            if (alive.current) setSharing(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1076,55 +1241,5 @@ function PageTitle({
         </button>
       )}
     </div>
-  );
-}
-
-/** A painted-looking leaf sprig for the page corners. Decorative. */
-function Sprig({ className }: { className: string }) {
-  // Leaves on both sides of a curving stem, tip at top right.
-  const leaves: [number, number, number, number][] = [
-    [24, 92, -70, 1],
-    [30, 86, 10, 0.95],
-    [42, 72, -62, 1.05],
-    [50, 66, 18, 1],
-    [62, 52, -52, 1.1],
-    [70, 46, 26, 1],
-    [82, 34, -44, 1],
-    [88, 30, 34, 0.9],
-    [98, 20, -30, 0.85],
-  ];
-  return (
-    <svg
-      className={className}
-      aria-hidden="true"
-      viewBox="0 0 120 120"
-      width="120"
-      height="120"
-    >
-      <path
-        d="M10 112 C 34 90, 60 60, 108 12"
-        fill="none"
-        stroke="#7d8f6a"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        opacity="0.75"
-      />
-      {leaves.map(([x, y, r, k], i) => (
-        <g key={i} transform={`translate(${x} ${y}) rotate(${r}) scale(${k})`}>
-          <path
-            d="M0 0 C 6 -9, 20 -10, 26 -2 C 18 4, 6 5, 0 0 Z"
-            fill={i % 2 ? "#a9b896" : "#98aa84"}
-            opacity="0.62"
-          />
-          <path
-            d="M1 -0.5 C 9 -3, 16 -3.5, 24 -2"
-            fill="none"
-            stroke="#6f8160"
-            strokeWidth="0.7"
-            opacity="0.6"
-          />
-        </g>
-      ))}
-    </svg>
   );
 }
