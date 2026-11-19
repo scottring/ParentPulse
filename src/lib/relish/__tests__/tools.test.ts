@@ -20,10 +20,20 @@ import {
   samePageTrend,
   startGame,
   turnCount,
+  turnPlan,
+  gamePlayer,
+  playMemory,
+  saidResult,
+  saidRoundLine,
+  saidTally,
+  SAID_LIMIT,
   type Game,
   type LivingState,
+  type Player,
+  type SaidMark,
 } from "../living";
-import { samePageBank, samePagePrompts } from "../play-content";
+import { samePageBank, samePagePrompts, samePageQuestion } from "../play-content";
+import { sameV2 } from "./same-page-v2";
 import {
   activeTrackers,
   answerCheckBack,
@@ -334,7 +344,7 @@ describe("Same page? game", () => {
     { id: "c", name: "Kai" },
   ];
   function play(turns: (number | null)[][], who = players) {
-    let g = advanceGame(newGame("match", who), { type: "start", firstId: who[0].id });
+    let g = advanceGame(sameV2(who), { type: "start", firstId: who[0].id });
     turns.forEach((answers, i) => {
       if (i > 0) g = advanceGame(g, { type: "ready" });
       g = advanceGame(g, { type: "answer", answers });
@@ -367,7 +377,7 @@ describe("Same page? game", () => {
     expect(samePageSummary(play([[0, 0, 0, 0, 0], [null, null, null, null, null], [null, null, null, null, null]]))).toBe("");
   });
   it("hands the device over between turns and checks every answer", () => {
-    let g = advanceGame(newGame("match", players), { type: "start" });
+    let g = advanceGame(sameV2(players), { type: "start" });
     expect(() => advanceGame(g, { type: "choice", choice: 0 })).toThrow();
     expect(() => advanceGame(g, { type: "answer", answers: [0, 1, 2] })).toThrow();
     expect(() => advanceGame(g, { type: "answer", answers: [0, 1, 2, 3, 0] })).toThrow();
@@ -377,11 +387,16 @@ describe("Same page? game", () => {
     expect(g.choices).toEqual([]);
     expect(() => advanceGame(g, { type: "answer", answers: [0, 0, 0, 0, 0] })).toThrow();
   });
-  it("fixes five age-fitted questions when the round starts", () => {
+  it("fixes age-fitted questions when the round starts: one each, at least three", () => {
     const g = newGame("match", players);
-    expect(g.contentVersion).toBe(2);
-    expect(g.questions).toHaveLength(5);
-    expect(new Set(g.questions).size).toBe(5);
+    expect(g.contentVersion).toBe(3);
+    expect(g.said).toEqual([]);
+    expect(g.answers).toBeUndefined();
+    expect(g.questions).toHaveLength(3);
+    expect(new Set(g.questions).size).toBe(3);
+    expect(newGame("match", players.slice(0, 2)).questions).toHaveLength(3);
+    const five = [...players, { id: "d", name: "Dee" }, { id: "e", name: "Eli" }];
+    expect(newGame("match", five).questions).toHaveLength(5);
     expect(samePageQuestions(JSON.parse(JSON.stringify(g)))).toEqual(samePageQuestions(g));
     const kid = newGame("match", [...players.slice(0, 2), { id: "k", name: "Ella", audience: "6-8" }]);
     const young = samePageBank("6-8").map((q) => q.id);
@@ -409,7 +424,8 @@ describe("Same page? game", () => {
     const first = livingOf({ ...emptyBook("Robin"), living }).plays![0].questions!.map((q) => q.id);
     living = startGame(living, "match", players);
     const second = living.game!.questions!;
-    // The young bank has 12 questions, so five fresh ones are always available.
+    expect(living.game!.contentVersion).toBe(3);
+    // The young bank has 12 questions, so fresh ones are always available.
     expect(second.some((id) => first.includes(id))).toBe(false);
     expect(recentQuestions(living, [...players].reverse())).toEqual(first);
   });
@@ -433,6 +449,7 @@ describe("Same page? game", () => {
     const legacy: Game = { ...fresh, contentVersion: 1, answers: undefined, questions: undefined };
     delete legacy.answers;
     delete legacy.questions;
+    delete legacy.said;
     expect(isLiving({ ...freshLiving(), game: legacy })).toBe(true);
     let g = advanceGame(legacy, { type: "start", firstId: "a" });
     for (const [i, choice] of [1, 1, 1].entries()) {
@@ -481,6 +498,297 @@ describe("Same page? game", () => {
       { ...g, contentVersion: 3 },
     ])
       expect(isLiving({ ...livingOf(book), game: bad })).toBe(false);
+  });
+});
+
+describe("Same page? in your own words", () => {
+  const family = [
+    { id: "a", name: "Alex" },
+    { id: "b", name: "Anna" },
+    { id: "c", name: "Leo", audience: "6-8" as const },
+  ];
+  type Step = {
+    answer: string | null;
+    guesses?: (string | null)[];
+    marks?: (SaidMark | null)[];
+    skip?: boolean;
+    /** Stop while everyone is looking at this question's guesses. */
+    stay?: boolean;
+  };
+  /** Plays questions in order; every intermediate state must validate. */
+  function playWords(steps: Step[], who: Player[] = family, g = advanceGame(newGame("match", who), { type: "start", firstId: who[0].id })) {
+    const valid = (x: Game) => expect(isLiving({ ...freshLiving(), game: x })).toBe(true);
+    valid(g);
+    for (const step of steps) {
+      if (g.stage === "handoff") g = advanceGame(g, { type: "ready" });
+      g = advanceGame(g, { type: "say", text: step.answer });
+      valid(g);
+      if (step.answer === null) continue;
+      for (const guess of step.guesses || []) {
+        g = advanceGame(advanceGame(g, { type: "ready" }), { type: "say", text: guess });
+        valid(g);
+      }
+      if (g.stage !== "judge") continue;
+      const line = g.said!.at(-1)!;
+      (step.marks || []).forEach((mark, k) => {
+        if (mark) g = advanceGame(g, { type: "judge", playerId: line.guesses[k].playerId, mark });
+      });
+      valid(g);
+      if (step.stay) break;
+      g = advanceGame(g, { type: "next", skip: step.skip });
+      valid(g);
+    }
+    return g;
+  }
+  const finishInto = (living: LivingState, g: Game) =>
+    recordRound({ ...living, game: advanceGame(g, { type: "finish" }) });
+
+  it("asks one question per player, at least three, taking turns to answer", () => {
+    const three = advanceGame(newGame("match", family), { type: "start", firstId: "b" });
+    expect(three.players.map((p) => p.name)).toEqual(["Anna", "Alex", "Leo"]);
+    expect(turnPlan(three).map((t) => `${t.player.name}${t.asks[0].about ? "?" : ""}`)).toEqual([
+      "Anna", "Alex?", "Leo?", "Alex", "Leo?", "Anna?", "Leo", "Anna?", "Alex?",
+    ]);
+    const two = advanceGame(newGame("match", family.slice(0, 2)), { type: "start" });
+    expect(two.questions).toHaveLength(3);
+    expect(turnPlan(two).filter((t) => !t.asks[0].about).map((t) => t.player.name)).toEqual([
+      "Alex", "Anna", "Alex",
+    ]);
+    // Each guess is about the one who answered; the prompt and ideas come from the bank.
+    const [share, guess] = turnPlan(three);
+    expect(guess.asks[0]).toEqual({ ...share.asks[0], about: "b" });
+    expect(share.asks[0].choices).toHaveLength(3);
+  });
+
+  it("answers, guesses in private, then the one who answered judges each guess", () => {
+    let g = advanceGame(newGame("match", family), { type: "start" });
+    expect(() => advanceGame(g, { type: "say", text: "   " })).toThrow();
+    expect(() => advanceGame(g, { type: "choice", choice: 0 })).toThrow();
+    expect(() => advanceGame(g, { type: "answer", answers: [0] })).toThrow();
+    g = advanceGame(g, { type: "say", text: `  pizza   with ${"pineapple ".repeat(20)}` });
+    expect(g.said![0].answer!.length).toBeLessThanOrEqual(SAID_LIMIT);
+    expect(g.said![0].answer!.startsWith("pizza with pineapple")).toBe(true);
+    expect(g.stage).toBe("handoff");
+    expect(gamePlayer(g).name).toBe("Anna");
+    expect(() => advanceGame(g, { type: "say", text: "tacos" })).toThrow();
+    g = advanceGame(advanceGame(g, { type: "ready" }), { type: "say", text: "Pizza" });
+    expect(g.stage).toBe("handoff");
+    g = advanceGame(advanceGame(g, { type: "ready" }), { type: "say", text: null });
+    expect(g.stage).toBe("judge");
+    expect(g.said![0].guesses).toEqual([
+      { playerId: "b", text: "Pizza" },
+      { playerId: "c", text: null },
+    ]);
+    expect(() => advanceGame(g, { type: "say", text: "again" })).toThrow();
+    // A passed guess has nothing to judge; judging is needed or skipped before moving on.
+    expect(() => advanceGame(g, { type: "judge", playerId: "c", mark: "got" })).toThrow();
+    expect(() => advanceGame(g, { type: "judge", playerId: "a", mark: "got" })).toThrow();
+    expect(() => advanceGame(g, { type: "judge", playerId: "b", mark: "maybe" as SaidMark })).toThrow();
+    expect(() => advanceGame(g, { type: "next" })).toThrow();
+    expect(advanceGame(g, { type: "next", skip: true }).stage).toBe("handoff");
+    g = advanceGame(g, { type: "judge", playerId: "b", mark: "close" });
+    g = advanceGame(g, { type: "judge", playerId: "b", mark: "got" });
+    expect(g.said![0].guesses[0].mark).toBe("got");
+    expect(advanceGame(g, { type: "judge", playerId: "b", mark: null }).said![0].guesses[0]).toEqual({
+      playerId: "b",
+      text: "Pizza",
+    });
+    g = advanceGame(g, { type: "next" });
+    expect(g.stage).toBe("handoff");
+    expect(gamePlayer(g).name).toBe("Anna");
+  });
+
+  it("a passed answer skips the guessing, and a last pass goes straight to the reveal", () => {
+    let g = playWords([{ answer: null }]);
+    expect(g.stage).toBe("handoff");
+    expect(g.said).toEqual([{ by: "a", answer: null, guesses: [] }]);
+    expect(gamePlayer(g).name).toBe("Anna");
+    g = playWords([{ answer: "a hug", guesses: ["hug", "jokes"], marks: ["got", "not"] }, { answer: null }], family, g);
+    expect(g.stage).toBe("reveal");
+    expect(g.turn).toBe(5);
+    expect(saidTally(saidResult(g), g.players)).toBe("Alex didn’t get it this time; Leo got 1 of 1.");
+  });
+
+  it("the reveal says who got it, who was close and who knew whom best", () => {
+    const g = playWords([
+      { answer: "pancakes", guesses: ["pancakes", "waffles"], marks: ["got", "close"] },
+      { answer: "the swings", guesses: ["swings", null], marks: ["got"] },
+      { answer: "a dog", guesses: ["a cat", "a dog"], marks: ["close", "got"] },
+    ]);
+    expect(g.stage).toBe("reveal");
+    const lines = saidResult(g);
+    expect(lines.map((l) => [l.sharer.name, l.answer])).toEqual([
+      ["Alex", "pancakes"],
+      ["Anna", "the swings"],
+      ["Leo", "a dog"],
+    ]);
+    expect(saidRoundLine(lines)).toBe("You got 3 of 5 right.");
+    // A pass is a pass, never a wrong guess.
+    expect(saidTally(lines, g.players)).toBe("Alex was close once; Anna got 2 of 2; Leo got 1 of 2 and was close once.");
+    const text = gameText(g);
+    expect(text.split("\n")[0]).toBe(
+      "You got 3 of 5 right. Alex was close once; Anna got 2 of 2; Leo got 1 of 2 and was close once.",
+    );
+    expect(text).toContain(`${lines[0].question.prompt} Alex said “pancakes”. Anna got it. Leo was close with “waffles”.`);
+    expect(text).toContain("Leo got it. Alex passed.");
+    expect(text).not.toMatch(/undefined|null/);
+    // Unjudged guesses read as guesses and don't count.
+    const skipped = playWords([
+      { answer: "pizza", guesses: ["pizza", "pasta"], skip: true },
+      { answer: null },
+      { answer: null },
+    ]);
+    expect(saidRoundLine(saidResult(skipped))).toBe("");
+    expect(gameText(skipped)).toContain("Anna guessed “pizza”. Leo guessed “pasta”.");
+    expect(gameText(playWords([{ answer: null }, { answer: null }, { answer: null }]))).toBe("");
+  });
+
+  it("keeps an approved page and remembers the round's words in this book only", () => {
+    const g = playWords([
+      { answer: "pancakes", guesses: ["pancakes", "waffles"], marks: ["got", "not"] },
+      { answer: "the swings", guesses: ["swings", "slide"], marks: ["got", "close"] },
+      { answer: "a dog", guesses: ["a dog", "a dog"], marks: ["got", "got"] },
+    ]);
+    let book = changeLiving(emptyBook("Alex"), (l) => ({ ...l, game: g }));
+    for (const p of family)
+      book = changeLiving(book, (l) => ({ ...l, game: advanceGame(l.game!, { type: "approve", playerId: p.id }) }));
+    book = keepGame(book);
+    const page = livingOf(book).sharedPages[0];
+    expect(page.title).toBe("Are we on the same page?");
+    expect(page.text).toBe(gameText(g));
+    expect(isBook(book)).toBe(true);
+    const living = finishInto(livingOf(book), livingOf(book).game!);
+    const record = living.plays![0];
+    expect(record.questions).toBeUndefined();
+    expect(record.said).toEqual(g.said!.map((s, i) => ({ id: g.questions![i], ...s })));
+    expect(JSON.stringify(record)).not.toMatch(/choices|audience|prompt/);
+    expect(isLiving(living)).toBe(true);
+    const memory = playMemory(record);
+    expect(memory.summary).toBe("You got 4 of 6 right. Alex got 1 of 2 and was close once; Anna got 2 of 2; Leo got 1 of 2.");
+    expect(memory.sections[2]).toEqual({
+      label: samePageQuestion(g.questions![2])!.prompt,
+      text: "Leo said “a dog”. Alex got it. Anna got it.",
+    });
+    // Next round with these players avoids these questions and looks back.
+    const next = startGame(living, "match", family);
+    expect(next.game!.questions!.some((id) => g.questions!.includes(id))).toBe(false);
+    expect(samePageTrend(next, next.game!)).toMatch(/^Last time, on .+, you got 4 of 6 right\.$/);
+    const later = startGame(finishInto(next, playWords([
+      { answer: "x", guesses: ["x", "y"], marks: ["got", "not"] },
+      { answer: null },
+      { answer: null },
+    ], family, advanceGame(next.game!, { type: "start" }))), "match", family);
+    expect(samePageTrend(later, later.game!)).toBe("Over your last 2 rounds together, you got 5 of 8 right.");
+  });
+
+  it("older multiple-choice rounds keep their own look back, and don't count toward own words", () => {
+    let living = freshLiving();
+    let v2 = advanceGame(sameV2(family), { type: "start" });
+    for (let i = 0; i < 3; i++) {
+      if (i) v2 = advanceGame(v2, { type: "ready" });
+      v2 = advanceGame(v2, { type: "answer", answers: [0, 0, 0, 0, 0] });
+    }
+    living = finishInto(living, v2);
+    const fresh = startGame(living, "match", family).game!;
+    expect(fresh.contentVersion).toBe(3);
+    expect(samePageTrend(living, fresh)).toBe("");
+    expect(recentQuestions(living, family)).toEqual(v2.questions);
+    // A v2 round left mid-way before the update still validates and finishes.
+    let open = advanceGame(advanceGame(sameV2(family), { type: "start" }), { type: "answer", answers: [1, 1, 1, 1, 1] });
+    expect(open.stage).toBe("handoff");
+    expect(isLiving({ ...freshLiving(), game: JSON.parse(JSON.stringify(open)) })).toBe(true);
+    while (open.stage !== "reveal")
+      open = advanceGame(advanceGame(open, { type: "ready" }), { type: "answer", answers: [1, 1, 1, 1, 1] });
+    expect(samePageSummary(open)).toBe("You matched on all 5.");
+    expect(() => advanceGame(sameV2(family), { type: "say", text: "hi" })).toThrow();
+  });
+
+  it("rejects malformed own-words rounds and records", () => {
+    const mid = playWords([{ answer: "pancakes", guesses: ["pancakes", "waffles"], marks: ["got"], skip: true }]);
+    expect(mid.stage).toBe("handoff");
+    const done = playWords([
+      { answer: "pancakes", guesses: ["pancakes", null], marks: ["got"] },
+      { answer: null },
+      { answer: "a dog", guesses: ["a dog", "a cat"], marks: ["got", "close"] },
+    ]);
+    const s = done.said!;
+    const ok = (game: Game) => isLiving({ ...freshLiving(), game });
+    expect(ok(mid) && ok(done)).toBe(true);
+    expect(ok({ ...done, said: s.slice(0, 2), turn: 4, stage: "handoff" })).toBe(true);
+    for (const bad of [
+      { ...done, contentVersion: 2 },
+      { ...done, kind: "story" },
+      { ...done, answers: [] },
+      { ...done, said: undefined },
+      { ...done, said: "nope" },
+      { ...done, questions: done.questions!.slice(0, 2) },
+      { ...done, questions: [...done.questions!.slice(0, 2), "invented"] },
+      { ...done, questions: [done.questions![0], ...done.questions!.slice(0, 2)] },
+      { ...done, turn: done.turn - 1 },
+      // Nothing to judge after a passed answer.
+      { ...done, said: s.slice(0, 2), turn: 4, stage: "judge" },
+      { ...done, said: s.slice(0, 2) },
+      { ...done, said: [{ ...s[0], by: "b" }, ...s.slice(1)] },
+      { ...done, said: [{ ...s[0], answer: "x".repeat(SAID_LIMIT + 1) }, ...s.slice(1)] },
+      { ...done, said: [{ ...s[0], answer: "  " }, ...s.slice(1)] },
+      { ...done, said: [{ ...s[0], answer: 7 }, ...s.slice(1)] },
+      { ...done, said: [s[0], { ...s[1], guesses: s[0].guesses }, s[2]] },
+      { ...done, said: [{ ...s[0], guesses: [...s[0].guesses].reverse() }, ...s.slice(1)] },
+      { ...done, said: [{ ...s[0], guesses: [s[0].guesses[0], { playerId: "a", text: "me" }] }, ...s.slice(1)] },
+      { ...done, said: [{ ...s[0], guesses: [s[0].guesses[0], { playerId: "c", text: null, mark: "got" }] }, ...s.slice(1)] },
+      { ...done, said: [{ ...s[0], guesses: [{ ...s[0].guesses[0], mark: "maybe" }, s[0].guesses[1]] }, ...s.slice(1)] },
+      { ...done, said: [...s, { by: "a", answer: null, guesses: [] }] },
+      { ...mid, stage: "ready" },
+      { ...mid, stage: "reveal" },
+      { ...mid, said: [{ ...mid.said![0], guesses: mid.said![0].guesses.slice(0, 1) }], stage: "handoff", turn: 2 },
+      // A sharer still being guessed can't have judged guesses yet.
+      {
+        ...mid,
+        said: [{ ...mid.said![0], guesses: [mid.said![0].guesses[0]] }],
+        turn: 2,
+      },
+      { ...advanceGame(sameV2(family), { type: "start" }), stage: "judge" },
+      { ...advanceGame(sameV2(family), { type: "start" }), said: [] },
+    ])
+      expect(ok(bad as Game)).toBe(false);
+    const living = finishInto(freshLiving(), done);
+    const record = living.plays![0];
+    expect(isLiving(living)).toBe(true);
+    for (const bad of [
+      { ...record, kind: "joy" },
+      { ...record, questions: [] },
+      { ...record, said: "nope" },
+      { ...record, said: [{ ...record.said![0], id: "" }] },
+      { ...record, said: [{ ...record.said![0], by: "stranger" }] },
+      { ...record, said: [{ ...record.said![0], answer: "x".repeat(SAID_LIMIT + 1) }] },
+      { ...record, said: [{ ...record.said![1], guesses: record.said![0].guesses }] },
+      { ...record, said: [{ ...record.said![0], guesses: [{ playerId: "b", text: "a", mark: "yes" }] }] },
+      { ...record, said: Array.from({ length: 13 }, () => record.said![0]) },
+    ])
+      expect(isLiving({ ...living, plays: [bad] })).toBe(false);
+  });
+
+  it("survives an encrypt and unlock round trip, mid-round and remembered", async () => {
+    const done = playWords([
+      { answer: "pancakes", guesses: ["pancakes", "waffles"], marks: ["got", "close"] },
+      { answer: null },
+      { answer: "a dog", guesses: ["a dog", null], skip: true },
+    ]);
+    const living = finishInto(freshLiving(), done);
+    const mid = playWords([{ answer: "cereal in our pajamas", guesses: ["cereal", "toast"], stay: true }]);
+    expect(mid.stage).toBe("judge");
+    const book = changeLiving(emptyBook("Alex"), () => ({ ...living, game: mid }));
+    expect(isBook(book)).toBe(true);
+    const { envelope } = await createVault(book, "long testing-only passphrase");
+    const raw = JSON.stringify(envelope);
+    expect(raw).not.toContain("pancakes");
+    expect(raw).not.toContain("cereal in our pajamas");
+    const back = (await unlockVault(raw, "long testing-only passphrase")).book;
+    expect(back).toEqual(book);
+    // The open round carries on where it was left.
+    const resumed = advanceGame(livingOf(back).game!, { type: "next", skip: true });
+    expect(resumed.stage).toBe("handoff");
+    expect(gamePlayer(resumed).name).toBe("Anna");
   });
 });
 

@@ -4,8 +4,9 @@ import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { webcrypto } from "node:crypto";
 import { emptyBook, sampleBook, type Book } from "@/lib/relish/model";
-import { advanceGame, livingOf, newGame, turnPlan, type Game } from "@/lib/relish/living";
+import { advanceGame, livingOf, turnPlan, type Game } from "@/lib/relish/living";
 import LivingBook from "../LivingBook";
+import { sameV2 } from "@/lib/relish/__tests__/same-page-v2";
 Object.defineProperty(globalThis, "crypto", {
   value: webcrypto,
   configurable: true,
@@ -57,7 +58,7 @@ const family = (): Book => ({
 });
 function revealed(): Game {
   let g = advanceGame(
-    newGame("match", [
+    sameV2([
       { id: "owner", name: "Robin" },
       { id: "ella", name: "Ella" },
       { id: "kaleb", name: "Kaleb" },

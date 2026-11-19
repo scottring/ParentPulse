@@ -97,21 +97,39 @@ export type SpotCard = { squares: string[]; marks: (number | null)[] };
 export const SPOT_ALL = -1;
 /** "Where were you headed?" — a few words, e.g. "Grandma’s". */
 export const PLACE_LIMIT = 60;
+/** Same page? in your own words: an answer or a guess, a few words long. */
+export const SAID_LIMIT = 80;
+/** How close a guess came, as the person who answered judged it. */
+export type SaidMark = "got" | "close" | "not";
+export const saidMarks: SaidMark[] = ["got", "close", "not"];
+export type SaidGuess = { playerId: string; text: string | null; mark?: SaidMark };
+/**
+ * One question of a Same page? round from contentVersion 3: whose turn it was
+ * to answer (`by`), their own words (null for a pass) and each other player's
+ * guess in turn order (text null for a pass; no guesses when the answer passed).
+ */
+export type Said = { by: string; answer: string | null; guesses: SaidGuess[] };
 export type Game = {
   audience?: Audience;
-  /** 1: one answer per turn in `choices`. 2: turns of several answers in `answers`. */
-  contentVersion?: 1 | 2;
+  /**
+   * 1: one answer per turn in `choices`. 2: turns of several answers in
+   * `answers`. 3 (Same page? only): answers in the players' own words in `said`.
+   */
+  contentVersion?: 1 | 2 | 3;
   id: string;
   kind: GameKind;
   players: Player[];
-  stage: "ready" | "choose" | "handoff" | "reveal" | "kept" | "finished";
+  /** "judge": contentVersion 3 Same page?, everyone sees one answer and its guesses. */
+  stage: "ready" | "choose" | "handoff" | "judge" | "reveal" | "kept" | "finished";
   turn: number;
   /** contentVersion 1 (or none): one answer per turn. Empty from version 2. */
   choices: (number | null)[];
   /** contentVersion 2: each finished turn's answers, one per question asked. */
   answers?: (number | null)[][];
-  /** contentVersion 2 Same page?: the question ids, fixed when the round starts. */
+  /** Same page? from contentVersion 2: the question ids, fixed when the round starts. */
   questions?: string[];
+  /** contentVersion 3 Same page?: each question played so far, in order. */
+  said?: Said[];
   /** contentVersion 2 story: the title the group picked at the end. */
   title?: string;
   /** After the reveal, each player may add one line of their own. */
@@ -151,6 +169,8 @@ export type PlayRecord = {
   pageId?: string;
   /** Same page?: each question's id and each player's pick, in `players` order. */
   questions?: { id: string; picks: (number | null)[] }[];
+  /** Same page? in your own words: each question's id, answer and guesses. */
+  said?: (Said & { id: string })[];
   /** Guess my small joy: each player's own pick, in `players` order. */
   joys?: (string | null)[];
   /** Guess my small joy: guesses[guesser][target], null for a pass or no guess. */
@@ -499,13 +519,38 @@ export const turnCount = (g: Game) => turnPlan(g).length;
 // as before. Rounds from contentVersion 2 keep each turn's answers in
 // `answers`, and their questions and choices are frozen: a later content
 // change starts a new version rather than editing this one.
+//
+// Same page? rounds from contentVersion 3 are played in the players' own
+// words: one player answers, everyone else guesses, then the one who answered
+// judges the guesses before the next question (see `said`).
 const isV2 = (g: Pick<Game, "contentVersion">) => g.contentVersion === 2;
+/** A Same page? round answered in the players' own words (contentVersion 3). */
+export const ownWords = (g: Pick<Game, "kind" | "contentVersion">) =>
+  g.kind === "match" && g.contentVersion === 3;
 /** The kinds that start new rounds at contentVersion 2. */
 const roundKinds: GameKind[] = ["match", "joy", "story", "spot"];
 /** A story runs at least this many turns, so two players go around more than once. */
 export const STORY_TURNS = 5;
 export const TITLE_LIMIT = 60;
 export const SAME_PAGE_COUNT = 5;
+/** In your own words, everyone answers at least once, and a round has at least three questions. */
+export const SAID_MIN = 3;
+export const saidCount = (players: number) => Math.max(SAID_MIN, players);
+/** Who answers question q: players take turns, in round order. */
+export const sharerOf = <P>(players: P[], q: number) => players[q % players.length];
+/** Who guesses question q: everyone else, starting with the next player. */
+export function guessersOf<P>(players: P[], q: number) {
+  const n = players.length,
+    s = q % n;
+  return Array.from({ length: n - 1 }, (_, k) => players[(s + 1 + k) % n]);
+}
+/** Trims an answer or guess to a few words; "" when nothing is left. */
+export const cleanSaid = (text: string) =>
+  String(text || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, SAID_LIMIT)
+    .trim();
 export type Ask = {
   prompt: string;
   choices: string[];
@@ -535,7 +580,7 @@ export function samePageRound(g: Pick<Game, "id" | "audience">) {
 export function samePageQuestions(
   g: Pick<Game, "id" | "audience" | "contentVersion" | "questions">,
 ): SameQuestion[] {
-  return isV2(g)
+  return isV2(g) || g.contentVersion === 3
     ? (g.questions || [])
         .map(samePageQuestion)
         .filter((q): q is SameQuestion => !!q)
@@ -582,6 +627,24 @@ export function turnPlan(g: Game): Turn[] {
   const n = g.players.length;
   // Spot it! has no turns: anyone calls out, and the holder taps the card.
   if (g.kind === "spot") return [];
+  if (ownWords(g)) {
+    // Each question: one player answers, then everyone else guesses. A pass
+    // leaves nothing to guess, so that question has no guessing turns.
+    const said = g.said || [];
+    return samePageQuestions(g).flatMap((q, i) => {
+      const sharer = sharerOf(g.players, i);
+      const ask = { prompt: q.prompt, choices: q.choices };
+      const share: Turn = { player: sharer, asks: [ask] };
+      if (said[i]?.answer === null) return [share];
+      return [
+        share,
+        ...guessersOf(g.players, i).map((player) => ({
+          player,
+          asks: [{ ...ask, about: sharer.id }],
+        })),
+      ];
+    });
+  }
   if (g.kind === "match") {
     const asks = samePageQuestions(g).map((q) => ({
       prompt: q.prompt,
@@ -761,6 +824,7 @@ function recordTally(r: PlayRecord) {
  * the answers this book remembers. Empty when there are none.
  */
 export function samePageTrend(l: LivingState, g: Game, includeThisRound = false) {
+  if (ownWords(g)) return saidTrend(l, g);
   const earlier = earlierSamePage(l, g)
     .map((r) => ({ ...recordTally(r), playedAt: r.playedAt }))
     .filter((t) => t.counted);
@@ -779,6 +843,119 @@ export function samePageTrend(l: LivingState, g: Game, includeThisRound = false)
   const [topic, times] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] || [];
   return topic && times >= 2 ? `${line} You differ most on ${topic}.` : line;
 }
+// ── Same page? in your own words ────────────────────────────────────────────
+export type SaidLine = {
+  question: SameQuestion;
+  sharer: Pick<Player, "id" | "name">;
+  /** The sharer's own words; null for a pass. */
+  answer: string | null;
+  guesses: { player: Pick<Player, "id" | "name">; text: string | null; mark?: SaidMark }[];
+};
+/** Each question with the sharer's answer and every guess, by name. */
+export function saidLines(
+  players: Pick<Player, "id" | "name">[],
+  said: (Said & { id: string })[],
+): SaidLine[] {
+  const named = (id: string) => players.find((p) => p.id === id);
+  return said.flatMap((s) => {
+    const question = samePageQuestion(s.id),
+      sharer = named(s.by);
+    if (!question || !sharer) return [];
+    return [
+      {
+        question,
+        sharer,
+        answer: s.answer,
+        guesses: s.guesses.flatMap((x) => {
+          const player = named(x.playerId);
+          return player
+            ? [{ player, text: x.text, ...(x.mark ? { mark: x.mark } : {}) }]
+            : [];
+        }),
+      },
+    ];
+  });
+}
+/** This round's questions so far, each with its id. */
+const saidSoFar = (g: Game) =>
+  (g.said || []).map((s, i) => ({ ...s, id: g.questions?.[i] || "" }));
+export const saidResult = (g: Game) => saidLines(g.players, saidSoFar(g));
+const times = (n: number) => (n === 1 ? "once" : n === 2 ? "twice" : `${n} times`);
+/** Right guesses out of the judged ones, across every question. */
+function saidCounts(lines: SaidLine[]) {
+  const judged = lines.flatMap((l) => l.guesses).filter((x) => x.text !== null && x.mark);
+  return { got: judged.filter((x) => x.mark === "got").length, judged: judged.length };
+}
+/** "You got 3 of 5 right." Empty when no guess was judged. */
+export function saidRoundLine(lines: SaidLine[]) {
+  const { got, judged } = saidCounts(lines);
+  if (!judged) return "";
+  if (got === judged) return judged === 1 ? "You got it right." : `You got all ${judged} right.`;
+  return `You got ${got} of ${judged} right.`;
+}
+/** Who knew whom best: "Anna got 2 of 3; Leo was close twice; June passed." */
+export function saidTally(lines: SaidLine[], players: Pick<Player, "id" | "name">[]) {
+  const parts = players.flatMap((p) => {
+    const mine = lines.flatMap((l) => l.guesses.filter((x) => x.player.id === p.id));
+    if (!mine.length) return [];
+    const guessed = mine.filter((x) => x.text !== null);
+    if (!guessed.length) return [`${p.name} passed`];
+    const judged = guessed.filter((x) => x.mark);
+    if (!judged.length) return [];
+    const got = judged.filter((x) => x.mark === "got").length,
+      close = judged.filter((x) => x.mark === "close").length;
+    if (got)
+      return [
+        `${p.name} got ${got} of ${judged.length}${close ? ` and was close ${times(close)}` : ""}`,
+      ];
+    if (close) return [`${p.name} was close ${times(close)}`];
+    return [`${p.name} didn’t get ${judged.length === 1 ? "it" : "any"} this time`];
+  });
+  // A line of passes alone says nothing new.
+  return parts.every((x) => x.endsWith(" passed")) ? "" : `${parts.join("; ")}.`;
+}
+/** One guess, said aloud: "Anna got it", "Leo was close with “pasta”". */
+export function guessWords(x: SaidLine["guesses"][number]) {
+  if (x.text === null) return `${x.player.name} passed`;
+  if (x.mark === "got") return `${x.player.name} got it`;
+  if (x.mark === "close") return `${x.player.name} was close with “${x.text}”`;
+  return `${x.player.name} guessed “${x.text}”`;
+}
+/** A question as it reads in a shared page or Your book. */
+function saidWords(l: SaidLine) {
+  if (l.answer === null) return `${l.sharer.name} passed.`;
+  return [
+    `${l.sharer.name} said “${l.answer}”.`,
+    ...l.guesses.map((x) => `${guessWords(x)}.`),
+  ].join(" ");
+}
+function saidSummary(lines: SaidLine[], players: Pick<Player, "id" | "name">[]) {
+  if (!lines.some((l) => l.answer !== null)) return "Everyone passed.";
+  return (
+    [saidRoundLine(lines), saidTally(lines, players)].filter(Boolean).join(" ") ||
+    "Answered in your own words."
+  );
+}
+/** Earlier own-words rounds with exactly these players: right guesses out of judged ones. */
+function saidTrend(l: LivingState, g: Game) {
+  const key = playersKey(g.players);
+  const earlier = (l.plays || [])
+    .filter(
+      (r) =>
+        r.kind === "match" &&
+        r.id !== g.id &&
+        !!r.said?.length &&
+        playersKey(r.players) === key,
+    )
+    .map((r) => ({ ...saidCounts(saidLines(r.players, r.said!)), playedAt: r.playedAt }))
+    .filter((t) => t.judged);
+  if (!earlier.length) return "";
+  const recent = earlier.slice(-5);
+  if (recent.length === 1)
+    return `Last time, on ${shortDate(recent[0].playedAt)}, you got ${recent[0].got} of ${recent[0].judged} right.`;
+  return `Over your last ${recent.length} rounds together, you got ${recent.reduce((n, t) => n + t.got, 0)} of ${recent.reduce((n, t) => n + t.judged, 0)} right.`;
+}
+
 /** Each player's own line about the round, labelled with their name. */
 export function reflectionSections(r: Pick<PlayRecord, "players" | "reflections">) {
   return (r.reflections || []).flatMap((x) => {
@@ -795,6 +972,13 @@ function roundSummary(r: PlayRecord): {
   summary: string;
   sections: { label: string; text: string }[];
 } {
+  if (r.kind === "match" && r.said?.length) {
+    const lines = saidLines(r.players, r.said);
+    return {
+      summary: saidSummary(lines, r.players),
+      sections: lines.map((l) => ({ label: l.question.prompt, text: saidWords(l) })),
+    };
+  }
   if (r.kind === "match" && r.questions?.length) {
     const t = recordTally(r);
     const summary = t.counted
@@ -879,7 +1063,10 @@ export function recentQuestions(l: LivingState, players: Pick<Player, "name">[])
   return (l.plays || [])
     .filter((r) => r.kind === "match" && playersKey(r.players) === key)
     .toReversed()
-    .flatMap((r) => (r.questions || []).map((q) => q.id));
+    .flatMap((r) => [
+      ...(r.questions || []).map((q) => q.id),
+      ...(r.said || []).map((q) => q.id),
+    ]);
 }
 const random = (n: number) => {
   const x = new Uint32Array(1);
@@ -894,14 +1081,14 @@ function shuffled<T>(items: T[]) {
   }
   return out;
 }
-/** Five questions for this age range, preferring ones these players haven't had lately. */
-function chooseQuestions(audience: Audience, recent: string[]) {
+/** A round's questions for this age range, preferring ones these players haven't had lately. */
+function chooseQuestions(audience: Audience, recent: string[], count = SAME_PAGE_COUNT) {
   const bank = samePageBank(audience);
   const fresh = shuffled(bank.filter((q) => !recent.includes(q.id)));
   const stale = bank
     .filter((q) => recent.includes(q.id))
     .sort((a, b) => recent.indexOf(b.id) - recent.indexOf(a.id));
-  return [...fresh, ...stale].slice(0, SAME_PAGE_COUNT).map((q) => q.id);
+  return [...fresh, ...stale].slice(0, count).map((q) => q.id);
 }
 
 // ── Spot it! ────────────────────────────────────────────────────────────────
@@ -1156,19 +1343,29 @@ export function newGame(
     ...(editionAudience ? [{ audience: editionAudience }] : []),
   ]);
   const rounds = roundKinds.includes(kind);
+  // New Same page? rounds are answered in the players' own words.
+  const words = kind === "match";
   return {
     id: id(),
     kind,
-    contentVersion: rounds ? 2 : 1,
+    contentVersion: words ? 3 : rounds ? 2 : 1,
     audience,
     players: players.map((p) => ({ ...p })),
     stage: "ready",
     turn: 0,
     choices: [],
-    ...(rounds ? { answers: [] } : {}),
-    ...(rounds && kind === "match"
-      ? { questions: chooseQuestions(audience, options.recent || []) }
-      : {}),
+    ...(words
+      ? {
+          questions: chooseQuestions(
+            audience,
+            options.recent || [],
+            saidCount(players.length),
+          ),
+          said: [],
+        }
+      : rounds
+        ? { answers: [] }
+        : {}),
     ...(kind === "spot"
       ? {
           spot: {
@@ -1214,6 +1411,14 @@ export function gameText(g: Game): string {
       ...r.squares
         .filter((x) => x.by !== null && x.text)
         .map((x) => `${x.text}: ${x.by === SPOT_ALL ? "everyone" : x.who}.`),
+    ].join("\n");
+  }
+  if (ownWords(g)) {
+    const lines = saidResult(g);
+    if (!lines.some((l) => l.answer !== null)) return "";
+    return [
+      saidSummary(lines, g.players),
+      ...lines.map((l) => `${l.question.prompt} ${saidWords(l)}`),
     ].join("\n");
   }
   if (g.kind === "match") {
@@ -1267,6 +1472,12 @@ export type GameAction =
   | { type: "choice"; choice: number | null }
   /** Every answer in a turn with several questions; null passes one. */
   | { type: "answer"; answers: (number | null)[] }
+  /** Same page? in your own words: an answer or a guess; null passes. */
+  | { type: "say"; text: string | null }
+  /** The one who answered says how close a guess came; null clears it. */
+  | { type: "judge"; playerId: string; mark: SaidMark | null }
+  /** On to the next question; `skip` leaves guesses unjudged. */
+  | { type: "next"; skip?: boolean }
   | { type: "approve"; playerId: string }
   /** A story's title, picked together after the last line; "" clears it. */
   | { type: "title"; title: string }
@@ -1342,6 +1553,8 @@ export function advanceGame(g: Game, action: GameAction): Game {
   }
   if (action.type === "ready" && g.stage === "handoff")
     return { ...g, stage: "choose", updatedAt: stamp };
+  if (ownWords(g) && ["say", "judge", "next", "choice", "answer"].includes(action.type))
+    return advanceWords(g, action, stamp);
   if ((action.type === "choice" || action.type === "answer") && g.stage === "choose") {
     const asks = turnPlan(g)[g.turn]?.asks || [];
     const answers =
@@ -1414,6 +1627,51 @@ export function advanceGame(g: Game, action: GameAction): Game {
     return { ...g, stage: "finished", finishedAt: stamp, updatedAt: stamp };
   throw new Error("That action is not available at this point in the game.");
 }
+/** Same page? in your own words: answering, guessing and judging. */
+function advanceWords(g: Game, action: GameAction, stamp: string): Game {
+  const said = [...(g.said || [])],
+    count = (g.questions || []).length,
+    others = g.players.length - 1;
+  const last = said.at(-1);
+  const q = said.length - 1;
+  if (action.type === "say" && g.stage === "choose") {
+    const text = action.text === null ? null : cleanSaid(action.text);
+    if (text === "") throw new Error("Write a few words, or pass.");
+    const turn = g.turn + 1;
+    if (last && last.answer !== null && last.guesses.length < others) {
+      const guesser = guessersOf(g.players, q)[last.guesses.length];
+      said[q] = { ...last, guesses: [...last.guesses, { playerId: guesser.id, text }] };
+      const judging = said[q].guesses.length === others;
+      return { ...g, said, turn, stage: judging ? "judge" : "handoff", updatedAt: stamp };
+    }
+    if (said.length >= count) throw new Error("Every question has been answered.");
+    said.push({ by: sharerOf(g.players, said.length).id, answer: text, guesses: [] });
+    // A pass leaves nothing to guess: on to the next person's question.
+    const over = text === null && said.length >= count;
+    return { ...g, said, turn, stage: over ? "reveal" : "handoff", updatedAt: stamp };
+  }
+  if (action.type === "judge" && g.stage === "judge" && last) {
+    const k = last.guesses.findIndex((x) => x.playerId === action.playerId);
+    if (k < 0 || last.guesses[k].text === null) throw new Error("Choose a guess to judge.");
+    if (action.mark !== null && !saidMarks.includes(action.mark))
+      throw new Error("Choose Got it, Close or Not quite.");
+    const guesses = last.guesses.map((x, i) => {
+      if (i !== k) return x;
+      const next = { ...x };
+      if (action.mark) next.mark = action.mark;
+      else delete next.mark;
+      return next;
+    });
+    said[q] = { ...last, guesses };
+    return { ...g, said, updatedAt: stamp };
+  }
+  if (action.type === "next" && g.stage === "judge" && last) {
+    if (!action.skip && last.guesses.some((x) => x.text !== null && !x.mark))
+      throw new Error("Judge each guess, or skip judging.");
+    return { ...g, stage: said.length >= count ? "reveal" : "handoff", updatedAt: stamp };
+  }
+  throw new Error("That action is not available at this point in the game.");
+}
 export function keepGame(book: Book): Book {
   const l = livingOf(book),
     g = l.game;
@@ -1446,6 +1704,15 @@ export function keepGame(book: Book): Book {
 
 /** What a finished round remembers: its answers, for contentVersion 2 rounds. */
 function roundMemory(g: Game): Partial<PlayRecord> {
+  if (ownWords(g))
+    return {
+      said: saidSoFar(g).map((s) => ({
+        id: s.id,
+        by: s.by,
+        answer: s.answer,
+        guesses: s.guesses.map((x) => ({ ...x })),
+      })),
+    };
   if (!isV2(g)) return {};
   if (g.kind === "match")
     return {
@@ -1472,6 +1739,7 @@ function roundMemory(g: Game): Partial<PlayRecord> {
 }
 const memoryOf = (r: PlayRecord) =>
   r.questions !== undefined ||
+  r.said !== undefined ||
   r.joys !== undefined ||
   r.guesses !== undefined ||
   r.story !== undefined ||
@@ -1488,6 +1756,7 @@ function trimMemory(plays: PlayRecord[]) {
       if (!memoryOf(r) || ++kept <= ANSWERS_KEPT) return r;
       const rest = { ...r };
       delete rest.questions;
+      delete rest.said;
       delete rest.joys;
       delete rest.guesses;
       delete rest.story;
@@ -1641,6 +1910,21 @@ export function isLiving(value: unknown): value is LivingState {
               ),
           ) &&
           optional(
+            r.said,
+            (x) =>
+              r.kind === "match" &&
+              r.questions === undefined &&
+              Array.isArray(x) &&
+              x.length <= 12 &&
+              x.every(
+                (line) =>
+                  obj(line) &&
+                  str(line.id, 60) &&
+                  !!line.id &&
+                  saidFits(line, r.players as Player[]),
+              ),
+          ) &&
+          optional(
             r.joys,
             (j) =>
               r.kind === "joy" &&
@@ -1728,7 +2012,84 @@ export function isLiving(value: unknown): value is LivingState {
   return true;
 }
 
-const stages = ["ready", "choose", "handoff", "reveal", "kept", "finished"];
+const stages = ["ready", "choose", "handoff", "judge", "reveal", "kept", "finished"];
+const saidText = (x: unknown) => str(x, SAID_LIMIT) && !!x.trim();
+/**
+ * One own-words question: an answer or pass by someone playing, and at most
+ * one guess from each other player. A pass has no guesses; only a guess that
+ * was made can be judged.
+ */
+function saidFits(value: unknown, players: Player[]) {
+  if (
+    !obj(value) ||
+    !players.some((p) => p.id === value.by) ||
+    !(value.answer === null || saidText(value.answer)) ||
+    !Array.isArray(value.guesses) ||
+    value.guesses.length > players.length - 1 ||
+    (value.answer === null && value.guesses.length)
+  )
+    return false;
+  const ids = value.guesses.map((x) => (obj(x) ? x.playerId : x));
+  return (
+    new Set(ids).size === ids.length &&
+    value.guesses.every(
+      (x) =>
+        obj(x) &&
+        x.playerId !== value.by &&
+        players.some((p) => p.id === x.playerId) &&
+        (x.text === null || saidText(x.text)) &&
+        (x.mark === undefined ||
+          (x.text !== null && saidMarks.includes(x.mark as SaidMark))),
+    )
+  );
+}
+/** An own-words round: each question in turn order, and a stage that fits how far it got. */
+function wordsGameFits(g: Record<string, unknown>, sharedPages: unknown[]) {
+  const game = g as Game,
+    players = game.players,
+    n = players.length;
+  const bank = samePageBank(game.audience as Audience);
+  if (
+    game.kind !== "match" ||
+    g.answers !== undefined ||
+    game.choices.length ||
+    g.title !== undefined ||
+    g.spot !== undefined ||
+    g.place !== undefined ||
+    !Array.isArray(g.questions) ||
+    g.questions.length !== saidCount(n) ||
+    new Set(g.questions).size !== g.questions.length ||
+    !g.questions.every((q) => bank.some((x) => x.id === q)) ||
+    !Array.isArray(g.said) ||
+    g.said.length > g.questions.length
+  )
+    return false;
+  const said = g.said as Said[];
+  const complete = (s: Said) => s.answer === null || s.guesses.length === n - 1;
+  for (let i = 0; i < said.length; i++) {
+    const s = said[i];
+    if (
+      !saidFits(s, players) ||
+      s.by !== sharerOf(players, i).id ||
+      !s.guesses.every((x, k) => x.playerId === guessersOf(players, i)[k].id) ||
+      (i < said.length - 1 && !complete(s)) ||
+      (!complete(s) && s.guesses.some((x) => x.mark))
+    )
+      return false;
+  }
+  if (game.turn !== said.reduce((t, s) => t + 1 + s.guesses.length, 0)) return false;
+  const last = said.at(-1);
+  const done = said.length === g.questions.length && (!last || complete(last));
+  const fits =
+    game.stage === "ready"
+      ? said.length === 0
+      : game.stage === "choose" || game.stage === "handoff"
+        ? !done && (game.stage === "choose" || game.turn > 0)
+        : game.stage === "judge"
+          ? !!last && last.answer !== null && last.guesses.length === n - 1
+          : done;
+  return fits && stageFits(game, sharedPages);
+}
 const placeFits = (x: unknown) => str(x, PLACE_LIMIT) && !!x.trim();
 /** Nine different squares, each mark a player's index, SPOT_ALL or null. */
 function spotCardFits(
@@ -1775,7 +2136,7 @@ function isGame(g: unknown, sharedPages: unknown[]): boolean {
     !optional(g.audience, isAudience) ||
     (g.audience === undefined
       ? g.contentVersion !== undefined
-      : g.contentVersion !== 1 && g.contentVersion !== 2) ||
+      : g.contentVersion !== 1 && g.contentVersion !== 2 && g.contentVersion !== 3) ||
     !gameKinds.includes(g.kind as GameKind) ||
     !stages.includes(String(g.stage)) ||
     !Array.isArray(g.players) ||
@@ -1795,6 +2156,15 @@ function isGame(g: unknown, sharedPages: unknown[]): boolean {
     !Array.isArray(g.choices)
   )
     return false;
+  if (
+    g.reflections !== undefined &&
+    (!reflectionsFit(g.reflections, g.players as Player[]) ||
+      !["reveal", "kept", "finished"].includes(String(g.stage)))
+  )
+    return false;
+  if (g.contentVersion === 3) return wordsGameFits(g, sharedPages);
+  // Only own-words rounds judge, or keep words in `said`.
+  if (g.stage === "judge" || g.said !== undefined) return false;
   const v2 = g.contentVersion === 2;
   if (v2) {
     if (!Array.isArray(g.answers) || g.choices.length) return false;
@@ -1820,12 +2190,6 @@ function isGame(g: unknown, sharedPages: unknown[]): boolean {
     g.answers !== undefined ||
     g.questions !== undefined ||
     g.title !== undefined
-  )
-    return false;
-  if (
-    g.reflections !== undefined &&
-    (!reflectionsFit(g.reflections, g.players as Player[]) ||
-      !["reveal", "kept", "finished"].includes(String(g.stage)))
   )
     return false;
   if (g.kind === "spot") {
@@ -1879,7 +2243,7 @@ function isGame(g: unknown, sharedPages: unknown[]): boolean {
 /** What every stage needs, whatever the game: approvals, finishing and a kept page. */
 function stageFits(game: Game, sharedPages: unknown[]) {
   if (
-    ["ready", "choose", "handoff"].includes(game.stage) &&
+    ["ready", "choose", "handoff", "judge"].includes(game.stage) &&
     game.approvals.some(Boolean)
   )
     return false;
