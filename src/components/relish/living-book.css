@@ -1965,3 +1965,10 @@
 .lb-app .lb-notes .lb-actions {
   align-items: center;
 }
+.lb-app .lb-session-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px 14px;
+}

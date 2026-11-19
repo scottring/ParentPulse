@@ -66,13 +66,13 @@ describe("living-book interaction boundaries", () => {
     render(createElement(Harness));
     fireEvent.click(screen.getByRole("button", { name: "Activities" }));
     fireEvent.click(
-      screen.getByRole("button", { name: /Think it through/ }),
+      screen.getByRole("button", { name: /^Think it through/ }),
     );
     await screen.findByRole("alert");
     expect(screen.queryByText("Your page is kept.")).toBeNull();
     fail = false;
     fireEvent.click(
-      screen.getByRole("button", { name: /Think it through/ }),
+      screen.getByRole("button", { name: /^Think it through/ }),
     );
     const textbox = await screen.findByRole("textbox", { name: "Your moment" });
     fireEvent.change(textbox, { target: { value: "One sample moment" } });

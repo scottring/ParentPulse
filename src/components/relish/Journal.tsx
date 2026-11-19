@@ -1,4 +1,6 @@
 "use client";
+import ConfirmDelete from "./ConfirmDelete";
+import { deletable, deletePage } from "@/lib/relish/delete";
 import {
   useEffect,
   useImperativeHandle,
@@ -152,6 +154,7 @@ export default function Journal({
   const [celebrate, setCelebrate] = useState(initialCelebrate);
   const [query, setQuery] = useState("");
   const [excerpt, setExcerpt] = useState<string | null>(null);
+  const [problem, setProblem] = useState("");
   const prose = useRef<HTMLElement>(null);
   const sensory = useSensory();
   const top = useRef<HTMLHeadingElement>(null);
@@ -310,6 +313,28 @@ export default function Journal({
               <Feather size={15} /> Edit this page
             </button>
           )}
+          {problem && (
+            <p className="lb-error" role="alert">
+              {problem}
+            </p>
+          )}
+          {!sample && deletable(page.id) && (
+            <ConfirmDelete
+              label="Delete this page"
+              question="Delete this page?"
+              detail={`It’s removed from this book on every device${page.kind === "Received passage" ? "; the sender’s copy stays with them" : ""}. This can’t be undone.`}
+              onConfirm={async () => {
+                try {
+                  await save((b) => deletePage(b, page.id));
+                  sensory.play("place");
+                  if (onBack) onBack();
+                  else setReading(null);
+                } catch {
+                  setProblem("This page couldn’t be deleted. It’s still here; please try again.");
+                }
+              }}
+            />
+          )}
           {!page.record && (
             <button
               className="lb-text"
@@ -422,14 +447,28 @@ export default function Journal({
       {drafts.length > 0 && (
         <section className="rj-drafts" aria-label="Pages in progress">
           <p className="lb-kicker">Saved drafts</p>
+          {problem && (
+            <p className="lb-error" role="alert">
+              {problem}
+            </p>
+          )}
           {drafts.map((draft) => (
-            <button
-              className="lb-secondary"
-              key={draft.id}
-              onClick={() => edit(draft)}
-            >
-              Keep writing: {pageTitle(draft)} <Feather size={16} />
-            </button>
+            <div className="rj-draft-row" key={draft.id}>
+              <button className="lb-secondary" onClick={() => edit(draft)}>
+                Keep writing: {pageTitle(draft)} <Feather size={16} />
+              </button>
+              <ConfirmDelete
+                label="Discard"
+                ariaLabel={`Discard ${pageTitle(draft)}`}
+                question="Discard this draft?"
+                yes="Yes, discard"
+                onConfirm={() =>
+                  save((b) => deletePage(b, `journal:${draft.id}`)).catch(() =>
+                    setProblem("This draft couldn’t be discarded. Please try again."),
+                  )
+                }
+              />
+            </div>
           ))}
         </section>
       )}

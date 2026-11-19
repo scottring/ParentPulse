@@ -1,4 +1,5 @@
 "use client";
+import ConfirmDelete from "./ConfirmDelete";
 import { useEffect, useState, type RefObject } from "react";
 import type { Book, Person } from "@/lib/relish/model";
 import { bookPages, PLAY_RECORD, type BookPage } from "@/lib/relish/pages";
@@ -33,6 +34,8 @@ type Learned = {
   tone: Tone;
   text: string;
   tryThis?: string;
+  /** A note from a game can be removed here. */
+  note?: { personId: string; noteId: string };
 };
 const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
@@ -84,6 +87,7 @@ export default function YourBook({
   onAddPerson,
   onEditPerson,
   onCheckBack,
+  onDeleteNote,
 }: {
   book: Book;
   busy: boolean;
@@ -107,6 +111,8 @@ export default function YourBook({
   onEditPerson: (person: Person) => void;
   /** Answers a plan kept from an exercise (Plan a repair, and others). */
   onCheckBack?: (id: string, answer: CheckBackAnswer) => void;
+  /** Removes a note kept from a game. */
+  onDeleteNote?: (personId: string, noteId: string) => void;
 }) {
   const [asking, setAsking] = useState<string | null>(null);
   const [who, setWho] = useState<Who>(
@@ -155,6 +161,7 @@ export default function YourBook({
         who: [p.id],
         tone: tone(p.id),
         text: n.text,
+        note: { personId: p.id, noteId: n.id },
       })),
     ),
     ...manual
@@ -369,6 +376,17 @@ export default function YourBook({
                 </span>
                 <span className="rp-learned-text">{c.text}</span>
                 {c.tryThis && <span className="rp-learned-try">Try: {c.tryThis}</span>}
+                {c.note && onDeleteNote && (
+                  <ConfirmDelete
+                    label="Remove"
+                    ariaLabel={`Remove the note “${c.text}”`}
+                    question="Remove this note?"
+                    yes="Yes, remove"
+                    busy={busy}
+                    className="rp-learned-remove"
+                    onConfirm={() => onDeleteNote(c.note!.personId, c.note!.noteId)}
+                  />
+                )}
               </article>
             ))}
           </div>

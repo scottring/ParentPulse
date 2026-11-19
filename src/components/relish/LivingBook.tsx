@@ -62,6 +62,7 @@ import { TypingSoundSetting } from "./TypingSound";
 import TopBar, { type MenuItem, type Place, type Space } from "./TopBar";
 import { inviteFriend, inviteNotice } from "@/lib/relish/invite";
 import { keepNotes } from "@/lib/relish/game-notes";
+import { deletePage, deletePersonNote, discardUnderWay } from "@/lib/relish/delete";
 import Home, { type FamilyPerson } from "./Home";
 import DoSomething from "./DoSomething";
 import YourBook from "./YourBook";
@@ -425,6 +426,19 @@ export default function LivingBook({
         ),
       () => navigate("play"),
     );
+  }
+  /** Deletes a page from this book; reports how it went. */
+  async function deleteFromBook(pageId: string) {
+    setError("");
+    try {
+      await vault.save((b) => deletePage(b, pageId));
+      setNotice("Deleted from your book.");
+      sensory.play("place");
+      return true;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "This couldn’t be deleted. Please try again.");
+      return false;
+    }
   }
   function finishGame() {
     void commit(
@@ -1011,6 +1025,13 @@ export default function LivingBook({
             onDraft={(draft) => quickEntry(false, draft)}
             onResumeGame={() => navigate("play")}
             onStartGame={createGame}
+            onDiscard={(g) =>
+              void commit(
+                (b) => discardUnderWay(b, g),
+                undefined,
+                g.kind === "game" ? "Round ended. Nothing was kept." : "Removed.",
+              )
+            }
           />
         ) : view === "tools" && !sharedView ? (
           <Tools
@@ -1073,6 +1094,7 @@ export default function LivingBook({
             onRemoved={(problem) =>
               problem ? setError(problem) : setNotice("Taken out of Our family book.")
             }
+            onDelete={sample ? undefined : deleteFromBook}
           />
         ) : view === "book" && !sharedView ? (
           <YourBook
@@ -1112,6 +1134,9 @@ export default function LivingBook({
             onAddPerson={() => setModal("person")}
             onEditPerson={setEditing}
             onCheckBack={answerPlan}
+            onDeleteNote={(personId, noteId) =>
+              void commit((b) => deletePersonNote(b, personId, noteId), undefined, "Note removed.")
+            }
           />
         ) : (view === "words" || view === "journal") && !sharedView ? (
           <Journal

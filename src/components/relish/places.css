@@ -1956,3 +1956,22 @@ img.ui-illustration.rk-cover-emblem,
   position: absolute;
   inset: -4px 0;
 }
+.lb-app .rp-resume li.rp-resume-row {
+  flex-wrap: wrap;
+  align-items: center;
+}
+.lb-app .rp-resume-remove.lb-delete {
+  font-size: 13px;
+  padding: 6px 10px;
+  min-height: 36px;
+  opacity: 0.8;
+}
+.lb-app .rp-resume-remove.lb-delete-confirm {
+  margin: 4px 12px 8px;
+}
+.lb-app .rp-learned .rp-learned-remove {
+  align-self: flex-start;
+  font-size: 12px;
+  padding: 4px 0;
+  min-height: 32px;
+}
