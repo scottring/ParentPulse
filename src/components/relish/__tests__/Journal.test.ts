@@ -289,6 +289,45 @@ const menuItem = (name: string) => {
   openMenu();
   fireEvent.click(screen.getByRole("button", { name }));
 };
+describe("deleting", () => {
+  it("deletes a kept page only after a second, explicit yes; discards a draft the same way", async () => {
+    let stored = writeJournalPage(
+      writeJournalPage(emptyBook("Robin"), { ...newJournalDraft(), text: "Keep me" }, 0, "kept"),
+      { ...newJournalDraft(), text: "Delete me" },
+      0,
+      "kept",
+    );
+    stored = writeJournalPage(stored, { ...newJournalDraft(), text: "Half a thought" }, 0, "draft");
+    const second = stored.journal![1].id;
+    function Harness() {
+      const [book, setBook] = useState(stored);
+      return createElement(Journal, {
+        book,
+        sample: false,
+        initialReading: `journal:${second}`,
+        onEditingChange: vi.fn(),
+        onDone: vi.fn(),
+        save: async (change) => {
+          stored = change(stored);
+          setBook(stored);
+        },
+      });
+    }
+    render(createElement(Harness));
+    fireEvent.click(screen.getByRole("button", { name: /Delete this page/ }));
+    // Asking changes nothing; Keep it backs out.
+    expect(stored.journal).toHaveLength(3);
+    fireEvent.click(screen.getByRole("button", { name: "Keep it" }));
+    fireEvent.click(screen.getByRole("button", { name: /Delete this page/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Yes, delete" }));
+    await waitFor(() => expect(stored.journal!.map((e) => e.text)).toEqual(["Keep me", "Half a thought"]));
+    // Back on the list of pages, the draft can be discarded too.
+    fireEvent.click(await screen.findByRole("button", { name: /^Discard / }));
+    fireEvent.click(screen.getByRole("button", { name: "Yes, discard" }));
+    await waitFor(() => expect(stored.journal!.map((e) => e.text)).toEqual(["Keep me"]));
+  });
+});
+
 describe("journal header navigation", () => {
   function setup(
     options: {

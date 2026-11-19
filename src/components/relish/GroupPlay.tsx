@@ -1,4 +1,5 @@
 "use client";
+import ConfirmDelete from "./ConfirmDelete";
 import type { NoteDraft } from "@/lib/relish/game-notes";
 import { ListenBar, useListen } from "./GameListen";
 import GameNotes, { canListen, useNotesConfig } from "./GameNotes";
@@ -138,9 +139,20 @@ export default function GroupPlay({
                   : `Turn ${Math.min(g.turn + 1, total)} of ${total} · then reveal together`}
             </p>
           </div>
-          <button className="lb-text" disabled={busy} onClick={onPause}>
-            Pause here
-          </button>
+          <span className="lb-session-actions">
+            <button className="lb-text" disabled={busy} onClick={onPause}>
+              Pause here
+            </button>
+            <ConfirmDelete
+              label="End without keeping"
+              question="End this round without keeping it?"
+              detail="Its answers are let go. This can’t be undone."
+              yes="Yes, end it"
+              no="Keep playing"
+              busy={busy}
+              onConfirm={onCancel}
+            />
+          </span>
         </div>
       )}
       {g.stage === "ready" && spot ? (

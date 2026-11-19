@@ -196,7 +196,7 @@ it("a kept Plan a repair page comes back in Still going, then on Home once it's 
 });
 it("runs a day-by-day checklist across visits and finishes into a page", async () => {
   const app = open(adult());
-  fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /^Ten real hellos/ }));
   const start = screen.getByRole("button", { name: /Start/ }) as HTMLButtonElement;
   expect(start.disabled).toBe(true);
   // Today's effort and the overall length are told apart, and what saves is honest.
@@ -264,7 +264,7 @@ const run = (id: string, personId: string, marks = 0) => ({
 });
 it("does ten real hellos with two people at once, each marked on their own", async () => {
   const app = open(parent());
-  fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /^Ten real hellos/ }));
   // Several people can be chosen for a habit about someone.
   fireEvent.click(screen.getByRole("checkbox", { name: "Ella" }));
   fireEvent.click(screen.getByRole("checkbox", { name: "Kaleb" }));
@@ -292,7 +292,7 @@ it("does ten real hellos with two people at once, each marked on their own", asy
 });
 it("lets one person finish first while the other carries on", async () => {
   const app = open(parent({ version: 1, trackers: [run("e", "ella", 10), run("k", "kaleb", 3)] }));
-  fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /^Ten real hellos/ }));
   await screen.findByText("Ten hellos with Ella.");
   const [ella, kaleb] = [...document.querySelectorAll<HTMLElement>(".rt-habit-row")];
   expect(within(kaleb).getByText("3 of 10 days")).toBeTruthy();
@@ -314,7 +314,7 @@ it("lets one person finish first while the other carries on", async () => {
 });
 it("after the tenth day, offers a line to remember and keeps the page", async () => {
   const app = open(parent({ version: 1, trackers: [run("k", "kaleb", 10)] }));
-  fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /^Ten real hellos/ }));
   await screen.findByText("Ten hellos with Kaleb.");
   expect(screen.getByText("10 of 10 days")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Mark today" })).toBeNull();
@@ -352,7 +352,7 @@ it("offers children with their own books in the library, and notes the one chose
     { id: "e", name: "Ella", onOpen: vi.fn() },
   ];
   const app = open({ ...emptyBook("Scott"), profile: { kind: "adult" } }, kids);
-  fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /^Ten real hellos/ }));
   expect(screen.queryByText(/Add someone to your book first/)).toBeNull();
   fireEvent.click(screen.getByRole("checkbox", { name: "Kaleb" }));
   fireEvent.click(screen.getByRole("button", { name: /Start/ }));
@@ -406,7 +406,7 @@ it("offers only age-appropriate exercises in a young child's edition", async () 
   expect(screen.getByRole("button", { name: /What helps when I’m upset/ })).toBeTruthy();
   expect(screen.getByRole("button", { name: /Kindness spotting/ })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /Rewrite the opener/ })).toBeNull();
-  expect(screen.queryByRole("button", { name: /Repair bingo/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Repair bingo/ })).toBeNull();
 });
 it("plays Same page? with hidden answers and a shared reveal", async () => {
   const book = emptyBook("Robin");

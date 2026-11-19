@@ -1,4 +1,5 @@
 "use client";
+import ConfirmDelete from "./ConfirmDelete";
 import { inviteFriend, inviteNotice } from "@/lib/relish/invite";
 import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import { Search, Users, X } from "lucide-react";
@@ -134,6 +135,9 @@ type Shown = {
   mine: boolean;
   /** This writer added it to the family book, so they can take it out. */
   removable: boolean;
+  /** Kept in this book (a game page, an album passage, a page passed between
+   *  partners): deleting it removes this book's copy, by its page id. */
+  deleteId?: string;
   lines?: { label: string; text: string }[];
   photos?: AlbumItem["photos"];
 };
@@ -188,6 +192,7 @@ export function familyPagesOf(
         art: gameIllustration[p.kind],
         mine: true,
         removable: false,
+        deleteId: `game:${p.id}`,
         lines: round ? reflectionSections(round) : [],
       };
     }),
@@ -203,6 +208,7 @@ export function familyPagesOf(
       note: `Chosen by ${p.fromName} from ${shortDate(p.sourceDate)}. The original page stays private.`,
       mine: same(p.fromName, me.name),
       removable: false,
+      deleteId: `album:${p.id}`,
       photos: p.photos,
     })),
     ...passedBetween(book).map((p) => ({
@@ -219,6 +225,7 @@ export function familyPagesOf(
           : `${p.who}. It’s kept in your book too.`,
       mine: p.who === "You sent",
       removable: false,
+      deleteId: `${p.who === "You sent" ? "sent" : "passage"}:${p.id}`,
     })),
   ];
   const seen = new Set<string>();
@@ -251,6 +258,7 @@ export default function OurFamily({
   onResumeGame,
   onCloseFinished,
   onRemoved,
+  onDelete,
 }: {
   book: Book;
   access: FamilyAccess;
@@ -268,6 +276,8 @@ export default function OurFamily({
   onResumeGame: () => void;
   onCloseFinished: (again: boolean) => void;
   onRemoved?: (error?: string) => void;
+  /** Deletes this book's copy of a page (see Shown.deleteId). */
+  onDelete?: (pageId: string) => Promise<boolean>;
 }) {
   const [who, setWho] = useState("all");
   const [query, setQuery] = useState("");
@@ -518,6 +528,21 @@ export default function OurFamily({
               >
                 {removing ? "Taking it out…" : "Take out of the family book"}
               </button>
+            )}
+            {open.deleteId && onDelete && (
+              <ConfirmDelete
+                label="Delete from my book"
+                question="Delete this from your book?"
+                detail={
+                  open.deleteId.startsWith("sent:") || open.deleteId.startsWith("passage:")
+                    ? "Only your copy goes; the other book keeps its own. This can’t be undone."
+                    : "It’s removed from this book on every device. This can’t be undone."
+                }
+                busy={busy}
+                onConfirm={async () => {
+                  if (await onDelete(open.deleteId!)) setReading(null);
+                }}
+              />
             )}
           </article>
         </Dialog>

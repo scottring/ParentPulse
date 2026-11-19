@@ -1004,3 +1004,19 @@
 .lb-app .rt-square-change .rt-actions {
   margin-top: 10px;
 }
+
+/* ── Delete and discard, asked once in place (2026-11-19) ── */
+.lb-app .lb-delete {
+  color: #8a3b2a;
+}
+.lb-app .lb-delete-confirm {
+  font-size: 14px;
+  line-height: 1.4;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: #f6e7e1;
+}
+.lb-app .lb-delete-confirm .lb-delete-yes {
+  color: #8a3b2a;
+  font-weight: 700;
+}

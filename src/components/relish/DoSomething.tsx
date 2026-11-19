@@ -1,4 +1,5 @@
 "use client";
+import ConfirmDelete from "./ConfirmDelete";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import type { Book } from "@/lib/relish/model";
 import {
@@ -51,6 +52,7 @@ export default function DoSomething({
   onDraft,
   onResumeGame,
   onStartGame,
+  onDiscard,
   initialGame,
   together = false,
 }: {
@@ -68,6 +70,8 @@ export default function DoSomething({
   onDraft: (draft: JournalEntry) => void;
   onResumeGame: () => void;
   onStartGame: (kind: Game["kind"], players: Player[]) => void;
+  /** Ends something under way without keeping it. */
+  onDiscard?: (item: UnderWay) => void;
   /** Our family: things you do together come first. */
   together?: boolean;
 }) {
@@ -112,7 +116,7 @@ export default function DoSomething({
           <h2 id="rp-resume-title">Pick up where you left off</h2>
           <ul>
             {going.map((g) => (
-              <li key={`${g.kind}:${g.key}`}>
+              <li key={`${g.kind}:${g.key}`} className="rp-resume-row">
                 <button
                   className="rp-resume-item"
                   disabled={busy}
@@ -126,6 +130,30 @@ export default function DoSomething({
                     {g.label} <span aria-hidden="true">→</span>
                   </span>
                 </button>
+                {onDiscard && (
+                  <ConfirmDelete
+                    label="Remove"
+                    ariaLabel={`Remove ${g.title}`}
+                    question={
+                      g.kind === "game"
+                        ? "End this round without keeping it?"
+                        : g.kind === "draft"
+                          ? "Discard this draft?"
+                          : g.kind === "habit"
+                            ? "Stop and discard this progress?"
+                            : "Set this aside without keeping it?"
+                    }
+                    detail={
+                      g.kind === "game"
+                        ? "Its answers are let go. This can’t be undone."
+                        : "This can’t be undone."
+                    }
+                    yes={g.kind === "game" ? "Yes, end it" : g.kind === "draft" ? "Yes, discard" : "Yes, remove"}
+                    busy={busy}
+                    className="rp-resume-remove"
+                    onConfirm={() => onDiscard(g)}
+                  />
+                )}
               </li>
             ))}
           </ul>
