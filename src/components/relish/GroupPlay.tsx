@@ -196,9 +196,9 @@ export default function GroupPlay({
           </div>
           <p className="lb-fine lb-setup-note">
             {inWords
-              ? "Each answer stays hidden until everyone has guessed"
+              ? `Each answer stays hidden until everyone has guessed. The answers and guesses stay with this round in ${book.owner}’s book (never sent to AI)`
               : "Answers stay hidden until the reveal"}
-            {remembers(g)
+            {remembers(g) && !inWords
               ? `, then stay with this round in ${book.owner}’s book (never sent to AI)`
               : ""}
             . Passing is always fine.
@@ -511,11 +511,18 @@ function SayTurn({
       {sharer && <p className="lb-story-so-far">{ask.prompt}</p>}
       <label>
         {sharer ? "Your guess" : "Your answer, in your own words"}
-        <input
+        <textarea
+          rows={2}
           value={text}
           maxLength={SAID_LIMIT}
           autoComplete="off"
           onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            // A few words, not a page: Enter is done.
+            if (e.key !== "Enter" || e.shiftKey) return;
+            e.preventDefault();
+            if (text.trim() && !busy) onAction({ type: "say", text });
+          }}
         />
       </label>
       {ideas && (

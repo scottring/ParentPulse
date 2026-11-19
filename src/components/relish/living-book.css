@@ -1520,8 +1520,9 @@
 .lb-app .lb-say label {
   font-size: 15px;
 }
-.lb-app .lb-say input {
+.lb-app .lb-say textarea {
   font: 500 19px/1.4 var(--serif);
+  resize: none;
 }
 .lb-app .lb-say-ideas {
   display: flex;
@@ -1587,6 +1588,15 @@
 .lb-app .lb-judge-marks button[aria-pressed="true"]:not(:disabled):hover {
   background: #4d5840;
   color: #f2f4ee;
+}
+@media (max-width: 719px) {
+  .lb-app .lb-judge-marks {
+    gap: 6px;
+  }
+  .lb-app .lb-judge-marks button {
+    padding: 8px 4px;
+    font-size: 15px;
+  }
 }
 .lb-app .lb-said-answer {
   margin: 0 0 8px;
