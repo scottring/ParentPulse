@@ -5,6 +5,7 @@ import { isEditionProfile, type EditionProfile } from "./profiles";
 import { isLiving, type LivingState } from "./living";
 import { isConnections, type Connections } from "./sharing";
 import { isTools, type ToolsState } from "./tools";
+import { isFamilyPages, type FamilyPage } from "./family-pages";
 export type Person = {
   id: string;
   name: string;
@@ -45,6 +46,11 @@ export type Book = {
   rhythm?: RhythmSettings;
   reviews?: WeeklyReview[];
   tools?: ToolsState;
+  /**
+   * Our family book's pages. Kept in the account's family book when there is
+   * one; in a book kept on this device (or the sample), kept here instead.
+   */
+  familyPages?: FamilyPage[];
 };
 export const emptyBook = (owner: string): Book => ({
   version: 1,
@@ -89,6 +95,41 @@ export function sampleBook(): Book {
         lessons: [
           "A specific question brings back a story that “how are you?” never does.",
         ],
+      },
+    ],
+    // Our family book, kept inside the sample (no account). Fictional.
+    familyPages: [
+      {
+        id: "sample-family-drive", kind: "highlights", activity: "day-highlights",
+        title: "The drive to Grandma June’s",
+        text: "Leo counted 41 red trucks and wants a recount. Best part: the pie stop. Hardest: the last hour.",
+        byName: "Alex", byBookId: "sample", createdAt: "2026-11-16T19:00:00Z",
+      },
+      {
+        id: "sample-family-hand", kind: "passage",
+        text: "When I’m big I’ll still hold your hand. Just not in front of people.",
+        caption: "Leo, at bedtime", byName: "Alex", byBookId: "sample", createdAt: "2026-11-12T20:30:00Z",
+      },
+      {
+        id: "sample-family-snow", kind: "page", title: "First snow",
+        text: "Leo made a snow cat. Anna insisted it was a lion. They agreed on “snow lion cat.”",
+        byName: "Anna", byBookId: "sample-anna", createdAt: "2026-11-03T16:00:00Z",
+      },
+      {
+        id: "sample-family-day-two", kind: "highlights", activity: "day-highlights",
+        title: "Road trip, day two",
+        text: "Best: the motel pool. Hardest: the car after lunch. Funniest: Dad singing the wrong words on purpose.",
+        byName: "Alex", byBookId: "sample", createdAt: "2026-11-15T21:00:00Z",
+      },
+      {
+        id: "sample-family-tooth", kind: "page", title: "My tooth came out!!",
+        text: "It was in an apple. I put it under my pillow and the tooth fairy wrote back in tiny letters.",
+        byName: "Leo", byBookId: "sample-leo", createdAt: "2026-11-01T18:00:00Z",
+      },
+      {
+        id: "sample-family-june", kind: "passage",
+        text: "Your grandfather sang to the tomatoes. Every single morning.",
+        caption: "June, on the porch", byName: "June", byBookId: "sample-june", createdAt: "2026-09-21T15:00:00Z",
       },
     ],
     journal: [{
@@ -148,6 +189,7 @@ export function isBook(value: unknown): value is Book {
     (b.connections === undefined || isConnections(b.connections)) &&
     (b.living === undefined || isLiving(b.living)) &&
     (b.tools === undefined || isTools(b.tools)) &&
+    (b.familyPages === undefined || isFamilyPages(b.familyPages)) &&
     (b.rhythm === undefined ||
       (!!b.rhythm &&
         [1, 3, 5].includes(b.rhythm.target) &&

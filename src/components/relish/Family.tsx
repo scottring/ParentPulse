@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import { Search, Users, X } from "lucide-react";
 import type { Book } from "@/lib/relish/model";
 import {
   gameText,
@@ -9,10 +10,20 @@ import {
 } from "@/lib/relish/living";
 import type { PhotoAccess } from "@/lib/relish/photos";
 import type { Tone } from "@/lib/relish/catalog";
-import Illustration from "./Illustration";
+import type { FamilyPage, FamilyPageKind } from "@/lib/relish/family-pages";
+import { Dialog } from "./BookForms";
 import { KidCoverMark } from "./KidHome";
 import { PhotoGallery } from "./Photos";
-import { personTones, type FamilyPerson } from "./Home";
+import { personTones } from "./Home";
+import Illustration from "./Illustration";
+import Sprig from "./Sprig";
+import {
+  exerciseIllustration,
+  gameIllustration,
+  type IllustrationName,
+} from "./illustrations";
+import type { FamilyAccess } from "./useFamilyBook";
+import "./family.css";
 
 const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
@@ -75,8 +86,9 @@ export function passedBetween(book: Book) {
   const c = book.connections;
   return [
     ...(c?.received || []).map((p) => ({
-      id: `in:${p.id}`,
-      who: `From ${p.fromName}`,
+      id: p.id,
+      who: `From ${p.fromName}’s book`,
+      byName: p.fromName,
       tone: "sage" as Tone,
       title: p.title,
       text: p.text,
@@ -85,8 +97,9 @@ export function passedBetween(book: Book) {
     ...(c?.outgoing || [])
       .filter((o) => o.sent)
       .map((o) => ({
-        id: `out:${o.id}`,
+        id: o.id,
         who: "You sent",
+        byName: book.owner,
         tone: "sun" as Tone,
         title: o.title,
         text: o.text,
@@ -95,59 +108,238 @@ export function passedBetween(book: Book) {
   ].toSorted((a, b) => b.date.localeCompare(a.date));
 }
 
-export default function Family({
+/** Someone in the family, as Family members lists them. */
+export type FamilyMember = {
+  id: string;
+  name: string;
+  /** Opens their own book in this account. */
+  onOpen?: () => void;
+  /** An older copy that still needs its original passphrase. */
+  locked?: boolean;
+};
+
+/** One page of Our family book as it is shown, from wherever it is kept. */
+type Shown = {
+  id: string;
+  kind: FamilyPageKind;
+  label: string;
+  title: string;
+  text: string;
+  caption?: string;
+  byName: string;
+  date: string;
+  note: string;
+  art?: IllustrationName;
+  mine: boolean;
+  /** This writer added it to the family book, so they can take it out. */
+  removable: boolean;
+  lines?: { label: string; text: string }[];
+  photos?: AlbumItem["photos"];
+};
+const kindLabel: Record<FamilyPageKind, string> = {
+  passage: "Passage",
+  page: "Page",
+  game: "Game",
+  highlights: "Day’s highlights",
+};
+const artFor = (activity?: string): IllustrationName | undefined =>
+  activity ? gameIllustration[activity] ?? exerciseIllustration[activity] : undefined;
+const same = (a: string, b: string) =>
+  a.trim().toLocaleLowerCase() === b.trim().toLocaleLowerCase();
+
+export function familyPagesOf(
+  book: Book,
+  pages: FamilyPage[],
+  me: { name: string; bookId: string },
+): Shown[] {
+  const l = livingOf(book);
+  const shown: Shown[] = [
+    ...pages.map((p) => {
+      const mine = p.byBookId === me.bookId;
+      return {
+        id: p.id,
+        kind: p.kind,
+        label: kindLabel[p.kind],
+        title: p.title || "",
+        text: p.text,
+        caption: p.caption,
+        byName: p.byName,
+        date: p.createdAt,
+        note: mine
+          ? "You added this to Our family book."
+          : `${p.byName} added this to Our family book.`,
+        art: artFor(p.activity),
+        mine,
+        removable: mine,
+      };
+    }),
+    ...l.sharedPages.map((p) => {
+      const round = (l.plays || []).find((r) => r.pageId === p.id);
+      return {
+        id: `game:${p.id}`,
+        kind: "game" as const,
+        label: gameLabel[p.kind].label,
+        title: p.title,
+        text: p.text,
+        byName: p.players.map((x) => x.name).join(" + "),
+        date: p.createdAt,
+        note: `${p.players.map((x) => x.name).join(" + ")} · everyone approved these words`,
+        art: gameIllustration[p.kind],
+        mine: true,
+        removable: false,
+        lines: round ? reflectionSections(round) : [],
+      };
+    }),
+    ...(book.album || []).map((p) => ({
+      id: `album:${p.id}`,
+      kind: "passage" as const,
+      label: p.photos?.length ? "Photo" : "Passage",
+      title: p.title,
+      text: p.text,
+      caption: `${p.fromName} · ${shortDate(p.sourceDate)}`,
+      byName: p.fromName,
+      date: p.createdAt,
+      note: `Chosen by ${p.fromName} from ${shortDate(p.sourceDate)}. The original page stays private.`,
+      mine: same(p.fromName, me.name),
+      removable: false,
+      photos: p.photos,
+    })),
+    ...passedBetween(book).map((p) => ({
+      id: p.id,
+      kind: "page" as const,
+      label: p.who,
+      title: p.title,
+      text: p.text,
+      byName: p.byName,
+      date: p.date,
+      note:
+        p.who === "You sent"
+          ? "You sent this to your partner’s book."
+          : `${p.who}. It’s kept in your book too.`,
+      mine: p.who === "You sent",
+      removable: false,
+    })),
+  ];
+  const seen = new Set<string>();
+  return shown
+    .filter((p) => !seen.has(p.id) && !!seen.add(p.id))
+    .toSorted((a, b) => b.date.localeCompare(a.date));
+}
+
+const mentions = (p: Shown, name: string) => {
+  const word = new RegExp(`\\b${name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+  return (
+    same(p.byName, name) ||
+    p.byName.split(" + ").some((n) => same(n, name)) ||
+    word.test(`${p.caption || ""}\n${p.title}\n${p.text}`)
+  );
+};
+
+export default function OurFamily({
   book,
-  people,
+  access,
+  me,
+  members,
   busy,
   headingRef,
   photos,
-  canShare,
+  onOpenMine,
   onInvite,
   onAddChild,
-  onShare,
   onPlay,
   onResumeGame,
   onCloseFinished,
+  onRemoved,
 }: {
   book: Book;
-  people: FamilyPerson[];
+  access: FamilyAccess;
+  /** The writer of this book, and the id their family pages carry. */
+  me: { name: string; bookId: string };
+  members: FamilyMember[];
   busy: boolean;
   headingRef: RefObject<HTMLHeadingElement | null>;
   photos?: PhotoAccess;
-  /** Adult books can pass pages to a partner's book. */
-  canShare: boolean;
+  /** Back to this book's own pages (Book · Just me). */
+  onOpenMine: () => void;
   onInvite?: () => void;
   onAddChild?: () => void;
-  onShare: () => void;
   onPlay: () => void;
   onResumeGame: () => void;
   onCloseFinished: (again: boolean) => void;
+  onRemoved?: (error?: string) => void;
 }) {
-  const [inviting, setInviting] = useState(false);
+  const [who, setWho] = useState("all");
+  const [query, setQuery] = useState("");
   const [reading, setReading] = useState<string | null>(null);
+  const [membersOpen, setMembersOpen] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const refresh = access.refresh;
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
   const l = livingOf(book);
   const active = l.game && l.game.stage !== "finished" ? l.game : undefined;
   const finished = l.game?.stage === "finished" ? l.game : undefined;
-  const album = albumOf(book);
-  const passed = passedBetween(book);
-  const open = album.find((a) => a.id === reading);
+  const all = familyPagesOf(book, access.pages, me);
+  const chips = [
+    { id: "all", label: "Everyone" },
+    ...members
+      .filter((m) => !same(m.name, me.name))
+      .map((m) => ({ id: `name:${m.name}`, label: m.name })),
+    { id: "me", label: "Me" },
+  ];
+  const q = query.trim().toLocaleLowerCase();
+  const shown = all.filter(
+    (p) =>
+      (who === "all" ||
+        (who === "me" ? p.mine || same(p.byName, me.name) : mentions(p, who.slice(5)))) &&
+      (!q || `${p.title}\n${p.text}\n${p.caption || ""}`.toLocaleLowerCase().includes(q)),
+  );
+  const featured = shown.find((p) => p.art);
+  const quote = shown.find((p) => p.kind === "passage" && p !== featured);
+  const ordered = [
+    ...(featured ? [featured] : []),
+    ...(quote ? [quote] : []),
+    ...shown.filter((p) => p !== featured && p !== quote),
+  ];
+  const first = all.at(-1);
+  const open = all.find((p) => p.id === reading);
+  const count = all.length;
+  async function takeOut(page: Shown) {
+    setRemoving(true);
+    try {
+      await access.remove(page.id);
+      setReading(null);
+      onRemoved?.();
+    } catch (e) {
+      onRemoved?.(
+        e instanceof Error ? e.message : "This page couldn’t be taken out. Try again.",
+      );
+    } finally {
+      setRemoving(false);
+    }
+  }
   return (
-    <main className="rp-place rp-family" aria-labelledby="rp-family-title">
-      <section className="rp-stack-tight">
-        <div className="rp-place-head">
-          <div>
-            <h1 id="rp-family-title" ref={headingRef} tabIndex={-1}>
-              Your family
-            </h1>
-            <p className="rp-lede">
-              {book.profile?.kind === "child"
-                ? "What your family has made together."
-                : "Everyone’s book, and what you’ve chosen to share. Nothing private leaves a book unless you send it."}
-            </p>
-          </div>
-          <Illustration name="family" size={120} eager className="rp-place-art" />
+    <main className="rp-place rp-family rp-fb" aria-labelledby="rp-family-title">
+      <header className="rp-fb-cover">
+        <div className="rp-fb-cover-words">
+          <h1 id="rp-family-title" ref={headingRef} tabIndex={-1}>
+            Our family book
+          </h1>
+          <p>
+            {count ? `${count} ${count === 1 ? "page" : "pages"}` : "No pages yet"}
+            {first && (
+              <>
+                {" "}
+                <span aria-hidden="true">·</span> Since{" "}
+                {new Date(first.date).toLocaleDateString(undefined, { month: "long" })}
+              </>
+            )}
+          </p>
         </div>
-      </section>
+        <Sprig className="rp-fb-cover-sprig" tone="gold" />
+      </header>
 
       {finished && (
         <section className="rp-finished" aria-label="Game finished">
@@ -158,7 +350,7 @@ export default function Family({
               : !gameText(finished)
                 ? "Everyone passed. No shared page was saved."
                 : finished.contentVersion === 2
-                  ? "You finished a round together. Its answers are in Your book; no shared page was kept."
+                  ? "You finished a round together. Its answers are in your book; no shared page was kept."
                   : "You finished a round together. No shared page was saved."}
           </p>
           <div className="rp-finished-actions">
@@ -172,165 +364,163 @@ export default function Family({
         </section>
       )}
 
-      <section aria-label="People" className="rp-people">
-        {people.map((p, i) => (
-          <button
-            key={p.id}
-            className={`rp-person rp-tone-${personTones[i % personTones.length]}`}
-            disabled={busy}
-            onClick={p.onOpen}
-            aria-label={
-              !p.hasBook
-                ? undefined
-                : p.locked
-                  ? `Open ${p.name}’s book, an earlier copy that needs its original passphrase`
-                  : `Open ${p.name}’s book`
-            }
-          >
-            {p.hasBook ? (
-              <span className="rp-person-dot rp-person-emblem">
-                <KidCoverMark name={p.name} />
-              </span>
-            ) : (
-              <span className="rp-person-dot" aria-hidden="true">
-                {p.name.trim().charAt(0).toUpperCase()}
-              </span>
-            )}
-            <span className="rp-person-words">
-              <span className="rp-person-name">{p.name}</span>
-              <span>
-                {p.locked
-                  ? "Earlier copy · needs its original passphrase"
-                  : p.note || "Book in your account"}
-              </span>
-              <span className="rp-person-open">
-                {p.hasBook ? `Open ${p.name}’s book →` : `See my pages about ${p.name} →`}
-              </span>
-            </span>
-          </button>
-        ))}
-        {onInvite && (
-          <button
-            className="rp-person rp-person-invite"
-            disabled={busy}
-            onClick={() => setInviting(true)}
-          >
-            <span className="rp-person-dot rp-tone-sun" aria-hidden="true">
-              +
-            </span>
-            <span className="rp-person-words">
-              <span className="rp-person-name">Invite a partner</span>
-              <span>They get their own private book. You each choose what to share.</span>
-            </span>
-          </button>
-        )}
-        {onAddChild && (
-          <button className="rp-person rp-person-add" disabled={busy} onClick={onAddChild}>
-            <span className="rp-person-add-title">+ Add a child</span>
-            <span className="rp-quiet">Their book lives in your account. No login needed.</span>
-          </button>
-        )}
-        {!people.length && !onInvite && !onAddChild && (
-          <p className="rp-quiet">
-            {book.profile?.kind === "child"
-              ? "A grown-up can switch books from the menu."
-              : "Sign in from the menu to keep your family’s books together."}
-          </p>
-        )}
-      </section>
+      <div className="rp-fb-bar">
+        <div className="rp-fb-chips" role="group" aria-label="Show pages from">
+          {chips.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              aria-pressed={who === c.id}
+              onClick={() => setWho(c.id)}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+        <span className="rp-fb-divider" aria-hidden="true" />
+        <div className="rp-fb-tools">
+          <MembersLink
+            open={membersOpen}
+            onToggle={setMembersOpen}
+            me={me}
+            members={members}
+            busy={busy}
+            onOpenMine={onOpenMine}
+            onSee={(name) => {
+              setWho(`name:${name}`);
+              setMembersOpen(false);
+            }}
+            onAddChild={onAddChild}
+            onInvite={onInvite ? () => setInviting(true) : undefined}
+          />
+          <label className="rp-fb-search">
+            <Search size={17} aria-hidden="true" />
+            <input
+              type="search"
+              aria-label="Find a page"
+              placeholder="Find a page"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </label>
+        </div>
+      </div>
 
-      <div className="rp-pair">
-        {canShare && (
-          <section className="rp-panel rp-passed" aria-labelledby="rp-passed-title">
-            <div className="rp-panel-head">
-              <h2 id="rp-passed-title">Passed between you</h2>
-              <button className="rp-link" disabled={busy} onClick={onShare}>
-                Choose a page to share
-              </button>
-            </div>
-            {passed.length ? (
-              <div className="rp-passed-list">
-                {passed.slice(0, 8).map((p) => (
-                  <div key={p.id} className="rp-passed-item">
-                    <span className={`rp-pill rp-tone-${p.tone}`}>{p.who}</span>
-                    <span className="rp-stack-tight">
-                      <span className="rp-going-title">{p.title}</span>
-                      <span className="rp-row-date">
-                        {p.text.split("\n")[0].slice(0, 120)} · {shortDate(p.date)}
-                      </span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
+      {active && (
+        <button className="rp-fb-resume" disabled={busy} onClick={onResumeGame}>
+          <span className="rp-fb-kind">Unfinished game</span>
+          <span className="rp-fb-resume-title">Resume {gameNames[active.kind]}</span>
+          <span aria-hidden="true">→</span>
+        </button>
+      )}
+
+      {access.error && (
+        <p className="rp-fb-error" role="alert">
+          {access.error}{" "}
+          <button className="rp-link" onClick={access.refresh}>
+            Try again
+          </button>
+        </p>
+      )}
+
+      {ordered.length > 0 ? (
+        <ul className="rp-fb-grid" aria-label="Pages in Our family book">
+          {ordered.map((p) => (
+            <li
+              key={p.id}
+              className={
+                p === featured ? "rp-fb-featured" : p === quote ? "rp-fb-quote-cell" : undefined
+              }
+            >
+              <PageCard
+                page={p}
+                featured={p === featured}
+                quote={p.kind === "passage"}
+                onOpen={() => setReading(p.id)}
+              />
+            </li>
+          ))}
+        </ul>
+      ) : all.length > 0 ? (
+        <p className="rp-quiet rp-fb-none">
+          No pages match.{" "}
+          <button
+            className="rp-link"
+            onClick={() => {
+              setWho("all");
+              setQuery("");
+            }}
+          >
+            Show every page
+          </button>
+        </p>
+      ) : access.loading ? (
+        <p className="rp-quiet rp-fb-none" role="status">
+          Opening Our family book…
+        </p>
+      ) : (
+        <section className="rp-fb-empty" aria-label="No pages yet">
+          <Illustration name="family" size={120} className="rp-fb-empty-art" />
+          <div>
+            <h2>The first page is waiting</h2>
+            <p>
+              Pages get here two ways: share a passage from Journal (choose Our
+              family at the top, or Share a passage), or keep a page from a
+              game you play together.
+            </p>
+            {access.kind === "local" && (
               <p className="rp-quiet">
-                Shows up once a partner joins. Until then, this is where their
-                shared pages will land.
+                This book isn’t in an account, so family pages are kept inside
+                it, on this device. Sign in to share one family book across
+                your family’s books.
               </p>
             )}
-          </section>
-        )}
-
-        <section className="rp-panel rp-album" aria-labelledby="rp-album-title">
-          <div className="rp-panel-head">
-            <h2 id="rp-album-title">Family album</h2>
-            <button className="rp-link" disabled={busy} onClick={onPlay}>
-              Play a game
-            </button>
           </div>
-          {(active || album.length > 0) && (
-            <div className="rp-album-grid">
-              {active && (
-                <button
-                  className="rp-album-tile rp-album-resume"
-                  disabled={busy}
-                  onClick={onResumeGame}
-                >
-                  <span className="rp-album-label">Unfinished game</span>
-                  <span className="rp-album-title">
-                    Resume {gameNames[active.kind]}
-                  </span>
-                </button>
-              )}
-              {album.map((a) => (
-                <button
-                  key={a.id}
-                  className={`rp-album-tile rp-tone-${a.tone}`}
-                  aria-expanded={reading === a.id}
-                  onClick={() => setReading(reading === a.id ? null : a.id)}
-                >
-                  <span className="rp-album-label">{a.label}</span>
-                  <span className="rp-album-title">{a.title}</span>
-                </button>
-              ))}
-            </div>
-          )}
-          {open && (
-            <article className="rp-album-open">
-              <p className="rp-eyebrow">{shortDate(open.date)} · {open.label}</p>
-              <h3>{open.title}</h3>
-              {open.text && <blockquote>{open.text}</blockquote>}
-              {!!open.lines?.length && (
-                <div className="rp-album-lines">
-                  {open.lines.map((line, i) => (
-                    <p key={i}>
-                      <strong>{line.label}:</strong> {line.text}
-                    </p>
-                  ))}
-                </div>
-              )}
-              {open.photos && <PhotoGallery photos={open.photos} access={photos} />}
-              <p className="rp-quiet">{open.note}</p>
-            </article>
-          )}
-          {!active && !album.length && (
-            <p className="rp-quiet">
-              No shared pages yet. A game can be enough on its own; keeping a
-              page is always optional.
-            </p>
-          )}
         </section>
-      </div>
+      )}
+
+      <footer className="rp-fb-foot">
+        <p className="rp-quiet">
+          Everyone in the family sees the same pages. Whoever added a page can
+          take it out.
+        </p>
+        <button className="rp-link" disabled={busy} onClick={onPlay}>
+          Play a game
+        </button>
+      </footer>
+
+      {open && (
+        <Dialog title={open.title || open.label} onClose={() => !removing && setReading(null)}>
+          <article className="rp-album-open rp-fb-reader">
+            <p className="rp-eyebrow">
+              {shortDate(open.date)} · {open.label}
+            </p>
+            {open.title && <h3>{open.title}</h3>}
+            {open.text && <blockquote>{open.text}</blockquote>}
+            {open.caption && <p className="rp-fb-caption">{open.caption}</p>}
+            {!!open.lines?.length && (
+              <div className="rp-album-lines">
+                {open.lines.map((line, i) => (
+                  <p key={i}>
+                    <strong>{line.label}:</strong> {line.text}
+                  </p>
+                ))}
+              </div>
+            )}
+            {open.photos && <PhotoGallery photos={open.photos} access={photos} />}
+            <p className="rp-quiet">{open.note}</p>
+            {open.removable && (
+              <button
+                className="rp-link rp-fb-takeout"
+                disabled={removing}
+                onClick={() => void takeOut(open)}
+              >
+                {removing ? "Taking it out…" : "Take out of the family book"}
+              </button>
+            )}
+          </article>
+        </Dialog>
+      )}
 
       {inviting && onInvite && (
         <InviteSheet
@@ -345,7 +535,226 @@ export default function Family({
   );
 }
 
-function InviteSheet({
+function PageCard({
+  page,
+  featured,
+  quote,
+  onOpen,
+}: {
+  page: Shown;
+  featured: boolean;
+  quote: boolean;
+  onOpen: () => void;
+}) {
+  if (quote && !featured)
+    return (
+      <button className="rp-fb-card rp-fb-quote" data-page-id={page.id} onClick={onOpen}>
+        <span className="ui-sr-only">{page.label}: </span>
+        <span className="rp-fb-quote-text">“{page.text.trim()}”</span>
+        <span className="rp-fb-caption">
+          {page.caption || page.byName} <span aria-hidden="true">·</span> {shortDate(page.date)}
+        </span>
+        <Sprig className="rp-fb-quote-sprig" berries />
+      </button>
+    );
+  return (
+    <button
+      className={`rp-fb-card ${featured ? "rp-fb-card-featured" : ""}`}
+      data-page-id={page.id}
+      onClick={onOpen}
+    >
+      <span className="rp-fb-date">{shortDate(page.date)}</span>
+      <span className="rp-fb-title">{page.title || page.label}</span>
+      <span className="rp-fb-text">{page.text}</span>
+      {featured && page.art && (
+        <span className="rp-fb-art">
+          <Illustration name={page.art} size="100%" />
+        </span>
+      )}
+    </button>
+  );
+}
+
+function MembersLink({
+  open,
+  onToggle,
+  me,
+  members,
+  busy,
+  onOpenMine,
+  onSee,
+  onAddChild,
+  onInvite,
+}: {
+  open: boolean;
+  onToggle: (open: boolean) => void;
+  me: { name: string };
+  members: FamilyMember[];
+  busy: boolean;
+  onOpenMine: () => void;
+  onSee: (name: string) => void;
+  onAddChild?: () => void;
+  onInvite?: () => void;
+}) {
+  const id = useId();
+  const wrap = useRef<HTMLDivElement>(null);
+  const link = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    panel.current?.focus();
+    const close = () => {
+      onToggle(false);
+      link.current?.focus();
+    };
+    const outside = (e: PointerEvent) => {
+      if (!wrap.current?.contains(e.target as Node)) onToggle(false);
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", key);
+    };
+  }, [open, onToggle]);
+  const others = members.filter((m) => !same(m.name, me.name));
+  const row = (
+    key: string,
+    name: string,
+    index: number,
+    action: { label: string; onClick: () => void; aria?: string } | null,
+    note?: string,
+  ) => (
+    <li key={key} className="rp-fb-member">
+      <span className={`rp-fb-emblem rp-tone-${personTones[index % personTones.length]}`}>
+        <KidCoverMark name={name} />
+      </span>
+      <span className="rp-fb-member-words">
+        <span className="rp-fb-member-name">{name}</span>
+        {action && (
+          <>
+            <span aria-hidden="true"> · </span>
+            <button
+              type="button"
+              className="rp-fb-member-link"
+              disabled={busy}
+              aria-label={action.aria}
+              onClick={action.onClick}
+            >
+              {action.label}
+            </button>
+          </>
+        )}
+        {note && <span className="rp-fb-member-note">{note}</span>}
+      </span>
+    </li>
+  );
+  return (
+    <div className="rp-fb-members-wrap" ref={wrap}>
+      <button
+        ref={link}
+        type="button"
+        className="rp-fb-members-link"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => onToggle(!open)}
+      >
+        <Users size={20} aria-hidden="true" /> <span>Family members</span>
+      </button>
+      {open && (
+        <>
+          <div className="rp-fb-members-backdrop" aria-hidden="true" />
+          <div
+            ref={panel}
+            id={id}
+            className="rp-fb-members"
+            role="dialog"
+            aria-label="Family members"
+            tabIndex={-1}
+          >
+            <span className="rp-fb-grab" aria-hidden="true" />
+            <div className="rp-fb-members-head">
+              <h2>Family members</h2>
+              <button
+                type="button"
+                className="rp-fb-x"
+                aria-label="Close family members"
+                onClick={() => {
+                  onToggle(false);
+                  link.current?.focus();
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <ul>
+              {row("me", `${me.name} (you)`, 0, {
+                label: "Open my book",
+                onClick: () => {
+                  onToggle(false);
+                  onOpenMine();
+                },
+              })}
+              {others.map((m, i) =>
+                row(
+                  m.id,
+                  m.name,
+                  i + 1,
+                  m.onOpen
+                    ? {
+                        label: `Open ${m.name}’s book`,
+                        aria: m.locked
+                          ? `Open ${m.name}’s book, an earlier copy that needs its original passphrase`
+                          : `Open ${m.name}’s book`,
+                        onClick: () => {
+                          onToggle(false);
+                          m.onOpen!();
+                        },
+                      }
+                    : { label: "See shared pages", onClick: () => onSee(m.name) },
+                  m.locked ? "Earlier copy · needs its original passphrase" : undefined,
+                ),
+              )}
+            </ul>
+            {(onAddChild || onInvite) && (
+              <div className="rp-fb-members-add">
+                {onAddChild && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      onToggle(false);
+                      onAddChild();
+                    }}
+                  >
+                    <span aria-hidden="true">+</span> Add a child
+                  </button>
+                )}
+                {onInvite && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      onToggle(false);
+                      onInvite();
+                    }}
+                  >
+                    <span aria-hidden="true">+</span> Invite a partner
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export function InviteSheet({
   onClose,
   onStart,
 }: {

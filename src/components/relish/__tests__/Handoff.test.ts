@@ -142,6 +142,18 @@ vi.mock("../useBookSync", () => ({
 import RelishApp from "../RelishApp";
 
 type FakeSync = { open: ReturnType<typeof vi.fn> };
+/** Book, then Our family in the switch at the top. */
+function ourFamily() {
+  fireEvent.click(screen.getByRole("button", { name: "Book" }));
+  fireEvent.click(
+    within(screen.getByRole("group", { name: "Whose pages" })).getByRole("button", { name: "Our family" }),
+  );
+}
+/** Opens Family members and returns it. */
+function members() {
+  fireEvent.click(screen.getByRole("button", { name: "Family members" }));
+  return screen.getByRole("dialog", { name: "Family members" });
+}
 beforeEach(() => {
   localStorage.setItem("relish:home-book:parent-one", "r-scott");
   world.edition = "ed-scott";
@@ -154,19 +166,21 @@ afterEach(() => {
   localStorage.clear();
 });
 
-it("hands a shared device from Scott's book to Kaleb's and back to Family, then on to Ella's", async () => {
+it("hands a shared device from Scott's book to Kaleb's and back to Our family, then on to Ella's", async () => {
   render(createElement(RelishApp));
   const sync = world.sync as FakeSync;
 
-  // Scott's book: Family lists the children's books first, then the older
-  // copy that needs its passphrase. Kaleb's opens without a password.
-  fireEvent.click(screen.getByRole("button", { name: "Family" }));
-  let shelf = screen.getByRole("region", { name: "People" });
+  // Scott's book: Book · Our family › Family members lists the children's
+  // books first, then the older copy that needs its passphrase. Kaleb's
+  // opens without a password.
+  ourFamily();
+  let shelf = members();
   expect(
     within(shelf)
       .getAllByRole("button", { name: /^Open / })
-      .map((b) => b.getAttribute("aria-label")),
+      .map((b) => b.getAttribute("aria-label") ?? b.textContent),
   ).toEqual([
+    "Open my book",
     "Open Kaleb’s book",
     "Open Ella’s book",
     "Open Iris’s book, an earlier copy that needs its original passphrase",
@@ -176,11 +190,16 @@ it("hands a shared device from Scott's book to Kaleb's and back to Family, then 
   expect(sync.open).toHaveBeenLastCalledWith(heads.kaleb);
   expect(screen.queryByLabelText(/password|passphrase/i)).toBeNull();
 
-  // Kaleb's book: no way to other books from Family, and his lock is set.
+  // Kaleb's book: Our family works, but leads to no other books, and his
+  // lock is set.
   await screen.findByRole("heading", { name: /Kaleb/ });
   expect(world.gate).toEqual({ accountUid: "parent-one" });
-  fireEvent.click(screen.getByRole("button", { name: "Family" }));
+  ourFamily();
+  expect(screen.getByRole("heading", { name: "Our family book", level: 1 })).toBeTruthy();
+  members();
   expect(screen.queryByRole("button", { name: /^Open .*’s book/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Add a child|Invite a partner/ })).toBeNull();
+  fireEvent.keyDown(document, { key: "Escape" });
 
   // Switch book asks for the parent password; a wrong one is rejected.
   fireEvent.click(screen.getByRole("button", { name: /^Menu/ }));
@@ -194,17 +213,23 @@ it("hands a shared device from Scott's book to Kaleb's and back to Family, then 
   fireEvent.change(password, { target: { value: "parent password" } });
   fireEvent.click(screen.getByRole("button", { name: "Open my book" }));
 
-  // Scott's book opens straight onto Family: no list of books in between.
-  await screen.findByRole("heading", { name: "Your family", level: 1 });
+  // Scott's book opens straight onto Book · Our family: no list of books in
+  // between.
+  await screen.findByRole("heading", { name: "Our family book", level: 1 });
   expect(sync.open).toHaveBeenLastCalledWith(heads.scott);
   expect(
-    screen.getByRole("button", { name: "Family" }).getAttribute("aria-current"),
+    screen.getByRole("button", { name: "Book" }).getAttribute("aria-current"),
   ).toBe("page");
+  expect(
+    within(screen.getByRole("group", { name: "Whose pages" }))
+      .getByRole("button", { name: "Our family" })
+      .getAttribute("aria-pressed"),
+  ).toBe("true");
   expect(world.gate).toBeNull();
   expect(screen.queryByRole("heading", { name: "Parent sign-in" })).toBeNull();
 
   // And on to Ella's book, again without a password.
-  shelf = screen.getByRole("region", { name: "People" });
+  shelf = members();
   fireEvent.click(within(shelf).getByRole("button", { name: "Open Ella’s book" }));
   expect(sync.open).toHaveBeenLastCalledWith(heads.ella);
   await screen.findByRole("heading", { name: /Ella/ });

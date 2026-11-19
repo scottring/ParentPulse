@@ -52,6 +52,7 @@ export default function DoSomething({
   onResumeGame,
   onStartGame,
   initialGame,
+  together = false,
 }: {
   book: Book;
   filter: DoFilter;
@@ -67,6 +68,8 @@ export default function DoSomething({
   onDraft: (draft: JournalEntry) => void;
   onResumeGame: () => void;
   onStartGame: (kind: Game["kind"], players: Player[]) => void;
+  /** Our family: things you do together come first. */
+  together?: boolean;
 }) {
   const audience = audienceOf(book);
   const [sheet, setSheet] = useState<GameItem | null>(
@@ -82,7 +85,14 @@ export default function DoSomething({
   // of these stay out of the grid; a game or a journal page can start fresh.
   const going = underWay(book);
   const all = doItems(audience).filter((item) => !onlyReopens(item, going));
-  const shown = all.filter((item) => matchesFilter(item, filter));
+  // Done together: games, kids' activities and the road-trip ones.
+  const isTogether = (item: DoItem) =>
+    item.type === "Game" || item.tags.includes("kids") || item.tags.includes("trip");
+  const shown = all
+    .filter((item) => matchesFilter(item, filter))
+    .toSorted((a, b) =>
+      together ? Number(isTogether(b)) - Number(isTogether(a)) : 0,
+    );
   function resume(g: UnderWay) {
     if (g.kind === "game") onResumeGame();
     else if (g.kind === "visit") onOpen({ kind: "reflect" });
@@ -145,7 +155,9 @@ export default function DoSomething({
         </div>
         <p className="rp-quiet rp-do-count" aria-live="polite">
           {filter === "all"
-            ? ""
+            ? together
+              ? "Things to do together come first."
+              : ""
             : `${shown.length} ${shown.length === 1 ? "activity fits" : "activities fit"}.`}
         </p>
         {!shown.length && (

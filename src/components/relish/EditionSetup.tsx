@@ -24,7 +24,7 @@ export default function EditionSetup({
   onCancel: () => void;
 }) {
   const [kind, setKind] = useState<"adult" | "child" | "">(
-    book.profile?.kind || "",
+    book.profile?.kind === "family" ? "" : book.profile?.kind || "",
   );
   const [band, setBand] = useState<Audience | "">(
     book.profile?.kind === "child" ? book.profile.ageBand : "",

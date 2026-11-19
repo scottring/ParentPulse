@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { webcrypto } from "node:crypto";
 import { emptyBook, sampleBook, type Book } from "@/lib/relish/model";
 import { writeJournalPage, newJournalDraft } from "@/lib/relish/journal";
@@ -17,6 +17,13 @@ afterEach(cleanup);
 
 import { openBook } from "./bookHarness";
 export { openBook };
+/** Book, then Our family in the switch at the top. */
+const ourFamily = () => {
+  fireEvent.click(screen.getByRole("button", { name: "Book" }));
+  fireEvent.click(
+    within(screen.getByRole("group", { name: "Whose pages" })).getByRole("button", { name: "Our family" }),
+  );
+};
 
 it("opens on Home with one suggestion, another on request, and time tiles", () => {
   openBook();
@@ -35,7 +42,7 @@ it("opens on Home with one suggestion, another on request, and time tiles", () =
   fireEvent.click(screen.getByRole("button", { name: /With the kids/ }));
   expect(
     screen
-      .getByRole("button", { name: "Do something" })
+      .getByRole("button", { name: "Activities" })
       .getAttribute("aria-current"),
   ).toBe("page");
 });
@@ -51,7 +58,7 @@ it("lists the latest kept pages and opens one in the reader", () => {
   fireEvent.click(screen.getByRole("button", { name: /Pancakes at dawn/ }));
   expect(screen.getByText("We flipped them high.")).toBeTruthy();
   expect(
-    screen.getByRole("button", { name: "Your book" }).getAttribute("aria-current"),
+    screen.getByRole("button", { name: "Book" }).getAttribute("aria-current"),
   ).toBe("page");
 });
 
@@ -70,7 +77,7 @@ it("falls back to family noted in the book when there are no account books", () 
 
 it("Your book: reviews one suggestion at a time and filters by person", async () => {
   const app = openBook(sampleBook(), { mode: "sample" });
-  fireEvent.click(screen.getByRole("button", { name: "Your book" }));
+  fireEvent.click(screen.getByRole("button", { name: "Book" }));
   expect(screen.getByRole("heading", { name: "Your book", level: 1 })).toBeTruthy();
   expect(screen.getByText("A little room to talk")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Yes, keep it" }));
@@ -103,7 +110,7 @@ it("Your book: unfinished drafts are under Still going", () => {
     "draft",
   );
   openBook(book);
-  fireEvent.click(screen.getByRole("button", { name: "Your book" }));
+  fireEvent.click(screen.getByRole("button", { name: "Book" }));
   fireEvent.click(screen.getByRole("button", { name: /Keep writing: Half a thought/ }));
   expect(
     (screen.getByRole("textbox", { name: "Your journal entry" }) as HTMLTextAreaElement)
@@ -111,7 +118,7 @@ it("Your book: unfinished drafts are under Still going", () => {
   ).toBe("and then");
 });
 
-it("Family: people, shared pages passed between you, and the album without locking", () => {
+it("Our family: members, pages passed between you, and kept game pages, without locking", () => {
   const base: Book = { ...emptyBook("Robin"), profile: { kind: "adult" } };
   const book: Book = {
     ...base,
@@ -150,39 +157,54 @@ it("Family: people, shared pages passed between you, and the album without locki
   const app = openBook(book, {
     family: [{ id: "b1", name: "Ella", onOpen: vi.fn(), note: "Book in your account" }],
   });
-  fireEvent.click(screen.getByRole("button", { name: "Family" }));
-  expect(screen.getByRole("heading", { name: "Your family", level: 1 })).toBeTruthy();
-  // Existing people first, as cards; invitations come after them.
-  const people = screen.getByRole("region", { name: "People" });
-  const ella = screen.getByRole("button", { name: "Open Ella’s book" });
-  expect(people.contains(ella)).toBe(true);
+  ourFamily();
+  expect(screen.getByRole("heading", { name: "Our family book", level: 1 })).toBeTruthy();
+  // Family members: your own book first, then account books, then invitations.
+  fireEvent.click(screen.getByRole("button", { name: "Family members" }));
+  const members = screen.getByRole("dialog", { name: "Family members" });
+  const mine = within(members).getByRole("button", { name: "Open my book" });
+  const ella = within(members).getByRole("button", { name: "Open Ella’s book" });
   expect(
-    ella.querySelector("[data-illustration]")?.getAttribute("data-illustration"),
+    mine.compareDocumentPosition(ella) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(
+    ella.closest("li")?.querySelector("[data-illustration]")?.getAttribute("data-illustration"),
   ).toBe("emblem-star");
-  const invite = screen.getByRole("button", { name: /^Invite a partner/ });
+  const invite = within(members).getByRole("button", { name: /Invite a partner/ });
   expect(
     ella.compareDocumentPosition(invite) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
+  // Escape closes it and puts focus back on the link.
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(screen.queryByRole("dialog", { name: "Family members" })).toBeNull();
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Family members" }));
+  // Pages passed between partners and kept game pages are both here.
   expect(screen.getByText("A note from Sam")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: /Story Our story/ }));
-  expect(screen.getByText("A fox in yellow boots.")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Our story/ }));
+  expect(screen.getAllByText("A fox in yellow boots.").length).toBeGreaterThan(0);
+  expect(screen.getByRole("dialog", { name: "Our story" })).toBeTruthy();
+  // A game page wasn't added by this writer to the family book: no take-out.
+  expect(screen.queryByRole("button", { name: "Take out of the family book" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Close dialog" }));
   expect(app.lock).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Family members" }));
   fireEvent.click(screen.getByRole("button", { name: /Invite a partner/ }));
   expect(screen.getByRole("dialog", { name: "Invite a partner" })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Close" }));
   expect(screen.queryByRole("dialog", { name: "Invite a partner" })).toBeNull();
 });
 
-it("Family in a child's book offers no invitations, sharing or other books", () => {
+it("Our family in a child's book offers no invitations or other books", () => {
   openBook({
     ...emptyBook("Ella"),
     profile: { kind: "child", ageBand: "6-8", parentLock: { accountUid: "parent" } },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Family" }));
+  ourFamily();
+  // Kids can read and add to the family book, but invite no one.
+  expect(screen.getByRole("heading", { name: "Our family book", level: 1 })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Family members" }));
   expect(screen.queryByRole("button", { name: /Invite a partner/ })).toBeNull();
   expect(screen.queryByRole("button", { name: /Add a child/ })).toBeNull();
-  expect(screen.queryByRole("heading", { name: "Passed between you" })).toBeNull();
   expect(screen.queryByRole("button", { name: /^Open .*’s book/ })).toBeNull();
-  expect(screen.queryByText(/Everyone’s book/)).toBeNull();
-  expect(screen.getByRole("heading", { name: "Family album" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Open my book" })).toBeTruthy();
 });

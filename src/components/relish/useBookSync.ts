@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { User } from "firebase/auth";
 import { editionKey } from "@/lib/relish/editions";
 import { currentAIUser, getAIAuth } from "@/lib/relish/ai-auth";
@@ -19,6 +19,14 @@ import type { useLocalBook } from "./useLocalBook";
 import { emptyBook } from "@/lib/relish/model";
 import { createVault } from "@/lib/relish/vault";
 import { type Audience, isAudience } from "@/lib/relish/profiles";
+import {
+  FAMILY_LABEL,
+  changeFamilyBook,
+  isFamilyHead,
+  loadFamilyPages,
+  type FamilyChange,
+  type FamilyRemote,
+} from "@/lib/relish/family-book";
 type Vault = ReturnType<typeof useLocalBook>;
 export function useBookSync(vault: Vault) {
   const [authReady, setAuthReady] = useState(false);
@@ -31,6 +39,9 @@ export function useBookSync(vault: Vault) {
   const latest = useRef(vault),
     paused = useRef(false),
     running = useRef(false),
+    // Our family book's read or write holds `running` too.
+    familyRunning = useRef(false),
+    familyAbort = useRef<AbortController | null>(null),
     abort = useRef<AbortController | null>(null);
   useLayoutEffect(() => {
     latest.current = vault;
@@ -40,9 +51,11 @@ export function useBookSync(vault: Vault) {
       setUser(currentAIUser());
       setBooks([]);
       abort.current?.abort();
+      familyAbort.current?.abort();
     };
     const locked = () => {
       abort.current?.abort();
+      familyAbort.current?.abort();
 
       setError("");
       setConflict(false);
@@ -64,14 +77,25 @@ export function useBookSync(vault: Vault) {
     return () => {
       alive = false;
       abort.current?.abort();
+      familyAbort.current?.abort();
       window.removeEventListener("relish:account", account);
       window.removeEventListener("relish:locked", locked);
     };
   }, []);
   const refreshUser = () => setUser(currentAIUser());
+  /** Waits for Our family book's read or write to finish (it's short). */
+  async function familyDone() {
+    const started = Date.now();
+    while (running.current && familyRunning.current) {
+      if (Date.now() - started > 20000) return;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  }
   async function exclusive<T>(
     fn: (signal: AbortSignal) => Promise<T>,
   ): Promise<T> {
+    // Opening a book while the family book loads waits for it, not fails.
+    if (running.current && familyRunning.current) await familyDone();
     if (running.current)
       throw new Error("Sync is already running. Please try again in a moment.");
     running.current = true;
@@ -94,6 +118,53 @@ export function useBookSync(vault: Vault) {
       setWorking(false);
     }
   }
+  /**
+   * Our family book's reads and writes share the lock with this book's own
+   * sync: they wait for a running sync to finish instead of failing, and the
+   * background check skips while they run. They don't show as "working".
+   */
+  async function familyWork<T>(
+    fn: (remote: FamilyRemote) => Promise<T>,
+  ): Promise<T> {
+    const account = user;
+    if (!account?.emailVerified)
+      throw new Error("Sign in and verify your email first.");
+    const started = Date.now();
+    while (running.current) {
+      if (Date.now() - started > 20000)
+        throw new Error("Sync is busy. Please try again in a moment.");
+      await new Promise((r) => setTimeout(r, 150));
+    }
+    running.current = true;
+    familyRunning.current = true;
+    const controller = new AbortController();
+    familyAbort.current = controller;
+    const signal = controller.signal;
+    try {
+      return await fn({
+        list: () => list(signal),
+        secret: async (id) =>
+          (
+            await syncRequest<{ secret: string }>(
+              account,
+              { action: "account-key", id },
+              signal,
+            )
+          ).secret,
+        download: (head) => downloadBook(account, head, signal),
+        upload: (snapshot, id, base, previous, secret) =>
+          uploadBook(account, snapshot, id, base, signal, previous, secret),
+      });
+    } finally {
+      running.current = false;
+      familyRunning.current = false;
+    }
+  }
+  const family = {
+    load: () => familyWork(loadFamilyPages),
+    change: (change: FamilyChange) =>
+      familyWork((remote) => changeFamilyBook(remote, change)),
+  };
   async function list(signal: AbortSignal) {
     if (!user?.emailVerified)
       throw new Error("Sign in and verify your email first.");
@@ -106,7 +177,8 @@ export function useBookSync(vault: Vault) {
     setBooks(result.books);
     return result.books;
   }
-  const refresh = () => exclusive(list);
+  const refresh = () =>
+    exclusive(list).then((all) => all.filter((h) => !isFamilyHead(h)));
   async function run(signal: AbortSignal) {
     const v = latest.current,
       binding = readBinding(v.editionId);
@@ -264,6 +336,8 @@ export function useBookSync(vault: Vault) {
       const label = name.trim();
       if (!label || label.length > 60 || !isAudience(audience))
         throw new Error("Choose a name and age range.");
+      if (label.toLowerCase() === FAMILY_LABEL.toLowerCase())
+        throw new Error("That name is taken by Our family book. Choose another.");
       const secret = newSecret(),
         id = crypto.randomUUID();
       const profile =
@@ -428,12 +502,15 @@ export function useBookSync(vault: Vault) {
       setStatus("Local only");
     });
   }
+  const listed = useMemo(() => books.filter((h) => !isFamilyHead(h)), [books]);
   return {
     user,
     authReady,
     createBook,
     addCurrentBook,
-    books,
+    // Our family book is never listed or opened as a book of its own.
+    books: listed,
+    family,
     status,
     conflict,
     working,

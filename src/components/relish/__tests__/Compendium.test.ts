@@ -77,12 +77,16 @@ const everyPage = () =>
 it("a game finished without keeping a page shows in Your book under each player", async () => {
   const book = family();
   const app = openBook({ ...book, living: { ...livingOf(book), game: revealed() } });
-  fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+  fireEvent.click(screen.getByRole("button", { name: "Activities" }));
   fireEvent.click(screen.getByRole("button", { name: /Same page\?.*Resume game/ }));
   fireEvent.click(await screen.findByRole("button", { name: /Finish round/ }));
   await screen.findByRole("status");
   expect(livingOf(app.stored()).plays).toHaveLength(1);
-  fireEvent.click(screen.getByRole("button", { name: "Your book" }));
+  // Finishing lands on Book · Our family; the round is in your own book too.
+  await screen.findByRole("heading", { name: "Our family book", level: 1 });
+  fireEvent.click(
+    within(screen.getByRole("group", { name: "Whose pages" })).getByRole("button", { name: "Just me" }),
+  );
   const record = everyPage().getByRole("button", { name: /Same page\? with Ella and Kaleb/ });
   expect(record.textContent).toMatch(/^Game/);
   fireEvent.click(screen.getByRole("button", { name: "Ella" }));
@@ -91,13 +95,15 @@ it("a game finished without keeping a page shows in Your book under each player"
   expect(everyPage().queryByRole("button", { name: /Same page\?/ })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Me" }));
   expect(everyPage().queryByRole("button", { name: /Same page\?/ })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Our family" }));
+  fireEvent.click(
+    within(screen.getByRole("group", { name: "Show pages about" })).getByRole("button", { name: "Our family" }),
+  );
   expect(everyPage().getByRole("button", { name: /Same page\? with Ella and Kaleb/ })).toBeTruthy();
 });
 
 it("an exercise started with someone is labelled Exercise and filed under them", async () => {
   const app = openBook(family());
-  fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+  fireEvent.click(screen.getByRole("button", { name: "Activities" }));
   fireEvent.click(screen.getByRole("button", { name: /What helps when I’m upset/ }));
   await screen.findByRole("heading", { name: "What helps when I’m upset" });
   const asked = screen.getByRole("group", { name: "Who is this with?" });
@@ -124,7 +130,7 @@ it("an exercise started with someone is labelled Exercise and filed under them",
     source: { kind: "exercise", toolId: "helps-upset" },
   });
   expect(app.stored().journal![0].text).not.toContain("Kaleb");
-  fireEvent.click(screen.getByRole("button", { name: "Your book" }));
+  fireEvent.click(screen.getByRole("button", { name: "Book" }));
   const page = everyPage().getByRole("button", { name: /What helps when I’m upset/ });
   expect(page.textContent).toMatch(/^Exercise/);
   expect(page.className).toContain("rp-edge-sage");
@@ -136,7 +142,7 @@ it("an exercise started with someone is labelled Exercise and filed under them",
 
 it("a bingo started with someone carries them to its kept page", async () => {
   const app = openBook(family());
-  fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+  fireEvent.click(screen.getByRole("button", { name: "Activities" }));
   fireEvent.click(screen.getByRole("button", { name: /Repair bingo/ }));
   await screen.findByRole("heading", { name: "Repair bingo" });
   fireEvent.click(screen.getByRole("checkbox", { name: "Ella" }));
@@ -147,7 +153,7 @@ it("a bingo started with someone carries them to its kept page", async () => {
 
 it("person chips filter What you’ve learned, and a card names who it is about", () => {
   openBook(sampleBook());
-  fireEvent.click(screen.getByRole("button", { name: "Your book" }));
+  fireEvent.click(screen.getByRole("button", { name: "Book" }));
   const learned = () =>
     within(screen.getByRole("heading", { name: "What you’ve learned" }).closest("section")!);
   const leoCard = () => learned().queryByText("Endings go better with a heads-up");
@@ -162,6 +168,8 @@ it("person chips filter What you’ve learned, and a card names who it is about"
   expect(learned().getByText(/Relish noticed something · Anna/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Me" }));
   expect(leoCard()).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Our family" }));
+  fireEvent.click(
+    within(screen.getByRole("group", { name: "Show pages about" })).getByRole("button", { name: "Our family" }),
+  );
   expect(leoCard()).toBeNull();
 });

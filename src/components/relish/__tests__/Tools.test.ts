@@ -55,7 +55,7 @@ function open(book = emptyBook("Robin"), family?: { id: string; name: string; on
     });
   }
   const mounted = render(createElement(Harness));
-  fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+  fireEvent.click(screen.getByRole("button", { name: "Activities" }));
   return {
     stored: () => stored,
     fail: (value: boolean) => {
@@ -163,7 +163,7 @@ it("a kept Plan a repair page comes back in Still going, then on Home once it's 
   // Not due yet: Home keeps its usual suggestion; Still going shows when it will ask.
   fireEvent.click(screen.getByRole("button", { name: "Home" }));
   expect(await screen.findByRole("region", { name: "Today’s suggestion" })).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Your book" }));
+  fireEvent.click(screen.getByRole("button", { name: "Book" }));
   const item = await screen.findByRole("button", { name: /Your plan · Plan a repair · Sam/ });
   expect(item.textContent).toMatch(/Relish asks \w+day/);
   app.unmount();
@@ -285,7 +285,7 @@ it("does ten real hellos with two people at once, each marked on their own", asy
   await screen.findByRole("button", { name: "Mark today for Ella" });
   expect(toolsOf(app.stored()).trackers[0].marks).toHaveLength(0);
   // Do something names both.
-  fireEvent.click(screen.getByRole("button", { name: /Back to Do something/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Back to Activities/ }));
   expect(
     await screen.findByRole("button", { name: /Ten real hellos · Ella 0 of 10 · Kaleb 0 of 10/ }),
   ).toBeTruthy();

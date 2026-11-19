@@ -59,7 +59,7 @@ function open(book = emptyBook("Robin")) {
     });
   }
   const mounted = render(createElement(Harness));
-  fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+  fireEvent.click(screen.getByRole("button", { name: "Activities" }));
   return {
     stored: () => stored,
     fail: (value: boolean) => {
@@ -80,23 +80,23 @@ it("opens free writing in one click, keeps the latest words before leaving, and 
     target: { value: "A small adventure, still unfolding" },
   });
   expect(
-    (screen.getByRole("button", { name: "Do something" }) as HTMLButtonElement)
+    (screen.getByRole("button", { name: "Activities" }) as HTMLButtonElement)
       .disabled,
   ).toBe(false);
   app.fail(true);
-  fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+  fireEvent.click(screen.getByRole("button", { name: "Activities" }));
   await screen.findByRole("alert");
   expect(screen.queryByRole("heading", { name: "What feels right?" })).toBeNull();
   expect(screen.getByRole("textbox", { name: "Your journal entry" })).toBe(
     input,
   );
   app.fail(false);
-  fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+  fireEvent.click(screen.getByRole("button", { name: "Activities" }));
   await screen.findByRole("heading", { name: "What feels right?" });
   expect(app.stored().journal?.[0].text).toBe(
     "A small adventure, still unfolding",
   );
-  fireEvent.click(screen.getByRole("button", { name: "Your book" }));
+  fireEvent.click(screen.getByRole("button", { name: "Book" }));
   fireEvent.click(screen.getByRole("button", { name: /Keep writing|Keep going/ }));
   expect(
     (
@@ -105,7 +105,7 @@ it("opens free writing in one click, keeps the latest words before leaving, and 
       }) as HTMLTextAreaElement
     ).value,
   ).toBe("A small adventure, still unfolding");
-  fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save to my book" }));
   await screen.findByText("Entry saved");
   fireEvent.click(
     screen.getByRole("button", { name: "Choose another activity" }),
@@ -193,7 +193,7 @@ it("saves one moment, stops cleanly, and recalls the plan in the writer's words 
   fireEvent.click(screen.getByRole("button", { name: /Done for now/ }));
   await screen.findByRole("heading", { name: /Hi Robin/ });
   // Coming back: the plan, in their words, and whether they had a chance.
-  fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+  fireEvent.click(screen.getByRole("button", { name: "Activities" }));
   fireEvent.click(screen.getByRole("button", { name: /Think it through/ }));
   await screen.findByRole("heading", { name: "Did you get a chance to try it?" });
   expect(screen.getByText("“Ask “ideas or listening?” after dinner”")).toBeTruthy();
@@ -222,7 +222,7 @@ it("lets an untried plan wait while a different moment is written", async () => 
   fireEvent.click(screen.getByRole("button", { name: /Save my plan/ }));
   await screen.findByRole("heading", { name: "Your plan is kept." });
   fireEvent.click(screen.getByRole("button", { name: /Done for now/ }));
-  fireEvent.click(screen.getByRole("button", { name: "Do something" }));
+  fireEvent.click(screen.getByRole("button", { name: "Activities" }));
   fireEvent.click(screen.getByRole("button", { name: /Think it through/ }));
   fireEvent.click(
     await screen.findByRole("button", { name: "Write about a different moment instead" }),
@@ -273,7 +273,7 @@ it("resumes the same group round full-screen and ends the game without locking",
   const app = open({ ...book, living: { ...livingOf(book), game } });
   fireEvent.click(screen.getByRole("button", { name: /Guess my small joy.*Resume game/ }));
   expect(livingOf(app.stored()).game?.id).toBe(game.id);
-  expect(screen.queryByRole("button", { name: "Do something" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Activities" })).toBeNull();
   expect(screen.queryByRole("button", { name: /Jot something down/ })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "End game" }));
   expect(app.lock).not.toHaveBeenCalled();

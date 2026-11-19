@@ -1856,3 +1856,103 @@ img.ui-illustration.rk-cover-emblem,
     font-size: 18px;
   }
 }
+
+/* ── Just me / Our family (Scott's mockups 33 and 36) ─────────────────── */
+.rp-space {
+  display: inline-flex;
+  align-items: stretch;
+  flex: none;
+  margin-left: auto;
+  padding: 2px;
+  border: 1.5px solid var(--olive);
+  border-radius: 999px;
+  background: var(--card);
+}
+.lb-app .rp-space button {
+  min-height: 40px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  color: var(--ink);
+  font: 500 15px/1 var(--sans);
+  white-space: nowrap;
+}
+.lb-app .rp-space button[aria-pressed="true"],
+.lb-app .rp-space button[aria-pressed="true"]:not(:disabled):hover {
+  background: var(--olive);
+  color: var(--on-olive);
+}
+.lb-app .rp-space button:not([aria-pressed="true"]):not(:disabled):hover {
+  background: var(--ui-sage-soft);
+  transform: none;
+}
+.lb-app .rp-space + .rp-write {
+  margin-left: 0;
+}
+.lb-app .rp-write .rp-write-word {
+  font-size: inherit;
+}
+@media (max-width: 720px) {
+  .lb-app .rp-wordmark {
+    font-size: 27px;
+  }
+  .rp-places {
+    justify-content: space-between;
+  }
+  .lb-app .rp-places button {
+    margin: 0 4px;
+  }
+  .lb-app .rp-space button {
+    min-height: 40px;
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+}
+/* A phone keeps the switch beside the wordmark; Write shrinks to "+". */
+@media (max-width: 560px) {
+  .rp-topbar-inner {
+    gap: 8px 6px;
+  }
+  .lb-app .rp-wordmark {
+    font-size: 25px;
+    padding: 4px 0;
+  }
+  .lb-app .rp-write {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+  .lb-app .rp-write .rp-write-word {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .lb-app .rp-write span[aria-hidden="true"] {
+    font-size: 24px;
+  }
+  .lb-app .rp-space button {
+    min-height: 38px;
+    padding: 6px 9px;
+    font-size: 13.5px;
+  }
+}
+@media (max-width: 380px) {
+  .lb-app .rp-wordmark {
+    font-size: 24px;
+  }
+  .lb-app .rp-space button {
+    padding: 6px 8px;
+    font-size: 13px;
+  }
+}
+/* Each half's tap area reaches the pill's full 44px height. */
+.lb-app .rp-space button {
+  position: relative;
+}
+.lb-app .rp-space button::after {
+  content: "";
+  position: absolute;
+  inset: -4px 0;
+}

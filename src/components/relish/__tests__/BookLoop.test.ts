@@ -29,17 +29,17 @@ const place = (name: string) =>
 
 it("+ Add a page opens the composer directly; Give me an idea goes to the catalog", async () => {
   openBook(sampleBook());
-  place("Your book");
+  place("Book");
   fireEvent.click(screen.getByRole("button", { name: "+ Add a page" }));
   expect(screen.getByRole("textbox", { name: "Your journal entry" })).toBeTruthy();
-  place("Your book");
+  place("Book");
   fireEvent.click(await screen.findByRole("button", { name: "Give me an idea" }));
   expect(screen.getByRole("heading", { name: "What feels right?" })).toBeTruthy();
 });
 
 it("a genuinely empty adult book gets one invitation", () => {
   openBook(adult());
-  place("Your book");
+  place("Book");
   expect(screen.getByText(/Nothing kept yet/)).toBeTruthy();
   expect(screen.queryByRole("heading", { name: "Still going" })).toBeNull();
   expect(screen.queryByRole("heading", { name: "What you’ve learned" })).toBeNull();
@@ -53,7 +53,7 @@ it("a kept exercise opens its own page, even beside an older one with the same t
     "kept",
   );
   openBook(older);
-  place("Do something");
+  place("Activities");
   fireEvent.click(screen.getByRole("button", { name: /What helps when I’m upset/ }));
   fireEvent.click(screen.getByRole("button", { name: /Start this exercise/ }));
   fireEvent.click(
@@ -71,7 +71,7 @@ it("a kept exercise opens its own page, even beside an older one with the same t
 
 it("Back from a page restores the person filter and the search", () => {
   openBook(sampleBook());
-  place("Your book");
+  place("Book");
   fireEvent.click(screen.getByRole("button", { name: "Leo", pressed: false }));
   fireEvent.change(screen.getByRole("searchbox"), { target: { value: "blanket" } });
   fireEvent.click(screen.getByRole("button", { name: /The blanket-fort expedition/ }));
@@ -80,13 +80,13 @@ it("Back from a page restores the person filter and the search", () => {
   expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("blanket");
   expect(document.activeElement?.getAttribute("data-page-id")).toBe("journal:sample-story");
   // Choosing the tab starts a fresh browse.
-  place("Your book");
+  place("Book");
   expect(screen.getByRole("button", { name: "Everyone" }).getAttribute("aria-pressed")).toBe("true");
 });
 
 it("a child's first visit to Your book is their own book with one way to start", () => {
   openBook(kid());
-  place("Your book");
+  place("Book");
   expect(screen.getByRole("heading", { name: "Kaleb’s book", level: 1 })).toBeTruthy();
   expect(screen.getByText("What would you like to keep?")).toBeTruthy();
   expect(screen.queryByText("What you’ve learned")).toBeNull();
@@ -99,7 +99,7 @@ it("a child's draft offers Keep going without hiding kept pages", () => {
   let book = writeJournalPage(kid(), { ...newJournalDraft(), title: "My first page", text: "KEPT WORDS" }, 0, "kept");
   book = writeJournalPage(book, { ...newJournalDraft(), title: "Still writing", text: "DRAFT WORDS" }, 0, "draft");
   openBook(book);
-  place("Your book");
+  place("Book");
   expect(screen.getByRole("button", { name: "Keep going" })).toBeTruthy();
   expect(screen.getByRole("button", { name: /My first page/ })).toBeTruthy();
 });
@@ -112,7 +112,7 @@ it("Repair bingo with someone survives leaving, and its page opens over an older
     "kept",
   );
   openBook(older);
-  place("Do something");
+  place("Activities");
   fireEvent.click(screen.getByRole("button", { name: /Repair bingo/ }));
   fireEvent.click(screen.getByRole("checkbox", { name: "Kaleb" }));
   fireEvent.click(screen.getByRole("button", { name: /Start bingo/ }));
@@ -127,7 +127,7 @@ it("Repair bingo with someone survives leaving, and its page opens over an older
   await mark(0);
   await mark(4);
   await vi.waitFor(() => {
-    fireEvent.click(screen.getByRole("button", { name: /Back to Do something/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Back to Activities/ }));
     expect(screen.getByRole("heading", { name: "What feels right?" })).toBeTruthy();
   });
   fireEvent.click(screen.getByRole("button", { name: /Repair bingo/ }));
