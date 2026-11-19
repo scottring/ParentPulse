@@ -207,4 +207,17 @@ it("Our family in a child's book offers no invitations or other books", () => {
   expect(screen.queryByRole("button", { name: /Add a child/ })).toBeNull();
   expect(screen.queryByRole("button", { name: /^Open .*’s book/ })).toBeNull();
   expect(screen.getByRole("button", { name: "Open my book" })).toBeTruthy();
+  // Inviting a friend to start their own Relish is open to everyone.
+  expect(screen.getByRole("button", { name: /Invite a friend/ })).toBeTruthy();
+});
+
+it("Invite a friend copies the link where there's no share sheet", async () => {
+  openBook();
+  ourFamily();
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  fireEvent.click(screen.getByRole("button", { name: "Family members" }));
+  fireEvent.click(screen.getByRole("button", { name: /Invite a friend/ }));
+  expect(await screen.findByText(/Invite link copied/)).toBeTruthy();
+  expect(writeText.mock.calls[0][0]).toContain("https://app.relish.my/");
 });

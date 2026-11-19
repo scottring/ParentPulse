@@ -571,18 +571,14 @@ export default function LivingBook({
     },
     "sound",
     { label: "Help", onSelect: () => setModal("guide") },
-    // Friends start their own accounts; children's books don't invite.
-    ...(book.profile?.kind === "child"
-      ? []
-      : [
-          {
-            label: "Invite a friend",
-            onSelect: () =>
-              void inviteFriend().then((r) => {
-                if (inviteNotice[r]) setNotice(inviteNotice[r]);
-              }),
-          },
-        ]),
+    // Friends start their own accounts; offered in every book (Scott, 2026-11-19).
+    {
+      label: "Invite a friend",
+      onSelect: () =>
+        void inviteFriend().then((r) => {
+          if (inviteNotice[r]) setNotice(inviteNotice[r]);
+        }),
+    },
     ...(onAccount
       ? [
           {
