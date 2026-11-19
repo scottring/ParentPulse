@@ -17,9 +17,9 @@ const displayFont = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Relish — The Operating Manual for Relationships",
+  title: "Relish — The journal your family keeps together",
   description:
-    "A private, living book of the people you love. Understand a little more. Find your next small move.",
+    "A private book for each person in your family, and a family book you keep together.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

@@ -37,7 +37,7 @@ function Gate({
     <main className={`r-app lb-gate lb-gate-one ${wide ? "lb-gate-wide" : ""} ${className}`}>
       <header className="lb-gate-head">
         <p className="lb-wordmark">relish</p>
-        <p>The operating manual for relationships</p>
+        <p>The journal your family keeps together</p>
       </header>
       <PaperCard className="lb-gate-paper">{children}</PaperCard>
     </main>
