@@ -14,6 +14,7 @@ import { emptyBook, type Book } from "@/lib/relish/model";
 import { advanceGame, livingOf, newGame } from "@/lib/relish/living";
 import { todayKey, toolsOf, type ToolsState } from "@/lib/relish/tools";
 import LivingBook from "../LivingBook";
+import { sameV2 } from "@/lib/relish/__tests__/same-page-v2";
 Object.defineProperty(globalThis, "crypto", {
   value: webcrypto,
   configurable: true,
@@ -409,7 +410,7 @@ it("offers only age-appropriate exercises in a young child's edition", async () 
 });
 it("plays Same page? with hidden answers and a shared reveal", async () => {
   const book = emptyBook("Robin");
-  const game = newGame("match", [
+  const game = sameV2([
     { id: "a", name: "Robin" },
     { id: "b", name: "Sam" },
   ]);
@@ -446,10 +447,91 @@ it("plays Same page? with hidden answers and a shared reveal", async () => {
   ]);
 });
 
+it("plays Same page? in your own words: answer, guess in private, judge, then the reveal", async () => {
+  const book = emptyBook("Robin");
+  const game = newGame("match", [
+    { id: "a", name: "Robin" },
+    { id: "b", name: "Sam" },
+    { id: "c", name: "Kai", audience: "6-8" },
+  ]);
+  const app = open({ ...book, living: { ...livingOf(book), game } });
+  fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
+  expect(
+    screen.getByText("Take turns answering in your own words. Everyone else guesses what you said."),
+  ).toBeTruthy();
+  expect(screen.getByText(/Each answer stays hidden until everyone has guessed/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Let’s play/ }));
+  const field = (name: RegExp) => screen.getByRole("textbox", { name }) as HTMLInputElement;
+  // Robin answers question 1 in their own words.
+  await screen.findByText("Robin’s turn · question 1 of 3");
+  expect(screen.queryByRole("group", { name: "Ideas to tap" })).toBeNull();
+  const answerButton = () => screen.getByRole("button", { name: /That’s my answer/ }) as HTMLButtonElement;
+  expect(answerButton().disabled).toBe(true);
+  fireEvent.change(field(/Your answer/), { target: { value: "Pizza with pineapple" } });
+  fireEvent.click(answerButton());
+  await screen.findByRole("heading", { name: "Over to Sam." });
+  expect(screen.queryByText(/Pizza with pineapple/)).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "I’m Sam · ready" }));
+  await screen.findByRole("heading", { name: "What did Robin say?" });
+  fireEvent.change(field(/Your guess/), { target: { value: "Pizza" } });
+  fireEvent.click(screen.getByRole("button", { name: /That’s my guess/ }));
+  await screen.findByRole("heading", { name: "Over to Kai." });
+  expect(screen.queryByText("Pizza")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "I’m Kai · ready" }));
+  // Kai is 6–8: the old choices are ideas to tap into the field.
+  const ideas = await screen.findByRole("group", { name: "Ideas to tap" });
+  expect(screen.getByText("Say it out loud and a grown-up can type it.")).toBeTruthy();
+  const idea = within(ideas).getAllByRole("button")[0];
+  fireEvent.click(idea);
+  expect(field(/Your guess/).value).toBe(idea.textContent);
+  fireEvent.click(screen.getByRole("button", { name: /That’s my guess/ }));
+  // Everyone looks; Robin judges.
+  expect(await screen.findByRole("heading", { name: "Robin said Pizza with pineapple" })).toBeTruthy();
+  const next = () => screen.getByRole("button", { name: /Next question/ }) as HTMLButtonElement;
+  expect(next().disabled).toBe(true);
+  fireEvent.click(within(screen.getByRole("group", { name: "How close was Sam?" })).getByRole("button", { name: "Got it" }));
+  await waitFor(() =>
+    expect(livingOf(app.stored()).game?.said?.[0].guesses[0].mark).toBe("got"),
+  );
+  fireEvent.click(within(screen.getByRole("group", { name: "How close was Kai?" })).getByRole("button", { name: "Not quite" }));
+  await waitFor(() => expect(next().disabled).toBe(false));
+  fireEvent.click(next());
+  // Sam passes: no guessing, on to Kai's question.
+  await screen.findByRole("heading", { name: "Over to Sam." });
+  fireEvent.click(screen.getByRole("button", { name: "I’m Sam · ready" }));
+  await screen.findByText("Sam’s turn · question 2 of 3");
+  fireEvent.click(screen.getByRole("button", { name: "Pass this one" }));
+  await screen.findByRole("heading", { name: "Over to Kai." });
+  expect(screen.getByText("Sam passed, so there was nothing to guess.")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "I’m Kai · ready" }));
+  fireEvent.change(await screen.findByRole("textbox", { name: /Your answer/ }), { target: { value: "A dog" } });
+  fireEvent.click(screen.getByRole("button", { name: /That’s my answer/ }));
+  for (const [name, guess] of [["Robin", "A cat"], ["Sam", null]] as const) {
+    fireEvent.click(await screen.findByRole("button", { name: `I’m ${name} · ready` }));
+    await screen.findByRole("heading", { name: "What did Kai say?" });
+    if (guess) {
+      fireEvent.change(field(/Your guess/), { target: { value: guess } });
+      fireEvent.click(screen.getByRole("button", { name: /That’s my guess/ }));
+    } else fireEvent.click(screen.getByRole("button", { name: "Pass this one" }));
+  }
+  await screen.findByRole("heading", { name: "Kai said A dog" });
+  expect(screen.queryByRole("group", { name: "How close was Sam?" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Skip judging" }));
+  expect(await screen.findByRole("heading", { name: "What you learned about each other" })).toBeTruthy();
+  expect(screen.getByText("Sam got it ✓")).toBeTruthy();
+  expect(screen.getByText(`Kai guessed “${idea.textContent}”`)).toBeTruthy();
+  expect(screen.getByText("You got 1 of 2 right.")).toBeTruthy();
+  expect(screen.getByText("Sam got 1 of 1; Kai got none of 1.")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Finish round/ }));
+  await screen.findByRole("region", { name: "Game finished" });
+  const record = livingOf(app.stored()).plays![0];
+  expect(record.said?.map((s) => s.answer)).toEqual(["Pizza with pineapple", null, "A dog"]);
+});
+
 it("after the reveal each player can add their own line or skip, and Finish still ends it", async () => {
   const book = emptyBook("Robin");
   let game = advanceGame(
-    newGame("match", [
+    sameV2([
       { id: "a", name: "Robin" },
       { id: "b", name: "Sam" },
       { id: "c", name: "Kai" },

@@ -1516,6 +1516,99 @@
   margin-top: 8px;
 }
 
+/* ── Same page? in your own words: answer, guess, judge ───────────────── */
+.lb-app .lb-say label {
+  font-size: 15px;
+}
+.lb-app .lb-say input {
+  font: 500 19px/1.4 var(--serif);
+}
+.lb-app .lb-say-ideas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -6px 0 10px;
+}
+.lb-app .lb-say .lb-turn-foot {
+  margin-top: 18px;
+}
+.lb-app .lb-said {
+  display: grid;
+  gap: 4px;
+  margin: 18px 0 14px;
+  font: 500 30px/1.25 var(--serif);
+  overflow-wrap: anywhere;
+}
+.lb-app .lb-said:focus {
+  outline: none;
+}
+.lb-app .lb-judge-list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 22px;
+  display: grid;
+  gap: 10px;
+}
+.lb-app .lb-judge-list > li {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--ui-card);
+}
+.lb-app .lb-judge-guess {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+.lb-app .lb-judge-guess strong {
+  font: 500 20px/1.4 var(--serif);
+  overflow-wrap: anywhere;
+}
+.lb-app .lb-judge-marks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.lb-app .lb-judge-marks button {
+  min-height: 52px;
+  justify-content: center;
+  text-align: center;
+  font: 600 16px/1.2 var(--sans);
+  border-radius: 12px;
+  border: 1.5px solid var(--ui-olive-line);
+  background: var(--ui-card);
+}
+.lb-app .lb-judge-marks button[aria-pressed="true"] {
+  background: var(--lb-cover);
+  border-color: var(--lb-cover);
+  color: #f2f4ee;
+}
+.lb-app .lb-judge-marks button[aria-pressed="true"]:not(:disabled):hover {
+  background: #4d5840;
+  color: #f2f4ee;
+}
+.lb-app .lb-said-answer {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.lb-app .lb-said-answer strong {
+  display: block;
+  margin-top: 2px;
+  font: 500 21px/1.35 var(--serif);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.lb-app .lb-said-list .lb-sp-picks {
+  flex-direction: column;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+.lb-app .lb-said-list .is-got strong {
+  color: var(--olive);
+}
+
 /* ── Spot it!: one card, read aloud in the car ────────────────────────── */
 .lb-app .lb-spot-rule {
   font: italic 400 19px/1.5 var(--serif);

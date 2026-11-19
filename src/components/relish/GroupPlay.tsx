@@ -6,8 +6,18 @@ import type { Book } from "@/lib/relish/model";
 import {
   type Game,
   type GameAction,
+  type SaidMark,
   type Turn,
   gamePlayer,
+  guessWords,
+  ownWords,
+  saidMarks,
+  saidResult,
+  saidRoundLine,
+  saidTally,
+  SAID_LIMIT,
+  samePageQuestions,
+  sharerOf,
   gameText,
   joyResult,
   joySummary,
@@ -38,7 +48,22 @@ const list = (items: string[]) =>
     : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
 const words = ["", "one", "two", "three", "four", "five", "six"];
 /** Rounds from contentVersion 2 keep their answers in the book. */
-const remembers = (g: Game) => g.contentVersion === 2;
+const remembers = (g: Game) => (g.contentVersion ?? 1) >= 2;
+const markLabels: Record<SaidMark, string> = {
+  got: "Got it",
+  close: "Close",
+  not: "Not quite",
+};
+/** Where an own-words round stands: the question being played and who answers it. */
+function wordsAt(g: Game) {
+  const said = g.said || [],
+    last = said.at(-1);
+  const guessing =
+    g.stage === "judge" ||
+    (!!last && last.answer !== null && last.guesses.length < g.players.length - 1);
+  const q = guessing ? said.length - 1 : said.length;
+  return { q, sharer: sharerOf(g.players, q), total: samePageQuestions(g).length };
+}
 
 export default function GroupPlay({
   book,
@@ -77,13 +102,25 @@ export default function GroupPlay({
   const everyone = g.kind === "joy" && remembers(g);
   const guessing = everyone && g.turn >= g.players.length;
   const spot = g.kind === "spot" && !!g.spot;
+  /** Same page? answered in your own words (contentVersion 3). */
+  const inWords = ownWords(g);
+  const at = inWords ? wordsAt(g) : null;
+  /** The question before this one, when its answer was passed. */
+  const passedBefore =
+    inWords && g.stage === "handoff" && g.said?.at(-1)?.answer === null
+      ? sharerOf(g.players, g.said.length - 1)
+      : null;
   return (
     <section className="lb-game" aria-label="Our game">
       {!finished && g.stage !== "ready" && !spot && (
         <div className="lb-session-line">
           <div>
             <p className="lb-kicker">One round</p>
-            <p>{`Turn ${Math.min(g.turn + 1, total)} of ${total} · then reveal together`}</p>
+            <p>
+              {at
+                ? `Question ${Math.min(at.q + 1, at.total)} of ${at.total} · ${at.sharer.name} answers`
+                : `Turn ${Math.min(g.turn + 1, total)} of ${total} · then reveal together`}
+            </p>
           </div>
           <button className="lb-text" disabled={busy} onClick={onPause}>
             Pause here
@@ -104,7 +141,9 @@ export default function GroupPlay({
         <>
           <h2>{title}</h2>
           <p>
-            {everyone
+            {inWords
+              ? "Take turns answering in your own words. Everyone else guesses what you said."
+              : everyone
               ? "Everyone picks a small joy in private, then guesses everyone else’s."
               : g.kind === "joy"
                 ? `One person picks a small joy, then everyone else guesses it.`
@@ -156,7 +195,9 @@ export default function GroupPlay({
             </button>
           </div>
           <p className="lb-fine lb-setup-note">
-            Answers stay hidden until the reveal
+            {inWords
+              ? "Each answer stays hidden until everyone has guessed"
+              : "Answers stay hidden until the reveal"}
             {remembers(g)
               ? `, then stay with this round in ${book.owner}’s book (never sent to AI)`
               : ""}
@@ -171,8 +212,17 @@ export default function GroupPlay({
           <Hand size={30} />
           <p className="lb-kicker">Pass the device</p>
           <h2>Over to {next.name}.</h2>
+          {passedBefore && (
+            <p className="lb-fine">
+              {passedBefore.name} passed, so there was nothing to guess.
+            </p>
+          )}
           <p>
-            {g.kind === "story"
+            {inWords && at
+              ? at.sharer.id === next.id
+                ? "Answer in your own words, or pass. Everyone else will guess what you said."
+                : `Guess what ${at.sharer.name} said, or pass. The other guesses stay hidden.`
+              : g.kind === "story"
               ? "Add the next part of the story, or pass."
               : guessing
                 ? `Now guess what ${plan[g.turn].asks.length === 1 ? "the other person" : "the others"} picked. Pass any you like. The answers so far stay hidden.`
@@ -192,6 +242,18 @@ export default function GroupPlay({
             I’m {next.name} · ready
           </button>
         </div>
+      ) : inWords && at && g.stage === "choose" && plan[g.turn] ? (
+        <SayTurn
+          key={`${g.id}:${g.turn}`}
+          turn={plan[g.turn]}
+          game={g}
+          question={at.q}
+          total={at.total}
+          busy={busy}
+          onAction={onAction}
+        />
+      ) : inWords && g.stage === "judge" ? (
+        <JudgeStep game={g} busy={busy} onAction={onAction} />
       ) : g.stage === "choose" && plan[g.turn] ? (
         <TurnPanel
           key={`${g.id}:${g.turn}`}
@@ -228,6 +290,8 @@ export default function GroupPlay({
         <>
           {spot ? (
             <SpotReveal game={g} busy={busy} onAction={onAction} />
+          ) : inWords ? (
+            <OwnWordsReveal game={g} trend={samePageTrend(living, g, true)} />
           ) : g.kind === "match" ? (
             <SamePageReveal game={g} trend={samePageTrend(living, g, true)} />
           ) : everyone ? (
@@ -397,6 +461,253 @@ function TurnPanel({
           {many ? "Pass this one" : "Pass my turn"}
         </button>
       </div>
+    </>
+  );
+}
+
+/**
+ * Same page? in your own words: the one answering writes their answer; each
+ * other player writes a guess. Young players can tap an idea to fill the field.
+ */
+function SayTurn({
+  turn,
+  game: g,
+  question,
+  total,
+  busy,
+  onAction,
+}: {
+  turn: Turn;
+  game: Game;
+  question: number;
+  total: number;
+  busy: boolean;
+  onAction: (action: GameAction) => void;
+}) {
+  const [text, setText] = useState("");
+  const heading = useRef<HTMLHeadingElement>(null);
+  const ask = turn.asks[0];
+  const sharer = ask.about ? g.players.find((p) => p.id === ask.about) : undefined;
+  const ideas =
+    turn.player.audience === "under-6" || turn.player.audience === "6-8";
+  useEffect(() => {
+    heading.current?.focus();
+  }, []);
+  return (
+    <form
+      className="lb-say"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (text.trim()) onAction({ type: "say", text });
+      }}
+    >
+      <p className="lb-kicker">
+        {turn.player.name}’s turn ·{" "}
+        {sharer ? "your guess" : `question ${question + 1} of ${total}`}
+      </p>
+      <h2 ref={heading} tabIndex={-1}>
+        {sharer ? `What did ${sharer.name} say?` : ask.prompt}
+      </h2>
+      {sharer && <p className="lb-story-so-far">{ask.prompt}</p>}
+      <label>
+        {sharer ? "Your guess" : "Your answer, in your own words"}
+        <input
+          value={text}
+          maxLength={SAID_LIMIT}
+          autoComplete="off"
+          onChange={(e) => setText(e.target.value)}
+        />
+      </label>
+      {ideas && (
+        <>
+          <div className="lb-say-ideas" role="group" aria-label="Ideas to tap">
+            {ask.choices.map((c) => (
+              <button
+                key={c}
+                type="button"
+                className="ui-chip"
+                disabled={busy}
+                aria-pressed={text === c}
+                onClick={() => setText(c)}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+          <p className="lb-fine">Say it out loud and a grown-up can type it.</p>
+        </>
+      )}
+      <div className="lb-turn-foot">
+        <button className="lb-primary" disabled={busy || !text.trim()}>
+          {sharer ? "That’s my guess" : "That’s my answer"} <Check size={16} />
+        </button>
+        <button
+          type="button"
+          className="lb-text"
+          disabled={busy}
+          onClick={() => onAction({ type: "say", text: null })}
+        >
+          Pass this one
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/** Everyone looks: one answer, each guess, and the one who answered judges them. */
+function JudgeStep({
+  game: g,
+  busy,
+  onAction,
+}: {
+  game: Game;
+  busy: boolean;
+  onAction: (action: GameAction) => void;
+}) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  const lines = saidResult(g),
+    line = lines.at(-1);
+  const total = samePageQuestions(g).length;
+  useEffect(() => {
+    heading.current?.focus();
+  }, []);
+  if (!line) return null;
+  const pending = line.guesses.some((x) => x.text !== null && !x.mark);
+  const last = lines.length >= total;
+  return (
+    <div className="lb-judge">
+      <p className="lb-kicker">
+        Everyone look · question {lines.length} of {total}
+      </p>
+      <p className="lb-story-so-far">{line.question.prompt}</p>
+      <h2 ref={heading} tabIndex={-1} className="lb-said">
+        <span className="lb-kicker">{line.sharer.name} said</span>
+        {line.answer}
+      </h2>
+      {line.guesses.some((x) => x.text !== null) ? (
+        <p>{line.sharer.name}, how close did each guess come?</p>
+      ) : (
+        <p>Everyone passed on this one.</p>
+      )}
+      <ul className="lb-judge-list">
+        {line.guesses.map((x) => (
+          <li key={x.player.id}>
+            <p className="lb-judge-guess">
+              <span className="lb-kicker">
+                {x.player.name} {x.text === null ? "passed" : "guessed"}
+              </span>
+              {x.text !== null && <strong>{x.text}</strong>}
+            </p>
+            {x.text !== null && (
+              <div
+                className="lb-judge-marks"
+                role="group"
+                aria-label={`How close was ${x.player.name}?`}
+              >
+                {saidMarks.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    disabled={busy}
+                    aria-pressed={x.mark === m}
+                    onClick={() =>
+                      onAction({
+                        type: "judge",
+                        playerId: x.player.id,
+                        mark: x.mark === m ? null : m,
+                      })
+                    }
+                  >
+                    {markLabels[m]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+      <div className="lb-turn-foot">
+        <button
+          className="lb-primary"
+          disabled={busy || pending}
+          onClick={() => onAction({ type: "next" })}
+        >
+          {last ? "See how you did" : "Next question"} <ArrowRight size={16} />
+        </button>
+        {pending && (
+          <button
+            className="lb-text"
+            disabled={busy}
+            onClick={() => onAction({ type: "next", skip: true })}
+          >
+            Skip judging
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** The whole round: each answer, who got it or came close, and who knew whom best. */
+function OwnWordsReveal({ game: g, trend }: { game: Game; trend: string }) {
+  const lines = saidResult(g);
+  if (!lines.some((l) => l.answer !== null))
+    return (
+      <>
+        <p className="lb-kicker">The reveal</p>
+        <h2>Everyone passed</h2>
+        <p>No answers to show this time. That’s fine too.</p>
+      </>
+    );
+  const round = saidRoundLine(lines),
+    tally = saidTally(lines, g.players);
+  return (
+    <>
+      <p className="lb-kicker">The reveal</p>
+      <h2>What you learned about each other</h2>
+      <ol className="lb-sp-list lb-said-list">
+        {lines.map((l) => (
+          <li
+            key={l.question.id}
+            className={l.guesses.some((x) => x.mark === "got") ? "is-same" : ""}
+          >
+            <p className="lb-sp-prompt">{l.question.prompt}</p>
+            {l.answer === null ? (
+              <p className="lb-said-answer">
+                <span>{l.sharer.name}</span> <em>passed</em>
+              </p>
+            ) : (
+              <>
+                <p className="lb-said-answer">
+                  <span>{l.sharer.name}</span> <strong>{l.answer}</strong>
+                </p>
+                <ul className="lb-sp-picks">
+                  {l.guesses.map((x) => (
+                    <li key={x.player.id} className={x.mark ? `is-${x.mark}` : ""}>
+                      {x.text === null ? (
+                        <>
+                          <span>{x.player.name}</span> <em>passed</em>
+                        </>
+                      ) : x.mark === "got" ? (
+                        <strong>{x.player.name} got it ✓</strong>
+                      ) : (
+                        guessWords(x)
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </li>
+        ))}
+      </ol>
+      {(round || tally) && (
+        <p className="lb-tally">
+          {round}
+          {tally && <span className="lb-tally-all">{tally}</span>}
+        </p>
+      )}
+      {trend && <p className="lb-trend">{trend}</p>}
     </>
   );
 }
