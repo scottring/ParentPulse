@@ -247,9 +247,11 @@ export function childStoryRounds(
   ];
 }
 
-// "Same page?" — everyone answers the same questions in private, then the
-// reveal shows where the group agrees. Every question has exactly three
-// choices. Ids and choice order are stored in play records and open rounds:
+// "Same page?" — rounds from before answers in your own words: everyone
+// answers the same questions in private, then the reveal shows where the
+// group agrees. Newer rounds ask the same prompts; one player answers in their
+// own words and the choices become tap-to-fill ideas for young players.
+// Every question has exactly three choices. Ids and choice order are stored in play records and open rounds:
 // never reorder, reword the meaning of, or remove a question; add new ones.
 export type SameQuestion = {
   id: string;
@@ -471,7 +473,7 @@ export const games: {
   {
     kind: "match",
     title: "Same page?",
-    blurb: "Five quick questions, answered in private. See where you match, and where you don’t.",
+    blurb: "Take turns answering in your own words while everyone else guesses. Find out how well you know each other.",
     short: "5–10 min",
     tags: ["kids"],
   },

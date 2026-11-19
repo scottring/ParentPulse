@@ -21,6 +21,7 @@ import {
   type Game,
   type Player,
 } from "../living";
+import { sameV2 } from "./same-page-v2";
 Object.defineProperty(globalThis, "crypto", {
   value: webcrypto,
   configurable: true,
@@ -42,8 +43,11 @@ const players: Player[] = [
   { id: "ella", name: "Ella", audience: "6-8" },
   { id: "kaleb", name: "Kaleb" },
 ];
+/** A round at its reveal; Same page? here is the multiple-choice shape (contentVersion 2). */
 function revealed(kind: Game["kind"] = "match"): Game {
-  let g = advanceGame(newGame(kind, players), { type: "start" });
+  let g = advanceGame(kind === "match" ? sameV2(players) : newGame(kind, players), {
+    type: "start",
+  });
   while (g.stage !== "reveal") {
     if (g.stage === "handoff") g = advanceGame(g, { type: "ready" });
     g = advanceGame(g, { type: "answer", answers: turnPlan(g)[g.turn].asks.map(() => 0) });
@@ -78,6 +82,30 @@ describe("play records", () => {
     expect(pageKind(page)).toEqual({ label: "Game", tone: "clay" });
     expect(page.people).toEqual(["ella", "kaleb"]);
     expect(page.record).toBe(true);
+  });
+
+  it("a round in your own words shows each answer and who got it in Your book", () => {
+    let g = advanceGame(newGame("match", players), { type: "start" });
+    for (const text of ["pancakes", "pancakes", "waffles"]) {
+      if (g.stage === "handoff") g = advanceGame(g, { type: "ready" });
+      g = advanceGame(g, { type: "say", text });
+    }
+    g = advanceGame(g, { type: "judge", playerId: "ella", mark: "got" });
+    g = advanceGame(g, { type: "judge", playerId: "kaleb", mark: "close" });
+    g = advanceGame(g, { type: "next" });
+    for (let i = 0; i < 2; i++)
+      g = advanceGame(advanceGame(g, { type: "ready" }), { type: "say", text: null });
+    expect(g.stage).toBe("reveal");
+    const book = finishGame(withGame(family(), g));
+    expect(isBook(book)).toBe(true);
+    const page = bookPages(book).find((p) => p.id === `play:${g.id}`)!;
+    expect(page.title).toBe("Same page? with Ella and Kaleb");
+    expect(page.text).toBe("You got 1 of 2 right. Ella got 1 of 1; Kaleb was close once.");
+    expect(page.sections.map((x) => x.text)).toEqual([
+      "Alex said “pancakes”. Ella got it. Kaleb was close with “waffles”.",
+      "Ella passed.",
+      "Kaleb passed.",
+    ]);
   });
 
   it("records once per round, and a kept page replaces the record", () => {
