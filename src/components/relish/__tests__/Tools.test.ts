@@ -455,7 +455,8 @@ it("plays Same page? in your own words: answer, guess in private, judge, then th
     { id: "c", name: "Kai", audience: "6-8" },
   ]);
   const app = open({ ...book, living: { ...livingOf(book), game } });
-  fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
+  // The round waiting to start is picked up from the resume band.
+  fireEvent.click(screen.getByRole("button", { name: /Same page\?.*Resume game/ }));
   expect(
     screen.getByText("Take turns answering in your own words. Everyone else guesses what you said."),
   ).toBeTruthy();
