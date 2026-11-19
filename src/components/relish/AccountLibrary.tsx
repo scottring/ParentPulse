@@ -285,6 +285,7 @@ export default function AccountLibrary({
       </div>
     </div>
   );
+  // An account with no books yet: one invitation to start.
   const start = (
     <section className="lb-lib-start">
       <Illustration
@@ -295,41 +296,61 @@ export default function AccountLibrary({
       />
       <div className="lb-lib-start-words">
         <p className="lb-kicker">Relish account</p>
-        {hasOwnBook ? (
-          <>
-            {/* Only if opening it on sign-in didn't work. */}
-            <Heading>Open your book</Heading>
-            <p className="lb-lib-invite">It’s below, with the others.</p>
-          </>
-        ) : (
-          <>
-            <Heading>Start your book</Heading>
-            <p className="lb-lib-invite">
-              What’s one thing someone in your family did this week that
-              you’d like to remember?
-            </p>
-          </>
-        )}
+        <Heading>Start your book</Heading>
+        <p className="lb-lib-invite">
+          What’s one thing someone in your family did this week that you’d
+          like to remember?
+        </p>
         {createActions}
       </div>
-      {view === "books" && (
-        <section className="lb-lib-others" aria-labelledby="lb-lib-others">
-          <h2 id="lb-lib-others">Books already in this account</h2>
-          <BookShelf label="Books already in this account">
-            {books.map((head) => (
-              <ShelfBook
-                key={head.id}
-                name={head.label}
-                cover={coverFor(head.label, isHome(head))}
-                disabled={working}
-                locked={!head.accountManaged}
-                note={isHome(head) ? "Your book" : undefined}
-                onOpen={() => void act(() => open(head))}
-              />
-            ))}
-          </BookShelf>
-        </section>
-      )}
+    </section>
+  );
+  // Books exist, but this device hasn't opened the adult's own book yet
+  // (or opening it on sign-in didn't work). Opening an adult's book here
+  // makes it this device's home book (RelishApp); a child's book never does.
+  const whichIsYours = (
+    <section className="lb-lib-which">
+      <div className="lb-lib-which-head">
+        <Heading>{hasOwnBook ? "Open your book" : "Which book is yours?"}</Heading>
+        {!hasOwnBook && (
+          <p className="lb-lib-invite">
+            Choose it once. This device opens it for you from then on.
+          </p>
+        )}
+      </div>
+      <BookShelf label="Books in this account">
+        {books.map((head) => (
+          <ShelfBook
+            key={head.id}
+            name={head.label}
+            cover={coverFor(head.label, isHome(head))}
+            disabled={working}
+            locked={!head.accountManaged}
+            note={isHome(head) ? "Your book" : undefined}
+            onOpen={() => void act(() => open(head))}
+          />
+        ))}
+      </BookShelf>
+      <p className="lb-lib-which-more">
+        {!hasOwnBook && (
+          <button
+            type="button"
+            className="lb-lib-link"
+            disabled={working}
+            onClick={() => startCreating("adult")}
+          >
+            Create a new book
+          </button>
+        )}
+        <button
+          type="button"
+          className="lb-lib-link"
+          disabled={working}
+          onClick={() => startCreating("child")}
+        >
+          Create a child’s book
+        </button>
+      </p>
     </section>
   );
   const library = accountPanel ? (
@@ -366,6 +387,8 @@ export default function AccountLibrary({
         </button>
       </div>
     </section>
+  ) : view === "books" ? (
+    whichIsYours
   ) : (
     start
   );
@@ -375,7 +398,7 @@ export default function AccountLibrary({
       <div className="lb-lib-foot-local">
         {onLocal && (
           <p>
-            {!accountPanel && "Already have a book? "}
+            {!accountPanel && view !== "books" && "Already have a book? "}
             <button type="button" onClick={onLocal}>
               Open a local book or restore a backup
             </button>
@@ -806,7 +829,7 @@ export default function AccountLibrary({
       </header>
       <section
         className={`lb-lib-sheet ${
-          libraryOpen && !adding && !chosen && (view === "empty" || view === "books")
+          libraryOpen && !adding && !chosen && view === "empty"
             ? "lb-lib-sheet-start"
             : ""
         }`}

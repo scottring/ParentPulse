@@ -87,8 +87,9 @@ vi.mock("../useLocalBook", async () => {
   } as Record<string, ReturnType<typeof emptyBook>>;
   const vaultFor = (id: string) =>
     (world.vaults[id] ??= {
-      mode: "open",
-      book: books[id],
+      // No edition: signed in, nothing open on this device yet.
+      mode: id ? "open" : "shelf",
+      book: books[id] ?? emptyBook(""),
       editionId: id,
       editions: [],
       busy: false,
@@ -143,6 +144,10 @@ import RelishApp from "../RelishApp";
 type FakeSync = { open: ReturnType<typeof vi.fn> };
 beforeEach(() => {
   localStorage.setItem("relish:home-book:parent-one", "r-scott");
+  world.edition = "ed-scott";
+  world.gate = null;
+  world.vaults = {};
+  world.sync = null;
 });
 afterEach(() => {
   cleanup();
@@ -204,4 +209,40 @@ it("hands a shared device from Scott's book to Kaleb's and back to Family, then 
   expect(sync.open).toHaveBeenLastCalledWith(heads.ella);
   await screen.findByRole("heading", { name: /Ella/ });
   expect(world.gate).toEqual({ accountUid: "parent-one" });
+});
+
+it("new device: picking your book once makes the next load open it directly", async () => {
+  localStorage.clear();
+  world.edition = "";
+  render(createElement(RelishApp));
+  const sync = world.sync as FakeSync;
+  await screen.findByRole("heading", { name: "Which book is yours?" });
+  expect(sync.open).not.toHaveBeenCalled();
+
+  // A child's book picked here is never remembered as the adult's own.
+  fireEvent.click(screen.getByRole("button", { name: "Open Kaleb’s book" }));
+  await screen.findByRole("heading", { name: /Kaleb/ });
+  expect(localStorage.getItem("relish:home-book:parent-one")).toBeNull();
+
+  // Back on the screen (a reload), Scott picks his own book.
+  cleanup();
+  world.edition = "";
+  world.gate = null;
+  world.sync = null;
+  render(createElement(RelishApp));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Open Scott’s book" }),
+  );
+  await screen.findByRole("heading", { name: /Scott/ });
+  expect(localStorage.getItem("relish:home-book:parent-one")).toBe("r-scott");
+
+  // Reload: straight into Scott's book, no screen asking which is yours.
+  cleanup();
+  world.edition = "";
+  world.sync = null;
+  render(createElement(RelishApp));
+  expect(screen.queryByRole("heading", { name: "Which book is yours?" })).toBeNull();
+  await screen.findByRole("heading", { name: /Scott/ });
+  expect((world.sync as FakeSync).open).toHaveBeenCalledWith(heads.scott);
+  expect(screen.queryByRole("heading", { name: "Which book is yours?" })).toBeNull();
 });

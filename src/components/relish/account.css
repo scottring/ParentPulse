@@ -588,23 +588,21 @@
   color: var(--ui-ink);
   background: none;
 }
-/* Only when this device doesn't know the adult's book yet: the books
-   already in the account, small and below the invitation. */
-.lb-app .lb-account .lb-lib-others {
-  grid-column: 1 / -1;
+/* A new device: "Which book is yours?" with the account's books on a shelf
+   and the create actions as quiet links below. */
+.lb-app .lb-account section.lb-lib-which {
   display: grid;
-  gap: 4px;
-  padding-top: 24px;
-  border-top: 1px solid var(--ui-line);
+  gap: 28px;
 }
-.lb-app .lb-account .lb-lib-others h2 {
-  font: 600 20px/1.3 var(--serif);
-  letter-spacing: 0;
+.lb-lib-which-head {
+  display: grid;
+  gap: 10px;
 }
-.lb-lib-others .lb-bookshelf {
-  --lb-book-w: 150px;
-  --lb-shelf-gap: 32px;
-  justify-content: start;
+.lb-app .lb-account .lb-lib-which-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 28px;
+  margin: 0;
 }
 .lb-lib-state {
   justify-items: start;

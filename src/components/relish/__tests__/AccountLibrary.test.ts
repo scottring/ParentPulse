@@ -116,10 +116,11 @@ it("keeps the account's books behind the parent gate after a child-view reload",
     target: { value: "parent password" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Open my book" }));
-  // This device doesn't know the adult's book: setup, with the account's
-  // books below it.
+  // This device doesn't know the adult's book: it asks which one is theirs.
   await screen.findByText("Parent private book");
-  expect(screen.getByRole("heading", { name: "Start your book" })).toBeTruthy();
+  expect(
+    screen.getByRole("heading", { name: "Which book is yours?" }),
+  ).toBeTruthy();
   expect(auth.clear).toHaveBeenCalledWith(null);
   expect(sync.refresh).toHaveBeenCalledTimes(1);
   expect(sync.open).not.toHaveBeenCalled();
@@ -170,6 +171,7 @@ it("if opening the adult's book on sign-in didn't work, it's below without a sec
   expect(screen.getByRole("heading", { name: "Open your book" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Open Scott’s book" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /Create my book/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Create a new book" })).toBeNull();
   expect(
     screen.getByRole("button", { name: "Create a child’s book" }),
   ).toBeTruthy();
@@ -256,20 +258,31 @@ it("waits for a sync already running instead of reporting a failed load", async 
   expect(refresh).toHaveBeenCalledTimes(2);
 });
 
-it("child-only account: setup for the adult's book, with the child's book below", async () => {
+it("new device: asks which book is yours, with create as quiet links", async () => {
   const kid = { id: "kid", label: "Ella", accountManaged: true };
-  const { sync } = mount({ books: [kid] });
-  expect(screen.getByRole("heading", { name: "Start your book" })).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Create my book" })).toBeTruthy();
+  const old = { id: "old", label: "Iris" };
+  const { sync } = mount({ books: [kid, old] });
   expect(
-    screen.getByRole("button", { name: "Create a child’s book" }),
+    screen.getByRole("heading", { name: "Which book is yours?" }),
   ).toBeTruthy();
+  expect(screen.queryByRole("heading", { name: "Start your book" })).toBeNull();
+  // No primary Create my book; creating stays available, quietly.
+  expect(screen.queryByRole("button", { name: /Create my book/ })).toBeNull();
   expect(
-    screen.getByRole("heading", { name: "Books already in this account" }),
+    screen.getByRole("button", { name: "Create a new book" }).className,
+  ).toContain("lb-lib-link");
+  expect(
+    screen.getByRole("button", { name: "Create a child’s book" }).className,
+  ).toContain("lb-lib-link");
+  expect(
+    screen.getByRole("button", {
+      name: "Open Iris’s book, an earlier copy that needs its original passphrase",
+    }),
   ).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Open Ella’s book" }));
   await waitFor(() => expect(sync.open).toHaveBeenCalledWith(kid));
 });
+
 it("populated library: each cover is one named open action", () => {
   localStorage.setItem("relish:home-book:parent-one", "mine");
   mount({
