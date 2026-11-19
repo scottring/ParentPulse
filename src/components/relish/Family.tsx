@@ -1,4 +1,5 @@
 "use client";
+import { inviteFriend, inviteNotice } from "@/lib/relish/invite";
 import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import { Search, Users, X } from "lucide-react";
 import type { Book } from "@/lib/relish/model";
@@ -598,6 +599,7 @@ function MembersLink({
 }) {
   const id = useId();
   const wrap = useRef<HTMLDivElement>(null);
+  const [inviteStatus, setInviteStatus] = useState("");
   const link = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -719,7 +721,7 @@ function MembersLink({
                 ),
               )}
             </ul>
-            {(onAddChild || onInvite) && (
+            {
               <div className="rp-fb-members-add">
                 {onAddChild && (
                   <button
@@ -745,8 +747,21 @@ function MembersLink({
                     <span aria-hidden="true">+</span> Invite a partner
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() =>
+                    void inviteFriend().then((r) => setInviteStatus(inviteNotice[r]))
+                  }
+                >
+                  <span aria-hidden="true">+</span> Invite a friend
+                </button>
+                {inviteStatus && (
+                  <p className="rp-fb-invite-status" role="status">
+                    {inviteStatus}
+                  </p>
+                )}
               </div>
-            )}
+            }
           </div>
         </>
       )}

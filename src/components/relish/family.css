@@ -915,3 +915,9 @@
     font-size: 14.5px;
   }
 }
+.lb-app.rp-shell .rp-fb-invite-status {
+  margin: 2px 0 0;
+  color: var(--ui-muted);
+  font: 400 13px/1.4 var(--sans);
+  overflow-wrap: anywhere;
+}

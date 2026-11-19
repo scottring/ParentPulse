@@ -60,6 +60,7 @@ import EditionSetup from "./EditionSetup";
 import { guidanceFor } from "@/lib/relish/guidance";
 import { TypingSoundSetting } from "./TypingSound";
 import TopBar, { type MenuItem, type Place, type Space } from "./TopBar";
+import { inviteFriend, inviteNotice } from "@/lib/relish/invite";
 import Home, { type FamilyPerson } from "./Home";
 import DoSomething from "./DoSomething";
 import YourBook from "./YourBook";
@@ -570,6 +571,14 @@ export default function LivingBook({
     },
     "sound",
     { label: "Help", onSelect: () => setModal("guide") },
+    // Friends start their own accounts; offered in every book (Scott, 2026-11-19).
+    {
+      label: "Invite a friend",
+      onSelect: () =>
+        void inviteFriend().then((r) => {
+          if (inviteNotice[r]) setNotice(inviteNotice[r]);
+        }),
+    },
     ...(onAccount
       ? [
           {
