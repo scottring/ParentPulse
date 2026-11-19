@@ -168,8 +168,13 @@ it("if opening the adult's book on sign-in didn't work, it's below without a sec
       { id: "mine", label: "Scott", accountManaged: true },
     ],
   });
-  expect(screen.getByRole("heading", { name: "Open your book" })).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Open Scott’s book" })).toBeTruthy();
+  expect(
+    screen.getByRole("heading", { name: "Welcome back, Scott." }),
+  ).toBeTruthy();
+  // Your own book comes first on the shelf, marked as yours.
+  const covers = screen.getAllByRole("button", { name: /^Open .*’s book$/ });
+  expect(covers[0].getAttribute("aria-label")).toBe("Open Scott’s book");
+  expect(screen.getByText("Your book")).toBeTruthy();
   expect(screen.queryByRole("button", { name: /Create my book/ })).toBeNull();
   expect(screen.queryByRole("button", { name: "Create a new book" })).toBeNull();
   expect(

@@ -6,6 +6,7 @@ import {
   ArrowUpRight,
   ChevronDown,
   ShieldCheck,
+  Plus,
 } from "lucide-react";
 import { sendPasswordResetEmail, sendEmailVerification } from "firebase/auth";
 import {
@@ -308,29 +309,54 @@ export default function AccountLibrary({
   // Books exist, but this device hasn't opened the adult's own book yet
   // (or opening it on sign-in didn't work). Opening an adult's book here
   // makes it this device's home book (RelishApp); a child's book never does.
+  const homeHead = books.find(isHome);
+  const homeName = homeHead ? homeHead.label.replace(/[’']s book$/, "").trim() : "";
+  // Your own book first, then everyone else's.
+  const shelved = homeHead
+    ? [homeHead, ...books.filter((b) => b !== homeHead)]
+    : books;
   const whichIsYours = (
-    <section className="lb-lib-which">
+    <section className={`lb-lib-which ${hasOwnBook ? "is-returning" : ""}`}>
       <div className="lb-lib-which-head">
-        <Heading>{hasOwnBook ? "Open your book" : "Which book is yours?"}</Heading>
-        {!hasOwnBook && (
-          <p className="lb-lib-invite">
-            Choose it once. This device opens it for you from then on.
+        <div className="lb-lib-which-words">
+          <p className="lb-lib-eyebrow">
+            {hasOwnBook ? "Your family’s books" : "Relish account"}
           </p>
-        )}
+          <Heading>
+            {hasOwnBook
+              ? homeName
+                ? `Welcome back, ${homeName}.`
+                : "Welcome back."
+              : "Which book is yours?"}
+          </Heading>
+          <p className="lb-lib-invite">
+            {hasOwnBook
+              ? "Open your book, or one of the family’s."
+              : "Choose it once. This device opens it for you from then on."}
+          </p>
+        </div>
+        <Illustration
+          name="your-book"
+          size={150}
+          eager
+          className="lb-lib-which-art"
+        />
       </div>
-      <BookShelf label="Books in this account">
-        {books.map((head) => (
-          <ShelfBook
-            key={head.id}
-            name={head.label}
-            cover={coverFor(head.label, isHome(head))}
-            disabled={working}
-            locked={!head.accountManaged}
-            note={isHome(head) ? "Your book" : undefined}
-            onOpen={() => void act(() => open(head))}
-          />
-        ))}
-      </BookShelf>
+      <div className="lb-lib-wall">
+        <BookShelf label="Books in this account">
+          {shelved.map((head) => (
+            <ShelfBook
+              key={head.id}
+              name={head.label}
+              cover={coverFor(head.label, isHome(head))}
+              disabled={working}
+              locked={!head.accountManaged}
+              note={isHome(head) ? "Your book" : undefined}
+              onOpen={() => void act(() => open(head))}
+            />
+          ))}
+        </BookShelf>
+      </div>
       <p className="lb-lib-which-more">
         {!hasOwnBook && (
           <button
@@ -339,7 +365,7 @@ export default function AccountLibrary({
             disabled={working}
             onClick={() => startCreating("adult")}
           >
-            Create a new book
+            <Plus size={16} aria-hidden="true" /> Create a new book
           </button>
         )}
         <button
@@ -348,7 +374,7 @@ export default function AccountLibrary({
           disabled={working}
           onClick={() => startCreating("child")}
         >
-          Create a child’s book
+          <Plus size={16} aria-hidden="true" /> Create a child’s book
         </button>
       </p>
     </section>
@@ -831,7 +857,9 @@ export default function AccountLibrary({
         className={`lb-lib-sheet ${
           libraryOpen && !adding && !chosen && view === "empty"
             ? "lb-lib-sheet-start"
-            : ""
+            : libraryOpen && !adding && !chosen && view === "books"
+              ? "lb-lib-sheet-books"
+              : ""
         }`}
       >
         {content}

@@ -113,7 +113,7 @@ type Modal =
   "settings" | "create" | "person" | "guide" | "connections" | "profile" | null;
 type Vault = Omit<
   ReturnType<typeof useLocalBook>,
-  "syncSnapshot" | "openSynced" | "receiveSynced" | "accountSnapshot"
+  "syncSnapshot" | "openSynced" | "receiveSynced" | "accountSnapshot" | "autoLocked"
 >;
 export default function LivingBook({
   vault,

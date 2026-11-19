@@ -63,6 +63,9 @@ export function useLocalBook() {
   >("loading");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // True after the book locked by itself (idle, put away, or changed in
+  // another tab), not after Lock, Sign out or an account change.
+  const [autoLocked, setAutoLocked] = useState(false);
   const key = useRef<CryptoKey | null>(null),
     envelope = useRef<Envelope | null>(null),
     epoch = useRef(0);
@@ -96,20 +99,27 @@ export function useLocalBook() {
     setMode("locked");
     setBusy(false);
     setError("");
+    setAutoLocked(false);
   }, []);
   useEffect(() => {
     if (mode !== "open") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- an open book is no longer auto-locked
+    setAutoLocked(false);
     let timer: ReturnType<typeof setTimeout>;
+    const autoLock = () => {
+      lock();
+      setAutoLocked(true);
+    };
     const reset = () => {
       clearTimeout(timer);
-      timer = setTimeout(lock, IDLE_LOCK_MS);
+      timer = setTimeout(autoLock, IDLE_LOCK_MS);
     };
     const change = (e: StorageEvent) => {
-      if (e.key === editionKey(selected.current) || e.key === null) lock();
+      if (e.key === editionKey(selected.current) || e.key === null) autoLock();
     };
     const visibility = () => {
       clearTimeout(timer);
-      timer = setTimeout(lock, document.hidden ? HIDDEN_LOCK_MS : IDLE_LOCK_MS);
+      timer = setTimeout(autoLock, document.hidden ? HIDDEN_LOCK_MS : IDLE_LOCK_MS);
     };
     reset();
     window.addEventListener("pointerdown", reset);
@@ -610,6 +620,7 @@ export function useLocalBook() {
     photos,
     book,
     mode,
+    autoLocked,
     busy,
     error,
     open,

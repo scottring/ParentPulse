@@ -200,6 +200,43 @@ function BookGate() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sync.authReady, sync.user, sync.working, sync.books, vault.mode, landing]);
   /* eslint-enable react-hooks/set-state-in-effect */
+  // When the book locks by itself (left idle, or the tab or app put away),
+  // open your own book again as soon as you come back, the same as a
+  // reload: no library in between. Lock, Sign out and a child's parent gate
+  // still stop here.
+  const [resting, setResting] = useState(false);
+  /* eslint-disable react-hooks/set-state-in-effect -- follows the vault's lock state */
+  useEffect(() => {
+    const user = sync.user;
+    if (
+      !vault.autoLocked ||
+      vault.mode !== "locked" ||
+      !user?.emailVerified ||
+      !readHomeBook(user.uid) ||
+      getParentGate()
+    ) {
+      setResting(false);
+      return;
+    }
+    setResting(true);
+    const events = ["pointerdown", "pointermove", "keydown", "touchstart", "focus"];
+    const stop = () => {
+      events.forEach((e) => window.removeEventListener(e, back));
+      document.removeEventListener("visibilitychange", back);
+    };
+    function back() {
+      if (document.hidden) return;
+      stop();
+      openHome.current = true;
+      fetched.current = false;
+      setLanding(true);
+      setResting(false);
+    }
+    events.forEach((e) => window.addEventListener(e, back));
+    document.addEventListener("visibilitychange", back);
+    return stop;
+  }, [vault.autoLocked, vault.mode, sync.user]);
+  /* eslint-enable react-hooks/set-state-in-effect */
   // Never strand someone on the opening screen: after 8 s, show the library.
   useEffect(() => {
     if (!landing) return;
@@ -220,6 +257,7 @@ function BookGate() {
       vault.mode === "loading" ||
       !sync.authReady ||
       ((landing ||
+        resting ||
         (!decided &&
           !!sync.user &&
           !!readHomeBook(sync.user.uid) &&
@@ -230,7 +268,9 @@ function BookGate() {
         <main className="r-app lb-gate lb-gate-one lb-gate-loading">
           <header className="lb-gate-head">
             <p className="lb-wordmark">relish</p>
-            <p role="status">Opening Relish…</p>
+            <p role="status">
+              {resting ? "Your book is resting. Tap to open it." : "Opening Relish…"}
+            </p>
           </header>
         </main>
       );
