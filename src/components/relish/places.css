@@ -1100,22 +1100,30 @@
   margin-top: 6px;
   font-weight: 700;
 }
-/* Family books on the shelf come first; invitations are quiet links after. */
-.rp-family-people {
-  display: grid;
-  gap: 28px;
+.lb-app .rp-person-invite,
+.lb-app .rp-person-invite:not(:disabled):hover {
+  background: var(--card);
+  border: 2.5px dashed var(--olive);
 }
-.rp-family-invites {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 40px;
+.lb-app .rp-person-invite .rp-person-dot {
+  font: 600 36px/1 var(--sans);
 }
-.lb-app .rp-family-invites p {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 12px;
-  margin: 0;
+.lb-app .rp-person-add,
+.lb-app .rp-person-add:not(:disabled):hover {
+  background: transparent;
+  border: 1.5px solid var(--line);
+  justify-content: flex-end;
+  gap: 4px;
+}
+.rp-person-add-title {
+  font: 700 26px/1 var(--serif);
+}
+.lb-app .rp-person-emblem {
+  background: var(--ui-olive) !important;
+  padding: 8px;
+}
+.lb-app .rp-person-emblem .rk-mark {
+  width: 100%;
 }
 .rp-finished {
   display: flex;

@@ -10,8 +10,7 @@ import {
 import type { PhotoAccess } from "@/lib/relish/photos";
 import type { Tone } from "@/lib/relish/catalog";
 import Illustration from "./Illustration";
-import { BookShelf, ShelfBook } from "./BookCover";
-import { coverFor } from "./covers";
+import { KidCoverMark } from "./KidHome";
 import { PhotoGallery } from "./Photos";
 import { personTones, type FamilyPerson } from "./Home";
 
@@ -173,75 +172,63 @@ export default function Family({
         </section>
       )}
 
-      <section aria-label="People" className="rp-family-people">
-        {people.some((p) => p.hasBook) && (
-          <BookShelf label="Family books" className="rp-family-shelf">
-            {people
-              .filter((p) => p.hasBook)
-              .map((p) => (
-                <ShelfBook
-                  key={p.id}
-                  name={p.name}
-                  cover={coverFor(p.name)}
-                  disabled={busy}
-                  locked={p.locked}
-                  onOpen={p.onOpen}
-                />
-              ))}
-          </BookShelf>
-        )}
-        {people.some((p) => !p.hasBook) && (
-          <div className="rp-people">
-            {people
-              .filter((p) => !p.hasBook)
-              .map((p, i) => (
-                <button
-                  key={p.id}
-                  className={`rp-person rp-tone-${personTones[i % personTones.length]}`}
-                  disabled={busy}
-                  onClick={p.onOpen}
-                >
-                  <span className="rp-person-dot" aria-hidden="true">
-                    {p.name.trim().charAt(0).toUpperCase()}
-                  </span>
-                  <span className="rp-person-words">
-                    <span className="rp-person-name">{p.name}</span>
-                    {p.note && <span>{p.note}</span>}
-                    <span className="rp-person-open">
-                      See my pages about {p.name} →
-                    </span>
-                  </span>
-                </button>
-              ))}
-          </div>
-        )}
-        {(onAddChild || onInvite) && (
-          <div className="rp-family-invites">
-            {onAddChild && (
-              <p>
-                <button className="rp-link" disabled={busy} onClick={onAddChild}>
-                  + Add a child
-                </button>
-                <span className="rp-quiet">
-                  Their book lives in your account. No login needed.
-                </span>
-              </p>
+      <section aria-label="People" className="rp-people">
+        {people.map((p, i) => (
+          <button
+            key={p.id}
+            className={`rp-person rp-tone-${personTones[i % personTones.length]}`}
+            disabled={busy}
+            onClick={p.onOpen}
+            aria-label={
+              !p.hasBook
+                ? undefined
+                : p.locked
+                  ? `Open ${p.name}’s book, an earlier copy that needs its original passphrase`
+                  : `Open ${p.name}’s book`
+            }
+          >
+            {p.hasBook ? (
+              <span className="rp-person-dot rp-person-emblem">
+                <KidCoverMark name={p.name} />
+              </span>
+            ) : (
+              <span className="rp-person-dot" aria-hidden="true">
+                {p.name.trim().charAt(0).toUpperCase()}
+              </span>
             )}
-            {onInvite && (
-              <p>
-                <button
-                  className="rp-link"
-                  disabled={busy}
-                  onClick={() => setInviting(true)}
-                >
-                  Invite a partner
-                </button>
-                <span className="rp-quiet">
-                  They get their own private book. You each choose what to share.
-                </span>
-              </p>
-            )}
-          </div>
+            <span className="rp-person-words">
+              <span className="rp-person-name">{p.name}</span>
+              <span>
+                {p.locked
+                  ? "Earlier copy · needs its original passphrase"
+                  : p.note || "Book in your account"}
+              </span>
+              <span className="rp-person-open">
+                {p.hasBook ? `Open ${p.name}’s book →` : `See my pages about ${p.name} →`}
+              </span>
+            </span>
+          </button>
+        ))}
+        {onInvite && (
+          <button
+            className="rp-person rp-person-invite"
+            disabled={busy}
+            onClick={() => setInviting(true)}
+          >
+            <span className="rp-person-dot rp-tone-sun" aria-hidden="true">
+              +
+            </span>
+            <span className="rp-person-words">
+              <span className="rp-person-name">Invite a partner</span>
+              <span>They get their own private book. You each choose what to share.</span>
+            </span>
+          </button>
+        )}
+        {onAddChild && (
+          <button className="rp-person rp-person-add" disabled={busy} onClick={onAddChild}>
+            <span className="rp-person-add-title">+ Add a child</span>
+            <span className="rp-quiet">Their book lives in your account. No login needed.</span>
+          </button>
         )}
         {!people.length && !onInvite && !onAddChild && (
           <p className="rp-quiet">

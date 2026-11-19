@@ -161,10 +161,10 @@ it("hands a shared device from Scott's book to Kaleb's and back to Family, then 
   // Scott's book: Family lists the children's books first, then the older
   // copy that needs its passphrase. Kaleb's opens without a password.
   fireEvent.click(screen.getByRole("button", { name: "Family" }));
-  let shelf = screen.getByRole("list", { name: "Family books" });
+  let shelf = screen.getByRole("region", { name: "People" });
   expect(
     within(shelf)
-      .getAllByRole("button")
+      .getAllByRole("button", { name: /^Open / })
       .map((b) => b.getAttribute("aria-label")),
   ).toEqual([
     "Open Kaleb’s book",
@@ -180,7 +180,7 @@ it("hands a shared device from Scott's book to Kaleb's and back to Family, then 
   await screen.findByRole("heading", { name: /Kaleb/ });
   expect(world.gate).toEqual({ accountUid: "parent-one" });
   fireEvent.click(screen.getByRole("button", { name: "Family" }));
-  expect(screen.queryByRole("list", { name: "Family books" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Open .*’s book/ })).toBeNull();
 
   // Switch book asks for the parent password; a wrong one is rejected.
   fireEvent.click(screen.getByRole("button", { name: /^Menu/ }));
@@ -204,7 +204,7 @@ it("hands a shared device from Scott's book to Kaleb's and back to Family, then 
   expect(screen.queryByRole("heading", { name: "Parent sign-in" })).toBeNull();
 
   // And on to Ella's book, again without a password.
-  shelf = screen.getByRole("list", { name: "Family books" });
+  shelf = screen.getByRole("region", { name: "People" });
   fireEvent.click(within(shelf).getByRole("button", { name: "Open Ella’s book" }));
   expect(sync.open).toHaveBeenLastCalledWith(heads.ella);
   await screen.findByRole("heading", { name: /Ella/ });
