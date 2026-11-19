@@ -19,6 +19,8 @@ import {
   samePageQuestions,
   sharerOf,
   gameText,
+  joyJudgePending,
+  joyJudging,
   joyResult,
   joySummary,
   joyTally,
@@ -119,7 +121,9 @@ export default function GroupPlay({
             <p>
               {at
                 ? `Question ${Math.min(at.q + 1, at.total)} of ${at.total} · ${at.sharer.name} answers`
-                : `Turn ${Math.min(g.turn + 1, total)} of ${total} · then reveal together`}
+                : g.stage === "judge"
+                  ? "Every turn is in · how close did they get?"
+                  : `Turn ${Math.min(g.turn + 1, total)} of ${total} · then reveal together`}
             </p>
           </div>
           <button className="lb-text" disabled={busy} onClick={onPause}>
@@ -144,7 +148,7 @@ export default function GroupPlay({
             {inWords
               ? "Take turns answering in your own words. Everyone else guesses what you said."
               : everyone
-              ? "Everyone picks a small joy in private, then guesses everyone else’s."
+              ? "Everyone picks a small joy in private, from the list or in their own words, then guesses everyone else’s."
               : g.kind === "joy"
                 ? `One person picks a small joy, then everyone else guesses it.`
                 : g.kind === "match"
@@ -152,7 +156,7 @@ export default function GroupPlay({
                     ? `Answer ${words[plan[0].asks.length] ?? plan[0].asks.length} questions each, then pass the device and compare.`
                     : "Everyone answers one question in private, then you compare."
                   : remembers(g)
-                    ? "Take turns adding to one story, then read it back and give it a title."
+                    ? "Take turns adding to one story, from the list or in your own words, then read it back and give it a title."
                     : "Take turns adding to one story. Anyone can pass."}
           </p>
           {g.kind === "match" && samePageTrend(living, g) && (
@@ -223,7 +227,9 @@ export default function GroupPlay({
                 ? "Answer in your own words, or pass. Everyone else will guess what you said."
                 : `Guess what ${at.sharer.name} said, or pass. The other guesses stay hidden.`
               : g.kind === "story"
-              ? "Add the next part of the story, or pass."
+              ? remembers(g)
+                ? "Add the next part of the story: pick a line or write your own. Passing is fine."
+                : "Add the next part of the story, or pass."
               : guessing
                 ? `Now guess what ${plan[g.turn].asks.length === 1 ? "the other person" : "the others"} picked. Pass any you like. The answers so far stay hidden.`
                 : everyone
@@ -254,10 +260,13 @@ export default function GroupPlay({
         />
       ) : inWords && g.stage === "judge" ? (
         <JudgeStep game={g} busy={busy} onAction={onAction} />
+      ) : everyone && g.stage === "judge" ? (
+        <JoyJudge game={g} busy={busy} onAction={onAction} />
       ) : g.stage === "choose" && plan[g.turn] ? (
         <TurnPanel
           key={`${g.id}:${g.turn}`}
           turn={plan[g.turn]}
+          kind={g.kind}
           busy={busy}
           onAction={onAction}
           storySoFar={g.kind === "story" ? text : ""}
@@ -389,15 +398,19 @@ export default function GroupPlay({
 /**
  * One player's turn. A turn with several questions shows them one at a time;
  * the answers are sent together at the end, so nothing is saved half-done.
+ * A question that takes your own words ends its list with "Something else…";
+ * a guess at a joy someone wrote is answered in words, with the list as ideas.
  */
 function TurnPanel({
   turn,
+  kind,
   busy,
   onAction,
   storySoFar,
   noun = "question",
 }: {
   turn: Turn;
+  kind: Game["kind"];
   busy: boolean;
   onAction: (action: GameAction) => void;
   storySoFar: string;
@@ -405,21 +418,82 @@ function TurnPanel({
 }) {
   const [step, setStep] = useState(0);
   const [picked, setPicked] = useState<(number | null)[]>([]);
+  const [texts, setTexts] = useState<(string | null)[]>([]);
+  /** The "Something else…" field is open on this question. */
+  const [writing, setWriting] = useState(false);
+  const [draft, setDraft] = useState("");
   const heading = useRef<HTMLHeadingElement>(null);
+  const field = useRef<HTMLTextAreaElement>(null);
   const many = turn.asks.length > 1;
   const ask = turn.asks[step];
+  const only = ask.write === "only";
+  const youngPlayer =
+    turn.player.audience === "under-6" || turn.player.audience === "6-8";
+  const story = kind === "story";
   useEffect(() => {
     if (step > 0) heading.current?.focus();
   }, [step]);
-  function answer(choice: number | null) {
+  useEffect(() => {
+    if (writing) field.current?.focus();
+  }, [writing]);
+  function go(next: number, written: (string | null)[]) {
+    setStep(next);
+    setDraft(written[next] ?? "");
+    setWriting(written[next] != null);
+  }
+  function answer(choice: number | null, text: string | null = null) {
     const answers = [...picked.slice(0, step), choice];
+    const written = [...texts.slice(0, step), text];
     if (step + 1 < turn.asks.length) {
       setPicked(answers);
-      setStep(step + 1);
+      setTexts(written);
+      go(step + 1, written);
       return;
     }
-    onAction(many ? { type: "answer", answers } : { type: "choice", choice });
+    if (many)
+      onAction({
+        type: "answer",
+        answers,
+        ...(written.some((t) => t !== null) ? { texts: written } : {}),
+      });
+    else onAction({ type: "choice", choice, ...(text !== null ? { text } : {}) });
   }
+  function submitWords(e?: { preventDefault: () => void }) {
+    e?.preventDefault();
+    if (draft.trim() && !busy) answer(null, draft);
+  }
+  const last = step + 1 >= turn.asks.length;
+  const ownField = (
+    <>
+      <label>
+        {only
+          ? "Your guess"
+          : story
+            ? "Your own line"
+            : "Your own small joy"}
+        <textarea
+          ref={field}
+          rows={2}
+          value={draft}
+          maxLength={SAID_LIMIT}
+          autoComplete="off"
+          autoCapitalize={story ? "none" : "sentences"}
+          placeholder={
+            only ? "" : story ? "a goose in a tiny scarf" : "Pancakes in our pajamas"
+          }
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            // A few words, not a page: Enter is done.
+            if (e.key !== "Enter" || e.shiftKey) return;
+            submitWords(e);
+          }}
+        />
+      </label>
+      {youngPlayer && (
+        <p className="lb-fine">Say it out loud and a grown-up can type it.</p>
+      )}
+    </>
+  );
   return (
     <>
       <p className="lb-kicker">
@@ -431,36 +505,109 @@ function TurnPanel({
       </h2>
       {ask.hint && <p className="lb-fine">{ask.hint}</p>}
       {storySoFar && <p className="lb-story-so-far">So far: {storySoFar}</p>}
-      <div className="lb-choices">
-        {ask.choices.map((choice, index) => (
-          <button
-            key={choice}
-            disabled={busy}
-            aria-pressed={picked[step] === index}
-            onClick={() => answer(index)}
-          >
-            {choice}
-          </button>
-        ))}
-      </div>
-      <div className="lb-turn-foot">
-        {many && step > 0 && (
-          <button
-            className="lb-text"
-            disabled={busy}
-            onClick={() => setStep(step - 1)}
-          >
-            Back to {noun} {step}
-          </button>
-        )}
-        <button
-          className="lb-text"
-          disabled={busy}
-          onClick={() => answer(null)}
-        >
-          {many ? "Pass this one" : "Pass my turn"}
-        </button>
-      </div>
+      {only ? (
+        <form key={step} className="lb-say" onSubmit={submitWords}>
+          {ownField}
+          <div className="lb-say-ideas" role="group" aria-label="Ideas to tap">
+            {ask.choices.map((c) => (
+              <button
+                key={c}
+                type="button"
+                className="ui-chip"
+                disabled={busy}
+                aria-pressed={draft === c}
+                onClick={() => setDraft(c)}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+          <div className="lb-turn-foot">
+            <button className="lb-primary" disabled={busy || !draft.trim()}>
+              {last ? "That’s my guess" : "Use this guess"} <Check size={16} />
+            </button>
+            {many && step > 0 && (
+              <button
+                type="button"
+                className="lb-text"
+                disabled={busy}
+                onClick={() => go(step - 1, texts)}
+              >
+                Back to {noun} {step}
+              </button>
+            )}
+            <button
+              type="button"
+              className="lb-text"
+              disabled={busy}
+              onClick={() => answer(null)}
+            >
+              {many ? "Pass this one" : "Pass my turn"}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <>
+          <div className="lb-choices">
+            {ask.choices.map((choice, index) => (
+              <button
+                key={choice}
+                disabled={busy}
+                aria-pressed={picked[step] === index && texts[step] == null}
+                onClick={() => answer(index)}
+              >
+                {choice}
+              </button>
+            ))}
+            {ask.write === "also" && !writing && (
+              <button
+                className="lb-choice-more"
+                disabled={busy}
+                aria-pressed={texts[step] != null}
+                onClick={() => setWriting(true)}
+              >
+                {story ? "Write your own…" : "Something else…"}
+              </button>
+            )}
+          </div>
+          {ask.write === "also" && writing && (
+            <form className="lb-choice-own" onSubmit={submitWords}>
+              {ownField}
+              <div className="lb-turn-foot">
+                <button className="lb-primary" disabled={busy || !draft.trim()}>
+                  Use this <Check size={16} />
+                </button>
+                <button
+                  type="button"
+                  className="lb-text"
+                  disabled={busy}
+                  onClick={() => setWriting(false)}
+                >
+                  Back to the list
+                </button>
+              </div>
+            </form>
+          )}
+          <div className="lb-turn-foot">
+            {many && step > 0 && (
+              <button
+                className="lb-text"
+                disabled={busy}
+                onClick={() => go(step - 1, texts)}
+              >
+                Back to {noun} {step}
+              </button>
+            )}
+            <button
+              className="lb-text"
+              disabled={busy}
+              onClick={() => answer(null)}
+            >
+              {many ? "Pass this one" : "Pass my turn"}
+            </button>
+          </div>
+        </>
+      )}
     </>
   );
 }
@@ -640,6 +787,111 @@ function JudgeStep({
           onClick={() => onAction({ type: "next" })}
         >
           {last ? "See how you did" : "Next question"} <ArrowRight size={16} />
+        </button>
+        {pending && (
+          <button
+            className="lb-text"
+            disabled={busy}
+            onClick={() => onAction({ type: "next", skip: true })}
+          >
+            Skip judging
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A small joy round where someone wrote their own: before the reveal,
+ * everyone looks at each written joy and its guesses, and whoever wrote it
+ * says how close each guess came.
+ */
+function JoyJudge({
+  game: g,
+  busy,
+  onAction,
+}: {
+  game: Game;
+  busy: boolean;
+  onAction: (action: GameAction) => void;
+}) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  const judging = joyJudging(g),
+    pending = joyJudgePending(g);
+  useEffect(() => {
+    heading.current?.focus();
+  }, []);
+  const one = judging.length === 1;
+  return (
+    <div className="lb-judge">
+      <p className="lb-kicker">Everyone look · before the reveal</p>
+      {!one && (
+        <h2 ref={heading} tabIndex={-1}>
+          Some of you wrote your own
+        </h2>
+      )}
+      {judging.map((t) => {
+        const Said = one ? "h2" : "h3";
+        return (
+          <section key={t.player.id} className="lb-joy-judge" aria-label={`${t.player.name}’s small joy`}>
+            <Said ref={one ? heading : undefined} tabIndex={one ? -1 : undefined} className="lb-said">
+              <span className="lb-kicker">{t.player.name} wrote</span>
+              {t.pick}
+            </Said>
+            {t.guesses.some((x) => x.text !== null) ? (
+              <p>{t.player.name}, how close did each guess come?</p>
+            ) : (
+              <p>Everyone passed on this one.</p>
+            )}
+            <ul className="lb-judge-list">
+              {t.guesses.map((x) => (
+                <li key={x.player.id}>
+                  <p className="lb-judge-guess">
+                    <span className="lb-kicker">
+                      {x.player.name} {x.text === null ? "passed" : "guessed"}
+                    </span>
+                    {x.text !== null && <strong>{x.text}</strong>}
+                  </p>
+                  {x.text !== null && (
+                    <div
+                      className="lb-judge-marks"
+                      role="group"
+                      aria-label={`How close was ${x.player.name}?`}
+                    >
+                      {saidMarks.map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          disabled={busy}
+                          aria-pressed={x.mark === m}
+                          onClick={() =>
+                            onAction({
+                              type: "judge",
+                              playerId: x.player.id,
+                              about: t.player.id,
+                              mark: x.mark === m ? null : m,
+                            })
+                          }
+                        >
+                          {markLabels[m]}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })}
+      <div className="lb-turn-foot">
+        <button
+          className="lb-primary"
+          disabled={busy || pending}
+          onClick={() => onAction({ type: "next" })}
+        >
+          See everyone’s joys <ArrowRight size={16} />
         </button>
         {pending && (
           <button
@@ -993,14 +1245,19 @@ function JoyReveal({ game: g }: { game: Game }) {
             <p>{l.pick}</p>
             <ul className="lb-sp-picks">
               {l.guesses.map((x) => (
-                <li key={x.player.id} className={x.right ? "is-right" : ""}>
+                <li
+                  key={x.player.id}
+                  className={x.right ? "is-right" : x.result === "close" ? "is-close" : ""}
+                >
                   <span>{x.player.name}</span>{" "}
                   {x.guess === null ? (
                     <em>passed</em>
                   ) : x.right ? (
                     <strong>guessed it ✓</strong>
+                  ) : x.result === "close" ? (
+                    <>was close with “{x.guess}”</>
                   ) : (
-                    <>guessed {x.guess.toLowerCase()}</>
+                    <>guessed {l.own ? `“${x.guess}”` : x.guess.toLowerCase()}</>
                   )}
                 </li>
               ))}
@@ -1010,7 +1267,7 @@ function JoyReveal({ game: g }: { game: Game }) {
       </div>
       <p className="lb-tally">
         {joySummary(g)}
-        {tally.length > 1 && tally.some((t) => t.right > 0) && (
+        {tally.length > 1 && tally.some((t) => t.right > 0 || t.close > 0) && (
           <span className="lb-tally-all">{joyTally(g)}</span>
         )}
       </p>

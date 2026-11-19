@@ -991,3 +991,16 @@
     transition: none;
   }
 }
+/* Bingo in your own words: a square the family wrote, and changing one. */
+.lb-app .rt-bingo button[data-own] {
+  border-style: dashed;
+}
+.lb-app .rt-square-change .rt-chips {
+  margin: 8px 0 6px;
+}
+.lb-app .rt-square-change .rt-field {
+  margin-bottom: 0;
+}
+.lb-app .rt-square-change .rt-actions {
+  margin-top: 10px;
+}

@@ -51,8 +51,12 @@ import {
   isTools,
   keepToolPage,
   sortPage,
+  squaresOf,
   startTracker,
   stopTracker,
+  TRACKER_SQUARE_LIMIT,
+  trackerPage,
+  writeTrackerSquare,
   toggleMark,
   toolById,
   tools,
@@ -196,6 +200,40 @@ describe("trackers", () => {
     book = toggleMark(book, id, "8");
     expect(hasBingo(toolsOf(book).trackers[0])).toBe(true);
     expect(() => toggleMark(book, id, "9")).toThrow();
+  });
+  it("takes a bingo square in your own words; its mark clears and the page reads it", () => {
+    let book = startTracker(withPeople(), "kindness-bingo");
+    const id = activeTrackers(book)[0].id;
+    book = toggleMark(book, id, "2");
+    book = toggleMark(book, id, "4");
+    book = writeTrackerSquare(book, [id], 4, "  Someone   fed the dog ");
+    let run = toolsOf(book).trackers[0];
+    expect(squaresOf(run)[4]).toBe("Someone fed the dog");
+    expect(run.marks.map((m) => m.key)).toEqual(["2"]);
+    expect(isTools(toolsOf(book))).toBe(true);
+    expect(() => writeTrackerSquare(book, [id], 5, "someone SHARED")).toThrow("already");
+    expect(() => writeTrackerSquare(book, [id], 9, "Nine")).toThrow("square");
+    expect(
+      squaresOf(toolsOf(writeTrackerSquare(book, [id], 1, "x".repeat(99))).trackers[0])[1],
+    ).toHaveLength(TRACKER_SQUARE_LIMIT);
+    book = toggleMark(book, id, "4");
+    run = toolsOf(book).trackers[0];
+    expect(trackerPage(book, run).text).toContain("Someone said thank you; Someone fed the dog.");
+    // "" puts the card's square back.
+    const back = toolsOf(writeTrackerSquare(book, [id], 4, "")).trackers[0];
+    expect(back.own).toBeUndefined();
+    expect(squaresOf(back)[4]).toBe("Someone gave a hug");
+    for (const own of [
+      ["x".repeat(TRACKER_SQUARE_LIMIT + 1), ...run.own!.slice(1)],
+      [" ", ...run.own!.slice(1)],
+      run.own!.slice(1),
+      "Someone fed the dog",
+    ])
+      expect(isTools({ ...toolsOf(book), trackers: [{ ...run, own }] })).toBe(false);
+    const hellos = toolsOf(startTracker(withPeople(), "hellos", "anna")).trackers[0];
+    expect(
+      isTools({ version: 1, trackers: [{ ...hellos, own: Array.from({ length: 9 }, () => null) }] }),
+    ).toBe(false);
   });
   it("stops without keeping anything", () => {
     let book = startTracker(withPeople(), "kindness-bingo");
