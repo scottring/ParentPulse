@@ -1,21 +1,46 @@
 "use client";
 import { useRef, useSyncExternalStore, type KeyboardEvent } from "react";
-import { Keyboard } from "lucide-react";
-import { createKeyboardEngine, strokeFor } from "@/lib/relish/keyboard-sound";
+import { Keyboard, Pencil, VolumeX } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
+  createKeyboardEngine,
+  KEYBOARD,
+  PENCIL,
+  strokeFor,
+} from "@/lib/relish/keyboard-sound";
 
-// On unless turned off. Separate from the quiet interaction sounds.
+// The sound of writing in the journal: a keyboard (the default), a pencil on
+// paper, or nothing. Separate from the quiet interaction sounds. Stored as
+// "on" (keyboard, as before the pencil existed), "pencil" or "off".
+export type TypingVoice = "keyboard" | "pencil" | "off";
 const KEY = "relish.typing-sounds.v1";
 const EVENT = "relish-typing-sound-change";
-const VOLUME = 0.55;
-let fallback: boolean | undefined;
-let engine: ReturnType<typeof createKeyboardEngine> | null = null;
-const getEngine = () => (engine ??= createKeyboardEngine());
+const VOLUME: Record<Exclude<TypingVoice, "off">, number> = {
+  keyboard: 0.55,
+  pencil: 0.5,
+};
+const VOICES: { voice: TypingVoice; label: string; icon: LucideIcon }[] = [
+  { voice: "keyboard", label: "Keyboard", icon: Keyboard },
+  { voice: "pencil", label: "Pencil", icon: Pencil },
+  { voice: "off", label: "Off", icon: VolumeX },
+];
+let fallback: TypingVoice | undefined;
+const engines: Partial<
+  Record<Exclude<TypingVoice, "off">, ReturnType<typeof createKeyboardEngine>>
+> = {};
+const getEngine = (voice: Exclude<TypingVoice, "off">) =>
+  (engines[voice] ??= createKeyboardEngine(
+    voice === "pencil" ? PENCIL : KEYBOARD,
+  ));
 
-function read() {
+export function parseVoice(stored: string | null): TypingVoice {
+  return stored === "off" ? "off" : stored === "pencil" ? "pencil" : "keyboard";
+}
+function read(): TypingVoice {
   try {
-    return fallback ?? localStorage.getItem(KEY) !== "off";
+    return fallback ?? parseVoice(localStorage.getItem(KEY));
   } catch {
-    return fallback ?? true;
+    return fallback ?? "keyboard";
   }
 }
 function subscribe(onChange: () => void) {
@@ -29,57 +54,81 @@ function subscribe(onChange: () => void) {
     window.removeEventListener("storage", storage);
   };
 }
-export function setTypingSound(on: boolean) {
-  fallback = on;
+export function setTypingVoice(voice: TypingVoice) {
+  fallback = voice;
   try {
-    localStorage.setItem(KEY, on ? "on" : "off");
+    localStorage.setItem(KEY, voice === "keyboard" ? "on" : voice);
     fallback = undefined;
   } catch {
     /* Session-only preference. */
   }
   window.dispatchEvent(new Event(EVENT));
 }
-export const useTypingSoundEnabled = () =>
-  useSyncExternalStore(subscribe, read, () => false);
+export const useTypingVoice = () =>
+  useSyncExternalStore(subscribe, read, () => "off" as TypingVoice);
 
-/** Spread onto any text field: a clack on each key down, a tick on release. */
+/**
+ * Spread onto any text field. Keyboard: a clack on each key down, a tick on
+ * release. Pencil: a short scratch for each letter and line, and quiet for
+ * spaces and deletions, the way a pencil lifts between words.
+ */
 export function useTypingSound() {
-  const enabled = useTypingSoundEnabled();
+  const voice = useTypingVoice();
   const down = useRef(new Set<string>());
   return {
     onFocus: () => {
-      if (enabled) getEngine().warm();
+      if (voice !== "off") getEngine(voice).warm();
     },
     onKeyDown: (e: KeyboardEvent) => {
-      if (!enabled || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (voice === "off" || e.repeat || e.metaKey || e.ctrlKey || e.altKey)
+        return;
       const stroke = strokeFor(e.key);
       if (!stroke) return;
+      if (voice === "pencil" && (stroke === "space" || stroke === "delete"))
+        return;
       down.current.add(e.code || e.key);
-      getEngine().strike(stroke, VOLUME);
+      getEngine(voice).strike(stroke, VOLUME[voice]);
     },
     onKeyUp: (e: KeyboardEvent) => {
       const id = e.code || e.key;
-      if (!down.current.delete(id) || !enabled) return;
-      getEngine().strike("up", VOLUME);
+      if (!down.current.delete(id) || voice !== "keyboard") return;
+      getEngine(voice).strike("up", VOLUME[voice]);
     },
   };
 }
 
-export function TypingSoundToggle() {
-  const enabled = useTypingSoundEnabled();
+function VoiceChoices() {
+  const current = useTypingVoice();
   return (
-    <button
-      type="button"
-      className="rj-typing-toggle"
-      data-sound="off"
-      aria-pressed={enabled}
-      onClick={() => {
-        setTypingSound(!enabled);
-        if (!enabled) getEngine().warm();
-      }}
-    >
-      <Keyboard size={16} /> Keyboard sound {enabled ? "on" : "off"}
-    </button>
+    <>
+      {VOICES.map(({ voice, label, icon: Icon }) => (
+        <button
+          key={voice}
+          type="button"
+          className="rj-typing-toggle"
+          data-sound="off"
+          aria-pressed={current === voice}
+          onClick={() => {
+            setTypingVoice(voice);
+            if (voice !== "off") getEngine(voice).warm();
+          }}
+        >
+          <Icon size={16} /> {label}
+        </button>
+      ))}
+    </>
+  );
+}
+
+/** The choice in the journal's page options. */
+export function TypingSoundToggle() {
+  return (
+    <fieldset className="rj-typing-voices">
+      <legend>Typing sound</legend>
+      <div>
+        <VoiceChoices />
+      </div>
+    </fieldset>
   );
 }
 
@@ -88,13 +137,14 @@ export function TypingSoundSetting() {
     <div className="r-setting-row">
       <Keyboard size={24} />
       <div>
-        <h3>Keyboard sound</h3>
+        <h3>Typing sound</h3>
         <p>
-          A mechanical-keyboard click as you type in your journal, timed to each
-          key. Separate from the other sounds.
+          A sound as you write in your journal, timed to each key: a
+          mechanical keyboard, or a pencil on paper. Separate from the other
+          sounds.
         </p>
-        <div className="r-sound-options">
-          <TypingSoundToggle />
+        <div className="r-sound-options rj-typing-voices">
+          <VoiceChoices />
         </div>
       </div>
     </div>
