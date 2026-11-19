@@ -152,7 +152,17 @@ it("Family: people, shared pages passed between you, and the album without locki
   });
   fireEvent.click(screen.getByRole("button", { name: "Family" }));
   expect(screen.getByRole("heading", { name: "Your family", level: 1 })).toBeTruthy();
-  expect(screen.getByRole("button", { name: /Open Ella’s book/ })).toBeTruthy();
+  // Existing people first, as covers on a shelf; invitations come after.
+  const shelf = screen.getByRole("list", { name: "Family books" });
+  const ella = screen.getByRole("button", { name: "Open Ella’s book" });
+  expect(shelf.contains(ella)).toBe(true);
+  expect(
+    ella.querySelector("[data-illustration]")?.getAttribute("data-illustration"),
+  ).toBe("emblem-star");
+  const invite = screen.getByRole("button", { name: "Invite a partner" });
+  expect(
+    shelf.compareDocumentPosition(invite) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
   expect(screen.getByText("A note from Sam")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /Story Our story/ }));
   expect(screen.getByText("A fox in yellow boots.")).toBeTruthy();
@@ -172,5 +182,7 @@ it("Family in a child's book offers no invitations, sharing or other books", () 
   expect(screen.queryByRole("button", { name: /Invite a partner/ })).toBeNull();
   expect(screen.queryByRole("button", { name: /Add a child/ })).toBeNull();
   expect(screen.queryByRole("heading", { name: "Passed between you" })).toBeNull();
+  expect(screen.queryByRole("list", { name: "Family books" })).toBeNull();
+  expect(screen.queryByText(/Everyone’s book/)).toBeNull();
   expect(screen.getByRole("heading", { name: "Family album" })).toBeTruthy();
 });

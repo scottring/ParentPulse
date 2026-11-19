@@ -13,7 +13,7 @@ import { useBookSync } from "./useBookSync";
 import Illustration from "./Illustration";
 import { PaperCard, PrivateNote } from "./ui";
 import type { ReactNode } from "react";
-import { readBinding } from "@/lib/relish/book-sync";
+import { readBinding, type SyncedEdition } from "@/lib/relish/book-sync";
 import { disconnectAI, getParentGate, setParentGate } from "@/lib/relish/ai-auth";
 import "./relish.css";
 import "./experience.css";
@@ -55,6 +55,11 @@ function BookGate() {
   const sync = useBookSync(vault);
   const [accountOpen, setAccountOpen] = useState(false);
   const [addChild, setAddChild] = useState(false);
+  // An older synced book chosen on Family: opens on its passphrase form.
+  const [opening, setOpening] = useState<SyncedEdition | null>(null);
+  // After the parent unlock from a child's book, the adult's own book opens
+  // on Family.
+  const [startOn, setStartOn] = useState<string | null>(null);
   const [localMode, setLocalMode] = useState(false);
   const [exportOpen, setExportOpen] = useState(false),
     [exportPass, setExportPass] = useState("");
@@ -86,6 +91,7 @@ function BookGate() {
     sync.cancel();
     setAccountOpen(false);
     setAddChild(false);
+    setOpening(null);
     setLocalMode(false);
   };
   const library = (inline = false) => (
@@ -95,6 +101,8 @@ function BookGate() {
       onClose={closeAccount}
       inline={inline}
       startAdding={!inline && addChild ? "child" : undefined}
+      opening={!inline && opening ? opening : undefined}
+      onSwitchHome={(head) => setStartOn(head.id)}
       onLocal={() => {
         // From the dialog, close it first; the open book locks on the shelf.
         if (!inline) closeAccount();
@@ -119,7 +127,7 @@ function BookGate() {
   useEffect(() => {
     if (ownBook && sync.user) writeHomeBook(sync.user.uid, ownBook);
   }, [ownBook, sync.user]);
-  // Land on that book's Home instead of stopping at the family library.
+  // Land on that book's Home; books are chosen on Family, not a library.
   // While that's under way, show the quiet opening screen, not a library
   // that flashes "empty" and then a list before the book opens.
   const signedIn = useRef<string | null | undefined>(undefined);
@@ -300,8 +308,10 @@ function BookGate() {
           />
         </Gate>
       );
-    // The other books in this parent account, shown as people in an adult
-    // book. A child's book never lists or opens its siblings' books.
+    // The other books in this parent account, shown as covers on Family in
+    // an adult book: account books first, then older synced copies that
+    // still need their original passphrase. A child's book never lists or
+    // opens its siblings' books.
     const family: FamilyPerson[] =
       vault.book.profile?.kind === "adult" &&
       managed &&
@@ -310,22 +320,27 @@ function BookGate() {
         ? sync.books
             .filter(
               (h) =>
-                h.accountManaged &&
-                h.id !== binding.remoteId &&
-                !h.label.endsWith("— device copy"),
+                h.id !== binding.remoteId && !h.label.endsWith("— device copy"),
             )
+            .toSorted((a, b) => Number(!a.accountManaged) - Number(!b.accountManaged))
             .map((h) => ({
               id: h.id,
               name: h.label,
               note: "Book in your account",
-              onOpen: () =>
-                void sync.open(h).catch(() => setAccountOpen(true)),
+              locked: !h.accountManaged,
+              onOpen: h.accountManaged
+                ? () => void sync.open(h).catch(() => setAccountOpen(true))
+                : () => {
+                    setOpening(h);
+                    setAccountOpen(true);
+                  },
             }))
         : [];
     return (
       <LivingBook
         key={`${vault.mode}:${vault.editionId}`}
         family={family}
+        startView={startOn && binding?.remoteId === startOn ? "family" : undefined}
         onAddChild={() => {
           setAddChild(true);
           setAccountOpen(true);
@@ -350,7 +365,13 @@ function BookGate() {
           },
         }}
         onAccount={() => setAccountOpen(true)}
-        accountLabel={sync.user ? "Family library" : "Sign in"}
+        accountLabel={
+          !sync.user
+            ? "Sign in"
+            : vault.book.profile?.kind === "child"
+              ? "Switch book"
+              : "Account"
+        }
         syncStatus={sync.status}
         onInteraction={(value) => sync.setPaused(value || accountOpen)}
       />

@@ -269,7 +269,7 @@ function AdultAIHelp({
               </p>
               <p className="r-small">
                 Sign-in enables up to {connection.dailyLimit} AI reflections a
-                day. Only the excerpt you approve below is sent for analysis. We keep usage counts. Your Relish account also provides access to your saved family library.
+                day. Only the excerpt you approve below is sent for analysis. We keep usage counts. Your Relish account also opens your family’s saved books.
               </p>
               {user ? (
                 <>

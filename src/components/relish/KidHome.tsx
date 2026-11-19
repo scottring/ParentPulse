@@ -1,5 +1,5 @@
 "use client";
-import { useState, type ReactNode, type RefObject } from "react";
+import { useState, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { Camera, Mic, Pencil } from "lucide-react";
 import type { Book } from "@/lib/relish/model";
 import { audienceOf } from "@/lib/relish/profiles";
@@ -17,6 +17,7 @@ import {
   type IllustrationName,
 } from "./illustrations";
 import { icons } from "./Home";
+import { coverFor } from "./covers";
 
 /** The picture beside a kid suggestion. */
 function nudgeArt(action: NudgeAction): IllustrationName {
@@ -32,12 +33,21 @@ function nudgeArt(action: NudgeAction): IllustrationName {
  * name drawn in code and their gold emblem. Falls back to a drawn cover.
  */
 export function KidCover({ name }: { name: string }) {
-  const emblem = emblemFor(name);
+  // The same cloth and emblem as this child's cover on the family shelf.
+  const cover = coverFor(name);
+  const emblem = cover.emblem;
   const emblemArt = `emblem-${emblem}` as IllustrationName;
   const [broken, setBroken] = useState(false);
+  const cloth = { "--cloth": cover.color } as CSSProperties;
   if (isPainted("kid-cover") && !broken)
     return (
-      <div className="rk-cover rk-cover-painted" aria-hidden="true" data-emblem={emblem}>
+      <div
+        className="rk-cover rk-cover-painted"
+        aria-hidden="true"
+        data-emblem={emblem}
+        data-cloth={cover.cloth}
+        style={cloth}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           className="rk-cover-photo"
@@ -49,6 +59,11 @@ export function KidCover({ name }: { name: string }) {
           decoding="async"
           onError={() => setBroken(true)}
         />
+        {/* Re-dye the painted olive cloth (masked by kid-cover-cloth.png):
+            darken it, then take the cloth's hue and saturation. The pages
+            and ribbon stay as painted. */}
+        <span className="rk-cover-shade" />
+        <span className="rk-cover-dye" />
         <span className="rk-cover-face">
           <span className="rk-cover-name">
             {name}’s
@@ -60,7 +75,13 @@ export function KidCover({ name }: { name: string }) {
       </div>
     );
   return (
-    <div className="rk-cover" aria-hidden="true" data-emblem={emblem}>
+    <div
+      className="rk-cover"
+      aria-hidden="true"
+      data-emblem={emblem}
+      data-cloth={cover.cloth}
+      style={cloth}
+    >
       <span className="rk-cover-pages" />
       <span className="rk-cover-cloth">
         <span className="rk-cover-name">

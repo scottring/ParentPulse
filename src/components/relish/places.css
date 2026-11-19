@@ -987,23 +987,22 @@
   margin-top: 6px;
   font-weight: 700;
 }
-.lb-app .rp-person-invite,
-.lb-app .rp-person-invite:not(:disabled):hover {
-  background: var(--card);
-  border: 2.5px dashed var(--olive);
+/* Family books on the shelf come first; invitations are quiet links after. */
+.rp-family-people {
+  display: grid;
+  gap: 28px;
 }
-.lb-app .rp-person-invite .rp-person-dot {
-  font: 600 36px/1 var(--sans);
+.rp-family-invites {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 40px;
 }
-.lb-app .rp-person-add,
-.lb-app .rp-person-add:not(:disabled):hover {
-  background: transparent;
-  border: 1.5px solid var(--line);
-  justify-content: flex-end;
-  gap: 4px;
-}
-.rp-person-add-title {
-  font: 700 26px/1 var(--serif);
+.lb-app .rp-family-invites p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 12px;
+  margin: 0;
 }
 .rp-finished {
   display: flex;
@@ -1264,7 +1263,7 @@
   gap: 10%;
   padding: 18% 12% 0;
   border-radius: 6px 12px 12px 6px;
-  background-color: #4a5a3c;
+  background-color: var(--cloth, #4a5a3c);
   background-image: repeating-linear-gradient(
       45deg,
       rgba(255, 255, 255, 0.05) 0 1px,
@@ -1289,6 +1288,25 @@
   display: block;
   width: 100%;
   height: auto;
+}
+.rk-cover.rk-cover-painted {
+  isolation: isolate;
+}
+.rk-cover-shade,
+.rk-cover-dye {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-mask: url("/illustrations/relish/kid-cover-cloth.png") 0 0 / 100% 100% no-repeat;
+  mask: url("/illustrations/relish/kid-cover-cloth.png") 0 0 / 100% 100% no-repeat;
+}
+.rk-cover-shade {
+  background: #b4b4b4;
+  mix-blend-mode: multiply;
+}
+.rk-cover-dye {
+  background: var(--cloth, #5e6b3c);
+  mix-blend-mode: color;
 }
 /* The cover face of kid-cover.webp: name and emblem sit on the cloth. */
 .rk-cover-face {
@@ -1636,15 +1654,11 @@ img.ui-illustration.rk-cover-emblem,
 .lb-app .rp-place-head > div {
   min-width: 0;
 }
+.lb-app .rp-place-head .rp-lede {
+  margin-top: 10px;
+}
 .lb-app .rp-place-art {
   border-radius: 14px;
-}
-.lb-app .rp-person-emblem {
-  background: var(--ui-olive) !important;
-  padding: 8px;
-}
-.lb-app .rp-person-emblem .rk-mark {
-  width: 100%;
 }
 @media (max-width: 560px) {
   .lb-app .rp-place-art {
