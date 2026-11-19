@@ -228,7 +228,7 @@ it("runs a day-by-day checklist across visits and finishes into a page", async (
   app.unmount();
   const again = open(app.stored());
   fireEvent.click(
-    screen.getByRole("button", { name: /Ten real hellos.*In progress · 1 of 10/ }),
+    screen.getByRole("button", { name: /Ten real hellos · 1 of 10/ }),
   );
   expect(screen.getByText(/1 of 10 days/)).toBeTruthy();
   // Finishing early lives under Activity options.
@@ -286,7 +286,7 @@ it("does ten real hellos with two people at once, each marked on their own", asy
   // Do something names both.
   fireEvent.click(screen.getByRole("button", { name: /Back to Do something/ }));
   expect(
-    await screen.findByRole("button", { name: /Ten real hellos.*In progress · Ella 0 of 10 · Kaleb 0 of 10/ }),
+    await screen.findByRole("button", { name: /Ten real hellos · Ella 0 of 10 · Kaleb 0 of 10/ }),
   ).toBeTruthy();
 });
 it("lets one person finish first while the other carries on", async () => {
@@ -326,7 +326,7 @@ it("after the tenth day, offers a line to remember and keeps the page", async ()
 });
 it("shows a habit started before this change unchanged, and can add someone mid-way", async () => {
   const app = open(parent({ version: 1, trackers: [run("k", "kaleb", 4)] }));
-  fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos.*In progress · 4 of 10/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /Ten real hellos · 4 of 10/ }));
   await screen.findByText("With Kaleb");
   expect(screen.getByText("4 of 10 days")).toBeTruthy();
   expect(document.querySelectorAll('.rt-days li[data-done="true"]')).toHaveLength(4);
@@ -414,7 +414,7 @@ it("plays Same page? with hidden answers and a shared reveal", async () => {
     { id: "b", name: "Sam" },
   ]);
   const app = open({ ...book, living: { ...livingOf(book), game } });
-  fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Same page\?.*Resume game/ }));
   expect(screen.getByRole("heading", { name: "Same page?" })).toBeTruthy();
   expect(screen.getByText(/stay with this round in Robin’s book \(never sent to AI\)/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /Let’s play/ }));
@@ -461,7 +461,7 @@ it("after the reveal each player can add their own line or skip, and Finish stil
     game = advanceGame(game, { type: "answer", answers: [0, 0, 1, 1, 2] });
   }
   const app = open({ ...book, living: { ...livingOf(book), game } });
-  fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Same page\?.*Resume game/ }));
   fireEvent.click(await screen.findByRole("button", { name: "Add a memory" }));
   await screen.findByRole("heading", { name: "Robin, anything to remember about this round?" });
   fireEvent.change(screen.getByRole("textbox", { name: "Robin’s line" }), {

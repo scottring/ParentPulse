@@ -82,7 +82,7 @@ it("More to try opens Do something filtered", () => {
   const more = screen.getByRole("region", { name: "More to try" });
   fireEvent.click(within(more).getByRole("button", { name: /Play a game/ }));
   expect(screen.getByRole("heading", { name: "What feels right?" })).toBeTruthy();
-  const cards = within(screen.getByRole("region", { name: "Things to do" })).getAllByRole("button");
+  const cards = within(screen.getByRole("list", { name: "Activities" })).getAllByRole("button");
   expect(cards.length).toBeGreaterThan(0);
   expect(cards.every((c) => c.textContent?.includes("Game"))).toBe(true);
 });

@@ -864,6 +864,7 @@ export default function LivingBook({
             initialGame={gameOffer}
             onFilter={setDoFilter}
             onOpen={onNudge}
+            onDraft={(draft) => quickEntry(false, draft)}
             onResumeGame={() => navigate("play")}
             onStartGame={createGame}
           />

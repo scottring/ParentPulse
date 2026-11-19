@@ -4,10 +4,14 @@ import type { Book } from "@/lib/relish/model";
 import {
   doFilters,
   doItems,
-  doTone,
+  doLabel,
+  gameNames,
   matchesFilter,
+  onlyReopens,
+  underWay,
   type DoFilter,
   type DoItem,
+  type UnderWay,
 } from "@/lib/relish/catalog";
 import {
   ageBands,
@@ -16,19 +20,8 @@ import {
   youngestAudience,
   type Audience,
 } from "@/lib/relish/profiles";
-import {
-  livingOf,
-  pendingPractice,
-  type Game,
-  type Player,
-} from "@/lib/relish/living";
-import {
-  activeTrackers,
-  DAY_TOOL,
-  dayStatus,
-  toolsOf,
-  runsStatus,
-} from "@/lib/relish/tools";
+import { livingOf, type Game, type Player } from "@/lib/relish/living";
+import type { JournalEntry } from "@/lib/relish/journal";
 import type { NudgeAction } from "@/lib/relish/nudges";
 import Illustration from "./Illustration";
 import {
@@ -46,12 +39,6 @@ function itemArt(action: NudgeAction): IllustrationName {
 }
 
 type GameItem = DoItem & { action: { kind: "game"; game: Game["kind"] } };
-const gameNames: Record<Game["kind"], string> = {
-  joy: "Guess my small joy",
-  story: "One story, many voices",
-  match: "Same page?",
-  spot: "Spot it!",
-};
 
 export default function DoSomething({
   book,
@@ -61,6 +48,7 @@ export default function DoSomething({
   headingRef,
   onFilter,
   onOpen,
+  onDraft,
   onResumeGame,
   onStartGame,
   initialGame,
@@ -75,6 +63,8 @@ export default function DoSomething({
   headingRef: RefObject<HTMLHeadingElement | null>;
   onFilter: (filter: DoFilter) => void;
   onOpen: (action: NudgeAction) => void;
+  /** Reopens an unfinished journal page. */
+  onDraft: (draft: JournalEntry) => void;
   onResumeGame: () => void;
   onStartGame: (kind: Game["kind"], players: Player[]) => void;
 }) {
@@ -88,36 +78,54 @@ export default function DoSomething({
   const living = livingOf(book);
   const game =
     living.game && living.game.stage !== "finished" ? living.game : undefined;
-  const pausedVisit = living.visit && living.visit.status !== "complete";
-  const plan = pendingPractice(book);
-  const running = activeTrackers(book);
-  const all = doItems(audience);
+  // Under way: not filtered, newest first. Cards that would only reopen one
+  // of these stay out of the grid; a game or a journal page can start fresh.
+  const going = underWay(book);
+  const all = doItems(audience).filter((item) => !onlyReopens(item, going));
   const shown = all.filter((item) => matchesFilter(item, filter));
-  function status(item: DoItem) {
-    if (item.action.kind === "reflect" && plan && !plan.triedAt)
-      return "Your plan is waiting · did you try it?";
-    if (item.action.kind === "reflect" && pausedVisit)
-      return "Paused · your words are saved";
-    if (item.action.kind === "game" && game?.kind === item.action.game)
-      return "Round in progress · tap to go back to it";
-    if (item.action.kind === "exercise") {
-      const id = item.action.id;
-      const day = toolsOf(book).day;
-      if (id === DAY_TOOL && day) return `In progress · ${dayStatus(day)}`;
-      const runs = running.filter((r) => r.toolId === id);
-      if (runs.length) return `In progress · ${runsStatus(book, runs)}`;
-    }
-    return "";
+  function resume(g: UnderWay) {
+    if (g.kind === "game") onResumeGame();
+    else if (g.kind === "visit") onOpen({ kind: "reflect" });
+    else if (g.kind === "draft") onDraft(g.draft);
+    else onOpen({ kind: "exercise", id: g.toolId });
   }
   return (
     <main className="rp-place rp-do" aria-labelledby="rp-do-title">
-      <section className="rp-stack">
-        <div className="rp-place-head">
-          <h1 id="rp-do-title" ref={headingRef} tabIndex={-1}>
-            What feels right?
-          </h1>
-          <Illustration name="do-something" size={110} eager className="rp-place-art" />
-        </div>
+      <div className="rp-place-head">
+        <h1 id="rp-do-title" ref={headingRef} tabIndex={-1}>
+          What feels right?
+        </h1>
+        <Illustration name="do-something" size={110} eager className="rp-place-art" />
+      </div>
+      {!!going.length && (
+        <section className="rp-resume" aria-labelledby="rp-resume-title">
+          <h2 id="rp-resume-title">Pick up where you left off</h2>
+          <ul>
+            {going.map((g) => (
+              <li key={`${g.kind}:${g.key}`}>
+                <button
+                  className="rp-resume-item"
+                  disabled={busy}
+                  onClick={() => resume(g)}
+                >
+                  <span className="rp-resume-name">
+                    {g.title}
+                    {g.detail && <span className="rp-resume-detail"> · {g.detail}</span>}
+                  </span>
+                  <span className="rp-resume-action">
+                    {g.label} <span aria-hidden="true">→</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      <section
+        className="rp-stack rp-do-new"
+        aria-labelledby={going.length ? "rp-do-new-title" : undefined}
+      >
+        {!!going.length && <h2 id="rp-do-new-title">New activities</h2>}
         <div
           className="rp-chips"
           role="group"
@@ -131,51 +139,48 @@ export default function DoSomething({
                 aria-pressed={filter === f.id}
                 onClick={() => onFilter(f.id)}
               >
-                {f.id === "kids" && audience !== "adult" ? "Together" : f.label}
+                {f.label}
               </button>
             ))}
         </div>
-        <p className="rp-quiet" aria-live="polite">
+        <p className="rp-quiet rp-do-count" aria-live="polite">
           {filter === "all"
-            ? "Everything in one place. Each one has a clear place to stop."
-            : `${shown.length} ${shown.length === 1 ? "thing fits" : "things that fit"}.`}
+            ? ""
+            : `${shown.length} ${shown.length === 1 ? "activity fits" : "activities fit"}.`}
         </p>
-      </section>
-      {!shown.length && (
-        <div className="rp-quiet rp-empty-filter">
-          <p>Nothing here for this filter yet.</p>
-          <button className="ui-link" onClick={() => onFilter("all")}>
-            Show everything
-          </button>
-        </div>
-      )}
-      <section className="rp-do-grid" aria-label="Things to do">
-        {shown.map((item) => {
-          const note = status(item);
-          return (
-            <button
-              key={item.key}
-              className={`rp-do-card rp-tone-${doTone[item.type]}`}
-              disabled={busy}
-              onClick={() => {
-                if (item.action.kind !== "game") return onOpen(item.action);
-                if (game?.kind === item.action.game) return onResumeGame();
-                setSheet(item as GameItem);
-              }}
-            >
-              <span className="rp-do-meta">
-                <span className="rp-do-type">{item.type}</span>
-                <span>{item.time}</span>
-              </span>
-              <span className="rp-do-art">
-                <Illustration name={itemArt(item.action)} size={88} />
-              </span>
-              <span className="rp-do-title">{item.title}</span>
-              <span className="rp-do-blurb">{item.blurb}</span>
-              {note && <span className="rp-do-note">{note}</span>}
+        {!shown.length && (
+          <div className="rp-quiet rp-empty-filter">
+            <p>Nothing here for this filter yet.</p>
+            <button className="ui-link" onClick={() => onFilter("all")}>
+              Show all activities
             </button>
-          );
-        })}
+          </div>
+        )}
+        <ul className="rp-do-grid" aria-label="Activities">
+          {shown.map((item) => (
+            <li key={item.key}>
+              <button
+                className="rp-do-card"
+                disabled={busy}
+                onClick={() => {
+                  if (item.action.kind !== "game") return onOpen(item.action);
+                  setSheet(item as GameItem);
+                }}
+              >
+                <span className="rp-do-art">
+                  <Illustration name={itemArt(item.action)} size={88} />
+                </span>
+                <span className="rp-do-text">
+                  <span className="rp-do-title">{item.title}</span>
+                  <span className="rp-do-line">{item.line}</span>
+                  <span className="rp-do-meta">
+                    {doLabel(item)}
+                  </span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
       </section>
       {sheet && (
         <GameSheet
@@ -265,7 +270,7 @@ function GameSheet({
             className="rp-sheet-art"
           />
           <div>
-            <span className="rp-eyebrow">Game · {item.time}</span>
+            <span className="rp-eyebrow">{doLabel(item)}</span>
             <h2 id="rp-sheet-title">{item.title}</h2>
             <p>{item.blurb}</p>
           </div>

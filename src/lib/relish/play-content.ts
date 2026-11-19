@@ -473,14 +473,14 @@ export const games: {
     title: "Same page?",
     blurb: "Five quick questions, answered in private. See where you match, and where you don’t.",
     short: "5–10 min",
-    tags: ["kids", "5"],
+    tags: ["kids"],
   },
   {
     kind: "joy",
     title: "Guess my small joy",
     blurb: "Everyone picks a small joy in secret, then guesses each other’s. See who knows whom best.",
     short: "5–10 min",
-    tags: ["kids", "5"],
+    tags: ["kids"],
   },
   {
     kind: "story",
