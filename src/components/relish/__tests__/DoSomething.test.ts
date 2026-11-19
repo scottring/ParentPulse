@@ -10,6 +10,7 @@ import {
 } from "@testing-library/react";
 import { webcrypto } from "node:crypto";
 import { emptyBook, type Book } from "@/lib/relish/model";
+import { newJournalDraft, writeJournalPage } from "@/lib/relish/journal";
 import {
   beginVisit,
   chooseThread,
@@ -140,7 +141,7 @@ it("returns a paused child reflection to Do something and resumes its saved step
   };
   const app = open(chooseThread(beginVisit(child), "listen"));
   fireEvent.click(
-    screen.getByRole("button", { name: /Think it through.*Paused/ }),
+    screen.getByRole("button", { name: /Think it through.*Continue writing/ }),
   );
   const text = await screen.findByRole("textbox", { name: "Your moment" });
   fireEvent.change(text, {
@@ -152,7 +153,7 @@ it("returns a paused child reflection to Do something and resumes its saved step
   expect(livingOf(paused).visit?.status).toBe("paused");
   app.unmount();
   const reopened = open(paused);
-  fireEvent.click(screen.getByRole("button", { name: /Think it through/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Think it through.*Continue writing/ }));
   const resumed = await screen.findByRole("textbox", { name: "Your moment" });
   expect((resumed as HTMLTextAreaElement).value).toBe(
     "We laughed at the same silly thing",
@@ -270,7 +271,7 @@ it("resumes the same group round full-screen and ends the game without locking",
     { id: "b", name: "Sam" },
   ]);
   const app = open({ ...book, living: { ...livingOf(book), game } });
-  fireEvent.click(screen.getByRole("button", { name: /Guess my small joy/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Guess my small joy.*Resume game/ }));
   expect(livingOf(app.stored()).game?.id).toBe(game.id);
   expect(screen.queryByRole("button", { name: "Do something" })).toBeNull();
   expect(screen.queryByRole("button", { name: /Jot something down/ })).toBeNull();
@@ -279,6 +280,83 @@ it("resumes the same group round full-screen and ends the game without locking",
   expect(screen.getByRole("heading", { name: "What feels right?" })).toBeTruthy();
   expect(livingOf(app.stored()).game?.id).toBe(game.id);
   expect(
-    screen.getByRole("button", { name: /Guess my small joy.*Round in progress/ }),
+    screen.getByRole("button", { name: /Guess my small joy.*Resume game/ }),
   ).toBeTruthy();
+});
+it("with “5 min or less”, a paused Same page? still resumes while new 5–10 minute games are left out", async () => {
+  const book: Book = { ...emptyBook("Robin"), profile: { kind: "adult" } };
+  const game = newGame("match", [
+    { id: "a", name: "Robin" },
+    { id: "b", name: "Sam" },
+  ]);
+  const app = open({ ...book, living: { ...livingOf(book), game } });
+  fireEvent.click(screen.getByRole("button", { name: "5 min or less" }));
+  expect(
+    screen.getByRole("button", { name: "5 min or less" }).getAttribute("aria-pressed"),
+  ).toBe("true");
+  // The row isn't filtered.
+  const row = screen.getByRole("region", { name: "Pick up where you left off" });
+  expect(within(row).getByRole("button", { name: /Same page\?.*Resume game/ })).toBeTruthy();
+  // The grid is: no 5–10 minute game as a new card.
+  const grid = screen.getByRole("list", { name: "Activities" });
+  for (const name of [/Same page\?/, /Guess my small joy/, /One story, many voices/, /Spot it!/])
+    expect(within(grid).queryByRole("button", { name })).toBeNull();
+  expect(within(grid).getByRole("button", { name: /Plan a repair/ }).textContent).toContain(
+    "Exercise · 3 min",
+  );
+  expect(screen.getByText(/activities fit\./)).toBeTruthy();
+  fireEvent.click(within(row).getByRole("button", { name: /Same page\?.*Resume game/ }));
+  expect(await screen.findByRole("heading", { name: "Same page?" })).toBeTruthy();
+  expect(livingOf(app.stored()).game?.id).toBe(game.id);
+});
+it("shows no resume row when nothing is under way, and every card has one sentence and one type line", () => {
+  open({ ...emptyBook("Robin"), profile: { kind: "adult" } });
+  expect(screen.queryByRole("region", { name: "Pick up where you left off" })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "New activities" })).toBeNull();
+  const chips = within(screen.getByRole("group", { name: "Filter by time or mood" }))
+    .getAllByRole("button")
+    .map((b) => b.textContent);
+  expect(chips).toEqual([
+    "All activities",
+    "1 min or less",
+    "5 min or less",
+    "With the kids",
+    "Road trip",
+    "Something’s hard",
+  ]);
+  const card = screen.getByRole("button", { name: /Ten real hellos/ });
+  expect(card.querySelectorAll(".rp-do-line")).toHaveLength(1);
+  expect(card.querySelector(".rp-do-meta")?.textContent).toBe(
+    "Habit · under a minute a day, 10 days",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "1 min or less" }));
+  expect(screen.getByRole("button", { name: /Ten real hellos/ })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Notice the unseen work/ })).toBeNull();
+});
+it("starting a new round from the grid warns it ends the paused one", () => {
+  const book: Book = { ...emptyBook("Robin"), profile: { kind: "adult" } };
+  const game = newGame("match", [
+    { id: "a", name: "Robin" },
+    { id: "b", name: "Sam" },
+  ]);
+  open({ ...book, living: { ...livingOf(book), game } });
+  expect(screen.getByRole("heading", { name: "New activities" })).toBeTruthy();
+  const grid = screen.getByRole("list", { name: "Activities" });
+  fireEvent.click(within(grid).getByRole("button", { name: /Same page\?/ }));
+  const sheet = screen.getByRole("dialog", { name: "Same page?" });
+  expect(within(sheet).getByText("This ends your unfinished round of Same page?.")).toBeTruthy();
+});
+it("continues an unfinished journal page from the resume row", () => {
+  const book = writeJournalPage(
+    { ...emptyBook("Robin"), profile: { kind: "adult" } },
+    { ...newJournalDraft(), text: "Kit asked about the moon" },
+    0,
+    "draft",
+  );
+  open(book);
+  const row = screen.getByRole("region", { name: "Pick up where you left off" });
+  fireEvent.click(within(row).getByRole("button", { name: /Kit asked about the moon.*Keep writing/ }));
+  expect(
+    (screen.getByRole("textbox", { name: "Your journal entry" }) as HTMLTextAreaElement).value,
+  ).toBe("Kit asked about the moon");
 });

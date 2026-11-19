@@ -20,9 +20,13 @@ type Base = {
   time: string;
   end: string;
   audiences: Audience[];
-  /** Filters in Do something: "1" and "5" minutes, "kids", "hard". */
+  /** Mood filters in Do something ("kids", "trip", "hard"); time filters come from `short`. */
   tags: Tag[];
-  /** Compact time for cards, e.g. "3 min". */
+  /**
+   * The time on Do something cards, which the time filters also read (see
+   * parseTime in catalog.ts): "3 min", "5–10 min", or for a habit the time
+   * each day plus how long it runs, "under a minute a day, 10 days".
+   */
   short: string;
   aboutPerson?: { label: string; required?: boolean };
 };
@@ -79,7 +83,7 @@ export const tools: Tool[] = [
   {
     kind: "sort",
     id: "helps-upset",
-    tags: ["5"],
+    tags: [],
     short: "3 min",
     title: "What helps when I’m upset",
     blurb: "Sort what helps when you’re upset. You’ll leave with your own list and one thing to try first.",
@@ -122,7 +126,7 @@ export const tools: Tool[] = [
   {
     kind: "sort",
     id: "drains-fills",
-    tags: ["5"],
+    tags: [],
     short: "4 min",
     title: "Drains and fills",
     blurb: "Sort your week by how each part leaves you. Pick one to shrink and one to grow.",
@@ -171,7 +175,7 @@ export const tools: Tool[] = [
   {
     kind: "sort",
     id: "iceberg",
-    tags: ["hard", "5"],
+    tags: ["hard"],
     short: "4 min",
     title: "What’s under the behavior?",
     blurb: "Name what happened, sort the likely reasons, and pick one guess to test.",
@@ -203,7 +207,7 @@ export const tools: Tool[] = [
   {
     kind: "sort",
     id: "load",
-    tags: ["5"],
+    tags: [],
     short: "5 min",
     title: "Who carries what",
     blurb: "Sort household jobs by who carries them now, including the noticing and planning. You’ll see the split on one page.",
@@ -239,7 +243,7 @@ export const tools: Tool[] = [
   {
     kind: "builder",
     id: "soft-start",
-    tags: ["hard", "5"],
+    tags: ["hard"],
     short: "3 min",
     title: "Rewrite the opener",
     blurb: "Have a hard conversation coming up? Find a first sentence you can actually use.",
@@ -282,7 +286,7 @@ export const tools: Tool[] = [
   {
     kind: "builder",
     id: "thought-court",
-    tags: ["hard", "5"],
+    tags: ["hard"],
     short: "4 min",
     title: "Put a thought on trial",
     blurb: "Weigh the evidence for a harsh thought about yourself, then write a fairer one to keep.",
@@ -319,7 +323,7 @@ export const tools: Tool[] = [
   {
     kind: "builder",
     id: "unseen",
-    tags: ["1"],
+    tags: [],
     short: "2 min",
     title: "Notice the unseen work",
     blurb: "Name one thing someone does that nobody thanks them for. You’ll leave with what to say to them.",
@@ -341,7 +345,7 @@ export const tools: Tool[] = [
   {
     kind: "builder",
     id: "repair",
-    tags: ["hard", "5"],
+    tags: ["hard"],
     short: "3 min",
     title: "Plan a repair",
     blurb: "After a rough moment, plan what to say so the next conversation goes better.",
@@ -366,8 +370,8 @@ export const tools: Tool[] = [
   {
     kind: "tracker",
     id: "hellos",
-    tags: ["1"],
-    short: "1 min a day",
+    tags: [],
+    short: "under a minute a day, 10 days",
     mode: "days",
     target: 10,
     title: "Ten real hellos",
@@ -384,8 +388,8 @@ export const tools: Tool[] = [
   {
     kind: "tracker",
     id: "thanks-week",
-    tags: ["1"],
-    short: "1 min a day",
+    tags: [],
+    short: "about a minute a day, 7 days",
     mode: "days",
     target: 7,
     title: "A week of specific thanks",
@@ -404,7 +408,7 @@ export const tools: Tool[] = [
     kind: "tracker",
     id: "repair-bingo",
     tags: ["hard"],
-    short: "1–2 weeks",
+    short: "a moment each time, 1–2 weeks",
     mode: "squares",
     title: "Repair bingo",
     blurb: "After a tense moment, mark the repair move you tried. Find out which ones land.",
@@ -430,8 +434,8 @@ export const tools: Tool[] = [
   {
     kind: "tracker",
     id: "kindness-bingo",
-    tags: ["1"],
-    short: "1 week",
+    tags: [],
+    short: "a moment each time, about a week",
     mode: "squares",
     title: "Kindness spotting",
     blurb: "Spot kind things people in your family do. Try to fill a line.",

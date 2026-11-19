@@ -475,14 +475,14 @@ export const games: {
     title: "Same page?",
     blurb: "Take turns answering in your own words while everyone else guesses. Find out how well you know each other.",
     short: "5–10 min",
-    tags: ["kids", "5"],
+    tags: ["kids"],
   },
   {
     kind: "joy",
     title: "Guess my small joy",
     blurb: "Everyone picks a small joy in secret, then guesses each other’s. See who knows whom best.",
     short: "5–10 min",
-    tags: ["kids", "5"],
+    tags: ["kids"],
   },
   {
     kind: "story",
