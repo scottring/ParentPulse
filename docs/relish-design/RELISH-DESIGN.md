@@ -130,3 +130,7 @@ The original boards live in Scott's ChatGPT library, which only he can open. The
 | Earlier family page with person cards | `boards/family-cards-earlier.jpg` (Scott kept the colored person cards on Family, 2026-11-19) |
 
 The Activities, Ten real hellos and Same page? boards were not in the handoff folder. A clickable version of the Home boards in Relish's real fonts is at https://claude.ai/artifact/TXDYsZJ89jnoJBAKW3uqjQ (private to Scott).
+
+## Paintings for the dinner example
+
+Full-size watercolors (1200×800, cream background) for the Home boards are in `art/`: `dinner-bowls.png` (first visit), `dinner-spoons.png` (coming back) and `striped-bowl.png` (looking back, behind Ella's line). Scott made them in ChatGPT on 2026-11-20.
