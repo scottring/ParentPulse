@@ -47,6 +47,7 @@ import {
 } from "@/lib/relish/journal";
 import "./duo.css";
 import "./places.css";
+import FamilyHome from "./FamilyHome";
 import Illustration, { Emblem } from "./Illustration";
 import { BookSpread, SubHead } from "./ui";
 import { gameIllustration, topicIllustration } from "./illustrations";
@@ -520,10 +521,10 @@ export default function LivingBook({
     Partial<Pick<FamilyPage, "title" | "caption" | "activity">>) {
     const page = newFamilyPage({ ...data, byName: book.owner, byBookId: myBookId });
     await familyAccess.add(page);
-    if (!alive.current) return;
+    if (!alive.current) return page.id;
     setNotice(sample ? "Kept in the sample for this visit." : "Added to Our family book.");
     sensory.play("place");
-    if (sample || !online || !book.connections?.identity) return;
+    if (sample || !online || !book.connections?.identity) return page.id;
     const owner = book.owner;
     void import("@/lib/relish/ai-auth")
       .then((auth) =>
@@ -543,6 +544,7 @@ export default function LivingBook({
             "Added to Our family book. It couldn’t reach your partner’s book yet; you can send it from Connected books.",
           );
       });
+    return page.id;
   }
   const help =
     view === "play"
@@ -947,6 +949,35 @@ export default function LivingBook({
               </button>
             )}
           </div>
+        ) : view === "home" && !sharedView && space === "family" && audienceOf(book) === "adult" ? (
+          <FamilyHome
+            plan={book.familyPlan}
+            owner={book.owner}
+            names={[book.owner, ...members.map((m) => m.name)]}
+            busy={busy}
+            headingRef={heading}
+            latestShared={familyAccess.pages
+              .filter((p) => p.kind === "passage")
+              .map((p) => ({ text: p.text, caption: p.caption }))
+              .at(0)}
+            onPlan={(update) =>
+              vault.save((b) => {
+                const { familyPlan, ...rest } = b;
+                const next = update(familyPlan);
+                return next ? { ...rest, familyPlan: next } : rest;
+              })
+            }
+            onKeep={({ text, caption }) => addToFamily({ kind: "passage", text, caption })}
+            onReflect={async (page) => {
+              await addToFamily({ kind: "page", ...page });
+            }}
+            onFamilyBook={openFamily}
+            onWrite={() => quickEntry()}
+            onPlay={() => {
+              navigate("do");
+              setDoFilter("kids");
+            }}
+          />
         ) : view === "home" && !sharedView ? (
           <Home
             book={book}
