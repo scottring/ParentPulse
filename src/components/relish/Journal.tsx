@@ -63,7 +63,7 @@ type Save = (change: (book: Book) => Book) => Promise<void>;
 export type FamilyAdd = (
   page: Pick<FamilyPage, "kind" | "text"> &
     Partial<Pick<FamilyPage, "title" | "caption" | "activity">>,
-) => Promise<void>;
+) => Promise<unknown>;
 export type JournalNavigation = RefObject<(() => Promise<boolean>) | null>;
 const dateLabel = (date: string) =>
   new Date(date).toLocaleDateString(undefined, {
