@@ -299,14 +299,18 @@
 }
 
 /* Home */
+/* The painting sits beside the greeting, never on a row of its own: the
+   heading wraps instead (Scott, 2026-11-20: on a tablet the square was
+   taking a tenth of the screen by itself). Phones hide it (max-width 720). */
 .rp-greeting {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 24px;
 }
 .rp-greeting > div {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
