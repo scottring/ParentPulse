@@ -34,7 +34,14 @@ import {
 } from "../living";
 import { samePageBank, samePagePrompts, samePageQuestion } from "../play-content";
 import { sameV2 } from "./same-page-v2";
+import { underWay } from "../catalog";
+import { discardUnderWay } from "../delete";
 import {
+  EXERCISE_RUN_LIMIT,
+  exerciseRunFor,
+  exerciseRuns,
+  saveExerciseRun,
+  type ExerciseRun,
   activeTrackers,
   answerCheckBack,
   builderComplete,
@@ -937,5 +944,43 @@ describe("check-backs on kept plans", () => {
     const raw = JSON.stringify(envelope);
     expect(raw).not.toContain("Hungry");
     expect((await unlockVault(raw, "long testing-only passphrase")).book).toEqual(book);
+  });
+});
+
+describe("sorts and fill-ins under way", () => {
+  const at = (m: number) => new Date(2026, 10, 20, 9, m).toISOString();
+  const run = (toolId: string, m = 0): ExerciseRun => ({
+    toolId,
+    who: "",
+    startedAt: at(0),
+    updatedAt: at(m),
+    values: { feel: "tired" },
+  });
+  it("keeps one run per exercise, the newest few, and checks them when a book opens", () => {
+    let b = emptyBook("Robin");
+    b = saveExerciseRun(b, run("soft-start", 1));
+    b = saveExerciseRun(b, { ...run("soft-start", 2), values: { feel: "worn out" } });
+    expect(exerciseRuns(b)).toHaveLength(1);
+    expect(exerciseRunFor(b, "soft-start")?.values).toEqual({ feel: "worn out" });
+    for (let i = 0; i < EXERCISE_RUN_LIMIT + 3; i++) b = saveExerciseRun(b, run(`x${i}`, 10 + i));
+    expect(exerciseRuns(b)).toHaveLength(EXERCISE_RUN_LIMIT);
+    expect(exerciseRunFor(b, "soft-start")).toBeUndefined();
+    expect(isTools(b.tools)).toBe(true);
+    expect(isTools({ ...b.tools, runs: [{ ...run("a"), who: 5 }] })).toBe(false);
+    expect(isTools({ ...b.tools, runs: [run("a"), run("a")] })).toBe(false);
+    expect(isTools({ ...b.tools, runs: [{ ...run("a"), sort: { subject: "", placed: {}, picks: {}, extra: "x", skipped: [] } }] })).toBe(false);
+    // An exercise that no longer exists never stops a book from opening.
+    expect(isTools({ version: 1, trackers: [], runs: [run("retired-exercise")] })).toBe(true);
+  });
+  it("keeping the page clears the run; setting it aside removes it", () => {
+    let b = saveExerciseRun(emptyBook("Robin"), run("soft-start"));
+    expect(underWay(b).map((g) => [g.kind, g.title, g.detail])).toEqual([
+      ["exercise", "Rewrite the opener", expect.stringMatching(/^1 of \d+ filled in$/)],
+    ]);
+    const kept = keepToolPage(b, { title: "Rewrite the opener", text: "I feel tired.", toolId: "soft-start" });
+    expect(exerciseRuns(kept)).toEqual([]);
+    expect(kept.tools?.runs).toBeUndefined();
+    b = discardUnderWay(b, underWay(b)[0]);
+    expect(exerciseRuns(b)).toEqual([]);
   });
 });

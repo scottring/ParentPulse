@@ -1,6 +1,8 @@
 import type { Book } from "./model";
-import type { GameKind } from "./living";
+import { livingOf, type GameKind } from "./living";
+import type { JournalEntry } from "./journal";
 import { audienceOf, type Audience } from "./profiles";
+import { exerciseProgress, exerciseRunFor, runningByTool, runsStatus, todayKey } from "./tools";
 
 // "Try this today": a hand-written, rotating list of small suggestions.
 // No AI. Each one is fitted to the book's age range and opens an existing flow.
@@ -296,4 +298,88 @@ export function nudgeStart(count: number, date = new Date()) {
     Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000,
   );
   return day % count;
+}
+
+// ── What became of today's suggestion ───────────────────────────────────────
+// Scott, 2026-11-20: he wrote something for "one thing Ella did this week that
+// made you laugh", reloaded, and the card showed no sign of it. Home now
+// remembers which suggestion was taken today and the page it started.
+
+/** Today's suggestion, once acted on: which one, and the journal page it opened. */
+export type SuggestionTaken = { day: string; id: string; journalId?: string };
+export function isSuggestionTaken(v: unknown): v is SuggestionTaken {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return false;
+  const s = v as SuggestionTaken;
+  return (
+    typeof s.day === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(s.day) &&
+    typeof s.id === "string" &&
+    s.id.length > 0 &&
+    s.id.length <= 100 &&
+    (s.journalId === undefined ||
+      (typeof s.journalId === "string" && s.journalId.length > 0 && s.journalId.length <= 100))
+  );
+}
+export function takeSuggestion(book: Book, id: string, journalId?: string, now = new Date()): Book {
+  return { ...book, suggestion: { day: todayKey(now), id, ...(journalId ? { journalId } : {}) } };
+}
+/** The suggestion acted on today, so Home keeps showing it rather than rotating away. */
+export function takenToday(book: Book, now = new Date()) {
+  const s = book.suggestion;
+  return s && s.day === todayKey(now) ? s : undefined;
+}
+
+export type NudgeStatus =
+  | { state: "start" }
+  | { state: "draft"; entry: JournalEntry }
+  | { state: "going"; detail?: string }
+  | { state: "done"; entry?: JournalEntry; pageId?: string; played?: boolean };
+
+const onDay = (iso: string, now: Date) => todayKey(new Date(iso)) === todayKey(now);
+
+/** Whether today's suggestion is untouched, under way, or done, from saved state only. */
+export function nudgeStatus(book: Book, nudge: Nudge, now = new Date()): NudgeStatus {
+  const a = nudge.action;
+  if (a.kind === "journal") {
+    const taken = takenToday(book, now);
+    if (taken?.id !== nudge.id || !taken.journalId) return { state: "start" };
+    const entry = (book.journal || []).find((e) => e.id === taken.journalId);
+    if (!entry) return { state: "start" };
+    if (entry.status === "kept") return { state: "done", entry, pageId: `journal:${entry.id}` };
+    return entry.text.trim() || entry.photos?.length ? { state: "draft", entry } : { state: "start" };
+  }
+  if (a.kind === "exercise") {
+    const kept = (book.journal || [])
+      .filter(
+        (e) =>
+          e.status === "kept" &&
+          e.source?.kind === "exercise" &&
+          e.source.toolId === a.id &&
+          onDay(e.createdAt, now),
+      )
+      .at(-1);
+    if (kept) return { state: "done", entry: kept, pageId: `journal:${kept.id}` };
+    const run = exerciseRunFor(book, a.id);
+    if (run) return { state: "going", detail: exerciseProgress(book, run) };
+    const habit = runningByTool(book).find((r) => r.toolId === a.id);
+    if (habit) return { state: "going", detail: runsStatus(book, habit.runs) };
+    return { state: "start" };
+  }
+  if (a.kind === "game") {
+    const l = livingOf(book);
+    const played = (l.plays || [])
+      .filter((r) => r.kind === a.game && onDay(r.playedAt, now))
+      .at(-1);
+    if (played) {
+      const shared = played.pageId && l.sharedPages.some((p) => p.id === played.pageId);
+      return {
+        state: "done",
+        played: true,
+        pageId: shared ? `game:${played.pageId}` : `play:${played.id}`,
+      };
+    }
+    if (l.game && l.game.kind === a.game && l.game.stage !== "finished")
+      return { state: "going" };
+  }
+  return { state: "start" };
 }

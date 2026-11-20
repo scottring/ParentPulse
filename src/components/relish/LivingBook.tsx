@@ -44,6 +44,7 @@ import {
   newJournalDraft,
   writeJournalPage,
   type JournalDraft,
+  type JournalEntry,
 } from "@/lib/relish/journal";
 import "./duo.css";
 import "./places.css";
@@ -53,7 +54,13 @@ import { BookSpread, SubHead } from "./ui";
 import { gameIllustration, topicIllustration } from "./illustrations";
 import Manual, { useManualGuide } from "./Manual";
 import { reviewManualIdea } from "@/lib/relish/manual";
-import { answerCheckBack, type CheckBackAnswer } from "@/lib/relish/tools";
+import {
+  answerCheckBack,
+  clearExerciseRun,
+  saveExerciseRun,
+  type CheckBackAnswer,
+  type ExerciseRun,
+} from "@/lib/relish/tools";
 import GroupPlay from "./GroupPlay";
 import Tools from "./Tools";
 import ConnectedEditions from "./ConnectedEditions";
@@ -71,8 +78,8 @@ import OurFamily, { type FamilyMember } from "./Family";
 import { localFamily, type FamilyAccess } from "./useFamilyBook";
 import { newFamilyPage, type FamilyPage } from "@/lib/relish/family-pages";
 import { sendToPartners } from "@/lib/relish/partner-share";
-import type { NudgeAction } from "@/lib/relish/nudges";
-import { isChild, isFamily, type DoFilter } from "@/lib/relish/catalog";
+import { takeSuggestion, takenToday, type NudgeAction } from "@/lib/relish/nudges";
+import { isChild, isFamily, underWay, type DoFilter, type UnderWay } from "@/lib/relish/catalog";
 import { canUseOnline, ageLabels, audienceOf } from "@/lib/relish/profiles";
 
 // Four places, plus the sub-screens that open inside them.
@@ -315,8 +322,9 @@ export default function LivingBook({
     setOffered(undefined);
     setModal("connections");
   }
-  function onNudge(action: NudgeAction) {
+  function onNudge(action: NudgeAction, nudgeId?: string): void {
     doReturn.current = view === "do" ? doFilter : "all";
+    if (nudgeId) return openSuggestion(action, nudgeId);
     if (action.kind === "journal") quickEntry();
     else if (action.kind === "exercise") openExercise(action.id);
     else if (action.kind === "reflect") start();
@@ -324,6 +332,57 @@ export default function LivingBook({
       navigate("do");
       setGameOffer(action.game);
     }
+  }
+  /**
+   * Home's suggestion: noted as taken today so the card can show what came of
+   * it. A writing suggestion reopens the page it started, never a blank one.
+   */
+  function openSuggestion(action: NudgeAction, id: string): void {
+    const taken = takenToday(book);
+    if (action.kind !== "journal") {
+      if (taken?.id !== id) quietSave((b) => takeSuggestion(b, id));
+      return onNudge(action);
+    }
+    const entry =
+      taken?.id === id && taken.journalId
+        ? (book.journal || []).find((e) => e.id === taken.journalId)
+        : undefined;
+    if (entry?.status === "kept") return openPage(`journal:${entry.id}`);
+    if (entry) return quickEntry(false, entry);
+    const draft = newJournalDraft();
+    quietSave((b) => takeSuggestion(b, id, draft.id));
+    quickEntry(false, draft);
+  }
+  /** Saves something small without a notice or a busy state (progress, bookkeeping). */
+  function quietSave(update: (b: Book) => Book) {
+    void Promise.resolve(vault.save(update)).catch(() => {
+      // Not worth interrupting anyone: the next change saves again.
+    });
+  }
+  /** Saves a sort or fill-in partway; null sets it aside. */
+  function saveProgress(toolId: string, run: ExerciseRun | null) {
+    quietSave((b) => (run ? saveExerciseRun(b, run) : clearExerciseRun(b, toolId)));
+  }
+  /** Reopens something under way: a game, a reflection, a draft or an exercise. */
+  function resume(g: UnderWay) {
+    doReturn.current = "all";
+    if (g.kind === "game") navigate("play");
+    else if (g.kind === "visit") start();
+    else if (g.kind === "draft") quickEntry(false, g.draft);
+    else openExercise(g.toolId);
+  }
+  /** Keeps a suggestion's draft just as it stands. */
+  function keepDraft(entry: JournalEntry) {
+    void commit(
+      (b) => {
+        const current = (b.journal || []).find((e) => e.id === entry.id);
+        if (!current) throw new Error("This draft is no longer here.");
+        if (current.status === "kept") return b;
+        return writeJournalPage(b, current, current.revision, "kept");
+      },
+      undefined,
+      "Kept in your book.",
+    );
   }
   async function commit(
     update: (b: Book) => Book,
@@ -395,7 +454,9 @@ export default function LivingBook({
         changeLiving(b, (x) => {
           if (!x.game || x.game.id !== gameId)
             throw new Error("This game changed. Reopen its latest turn.");
-          return { ...x, game: advanceGame(x.game, action) };
+          // A round that reaches its reveal is in the book straight away, even
+          // if nobody taps Finish round (Scott, 2026-11-20).
+          return recordRound({ ...x, game: advanceGame(x.game, action) });
         }),
       undefined,
       action.type === "approve" ? "Approval updated." : "",
@@ -976,6 +1037,8 @@ export default function LivingBook({
               navigate("do");
               setDoFilter("kids");
             }}
+            going={underWay(book, 1)[0]}
+            onResume={resume}
           />
         ) : view === "home" && !sharedView ? (
           <Home
@@ -985,6 +1048,8 @@ export default function LivingBook({
             busy={busy}
             headingRef={heading}
             onNudge={onNudge}
+            onResume={resume}
+            onSaveDraft={keepDraft}
             onCheckBack={answerPlan}
             onFilter={(f) => {
               navigate("do");
@@ -1080,6 +1145,7 @@ export default function LivingBook({
               openPage(id);
             }}
             onActivities={backToDo}
+            onProgress={saveProgress}
             initialId={exercise}
             onBack={exercise ? backToDo : undefined}
           />
@@ -1251,7 +1317,7 @@ export default function LivingBook({
                 onAction={gameAction}
                 onKeep={() =>
                   void commit(
-                    keepGame,
+                    (b) => changeLiving(keepGame(b), recordRound),
                     undefined,
                     "Everyone approved. A shared page is kept.",
                   )

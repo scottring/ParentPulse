@@ -8,6 +8,7 @@ import { isConnections, type Connections } from "./sharing";
 import { isTools, type ToolsState } from "./tools";
 import { isFamilyPages, type FamilyPage } from "./family-pages";
 import { isFamilyPlan, type FamilyPlan } from "./family-plan";
+import { isSuggestionTaken, type SuggestionTaken } from "./nudges";
 export type Person = {
   id: string;
   name: string;
@@ -57,6 +58,8 @@ export type Book = {
   familyPages?: FamilyPage[];
   /** What the family chose to try together, from Our family Home (family-plan.ts). */
   familyPlan?: FamilyPlan;
+  /** Home's suggestion taken today, so the card can show what came of it. */
+  suggestion?: SuggestionTaken;
 };
 export const emptyBook = (owner: string): Book => ({
   version: 1,
@@ -197,6 +200,7 @@ export function isBook(value: unknown): value is Book {
     (b.tools === undefined || isTools(b.tools)) &&
     (b.familyPages === undefined || isFamilyPages(b.familyPages)) &&
     (b.familyPlan === undefined || isFamilyPlan(b.familyPlan)) &&
+    (b.suggestion === undefined || isSuggestionTaken(b.suggestion)) &&
     (b.rhythm === undefined ||
       (!!b.rhythm &&
         [1, 3, 5].includes(b.rhythm.target) &&

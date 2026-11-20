@@ -115,7 +115,7 @@ it("sorts cards, picks one, and keeps the result as a page in Your pages", async
 it("builds a soft opener only once every part is filled in", async () => {
   const app = open(adult());
   fireEvent.click(await screen.findByRole("button", { name: /Rewrite the opener/ }));
-  expect(screen.getByText(/Nothing is saved until you choose Keep this page/)).toBeTruthy();
+  expect(screen.getByText(/Your answers save as you go/)).toBeTruthy();
   expect(screen.getByRole("group", { name: "Who will you say this to?" })).toBeTruthy();
   fireEvent.click(screen.getByRole("radio", { name: "Sam" }));
   fireEvent.click(screen.getByRole("button", { name: /Start this exercise/ }));
@@ -445,6 +445,9 @@ it("plays Same page? with hidden answers and a shared reveal", async () => {
     [0, 0, null, 0, 0],
     [0, 0, 0, 0, 1],
   ]);
+  // The round is in the book as soon as it reaches the reveal, before Finish round.
+  expect(livingOf(app.stored()).plays).toHaveLength(1);
+  expect(livingOf(app.stored()).plays![0]).toMatchObject({ kind: "match", id: game.id });
 });
 
 it("plays Same page? in your own words: answer, guess in private, judge, then the reveal", async () => {
@@ -589,4 +592,96 @@ it("a card sort offers one card at a time, with skip, and keeps every card chang
   expect(screen.getByRole("group", { name: /^Sort this card: / }).getAttribute("aria-label")).not.toBe(
     skippedName,
   );
+});
+
+it("a card sort left partway is saved, shows under way, and reopens where it stopped", async () => {
+  const app = open(adult());
+  fireEvent.click(screen.getByRole("button", { name: /What helps when I’m upset/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /Start this exercise/ }));
+  fireEvent.click(
+    within(screen.getByRole("group", { name: "Talking it through" })).getByRole("button", {
+      name: "Helps me",
+    }),
+  );
+  // Leaving straight away still saves it.
+  fireEvent.click(screen.getByRole("button", { name: /Back to Activities/ }));
+  await waitFor(() => expect(toolsOf(app.stored()).runs).toHaveLength(1));
+  expect(toolsOf(app.stored()).runs![0]).toMatchObject({
+    toolId: "helps-upset",
+    who: "",
+    sort: { placed: { "Talking it through": expect.any(String) } },
+  });
+  const resume = await screen.findByRole("button", {
+    name: /What helps when I’m upset · 1 of \d+ sorted.*Keep going/,
+  });
+  fireEvent.click(resume);
+  expect(await screen.findByText(/Picking up where you left off/)).toBeTruthy();
+  expect(
+    within(screen.getByRole("group", { name: "Talking it through" })).getByRole("button", {
+      name: "Helps me",
+      pressed: true,
+    }),
+  ).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
+  await screen.findByRole("heading", { name: "Kept in your book" });
+  expect(toolsOf(app.stored()).runs).toBeUndefined();
+  expect(app.stored().journal![0].text).toContain("Helps me: Talking it through.");
+});
+it("Start over drops a saved sort", async () => {
+  const app = open(adult());
+  fireEvent.click(screen.getByRole("button", { name: /What helps when I’m upset/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /Start this exercise/ }));
+  fireEvent.click(
+    within(screen.getByRole("group", { name: "Music" })).getByRole("button", { name: "Helps me" }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: /Back to Activities/ }));
+  await waitFor(() => expect(toolsOf(app.stored()).runs).toHaveLength(1));
+  fireEvent.click(await screen.findByRole("button", { name: /What helps when I’m upset ·.*Keep going/ }));
+  fireEvent.click(await screen.findByRole("button", { name: "Start over" }));
+  await waitFor(() => expect(toolsOf(app.stored()).runs).toBeUndefined());
+  expect(screen.queryByText(/Picking up where you left off/)).toBeNull();
+});
+it("Home's suggestion shows its draft, and Save it as is keeps it", async () => {
+  const today = new Date();
+  const draft = {
+    id: "laugh",
+    title: "",
+    text: "Sam wore rain boots on his hands.",
+    style: "sky" as const,
+    createdAt: today.toISOString(),
+    updatedAt: today.toISOString(),
+    revision: 1,
+    status: "draft" as const,
+  };
+  const app = open({
+    ...adult(),
+    journal: [draft],
+    suggestion: { day: todayKey(today), id: "made-you-laugh", journalId: "laugh" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Home" }));
+  const card = await screen.findByRole("region", { name: "Today’s suggestion" });
+  expect(within(card).getByText(/You started this · Draft saved/)).toBeTruthy();
+  expect(within(card).getByText(/made you laugh/)).toBeTruthy();
+  expect(within(card).getByText("“Sam wore rain boots on his hands.”")).toBeTruthy();
+  expect(within(card).getByRole("button", { name: "Keep writing" })).toBeTruthy();
+  // The draft also leads "Lately in your book".
+  const lately = screen.getByRole("heading", { name: "Lately in your book" }).closest("section")!;
+  expect(within(lately).getByRole("button", { name: /Draft.*Sam wore rain boots.*Keep writing/ })).toBeTruthy();
+  fireEvent.click(within(card).getByRole("button", { name: "Save it as is" }));
+  await waitFor(() => expect(app.stored().journal![0].status).toBe("kept"));
+  const done = await screen.findByRole("region", { name: "Today’s suggestion" });
+  expect(within(done).getByText("Done today · Saved in your book")).toBeTruthy();
+  expect(within(done).getByRole("button", { name: "Read it" })).toBeTruthy();
+});
+it("Write it now on a writing suggestion notes it, and the card never opens a second blank page", async () => {
+  const app = open({
+    ...adult(),
+    suggestion: { day: todayKey(), id: "made-you-laugh" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Home" }));
+  const card = await screen.findByRole("region", { name: "Today’s suggestion" });
+  expect(within(card).getByText(/made you laugh/)).toBeTruthy();
+  fireEvent.click(within(card).getByRole("button", { name: "Write it now" }));
+  await waitFor(() => expect(app.stored().suggestion?.journalId).toBeTruthy());
+  expect(app.stored().suggestion).toMatchObject({ day: todayKey(), id: "made-you-laugh" });
 });

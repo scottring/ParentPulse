@@ -1,6 +1,6 @@
 import type { Book } from "./model";
 import { writeJournalPage, JOURNAL_TITLE_LIMIT, SOURCE_NAME_LIMIT } from "./journal";
-import { isAudience, type Audience } from "./profiles";
+import { audienceOf, isAudience, type Audience } from "./profiles";
 import type { DayQuestion } from "./play-content";
 import type { Tag } from "./catalog";
 import { outcomes, type Outcome } from "./living";
@@ -575,7 +575,7 @@ export function keepToolPage(book: Book, page: ToolPage): Book {
   );
   const days = page.toolId ? checkBackDays[page.toolId] : undefined;
   const plan = (page.plan || "").trim().slice(0, PLAN_LIMIT);
-  if (!days || !plan) return kept;
+  if (!days || !plan) return page.toolId ? clearExerciseRun(kept, page.toolId) : kept;
   const created = new Date();
   const checkBack: CheckBack = {
     id: crypto.randomUUID(),
@@ -586,7 +586,7 @@ export function keepToolPage(book: Book, page: ToolPage): Book {
     createdAt: created.toISOString(),
     dueAt: new Date(created.getTime() + days * DAY).toISOString(),
   };
-  return change(kept, (s) => ({
+  return change(clearExerciseRun(kept, page.toolId!), (s) => ({
     ...s,
     checkBacks: trimCheckBacks([...(s.checkBacks || []), checkBack]),
   }));
@@ -728,6 +728,8 @@ export type ToolsState = {
   checkBacks?: CheckBack[];
   /** Day's highlights under way: saved after every answer. */
   day?: DayRun;
+  /** Sorts and fill-ins under way, saved as you go; cleared once a page is kept. */
+  runs?: ExerciseRun[];
 };
 export const TRACKER_LIMIT = 40;
 export const NOTE_LIMIT = 500;
@@ -1184,6 +1186,75 @@ export function keepDay(
   return withDay(kept, undefined);
 }
 
+// ── Sorts and fill-ins under way ────────────────────────────────────────────
+// Saved as you go (Scott, 2026-11-20: "I don't think any of the activities or
+// games are tracking"), so leaving partway never loses the answers, and Home
+// and Activities can offer "Keep going". Keeping the page clears the run.
+
+export type SortProgress = {
+  subject: string;
+  placed: Record<string, string>; // card → pile id
+  picks: Record<string, string>; // pile id → card
+  extra: string[];
+  skipped: string[];
+};
+export type ExerciseRun = {
+  toolId: string;
+  /** Who it is about or with, from the start screen; "" for no one. */
+  who: string;
+  startedAt: string;
+  updatedAt: string;
+  sort?: SortProgress;
+  values?: Record<string, string>;
+};
+export const EXERCISE_RUN_LIMIT = 12;
+const RUN_TEXT_LIMIT = 2000;
+
+export const exerciseRuns = (book: Book) => toolsOf(book).runs || [];
+export const exerciseRunFor = (book: Book, toolId: string) =>
+  exerciseRuns(book).find((r) => r.toolId === toolId);
+/** Saves one exercise's progress; the oldest runs drop off past the limit. */
+export function saveExerciseRun(book: Book, run: ExerciseRun): Book {
+  return change(book, (s) => ({
+    ...s,
+    runs: [...(s.runs || []).filter((r) => r.toolId !== run.toolId), run]
+      .toSorted((a, b) => a.updatedAt.localeCompare(b.updatedAt))
+      .slice(-EXERCISE_RUN_LIMIT),
+  }));
+}
+export function clearExerciseRun(book: Book, toolId: string): Book {
+  if (!exerciseRunFor(book, toolId)) return book;
+  return change(book, (s) => {
+    const runs = (s.runs || []).filter((r) => r.toolId !== toolId);
+    const rest = { ...s };
+    delete rest.runs;
+    return runs.length ? { ...rest, runs } : rest;
+  });
+}
+/** Where a run stands, in a few words: "3 of 8 sorted", "2 of 4 filled in". */
+export function exerciseProgress(book: Book, run: ExerciseRun): string {
+  const tool = toolById(run.toolId);
+  if (tool?.kind === "sort" && run.sort) {
+    const total = tool.cards(audienceOf(book)).length + run.sort.extra.length;
+    return `${Object.keys(run.sort.placed).length} of ${total} sorted`;
+  }
+  if (tool?.kind === "builder" && run.values) {
+    const filled = tool.fields.filter((f) => run.values?.[f.id]?.trim()).length;
+    return `${filled} of ${tool.fields.length} filled in`;
+  }
+  return "Started";
+}
+/** Whether a run holds anything worth keeping. */
+export function runHasWork(run: Pick<ExerciseRun, "sort" | "values">) {
+  if (run.sort)
+    return (
+      !!run.sort.subject.trim() ||
+      Object.keys(run.sort.placed).length > 0 ||
+      run.sort.extra.length > 0
+    );
+  return Object.values(run.values || {}).some((v) => v.trim());
+}
+
 // ── Validation (imported backups and synced books are untrusted) ────────────
 
 const obj = (v: unknown): v is Record<string, unknown> =>
@@ -1231,10 +1302,41 @@ function isDayRun(v: unknown) {
   );
 }
 
+const shortText = (v: unknown) => typeof v === "string" && v.length <= RUN_TEXT_LIMIT;
+const textRecord = (v: unknown, max: number) =>
+  obj(v) &&
+  Object.keys(v).length <= max &&
+  Object.entries(v).every(([k, x]) => k.length <= RUN_TEXT_LIMIT && shortText(x));
+const textList = (v: unknown, max: number) =>
+  Array.isArray(v) && v.length <= max && v.every(shortText);
+// A removed exercise must never stop a book from opening, so any short id is accepted.
+function isExerciseRun(v: unknown): v is ExerciseRun {
+  if (!obj(v) || !str(v.toolId, 100) || typeof v.who !== "string" || v.who.length > 100)
+    return false;
+  if (!date(v.startedAt) || !date(v.updatedAt)) return false;
+  if (v.values !== undefined && !textRecord(v.values, 60)) return false;
+  if (v.sort === undefined) return true;
+  const s = v.sort;
+  return (
+    obj(s) &&
+    shortText(s.subject) &&
+    textRecord(s.placed, 200) &&
+    textRecord(s.picks, 60) &&
+    textList(s.extra, 100) &&
+    textList(s.skipped, 300)
+  );
+}
+
 export function isTools(value: unknown): value is ToolsState {
   if (!obj(value) || value.version !== 1 || !Array.isArray(value.trackers))
     return false;
   if (value.day !== undefined && !isDayRun(value.day)) return false;
+  if (value.runs !== undefined) {
+    const runs = value.runs;
+    if (!Array.isArray(runs) || runs.length > EXERCISE_RUN_LIMIT + 8) return false;
+    if (!runs.every(isExerciseRun)) return false;
+    if (new Set(runs.map((r) => r.toolId)).size !== runs.length) return false;
+  }
   if (value.trackers.length > TRACKER_LIMIT + 20) return false;
   const ids = new Set<string>();
   // One active run per exercise, or per exercise and person when it is about someone.

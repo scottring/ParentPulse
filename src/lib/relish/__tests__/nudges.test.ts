@@ -1,9 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { emptyBook, type Book } from "../model";
-import { nudgeStart, nudgesFor, nudgeTemplates } from "../nudges";
+import {
+  isSuggestionTaken,
+  nudgeStart,
+  nudgeStatus,
+  nudgesFor,
+  nudgeTemplates,
+  takeSuggestion,
+} from "../nudges";
+import { isBook } from "../model";
+import { saveExerciseRun, todayKey } from "../tools";
+import type { JournalEntry } from "../journal";
 import { ageBands, type Audience } from "../profiles";
 import { toolById, toolsFor } from "../tools";
-import { gameKinds } from "../living";
+import { gameKinds, livingOf } from "../living";
 import { pageKind } from "../catalog";
 import type { BookPage } from "../pages";
 
@@ -121,5 +131,79 @@ describe("Do something catalog", () => {
     expect(
       adultItems.filter((i) => matchesFilter(i, "kids")).every((i) => i.type === "Game"),
     ).toBe(true);
+  });
+});
+
+describe("what came of today's suggestion", () => {
+  const now = new Date(2026, 10, 20, 17);
+  const adult = (): Book => ({ ...emptyBook("Scott"), profile: { kind: "adult" } });
+  const laugh = nudgesFor(adult(), ["Ella"]).find((n) => n.id === "made-you-laugh")!;
+  const entry = (status: JournalEntry["status"], text = "Ella wore her boots on her hands."): JournalEntry => ({
+    id: "j1",
+    title: "",
+    text,
+    style: "sky",
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+    revision: 1,
+    status,
+  });
+  it("is untouched until a page with words exists, then a draft, then done", () => {
+    let b = adult();
+    expect(nudgeStatus(b, laugh, now).state).toBe("start");
+    b = takeSuggestion(b, laugh.id, "j1", now);
+    expect(nudgeStatus(b, laugh, now).state).toBe("start");
+    b = { ...b, journal: [entry("draft", "  ")] };
+    expect(nudgeStatus(b, laugh, now).state).toBe("start");
+    b = { ...b, journal: [entry("draft")] };
+    expect(nudgeStatus(b, laugh, now)).toMatchObject({ state: "draft" });
+    b = { ...b, journal: [entry("kept")] };
+    expect(nudgeStatus(b, laugh, now)).toMatchObject({ state: "done", pageId: "journal:j1" });
+    // Tomorrow it is a new day and a fresh card.
+    expect(nudgeStatus(b, laugh, new Date(2026, 10, 21, 9)).state).toBe("start");
+  });
+  it("an exercise suggestion is under way while its sort is saved, done once its page is kept", () => {
+    const n = nudgesFor(adult()).find((x) => x.action.kind === "exercise" && x.id === "unseen-work")!;
+    let b = saveExerciseRun(adult(), {
+      toolId: "unseen",
+      who: "",
+      startedAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      sort: { subject: "", placed: { Laundry: "me" }, picks: {}, extra: [], skipped: [] },
+    });
+    expect(nudgeStatus(b, n, now)).toMatchObject({ state: "going" });
+    b = {
+      ...b,
+      journal: [{ ...entry("kept", "Laundry"), source: { kind: "exercise", toolId: "unseen" } }],
+    };
+    expect(nudgeStatus(b, n, now)).toMatchObject({ state: "done", pageId: "journal:j1" });
+  });
+  it("a game suggestion is done once a round was played today", () => {
+    const n = nudgesFor(adult()).find((x) => x.id === "same-page-tonight")!;
+    const b: Book = {
+      ...adult(),
+      living: {
+        ...livingOf(adult()),
+        plays: [
+          {
+            id: "r1",
+            kind: "match",
+            players: [
+              { id: "a", name: "Scott" },
+              { id: "b", name: "Iris" },
+            ],
+            playedAt: now.toISOString(),
+          },
+        ],
+      },
+    };
+    expect(nudgeStatus(b, n, now)).toMatchObject({ state: "done", played: true, pageId: "play:r1" });
+  });
+  it("the saved suggestion is checked when a book opens", () => {
+    expect(isSuggestionTaken({ day: todayKey(now), id: "made-you-laugh", journalId: "j1" })).toBe(true);
+    expect(isSuggestionTaken({ day: "Nov 20", id: "x" })).toBe(false);
+    expect(isSuggestionTaken({ day: "2026-11-20", id: "" })).toBe(false);
+    expect(isBook({ ...adult(), suggestion: { day: "2026-11-20", id: "x" } })).toBe(true);
+    expect(isBook({ ...adult(), suggestion: { day: 5, id: "x" } })).toBe(false);
   });
 });

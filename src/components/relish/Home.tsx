@@ -1,8 +1,20 @@
 "use client";
 import { useState, type ReactNode, type RefObject } from "react";
+import { Check } from "lucide-react";
 import type { Book } from "@/lib/relish/model";
 import { bookPages } from "@/lib/relish/pages";
-import { nudgeStart, nudgesFor, type NudgeAction } from "@/lib/relish/nudges";
+import {
+  nudgeStart,
+  nudgeStatus,
+  nudgesFor,
+  takenToday,
+  type Nudge,
+  type NudgeAction,
+  type NudgeStatus,
+} from "@/lib/relish/nudges";
+import { underWay, type UnderWay } from "@/lib/relish/catalog";
+import { livingOf } from "@/lib/relish/living";
+import type { JournalEntry } from "@/lib/relish/journal";
 import { pageKind, type DoFilter, type Tone } from "@/lib/relish/catalog";
 import PhotoPick from "./PhotoPick";
 import { audienceOf } from "@/lib/relish/profiles";
@@ -95,13 +107,20 @@ export default function Home({
   onQuickWrite,
   onQuickPhoto,
   onCheckBack,
+  onResume,
+  onSaveDraft,
 }: {
   book: Book;
   names: string[];
   people: FamilyPerson[];
   busy: boolean;
   headingRef: RefObject<HTMLHeadingElement | null>;
-  onNudge: (action: NudgeAction) => void;
+  /** Opens a suggestion; with its id, Home remembers it was taken today. */
+  onNudge: (action: NudgeAction, nudgeId?: string) => void;
+  /** Reopens something under way, from "Lately in your book". */
+  onResume?: (item: UnderWay) => void;
+  /** Keeps the suggestion's draft as it stands. */
+  onSaveDraft?: (entry: JournalEntry) => void;
   onFilter: (filter: DoFilter) => void;
   onInvite?: () => void;
   onFamily: () => void;
@@ -117,10 +136,23 @@ export default function Home({
   onCheckBack?: (id: string, answer: CheckBackAnswer) => void;
 }) {
   const list = nudgesFor(book, names);
-  const [i, setI] = useState(() => nudgeStart(list.length));
+  // A suggestion taken today stays on the card, so its draft or result shows.
+  const [i, setI] = useState(() => {
+    const taken = takenToday(book);
+    const at = taken ? list.findIndex((n) => n.id === taken.id) : -1;
+    return at >= 0 ? at : nudgeStart(list.length);
+  });
   const nudge = list[i % Math.max(list.length, 1)];
   const child = audienceOf(book) !== "adult";
-  const latest = bookPages(book).toReversed().slice(0, 3);
+  // What's under way comes first, then the newest kept pages.
+  // A game at its reveal is already in the book as played; Activities still offers it.
+  const revealed = ["reveal", "kept"].includes(livingOf(book).game?.stage ?? "");
+  const going = child
+    ? []
+    : underWay(book, 3)
+        .filter((g) => !(g.kind === "game" && revealed))
+        .slice(0, 2);
+  const latest = bookPages(book).toReversed().slice(0, 5 - going.length);
   const due = dueCheckBacks(book)[0];
   if (child)
     return (
@@ -209,36 +241,16 @@ export default function Home({
           onAnswer={(answer) => onCheckBack(due.id, answer)}
         />
       ) : nudge && (
-        <section className="rp-nudge" aria-label="Today’s suggestion">
-          <div className="rp-nudge-text">
-            <p className="rp-nudge-kicker">
-              <span>Try this today</span>
-              <span aria-hidden="true">·</span>
-              <span>{nudge.time}</span>
-            </p>
-            <p className="rp-nudge-main" aria-live="polite">
-              {nudge.text}
-            </p>
-            <p className="rp-nudge-why">{nudge.why}</p>
-          </div>
-          <div className="rp-nudge-actions">
-            <button
-              className="rp-btn rp-btn-sun"
-              disabled={busy}
-              onClick={() => onNudge(nudge.action)}
-            >
-              {nudge.cta}
-            </button>
-            {list.length > 1 && (
-              <button
-                className="rp-btn rp-btn-ghost"
-                onClick={() => setI((n) => n + 1)}
-              >
-                Show me another
-              </button>
-            )}
-          </div>
-        </section>
+        <SuggestionCard
+          nudge={nudge}
+          status={nudgeStatus(book, nudge)}
+          busy={busy}
+          more={list.length > 1}
+          onOpen={() => onNudge(nudge.action, nudge.id)}
+          onPage={onPage}
+          onSaveDraft={onSaveDraft}
+          onAnother={() => setI((n) => n + 1)}
+        />
       )}
       <section className="rp-stack">
         <h2>Or pick by how much time you have</h2>
@@ -311,7 +323,24 @@ export default function Home({
               Open your book
             </button>
           </div>
-          {latest.length ? (
+          {going.map((g) => (
+            <button
+              key={`${g.kind}:${g.key}`}
+              className="rp-row rp-row-going"
+              disabled={busy || !onResume}
+              onClick={() => onResume?.(g)}
+            >
+              <span className="rp-pill rp-pill-going">
+                {g.kind === "draft" ? "Draft" : "In progress"}
+              </span>
+              <span className="rp-row-title">
+                {g.title}
+                {g.detail && <span className="rp-row-detail"> · {g.detail}</span>}
+              </span>
+              <span className="rp-row-action">{g.label}</span>
+            </button>
+          ))}
+          {latest.length || going.length ? (
             latest.map((page) => {
               const kind = pageKind(page);
               return (
@@ -337,6 +366,121 @@ export default function Home({
         </section>
       </div>
     </main>
+  );
+}
+
+const savedAt = (iso: string) =>
+  new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+const firstWords = (text: string) => {
+  const t = text.trim().replace(/\s+/g, " ");
+  return t.length > 160 ? `${t.slice(0, 157).trimEnd()}…` : t;
+};
+
+/**
+ * Today's suggestion, and what came of it (Scott, 2026-11-20): untouched, a
+ * draft with its first words, under way, or done today with what was kept.
+ */
+function SuggestionCard({
+  nudge,
+  status,
+  busy,
+  more,
+  onOpen,
+  onPage,
+  onSaveDraft,
+  onAnother,
+}: {
+  nudge: Nudge;
+  status: NudgeStatus;
+  busy: boolean;
+  more: boolean;
+  onOpen: () => void;
+  onPage: (id: string) => void;
+  onSaveDraft?: (entry: JournalEntry) => void;
+  onAnother: () => void;
+}) {
+  const another = more && (
+    <button className="rp-btn rp-btn-ghost" onClick={onAnother}>
+      Show me another
+    </button>
+  );
+  if (status.state === "start")
+    return (
+      <section className="rp-nudge" aria-label="Today’s suggestion">
+        <div className="rp-nudge-text">
+          <p className="rp-nudge-kicker">
+            <span>Try this today</span>
+            <span aria-hidden="true">·</span>
+            <span>{nudge.time}</span>
+          </p>
+          <p className="rp-nudge-main" aria-live="polite">
+            {nudge.text}
+          </p>
+          <p className="rp-nudge-why">{nudge.why}</p>
+        </div>
+        <div className="rp-nudge-actions">
+          <button className="rp-btn rp-btn-sun" disabled={busy} onClick={onOpen}>
+            {nudge.cta}
+          </button>
+          {another}
+        </div>
+      </section>
+    );
+  const done = status.state === "done";
+  const words =
+    status.state === "draft" || (done && status.entry) ? status.entry!.text : "";
+  const kicker =
+    status.state === "draft"
+      ? `You started this · Draft saved ${savedAt(status.entry.updatedAt)}`
+      : status.state === "going"
+        ? `You started this${status.detail ? ` · ${status.detail}` : ""}`
+        : status.played
+          ? "Done today · Played together"
+          : "Done today · Saved in your book";
+  return (
+    <section className="rp-nudge rp-nudge-taken" aria-label="Today’s suggestion">
+      <div className="rp-nudge-text">
+        <p className="rp-nudge-kicker">
+          {done && <Check size={16} aria-hidden="true" />}
+          <span>{kicker}</span>
+        </p>
+        <p className="rp-nudge-asked">{nudge.text}</p>
+        {words.trim() && (
+          <blockquote className="rp-nudge-words">“{firstWords(words)}”</blockquote>
+        )}
+      </div>
+      <div className="rp-nudge-actions">
+        {done ? (
+          <>
+            {status.pageId && (
+              <button
+                className="rp-btn rp-btn-sun"
+                disabled={busy}
+                onClick={() => onPage(status.pageId!)}
+              >
+                {status.played ? "See it in your book" : "Read it"}
+              </button>
+            )}
+            {another}
+          </>
+        ) : (
+          <>
+            <button className="rp-btn rp-btn-sun" disabled={busy} onClick={onOpen}>
+              {status.state === "draft" ? "Keep writing" : "Keep going"}
+            </button>
+            {status.state === "draft" && onSaveDraft && (
+              <button
+                className="rp-btn rp-btn-ghost"
+                disabled={busy}
+                onClick={() => onSaveDraft(status.entry)}
+              >
+                Save it as is
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </section>
   );
 }
 
