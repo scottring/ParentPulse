@@ -484,8 +484,23 @@
   }
 }
 
-/* Phone, and a closed Duo: one column in reading order. */
+/* Phone, and a closed Duo: one column in reading order. The painting goes
+   under the main action so Try this tonight stays on the first screen. */
 @media (max-width: 720px) {
+  .lb-app .fh-art-first {
+    order: 3;
+    width: 72%;
+    margin: 0;
+  }
+  .lb-app .fh-first.fh-has-art .fh-later-link {
+    order: 4;
+  }
+  .lb-app .fh-ask {
+    font-size: 17px;
+  }
+  .lb-app .fh-select {
+    min-height: 52px;
+  }
   .lb-app .rp-place.fh {
     gap: 36px;
     padding-top: 16px;

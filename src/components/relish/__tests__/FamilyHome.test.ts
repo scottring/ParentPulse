@@ -40,19 +40,33 @@ const plan = (daysAgo: number) =>
     now: new Date(Date.now() - daysAgo * 86_400_000),
   });
 
-it("Just me keeps today's Home; Our family asks what you'd like more of", () => {
+it("Just me keeps today's Home; Our family opens on a suggestion already previewed", () => {
   openBook(adult());
   expect(screen.getByRole("heading", { name: "Hi Scott. Here’s one small thing." })).toBeTruthy();
+  // Journal opens the editor; there is no second Write button in the header.
+  expect(screen.queryByRole("button", { name: /^\+?\s*Write$/ })).toBeNull();
   toFamily();
+  expect((screen.getByLabelText("What would you like a little more of in your family?") as HTMLSelectElement).value).toBe("hearing");
   expect(
-    screen.getByRole("heading", { level: 1, name: "What would you like a little more of in your family?" }),
+    screen.getByRole("heading", {
+      level: 1,
+      name: "At dinner, let someone finish a story. Then ask one question about it.",
+    }),
   ).toBeTruthy();
+  expect(document.querySelector(".fh-art-first")).toBeTruthy();
+  // Changing the selector previews another small thing; nothing is saved yet.
+  fireEvent.change(screen.getByLabelText("What would you like a little more of in your family?"), {
+    target: { value: "laughing" },
+  });
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+    "At dinner, each person tells one thing that made them laugh today.",
+  );
 });
 
 it("first visit: choose, the small thing leads, adjust the plan, try it tonight", async () => {
   const { stored } = openBook(adult());
   toFamily();
-  fireEvent.click(screen.getByRole("button", { name: "Hearing each other out" }));
+  expect(stored().familyPlan).toBeUndefined();
   expect(
     screen.getByRole("heading", {
       level: 1,

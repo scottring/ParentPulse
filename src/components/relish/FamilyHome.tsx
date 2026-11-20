@@ -176,7 +176,9 @@ function FirstVisit({
   onStart: (plan: FamilyPlan) => Promise<void>;
   onLater: () => void;
 }) {
-  const [goal, setGoal] = useState<GoalId | null>(null);
+  // Opens on a suggestion already previewed, so a family sees what they'd
+  // try before choosing anything (Scott, 2026-11-20). Try this tonight commits.
+  const [goal, setGoal] = useState<GoalId>("hearing");
   const [pick, setPick] = useState(0);
   const [place, setPlace] = useState<PlaceId>("dinner");
   const [days, setDays] = useState<PlanLength>(14);
@@ -186,35 +188,6 @@ function FirstVisit({
   const [adjusting, setAdjusting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  if (!goal)
-    return (
-      <section className="fh-first fh-choose">
-        <h1 id="fh-title" ref={headingRef} tabIndex={-1}>
-          What would you like a little more of in your family?
-        </h1>
-        <p className="fh-lede">Choose one to try together for a while.</p>
-        <div className="fh-goals" role="group" aria-label="Something to try together">
-          {goalChoices.map((g) => (
-            <button
-              key={g.id}
-              type="button"
-              className={`fh-goal ${g.id === "own" ? "fh-goal-own" : ""}`}
-              disabled={busy}
-              onClick={() => {
-                setGoal(g.id);
-                setPick(0);
-                setIntention(null);
-              }}
-            >
-              {g.label}
-            </button>
-          ))}
-        </div>
-        <button type="button" className="fh-link fh-later-link" onClick={onLater}>
-          Maybe later
-        </button>
-      </section>
-    );
   const own = goal === "own";
   const placed = isPlaced(goal);
   const options = own ? [] : invitationsFor(goal, place);
@@ -224,7 +197,7 @@ function FirstVisit({
   const tonight = placed && place !== "car" ? "tonight" : "today";
   const ready = !!label && !!invitation && !saving && !busy;
   async function start() {
-    if (!ready || !goal) return;
+    if (!ready) return;
     setSaving(true);
     setError("");
     try {

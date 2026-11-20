@@ -869,7 +869,6 @@ export default function LivingBook({
               next === "journal" ? openJournal() : navigate(next),
             )
           }
-          onWrite={() => void headerAction(() => quickEntry())}
           items={menuItems}
           space={space}
           onSpace={(next) =>
