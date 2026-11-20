@@ -1,5 +1,7 @@
 import { PLAY_RECORD, type BookPage } from "./pages";
 import {
+  exerciseProgress,
+  exerciseRuns,
   DAY_TOOL,
   dayStatus,
   runningByTool,
@@ -320,7 +322,7 @@ export type UnderWay = {
   | { kind: "game" }
   | { kind: "visit" }
   | { kind: "draft"; draft: JournalEntry }
-  | { kind: "habit" | "day"; toolId: string }
+  | { kind: "habit" | "day" | "exercise"; toolId: string }
 );
 const draftTitle = (d: JournalEntry) => {
   const words = d.title.trim() || d.text.trim().split("\n")[0];
@@ -374,6 +376,19 @@ export function underWay(book: Book, limit = 4, now = new Date()): UnderWay[] {
       label: "Continue",
       at: day.updatedAt,
     });
+  for (const run of exerciseRuns(book)) {
+    const tool = toolById(run.toolId);
+    if (!tool || (tool.kind !== "sort" && tool.kind !== "builder")) continue;
+    found.push({
+      kind: "exercise",
+      key: run.toolId,
+      toolId: run.toolId,
+      title: tool.title,
+      detail: exerciseProgress(book, run),
+      label: "Keep going",
+      at: run.updatedAt,
+    });
+  }
   const today = todayKey(now);
   for (const { toolId, runs } of runningByTool(book)) {
     const tool = toolById(toolId);

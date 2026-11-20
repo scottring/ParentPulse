@@ -1,5 +1,6 @@
 "use client";
 import { useState, type RefObject } from "react";
+import type { UnderWay } from "@/lib/relish/catalog";
 import {
   answerLabels,
   answerSummary,
@@ -61,6 +62,8 @@ export default function FamilyHome({
   onFamilyBook,
   onWrite,
   onPlay,
+  going,
+  onResume,
 }: {
   plan: FamilyPlan | undefined;
   owner: string;
@@ -78,6 +81,9 @@ export default function FamilyHome({
   onFamilyBook: () => void;
   onWrite: () => void;
   onPlay: () => void;
+  /** Something of yours under way (an exercise, a draft, a game), to pick up. */
+  going?: UnderWay;
+  onResume?: (item: UnderWay) => void;
 }) {
   const [later, setLater] = useState(false);
   const moment = momentOf(plan);
@@ -127,6 +133,16 @@ export default function FamilyHome({
       )}
       <nav className="fh-now" aria-label="Or, right now">
         <span className="fh-quiet">Or, right now:</span>
+        {going && onResume && (
+          <button
+            type="button"
+            className="fh-link"
+            disabled={busy}
+            onClick={() => onResume(going)}
+          >
+            Pick up “{going.title}”
+          </button>
+        )}
         <button type="button" className="fh-link" disabled={busy} onClick={onWrite}>
           Write something down
         </button>

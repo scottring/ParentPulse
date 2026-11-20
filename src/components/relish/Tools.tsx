@@ -7,6 +7,12 @@ import { libraryOnly, noteFamily } from "@/lib/relish/catalog";
 import {
   activeFor,
   builderComplete,
+  exerciseProgress,
+  exerciseRunFor,
+  exerciseRuns,
+  runHasWork,
+  type ExerciseRun,
+  type SortProgress,
   builderPage,
   checkBackDays,
   finishTracker,
@@ -61,9 +67,12 @@ export default function Tools({
   roster = [],
   sample = false,
   family = [],
+  onProgress,
 }: {
   book: Book;
   busy: boolean;
+  /** Saves a sort or fill-in as it goes (null: set it aside); quiet, no notice. */
+  onProgress?: Progress;
   /** Family to pick from for activities done together (Day’s highlights). */
   roster?: Player[];
   sample?: boolean;
@@ -84,6 +93,10 @@ export default function Tools({
   const audience = audienceOf(book);
   const available = toolsFor(audience);
   const running = runningByTool(book);
+  const partway = exerciseRuns(book).filter((r) => {
+    const t = toolById(r.toolId);
+    return !!t && t.audiences.includes(audience) && (t.kind === "sort" || t.kind === "builder");
+  });
   const tool = openId ? toolById(openId) : undefined;
 
   if (kept)
@@ -155,6 +168,7 @@ export default function Tools({
         roster={roster}
         sample={sample}
         family={family}
+        onProgress={onProgress}
         backLabel={onBack ? "Back to Activities" : "All exercises"}
         onBack={() => (onBack ? onBack() : setOpenId(null))}
       />
@@ -173,13 +187,26 @@ export default function Tools({
       <section className="rt-book ui-card">
         <h2 id="rt-title">Try an exercise</h2>
         <p className="rt-intro">
-          Sorts and fill-in-the-blanks end with a page you choose to keep.
-          Habits save each mark as you go.
+          Sorts and fill-in-the-blanks save as you go and end with a page
+          you choose to keep. Habits save each mark as you go.
         </p>
-        {!!running.length && (
+        {!!(running.length + partway.length) && (
           <section className="rt-group" aria-label="In progress">
             <h3>In progress</h3>
             <div className="rt-list">
+              {partway.map((r) => (
+                <button
+                  key={r.toolId}
+                  className="rt-card rt-running"
+                  disabled={busy}
+                  onClick={() => setOpenId(r.toolId)}
+                >
+                  <span className="lb-kicker">{exerciseProgress(book, r)}</span>
+                  <strong>{toolById(r.toolId)!.title}</strong>
+                  <span>Keep going</span>
+                  <ArrowRight size={16} />
+                </button>
+              ))}
               {running.map(({ toolId, runs }) => {
                 const t = toolById(toolId)!;
                 const one = runs.length === 1;
@@ -263,6 +290,7 @@ function OpenExercise({
   onBack,
   roster,
   sample,
+  onProgress,
 }: {
   tool: Tool;
   book: Book;
@@ -270,14 +298,19 @@ function OpenExercise({
   onCommit: Commit;
   onKept: (kept: Kept) => void;
   onOpenPage?: (id: string) => void;
+  onProgress?: Progress;
   family: { name: string }[];
   backLabel: string;
   onBack: () => void;
   roster: Player[];
   sample: boolean;
 }) {
-  const [started, setStarted] = useState(false);
-  const [who, setWho] = useState("");
+  // A sort or fill-in left partway reopens where it stopped.
+  const [saved] = useState(() =>
+    tool.kind === "sort" || tool.kind === "builder" ? exerciseRunFor(book, tool.id) : undefined,
+  );
+  const [started, setStarted] = useState(!!saved);
+  const [who, setWho] = useState(saved?.who ?? "");
   // A habit about someone can be done with several people at once.
   const [picked, setPicked] = useState<string[]>([]);
   if (tool.kind === "highlights")
@@ -422,6 +455,9 @@ function OpenExercise({
             busy={busy}
             personId={personId}
             people={people}
+            who={who}
+            initial={saved}
+            onProgress={onProgress}
             onKeep={keep}
           />
         ) : tool.kind === "builder" ? (
@@ -431,6 +467,9 @@ function OpenExercise({
             busy={busy}
             personId={personId}
             people={people}
+            who={who}
+            initial={saved}
+            onProgress={onProgress}
             onKeep={keep}
           />
         ) : null}
@@ -502,7 +541,7 @@ function ExerciseStart({
           <p className="rt-start-note">
             {tool.kind === "tracker"
               ? "Each mark saves as you go. Keep a page when you’re done, or stop any time."
-              : "Nothing is saved until you choose Keep this page at the end."}
+              : "Your answers save as you go, so you can stop and come back. Keep a page when you’re done."}
           </p>
           {required && !choices.length ? (
             <p className="lb-fine rt-note">
@@ -585,6 +624,71 @@ function ExerciseArt({ tool }: { tool: Tool }) {
 }
 
 type KeepPage = (page: ToolPage) => void;
+type Progress = (toolId: string, run: ExerciseRun | null) => void;
+
+/**
+ * Saves a sort or fill-in a moment after each change, and once more on the
+ * way out, so leaving partway never loses it. Nothing is saved until there is
+ * something worth keeping; `finish` stops it once the page is kept.
+ */
+function useSaveAsYouGo(
+  save: Progress | undefined,
+  toolId: string,
+  who: string,
+  work: Pick<ExerciseRun, "sort" | "values">,
+  initial?: ExerciseRun,
+) {
+  const startedAt = useRef(initial?.startedAt ?? new Date().toISOString());
+  const key = JSON.stringify([who, work.sort, work.values]);
+  const last = useRef(key);
+  const pending = useRef<ExerciseRun | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const done = useRef(false);
+  const saveRef = useRef(save);
+  useEffect(() => {
+    saveRef.current = save;
+  });
+  const flush = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    const run = pending.current;
+    pending.current = null;
+    if (run && !done.current) saveRef.current?.(toolId, run);
+  };
+  useEffect(() => {
+    if (key === last.current) return;
+    last.current = key;
+    if (!runHasWork(work)) return;
+    pending.current = {
+      toolId,
+      who,
+      startedAt: startedAt.current,
+      updatedAt: new Date().toISOString(),
+      ...work,
+    };
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(flush, 700);
+    // `work` and `who` are captured through `key`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => flush, []);
+  return {
+    /** The page was kept: nothing more to save. */
+    finish() {
+      done.current = true;
+      pending.current = null;
+      if (timer.current) clearTimeout(timer.current);
+    },
+    /** Start over: drop what was saved. */
+    clear() {
+      pending.current = null;
+      if (timer.current) clearTimeout(timer.current);
+      startedAt.current = new Date().toISOString();
+      saveRef.current?.(toolId, null);
+    },
+  };
+}
 /** What was just kept: its title and, once saved, its Your book page id. */
 type Kept = {
   title: string;
@@ -611,6 +715,9 @@ function SortRunner({
   busy,
   personId,
   people,
+  who,
+  initial,
+  onProgress,
   onKeep,
 }: {
   tool: SortTool;
@@ -620,14 +727,22 @@ function SortRunner({
   personId: string;
   /** Who it was with, for exercises not about anyone in particular. */
   people: string[];
+  /** The start screen's choice, saved with the progress. */
+  who: string;
+  initial?: ExerciseRun;
+  onProgress?: Progress;
   onKeep: KeepPage;
 }) {
-  const [subject, setSubject] = useState("");
-  const [placed, setPlaced] = useState<Record<string, string>>({});
-  const [picks, setPicks] = useState<Record<string, string>>({});
-  const [extra, setExtra] = useState<string[]>([]);
+  const from = initial?.sort;
+  const [subject, setSubject] = useState(from?.subject ?? "");
+  const [placed, setPlaced] = useState<Record<string, string>>(from?.placed ?? {});
+  const [picks, setPicks] = useState<Record<string, string>>(from?.picks ?? {});
+  const [extra, setExtra] = useState<string[]>(from?.extra ?? []);
   const [draft, setDraft] = useState("");
-  const [skipped, setSkipped] = useState<string[]>([]);
+  const [skipped, setSkipped] = useState<string[]>(from?.skipped ?? []);
+  const sort: SortProgress = { subject, placed, picks, extra, skipped };
+  const progress = useSaveAsYouGo(onProgress, tool.id, who, { sort }, initial);
+  const [resumed, setResumed] = useState(!!from);
   const cards = [...tool.cards(audienceOf(book)), ...extra];
   const sorted = Object.keys(placed).length;
   // One card at a time up top; every card stays changeable in the list below.
@@ -655,6 +770,27 @@ function SortRunner({
   }
   return (
     <div className="rt-runner">
+      {resumed && (
+        <p className="rt-resumed" role="status">
+          Picking up where you left off.{" "}
+          <button
+            type="button"
+            className="ui-link"
+            disabled={busy}
+            onClick={() => {
+              progress.clear();
+              setSubject("");
+              setPlaced({});
+              setPicks({});
+              setExtra([]);
+              setSkipped([]);
+              setResumed(false);
+            }}
+          >
+            Start over
+          </button>
+        </p>
+      )}
       {tool.subject && (
         <label className="rt-field">
           {tool.subject.label}
@@ -759,7 +895,8 @@ function SortRunner({
         <Preview
           text={sortPage(tool, { subject, placed, picks }, about)}
           busy={busy}
-          onKeep={(text) =>
+          onKeep={(text) => {
+            progress.finish();
             onKeep({
               title: titled(tool, book, personId),
               text,
@@ -767,8 +904,8 @@ function SortRunner({
               personId: personId || undefined,
               people,
               plan: checkBackDays[tool.id] ? picks[tool.picks[0]?.pile] : undefined,
-            })
-          }
+            });
+          }}
         />
       )}
     </div>
@@ -781,6 +918,9 @@ function BuilderRunner({
   busy,
   personId,
   people,
+  who,
+  initial,
+  onProgress,
   onKeep,
 }: {
   tool: BuilderTool;
@@ -790,9 +930,15 @@ function BuilderRunner({
   personId: string;
   /** Who it was with, for exercises not about anyone in particular. */
   people: string[];
+  /** The start screen's choice, saved with the progress. */
+  who: string;
+  initial?: ExerciseRun;
+  onProgress?: Progress;
   onKeep: KeepPage;
 }) {
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [values, setValues] = useState<Record<string, string>>(initial?.values ?? {});
+  const progress = useSaveAsYouGo(onProgress, tool.id, who, { values }, initial);
+  const [resumed, setResumed] = useState(!!initial?.values);
   const complete =
     builderComplete(tool, values) &&
     (!tool.aboutPerson?.required || !!personId);
@@ -800,6 +946,23 @@ function BuilderRunner({
   const checks = tool.checks?.(values);
   return (
     <div className="rt-runner">
+      {resumed && (
+        <p className="rt-resumed" role="status">
+          Picking up where you left off.{" "}
+          <button
+            type="button"
+            className="ui-link"
+            disabled={busy}
+            onClick={() => {
+              progress.clear();
+              setValues({});
+              setResumed(false);
+            }}
+          >
+            Start over
+          </button>
+        </p>
+      )}
       {tool.fields.map((f) => (
         <label key={f.id} className="rt-field">
           {f.label}
@@ -857,7 +1020,8 @@ function BuilderRunner({
           <Preview
             text={builderPage(tool, values, about)}
             busy={busy}
-            onKeep={(text) =>
+            onKeep={(text) => {
+              progress.finish();
               onKeep({
                 title: titled(tool, book, personId),
                 text,
@@ -865,8 +1029,8 @@ function BuilderRunner({
                 personId: personId || undefined,
                 people,
                 plan: checkBackDays[tool.id] ? tool.compose(values) : undefined,
-              })
-            }
+              });
+            }}
           />
         </>
       )}

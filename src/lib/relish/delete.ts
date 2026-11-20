@@ -6,7 +6,14 @@
 import type { Book } from "./model";
 import { changeLiving, livingOf } from "./living";
 import type { UnderWay } from "./catalog";
-import { discardDay, runningByTool, stopTracker, toolsOf } from "./tools";
+import {
+  clearExerciseRun,
+  discardDay,
+  exerciseRunFor,
+  runningByTool,
+  stopTracker,
+  toolsOf,
+} from "./tools";
 
 const without = <T extends { id: string }>(list: T[] | undefined, id: string) => {
   const kept = (list || []).filter((x) => x.id !== id);
@@ -89,6 +96,9 @@ export function discardUnderWay(book: Book, g: UnderWay): Book {
       if (!run) throw new Error("This day has already ended.");
       return discardDay(book, run.id);
     }
+    case "exercise":
+      if (!exerciseRunFor(book, g.toolId)) throw new Error("This has already been set aside.");
+      return clearExerciseRun(book, g.toolId);
     case "habit": {
       const runs = runningByTool(book).find((r) => r.toolId === g.toolId)?.runs || [];
       if (!runs.length) throw new Error("This has already stopped.");

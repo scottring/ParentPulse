@@ -1020,3 +1020,10 @@
   color: #8a3b2a;
   font-weight: 700;
 }
+
+/* A sort or fill-in reopened partway (2026-11-20). */
+.lb-app .rt-resumed {
+  margin: 0;
+  font-size: 15px;
+  color: var(--muted, #5c6455);
+}
