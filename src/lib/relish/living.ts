@@ -2067,6 +2067,36 @@ export function recordRound(l: LivingState): LivingState {
     ),
   };
 }
+/**
+ * "We did this": a game played without the app (out loud, in the car), noted
+ * as played today with who was there. No answers; it simply counts.
+ */
+export function recordOfflinePlay(
+  book: Book,
+  kind: GameKind,
+  players: { id: string; name: string }[],
+  now = new Date(),
+): [Book, PlayRecord] {
+  const named = players
+    .map((p) => ({ id: p.id, name: p.name.trim().slice(0, 60) }))
+    .filter((p, i, all) => p.name && all.findIndex((x) => x.id === p.id) === i);
+  if (!gameKinds.includes(kind)) throw new Error("Choose a game.");
+  if (named.length < 2) throw new Error("Choose at least two people who played.");
+  if (named.length > 12) throw new Error("A game can have up to 12 players.");
+  const record: PlayRecord = {
+    id: crypto.randomUUID(),
+    kind,
+    players: named,
+    playedAt: now.toISOString(),
+  };
+  return [
+    changeLiving(book, (x) => ({
+      ...x,
+      plays: trimMemory([...(x.plays || []), record].slice(-PLAY_LIMIT)),
+    })),
+    record,
+  ];
+}
 /** Ends the open round and notes that it was played. */
 export function finishGame(book: Book): Book {
   return changeLiving(book, (x) => {

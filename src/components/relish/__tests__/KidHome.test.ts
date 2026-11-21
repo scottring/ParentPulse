@@ -77,14 +77,15 @@ it("Add a photo opens the device's photo picker, then a new page with the photo"
   ).toBeTruthy();
 });
 
-it("More to try opens Do something filtered", () => {
+it("More to try opens Activities, with the games a child can play", () => {
   openBook(kid());
   const more = screen.getByRole("region", { name: "More to try" });
   fireEvent.click(within(more).getByRole("button", { name: /Play a game/ }));
-  expect(screen.getByRole("heading", { name: "What feels right?" })).toBeTruthy();
-  const cards = within(screen.getByRole("list", { name: "Activities" })).getAllByRole("button");
-  expect(cards.length).toBeGreaterThan(0);
-  expect(cards.every((c) => c.textContent?.includes("Game"))).toBe(true);
+  expect(screen.getByRole("main", { name: "Activities" })).toBeTruthy();
+  const games = screen.getAllByRole("button", { name: /: Play / });
+  expect(games.length).toBeGreaterThan(0);
+  // Only what fits a child's age: no adult-only exercises.
+  expect(screen.queryByRole("button", { name: /Plan a repair/ })).toBeNull();
 });
 
 it("fits the Home invitation to the age band, with a read-aloud cue for the youngest", () => {

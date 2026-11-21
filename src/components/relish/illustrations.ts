@@ -8,7 +8,7 @@
  * Still to paint (2026-11-18), for the road-trip activities; each borrows the
  * closest painting until then:
  * - "spot-it": a car window with a cow and a water tower going by
- *   (Spot it!; borrows "kid-kindness-spotting").
+ *   (Spot it!; borrows the winding road of "think-it-through").
  * - "days-highlights": a parked car at dusk with a notebook on the dashboard
  *   (Day’s highlights; borrows "home").
  */
@@ -98,8 +98,9 @@ export const gameIllustration: Record<string, IllustrationName> = {
   joy: "small-joy",
   story: "story-voices",
   match: "same-page",
-  // Stand-in until a road-trip painting arrives (see the list above).
-  spot: "kid-kindness-spotting",
+  // Stand-in until a road-trip painting arrives (see the list above): the
+  // winding road, as on Scott's Activities boards (2026-11-21).
+  spot: "think-it-through",
 };
 
 /**

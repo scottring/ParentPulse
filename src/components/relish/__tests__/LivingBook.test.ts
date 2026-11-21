@@ -125,7 +125,7 @@ describe("living-book interaction boundaries", () => {
     expect(screen.queryByRole("button", { name: /^Menu/ })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "End game" }));
     expect(lock).not.toHaveBeenCalled();
-    await screen.findByRole("heading", { name: "What feels right?" });
+    await screen.findByRole("main", { name: "Activities" });
   });
   it("does not render the chooser’s answer on a handoff or another person’s turn", () => {
     const g = advanceGame(
@@ -196,8 +196,8 @@ describe("living-book interaction boundaries", () => {
     expect(screen.getByText("Making something together")).toBeTruthy();
     expect(screen.getByText("guessed it ✓")).toBeTruthy();
     expect(screen.getByText("passed")).toBeTruthy();
-    expect(screen.getByText(/This round is kept in Iris’s book/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Finish round/ })).toBeTruthy();
+    expect(screen.getByText(/What everyone said stays in Iris’s book/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Done" })).toBeTruthy();
     // A shared page is a quiet offer: approvals appear only when asked for.
     expect(screen.queryByRole("button", { name: "Keep in our Family pages" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Create a shared page" }));

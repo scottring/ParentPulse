@@ -1,6 +1,5 @@
 "use client";
 import { useState, type RefObject } from "react";
-import type { UnderWay } from "@/lib/relish/catalog";
 import {
   answerLabels,
   answerSummary,
@@ -43,13 +42,13 @@ type PlanUpdate = (plan: FamilyPlan | undefined) => FamilyPlan | undefined;
 export type SharedLine = { text: string; caption?: string };
 
 /**
- * Our family Home: the three moments in RELISH-DESIGN.md. Each state gives
- * the most room to what matters to the family right then: the small thing to
- * try, the question on return, and their own words on the look-back.
- * Layout changes with width in CSS only, so opening or closing a Duo keeps
- * the moment, the answer and anything half written.
+ * The family plan, featured on Activities in Our family (Scott, 2026-11-21;
+ * it led Our family Home before). The three moments in RELISH-DESIGN.md
+ * still apply: the small thing to try, the question on return, and their own
+ * words on the look-back. Layout changes with width in CSS only, so opening
+ * or closing a Duo keeps the moment, the answer and anything half written.
  */
-export default function FamilyHome({
+export default function FamilyPlanFeature({
   plan,
   owner,
   names,
@@ -60,10 +59,8 @@ export default function FamilyHome({
   onKeep,
   onReflect,
   onFamilyBook,
-  onWrite,
-  onPlay,
-  going,
-  onResume,
+  preview,
+  onClearPreview,
 }: {
   plan: FamilyPlan | undefined;
   owner: string;
@@ -79,34 +76,27 @@ export default function FamilyHome({
   /** Adds the look-back to Our family book as a page. */
   onReflect: (page: { title: string; text: string }) => Promise<void>;
   onFamilyBook: () => void;
-  onWrite: () => void;
-  onPlay: () => void;
-  /** Something of yours under way (an exercise, a draft, a game), to pick up. */
-  going?: UnderWay;
-  onResume?: (item: UnderWay) => void;
+  /** A plan card chosen on a shelf: shown here to try, nothing started yet. */
+  preview?: { goal: Exclude<GoalId, "own">; place: PlaceId };
+  onClearPreview?: () => void;
 }) {
-  const [later, setLater] = useState(false);
   const moment = momentOf(plan);
   return (
-    <main className="rp-place fh" aria-labelledby="fh-title">
-      {moment === "first" || !plan ? (
-        later ? (
-          <section className="fh-later">
-            <h1 id="fh-title" ref={headingRef} tabIndex={-1}>
-              Our family
-            </h1>
-            <button type="button" className="fh-link" onClick={() => setLater(false)}>
-              Choose something to try together
-            </button>
-          </section>
-        ) : (
-          <FirstVisit
-            busy={busy}
-            headingRef={headingRef}
-            onStart={(next) => onPlan(() => next)}
-            onLater={() => setLater(true)}
-          />
-        )
+    <div className="ha-feature-plan fh">
+      {preview || moment === "first" || !plan ? (
+        <FirstVisit
+          key={preview ? `${preview.goal}:${preview.place}` : "first"}
+          busy={busy}
+          headingRef={headingRef}
+          initialGoal={preview?.goal}
+          initialPlace={preview?.place}
+          replacing={preview && plan ? plan.goalLabel : undefined}
+          onKeepCurrent={onClearPreview}
+          onStart={async (next) => {
+            await onPlan(() => next);
+            onClearPreview?.();
+          }}
+        />
       ) : moment === "back" ? (
         <ComingBack
           key={plan.id}
@@ -128,32 +118,10 @@ export default function FamilyHome({
           headingRef={headingRef}
           onPlan={onPlan}
           onReflect={onReflect}
-          onFinished={() => setLater(true)}
+          onFinished={() => {}}
         />
       )}
-      <nav className="fh-now" aria-label="Or, right now">
-        <span className="fh-quiet">Or, right now:</span>
-        {going && onResume && (
-          <button
-            type="button"
-            className="fh-link"
-            disabled={busy}
-            onClick={() => onResume(going)}
-          >
-            Pick up “{going.title}”
-          </button>
-        )}
-        <button type="button" className="fh-link" disabled={busy} onClick={onWrite}>
-          Write something down
-        </button>
-        <button type="button" className="fh-link" disabled={busy} onClick={onPlay}>
-          Play a game together
-        </button>
-        <button type="button" className="fh-link" disabled={busy} onClick={onFamilyBook}>
-          Open family book
-        </button>
-      </nav>
-    </main>
+    </div>
   );
 }
 
@@ -185,18 +153,25 @@ function FirstVisit({
   busy,
   headingRef,
   onStart,
-  onLater,
+  initialGoal = "hearing",
+  initialPlace = "dinner",
+  replacing,
+  onKeepCurrent,
 }: {
   busy: boolean;
   headingRef: RefObject<HTMLHeadingElement | null>;
   onStart: (plan: FamilyPlan) => Promise<void>;
-  onLater: () => void;
+  initialGoal?: GoalId;
+  initialPlace?: PlaceId;
+  /** What the family is trying now, when this would replace it. */
+  replacing?: string;
+  onKeepCurrent?: () => void;
 }) {
   // Opens on a suggestion already previewed, so a family sees what they'd
   // try before choosing anything (Scott, 2026-11-20). Try this tonight commits.
-  const [goal, setGoal] = useState<GoalId>("hearing");
+  const [goal, setGoal] = useState<GoalId>(initialGoal);
   const [pick, setPick] = useState(0);
-  const [place, setPlace] = useState<PlaceId>("dinner");
+  const [place, setPlace] = useState<PlaceId>(initialPlace);
   const [days, setDays] = useState<PlanLength>(14);
   const [ownGoal, setOwnGoal] = useState("");
   const [ownThing, setOwnThing] = useState("");
@@ -226,28 +201,12 @@ function FirstVisit({
     }
   }
   return (
-    <section className={`fh-first ${dinnerArt(goal, place) ? "fh-has-art" : ""}`}>
-      <div className="fh-first-words">
-        <label className="fh-ask" htmlFor="fh-goal">
-          What would you like a little more of in your family?
-        </label>
-        <select
-          id="fh-goal"
-          className="fh-select"
-          value={goal}
-          disabled={saving}
-          onChange={(e) => {
-            setGoal(e.target.value as GoalId);
-            setPick(0);
-            setIntention(null);
-          }}
-        >
-          {goalChoices.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.label}
-            </option>
-          ))}
-        </select>
+    <section className={`fh-first ha-feature ${dinnerArt(goal, place) ? "fh-has-art" : "ha-no-art"}`}>
+      <div className="fh-first-words ha-feature-words">
+        <p className="ha-quiet">Featured this week · for the whole family</p>
+        <h1 id="fh-title" ref={headingRef} tabIndex={-1}>
+          {own ? "Something to try together, in your own words" : goals[goal].label}
+        </h1>
         {own ? (
           <div className="fh-own">
             <label>
@@ -270,26 +229,33 @@ function FirstVisit({
                 onChange={(e) => setOwnThing(e.target.value)}
               />
             </label>
-            <h1 id="fh-title" ref={headingRef} tabIndex={-1} className="rj-sr-only">
-              Something to try together, in your own words
-            </h1>
           </div>
         ) : (
-          <h1 id="fh-title" ref={headingRef} tabIndex={-1} className="fh-invite" aria-live="polite">
+          <p className="fh-invite ha-feature-lead" aria-live="polite">
             {invitation}
-          </h1>
+          </p>
         )}
-        <p className="fh-commit">
+        <p className="fh-commit ha-feature-small">
           {tonight === "tonight" ? "Try it tonight." : "Start today."} Look back together in{" "}
           {lengthWords(days)}.
         </p>
-        <div className="fh-actions">
-          <button type="button" className="fh-primary" disabled={!ready} onClick={() => void start()}>
+        {replacing && (
+          <p className="ha-quiet">
+            You’re trying “{replacing}” now. Starting this one replaces it.{" "}
+            {onKeepCurrent && (
+              <button type="button" className="ha-link" onClick={onKeepCurrent}>
+                Keep what we’re trying
+              </button>
+            )}
+          </p>
+        )}
+        <div className="fh-actions ha-feature-actions">
+          <button type="button" className="ha-btn" disabled={!ready} onClick={() => void start()}>
             {saving ? "Saving…" : tonight === "tonight" ? "Try this tonight" : "Start today"}
           </button>
           <button
             type="button"
-            className="fh-link"
+            className="ha-link"
             aria-expanded={adjusting}
             aria-controls="fh-adjust"
             onClick={() => setAdjusting((a) => !a)}
@@ -300,6 +266,26 @@ function FirstVisit({
         <Problem text={error} />
         {adjusting && (
           <div className="fh-adjust" id="fh-adjust">
+            <label className="fh-field" htmlFor="fh-goal">
+              What would you like a little more of in your family?
+            </label>
+            <select
+              id="fh-goal"
+              className="fh-select"
+              value={goal}
+              disabled={saving}
+              onChange={(e) => {
+                setGoal(e.target.value as GoalId);
+                setPick(0);
+                setIntention(null);
+              }}
+            >
+              {goalChoices.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.label}
+                </option>
+              ))}
+            </select>
             {placed && (
               <fieldset className="fh-row">
                 <legend>Where</legend>
@@ -350,11 +336,8 @@ function FirstVisit({
             )}
           </div>
         )}
-        <button type="button" className="fh-link fh-later-link" onClick={onLater}>
-          Maybe later
-        </button>
       </div>
-      {dinnerArt(goal, place) && <Painting which="first" className="fh-art fh-art-first" />}
+      {dinnerArt(goal, place) && <Painting which="first" className="fh-art fh-art-first ha-bowls" />}
     </section>
   );
 }

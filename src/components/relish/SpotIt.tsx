@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
+import Illustration from "./Illustration";
+import { gameIllustration } from "./illustrations";
 import { ageLabels } from "@/lib/relish/profiles";
 import type { Book } from "@/lib/relish/model";
 import {
@@ -10,7 +12,6 @@ import {
   SQUARE_LIMIT,
   spotLines,
   spotResult,
-  spotSummary,
   type Game,
   type GameAction,
   type Player,
@@ -419,16 +420,42 @@ export function SpotReveal({
   onAction: (action: GameAction) => void;
 }) {
   const card = g.spot!;
-  const { squares, spotted, together } = spotResult(g.players, card);
+  const { squares, spotted, together, tally } = spotResult(g.players, card);
   const found = squares.filter((x) => x.by !== null);
   const missed = squares.filter((x) => x.by === null);
   const [place, setPlace] = useState("");
+  const best = Math.max(0, ...tally.map((t) => t.count));
+  const top = tally.filter((t) => t.count === best);
+  const squaresWord = (n: number) => `${n === 1 ? "one" : n < 10 ? ["", "", "two", "three", "four", "five", "six", "seven", "eight", "nine"][n] : n} ${n === 1 ? "square" : "squares"}`;
+  const headline = !spotted
+    ? "Your road-trip card"
+    : !best
+      ? `You spotted ${squaresWord(together)} together.`
+      : top.length === 1
+        ? `${top[0].player.name} wins with ${squaresWord(best)}.`
+        : `${list(top.map((t) => t.player.name))} tie with ${squaresWord(best)} each.`;
   return (
     <>
+      <Illustration name={gameIllustration.spot} size={200} className="ha-game-art" />
       <p className="lb-kicker">
         Spot it!{g.place ? ` · on the way to ${g.place}` : ""}
       </p>
-      <h2>Your road-trip card</h2>
+      <h2>{headline}</h2>
+      {spotted > 0 && (
+        <ul className="ha-scores" aria-label="Who spotted what">
+          {tally
+            .toSorted((a, b) => b.count - a.count)
+            .map((t) => (
+              <li key={t.player.id} className="ha-score">
+                <span className="ha-score-dot" aria-hidden="true">
+                  {t.player.name.trim().charAt(0).toUpperCase()}
+                </span>
+                <span>{t.player.name}</span>
+                <b>{t.count}</b>
+              </li>
+            ))}
+        </ul>
+      )}
       {found.length ? (
         <ol className="lb-spot-card is-reveal" aria-label="What you spotted">
           {found.map((sq) => (
@@ -443,7 +470,6 @@ export function SpotReveal({
       )}
       {found.length > 0 && (
         <p className="lb-tally">
-          {spotSummary(g.players, card)}
           <span className="lb-tally-all">
             {spotted} of {squares.length} spotted
             {together ? ` · ${together} together` : ""}

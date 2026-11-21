@@ -573,20 +573,42 @@ export function keepToolPage(book: Book, page: ToolPage): Book {
     0,
     "kept",
   );
-  const days = page.toolId ? checkBackDays[page.toolId] : undefined;
-  const plan = (page.plan || "").trim().slice(0, PLAN_LIMIT);
-  if (!days || !plan) return page.toolId ? clearExerciseRun(kept, page.toolId) : kept;
-  const created = new Date();
+  const cleared = page.toolId ? clearExerciseRun(kept, page.toolId) : kept;
+  if (!page.toolId || !page.plan?.trim()) return cleared;
+  return scheduleCheckBack(cleared, {
+    toolId: page.toolId,
+    pageId: journalId,
+    plan: page.plan,
+    personId: page.personId && people.includes(page.personId) ? page.personId : undefined,
+  });
+}
+
+/**
+ * Asks about a kept plan in a few days ("Remind me to say it"). Only the
+ * exercises in checkBackDays check back; for any other, nothing changes.
+ * A plan already waiting for this page is not asked about twice.
+ */
+export function scheduleCheckBack(
+  book: Book,
+  data: { toolId: string; pageId: string; plan: string; personId?: string },
+  now = new Date(),
+): Book {
+  const days = checkBackDays[data.toolId];
+  const plan = (data.plan || "").trim().slice(0, PLAN_LIMIT);
+  if (!days || !plan) return book;
+  if (openCheckBacks(book).some((c) => c.pageId === data.pageId)) return book;
   const checkBack: CheckBack = {
     id: crypto.randomUUID(),
-    toolId: page.toolId!,
-    pageId: journalId,
+    toolId: data.toolId,
+    pageId: data.pageId,
     plan,
-    ...(page.personId && people.includes(page.personId) ? { personId: page.personId } : {}),
-    createdAt: created.toISOString(),
-    dueAt: new Date(created.getTime() + days * DAY).toISOString(),
+    ...(data.personId && book.people.some((p) => p.id === data.personId)
+      ? { personId: data.personId }
+      : {}),
+    createdAt: now.toISOString(),
+    dueAt: new Date(now.getTime() + days * DAY).toISOString(),
   };
-  return change(clearExerciseRun(kept, page.toolId!), (s) => ({
+  return change(book, (s) => ({
     ...s,
     checkBacks: trimCheckBacks([...(s.checkBacks || []), checkBack]),
   }));
@@ -601,6 +623,7 @@ const DAY = 86_400_000;
 /** The exercises that check back, and how many days after keeping. */
 export const checkBackDays: Record<string, number> = {
   repair: 2,
+  unseen: 2,
   "soft-start": 2,
   iceberg: 3,
 };
@@ -652,9 +675,11 @@ export function checkBackWords(book: Book, c: CheckBack) {
     lead:
       c.toolId === "repair"
         ? `You planned to say${name ? ` to ${name}` : ""}:`
-        : `You planned to start the conversation${name ? ` with ${name}` : ""} like this:`,
+        : c.toolId === "unseen"
+          ? `You planned to thank${name ? ` ${name}` : " them"}:`
+          : `You planned to start the conversation${name ? ` with ${name}` : ""} like this:`,
     quote: c.plan,
-    ask: "Did you get a chance to say it?",
+    ask: "Did you get to say it?",
   };
 }
 export function answerCheckBack(
@@ -718,6 +743,8 @@ export type TrackerRun = {
   own?: (string | null)[];
   finishedAt?: string;
   pageId?: string;
+  /** "Remind me tonight": from this time, Home asks about today's mark (in the app only). */
+  remindAt?: string;
 };
 /** A bingo square in your own words: a few words, like the card's. */
 export const TRACKER_SQUARE_LIMIT = 60;
@@ -939,7 +966,28 @@ export function setMark(
       ];
   return change(book, (s) => ({
     ...s,
-    trackers: s.trackers.map((t) => (t.id === runId ? { ...t, marks } : t)),
+    trackers: s.trackers.map((t) => {
+      if (t.id !== runId) return t;
+      // Marking the day answers a reminder for it.
+      const next: TrackerRun = { ...t, marks };
+      if (on && next.remindAt) delete next.remindAt;
+      return next;
+    }),
+  }));
+}
+
+/**
+ * "Remind me tonight": Home asks about today's mark from 6 pm (or in an hour,
+ * when it is already evening). In the app only; nothing is sent anywhere.
+ */
+export function remindTonight(book: Book, runId: string, now = new Date()): Book {
+  if (!toolsOf(book).trackers.some((t) => t.id === runId && !t.finishedAt))
+    throw new Error("This exercise has finished or changed.");
+  const evening = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18);
+  const at = now < evening ? evening : new Date(now.getTime() + 3_600_000);
+  return change(book, (s) => ({
+    ...s,
+    trackers: s.trackers.map((t) => (t.id === runId ? { ...t, remindAt: at.toISOString() } : t)),
   }));
 }
 
@@ -1350,6 +1398,7 @@ export function isTools(value: unknown): value is ToolsState {
     if (!date(t.startedAt)) return false;
     if (t.finishedAt !== undefined && !date(t.finishedAt)) return false;
     if (t.pageId !== undefined && (!str(t.pageId, 100) || !t.finishedAt)) return false;
+    if (t.remindAt !== undefined && !date(t.remindAt)) return false;
     if (!t.finishedAt) {
       const key = tool.aboutPerson ? `${tool.id}\u0000${t.personId ?? ""}` : tool.id;
       if (active.has(key)) return false;

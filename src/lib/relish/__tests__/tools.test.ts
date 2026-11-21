@@ -876,7 +876,7 @@ describe("check-backs on kept plans", () => {
     expect(checkBackWords(book, repair)).toEqual({
       lead: "You planned to say to Sam:",
       quote: repairPlan,
-      ask: "Did you get a chance to say it?",
+      ask: "Did you get to say it?",
     });
     expect(checkBackWords(book, iceberg).lead).toBe(
       "You guessed it was “Tired” for Sam, and planned to respond to that instead of the behavior.",

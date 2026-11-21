@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { createElement, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { webcrypto } from "node:crypto";
 import { emptyBook, sampleBook, type Book } from "@/lib/relish/model";
 import { advanceGame, livingOf, turnPlan, type Game } from "@/lib/relish/living";
@@ -16,7 +16,10 @@ vi.mock("../Sensory", () => ({
   SoundControl: () => null,
   SoundSettings: () => null,
 }));
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  localStorage.clear();
+});
 
 function openBook(book: Book) {
   let stored = book;
@@ -78,10 +81,21 @@ it("a game finished without keeping a page shows in Your book under each player"
   const book = family();
   const app = openBook({ ...book, living: { ...livingOf(book), game: revealed() } });
   fireEvent.click(screen.getByRole("button", { name: "Activities" }));
-  fireEvent.click(screen.getByRole("button", { name: /Same page\?.*Resume game/ }));
-  fireEvent.click(await screen.findByRole("button", { name: /Finish round/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Same page\?.*Resume Same page\?/ }));
+  // The reveal says where the play is noted.
+  expect(
+    await screen.findByText(/Played Same page\? with Ella and Kaleb/),
+  ).toBeTruthy();
+  fireEvent.click(await screen.findByRole("button", { name: "Done" }));
   await screen.findByRole("status");
   expect(livingOf(app.stored()).plays).toHaveLength(1);
+  // One short note in Our family book: the game and who played, no answers.
+  await waitFor(() => expect(app.stored().familyPages ?? []).toHaveLength(1));
+  expect(app.stored().familyPages![0]).toMatchObject({
+    id: `play-${livingOf(app.stored()).plays![0].id}`,
+    kind: "game",
+    text: "Played Same page? with Ella and Kaleb.",
+  });
   // Finishing lands on Book · Our family; the round is in your own book too.
   await screen.findByRole("heading", { name: "Our family book", level: 1 });
   fireEvent.click(
@@ -123,7 +137,7 @@ it("an exercise started with someone is labelled Exercise and filed under them",
     }),
   );
   fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
-  await screen.findByRole("heading", { name: "Kept in your book" });
+  await screen.findByText("Kept in your book. Only you can see it.");
   expect(app.stored().journal![0]).toMatchObject({
     title: "What helps when I’m upset",
     people: ["kaleb"],

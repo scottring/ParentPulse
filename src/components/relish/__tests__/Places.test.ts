@@ -25,21 +25,14 @@ const ourFamily = () => {
   );
 };
 
-it("opens on Home with one suggestion, another on request, and time tiles", () => {
+it("opens on Home with a welcome and three things to do", () => {
   openBook();
-  expect(
-    screen.getByRole("heading", { name: "Hi Robin. Here’s one small thing." }),
-  ).toBeTruthy();
+  expect(screen.getByRole("heading", { level: 1, name: /^Welcome/ })).toBeTruthy();
   expect(
     screen.getByRole("button", { name: "Home" }).getAttribute("aria-current"),
   ).toBe("page");
-  const region = screen.getByRole("region", { name: "Today’s suggestion" });
-  const first = region.textContent;
-  fireEvent.click(screen.getByRole("button", { name: "Show me another" }));
-  expect(region.textContent).not.toBe(first);
-  for (const name of [/1 minute/, /5 minutes/, /With the kids/, /Something’s hard/])
-    expect(screen.getByRole("button", { name })).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: /With the kids/ }));
+  const todo = screen.getByRole("region", { name: "What would you like to do?" });
+  fireEvent.click(within(todo).getByRole("button", { name: "Do an activity" }));
   expect(
     screen
       .getByRole("button", { name: "Activities" })
@@ -62,17 +55,15 @@ it("lists the latest kept pages and opens one in the reader", () => {
   ).toBe("page");
 });
 
-it("shows the family’s books as people and opens one", () => {
-  const onOpen = vi.fn();
-  openBook(undefined, { family: [{ id: "b1", name: "Ella", onOpen }] });
-  fireEvent.click(screen.getByRole("button", { name: "Ella" }));
-  expect(onOpen).toHaveBeenCalledOnce();
-});
-
-it("falls back to family noted in the book when there are no account books", () => {
+it("Read about my family names the people in this book and opens it", () => {
   openBook(sampleBook(), { mode: "sample" });
-  expect(screen.getByRole("button", { name: "Leo" })).toBeTruthy();
+  const todo = screen.getByRole("region", { name: "What would you like to do?" });
+  expect(within(todo).getByText("What you’ve kept about Leo")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Invite a partner" })).toBeNull();
+  fireEvent.click(within(todo).getByRole("button", { name: "Read about my family" }));
+  expect(
+    screen.getByRole("button", { name: "Book" }).getAttribute("aria-current"),
+  ).toBe("page");
 });
 
 it("Your book: reviews one suggestion at a time and filters by person", async () => {

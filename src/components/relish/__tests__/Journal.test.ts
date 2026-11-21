@@ -253,8 +253,7 @@ describe("freeform journal", () => {
     render(createElement(Harness));
     fireEvent.click(screen.getByRole("button", { name: "Book" }));
     expect(screen.getAllByText("PRIVATE JOURNAL SENTENCE").length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("button", { name: "Activities" }));
-    fireEvent.click(screen.getByRole("button", { name: /Jot something down/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Journal" }));
     expect(
       (
         screen.getByRole("button", {
@@ -265,7 +264,7 @@ describe("freeform journal", () => {
     expect(screen.queryByText("Ask AI")).toBeNull();
     fill("Another private moment");
     fireEvent.click(screen.getByRole("button", { name: "Activities" }));
-    await screen.findByRole("heading", { name: "What feels right?" });
+    await screen.findByRole("main", { name: "Activities" });
     fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
     fireEvent.click(screen.getByRole("button", { name: "+ Someone visiting" }));
     fireEvent.change(screen.getByRole("textbox", { name: /Their name/ }), {
@@ -279,7 +278,7 @@ describe("freeform journal", () => {
     expect(screen.queryByRole("button", { name: "Book" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "End game" }));
     expect(lock).not.toHaveBeenCalled();
-    await screen.findByRole("heading", { name: "What feels right?" });
+    await screen.findByRole("main", { name: "Activities" });
   });
 });
 
@@ -381,8 +380,7 @@ describe("journal header navigation", () => {
       });
     }
     render(createElement(Harness));
-    fireEvent.click(screen.getByRole("button", { name: "Activities" }));
-    fireEvent.click(screen.getByRole("button", { name: /Jot something down/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Journal" }));
     return { account, lock, shelf, interaction, save, book: () => stored };
   }
   it("keeps the header available on a blank page and leaves without creating an empty entry", async () => {
@@ -405,7 +403,7 @@ describe("journal header navigation", () => {
       ).toBe(false);
     }
     fireEvent.click(screen.getByRole("button", { name: "Home" }));
-    await screen.findByRole("heading", { name: /one small thing/ });
+    await screen.findByRole("heading", { name: /^Welcome/ });
     expect(qa.save).not.toHaveBeenCalled();
     expect(qa.book().journal || []).toHaveLength(0);
     expect(qa.interaction).toHaveBeenLastCalledWith(false);
@@ -514,7 +512,7 @@ describe("journal header navigation", () => {
     expect(input()).toBeTruthy();
     await act(async () => slow.resolve());
     fireEvent.click(screen.getByRole("button", { name: "Home" }));
-    await screen.findByRole("heading", { name: /one small thing/ });
+    await screen.findByRole("heading", { name: /^Welcome/ });
     expect(qa.book().journal?.[0].photos).toEqual([photo]);
   });
 });

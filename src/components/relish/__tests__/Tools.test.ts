@@ -24,7 +24,10 @@ vi.mock("../Sensory", () => ({
   SoundControl: () => null,
   SoundSettings: () => null,
 }));
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  localStorage.clear();
+});
 function open(book = emptyBook("Robin"), family?: { id: string; name: string; onOpen: () => void }[]) {
   let stored = book;
   let fail = false;
@@ -102,15 +105,17 @@ it("sorts cards, picks one, and keeps the result as a page in Your pages", async
   );
   fireEvent.click(screen.getByRole("button", { name: /A long shower/, pressed: false }));
   fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
-  await screen.findByRole("heading", { name: "Kept in your book" });
+  await screen.findByText("Kept in your book. Only you can see it.");
   const page = app.stored().journal![0];
   expect(page.status).toBe("kept");
   expect(page.title).toBe("What helps when I’m upset");
   expect(page.text).toContain("Helps me: Talking it through; A long shower.");
   expect(page.text).toContain("Doesn’t help: Music.");
   expect(page.text).toContain("The one to try first next time: A long shower.");
-  fireEvent.click(screen.getByRole("button", { name: "Find something else to do" }));
-  await screen.findByRole("heading", { name: "What feels right?" });
+  // What now: the headline says what you came away with; Done for now goes Home.
+  expect(screen.getByRole("heading", { name: "You have your own list for hard moments." })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Done for now" }));
+  await screen.findByRole("heading", { level: 1, name: /^Welcome/ });
 });
 it("builds a soft opener only once every part is filled in", async () => {
   const app = open(adult());
@@ -135,7 +140,7 @@ it("builds a soft opener only once every part is filled in", async () => {
     ).length,
   ).toBeGreaterThan(0);
   fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
-  await screen.findByRole("heading", { name: "Kept in your book" });
+  await screen.findByText("Kept in your book. Only you can see it.");
   expect(app.stored().journal![0]).toMatchObject({
     title: "Rewrite the opener · Sam",
     people: ["sam"],
@@ -154,15 +159,21 @@ it("a kept Plan a repair page comes back in Still going, then on Home once it's 
   ])
     fireEvent.change(screen.getByRole("textbox", { name: label }), { target: { value } });
   fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
-  await screen.findByRole("heading", { name: "Kept in your book" });
-  expect(screen.getByText(/In a couple of days, Relish will ask how it went/)).toBeTruthy();
+  await screen.findByText("Kept in your book. Only you can see it.");
+  expect(screen.getByRole("heading", { name: "You have words for a repair with Sam." })).toBeTruthy();
+  // Nothing is asked about unless they choose to be reminded.
+  expect(toolsOf(app.stored()).checkBacks ?? []).toHaveLength(0);
+  expect(screen.getByText(/In two days Relish asks how it went/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Remind me to say it" }));
+  await waitFor(() => expect(toolsOf(app.stored()).checkBacks).toHaveLength(1));
   const [plan] = toolsOf(app.stored()).checkBacks!;
   expect(plan.plan).toBe(
     "I’m sorry I snapped about the shoes. I wish I’d helped you look. Next time I’ll say I need a minute. Can we try again tomorrow?",
   );
-  // Not due yet: Home keeps its usual suggestion; Still going shows when it will ask.
+  // Not due yet: Home doesn't ask; Still going shows when it will ask.
   fireEvent.click(screen.getByRole("button", { name: "Home" }));
-  expect(await screen.findByRole("region", { name: "Today’s suggestion" })).toBeTruthy();
+  await screen.findByRole("heading", { level: 1, name: /^Welcome/ });
+  expect(screen.queryByRole("region", { name: /Your plan from/ })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Book" }));
   const item = await screen.findByRole("button", { name: /Your plan · Plan a repair · Sam/ });
   expect(item.textContent).toMatch(/Relish asks \w+day/);
@@ -181,13 +192,19 @@ it("a kept Plan a repair page comes back in Still going, then on Home once it's 
   const card = await screen.findByRole("region", { name: "Your plan from Plan a repair" });
   expect(within(card).getByText("You planned to say to Sam:")).toBeTruthy();
   expect(within(card).getByText(`“${plan.plan}”`)).toBeTruthy();
-  expect(within(card).getByText("Did you get a chance to say it?")).toBeTruthy();
-  expect(screen.queryByRole("region", { name: "Today’s suggestion" })).toBeNull();
-  fireEvent.click(within(card).getByRole("button", { name: "Yes, I did" }));
+  expect(within(card).getByText("Did you get to say it?")).toBeTruthy();
+  expect(within(card).getAllByRole("button").map((b) => b.textContent)).toEqual([
+    "I said it",
+    "Not yet",
+    "Let it go",
+  ]);
+  fireEvent.click(within(card).getByRole("button", { name: "I said it" }));
   fireEvent.click(within(card).getByRole("button", { name: "It helped, even a little" }));
   fireEvent.change(within(card).getByRole("textbox"), { target: { value: "We laughed about it." } });
   fireEvent.click(within(card).getByRole("button", { name: "Save how it went" }));
-  await screen.findByRole("region", { name: "Today’s suggestion" });
+  await waitFor(() =>
+    expect(screen.queryByRole("region", { name: "Your plan from Plan a repair" })).toBeNull(),
+  );
   expect(toolsOf(later.stored()).checkBacks![0]).toMatchObject({
     status: "tried",
     outcome: "helped",
@@ -235,7 +252,7 @@ it("runs a day-by-day checklist across visits and finishes into a page", async (
   // Finishing early lives under Activity options.
   fireEvent.click(screen.getByRole("button", { name: /Activity options/ }));
   fireEvent.click(screen.getByRole("button", { name: "Finish and keep a page" }));
-  await screen.findByRole("heading", { name: "Kept in your book" });
+  await screen.findByText("Kept in your book. Only you can see it.");
   const stored = again.stored();
   expect(toolsOf(stored).trackers[0].finishedAt).toBeTruthy();
   expect(stored.journal![0].title).toBe("Ten real hellos · Sam");
@@ -322,7 +339,7 @@ it("after the tenth day, offers a line to remember and keeps the page", async ()
     target: { value: "He hugs me at the door now." },
   });
   fireEvent.click(screen.getByRole("button", { name: "Finish and keep a page" }));
-  await screen.findByRole("heading", { name: "Kept in your book" });
+  await screen.findByText("Kept in your book. Only you can see it.");
   expect(app.stored().journal![0].text).toContain("He hugs me at the door now.");
 });
 it("shows a habit started before this change unchanged, and can add someone mid-way", async () => {
@@ -342,7 +359,7 @@ it("shows a habit started before this change unchanged, and can add someone mid-
   // Finishing early keeps a page for whoever has days marked.
   fireEvent.click(screen.getByRole("button", { name: /Activity options/ }));
   fireEvent.click(screen.getByRole("button", { name: "Finish and keep a page" }));
-  await screen.findByRole("heading", { name: "Kept in your book" });
+  await screen.findByText("Kept in your book. Only you can see it.");
   expect(app.stored().journal!.map((e) => e.title)).toEqual(["Ten real hellos · Kaleb"]);
   expect(toolsOf(app.stored()).trackers.filter((t) => !t.finishedAt)).toHaveLength(0);
 });
@@ -402,7 +419,7 @@ it("offers only age-appropriate exercises in a young child's edition", async () 
       parentLock: { salt: "a".repeat(32), verifier: "b".repeat(64) },
     },
   });
-  await screen.findByRole("heading", { name: "What feels right?" });
+  await screen.findByRole("main", { name: "Activities" });
   expect(screen.getByRole("button", { name: /What helps when I’m upset/ })).toBeTruthy();
   expect(screen.getByRole("button", { name: /Kindness spotting/ })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /Rewrite the opener/ })).toBeNull();
@@ -415,7 +432,7 @@ it("plays Same page? with hidden answers and a shared reveal", async () => {
     { id: "b", name: "Sam" },
   ]);
   const app = open({ ...book, living: { ...livingOf(book), game } });
-  fireEvent.click(screen.getByRole("button", { name: /Same page\?.*Resume game/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Same page\?.*Resume Same page\?/ }));
   expect(screen.getByRole("heading", { name: "Same page?" })).toBeTruthy();
   expect(screen.getByText(/stay with this round in Robin’s book \(never sent to AI\)/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /Let’s play/ }));
@@ -459,7 +476,7 @@ it("plays Same page? in your own words: answer, guess in private, judge, then th
   ]);
   const app = open({ ...book, living: { ...livingOf(book), game } });
   // The round waiting to start is picked up from the resume band.
-  fireEvent.click(screen.getByRole("button", { name: /Same page\?.*Resume game/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Same page\?.*Resume Same page\?/ }));
   expect(
     screen.getByText("Take turns answering in your own words. Everyone else guesses what you said."),
   ).toBeTruthy();
@@ -526,7 +543,7 @@ it("plays Same page? in your own words: answer, guess in private, judge, then th
   expect(screen.getByText(`Kai guessed “${idea.textContent}”`)).toBeTruthy();
   expect(screen.getByText("You got 1 of 2 right.")).toBeTruthy();
   expect(screen.getByText("Sam got 1 of 1; Kai didn’t get it this time.")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: /Finish round/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Done" }));
   await screen.findByRole("region", { name: "Game finished" });
   const record = livingOf(app.stored()).plays![0];
   expect(record.said?.map((s) => s.answer)).toEqual(["Pizza with pineapple", null, "A dog"]);
@@ -547,8 +564,8 @@ it("after the reveal each player can add their own line or skip, and Finish stil
     game = advanceGame(game, { type: "answer", answers: [0, 0, 1, 1, 2] });
   }
   const app = open({ ...book, living: { ...livingOf(book), game } });
-  fireEvent.click(screen.getByRole("button", { name: /Same page\?.*Resume game/ }));
-  fireEvent.click(await screen.findByRole("button", { name: "Add a memory" }));
+  fireEvent.click(screen.getByRole("button", { name: /Same page\?.*Resume Same page\?/ }));
+  fireEvent.click(await screen.findByRole("button", { name: "Add a line about it" }));
   await screen.findByRole("heading", { name: "Robin, anything to remember about this round?" });
   fireEvent.change(screen.getByRole("textbox", { name: "Robin’s line" }), {
     target: { value: "We all want pancakes." },
@@ -569,7 +586,7 @@ it("after the reveal each player can add their own line or skip, and Finish stil
     { playerId: "c", text: "Rainy days are for forts." },
   ]);
   expect(screen.getByRole("heading", { name: "What you remember" })).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: /Finish round/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Done" }));
   await screen.findByRole("region", { name: "Game finished" });
   expect(livingOf(app.stored()).plays?.[0].reflections).toHaveLength(2);
 });
@@ -612,7 +629,7 @@ it("a card sort left partway is saved, shows under way, and reopens where it sto
     sort: { placed: { "Talking it through": expect.any(String) } },
   });
   const resume = await screen.findByRole("button", {
-    name: /What helps when I’m upset · 1 of \d+ sorted.*Keep going/,
+    name: /What helps when I’m upset · 1 of \d+ sorted.*Keep sorting/,
   });
   fireEvent.click(resume);
   expect(await screen.findByText(/Picking up where you left off/)).toBeTruthy();
@@ -623,7 +640,7 @@ it("a card sort left partway is saved, shows under way, and reopens where it sto
     }),
   ).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
-  await screen.findByRole("heading", { name: "Kept in your book" });
+  await screen.findByText("Kept in your book. Only you can see it.");
   expect(toolsOf(app.stored()).runs).toBeUndefined();
   expect(app.stored().journal![0].text).toContain("Helps me: Talking it through.");
 });
@@ -636,12 +653,12 @@ it("Start over drops a saved sort", async () => {
   );
   fireEvent.click(screen.getByRole("button", { name: /Back to Activities/ }));
   await waitFor(() => expect(toolsOf(app.stored()).runs).toHaveLength(1));
-  fireEvent.click(await screen.findByRole("button", { name: /What helps when I’m upset ·.*Keep going/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /What helps when I’m upset ·.*Keep sorting/ }));
   fireEvent.click(await screen.findByRole("button", { name: "Start over" }));
   await waitFor(() => expect(toolsOf(app.stored()).runs).toBeUndefined());
   expect(screen.queryByText(/Picking up where you left off/)).toBeNull();
 });
-it("Home's suggestion shows its draft, and Save it as is keeps it", async () => {
+it("Home's one writing suggestion under Write: a started one says Keep writing and reopens its draft", async () => {
   const today = new Date();
   const draft = {
     id: "laugh",
@@ -653,35 +670,30 @@ it("Home's suggestion shows its draft, and Save it as is keeps it", async () => 
     revision: 1,
     status: "draft" as const,
   };
-  const app = open({
+  open({
     ...adult(),
     journal: [draft],
     suggestion: { day: todayKey(today), id: "made-you-laugh", journalId: "laugh" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Home" }));
-  const card = await screen.findByRole("region", { name: "Today’s suggestion" });
-  expect(within(card).getByText(/You started this · Draft saved/)).toBeTruthy();
-  expect(within(card).getByText(/made you laugh/)).toBeTruthy();
-  expect(within(card).getByText("“Sam wore rain boots on his hands.”")).toBeTruthy();
-  expect(within(card).getByRole("button", { name: "Keep writing" })).toBeTruthy();
+  const todo = await screen.findByRole("region", { name: "What would you like to do?" });
+  const line = within(todo).getByRole("button", { name: /^Keep writing: .*made you laugh/ });
   // The draft also leads "Lately in your book".
-  const lately = screen.getByRole("heading", { name: "Lately in your book" }).closest("section")!;
-  expect(within(lately).getByRole("button", { name: /Draft.*Sam wore rain boots.*Keep writing/ })).toBeTruthy();
-  fireEvent.click(within(card).getByRole("button", { name: "Save it as is" }));
-  await waitFor(() => expect(app.stored().journal![0].status).toBe("kept"));
-  const done = await screen.findByRole("region", { name: "Today’s suggestion" });
-  expect(within(done).getByText("Done today · Saved in your book")).toBeTruthy();
-  expect(within(done).getByRole("button", { name: "Read it" })).toBeTruthy();
+  const lately = screen.getByRole("region", { name: "Lately in your book" });
+  expect(within(lately).getByText("Sam wore rain boots on his hands.")).toBeTruthy();
+  fireEvent.click(line);
+  expect(
+    (screen.getByRole("textbox", { name: "Your journal entry" }) as HTMLTextAreaElement).value,
+  ).toBe("Sam wore rain boots on his hands.");
 });
-it("Write it now on a writing suggestion notes it, and the card never opens a second blank page", async () => {
+it("Or try: on Home notes the suggestion and opens one page, never a second blank one", async () => {
   const app = open({
     ...adult(),
     suggestion: { day: todayKey(), id: "made-you-laugh" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Home" }));
-  const card = await screen.findByRole("region", { name: "Today’s suggestion" });
-  expect(within(card).getByText(/made you laugh/)).toBeTruthy();
-  fireEvent.click(within(card).getByRole("button", { name: "Write it now" }));
+  const todo = await screen.findByRole("region", { name: "What would you like to do?" });
+  fireEvent.click(within(todo).getByRole("button", { name: /^Or try: .*made you laugh/ }));
   await waitFor(() => expect(app.stored().suggestion?.journalId).toBeTruthy());
   expect(app.stored().suggestion).toMatchObject({ day: todayKey(), id: "made-you-laugh" });
 });

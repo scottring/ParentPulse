@@ -1,28 +1,57 @@
 "use client";
-import { useState, type ReactNode, type RefObject } from "react";
-import { Check } from "lucide-react";
+import type { ReactNode, RefObject } from "react";
 import type { Book } from "@/lib/relish/model";
-import { bookPages } from "@/lib/relish/pages";
+import { bookPages, type BookPage } from "@/lib/relish/pages";
 import {
   nudgeStart,
   nudgeStatus,
   nudgesFor,
   takenToday,
-  type Nudge,
   type NudgeAction,
-  type NudgeStatus,
 } from "@/lib/relish/nudges";
-import { underWay, type UnderWay } from "@/lib/relish/catalog";
-import { livingOf } from "@/lib/relish/living";
+import { gameNames, type DoFilter, type Tone, type UnderWay } from "@/lib/relish/catalog";
 import type { JournalEntry } from "@/lib/relish/journal";
-import { pageKind, type DoFilter, type Tone } from "@/lib/relish/catalog";
-import PhotoPick from "./PhotoPick";
 import { audienceOf } from "@/lib/relish/profiles";
-import { JOURNAL_TEXT_LIMIT } from "@/lib/relish/journal";
+import {
+  dueCheckBacks,
+  exerciseRunFor,
+  toolById,
+  tools,
+  type CheckBackAnswer,
+} from "@/lib/relish/tools";
+import {
+  featuredFor,
+  homeUnderWay,
+  idleLine,
+  leavingLine,
+  missedDay,
+  reminderDue,
+  STALE_DAYS,
+  type HomeItem,
+} from "@/lib/relish/activities";
+import {
+  dayOf,
+  goals,
+  momentOf,
+  places,
+  todaysAnswer,
+  wantedLine,
+  type FamilyPlan,
+} from "@/lib/relish/family-plan";
+import type { FamilyPage } from "@/lib/relish/family-pages";
 import Illustration from "./Illustration";
 import KidHome from "./KidHome";
 import CheckBackCard from "./CheckBack";
-import { dueCheckBacks, type CheckBackAnswer } from "@/lib/relish/tools";
+import ConfirmDelete from "./ConfirmDelete";
+import Sprig from "./Sprig";
+import { HabitNudge } from "./HabitNudge";
+import { familyPagesOf } from "./Family";
+import {
+  exerciseIllustration,
+  gameIllustration,
+  type IllustrationName,
+} from "./illustrations";
+import "./home-acts.css";
 
 export type FamilyPerson = {
   id: string;
@@ -36,8 +65,6 @@ export type FamilyPerson = {
   locked?: boolean;
 };
 export const personTones: Tone[] = ["clay", "sky", "sage", "lilac", "sun"];
-const shortDate = (iso: string) =>
-  new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
 export function greetingTime(date = new Date()) {
   const day = date.toLocaleDateString(undefined, { weekday: "long" });
@@ -60,6 +87,7 @@ const Icon = ({ children }: { children: ReactNode }) => (
     {children}
   </svg>
 );
+/** Line icons the kids' Home and Your book still use. */
 export const icons = {
   write: (
     <Icon>
@@ -91,512 +119,642 @@ export const icons = {
   ),
 };
 
-export default function Home({
-  book,
-  names,
-  people,
+const DAY = 86_400_000;
+const longDate = (d = new Date()) =>
+  d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+const pageDate = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+const shortDate = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+/** "today", "yesterday", "Wednesday" within the week, else "Nov 3". */
+export function when(iso: string, now = new Date()) {
+  const d = new Date(iso);
+  const days = Math.round(
+    (new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() -
+      new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) /
+      DAY,
+  );
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 7) return d.toLocaleDateString(undefined, { weekday: "long" });
+  return shortDate(iso);
+}
+const savedWhen = (iso: string) => {
+  const w = when(iso);
+  if (w !== "today") return w === "yesterday" ? "yesterday" : `on ${w}`;
+  const h = new Date(iso).getHours();
+  return h < 12 ? "this morning" : h < 17 ? "this afternoon" : "this evening";
+};
+const firstWords = (text: string, max = 150) => {
+  const t = text.trim().replace(/\s+/g, " ");
+  return t.length > max ? `${t.slice(0, max - 1).trimEnd()}…` : t;
+};
+const numberWords = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
+const count = (n: number) => numberWords[n] ?? String(n);
+
+/** The painting beside something under way or kept. */
+export function underWayArt(g: UnderWay): IllustrationName {
+  if (g.kind === "draft") return "jot";
+  if (g.kind === "visit") return "think-it-through";
+  if (g.kind === "game") return gameIllustration[g.key.slice(5)] ?? "do-something";
+  return exerciseIllustration[g.toolId] ?? "do-something";
+}
+function pageArt(page: BookPage): IllustrationName {
+  if (page.record) {
+    const kind = (Object.keys(gameNames) as (keyof typeof gameNames)[]).find((k) =>
+      page.title.startsWith(gameNames[k]),
+    );
+    return (kind && gameIllustration[kind]) || "do-something";
+  }
+  const tool = tools.find(
+    (t) => page.exercise === t.title || page.title === t.title || page.title.startsWith(`${t.title} · `),
+  );
+  if (tool) return exerciseIllustration[tool.id] ?? "do-something";
+  if (page.kind === "Journal entry") return "jot";
+  return "think-it-through";
+}
+
+/** One painted choice under "What would you like to do?". */
+function Choice({
+  art,
+  title,
+  line,
   busy,
-  headingRef,
-  onNudge,
-  onFilter,
-  onInvite,
-  onFamily,
-  onBook,
-  onPage,
-  onQuickSave,
-  onQuickWrite,
-  onQuickPhoto,
-  onCheckBack,
+  onOpen,
+  extra,
+}: {
+  art: IllustrationName;
+  title: string;
+  line?: string;
+  busy: boolean;
+  onOpen: () => void;
+  extra?: ReactNode;
+}) {
+  return (
+    <div className="ha-choice">
+      <Illustration name={art} size={104} className="ha-choice-art" />
+      <span className="ha-choice-words">
+        <button type="button" className="ha-choice-main" disabled={busy} onClick={onOpen}>
+          {title}
+        </button>
+        {line && <span className="ha-choice-line">{line}</span>}
+        {extra}
+      </span>
+    </div>
+  );
+}
+
+/** Progress for something under way: dots for a sort, marked days for a habit. */
+export function Progress({ book, item }: { book: Book; item: UnderWay }) {
+  if (item.kind === "exercise") {
+    const tool = toolById(item.toolId);
+    const run = exerciseRunFor(book, item.toolId);
+    if (tool?.kind === "sort" && run?.sort) {
+      const total = tool.cards(audienceOf(book)).length + run.sort.extra.length;
+      const done = Object.keys(run.sort.placed).length;
+      if (total <= 14)
+        return (
+          <span className="ha-dots" role="img" aria-label={`${done} of ${total} sorted`}>
+            {Array.from({ length: total }, (_, i) => (
+              <span key={i} className={i < done ? "is-on" : ""} />
+            ))}
+          </span>
+        );
+    }
+  }
+  if (item.kind === "habit") {
+    const tool = toolById(item.toolId);
+    if (tool?.kind === "tracker" && tool.mode === "days" && /^\d+ of \d+$/.test(item.detail || "")) {
+      const done = Number(item.detail!.split(" ")[0]);
+      const marked = Array.from({ length: tool.target }, (_, i) => i + 1).filter((n) => n <= done);
+      return (
+        <span
+          className="ha-days"
+          role="img"
+          aria-label={`${done} of ${tool.target} days marked`}
+        >
+          {Array.from({ length: tool.target }, (_, i) => (
+            <span key={i} className={marked.includes(i + 1) ? "is-on" : ""} aria-hidden="true">
+              {i + 1}
+            </span>
+          ))}
+        </span>
+      );
+    }
+  }
+  return item.detail ? <span className="ha-row-detail">{item.detail}</span> : null;
+}
+
+/** A row for something still going: painting, where it stands, Keep going and Let it go. */
+function GoingRow({
+  book,
+  item,
+  busy,
   onResume,
-  onSaveDraft,
+  onDiscard,
 }: {
   book: Book;
+  item: HomeItem;
+  busy: boolean;
+  onResume: (g: UnderWay) => void;
+  onDiscard?: (g: UnderWay) => void;
+}) {
+  const idle = idleLine(item);
+  const leaving = leavingLine(item);
+  return (
+    <div className={`ha-row ${leaving ? "is-fading" : ""}`}>
+      <Illustration name={underWayArt(item)} size={76} className="ha-row-art" />
+      <span className="ha-row-words">
+        <span className="ha-row-kicker">
+          {item.kind === "draft" ? "Draft" : "In progress"}
+          {idle && ` · ${idle}`}
+          {leaving && ` · ${leaving}`}
+        </span>
+        <span className="ha-row-title">{item.title}</span>
+        <Progress book={book} item={item} />
+      </span>
+      <span className="ha-row-actions">
+        <button type="button" className="ha-link" disabled={busy} onClick={() => onResume(item)}>
+          <span className="ui-sr-only">
+            {item.title}
+            {item.detail ? ` · ${item.detail}` : ""}:{" "}
+          </span>
+          {item.kind === "habit" && item.label === "Mark today" ? "Mark today" : "Keep going"}
+        </button>
+        {idle && onDiscard && (
+          <ConfirmDelete
+            label="Let it go"
+            icon={false}
+            ariaLabel={`Let ${item.title} go`}
+            question={
+              item.kind === "draft" ? "Let this draft go?" : "Let this go without keeping it?"
+            }
+            detail="It’s removed for good. This can’t be undone."
+            yes="Yes, let it go"
+            busy={busy}
+            className="ha-link ha-link-quiet"
+            onConfirm={() => onDiscard(item)}
+          />
+        )}
+      </span>
+    </div>
+  );
+}
+
+export type HomeProps = {
+  book: Book;
+  space: "me" | "family";
   names: string[];
-  people: FamilyPerson[];
   busy: boolean;
   headingRef: RefObject<HTMLHeadingElement | null>;
+  /** Our family book's pages, and which book is this one (for "From … book"). */
+  familyPages?: FamilyPage[];
+  myBookId?: string;
+  plan?: FamilyPlan;
   /** Opens a suggestion; with its id, Home remembers it was taken today. */
   onNudge: (action: NudgeAction, nudgeId?: string) => void;
-  /** Reopens something under way, from "Lately in your book". */
   onResume?: (item: UnderWay) => void;
-  /** Keeps the suggestion's draft as it stands. */
-  onSaveDraft?: (entry: JournalEntry) => void;
-  onFilter: (filter: DoFilter) => void;
-  onInvite?: () => void;
-  onFamily: () => void;
-  onBook: () => void;
-  onPage: (id: string) => void;
-  /** Keeps a page straight from Home; resolves to the new page's id. */
-  onQuickSave?: (text: string) => Promise<string>;
-  /** Opens the full editor, carrying anything already typed. */
-  onQuickWrite?: (text: string, voice: boolean) => void;
-  /** Opens a new page with the photo picker showing, carrying any words typed. */
-  onQuickPhoto?: (text: string, file: File) => void;
-  /** Answers a kept plan that it's time to ask about. */
+  onDiscard?: (item: UnderWay) => void;
   onCheckBack?: (id: string, answer: CheckBackAnswer) => void;
-}) {
-  const list = nudgesFor(book, names);
-  // A suggestion taken today stays on the card, so its draft or result shows.
-  const [i, setI] = useState(() => {
+  /** Journal in this space: a private page, or a page for Our family book. */
+  onWrite: () => void;
+  onActivities: () => void;
+  onBook: () => void;
+  onFamily: () => void;
+  onPage: (id: string) => void;
+  /** Today's mark on a habit, "Remind me tonight", and "Stop this one". */
+  onMarkToday?: (runId: string) => void;
+  onRemindTonight?: (runId: string) => void;
+  onStopHabit?: (runId: string) => void;
+  /** Kids' Home only. */
+  onFilter: (filter: DoFilter) => void;
+  onQuickWrite?: (text: string, voice: boolean) => void;
+  onQuickPhoto?: (text: string, file: File) => void;
+  onSaveDraft?: (entry: JournalEntry) => void;
+};
+
+/**
+ * Home, in both spaces (Scott, 2026-11-21): a welcome with its painting, then
+ * two sides. On the left, what's happened lately with a way back to each; on
+ * the right, "What would you like to do?" with three painted choices. One
+ * check-back at a time leads the left side. Layout follows width in CSS
+ * only, so opening or closing a Duo keeps everything in place.
+ */
+export default function Home(props: HomeProps) {
+  const { book, busy, headingRef, onNudge } = props;
+  const child = audienceOf(book) !== "adult";
+  const list = nudgesFor(book, props.names);
+  if (child) {
     const taken = takenToday(book);
     const at = taken ? list.findIndex((n) => n.id === taken.id) : -1;
-    return at >= 0 ? at : nudgeStart(list.length);
-  });
-  const nudge = list[i % Math.max(list.length, 1)];
-  const child = audienceOf(book) !== "adult";
-  // What's under way comes first, then the newest kept pages.
-  // A game at its reveal is already in the book as played; Activities still offers it.
-  const revealed = ["reveal", "kept"].includes(livingOf(book).game?.stage ?? "");
-  const going = child
-    ? []
-    : underWay(book, 3)
-        .filter((g) => !(g.kind === "game" && revealed))
-        .slice(0, 2);
-  const latest = bookPages(book).toReversed().slice(0, 5 - going.length);
-  const due = dueCheckBacks(book)[0];
-  if (child)
     return (
       <KidHome
         book={book}
         list={list}
-        start={i}
+        start={at >= 0 ? at : nudgeStart(list.length)}
         busy={busy}
         headingRef={headingRef}
         onNudge={onNudge}
-        onFilter={onFilter}
-        onBook={onBook}
-        onWrite={onQuickWrite && (() => onQuickWrite("", false))}
-        onRecord={onQuickWrite && (() => onQuickWrite("", true))}
-        onPhoto={onQuickPhoto && ((file) => onQuickPhoto("", file))}
+        onFilter={props.onFilter}
+        onBook={props.onBook}
+        onWrite={props.onQuickWrite && (() => props.onQuickWrite!("", false))}
+        onRecord={props.onQuickWrite && (() => props.onQuickWrite!("", true))}
+        onPhoto={props.onQuickPhoto && ((file) => props.onQuickPhoto!("", file))}
       />
     );
-  const tiles: {
-    filter: DoFilter;
-    tone: Tone;
-    kicker: string;
-    title: string;
-    text: string;
-    icon: ReactNode;
-  }[] = [
-    {
-      filter: "1",
-      tone: "sun",
-      kicker: "1 minute",
-      title: "Jot something down",
-      text: "Type it, say it, or snap a photo.",
-      icon: icons.write,
-    },
-    {
-      filter: "5",
-      tone: "sage",
-      kicker: "5 minutes",
-      title: "Try an exercise",
-      text: "Card sorts and little checklists.",
-      icon: icons.exercise,
-    },
-    {
-      filter: "kids",
-      tone: "clay",
-      kicker: child ? "Together · 10 min" : "With the kids · 10 min",
-      title: "Play a game",
-      text: "Everyone takes a turn. Passing is fine.",
-      icon: icons.game,
-    },
-    {
-      filter: "hard",
-      tone: "sky",
-      kicker: "Something’s hard",
-      title: "Think it through",
-      text: "Write down what happened. A plan is optional.",
-      icon: icons.think,
-    },
-  ];
+  }
+  return props.space === "family" ? <FamilySide {...props} /> : <MeSide {...props} />;
+}
+
+function Welcome({
+  owner,
+  first,
+  line,
+  art,
+  kicker,
+  headingRef,
+}: {
+  owner: string;
+  first: boolean;
+  line: string;
+  art: IllustrationName;
+  kicker: string;
+  headingRef: RefObject<HTMLHeadingElement | null>;
+}) {
   return (
-    <main className="rp-place rp-home" aria-labelledby="rp-home-title">
-      <section className="rp-greeting">
-        <div>
-          <p className="rp-eyebrow">{greetingTime()}</p>
-          <h1 id="rp-home-title" ref={headingRef} tabIndex={-1}>
-            Hi {book.owner}. Here’s one small thing.
-          </h1>
-        </div>
-        <Illustration name="home" size={128} eager className="rp-sun" />
-      </section>
-      {onQuickSave && onQuickWrite && (
-        <QuickJot
-          busy={busy}
-          onSave={onQuickSave}
-          onWrite={onQuickWrite}
-          onPhoto={onQuickPhoto}
-          onPage={onPage}
-        />
-      )}
-      {/* A plan that's due takes today's one invitation; the suggestion returns once it's answered. */}
-      {onCheckBack && due ? (
-        <CheckBackCard
-          key={due.id}
-          book={book}
-          item={due}
-          busy={busy}
-          onAnswer={(answer) => onCheckBack(due.id, answer)}
-        />
-      ) : nudge && (
-        <SuggestionCard
-          nudge={nudge}
-          status={nudgeStatus(book, nudge)}
-          busy={busy}
-          more={list.length > 1}
-          onOpen={() => onNudge(nudge.action, nudge.id)}
-          onPage={onPage}
-          onSaveDraft={onSaveDraft}
-          onAnother={() => setI((n) => n + 1)}
-        />
-      )}
-      <section className="rp-stack">
-        <h2>Or pick by how much time you have</h2>
-        <div className="rp-tiles">
-          {tiles.map((t) => (
-            <button
-              key={t.filter}
-              className={`rp-tile rp-tone-${t.tone}`}
-              disabled={busy}
-              onClick={() => onFilter(t.filter)}
-            >
-              {t.icon}
-              <span className="rp-tile-words">
-                <span className="rp-tile-kicker">{t.kicker}</span>
-                <span className="rp-tile-title">{t.title}</span>
-                <span>{t.text}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </section>
-      <div className="rp-pair">
-        <section className="rp-panel rp-people-panel">
-          <div className="rp-panel-head">
-            <h2>Your people</h2>
-            <button className="rp-link" disabled={busy} onClick={onFamily}>
-              See family
-            </button>
-          </div>
-          <div className="rp-avatars">
-            {people.map((p, n) => (
-              <button
-                key={p.id}
-                className="rp-avatar"
-                disabled={busy}
-                onClick={p.onOpen}
-              >
-                <span
-                  className={`rp-avatar-dot rp-tone-${personTones[n % personTones.length]}`}
-                  aria-hidden="true"
-                >
-                  {p.name.trim().charAt(0).toUpperCase()}
-                </span>
-                <span>{p.name}</span>
-              </button>
-            ))}
-            {onInvite && (
-              <button
-                className="rp-avatar rp-avatar-add"
-                disabled={busy}
-                onClick={onInvite}
-              >
-                <span className="rp-avatar-dot" aria-hidden="true">
-                  +
-                </span>
-                <span>Invite a partner</span>
-              </button>
-            )}
-            {!people.length && !onInvite && (
-              <p className="rp-quiet">
-                The people in your family show up here.
-              </p>
-            )}
-          </div>
-        </section>
-        <section className="rp-panel rp-lately">
-          <div className="rp-panel-head">
-            <h2>Lately in your book</h2>
-            <button className="rp-link" disabled={busy} onClick={onBook}>
-              Open your book
-            </button>
-          </div>
-          {going.map((g) => (
-            <button
-              key={`${g.kind}:${g.key}`}
-              className="rp-row rp-row-going"
-              disabled={busy || !onResume}
-              onClick={() => onResume?.(g)}
-            >
-              <span className="rp-pill rp-pill-going">
-                {g.kind === "draft" ? "Draft" : "In progress"}
-              </span>
-              <span className="rp-row-title">
-                {g.title}
-                {g.detail && <span className="rp-row-detail"> · {g.detail}</span>}
-              </span>
-              <span className="rp-row-action">{g.label}</span>
-            </button>
-          ))}
-          {latest.length || going.length ? (
-            latest.map((page) => {
-              const kind = pageKind(page);
-              return (
-                <button
-                  key={page.id}
-                  className="rp-row"
-                  disabled={busy}
-                  onClick={() => onPage(page.id)}
-                >
-                  <span className={`rp-pill rp-tone-${kind.tone}`}>
-                    {kind.label}
-                  </span>
-                  <span className="rp-row-title">{page.title}</span>
-                  <span className="rp-row-date">{shortDate(page.date)}</span>
-                </button>
-              );
-            })
-          ) : (
-            <p className="rp-quiet">
-              Nothing kept yet. Your first page will show up here.
-            </p>
-          )}
-        </section>
+    <section className="ha-welcome">
+      <div className="ha-welcome-words">
+        <p className="ha-quiet">{kicker}</p>
+        <h1 id="ha-title" ref={headingRef} tabIndex={-1}>
+          {first ? `Welcome, ${owner}.` : `Welcome back, ${owner}.`}
+        </h1>
+        {line && <p className="ha-welcome-line">{line}</p>}
       </div>
+      <Illustration name={art} size={380} eager className="ha-welcome-art" />
+    </section>
+  );
+}
+
+function MeSide({
+  book,
+  names,
+  busy,
+  headingRef,
+  onNudge,
+  onResume,
+  onDiscard,
+  onCheckBack,
+  onWrite,
+  onActivities,
+  onBook,
+  onPage,
+  onMarkToday,
+  onRemindTonight,
+  onStopHabit,
+}: HomeProps) {
+  const now = new Date();
+  const going = homeUnderWay(book, now, 4);
+  const draft = going.find((g): g is HomeItem & { kind: "draft"; draft: JournalEntry } => g.kind === "draft");
+  const others = going.filter((g) => g.kind !== "draft").slice(0, 2);
+  const pages = bookPages(book).toReversed();
+  const recent = pages
+    .filter((p) => now.getTime() - Date.parse(p.date) < STALE_DAYS * DAY)
+    .slice(0, Math.max(0, 3 - others.length));
+  // One check-back at a time leads: a plan to ask about, a reminder asked
+  // for tonight, then a habit that slipped a day.
+  const due = onCheckBack ? dueCheckBacks(book, now)[0] : undefined;
+  const reminder = !due ? reminderDue(book, now) : undefined;
+  const missed = !due && !reminder ? missedDay(book, now) : undefined;
+  const habit = reminder ?? missed;
+  // The habit asking for today isn't listed twice.
+  const rows = habit ? others.filter((g) => !(g.kind === "habit" && g.toolId === habit.tool.id)) : others;
+  // At most one line under Write: a writing suggestion, rotating daily.
+  const writing = nudgesFor(book, names).filter((n) => n.action.kind === "journal");
+  const taken = takenToday(book);
+  const suggestion =
+    writing.find((n) => n.id === taken?.id) ?? writing[nudgeStart(writing.length)];
+  const status = suggestion && nudgeStatus(book, suggestion);
+  const featured = featuredFor("adult", going, now);
+  const family = names.slice(0, 3);
+  const about = draft?.draft.people
+    ?.map((id) => book.people.find((p) => p.id === id)?.name)
+    .find(Boolean);
+  const line = due
+    ? "Something you planned is ready to check on."
+    : draft
+      ? about
+        ? `Your page about ${about} is waiting where you left it.`
+        : "Your page is waiting where you left it."
+      : pages.length
+        ? "Here’s what you’ve been keeping, and a few things to do next."
+        : "Your book is ready for its first page.";
+  return (
+    <main className="rp-place ha-home" aria-labelledby="ha-title">
+      <Welcome
+        owner={book.owner}
+        first={!pages.length && !going.length}
+        line={line}
+        art="welcome"
+        kicker={longDate(now)}
+        headingRef={headingRef}
+      />
+      {(due || habit) && (
+        <div className="ha-lead">
+          {due && onCheckBack ? (
+            <CheckBackCard
+              key={due.id}
+              book={book}
+              item={due}
+              busy={busy}
+              onAnswer={(answer) => onCheckBack(due.id, answer)}
+            />
+          ) : habit && onMarkToday && onRemindTonight && onStopHabit ? (
+            <HabitNudge
+              key={habit.run.id}
+              book={book}
+              run={habit.run}
+              tool={habit.tool}
+              reminded={!!reminder}
+              busy={busy}
+              compact
+              onMark={() => onMarkToday(habit.run.id)}
+              onRemind={() => onRemindTonight(habit.run.id)}
+              onStop={() => onStopHabit(habit.run.id)}
+            />
+          ) : null}
+        </div>
+      )}
+      <section className="ha-lately" aria-label="Lately in your book">
+        {draft && onResume && (
+          <article className="ha-journal">
+            <Sprig className="ha-journal-sprig" />
+            <p className="ha-journal-meta">
+              <span className="ha-journal-date">{pageDate(draft.draft.updatedAt)}</span>
+              <span className="ha-only">
+                <LockIcon /> Only me
+              </span>
+            </p>
+            <h2 className="ha-journal-title">{draft.draft.title.trim() || "Your unfinished page"}</h2>
+            {draft.draft.text.trim() && (
+              <p className="ha-journal-text">{firstWords(draft.draft.text, 160)}</p>
+            )}
+            <div className="ha-journal-foot">
+              <span className="ha-quiet">
+                Draft saved {savedWhen(draft.draft.updatedAt)}
+                {idleLine(draft) && ` · ${idleLine(draft)}`}
+                {leavingLine(draft) && ` · ${leavingLine(draft)}`}
+              </span>
+              <span className="ha-journal-actions">
+                {idleLine(draft) && onDiscard && (
+                  <ConfirmDelete
+                    label="Let it go"
+            icon={false}
+                    ariaLabel="Let this draft go"
+                    question="Let this draft go?"
+                    detail="It’s removed for good. This can’t be undone."
+                    yes="Yes, let it go"
+                    busy={busy}
+                    className="ha-link ha-link-quiet"
+                    onConfirm={() => onDiscard(draft)}
+                  />
+                )}
+                <button type="button" className="ha-ghost" disabled={busy} onClick={() => onResume(draft)}>
+                  Keep writing
+                </button>
+              </span>
+            </div>
+          </article>
+        )}
+        {onResume &&
+          rows.map((g) => (
+            <GoingRow
+              key={`${g.kind}:${g.key}`}
+              book={book}
+              item={g}
+              busy={busy}
+              onResume={onResume}
+              onDiscard={onDiscard}
+            />
+          ))}
+        {recent.map((p) => (
+          <div key={p.id} className="ha-row">
+            <Illustration name={pageArt(p)} size={76} className="ha-row-art" />
+            <span className="ha-row-words">
+              <span className="ha-row-kicker">
+                {p.record ? "Played" : "Kept"} {when(p.date)}
+              </span>
+              <span className="ha-row-title">{p.title}</span>
+              {p.record && p.text && <span className="ha-row-detail">{firstWords(p.text, 70)}</span>}
+            </span>
+            <span className="ha-row-actions">
+              <button type="button" className="ha-link" disabled={busy} onClick={() => onPage(p.id)}>
+                <span className="ui-sr-only">{p.title}: </span>
+                {p.record ? "See it" : "Read it"}
+              </button>
+            </span>
+          </div>
+        ))}
+        {!draft && !rows.length && !recent.length && (
+          <p className="ha-quiet ha-empty">
+            {pages.length
+              ? "Nothing new in the last two weeks. Everything you’ve kept is in your book."
+              : "Nothing kept yet. Your first page will show up here."}
+          </p>
+        )}
+        <button type="button" className="ha-link ha-open" disabled={busy} onClick={onBook}>
+          Open my book
+        </button>
+      </section>
+      <section className="ha-todo" aria-labelledby="ha-todo-title">
+        <h2 id="ha-todo-title">What would you like to do?</h2>
+        <Choice
+          art="jot"
+          title="Write a journal entry"
+          busy={busy}
+          onOpen={onWrite}
+          extra={
+            suggestion && status && status.state !== "done" && status.state !== "going" ? (
+              <button
+                type="button"
+                className="ha-choice-try"
+                disabled={busy}
+                onClick={() => onNudge(suggestion.action, suggestion.id)}
+              >
+                {status.state === "draft" ? "Keep writing: " : "Or try: "}
+                {suggestion.text.replace(/^Write down /, "").replace(/\.$/, "")}
+              </button>
+            ) : undefined
+          }
+        />
+        <Choice
+          art="do-something"
+          title="Do an activity"
+          line={featured ? `This week: ${featured.title}, ${featured.time}` : undefined}
+          busy={busy}
+          onOpen={onActivities}
+        />
+        <Choice
+          art="your-book"
+          title="Read about my family"
+          line={
+            family.length
+              ? `What you’ve kept about ${family.length < 2 ? family[0] : `${family.slice(0, -1).join(", ")} and ${family.at(-1)}`}`
+              : "Every page you’ve kept"
+          }
+          busy={busy}
+          onOpen={onBook}
+        />
+      </section>
     </main>
   );
 }
 
-const savedAt = (iso: string) =>
-  new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-const firstWords = (text: string) => {
-  const t = text.trim().replace(/\s+/g, " ");
-  return t.length > 160 ? `${t.slice(0, 157).trimEnd()}…` : t;
-};
-
-/**
- * Today's suggestion, and what came of it (Scott, 2026-11-20): untouched, a
- * draft with its first words, under way, or done today with what was kept.
- */
-function SuggestionCard({
-  nudge,
-  status,
-  busy,
-  more,
-  onOpen,
-  onPage,
-  onSaveDraft,
-  onAnother,
-}: {
-  nudge: Nudge;
-  status: NudgeStatus;
-  busy: boolean;
-  more: boolean;
-  onOpen: () => void;
-  onPage: (id: string) => void;
-  onSaveDraft?: (entry: JournalEntry) => void;
-  onAnother: () => void;
-}) {
-  const another = more && (
-    <button className="rp-btn rp-btn-ghost" onClick={onAnother}>
-      Show me another
-    </button>
-  );
-  if (status.state === "start")
-    return (
-      <section className="rp-nudge" aria-label="Today’s suggestion">
-        <div className="rp-nudge-text">
-          <p className="rp-nudge-kicker">
-            <span>Try this today</span>
-            <span aria-hidden="true">·</span>
-            <span>{nudge.time}</span>
-          </p>
-          <p className="rp-nudge-main" aria-live="polite">
-            {nudge.text}
-          </p>
-          <p className="rp-nudge-why">{nudge.why}</p>
-        </div>
-        <div className="rp-nudge-actions">
-          <button className="rp-btn rp-btn-sun" disabled={busy} onClick={onOpen}>
-            {nudge.cta}
-          </button>
-          {another}
-        </div>
-      </section>
-    );
-  const done = status.state === "done";
-  const words =
-    status.state === "draft" || (done && status.entry) ? status.entry!.text : "";
-  const kicker =
-    status.state === "draft"
-      ? `You started this · Draft saved ${savedAt(status.entry.updatedAt)}`
-      : status.state === "going"
-        ? `You started this${status.detail ? ` · ${status.detail}` : ""}`
-        : status.played
-          ? "Done today · Played together"
-          : "Done today · Saved in your book";
+function LockIcon() {
   return (
-    <section className="rp-nudge rp-nudge-taken" aria-label="Today’s suggestion">
-      <div className="rp-nudge-text">
-        <p className="rp-nudge-kicker">
-          {done && <Check size={16} aria-hidden="true" />}
-          <span>{kicker}</span>
-        </p>
-        <p className="rp-nudge-asked">{nudge.text}</p>
-        {words.trim() && (
-          <blockquote className="rp-nudge-words">“{firstWords(words)}”</blockquote>
-        )}
-      </div>
-      <div className="rp-nudge-actions">
-        {done ? (
-          <>
-            {status.pageId && (
-              <button
-                className="rp-btn rp-btn-sun"
-                disabled={busy}
-                onClick={() => onPage(status.pageId!)}
-              >
-                {status.played ? "See it in your book" : "Read it"}
-              </button>
-            )}
-            {another}
-          </>
-        ) : (
-          <>
-            <button className="rp-btn rp-btn-sun" disabled={busy} onClick={onOpen}>
-              {status.state === "draft" ? "Keep writing" : "Keep going"}
-            </button>
-            {status.state === "draft" && onSaveDraft && (
-              <button
-                className="rp-btn rp-btn-ghost"
-                disabled={busy}
-                onClick={() => onSaveDraft(status.entry)}
-              >
-                Save it as is
-              </button>
-            )}
-          </>
-        )}
-      </div>
-    </section>
+    <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </svg>
   );
 }
 
-/** Type a line, press Save, and it is a kept page. Nothing else to choose. */
-function QuickJot({
+function FamilySide({
+  book,
   busy,
-  onSave,
+  headingRef,
+  familyPages = [],
+  myBookId = "",
+  plan,
   onWrite,
-  onPhoto,
-  onPage,
-}: {
-  busy: boolean;
-  onSave: (text: string) => Promise<string>;
-  onWrite: (text: string, voice: boolean) => void;
-  onPhoto?: (text: string, file: File) => void;
-  onPage: (id: string) => void;
-}) {
-  const [text, setText] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState<string | null>(null);
-  const [error, setError] = useState("");
-  const ready = !!text.trim() && !saving && !busy;
-  async function save() {
-    if (!ready) return;
-    setSaving(true);
-    setError("");
-    try {
-      const id = await onSave(text.trim());
-      setText("");
-      setSaved(id);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "This page could not be saved.");
-    } finally {
-      setSaving(false);
-    }
-  }
+  onActivities,
+  onFamily,
+}: HomeProps) {
+  const now = new Date();
+  const shown = familyPagesOf(book, familyPages, { name: book.owner, bookId: myBookId });
+  const passage = shown.find((p) => p.kind === "passage");
+  const cards = shown.filter((p) => p !== passage).slice(0, 2);
+  const fresh = shown.filter((p) => now.getTime() - Date.parse(p.date) < 7 * DAY).length;
+  const since = shown.at(-1);
+  const moment = plan ? momentOf(plan, now) : "first";
+  const asking = !!plan && (moment === "lookback" || !todaysAnswer(plan, now));
+  const goalLabel = plan?.goalLabel ?? goals.hearing.label;
+  const where = plan ? places[plan.place].at : places.dinner.at;
+  const line = fresh
+    ? `${count(fresh)} new ${fresh === 1 ? "page" : "pages"} in the family book this week${plan ? "." : ", and something to try together tonight."}`
+    : plan
+      ? `Day ${Math.min(dayOf(plan, now), plan.days)} of trying ${goalLabel.charAt(0).toLowerCase()}${goalLabel.slice(1)}.`
+      : "Something to try together tonight is waiting in Activities.";
   return (
-    <section className="rp-jot" aria-label="Jot something down">
-      <form
-        className="rp-jot-bar"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void save();
-        }}
-      >
-        <label className="rj-sr-only" htmlFor="rp-jot-input">
-          Jot something down
-        </label>
-        <textarea
-          id="rp-jot-input"
-          rows={1}
-          value={text}
-          maxLength={JOURNAL_TEXT_LIMIT}
-          disabled={saving}
-          placeholder="Jot something down…"
-          onChange={(e) => {
-            setText(e.target.value);
-            setSaved(null);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              void save();
-            }
-          }}
+    <main
+      className={`rp-place ha-home ha-home-family ${asking ? "is-asking" : ""}`}
+      aria-labelledby="ha-title"
+    >
+      <Welcome
+        owner={book.owner}
+        first={!shown.length && !plan}
+        line={line}
+        art="home"
+        kicker={longDate(now)}
+        headingRef={headingRef}
+      />
+      {(asking || passage) && (
+        <div className={`ha-lead ${asking ? "is-asking" : ""}`}>
+          {asking && plan ? (
+            <section className="ha-plan-ask" aria-label="How is it going?">
+              <p className="ha-quiet">
+                {moment === "lookback"
+                  ? `${plan.goalLabel} · time to look back`
+                  : `${plan.goalLabel} · Day ${Math.min(dayOf(plan, now), plan.days)} of ${plan.days}`}
+              </p>
+              <p className="ha-plan-question">
+                {moment === "lookback" ? "Your two weeks are up." : wantedLine(plan)}{" "}
+                <em>{moment === "lookback" ? "Does it feel any different?" : "How did it go?"}</em>
+              </p>
+              <button type="button" className="ha-ghost" disabled={busy} onClick={onActivities}>
+                {moment === "lookback" ? "Look back together" : "Say how it went"}
+              </button>
+            </section>
+          ) : passage ? (
+            <PassageCard passage={passage} />
+          ) : null}
+        </div>
+      )}
+      <button type="button" className="ha-cover" disabled={busy} onClick={onFamily}>
+          <span className="ha-cover-words">
+            <span className="ha-cover-title">Our family book</span>
+            <span className="ha-cover-line">
+              {shown.length ? `${shown.length} ${shown.length === 1 ? "page" : "pages"}` : "No pages yet"}
+              {since && ` · since ${new Date(since.date).toLocaleDateString(undefined, { month: "long" })}`}
+              {fresh > 0 && ` · ${fresh} new this week`}
+            </span>
+          </span>
+          <Sprig className="ha-cover-leaf" tone="gold" />
+      </button>
+      <section className="ha-lately" aria-label="Lately in our family book">
+        {asking && passage && <PassageCard passage={passage} />}
+        {cards.length > 0 && (
+          <div className="ha-pages">
+            {cards.map((p) => (
+              <button key={p.id} type="button" className="ha-page" disabled={busy} onClick={onFamily}>
+                <span className="ha-page-meta">
+                  <span>{p.label}</span>
+                  <span>{when(p.date) === "today" ? "Today" : shortDate(p.date)}</span>
+                </span>
+                <span className="ha-page-title">{p.title || p.label}</span>
+                <span className="ha-page-text">{firstWords(p.text, 110)}</span>
+                <span className="ha-page-from">
+                  {p.byName.includes(" + ") ? p.byName : `From ${p.byName}’s book`}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+        {!shown.length && (
+          <p className="ha-quiet ha-empty">
+            Pages your family chooses to share show up here.
+          </p>
+        )}
+        <button type="button" className="ha-link ha-open" disabled={busy} onClick={onFamily}>
+          Open family book
+        </button>
+      </section>
+      <section className="ha-todo" aria-labelledby="ha-todo-title">
+        <h2 id="ha-todo-title">What would you like to do?</h2>
+        <Choice
+          art="jot"
+          title="Write in our family book"
+          line="Everyone in the family can read it."
+          busy={busy}
+          onOpen={onWrite}
         />
-        <button
-          type="button"
-          className="rp-jot-mic"
-          aria-label="Say it out loud"
-          disabled={saving || busy}
-          onClick={() => onWrite(text, true)}
-        >
-          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="9" y="3" width="6" height="11" rx="3" />
-            <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
-          </svg>
-        </button>
-        {onPhoto && (
-          <PhotoPick
-            className="rp-jot-mic"
-            label="Add a photo"
-            disabled={saving || busy}
-            onFile={(file) => onPhoto(text, file)}
-          >
-            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
-              <circle cx="12" cy="13" r="3.5" />
-            </svg>
-          </PhotoPick>
-        )}
-        <button className="rp-jot-save" disabled={!ready}>
-          {saving ? "Saving…" : "Save"}
-        </button>
-      </form>
-      <div className="rp-jot-foot" role="status" aria-live="polite">
-        {error ? (
-          <span className="lb-error">{error}</span>
-        ) : saved ? (
-          <>
-            <span>Kept in your book.</span>
-            <button type="button" className="lb-text" onClick={() => onPage(saved)}>
-              Open it to add a title
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            className="lb-text"
-            disabled={saving || busy}
-            onClick={() => onWrite(text, false)}
-          >
-            Write more: title, photos, people
-          </button>
-        )}
-      </div>
-    </section>
+        <Choice
+          art="same-page"
+          title="Do an activity together"
+          line={`This week: ${goalLabel}${plan && !goals[plan.goal as keyof typeof goals]?.placed ? "" : `, ${where}`}`}
+          busy={busy}
+          onOpen={onActivities}
+        />
+        <Choice
+          art="your-book"
+          title="Read about our family"
+          line="Every page anyone has shared"
+          busy={busy}
+          onOpen={onFamily}
+        />
+      </section>
+    </main>
+  );
+}
+
+function PassageCard({ passage }: { passage: { text: string; caption?: string; byName: string; date: string } }) {
+  return (
+    <figure className="ha-passage">
+      <blockquote>“{passage.text.trim()}”</blockquote>
+      <figcaption>
+        {passage.caption || passage.byName} · {shortDate(passage.date)}
+        {passage.caption && <span className="ha-passage-from"> · From {passage.byName}’s book</span>}
+      </figcaption>
+      <Sprig className="ha-passage-sprig" berries />
+    </figure>
   );
 }

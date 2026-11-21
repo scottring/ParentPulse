@@ -1,5 +1,6 @@
 "use client";
 import ConfirmDelete from "./ConfirmDelete";
+import { playNoteText } from "@/lib/relish/play-notes";
 import type { NoteDraft } from "@/lib/relish/game-notes";
 import { ListenBar, useListen } from "./GameListen";
 import GameNotes, { canListen, useNotesConfig } from "./GameNotes";
@@ -79,6 +80,8 @@ export default function GroupPlay({
   onKeep,
   onPause,
   onFinish,
+  onPlayAgain,
+  familyNote = false,
   onCancel,
   onKeepNotes,
 }: {
@@ -90,6 +93,10 @@ export default function GroupPlay({
   onKeep: () => void;
   onPause: () => void;
   onFinish: () => void;
+  /** Ends this round and sets up a new one of the same game. */
+  onPlayAgain?: () => void;
+  /** The book notes plays in Our family book (an adult's book). */
+  familyNote?: boolean;
   onCancel: () => void;
   /** A parent's book keeps notes about the players; children's books don't. */
   onKeepNotes?: (notes: NoteDraft[]) => Promise<boolean>;
@@ -353,33 +360,49 @@ export default function GroupPlay({
               onKeep={onKeepNotes}
             />
           )}
-          <div className="lb-round-end">
-            <p className="lb-fine">
-              {spot
-                ? `This card is kept in ${book.owner}’s book.`
-                : remembers(g)
-                  ? `This round is kept in ${book.owner}’s book.`
-                  : "Your book notes that you played, without anyone’s answers."}
-              {g.savedPageId
-                ? " A shared page was kept with everyone’s approval."
-                : ""}
+          <div className="lb-round-end ha-game-done">
+            <p className="ha-note">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#43513a" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12.5l4.5 4.5L19 7.5" />
+              </svg>
+              <span>
+                {familyNote ? (
+                  <>
+                    Noted in our family book: <b>{playNoteText(g, book.owner).replace(/\.$/, "")}</b>, today.
+                  </>
+                ) : (
+                  <>
+                    Noted in {book.owner}’s book: <b>played {titles[g.kind]}</b> today.
+                  </>
+                )}
+              </span>
             </p>
-            <button className="lb-primary" disabled={busy} onClick={onFinish}>
-              Finish round <Check size={16} />
+            <p className="ha-quiet lb-fine">
+              {g.savedPageId
+                ? "A shared page was kept with everyone’s approval."
+                : spot || remembers(g)
+                  ? `What everyone said stays in ${book.owner}’s book${text ? " unless everyone approves a shared page" : ""}.`
+                  : "Your book notes that you played, without anyone’s answers."}
+            </p>
+            <button className="ha-btn" disabled={busy} onClick={onFinish}>
+              Done
             </button>
-            <div className="lb-round-more">
+            <div className="ha-game-actions">
               <button
-                className="lb-text"
+                className="ha-link"
                 disabled={busy}
                 onClick={() => setReflecting(0)}
               >
-                {g.reflections?.length
-                  ? "Add or change a memory"
-                  : "Add a memory"}
+                {g.reflections?.length ? "Add or change a line about it" : "Add a line about it"}
               </button>
+              {onPlayAgain && (
+                <button className="ha-link ha-link-quiet" disabled={busy} onClick={onPlayAgain}>
+                  Play again
+                </button>
+              )}
               {text && !g.savedPageId && (
                 <button
-                  className="lb-text"
+                  className="ha-link ha-link-quiet"
                   disabled={busy}
                   aria-expanded={sharing}
                   onClick={() => setSharing(!sharing)}

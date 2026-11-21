@@ -34,7 +34,7 @@ it("+ Add a page opens the composer directly; Give me an idea goes to the catalo
   expect(screen.getByRole("textbox", { name: "Your journal entry" })).toBeTruthy();
   place("Book");
   fireEvent.click(await screen.findByRole("button", { name: "Give me an idea" }));
-  expect(screen.getByRole("heading", { name: "What feels right?" })).toBeTruthy();
+  expect(screen.getByRole("main", { name: "Activities" })).toBeTruthy();
 });
 
 it("a genuinely empty adult book gets one invitation", () => {
@@ -62,7 +62,7 @@ it("a kept exercise opens its own page, even beside an older one with the same t
     }),
   );
   fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
-  await screen.findByRole("heading", { name: "Kept in your book" });
+  await screen.findByText("Kept in your book. Only you can see it.");
   fireEvent.click(screen.getByRole("button", { name: /Open this page/ }));
   const page = document.querySelector(".rj-sequence-paper")!;
   expect(page.textContent).toContain("Talking it through");
@@ -128,13 +128,13 @@ it("Repair bingo with someone survives leaving, and its page opens over an older
   await mark(4);
   await vi.waitFor(() => {
     fireEvent.click(screen.getByRole("button", { name: /Back to Activities/ }));
-    expect(screen.getByRole("heading", { name: "What feels right?" })).toBeTruthy();
+    expect(screen.getByRole("main", { name: "Activities" })).toBeTruthy();
   });
   fireEvent.click(screen.getByRole("button", { name: /^Repair bingo/ }));
   await vi.waitFor(() => expect(document.querySelectorAll('.rt-bingo button[aria-pressed="true"]').length).toBe(2));
   fireEvent.click(screen.getByRole("button", { name: /Activity options/ }));
   fireEvent.click(screen.getByRole("button", { name: /Finish and keep a page/ }));
-  await screen.findByRole("heading", { name: "Kept in your book" });
+  await screen.findByText("Kept in your book. Only you can see it.");
   fireEvent.click(screen.getByRole("button", { name: /Open this page/ }));
   const page = document.querySelector(".rj-sequence-paper")!;
   expect(page.textContent).toContain("Repair bingo · Kaleb");
