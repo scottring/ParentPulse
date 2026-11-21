@@ -38,7 +38,7 @@ afterEach(cleanup);
 it("keeps an older unlocked book at reader setup until its profile is configured", () => {
   const { rerender } = render(createElement(RelishApp));
   expect(
-    screen.getByRole("heading", { name: "Who is this book for?" }),
+    screen.getByRole("heading", { name: "Who is this journal for?" }),
   ).toBeTruthy();
   expect(screen.queryByText("Private content is open")).toBeNull();
   state.book = { ...state.book, profile: { kind: "adult" } };

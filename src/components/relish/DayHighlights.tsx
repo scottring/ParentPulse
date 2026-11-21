@@ -183,7 +183,7 @@ function DayStart({
         <p className="rt-start-note">
           One person reads the questions and taps or types the answers. Anyone
           can skip. Each answer saves as you go; the day is kept in{" "}
-          {book.owner}’s book when you choose.
+          {book.owner}’s journal when you choose.
         </p>
         <button
           className="rp-btn rp-btn-olive rt-start-go"
@@ -365,7 +365,7 @@ function DayReadBack({
             ? `Day ${day} of ${name}. Use the same trip name tomorrow and it becomes Day ${day + 1}.`
             : undefined,
         }),
-      "Kept in your book.",
+      "Kept in your journal.",
     );
   }
   return (
@@ -430,7 +430,7 @@ function DayReadBack({
           <button className="lb-primary" disabled={busy} onClick={keep}>
             Keep as a trip page <Check size={16} />
           </button>
-          <p className="lb-fine">Kept privately in {book.owner}’s book, with today’s date.</p>
+          <p className="lb-fine">Kept privately in {book.owner}’s journal, with today’s date.</p>
         </div>
       )}
       <div className="rt-day-foot">

@@ -24,13 +24,15 @@ import {
   type Audience,
 } from "@/lib/relish/profiles";
 import { readBinding, type SyncedEdition } from "@/lib/relish/book-sync";
-import { coverFor } from "./covers";
 import type { useLocalBook } from "./useLocalBook";
 import type { useBookSync } from "./useBookSync";
 import { readHomeBook } from "./homeBook";
 import { Dialog } from "./BookForms";
 import Illustration from "./Illustration";
-import { BookShelf, ShelfBook } from "./BookCover";
+
+/** "Kaleb" or "Kaleb’s book" → "Kaleb’s journal". */
+const journalName = (label: string) =>
+  `${label.replace(/[’']s book$/, "").trim()}’s journal`;
 
 /** Where book creation saves, verified against useBookSync.accountBook:
  *  an encrypted copy uploads to the account and opens from any signed-in
@@ -219,7 +221,7 @@ export default function AccountLibrary({
         code === "auth/invalid-credential" ||
           code === "auth/wrong-password" ||
           code === "auth/user-not-found"
-          ? "That email and account password didn’t match. Use your Relish account password, or choose ‘Forgot account password?’ below. A book passphrase won’t sign you in."
+          ? "That email and account password didn’t match. Use your Relish account password, or choose ‘Forgot account password?’ below. A journal passphrase won’t sign you in."
           : e instanceof Error
             ? e.message
             : "Please try again.",
@@ -269,7 +271,7 @@ export default function AccountLibrary({
             disabled={working}
             onClick={() => startCreating("adult")}
           >
-            Create my book <ArrowRight size={18} aria-hidden="true" />
+            Create my journal <ArrowRight size={18} aria-hidden="true" />
           </button>
           <p className="lb-fine">{OWN_BOOK_NOTE}</p>
         </div>
@@ -281,7 +283,7 @@ export default function AccountLibrary({
           disabled={working}
           onClick={() => startCreating("child")}
         >
-          Create a child’s book
+          Create a child’s journal
         </button>
       </div>
     </div>
@@ -297,7 +299,7 @@ export default function AccountLibrary({
       />
       <div className="lb-lib-start-words">
         <p className="lb-kicker">Relish account</p>
-        <Heading>Start your book</Heading>
+        <Heading>Start your journal</Heading>
         <p className="lb-lib-invite">
           What’s one thing someone in your family did this week that you’d
           like to remember?
@@ -311,27 +313,25 @@ export default function AccountLibrary({
   // makes it this device's home book (RelishApp); a child's book never does.
   const homeHead = books.find(isHome);
   const homeName = homeHead ? homeHead.label.replace(/[’']s book$/, "").trim() : "";
-  // Your own book first, then everyone else's.
-  const shelved = homeHead
-    ? [homeHead, ...books.filter((b) => b !== homeHead)]
-    : books;
+  // No bookshelf (Scott, 2026-11-21): signed-in loads go straight to Home.
+  // This only shows when this device doesn't know the adult's own journal
+  // yet, or opening it didn't work: one plain choice, made once per device.
+  const others = books.filter((b) => b !== homeHead);
   const whichIsYours = (
-    <section className={`lb-lib-which ${hasOwnBook ? "is-returning" : ""}`}>
+    <section className={`lb-lib-which lb-lib-pick ${hasOwnBook ? "is-returning" : ""}`}>
       <div className="lb-lib-which-head">
         <div className="lb-lib-which-words">
-          <p className="lb-lib-eyebrow">
-            {hasOwnBook ? "Your family’s books" : "Relish account"}
-          </p>
+          <p className="lb-lib-eyebrow">Relish account</p>
           <Heading>
             {hasOwnBook
               ? homeName
                 ? `Welcome back, ${homeName}.`
                 : "Welcome back."
-              : "Which book is yours?"}
+              : "Which journal is yours?"}
           </Heading>
           <p className="lb-lib-invite">
             {hasOwnBook
-              ? "Open your book, or one of the family’s."
+              ? "Your journal opens on Home. Kids’ journals are in the Journal menu."
               : "Choose it once. This device opens it for you from then on."}
           </p>
         </div>
@@ -342,21 +342,55 @@ export default function AccountLibrary({
           className="lb-lib-which-art"
         />
       </div>
-      <div className="lb-lib-wall">
-        <BookShelf label="Books in this account">
-          {shelved.map((head) => (
-            <ShelfBook
-              key={head.id}
-              name={head.label}
-              cover={coverFor(head.label, isHome(head))}
-              disabled={working}
-              locked={!head.accountManaged}
-              note={isHome(head) ? "Your book" : undefined}
-              onOpen={() => void act(() => open(head))}
-            />
+      {hasOwnBook && homeHead ? (
+        <div className="lb-lib-pick-actions">
+          <button
+            type="button"
+            className="lb-primary"
+            disabled={working}
+            onClick={() => void act(() => open(homeHead))}
+          >
+            Open my journal <ArrowRight size={18} aria-hidden="true" />
+          </button>
+          {others.length > 0 && (
+            <p className="lb-lib-pick-kids">
+              Or open{" "}
+              {others.map((head, i) => (
+                <span key={head.id}>
+                  {i > 0 && (i === others.length - 1 ? " or " : ", ")}
+                  <button
+                    type="button"
+                    className="lb-lib-link"
+                    disabled={working}
+                    onClick={() => void act(() => open(head))}
+                  >
+                    {journalName(head.label)}
+                  </button>
+                </span>
+              ))}
+            </p>
+          )}
+        </div>
+      ) : (
+        <ul className="lb-lib-picklist" aria-label="Journals in this account">
+          {books.map((head) => (
+            <li key={head.id}>
+              <button
+                type="button"
+                className="lb-lib-pickrow"
+                disabled={working}
+                onClick={() => void act(() => open(head))}
+              >
+                <span>{journalName(head.label)}</span>
+                {!head.accountManaged && (
+                  <small>Earlier copy · needs its original passphrase</small>
+                )}
+                <ArrowRight size={18} aria-hidden="true" />
+              </button>
+            </li>
           ))}
-        </BookShelf>
-      </div>
+        </ul>
+      )}
       <p className="lb-lib-which-more">
         {!hasOwnBook && (
           <button
@@ -365,7 +399,7 @@ export default function AccountLibrary({
             disabled={working}
             onClick={() => startCreating("adult")}
           >
-            <Plus size={16} aria-hidden="true" /> Create a new book
+            <Plus size={16} aria-hidden="true" /> Create a new journal
           </button>
         )}
         <button
@@ -374,7 +408,7 @@ export default function AccountLibrary({
           disabled={working}
           onClick={() => startCreating("child")}
         >
-          <Plus size={16} aria-hidden="true" /> Create a child’s book
+          <Plus size={16} aria-hidden="true" /> Create a child’s journal
         </button>
       </p>
     </section>
@@ -384,19 +418,19 @@ export default function AccountLibrary({
       <Heading>Account</Heading>
       <p>
         Signed in as <strong>{user?.email || "this account"}</strong>. Your
-        family’s books open from Family.
+        children’s journals open from the Journal menu.
       </p>
     </section>
   ) : view === "loading" ? (
     <section className="lb-lib-state" aria-busy="true">
-      <Heading>Your books</Heading>
-      <p role="status">Loading your books…</p>
+      <Heading>Your journals</Heading>
+      <p role="status">Loading your journals…</p>
     </section>
   ) : view === "failed" ? (
     <section className="lb-lib-state">
-      <Heading>Your books</Heading>
+      <Heading>Your journals</Heading>
       <p role="alert" className="lb-error">
-        Your books didn’t load.{" "}
+        Your journals didn’t load.{" "}
         {sync.error || "Check your connection and try again."}
       </p>
       <div>
@@ -424,9 +458,9 @@ export default function AccountLibrary({
       <div className="lb-lib-foot-local">
         {onLocal && (
           <p>
-            {!accountPanel && view !== "books" && "Already have a book? "}
+            {!accountPanel && view !== "books" && "Already have a journal? "}
             <button type="button" onClick={onLocal}>
-              Open a local book or restore a backup
+              Open a local journal or restore a backup
             </button>
           </p>
         )}
@@ -444,9 +478,9 @@ export default function AccountLibrary({
 
   const signedIn = !user ? null : !parentReady && gate ? (
     <>
-      <p className="lb-kicker">Switch book</p>
+      <p className="lb-kicker">Switch journal</p>
       <Heading>Parent sign-in</Heading>
-      <p>Enter the parent password to go back to your book.</p>
+      <p>Enter the parent password to go back to your journal.</p>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -487,7 +521,7 @@ export default function AccountLibrary({
         </label>
         <button className="lb-primary" disabled={working}>
           <ShieldCheck size={17} />
-          Open my book
+          Open my journal
         </button>
       </form>
     </>
@@ -497,7 +531,7 @@ export default function AccountLibrary({
       <Heading>Verify your email</Heading>
       <section>
         <p>
-          Verify <strong>{user.email}</strong> to open your account library.
+          Verify <strong>{user.email}</strong> to open your journals.
         </p>
         <button
           className="lb-primary"
@@ -536,15 +570,15 @@ export default function AccountLibrary({
       {accountPanel && !adding && !chosen && library}
       {vault.mode === "open" && !bound?.accountManaged && (
         <section className="lb-account-current">
-          <h3>Add {vault.book.owner}’s book to your account</h3>
+          <h3>Add {vault.book.owner}’s journal to your account</h3>
           <p>
-            Add the entries, photos and progress in this book to your account.
+            Add the entries, photos and progress in this journal to your account.
             After this one-time step, sign-in opens the account copy on any
             device. Your original stays on this device.
           </p>
           <p className="lb-fine">
             Your account can recover this copy. Anyone signed in to this parent
-            account can open its family books. Other accounts cannot.
+            account can open its family’s journals. Other accounts cannot.
           </p>
           <button
             className="lb-primary"
@@ -556,7 +590,7 @@ export default function AccountLibrary({
               })
             }
           >
-            Add this book to my account
+            Add this journal to my account
             <ArrowUpRight size={17} />
           </button>
         </section>
@@ -593,7 +627,7 @@ export default function AccountLibrary({
           }}
         >
           <Heading>
-            {audience === "adult" ? "Create your book" : "Create a child’s book"}
+            {audience === "adult" ? "Create your journal" : "Create a child’s journal"}
           </Heading>
           <label>
             {audience === "adult" ? "Your name" : "Child’s name"}
@@ -627,7 +661,7 @@ export default function AccountLibrary({
               </label>
               <p>
                 Their prompts and activities will match this age range.{" "}
-                {CHILD_BOOK_NOTE} Their book belongs to your account: no child
+                {CHILD_BOOK_NOTE} Their journal belongs to your account: no child
                 email or password. Entries and photos save under your account,
                 and a parent password protects switching books and parent
                 settings. AI and sharing with other accounts still need your
@@ -640,7 +674,7 @@ export default function AccountLibrary({
                   onChange={(e) => setParentConfirm(e.target.checked)}
                 />
                 I’m their parent or guardian and understand this account can
-                access their book.
+                access their journal.
               </label>
             </>
           )}
@@ -653,7 +687,7 @@ export default function AccountLibrary({
               (audience !== "adult" && !parentConfirm)
             }
           >
-            {working ? "Creating book…" : "Create & open book"}
+            {working ? "Creating journal…" : "Create & open journal"}
             <ArrowUpRight size={17} />
           </button>
           <button
@@ -677,13 +711,13 @@ export default function AccountLibrary({
             });
           }}
         >
-          <Heading>Open {chosen.label}’s earlier book</Heading>
+          <Heading>Open {chosen.label}’s earlier journal</Heading>
           <p>
-            This copy still uses its original book passphrase. Once it’s open,
+            This copy still uses its original journal passphrase. Once it’s open,
             choose Account in the menu to add it to your account.
           </p>
           <label>
-            Original book passphrase
+            Original journal passphrase
             <input
               type="password"
               required
@@ -693,7 +727,7 @@ export default function AccountLibrary({
             />
           </label>
           <button className="lb-primary" disabled={working}>
-            Open book
+            Open journal
           </button>
           <button
             type="button"
@@ -816,13 +850,13 @@ export default function AccountLibrary({
         </p>
       )}
       {working && !(libraryOpen && view === "loading") && (
-        <p role="status">Working on your books…</p>
+        <p role="status">Working on your journals…</p>
       )}
       {notice && <p role="status">{notice}</p>}
       {!user && (
         <footer className="lb-account-footer">
           <p className="lb-fine">
-            Account books save automatically online. Stay signed in only on a
+            Account journals save automatically online. Stay signed in only on a
             device you trust.{" "}
             <a href="/privacy/" target="_blank" rel="noreferrer">
               Privacy details
@@ -830,7 +864,7 @@ export default function AccountLibrary({
           </p>
           {onLocal && (
             <button onClick={onLocal}>
-              Open a local-only book or restore a backup
+              Open a local-only journal or restore a backup
             </button>
           )}
           {onExplore && (

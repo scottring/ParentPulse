@@ -20,15 +20,19 @@ import { livingOf, gameKinds, type Game, type GameKind, type Player } from "@/li
 import type { NudgeAction } from "@/lib/relish/nudges";
 import {
   actionLabel,
+  actsFilters,
   featuredFor,
   featuredWords,
   isPlanCard,
+  kindLabel,
   resumeLabel,
   shelvesFor,
+  weekIndex,
   whoLine,
+  type ActsFilter,
   type PlanCard,
 } from "@/lib/relish/activities";
-import type { FamilyPlan, GoalId, PlaceId } from "@/lib/relish/family-plan";
+import { momentOf, type FamilyPlan, type GoalId, type PlaceId } from "@/lib/relish/family-plan";
 import { toolById } from "@/lib/relish/tools";
 import Illustration from "./Illustration";
 import FamilyPlanFeature, { type SharedLine } from "./FamilyHome";
@@ -68,11 +72,12 @@ export type PlanFeatureProps = {
 };
 
 /**
- * Activities (Scott, 2026-11-21): one featured thing for this space, what's
- * under way, then the collection on shelves by situation. Every card says
- * what you'll do, with whom, roughly how long, and its action names what
- * happens next ("Play Spot it!", "Keep sorting"). Just me / Our family
- * decides solo or together; a child's book shows only what fits their age.
+ * Activities, one page for everyone (Scott, 2026-11-21): one featured thing,
+ * a segmented "Everything / On my own / Together" filter with an inline
+ * "Pick up:" line, then situation shelves that mix both kinds. Every card says
+ * "On your own" or "Together", what you'll do, with whom, roughly how long,
+ * and its action names what happens next ("Play Spot it!", "Keep sorting").
+ * A child's book shows only what fits their age.
  */
 export default function DoSomething({
   book,
@@ -85,8 +90,10 @@ export default function DoSomething({
   onDiscard,
   onOfflinePlay,
   initialGame,
-  together = false,
+  filter: chosen,
+  onFilter,
   planFeature,
+  now = new Date(),
 }: {
   book: Book;
   /** Opens the game sheet straight away (from a Home suggestion). */
@@ -103,10 +110,12 @@ export default function DoSomething({
   onDiscard?: (item: UnderWay) => void;
   /** "We did this": a game played without the app. */
   onOfflinePlay?: (kind: GameKind, players: Player[]) => Promise<void>;
-  /** Our family: things you do together. */
-  together?: boolean;
-  /** Our family, an adult's book: the family plan is the featured activity. */
+  /** Everything, On my own or Together; kept by the caller so Back returns to it. */
+  filter?: ActsFilter;
+  onFilter?: (filter: ActsFilter) => void;
+  /** An adult's book with a family: the family plan can be the featured activity. */
   planFeature?: PlanFeatureProps;
+  now?: Date;
 }) {
   const audience = audienceOf(book);
   const [sheet, setSheet] = useState<GameItem | null>(
@@ -115,38 +124,55 @@ export default function DoSomething({
         (i) => i.action.kind === "game" && i.action.game === initialGame,
       ) as GameItem | undefined) ?? null,
   );
+  const [own, setOwn] = useState<ActsFilter>("all");
+  const filter = chosen ?? own;
+  const setFilter = (f: ActsFilter) => (onFilter ? onFilter(f) : setOwn(f));
   const [shift, setShift] = useState(0);
   const [preview, setPreview] = useState<{ goal: Exclude<GoalId, "own">; place: PlaceId } | undefined>();
+  const [listOpen, setListOpen] = useState(false);
   const featureRef = useRef<HTMLDivElement>(null);
   const living = livingOf(book);
   const game =
     living.game && living.game.stage !== "finished" ? living.game : undefined;
-  // Under way: in Our family, the games and the car's questions; in Just me,
-  // everything of yours. Drafts live in Journal and on Home.
-  const going = underWay(book, 8).filter((g) =>
-    g.kind === "draft" ? false : together ? g.kind === "game" || g.kind === "day" : true,
+  // Under way, for this filter. Drafts live in Journal and on Home.
+  const going = underWay(book, 8).filter(
+    (g) =>
+      g.kind !== "draft" &&
+      (filter === "all" || (filter === "together") === (g.kind === "game" || g.kind === "day")),
   );
   const all = underWay(book, 12);
+  // The family plan when this account has a family: always while a plan is
+  // under way, otherwise taking turns week by week with something to do on
+  // your own. The filter can ask for either.
+  const planRunning = !!planFeature?.plan && momentOf(planFeature.plan, now) !== "first";
+  const planFirst =
+    !!planFeature &&
+    (filter === "together" ||
+      (filter === "all" && (planRunning || !!preview || weekIndex(now) % 2 === 0)));
   const featured =
-    together && planFeature ? undefined : featuredFor(audience, all, new Date(), shift);
+    planFirst || filter === "together" ? undefined : featuredFor(audience, all, now, shift);
   // A card that would only reopen something in Pick up stays off the shelves;
   // a game can always start a fresh round.
   const reopens = going.filter((g) => g.kind !== "game").map((g) => g.key);
-  const shelves = shelvesFor(audience, together, [...(featured ? [featured.key] : []), ...reopens]);
+  const shelves = shelvesFor(audience, filter, [...(featured ? [featured.key] : []), ...reopens], {
+    plansOk: !!planFeature,
+  });
   function open(item: DoItem) {
     if (item.action.kind !== "game") return onOpen(item.action);
     setSheet(item as GameItem);
   }
   function tryPlan(card: PlanCard) {
     setPreview({ goal: card.goal, place: card.place });
+    if (filter === "solo") setFilter("all");
     featureRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     window.setTimeout(() => headingRef.current?.focus({ preventScroll: true }), 0);
   }
   const words = featured ? featuredWords(featured) : null;
+  const pick = going.slice(0, 2);
   return (
     <main className="rp-place ha-acts" aria-label="Activities">
       <div ref={featureRef}>
-        {together && planFeature ? (
+        {planFirst && planFeature ? (
           <FamilyPlanFeature
             {...planFeature}
             busy={busy}
@@ -158,7 +184,7 @@ export default function DoSomething({
           <section className="ha-feature" aria-labelledby="ha-feat">
             <div className="ha-feature-words">
               <p className="ha-quiet">
-                Featured this week · {together ? "for the whole family" : "just for you"}
+                Featured this week · {featured.action.kind === "game" ? "together" : "on your own"}
               </p>
               <h1 id="ha-feat" ref={headingRef} tabIndex={-1}>
                 {featured.title}
@@ -166,7 +192,7 @@ export default function DoSomething({
               <p className="ha-feature-lead">{words.lead}</p>
               <p className="ha-feature-small">
                 {words.rest && `${words.rest} `}
-                {featuredTime(featured, together)}
+                {featuredTime(featured)}
               </p>
               <div className="ha-feature-actions">
                 <button type="button" className="ha-btn" disabled={busy} onClick={() => open(featured)}>
@@ -191,8 +217,55 @@ export default function DoSomething({
           </h1>
         )}
       </div>
-      {!!going.length && (
-        <section className="ha-section" aria-labelledby="ha-pick">
+      <div className="ha-acts-bar">
+        <div className="ha-seg" role="group" aria-label="Show">
+          {actsFilters.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              aria-pressed={filter === f.id}
+              onClick={() => {
+                setFilter(f.id);
+                setListOpen(false);
+              }}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        {pick.length > 0 && (
+          <p className="ha-pick-line">
+            <span className="ha-quiet">Pick up: </span>
+            {pick.map((g, i) => (
+              <span key={`${g.kind}:${g.key}`}>
+                {i > 0 && <span aria-hidden="true"> · </span>}
+                <button
+                  type="button"
+                  className="ha-link ha-pick-link"
+                  disabled={busy}
+                  aria-label={`${pickText(g)}: ${resumeLabel(g)}`}
+                  onClick={() => onResume(g)}
+                >
+                  {pickText(g)}
+                </button>
+              </span>
+            ))}
+            <span aria-hidden="true"> · </span>
+            <button
+              type="button"
+              className="ha-link ha-link-quiet"
+              aria-expanded={listOpen}
+              aria-controls="ha-pick-list"
+              onClick={() => setListOpen((o) => !o)}
+            >
+              {listOpen ? "Hide" : going.length > pick.length ? `All ${going.length}` : "More"}
+              <span className="ui-sr-only"> things under way</span>
+            </button>
+          </p>
+        )}
+      </div>
+      {listOpen && !!going.length && (
+        <section className="ha-section" id="ha-pick-list" aria-labelledby="ha-pick">
           <h2 id="ha-pick" className="ha-quiet-head">
             Pick up where you left off
           </h2>
@@ -257,6 +330,7 @@ export default function DoSomething({
                 <li key={card.key}>
                   <Card
                     art={planArt[card.goal] ?? "family"}
+                    kind={kindLabel(card)}
                     title={card.title}
                     line={card.line}
                     who={card.who}
@@ -269,9 +343,10 @@ export default function DoSomething({
                 <li key={card.key}>
                   <Card
                     art={itemArt(card.action)}
+                    kind={kindLabel(card)}
                     title={card.title}
                     line={card.line}
-                    who={`${whoLine(card, together)}${doneLine(book, card)}`}
+                    who={`${whoLine(card)}${doneLine(book, card)}`}
                     action={continuing(card, all) ?? actionLabel(card)}
                     busy={busy}
                     onGo={() => {
@@ -286,7 +361,7 @@ export default function DoSomething({
           </ul>
         </section>
       ))}
-      {onOfflinePlay && (
+      {onOfflinePlay && filter !== "solo" && (
         <OfflinePlay roster={roster} busy={busy} onSave={onOfflinePlay} />
       )}
       {sheet && (
@@ -304,12 +379,14 @@ export default function DoSomething({
   );
 }
 
+/** "What helps when I’m upset · 2 of 10": the Pick up line's words. */
+const pickText = (g: UnderWay) => `${g.title}${g.detail ? ` · ${g.detail}` : ""}`;
 /** "You'll leave with … About 2 minutes, only you see it." */
-function featuredTime(item: DoItem, together: boolean) {
+function featuredTime(item: DoItem) {
   const tool = item.action.kind === "exercise" ? toolById(item.action.id) : undefined;
   const time = tool ? tool.time : item.time.charAt(0).toUpperCase() + item.time.slice(1);
   if (item.action.kind === "game") return `${time}, together.`;
-  return `${time}${together ? "." : ", only you see it."}`;
+  return `${time}, only you see it.`;
 }
 /** "Keep sorting" on a card for something already under way. */
 function continuing(card: DoItem, all: UnderWay[]) {
@@ -329,6 +406,7 @@ function doneLine(book: Book, card: DoItem) {
 
 function Card({
   art,
+  kind,
   title,
   line,
   who,
@@ -337,6 +415,8 @@ function Card({
   onGo,
 }: {
   art: IllustrationName;
+  /** "On your own" or "Together". */
+  kind: string;
   title: string;
   line: string;
   who: string;
@@ -348,6 +428,7 @@ function Card({
     <article className="ha-card">
       <Illustration name={art} size="100%" className="ha-card-art" />
       <div className="ha-card-body">
+        <span className={`ha-kind ${kind === "Together" ? "is-together" : "is-solo"}`}>{kind}</span>
         <h3 className="ha-card-title">{title}</h3>
         <p className="ha-card-line">{line}</p>
         <span className="ha-card-who">{who}</span>

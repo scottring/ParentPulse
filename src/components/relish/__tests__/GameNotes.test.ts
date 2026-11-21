@@ -50,7 +50,7 @@ describe("notes at the end of a round", () => {
     await waitFor(() => expect(onKeep).toHaveBeenCalled());
     expect(onKeep.mock.calls[0][0]).toHaveLength(1);
     expect(onKeep.mock.calls[0][0][0]).toMatchObject({ person: "Kaleb" });
-    expect(await screen.findByText(/Kept in Scott’s book/)).toBeTruthy();
+    expect(await screen.findByText(/Kept in Scott’s journal/)).toBeTruthy();
     // Children's spoken notes wait for the provider privacy setup, and it says so.
     expect(screen.queryByText(/extra privacy setup/)).toBeNull();
   });

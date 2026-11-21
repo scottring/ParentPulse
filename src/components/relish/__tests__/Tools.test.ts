@@ -14,6 +14,7 @@ import { emptyBook, type Book } from "@/lib/relish/model";
 import { advanceGame, livingOf, newGame } from "@/lib/relish/living";
 import { todayKey, toolsOf, type ToolsState } from "@/lib/relish/tools";
 import LivingBook from "../LivingBook";
+import { myJournal } from "./bookHarness";
 import { sameV2 } from "@/lib/relish/__tests__/same-page-v2";
 Object.defineProperty(globalThis, "crypto", {
   value: webcrypto,
@@ -105,7 +106,7 @@ it("sorts cards, picks one, and keeps the result as a page in Your pages", async
   );
   fireEvent.click(screen.getByRole("button", { name: /A long shower/, pressed: false }));
   fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
-  await screen.findByText("Kept in your book. Only you can see it.");
+  await screen.findByText("Kept in your journal. Only you can see it.");
   const page = app.stored().journal![0];
   expect(page.status).toBe("kept");
   expect(page.title).toBe("What helps when I’m upset");
@@ -140,7 +141,7 @@ it("builds a soft opener only once every part is filled in", async () => {
     ).length,
   ).toBeGreaterThan(0);
   fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
-  await screen.findByText("Kept in your book. Only you can see it.");
+  await screen.findByText("Kept in your journal. Only you can see it.");
   expect(app.stored().journal![0]).toMatchObject({
     title: "Rewrite the opener · Sam",
     people: ["sam"],
@@ -159,7 +160,7 @@ it("a kept Plan a repair page comes back in Still going, then on Home once it's 
   ])
     fireEvent.change(screen.getByRole("textbox", { name: label }), { target: { value } });
   fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
-  await screen.findByText("Kept in your book. Only you can see it.");
+  await screen.findByText("Kept in your journal. Only you can see it.");
   expect(screen.getByRole("heading", { name: "You have words for a repair with Sam." })).toBeTruthy();
   // Nothing is asked about unless they choose to be reminded.
   expect(toolsOf(app.stored()).checkBacks ?? []).toHaveLength(0);
@@ -174,7 +175,7 @@ it("a kept Plan a repair page comes back in Still going, then on Home once it's 
   fireEvent.click(screen.getByRole("button", { name: "Home" }));
   await screen.findByRole("heading", { level: 1, name: /^Welcome/ });
   expect(screen.queryByRole("region", { name: /Your plan from/ })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Book" }));
+  myJournal();
   const item = await screen.findByRole("button", { name: /Your plan · Plan a repair · Sam/ });
   expect(item.textContent).toMatch(/Relish asks \w+day/);
   app.unmount();
@@ -252,7 +253,7 @@ it("runs a day-by-day checklist across visits and finishes into a page", async (
   // Finishing early lives under Activity options.
   fireEvent.click(screen.getByRole("button", { name: /Activity options/ }));
   fireEvent.click(screen.getByRole("button", { name: "Finish and keep a page" }));
-  await screen.findByText("Kept in your book. Only you can see it.");
+  await screen.findByText("Kept in your journal. Only you can see it.");
   const stored = again.stored();
   expect(toolsOf(stored).trackers[0].finishedAt).toBeTruthy();
   expect(stored.journal![0].title).toBe("Ten real hellos · Sam");
@@ -318,7 +319,7 @@ it("lets one person finish first while the other carries on", async () => {
     target: { value: "She started waving from the window." },
   });
   fireEvent.click(within(ella).getByRole("button", { name: "Keep Ella’s page" }));
-  await screen.findByText(/Ella’s page is kept in your book/);
+  await screen.findByText(/Ella’s page is kept in your journal/);
   const stored = app.stored();
   expect(stored.journal![0].title).toBe("Ten real hellos · Ella");
   expect(stored.journal![0].text).toContain("She started waving from the window.");
@@ -339,7 +340,7 @@ it("after the tenth day, offers a line to remember and keeps the page", async ()
     target: { value: "He hugs me at the door now." },
   });
   fireEvent.click(screen.getByRole("button", { name: "Finish and keep a page" }));
-  await screen.findByText("Kept in your book. Only you can see it.");
+  await screen.findByText("Kept in your journal. Only you can see it.");
   expect(app.stored().journal![0].text).toContain("He hugs me at the door now.");
 });
 it("shows a habit started before this change unchanged, and can add someone mid-way", async () => {
@@ -359,7 +360,7 @@ it("shows a habit started before this change unchanged, and can add someone mid-
   // Finishing early keeps a page for whoever has days marked.
   fireEvent.click(screen.getByRole("button", { name: /Activity options/ }));
   fireEvent.click(screen.getByRole("button", { name: "Finish and keep a page" }));
-  await screen.findByText("Kept in your book. Only you can see it.");
+  await screen.findByText("Kept in your journal. Only you can see it.");
   expect(app.stored().journal!.map((e) => e.title)).toEqual(["Ten real hellos · Kaleb"]);
   expect(toolsOf(app.stored()).trackers.filter((t) => !t.finishedAt)).toHaveLength(0);
 });
@@ -370,7 +371,7 @@ it("offers children with their own books in the library, and notes the one chose
   ];
   const app = open({ ...emptyBook("Scott"), profile: { kind: "adult" } }, kids);
   fireEvent.click(await screen.findByRole("button", { name: /^Ten real hellos/ }));
-  expect(screen.queryByText(/Add someone to your book first/)).toBeNull();
+  expect(screen.queryByText(/Add someone to your journal first/)).toBeNull();
   fireEvent.click(screen.getByRole("checkbox", { name: "Kaleb" }));
   fireEvent.click(screen.getByRole("button", { name: /Start/ }));
   await screen.findByRole("button", { name: "Mark today" });
@@ -385,7 +386,8 @@ it("the journal can tag children who have their own books in the library", async
     { id: "k", name: "Kaleb", onOpen: vi.fn() },
     { id: "e", name: "Ella", onOpen: vi.fn() },
   ]);
-  fireEvent.click(screen.getByRole("button", { name: "Journal" }));
+  myJournal();
+  fireEvent.click(screen.getByRole("button", { name: "Write today’s entry" }));
   fireEvent.click(await screen.findByRole("button", { name: /Tag people/ }));
   fireEvent.click(screen.getByRole("checkbox", { name: "Ella" }));
   await waitFor(() => expect(app.stored().people.map((p) => p.name)).toEqual(["Ella"]));
@@ -434,7 +436,7 @@ it("plays Same page? with hidden answers and a shared reveal", async () => {
   const app = open({ ...book, living: { ...livingOf(book), game } });
   fireEvent.click(screen.getByRole("button", { name: /Same page\?.*Resume Same page\?/ }));
   expect(screen.getByRole("heading", { name: "Same page?" })).toBeTruthy();
-  expect(screen.getByText(/stay with this round in Robin’s book \(never sent to AI\)/)).toBeTruthy();
+  expect(screen.getByText(/stay with this round in Robin’s journal \(never sent to AI\)/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /Let’s play/ }));
   const options = () =>
     screen.getAllByRole("button").filter((b) => b.closest(".lb-choices"));
@@ -640,7 +642,7 @@ it("a card sort left partway is saved, shows under way, and reopens where it sto
     }),
   ).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
-  await screen.findByText("Kept in your book. Only you can see it.");
+  await screen.findByText("Kept in your journal. Only you can see it.");
   expect(toolsOf(app.stored()).runs).toBeUndefined();
   expect(app.stored().journal![0].text).toContain("Helps me: Talking it through.");
 });
@@ -678,9 +680,9 @@ it("Home's one writing suggestion under Write: a started one says Keep writing a
   fireEvent.click(screen.getByRole("button", { name: "Home" }));
   const todo = await screen.findByRole("region", { name: "What would you like to do?" });
   const line = within(todo).getByRole("button", { name: /^Keep writing: .*made you laugh/ });
-  // The draft also leads "Lately in your book".
-  const lately = screen.getByRole("region", { name: "Lately in your book" });
-  expect(within(lately).getByText("Sam wore rain boots on his hands.")).toBeTruthy();
+  // The draft also leads Lately, as Only me.
+  const lately = screen.getByRole("region", { name: "Lately" });
+  expect(within(lately).getByText(/Sam wore rain boots on his hands\./)).toBeTruthy();
   fireEvent.click(line);
   expect(
     (screen.getByRole("textbox", { name: "Your journal entry" }) as HTMLTextAreaElement).value,

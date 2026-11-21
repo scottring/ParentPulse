@@ -67,7 +67,7 @@ export function weekIndex(date = new Date()) {
   // 1970-01-01 was a Thursday: shift so weeks start on Monday.
   return Math.floor((day + 3) / 7);
 }
-/** Just me: the activities that take a turn as this week's featured one. */
+/** The activities that take a turn as this week's featured one (on your own). */
 export const featuredMe = [
   "unseen",
   "helps-upset",
@@ -82,7 +82,7 @@ export const featuredMe = [
   "game:story",
 ];
 /**
- * This week's featured activity for Just me: the same all week, a different
+ * This week's featured activity to do on your own: the same all week, a different
  * one next week. `shift` is "Show me another". Things already under way are
  * skipped; they have their own row.
  */
@@ -96,7 +96,7 @@ export function featuredFor(
   const busy = new Set(going.map((g) => g.key));
   const list = featuredMe
     .map((key) => items.find((i) => i.key === key))
-    // An adult's Just me features something to do on your own; a child's can be a game.
+    // An adult's features something to do on your own; a child's can be a game.
     .filter((i): i is DoItem => !!i && !busy.has(i.key))
     .filter((i) => audience !== "adult" || i.action.kind !== "game");
   if (!list.length) return undefined;
@@ -146,7 +146,7 @@ export function resumeLabel(g: UnderWay) {
   return g.label;
 }
 /** Who it's for and roughly how long: only times the activity actually states. */
-export function whoLine(item: DoItem, together = false) {
+export function whoLine(item: DoItem, together = isTogether(item)) {
   const time = item.time;
   if (item.action.kind === "game")
     return item.action.game === "spot"
@@ -154,7 +154,7 @@ export function whoLine(item: DoItem, together = false) {
       : `Two or more · one phone, passed around · ${time}`;
   if (item.key === "day-highlights") return `Everyone in the car · ${time}`;
   if (item.type === "Habit") return `${together ? "Everyone" : "You"} · ${time}`;
-  return `Just you · ${time}`;
+  return `You · ${time}`;
 }
 
 // ── Shelves by situation ────────────────────────────────────────────────────
@@ -191,15 +191,33 @@ export function planCard(goal: Exclude<GoalId, "own">, place: PlaceId, action: s
 export type Shelf = { id: string; title: string; cards: (DoItem | PlanCard)[] };
 export const isPlanCard = (c: DoItem | PlanCard): c is PlanCard => "goal" in c;
 
-const shelvesMe: { id: string; title: string; keys: string[] }[] = [
-  { id: "hard", title: "Something felt hard", keys: ["repair", "soft-start", "thought-court", "think"] },
-  { id: "thin", title: "Feeling stretched thin", keys: ["drains-fills", "load", "helps-upset"] },
-  { id: "daily", title: "A small thing each day", keys: ["hellos", "thanks-week", "repair-bingo", "kindness-bingo"] },
+/** Activities' segmented filter (2026-11-21): one page, both kinds. */
+export type ActsFilter = "all" | "solo" | "together";
+export const actsFilters: { id: ActsFilter; label: string }[] = [
+  { id: "all", label: "Everything" },
+  { id: "solo", label: "On my own" },
+  { id: "together", label: "Together" },
 ];
-const shelvesFamily: { id: string; title: string; keys: string[] }[] = [
-  { id: "dinner", title: "At dinner", keys: ["game:match", "game:joy", "plan:laughing"] },
+/** Done together: a game, a plan for the family, or a together activity. */
+export const togetherCard = (c: DoItem | PlanCard) => isPlanCard(c) || isTogether(c);
+/** "On your own" or "Together", on every card. */
+export const kindLabel = (c: DoItem | PlanCard) => (togetherCard(c) ? "Together" : "On your own");
+
+/**
+ * One set of situation shelves for everyone (Scott, 2026-11-21): each shelf
+ * mixes what you do on your own with what you do together, and each card says
+ * which. Before this, Just me and Our family had separate shelves.
+ */
+const shelfList: { id: string; title: string; keys: string[] }[] = [
+  { id: "dinner", title: "At dinner", keys: ["game:match", "game:joy", "plan:laughing", "thanks-week"] },
+  {
+    id: "hard",
+    title: "Something felt hard",
+    keys: ["repair", "soft-start", "plan:disagree", "repair-bingo", "thought-court", "think"],
+  },
   { id: "car", title: "In the car", keys: ["game:spot", "game:story", "day-highlights"] },
-  { id: "hard", title: "Something felt hard", keys: ["plan:disagree", "repair-bingo", "kindness-bingo"] },
+  { id: "thin", title: "Feeling stretched thin", keys: ["drains-fills", "load", "helps-upset"] },
+  { id: "daily", title: "A small thing each day", keys: ["hellos", "unseen", "kindness-bingo"] },
 ];
 const plans: Record<string, PlanCard> = {
   "plan:laughing": planCard("laughing", "dinner", "Try it at dinner"),
@@ -208,35 +226,33 @@ const plans: Record<string, PlanCard> = {
   "plan:oneonone": planCard("oneonone", "dinner", "Try it this week"),
 };
 /**
- * The collection by recognizable situations. Only what this book's age can
- * do appears; anything not on a named shelf is under "More to try", so a
- * child's book (or an adult's) never loses an activity.
+ * The collection by recognizable situations, narrowed by the filter. Only
+ * what this book's age can do appears; anything not on a named shelf is
+ * under "More to try", so a child's book (or an adult's) never loses an
+ * activity. Plan cards are for an adult's family only.
  */
 export function shelvesFor(
   audience: Audience,
-  together: boolean,
+  filter: ActsFilter = "all",
   skip: string[] = [],
+  { plansOk = audience === "adult" }: { plansOk?: boolean } = {},
 ): Shelf[] {
   const items = doItems(audience).filter((i) => i.key !== "write" && !skip.includes(i.key));
-  const adult = audience === "adult";
   const find = (key: string): DoItem | PlanCard | undefined =>
-    key.startsWith("plan:") ? (adult && together ? plans[key] : undefined) : items.find((i) => i.key === key);
-  const named = (together ? shelvesFamily : shelvesMe).map((s) => ({
+    key.startsWith("plan:") ? (plansOk && !skip.includes(key) ? plans[key] : undefined) : items.find((i) => i.key === key);
+  const fits = (c: DoItem | PlanCard) =>
+    filter === "all" || (filter === "together") === togetherCard(c);
+  const named = shelfList.map((s) => ({
     id: s.id,
     title: s.title,
     cards: s.keys.map(find).filter((c): c is DoItem | PlanCard => !!c),
   }));
   const used = new Set(named.flatMap((s) => s.cards.map((c) => c.key)));
-  // Our family has what's done together; Just me has what you do on your own.
-  // A child's book keeps its games in Just me too: kids rarely switch spaces.
-  const rest: (DoItem | PlanCard)[] = items.filter(
-    (i) => !used.has(i.key) && (isTogether(i) === together || (!adult && !together)),
-  );
-  if (adult && together) rest.push(plans["plan:mornings"], plans["plan:oneonone"]);
-  return [
-    ...named,
-    { id: "more", title: together ? "More to do together" : "More to try", cards: rest },
-  ].filter((s) => s.cards.length);
+  const rest: (DoItem | PlanCard)[] = items.filter((i) => !used.has(i.key));
+  if (plansOk) rest.push(plans["plan:mornings"], plans["plan:oneonone"]);
+  return [...named, { id: "more", title: "More to try", cards: rest }]
+    .map((s) => ({ ...s, cards: s.cards.filter(fits) }))
+    .filter((s) => s.cards.length);
 }
 
 // ── A habit that slipped a day ──────────────────────────────────────────────

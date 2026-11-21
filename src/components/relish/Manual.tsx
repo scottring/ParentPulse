@@ -78,7 +78,7 @@ export function useManualGuide(
       if (!config?.enabled || sample || !alive.current)
         throw new Error("AI suggestions are not enabled yet.");
       const b = latest.current;
-      if (!b.profile) throw new Error("Choose who this book is for first.");
+      if (!b.profile) throw new Error("Choose who this journal is for first.");
       if (b.profile.kind === "child" && !config.children)
         throw new Error(
           "Children’s automatic reflections need the additional provider privacy setup.",
@@ -454,7 +454,7 @@ export default function Manual({
                       ? "I’m the parent or guardian and allow this guide session. "
                       : "I’m 18 or older. "}
                     I understand that turning on a manual’s guide sends its
-                    recent kept text to OpenAI automatically while this book
+                    recent kept text to OpenAI automatically while this journal
                     is open. I can turn it off below. Standard API privacy
                     applies: no model training by default, response storage off,
                     and possible abuse-monitoring retention for up to 30 days.
@@ -559,7 +559,7 @@ export default function Manual({
               Save an entry, then enable automatic analysis above to receive suggestions. Each suggestion needs your review before you add it to your manual.
             </p>
             <button className="lb-text" onClick={onPages}>
-              Back to Your book <BookOpen size={16} />
+              Back to my journal <BookOpen size={16} />
             </button>
           </div>
         )}

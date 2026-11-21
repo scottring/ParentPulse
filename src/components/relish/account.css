@@ -666,11 +666,6 @@
   max-width: 220px;
   justify-self: start;
 }
-.r-dialog .lb-bookshelf {
-  --lb-book-w: 160px;
-  --lb-shelf-gap: 32px;
-  --lb-shelf-inset: 16px;
-}
 .r-dialog .lb-account .lb-lib-start :is(h1, h2) {
   font-size: clamp(38px, 6vw, 52px);
 }
@@ -754,38 +749,6 @@
   -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent 100%);
   mask-image: radial-gradient(closest-side, #000 72%, transparent 100%);
 }
-.lb-lib-wall {
-  position: relative;
-  padding: 30px clamp(10px, 3vw, 36px) 30px;
-  border-radius: 26px;
-  background:
-    radial-gradient(120% 100% at 50% 0%, #fdf9ef 0%, #f1e8d5 70%, #ebe0c9 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    0 24px 50px -32px rgba(48, 56, 44, 0.45);
-}
-.lb-app .lb-lib-wall .lb-bookshelf {
-  margin: 0;
-}
-.lb-lib-wall .lb-bookshelf-ledge {
-  height: 13px;
-  background: linear-gradient(#efe0c2 0 3px, #d6ba8f 3px, #b99669);
-  box-shadow:
-    0 1px 0 rgba(48, 56, 44, 0.14),
-    0 12px 18px -8px rgba(48, 56, 44, 0.32);
-}
-.lb-lib-wall .lb-cloth {
-  filter: drop-shadow(0 10px 12px rgba(48, 56, 44, 0.18));
-}
-.lb-lib-wall .lb-bookshelf-note {
-  margin-top: 16px;
-  padding: 5px 14px;
-  border-radius: 999px;
-  background: var(--ui-olive);
-  color: #fffdf6;
-  font: 700 13px/1.2 var(--sans);
-  letter-spacing: 0.02em;
-}
 .lb-app .lb-account .lb-lib-which-more .lb-lib-link {
   display: inline-flex;
   align-items: center;
@@ -804,9 +767,5 @@
   }
   .lb-app .lb-account .lb-lib-which-words .lb-lib-invite {
     font-size: 17px;
-  }
-  .lb-lib-wall {
-    padding: 22px 6px 22px;
-    border-radius: 20px;
   }
 }

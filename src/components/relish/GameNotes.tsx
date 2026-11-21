@@ -13,7 +13,7 @@ import { forgetTranscript, isChildPlayer, transcriptOf, type Listen } from "./Ga
 
 export type NotesConfig = { enabled: boolean; children: boolean };
 
-/** Whether this book can take notes from what's said aloud in this round. */
+/** Whether this journal can take notes from what's said aloud in this round. */
 export function useNotesConfig(skip: boolean) {
   const [config, setConfig] = useState<NotesConfig | null>(null);
   useEffect(() => {
@@ -33,7 +33,7 @@ export const canListen = (game: Game, config: NotesConfig | null) =>
 /**
  * The end of a round: what came out of it about each player, from the typed
  * answers and (with Listen) what was said. Everything starts checked; one tap
- * keeps them on each person in this book.
+ * keeps them on each person in this journal.
  */
 export default function GameNotes({
   game,
@@ -102,7 +102,7 @@ export default function GameNotes({
     })();
   }, [waiting, transcript, aiOk, game]);
 
-  // Notes are about the people you play with, kept in your book under each
+  // Notes are about the people you play with, kept in your journal under each
   // of them; the book's owner isn't one of their own people.
   const mine = (n: NoteDraft) => n.person.trim().toLowerCase() !== owner.trim().toLowerCase();
   const all = [...typed, ...said].filter(mine);
@@ -113,7 +113,7 @@ export default function GameNotes({
       <section className="lb-notes" aria-label="Notes from this round">
         <p className="lb-kicker">Notes from this round</p>
         <p>
-          <Check size={16} aria-hidden="true" /> Kept in {owner}’s book, under each person. Only
+          <Check size={16} aria-hidden="true" /> Kept in {owner}’s journal, under each person. Only
           the parents’ books hold these notes.
         </p>
       </section>
@@ -199,7 +199,7 @@ export default function GameNotes({
           >
             Keep {chosen.length} {chosen.length === 1 ? "note" : "notes"}
           </button>
-          <span className="lb-fine">In {owner}’s book, under each person. Not shared.</span>
+          <span className="lb-fine">In {owner}’s journal, under each person. Not shared.</span>
         </div>
       )}
     </section>

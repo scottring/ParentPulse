@@ -4,7 +4,7 @@ import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { webcrypto } from "node:crypto";
 import { emptyBook, sampleBook, type Book } from "@/lib/relish/model";
 import { newJournalDraft, writeJournalPage } from "@/lib/relish/journal";
-import { openBook } from "./bookHarness";
+import { myJournal, openBook } from "./bookHarness";
 Object.defineProperty(globalThis, "crypto", { value: webcrypto, configurable: true });
 vi.mock("../Sensory", () => ({
   useSensory: () => ({ play: vi.fn() }),
@@ -25,12 +25,14 @@ const kid = (): Book => ({
   profile: { kind: "child", ageBand: "9-12", parentLock: { accountUid: "parent-uid" } },
 });
 const place = (name: string) =>
-  fireEvent.click(within(screen.getByRole("navigation", { name: "Main" })).getByRole("button", { name }));
+  name === "Book"
+    ? myJournal()
+    : fireEvent.click(within(screen.getByRole("navigation", { name: "Main" })).getByRole("button", { name }));
 
-it("+ Add a page opens the composer directly; Give me an idea goes to the catalog", async () => {
+it("Write today’s entry opens the composer directly; Give me an idea goes to the catalog", async () => {
   openBook(sampleBook());
   place("Book");
-  fireEvent.click(screen.getByRole("button", { name: "+ Add a page" }));
+  fireEvent.click(screen.getByRole("button", { name: "Write today’s entry" }));
   expect(screen.getByRole("textbox", { name: "Your journal entry" })).toBeTruthy();
   place("Book");
   fireEvent.click(await screen.findByRole("button", { name: "Give me an idea" }));
@@ -62,7 +64,7 @@ it("a kept exercise opens its own page, even beside an older one with the same t
     }),
   );
   fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
-  await screen.findByText("Kept in your book. Only you can see it.");
+  await screen.findByText("Kept in your journal. Only you can see it.");
   fireEvent.click(screen.getByRole("button", { name: /Open this page/ }));
   const page = document.querySelector(".rj-sequence-paper")!;
   expect(page.textContent).toContain("Talking it through");
@@ -75,19 +77,19 @@ it("Back from a page restores the person filter and the search", () => {
   fireEvent.click(screen.getByRole("button", { name: "Leo", pressed: false }));
   fireEvent.change(screen.getByRole("searchbox"), { target: { value: "blanket" } });
   fireEvent.click(screen.getByRole("button", { name: /The blanket-fort expedition/ }));
-  fireEvent.click(screen.getByRole("button", { name: /Back to your book/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Back to my journal/ }));
   expect(screen.getByRole("button", { name: "Leo" }).getAttribute("aria-pressed")).toBe("true");
   expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("blanket");
   expect(document.activeElement?.getAttribute("data-page-id")).toBe("journal:sample-story");
-  // Choosing the tab starts a fresh browse.
+  // Choosing My journal from the menu starts a fresh browse.
   place("Book");
-  expect(screen.getByRole("button", { name: "Everyone" }).getAttribute("aria-pressed")).toBe("true");
+  expect(screen.getByRole("button", { name: "Everything" }).getAttribute("aria-pressed")).toBe("true");
 });
 
-it("a child's first visit to Your book is their own book with one way to start", () => {
+it("a child's first visit to their journal is their own journal with one way to start", () => {
   openBook(kid());
   place("Book");
-  expect(screen.getByRole("heading", { name: "Kaleb’s book", level: 1 })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Kaleb’s journal", level: 1 })).toBeTruthy();
   expect(screen.getByText("What would you like to keep?")).toBeTruthy();
   expect(screen.queryByText("What you’ve learned")).toBeNull();
   expect(screen.queryByText(/Relish noticed/)).toBeNull();
@@ -134,7 +136,7 @@ it("Repair bingo with someone survives leaving, and its page opens over an older
   await vi.waitFor(() => expect(document.querySelectorAll('.rt-bingo button[aria-pressed="true"]').length).toBe(2));
   fireEvent.click(screen.getByRole("button", { name: /Activity options/ }));
   fireEvent.click(screen.getByRole("button", { name: /Finish and keep a page/ }));
-  await screen.findByText("Kept in your book. Only you can see it.");
+  await screen.findByText("Kept in your journal. Only you can see it.");
   fireEvent.click(screen.getByRole("button", { name: /Open this page/ }));
   const page = document.querySelector(".rj-sequence-paper")!;
   expect(page.textContent).toContain("Repair bingo · Kaleb");

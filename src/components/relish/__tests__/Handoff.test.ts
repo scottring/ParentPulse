@@ -140,19 +140,26 @@ vi.mock("../useBookSync", () => ({
     }),
 }));
 import RelishApp from "../RelishApp";
+import { familyJournal, pickJournal } from "./bookHarness";
 
 type FakeSync = { open: ReturnType<typeof vi.fn> };
-/** Book, then Our family in the switch at the top. */
-function ourFamily() {
-  fireEvent.click(screen.getByRole("button", { name: "Book" }));
-  fireEvent.click(
-    within(screen.getByRole("group", { name: "Whose pages" })).getByRole("button", { name: "Our family" }),
-  );
-}
-/** Opens Family members and returns it. */
+/** Journal ▾, then Our family journal. */
+const ourFamily = familyJournal;
+/** Opens Who's in our family and returns it. */
 function members() {
-  fireEvent.click(screen.getByRole("button", { name: "Family members" }));
-  return screen.getByRole("dialog", { name: "Family members" });
+  fireEvent.click(screen.getByRole("button", { name: "Who’s in our family" }));
+  return screen.getByRole("dialog", { name: "Who’s in our family" });
+}
+/** Opens the Journal menu and returns its items' names. */
+function journalMenu() {
+  fireEvent.click(
+    within(screen.getByRole("navigation", { name: "Main" })).getByRole("button", { name: /^Journal/ }),
+  );
+  const items = within(screen.getByRole("menu", { name: "Journals" }))
+    .getAllByRole("menuitem")
+    .map((i) => i.textContent);
+  fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+  return items;
 }
 beforeEach(() => {
   localStorage.setItem("relish:home-book:parent-one", "r-scott");
@@ -170,82 +177,90 @@ it("hands a shared device from Scott's book to Kaleb's and back to Our family, t
   render(createElement(RelishApp));
   const sync = world.sync as FakeSync;
 
-  // Scott's book: Book · Our family › Family members lists the children's
-  // books first, then the older copy that needs its passphrase. Kaleb's
-  // opens without a password.
+  // Scott's journal: the Journal menu lists the children's journals, then
+  // the older copy that needs its passphrase. Kaleb's opens without a password.
+  expect(journalMenu()).toEqual([
+    "My journalOnly me",
+    "Our family journalEveryone in the family",
+    "Kaleb’s journal",
+    "Ella’s journal",
+    "Iris’s journalNeeds its original passphrase",
+  ]);
+  // Who's in our family lists them too.
   ourFamily();
-  let shelf = members();
+  const shelf = members();
   expect(
     within(shelf)
       .getAllByRole("button", { name: /^Open / })
       .map((b) => b.getAttribute("aria-label") ?? b.textContent),
   ).toEqual([
-    "Open my book",
-    "Open Kaleb’s book",
-    "Open Ella’s book",
-    "Open Iris’s book, an earlier copy that needs its original passphrase",
+    "Open my journal",
+    "Open Kaleb’s journal",
+    "Open Ella’s journal",
+    "Open Iris’s journal, an earlier copy that needs its original passphrase",
   ]);
-  expect(within(shelf).queryByRole("button", { name: /Scott’s book/ })).toBeNull();
-  fireEvent.click(within(shelf).getByRole("button", { name: "Open Kaleb’s book" }));
+  fireEvent.keyDown(document, { key: "Escape" });
+  pickJournal("Kaleb’s journal");
   expect(sync.open).toHaveBeenLastCalledWith(heads.kaleb);
   expect(screen.queryByLabelText(/password|passphrase/i)).toBeNull();
 
-  // Kaleb's book: Our family works, but leads to no other books, and his
-  // lock is set.
+  // Kaleb's journal: Our family journal works, but leads to no other
+  // journals, and his lock is set.
   await screen.findByRole("heading", { name: /Kaleb/ });
   expect(world.gate).toEqual({ accountUid: "parent-one" });
+  expect(journalMenu()).toEqual(["My journalOnly me", "Our family journalEveryone in the family"]);
   ourFamily();
-  expect(screen.getByRole("heading", { name: "Our family book", level: 1 })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Our family journal", level: 1 })).toBeTruthy();
   members();
-  expect(screen.queryByRole("button", { name: /^Open .*’s book/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Open .*’s journal/ })).toBeNull();
   expect(screen.queryByRole("button", { name: /Add a child|Invite a partner/ })).toBeNull();
   fireEvent.keyDown(document, { key: "Escape" });
 
-  // Switch book asks for the parent password; a wrong one is rejected.
-  fireEvent.click(screen.getByRole("button", { name: /^Menu/ }));
-  fireEvent.click(screen.getByRole("button", { name: "Switch book" }));
+  // Back to my journal (a clear way back) asks for the parent password; a
+  // wrong one is rejected.
+  expect(screen.getByText("Kaleb’s journal", { selector: ".rp-kidbar strong" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Back to my journal" }));
   expect(screen.getByRole("heading", { name: "Parent sign-in" })).toBeTruthy();
   const password = screen.getByLabelText("Parent account password");
   fireEvent.change(password, { target: { value: "a guess" } });
-  fireEvent.click(screen.getByRole("button", { name: "Open my book" }));
+  fireEvent.click(screen.getByRole("button", { name: "Open my journal" }));
   await screen.findByText(/parent password didn’t match/);
   expect(sync.open).toHaveBeenLastCalledWith(heads.kaleb);
   fireEvent.change(password, { target: { value: "parent password" } });
-  fireEvent.click(screen.getByRole("button", { name: "Open my book" }));
+  fireEvent.click(screen.getByRole("button", { name: "Open my journal" }));
 
-  // Scott's book opens straight onto Book · Our family: no list of books in
-  // between.
-  await screen.findByRole("heading", { name: "Our family book", level: 1 });
+  // Scott's journal opens straight onto Our family journal: no list of
+  // journals in between.
+  await screen.findByRole("heading", { name: "Our family journal", level: 1 });
   expect(sync.open).toHaveBeenLastCalledWith(heads.scott);
   expect(
-    screen.getByRole("button", { name: "Book" }).getAttribute("aria-current"),
+    within(screen.getByRole("navigation", { name: "Main" }))
+      .getByRole("button", { name: /^Journal/ })
+      .getAttribute("aria-current"),
   ).toBe("page");
-  expect(
-    within(screen.getByRole("group", { name: "Whose pages" }))
-      .getByRole("button", { name: "Our family" })
-      .getAttribute("aria-pressed"),
-  ).toBe("true");
+  expect(screen.queryByRole("button", { name: "Back to my journal" })).toBeNull();
   expect(world.gate).toBeNull();
   expect(screen.queryByRole("heading", { name: "Parent sign-in" })).toBeNull();
 
-  // And on to Ella's book, again without a password.
-  shelf = members();
-  fireEvent.click(within(shelf).getByRole("button", { name: "Open Ella’s book" }));
+  // And on to Ella's journal, again without a password.
+  pickJournal("Ella’s journal");
   expect(sync.open).toHaveBeenLastCalledWith(heads.ella);
   await screen.findByRole("heading", { name: /Ella/ });
   expect(world.gate).toEqual({ accountUid: "parent-one" });
 });
 
-it("new device: picking your book once makes the next load open it directly", async () => {
+it("new device: picking your journal once makes the next load open it directly", async () => {
   localStorage.clear();
   world.edition = "";
   render(createElement(RelishApp));
   const sync = world.sync as FakeSync;
-  await screen.findByRole("heading", { name: "Which book is yours?" });
+  await screen.findByRole("heading", { name: "Which journal is yours?" });
   expect(sync.open).not.toHaveBeenCalled();
 
   // A child's book picked here is never remembered as the adult's own.
-  fireEvent.click(screen.getByRole("button", { name: "Open Kaleb’s book" }));
+  // A plain list of journals, no bookshelf of covers.
+  expect(document.querySelector(".lb-bookshelf")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Kaleb’s journal" }));
   await screen.findByRole("heading", { name: /Kaleb/ });
   expect(localStorage.getItem("relish:home-book:parent-one")).toBeNull();
 
@@ -256,7 +271,7 @@ it("new device: picking your book once makes the next load open it directly", as
   world.sync = null;
   render(createElement(RelishApp));
   fireEvent.click(
-    await screen.findByRole("button", { name: "Open Scott’s book" }),
+    await screen.findByRole("button", { name: "Scott’s journal" }),
   );
   await screen.findByRole("heading", { name: /Scott/ });
   expect(localStorage.getItem("relish:home-book:parent-one")).toBe("r-scott");
@@ -266,8 +281,8 @@ it("new device: picking your book once makes the next load open it directly", as
   world.edition = "";
   world.sync = null;
   render(createElement(RelishApp));
-  expect(screen.queryByRole("heading", { name: "Which book is yours?" })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Which journal is yours?" })).toBeNull();
   await screen.findByRole("heading", { name: /Scott/ });
   expect((world.sync as FakeSync).open).toHaveBeenCalledWith(heads.scott);
-  expect(screen.queryByRole("heading", { name: "Which book is yours?" })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Which journal is yours?" })).toBeNull();
 });

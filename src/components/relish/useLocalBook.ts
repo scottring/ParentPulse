@@ -20,7 +20,7 @@ import {
   removeEditionLabel,
   type Edition,
 } from "@/lib/relish/editions";
-import { emptyBook, sampleBook, isBook, type Book } from "@/lib/relish/model";
+import { emptyBook, sampleBook, sampleChildBook, isBook, type Book } from "@/lib/relish/model";
 import {
   createVault,
   decryptVault,
@@ -70,6 +70,8 @@ export function useLocalBook() {
     envelope = useRef<Envelope | null>(null),
     epoch = useRef(0);
   const samplePhotos = useRef(new Map<string, Blob>());
+  // The sample adult's journal while the sample child's is open.
+  const sampleParent = useRef<Book | null>(null);
   const currentBook = useRef(book);
   const queue = useRef<Promise<void>>(Promise.resolve());
   const pending = useRef(0);
@@ -92,6 +94,7 @@ export function useLocalBook() {
   const lock = useCallback(() => {
     epoch.current++;
     samplePhotos.current.clear();
+    sampleParent.current = null;
     key.current = null;
     envelope.current = null;
     currentBook.current = emptyBook("");
@@ -612,6 +615,20 @@ export function useLocalBook() {
       setEditions(listEditions());
     });
   };
+  // The sample's Kids' journals: Leo's journal stands in for a child's book,
+  // and Back returns to the sample adult's journal as it was left.
+  const openSampleChild = useCallback(() => {
+    if (mode !== "sample" || sampleParent.current) return;
+    sampleParent.current = currentBook.current;
+    currentBook.current = sampleChildBook();
+    setBook(currentBook.current);
+  }, [mode]);
+  const closeSampleChild = useCallback(() => {
+    if (!sampleParent.current) return;
+    currentBook.current = sampleParent.current;
+    sampleParent.current = null;
+    setBook(currentBook.current);
+  }, []);
   return {
     syncSnapshot,
     accountSnapshot,
@@ -632,5 +649,7 @@ export function useLocalBook() {
     shelf,
     select,
     remove,
+    openSampleChild,
+    closeSampleChild,
   };
 }

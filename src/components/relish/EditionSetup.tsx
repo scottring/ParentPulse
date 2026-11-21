@@ -88,13 +88,13 @@ export default function EditionSetup({
         <ShieldCheck size={17} /> Profile settings
       </p>
       <h2>
-        {book.profile ? "Who this book is for" : "Who is this book for?"}
+        {book.profile ? "Who this journal is for" : "Who is this journal for?"}
       </h2>
       <p>
-        {book.owner}’s book uses this age range to select prompts and activities. Relish does not infer age from a name.
+        {book.owner}’s journal uses this age range to select prompts and activities. Relish does not infer age from a name.
       </p>
       <fieldset disabled={busy}>
-        <legend>This book belongs to</legend>
+        <legend>This journal belongs to</legend>
         <div className="lb-profile-choices">
           <button
             type="button"
@@ -105,7 +105,7 @@ export default function EditionSetup({
             }}
           >
             <strong>An adult</strong>
-            <span>My own book · 18 or older</span>
+            <span>My own journal · 18 or older</span>
           </button>
           <button
             type="button"
@@ -137,7 +137,7 @@ export default function EditionSetup({
               </select>
             </label>
             <div className="lb-boundary">
-              <strong>A private book, with guidance for their age.</strong>
+              <strong>A private journal, with guidance for their age.</strong>
               <p>
                 Prompts, small practices and how long each one takes follow this range.
                 Under 6, read and choose together. Children and teens can always
@@ -146,7 +146,7 @@ export default function EditionSetup({
               <p>
                 {accountUid
                   ? "This profile belongs to your parent account. Its entries and photos save automatically online and can be opened from that account on any device."
-                  : "Children have no independent online account. This book can stay on this device or be added to a parent’s account."}{" "}
+                  : "Children have no independent online account. This journal can stay on this device or be added to a parent’s account."}{" "}
                 Assisted voice writing has its own parent permission; saving
                 online never authorizes AI analysis or online passage sharing.
               </p>
@@ -194,7 +194,7 @@ export default function EditionSetup({
               (book.profile?.kind === "child" &&
                 "accountUid" in book.profile.parentLock)
                 ? "Your parent account password protects these changes. Children do not need their own account password."
-                : "A separate parent passphrase protects age changes in this book. Keep it privately; Relish cannot recover it."}
+                : "A separate parent passphrase protects age changes in this journal. Keep it privately; Relish cannot recover it."}
             </p>
           </>
         )}
@@ -213,8 +213,8 @@ export default function EditionSetup({
             {kind === "child"
               ? "I’m the parent or guardian choosing this range and have reviewed any existing content for this child."
               : protectedEdition
-                ? "As the parent or guardian, I confirm this book’s reader is now 18 or older."
-                : "This is my own book and I’m 18 or older."}
+                ? "As the parent or guardian, I confirm this journal’s reader is now 18 or older."
+                : "This is my own journal and I’m 18 or older."}
           </label>
         )}
       </fieldset>
@@ -231,7 +231,7 @@ export default function EditionSetup({
           ? "Saving settings…"
           : book.profile
             ? "Save these settings"
-            : "Open this book"}
+            : "Open this journal"}
         <ArrowRight size={16} />
       </button>
       <button

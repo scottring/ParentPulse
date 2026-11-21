@@ -164,21 +164,15 @@ vi.mock("../useBookSync", async () => {
   };
 });
 import RelishApp from "../RelishApp";
+import { familyJournal, myJournal, pickJournal } from "./bookHarness";
 import { loadFamilyPages } from "@/lib/relish/family-book";
 import type { fakeLibrary } from "@/lib/relish/__tests__/family-remote";
 
 const library = () => world.library as ReturnType<typeof fakeLibrary>;
-/** Book, then Our family in the switch at the top. */
+/** Journal ▾, then Our family journal. Leaving a page being written saves it first. */
 async function ourFamily() {
-  fireEvent.click(screen.getByRole("button", { name: "Book" }));
-  // Leaving the Journal saves the draft first.
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: "Book" }).getAttribute("aria-current")).toBe("page"),
-  );
-  const sw = within(screen.getByRole("group", { name: "Whose pages" }));
-  const button = sw.getByRole("button", { name: "Our family" });
-  if (button.getAttribute("aria-pressed") !== "true") fireEvent.click(button);
-  await screen.findByRole("heading", { name: "Our family book", level: 1 });
+  familyJournal();
+  await screen.findByRole("heading", { name: "Our family journal", level: 1 });
 }
 const QUOTE = "When I’m big I’ll still hold your hand. Just not in front of people.";
 
@@ -198,8 +192,9 @@ afterEach(() => {
 it("a passage added in Scott's book shows in Kaleb's Our family, and taking it out removes it for both", async () => {
   render(createElement(RelishApp));
 
-  // Scott writes in Journal and shares one passage with the family.
-  fireEvent.click(screen.getByRole("button", { name: "Journal" }));
+  // Scott writes in My journal and shares one passage with the family.
+  myJournal();
+  fireEvent.click(screen.getByRole("button", { name: "Write today’s entry" }));
   fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Bedtime was hard" } });
   fireEvent.change(screen.getByRole("textbox", { name: "Your journal entry" }), {
     target: {
@@ -208,11 +203,11 @@ it("a passage added in Scott's book shows in Kaleb's Our family, and taking it o
   });
   fireEvent.click(screen.getByRole("button", { name: "Share a passage" }));
   const sheet = screen.getByRole("dialog", { name: "Share with our family" });
-  expect(within(sheet).getByText("Kaleb and Ella will see this in Our family book.")).toBeTruthy();
+  expect(within(sheet).getByText("Kaleb and Ella will see this in Our family journal.")).toBeTruthy();
   // The first quoted sentence is suggested; the caption names Kaleb.
   expect(within(sheet).getByText(QUOTE)).toBeTruthy();
   expect((within(sheet).getByLabelText("Caption") as HTMLInputElement).value).toBe("Kaleb");
-  fireEvent.click(within(sheet).getByRole("button", { name: "Add passage to family book" }));
+  fireEvent.click(within(sheet).getByRole("button", { name: "Add passage to family journal" }));
   await waitFor(() => expect(screen.queryByRole("dialog", { name: "Share with our family" })).toBeNull(), {
     timeout: 15000,
   });
@@ -225,41 +220,38 @@ it("a passage added in Scott's book shows in Kaleb's Our family, and taking it o
   ]);
   expect([...library().raw.values()].join()).not.toContain("hold your hand");
 
-  // Scott's Book · Our family shows it.
+  // Scott's Our family journal shows it.
   await ourFamily();
   expect(await screen.findByText(`“${QUOTE}”`, {}, { timeout: 15000 })).toBeTruthy();
 
-  // Kaleb's book, opened from Family members, shows it too.
-  fireEvent.click(screen.getByRole("button", { name: "Family members" }));
-  fireEvent.click(screen.getByRole("button", { name: "Open Kaleb’s book" }));
+  // Kaleb's journal, opened from Kids' journals in the Journal menu, shows it too.
+  pickJournal("Kaleb’s journal");
   await screen.findByRole("heading", { name: /Kaleb/ });
   await ourFamily();
   fireEvent.click(await screen.findByText(`“${QUOTE}”`, {}, { timeout: 15000 }));
   // Kaleb didn't add it, so he can't take it out.
-  expect(screen.queryByRole("button", { name: "Take out of the family book" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Take out of the family journal" })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Close dialog" }));
 
-  // Back to Scott's book (parent password), straight onto Our family.
-  fireEvent.click(screen.getByRole("button", { name: /^Menu/ }));
-  fireEvent.click(screen.getByRole("button", { name: "Switch book" }));
+  // Back to Scott's journal (parent password), straight onto Our family journal.
+  fireEvent.click(screen.getByRole("button", { name: "Back to my journal" }));
   fireEvent.change(screen.getByLabelText("Parent account password"), {
     target: { value: "parent password" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Open my book" }));
-  await screen.findByRole("heading", { name: "Our family book", level: 1 });
+  fireEvent.click(screen.getByRole("button", { name: "Open my journal" }));
+  await screen.findByRole("heading", { name: "Our family journal", level: 1 });
   fireEvent.click(await screen.findByText(`“${QUOTE}”`, {}, { timeout: 15000 }));
-  fireEvent.click(screen.getByRole("button", { name: "Take out of the family book" }));
+  fireEvent.click(screen.getByRole("button", { name: "Take out of the family journal" }));
   await waitFor(() => expect(screen.queryByText(`“${QUOTE}”`)).toBeNull(), { timeout: 15000 });
   await waitFor(async () => expect(await loadFamilyPages(library().remote)).toEqual([]), {
     timeout: 15000,
   });
-  expect(screen.getByRole("status").textContent).toBe("Taken out of Our family book.");
+  expect(screen.getByRole("status").textContent).toBe("Taken out of Our family journal.");
 
-  // And it's gone from Kaleb's Our family too.
-  fireEvent.click(screen.getByRole("button", { name: "Family members" }));
-  fireEvent.click(screen.getByRole("button", { name: "Open Kaleb’s book" }));
+  // And it's gone from Kaleb's Our family journal too.
+  pickJournal("Kaleb’s journal");
   await screen.findByRole("heading", { name: /Kaleb/ });
   await ourFamily();
-  await screen.findByRole("heading", { name: "The first page is waiting" }, { timeout: 15000 });
+  await screen.findByRole("heading", { name: "The first entry is waiting" }, { timeout: 15000 });
   expect(screen.queryByText(`“${QUOTE}”`)).toBeNull();
 }, 60000);

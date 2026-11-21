@@ -1,0 +1,534 @@
+/* Home · Journal ▾ · Activities (Scott, 2026-11-21): the Journal menu, the
+   phone Mine / Family switch, My journal, Our family journal's cover button,
+   "Only me" / "Family journal" labels on Home, and the Activities filter.
+   Colors are the tokens from ui.css and the approved mockups' accents. */
+
+/* ── Journal tab and its menu ─────────────────────────────────────────── */
+.rp-journal-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.lb-app .rp-places .rp-journal-tab {
+  gap: 6px;
+}
+.rp-journal-caret {
+  flex: none;
+}
+.lb-app .rp-places .rp-journal-menu {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 10px);
+  z-index: 40;
+  width: 330px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: 0 18px 40px rgba(48, 56, 44, 0.18);
+}
+.lb-app .rp-places .rp-journal-menu button.rp-jm-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 400;
+  text-align: left;
+  white-space: normal;
+}
+.lb-app .rp-places .rp-journal-menu button.rp-jm-item.is-on,
+.lb-app .rp-places .rp-journal-menu button.rp-jm-item:not(:disabled):hover,
+.lb-app .rp-places .rp-journal-menu button.rp-jm-item:focus-visible {
+  background: #eef1e6;
+  border: 0;
+}
+.lb-app .rp-places .rp-journal-menu button.rp-jm-item:focus-visible {
+  outline: 2px solid var(--olive);
+  outline-offset: -2px;
+}
+.lb-app .rp-places .rp-journal-menu .rp-jm-kid {
+  padding: 6px 12px;
+}
+.lb-app .rp-jm-art {
+  flex: none;
+  width: 46px !important;
+  height: 46px !important;
+  object-fit: contain;
+}
+.lb-app .rp-jm-kid .rp-jm-art {
+  width: 30px !important;
+  height: 30px !important;
+}
+.rp-jm-words {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.rp-jm-title {
+  font: 600 19px/1.2 var(--serif);
+}
+.rp-jm-kid-name {
+  font: 400 17px/1.2 var(--serif);
+}
+.rp-jm-note {
+  color: var(--muted);
+  font: 400 13px/1.3 var(--sans);
+}
+.lb-app .rp-jm-group {
+  margin: 10px 12px 4px;
+  color: var(--muted);
+  font: 600 12px/1.2 var(--sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* A child's journal, opened by a parent: whose it is, and the way back. */
+.lb-app .rp-kidbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding: 6px 16px;
+  background: #eef1e6;
+  border-bottom: 1px solid var(--line);
+  font: 400 15px/1.3 var(--sans);
+}
+.lb-app .rp-kidbar strong {
+  font: 600 16px/1.3 var(--serif);
+}
+.lb-app .rp-kidbar button {
+  min-height: 44px;
+  padding: 0 4px;
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* Phones: no dropdown. The journal page gets Mine / Family on top and the
+   kids' journals below; both stay hidden on wider screens. */
+.rp-jswitch,
+.rp-jkids {
+  display: none;
+}
+@media (max-width: 720px) {
+  .rp-journal-caret {
+    display: none;
+  }
+  .lb-app .rp-jswitch {
+    display: flex;
+    padding: 3px;
+    border: 1.5px solid #9fae92;
+    border-radius: 999px;
+    background: var(--card);
+  }
+  .lb-app .rp-jswitch button {
+    flex: 1;
+    min-height: 42px;
+    justify-content: center;
+    border-radius: 999px;
+    color: var(--ink);
+    font: 500 15px/1 var(--sans);
+  }
+  .lb-app .rp-jswitch button[aria-pressed="true"],
+  .lb-app .rp-jswitch button[aria-pressed="true"]:not(:disabled):hover {
+    background: var(--olive);
+    color: var(--on-olive);
+  }
+  .lb-app .rp-jkids {
+    display: block;
+    margin: 6px 0 0;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .lb-app .rp-jkids .rp-link {
+    min-height: 44px;
+    font-size: 14px;
+  }
+}
+
+/* ── Home: whose journal each item comes from ─────────────────────────── */
+.lb-app.rp-shell .ha-whose {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  color: var(--ink);
+  font: 600 12px/1.5 var(--sans);
+}
+.lb-app.rp-shell .ha-whose.is-mine {
+  background: #efe6cf;
+}
+.lb-app.rp-shell .ha-whose.is-family {
+  background: #dfe8d6;
+}
+.lb-app.rp-shell .ha-lately-title {
+  margin: 0 0 -4px;
+  font: 500 28px/1.2 var(--serif);
+}
+.lb-app.rp-shell .ha-lately {
+  gap: 12px;
+}
+.lb-app.rp-shell .ha-passage blockquote {
+  margin-top: 10px;
+}
+.lb-app.rp-shell .ha-row-words .ha-whose {
+  margin-bottom: 2px;
+}
+.lb-app.rp-shell p.ha-open {
+  margin: 4px 0 0;
+}
+
+/* ── Activities: one filter, an inline Pick up ────────────────────────── */
+.lb-app.rp-shell .ha-acts-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+}
+.lb-app.rp-shell .ha-seg {
+  display: inline-flex;
+  padding: 3px;
+  border: 1.5px solid #9fae92;
+  border-radius: 999px;
+  background: var(--ui-card);
+}
+.lb-app.rp-shell .ha-seg button {
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  color: var(--ink);
+  font: 500 15px/1 var(--sans);
+  position: relative;
+}
+.lb-app.rp-shell .ha-seg button::after {
+  content: "";
+  position: absolute;
+  inset: -4px 0;
+}
+.lb-app.rp-shell .ha-seg button[aria-pressed="true"],
+.lb-app.rp-shell .ha-seg button[aria-pressed="true"]:not(:disabled):hover {
+  background: var(--olive);
+  color: var(--on-olive);
+}
+.lb-app.rp-shell .ha-pick-line {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 4px;
+  font-size: 15px;
+}
+.lb-app.rp-shell .ha-pick-line .ha-link {
+  min-height: 44px;
+  font-size: 15px;
+}
+.lb-app.rp-shell .ha-kind {
+  align-self: flex-start;
+  padding: 2px 9px;
+  border-radius: 999px;
+  color: var(--ink);
+  font: 600 12px/1.5 var(--sans);
+}
+.lb-app.rp-shell .ha-kind.is-solo {
+  background: #efe6cf;
+}
+.lb-app.rp-shell .ha-kind.is-together {
+  background: #dfe8d6;
+}
+
+/* ── My journal ───────────────────────────────────────────────────────── */
+.lb-app.rp-shell .rp-mine {
+  gap: 22px;
+}
+.lb-app.rp-shell .rp-mine-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+}
+.lb-app.rp-shell .rp-mine-head h1 {
+  margin: 12px 0 6px;
+  font: 500 clamp(34px, 5vw, 58px) / 1.05 var(--serif);
+}
+.lb-app.rp-shell .rp-mine-head h1:focus {
+  outline: none;
+}
+.lb-app.rp-shell .rp-only {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: #efe6cf;
+  font: 600 13px/1.3 var(--sans);
+}
+.lb-app.rp-shell .rp-mine-count {
+  margin: 0;
+  font-size: 16px;
+}
+.lb-app.rp-shell .rp-mine-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+.lb-app.rp-shell .rp-mine-bar .rp-chips {
+  margin: 0;
+}
+.lb-app.rp-shell .rp-entries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.lb-app.rp-shell .rp-entries > li {
+  display: flex;
+  min-width: 0;
+}
+.lb-app.rp-shell .rp-entry {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 6px;
+  min-width: 0;
+  padding: 20px 22px;
+  border: 1px solid #e2e0d4;
+  border-radius: 16px;
+  background: var(--ui-card);
+  color: var(--ink);
+  text-align: left;
+  box-shadow: 0 1px 2px rgba(48, 56, 44, 0.05), 0 10px 24px rgba(48, 56, 44, 0.07);
+}
+.lb-app.rp-shell .rp-entry-draft {
+  border: 2px dashed #b9a56a;
+}
+.lb-app.rp-shell .rp-entry .rp-page-title {
+  font: 600 22px/1.25 var(--serif);
+}
+.lb-app.rp-shell .rp-entry .rp-page-excerpt {
+  font-size: 15px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.lb-app.rp-shell .rp-entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 16px;
+  margin-top: auto;
+}
+.lb-app.rp-shell .rp-entry-actions .rp-link {
+  min-height: 44px;
+}
+.lb-app.rp-shell .rp-entry-note {
+  margin-top: auto;
+  color: var(--muted);
+  font: 400 13px/1.4 var(--sans);
+}
+@media (max-width: 940px) {
+  .lb-app.rp-shell .rp-entries {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .lb-app.rp-shell .rp-mine {
+    gap: 14px;
+  }
+  .lb-app.rp-shell .rp-mine-head {
+    display: grid;
+  }
+  .lb-app.rp-shell .rp-mine-head .rp-head-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+  .lb-app.rp-shell .rp-mine-head .rp-head-actions .ui-link {
+    align-self: flex-start;
+  }
+  .lb-app.rp-shell .rp-mine-since {
+    display: none;
+  }
+  .lb-app.rp-shell .rp-entries {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .lb-app.rp-shell .rp-entry {
+    padding: 16px 18px;
+  }
+  .lb-app.rp-shell .rp-entry .rp-page-title {
+    font-size: 19px;
+  }
+  .lb-app.rp-shell .rp-mine-bar .rp-search {
+    width: 100%;
+  }
+}
+
+/* ── Our family journal ───────────────────────────────────────────────── */
+.lb-app.rp-shell .rp-fb-cover h1 {
+  font-size: clamp(32px, 4.2vw, 48px);
+}
+.lb-app.rp-shell .rp-fb-cover p {
+  margin-top: 8px;
+  font-size: 16px;
+}
+.lb-app.rp-shell .rp-fb-search {
+  width: min(100%, 270px);
+}
+.lb-app.rp-shell .rp-fb-cover-words {
+  flex: 1;
+  min-width: 0;
+}
+.lb-app.rp-shell .rp-fb-cover .rp-fb-cover-sprig {
+  width: 84px;
+  height: 84px;
+}
+.lb-app.rp-shell .rp-fb-write {
+  flex: none;
+  min-height: 52px;
+  padding: 0 26px;
+  border: 0;
+  border-radius: 999px;
+  background: #f2d58a;
+  color: var(--ink);
+  font: 500 18px/1.1 var(--serif);
+}
+.lb-app.rp-shell .rp-fb-write:not(:disabled):hover {
+  background: #f5dfa3;
+}
+.lb-app.rp-shell .rp-fb-write:focus-visible {
+  outline: 3px solid #f2d58a;
+  outline-offset: 3px;
+}
+.lb-app.rp-shell .rp-fb-quote-cell {
+  grid-column: span 2;
+}
+.lb-app.rp-shell .rp-fb-featured {
+  grid-column: auto;
+}
+.lb-app.rp-shell .rp-fb-card-featured {
+  min-height: 0;
+  padding: 20px 22px 22px;
+}
+.lb-app.rp-shell .rp-fb-tile {
+  display: block;
+  width: 64px;
+  height: 64px;
+}
+.lb-app.rp-shell .rp-fb-tile img,
+.lb-app.rp-shell .rp-fb-tile .ui-illustration {
+  width: 64px !important;
+  height: 64px !important;
+  object-fit: contain;
+}
+.lb-app.rp-shell .rp-fb-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ui-ink-soft);
+  font: 500 13px/1.3 var(--sans);
+}
+.lb-app.rp-shell .rp-fb-meta .rp-fb-date {
+  font-size: 13px;
+}
+.lb-app.rp-shell .rp-fb-foot {
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px 16px;
+}
+.lb-app.rp-shell .rp-fb-foot > .rp-link:last-child {
+  margin-left: auto;
+}
+.lb-app.rp-shell .rp-fb-foot .rp-fb-members-link {
+  min-height: 44px;
+  font-size: 15px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.lb-app.rp-shell .rp-fb-foot .rp-fb-members {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+@media (max-width: 860px) {
+  .lb-app.rp-shell .rp-fb-quote-cell {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 640px) {
+  .lb-app.rp-shell .rp-fb-cover {
+    flex-wrap: wrap;
+  }
+  .lb-app.rp-shell .rp-fb-cover .rp-fb-cover-sprig {
+    width: 48px;
+    height: 48px;
+  }
+  .lb-app.rp-shell .rp-fb-write {
+    width: 100%;
+    min-height: 48px;
+    font-size: 17px;
+  }
+}
+
+/* ── First time on a device: which journal is yours (no bookshelf) ────── */
+.lb-app .lb-lib-picklist {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  max-width: 520px;
+}
+.lb-app .lb-account .lb-lib-pickrow {
+  display: flex;
+  align-items: center;
+  gap: 4px 12px;
+  flex-wrap: wrap;
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 18px;
+  border: 1px solid var(--ui-line);
+  border-radius: 14px;
+  background: var(--ui-card);
+  color: var(--ink);
+  text-align: left;
+}
+.lb-app .lb-account .lb-lib-pickrow span {
+  flex: 1;
+  font: 600 20px/1.2 var(--serif);
+}
+.lb-app .lb-account .lb-lib-pickrow small {
+  order: 3;
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 13px;
+}
+.lb-app .lb-lib-pick-actions {
+  margin-top: 18px;
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}

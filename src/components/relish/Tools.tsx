@@ -92,7 +92,7 @@ export default function Tools({
   /** Family members with their own books in the library (e.g. the children). */
   family?: { name: string }[];
   onPages: () => void;
-  /** Opens one kept page by its Your book id (e.g. "journal:<id>"). */
+  /** Opens one kept page by its Your journal id (e.g. "journal:<id>"). */
   onOpenPage?: (id: string) => void;
   onActivities: () => void;
   /** Opens straight into one exercise (from Do something or Home). */
@@ -298,7 +298,7 @@ function OpenExercise({
       />
     );
   // Family with their own books who aren't noted in this one yet. Choosing one
-  // notes them in this book when the exercise starts, so it can be about them.
+  // notes them in this journal when the exercise starts, so it can be about them.
   const extra = libraryOnly(book.people, family);
   const choices = [
     ...book.people.map((p) => ({ id: p.id, name: p.name })),
@@ -337,7 +337,7 @@ function OpenExercise({
             ? { checkBack: checkBackDays[page.toolId], plan }
             : {}),
         }),
-      "Kept in your book.",
+      "Kept in your journal.",
     );
   };
   if (!started && !running)
@@ -520,7 +520,7 @@ function ExerciseStart({
           </p>
           {required && !choices.length ? (
             <p className="lb-fine rt-note">
-              Add someone to your book first, then come back to this exercise.
+              Add someone to your journal first, then come back to this exercise.
             </p>
           ) : (
             choices.length > 0 && (
@@ -664,7 +664,7 @@ function useSaveAsYouGo(
     },
   };
 }
-/** What was just kept: its title and, once saved, its Your book page id. */
+/** What was just kept: its title and, once saved, its Your journal page id. */
 type Kept = {
   title: string;
   pageId?: string;
@@ -679,7 +679,7 @@ type Kept = {
   /** The kept page's words, shown on the finish screen. */
   text?: string;
 };
-/** The journal page a change added, as a Your book page id. */
+/** The journal page a change added, as a Your journal page id. */
 function newJournalId(before: Book, after: Book) {
   const had = new Set((before.journal || []).map((e) => e.id));
   const added = (after.journal || []).find((e) => !had.has(e.id));
@@ -1040,7 +1040,7 @@ function Preview({
         Keep this page <Check size={16} />
       </button>
       <p className="lb-fine">
-        It is saved privately in Your book. Sharing is a separate choice.
+        It is saved privately in My journal. Sharing is a separate choice.
       </p>
     </div>
   );
@@ -1129,7 +1129,7 @@ function HabitScreen({
         others
           ? setKeptNote({ name: name || tool.title, pageId })
           : onKept({ title: titleFor(run), pageId }),
-      others ? undefined : "Kept in your book.",
+      others ? undefined : "Kept in your journal.",
     );
   }
   /** Finishing early: a page for everyone with something marked. */
@@ -1154,7 +1154,7 @@ function HabitScreen({
                 note: `One page each for ${namesList(withMarks.map((r) => nameOf(r) || "no one in particular"))}.`,
               },
         ),
-      "Kept in your book.",
+      "Kept in your journal.",
     );
   }
 
@@ -1272,7 +1272,7 @@ function HabitScreen({
         <div className="rt-habit-body">
           {keptNote && (
             <p className="rt-habit-kept" role="status">
-              {keptNote.name}’s page is kept in your book.
+              {keptNote.name}’s page is kept in your journal.
               {keptNote.pageId && onOpenPage && (
                 <>
                   {" "}
@@ -1616,7 +1616,7 @@ function cameAway(book: Book, kept: Kept) {
   }
   if (tool?.kind === "tracker" && tool.mode === "days" && tool.doneLine)
     return `${tool.doneLine}${name ? ` with ${name}` : ""}.`;
-  return "Kept in your book.";
+  return "Kept in your journal.";
 }
 /** The page's paragraphs as label and words: "What to say: …" → label, words. */
 function sections(text: string) {
@@ -1699,7 +1699,7 @@ function ExerciseDone({
         {kept.note && <p className="ha-quiet">{kept.note}</p>}
         <p className="ha-saved">
           <Check size={20} aria-hidden="true" color="#43513a" strokeWidth={2.6} />
-          Kept in your book. Only you can see it.
+          Kept in your journal. Only you can see it.
         </p>
       </div>
       <aside className="ha-done-side" aria-labelledby="ha-done-now">
@@ -1759,7 +1759,7 @@ function ExerciseDone({
           </button>
         ) : (
           <button type="button" className="ha-link" disabled={busy} onClick={onPages}>
-            Open my book
+            Open my journal
           </button>
         )}
         <button type="button" className="ha-link" disabled={busy} onClick={onDone}>

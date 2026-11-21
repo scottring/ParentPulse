@@ -147,7 +147,7 @@ export function PhotoPicker({
         <span className="lb-fine">
           {busy
             ? "Adding photo…"
-            : `${photos.length} / ${PHOTO_LIMIT} photos · encrypted in your book`}
+            : `${photos.length} / ${PHOTO_LIMIT} photos · encrypted in your journal`}
         </span>
       </div>
       <input

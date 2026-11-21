@@ -17,14 +17,14 @@ const kid = (ageBand: "6-8" | "9-12" = "9-12"): Book => ({
   profile: { kind: "child", ageBand, parentLock: { accountUid: "parent-uid" } },
 });
 
-it("greets a child with their own book and three ways to add a page", () => {
+it("greets a child with their own journal and three ways to add a page", () => {
   openBook(kid());
   expect(screen.getByRole("heading", { name: "Hi, Kaleb.", level: 1 })).toBeTruthy();
   expect(screen.getByText("What did you notice today?")).toBeTruthy();
   const add = screen.getByRole("group", { name: "Add a page" });
   for (const name of ["Write", "Record", "Add a photo"])
     expect(within(add).getByRole("button", { name })).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Open my book" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Open my journal" })).toBeTruthy();
   const cover = document.querySelector(".rk-cover")!;
   expect(cover.textContent).toContain("Kaleb’s");
   expect(cover.getAttribute("data-emblem")).toBe("beetle");

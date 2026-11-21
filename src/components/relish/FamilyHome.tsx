@@ -68,12 +68,12 @@ export default function FamilyPlanFeature({
   names: string[];
   busy: boolean;
   headingRef: RefObject<HTMLHeadingElement | null>;
-  /** The newest passage in Our family book, for a return visit with nothing kept yet. */
+  /** The newest passage in Our family journal, for a return visit with nothing kept yet. */
   latestShared?: SharedLine;
   onPlan: (update: PlanUpdate) => Promise<void>;
-  /** Adds a passage to Our family book; resolves to its id. */
+  /** Adds a passage to Our family journal; resolves to its id. */
   onKeep: (line: { text: string; caption: string }) => Promise<string>;
-  /** Adds the look-back to Our family book as a page. */
+  /** Adds the look-back to Our family journal as a page. */
   onReflect: (page: { title: string; text: string }) => Promise<void>;
   onFamilyBook: () => void;
   /** A plan card chosen on a shelf: shown here to try, nothing started yet. */
@@ -442,7 +442,7 @@ function ComingBack({
       <Problem text={error} />
       {kept && (
         <p className="fh-quiet" role="status">
-          Kept in Our family book.{" "}
+          Kept in Our family journal.{" "}
           <button type="button" className="fh-link" onClick={() => setOpen(true)}>
             Keep another line
           </button>
@@ -518,11 +518,11 @@ function ComingBack({
       )}
       <div className="fh-foot">
         <button type="button" className="fh-link" onClick={onFamilyBook}>
-          Open family book
+          Open family journal
         </button>
         {stopping ? (
           <p className="fh-quiet" role="group" aria-label="Stop trying this?">
-            Stop trying this and choose something new? What you kept stays in Our family book.{" "}
+            Stop trying this and choose something new? What you kept stays in Our family journal.{" "}
             <button
               type="button"
               className="fh-link"
@@ -646,7 +646,7 @@ function LookingBack({
         </div>
         <label className="fh-check">
           <input type="checkbox" checked={toBook} onChange={(e) => setToBook(e.target.checked)} />
-          Keep this look-back in Our family book
+          Keep this look-back in Our family journal
         </label>
         <Problem text={error} />
       </section>

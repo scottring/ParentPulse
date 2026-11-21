@@ -43,6 +43,7 @@ import { SoundSettings, useSensory } from "./Sensory";
 import VisitEditor from "./VisitEditor";
 import Journal from "./Journal";
 import {
+  audienceOfEntry,
   newJournalDraft,
   writeJournalPage,
   type JournalDraft,
@@ -73,7 +74,13 @@ import ConnectedEditions from "./ConnectedEditions";
 import EditionSetup from "./EditionSetup";
 import { guidanceFor } from "@/lib/relish/guidance";
 import { TypingSoundSetting } from "./TypingSound";
-import TopBar, { type MenuItem, type Place, type Space } from "./TopBar";
+import TopBar, {
+  kidJournalName,
+  type KidJournal,
+  type MenuItem,
+  type Place,
+  type Space,
+} from "./TopBar";
 import { inviteFriend, inviteNotice } from "@/lib/relish/invite";
 import { keepNotes } from "@/lib/relish/game-notes";
 import { deletePage, deletePersonNote, discardUnderWay } from "@/lib/relish/delete";
@@ -86,10 +93,13 @@ import { newFamilyPage, type FamilyPage } from "@/lib/relish/family-pages";
 import { sendToPartners } from "@/lib/relish/partner-share";
 import { takeSuggestion, takenToday, type NudgeAction } from "@/lib/relish/nudges";
 import { isChild, isFamily, type DoFilter, type UnderWay } from "@/lib/relish/catalog";
+import type { ActsFilter } from "@/lib/relish/activities";
 import { canUseOnline, ageLabels, audienceOf } from "@/lib/relish/profiles";
 
-// Four places, plus the sub-screens that open inside them.
+// Three places, plus the sub-screens that open inside them. "book" is the
+// Journal place's page: My journal or Our family journal, by `space`.
 type View =
+  | "book"
   | Place
   | "bookmark"
   | "manual"
@@ -104,12 +114,16 @@ const placeOf: Record<View, Place> = {
   session: "do",
   bookmark: "do",
   play: "do",
-  book: "book",
-  words: "book",
-  manual: "book",
+  book: "journal",
+  words: "journal",
+  manual: "journal",
   journal: "journal",
 };
-/** Just me / Our family, remembered per book on this device. */
+/**
+ * Which journal was open last (My journal or Our family journal), remembered
+ * per book on this device. Phones open Journal onto it. Home and Activities
+ * don't depend on it; writing takes its audience from the draft.
+ */
 const spaceKey = (edition: string) => `relish.space.v1:${edition}`;
 function readSpace(edition: string): Space | null {
   try {
@@ -123,14 +137,20 @@ function writeSpace(edition: string, space: Space) {
   try {
     localStorage.setItem(spaceKey(edition), space);
   } catch {
-    /* Without storage the switch still works for this visit. */
+    /* Without storage the choice still works for this visit. */
   }
 }
 type Modal =
   "settings" | "create" | "person" | "guide" | "connections" | "profile" | null;
 type Vault = Omit<
   ReturnType<typeof useLocalBook>,
-  "syncSnapshot" | "openSynced" | "receiveSynced" | "accountSnapshot" | "autoLocked"
+  | "syncSnapshot"
+  | "openSynced"
+  | "receiveSynced"
+  | "accountSnapshot"
+  | "autoLocked"
+  | "openSampleChild"
+  | "closeSampleChild"
 >;
 export default function LivingBook({
   vault,
@@ -142,21 +162,24 @@ export default function LivingBook({
   onAddChild,
   startView,
   familyBook,
+  onBackHome,
 }: {
   vault: Vault;
   onAccount?: () => void;
   accountLabel?: string;
   syncStatus?: string;
   onInteraction?: (paused: boolean) => void;
-  /** Other books in this account (children), shown as covers on Family. */
+  /** Other books in this account (children): Kids' journals in the Journal menu. */
   family?: FamilyPerson[];
   /** Opens the add-a-child form. */
   onAddChild?: () => void;
-  /** Where the book opens, e.g. Our family after switching back from a child's book. */
+  /** Where the book opens, e.g. Our family journal after switching back from a child's book. */
   startView?: "family";
+  /** From a child's journal: back to the parent's own (asks for the parent password). */
+  onBackHome?: () => void;
   /**
-   * The account's Our family book. Without it (no account, or the sample),
-   * family pages are kept inside this book.
+   * The account's Our family journal. Without it (no account, or the sample),
+   * family pages are kept inside this journal.
    */
   familyBook?: FamilyAccess;
 }) {
@@ -194,7 +217,9 @@ export default function LivingBook({
     [bookWho, setBookWho] = useState<string | undefined>(),
     [bookQuery, setBookQuery] = useState(""),
     [kept, setKept] = useState(false),
-    [passage, setPassage] = useState(false);
+    [passage, setPassage] = useState(false),
+    [showMembers, setShowMembers] = useState(false),
+    [actsFilter, setActsFilter] = useState<ActsFilter>("all");
   const [space, setSpaceState] = useState<Space>(() =>
     startView === "family" ? "family" : (readSpace(vault.editionId) ?? "me"),
   );
@@ -220,8 +245,8 @@ export default function LivingBook({
       alive.current = false;
     };
   }, []);
-  // Where the writer was in Your book when they opened a page, so Back can
-  // put them there again. Choosing the Your book tab starts a fresh browse.
+  // Where the writer was in My journal when they opened a page, so Back can
+  // put them there again. Opening My journal from the menu starts a fresh browse.
   const browse = useRef<{ who: string; query: string; scroll: number; page?: string } | null>(null);
   const restoring = useRef(false);
   // The Do something filter in use when an activity was opened from it.
@@ -244,17 +269,17 @@ export default function LivingBook({
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     heading.current?.focus({ preventScroll: true });
   }, [view, pageKey]);
-  /** Back to Your book exactly as it was left: filter, search, scroll, row. */
+  /** Back to the journal exactly as it was left: filter, search, scroll, row. */
   function backToBook() {
     const saved = browse.current;
-    openMyBook();
+    navigate("book");
     if (saved) {
       restoring.current = true;
       setBookWho(saved.who);
       setBookQuery(saved.query);
     }
   }
-  /** Back to Activities with the chip that was chosen. */
+  /** Back to Activities with the chip that was chosen (the filter is kept across visits). */
   function backToDo() {
     const filter = doReturn.current;
     navigate("do");
@@ -273,6 +298,7 @@ export default function LivingBook({
     setBookQuery("");
     setKept(false);
     setPassage(false);
+    setShowMembers(false);
     setView(next);
     setClosed(false);
     setPageKey((n) => n + 1);
@@ -295,29 +321,47 @@ export default function LivingBook({
       if (alive.current) setWorking(false);
     }
   }
-  /** Journal: the draft in progress, or a new page. */
-  function openJournal(draft?: JournalDraft, voice = false, photo = false) {
+  /**
+   * Writes in a journal: that journal's draft in progress, or a new page. The
+   * draft carries its journal, so a private draft is only ever resumed from
+   * My journal and a family draft only from Our family journal.
+   */
+  function openJournal(
+    draft?: JournalDraft,
+    voice = false,
+    photo = false,
+    audience: Space = draft ? audienceOfEntry(draft) : "me",
+  ) {
     const latest = (book.journal || [])
-      .filter((e) => e.status === "draft")
+      .filter((e) => e.status === "draft" && audienceOfEntry(e) === audience)
       .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+    const chosen = draft ?? latest ?? newJournalDraft(audience);
+    setSpace(audienceOfEntry(chosen));
     navigate("journal");
-    setCapture({ draft: draft ?? latest ?? newJournalDraft(), voice, photo });
+    setCapture({ draft: chosen, voice, photo });
     setJournalEditing(true);
   }
   function quickEntry(voice = false, draft = newJournalDraft(), photo = false) {
     openJournal(draft, voice, photo);
   }
-  /** Book · Just me: this writer's own pages. */
+  /** My journal: this writer's own pages. */
   function openMyBook() {
     setSpace("me");
     navigate("book");
   }
-  /** Book · Our family. */
+  /** Our family journal. */
   function openFamily() {
     setSpace("family");
     navigate("book");
   }
+  /** Who's in our family, from the avatar menu: Our family journal with the list open. */
+  function openMembers() {
+    openFamily();
+    setShowMembers(true);
+  }
+  /** Reads a kept page; pages live in My journal, so Back goes there. */
   function openPage(id: string) {
+    setSpace("me");
     navigate("words");
     setReading(id);
   }
@@ -388,7 +432,7 @@ export default function LivingBook({
     );
   }
   /**
-   * A played round leaves one short note in Our family book (game, who, the
+   * A played round leaves one short note in Our family journal (game, who, the
    * day); the answers stay here unless everyone approves a shared page. The
    * note's id comes from the play, so recording again never adds a second.
    * Only an adult's book notes plays; a child's book doesn't.
@@ -402,7 +446,7 @@ export default function LivingBook({
     try {
       await familyAccess.add(page);
     } catch {
-      // The round is still in this book; the note can go up next time it's recorded.
+      // The round is still in this journal; the note can go up next time it's recorded.
       noted.current.delete(play.id);
     }
   }
@@ -421,7 +465,7 @@ export default function LivingBook({
         return writeJournalPage(b, current, current.revision, "kept");
       },
       undefined,
-      "Kept in your book.",
+      "Kept in your journal.",
     );
   }
   async function commit(
@@ -479,7 +523,7 @@ export default function LivingBook({
     void commit(
       (b) => completeVisit(b, v.id, draft),
       () => navigate("bookmark"),
-      "Saved in your book.",
+      "Saved in your journal.",
     );
   }
   // Leaving a game never locks the book; the round stays saved to resume.
@@ -513,7 +557,7 @@ export default function LivingBook({
       answer.kind === "later"
         ? "We’ll ask again in two days."
         : answer.kind === "let-go"
-          ? "Set aside. The page stays in Your book."
+          ? "Set aside. The page stays in My journal."
           : "Saved with your plan.",
     );
   }
@@ -532,12 +576,12 @@ export default function LivingBook({
       () => navigate("play"),
     );
   }
-  /** Deletes a page from this book; reports how it went. */
+  /** Deletes a page from this journal; reports how it went. */
   async function deleteFromBook(pageId: string) {
     setError("");
     try {
       await vault.save((b) => deletePage(b, pageId));
-      setNotice("Deleted from your book.");
+      setNotice("Deleted from your journal.");
       sensory.play("place");
       return true;
     } catch (e) {
@@ -571,7 +615,7 @@ export default function LivingBook({
   const sharedView = view === "play";
   const place = placeOf[view];
   // Places draw their own big heading; sub-screens keep the small running head.
-  const placeScreen = view === place && view !== "journal" && !closed;
+  const placeScreen = (view === "book" || (view === place && view !== "journal")) && !closed;
   // Exercises and the journal draw their own back link and privacy note.
   const ownHead =
     !closed && (view === "tools" || view === "words" || view === "journal");
@@ -592,7 +636,7 @@ export default function LivingBook({
     ...(family || []).map((p) => p.name),
     ...book.people.filter(isChild).map((p) => p.name),
   ].filter((n, i, all) => all.indexOf(n) === i);
-  // Our family book: the account's, or kept inside this book without one.
+  // Our family journal: the account's, or kept inside this journal without one.
   const familyAccess = familyBook ?? localFamily(book, vault.save);
   const myBookId = sample
     ? "sample"
@@ -616,13 +660,13 @@ export default function LivingBook({
       !sameName(m.name, book.owner) &&
       all.findIndex((x) => sameName(x.name, m.name)) === i,
   );
-  /** Adds a page to Our family book, and sends it on to a connected partner. */
+  /** Adds a page to Our family journal, and sends it on to a connected partner. */
   async function addToFamily(data: Pick<FamilyPage, "kind" | "text"> &
     Partial<Pick<FamilyPage, "title" | "caption" | "activity">>) {
     const page = newFamilyPage({ ...data, byName: book.owner, byBookId: myBookId });
     await familyAccess.add(page);
     if (!alive.current) return page.id;
-    setNotice(sample ? "Kept in the sample for this visit." : "Added to Our family book.");
+    setNotice(sample ? "Kept in the sample for this visit." : "Added to Our family journal.");
     sensory.play("place");
     if (sample || !online || !book.connections?.identity) return page.id;
     const owner = book.owner;
@@ -630,18 +674,18 @@ export default function LivingBook({
       .then((auth) =>
         sendToPartners(auth.currentAIUser(), book, vault.save, {
           id: page.id,
-          title: page.title || `From ${owner}’s family book`,
+          title: page.title || `From ${owner}’s family journal`,
           text: page.caption ? `${page.text}\n\n— ${page.caption}` : page.text,
         }),
       )
       .then((sent) => {
         if (sent && alive.current)
-          setNotice("Added to Our family book and sent to your partner’s book.");
+          setNotice("Added to Our family journal and sent to your partner’s journal.");
       })
       .catch(() => {
         if (alive.current)
           setNotice(
-            "Added to Our family book. It couldn’t reach your partner’s book yet; you can send it from Connected books.",
+            "Added to Our family journal. It couldn’t reach your partner’s journal yet; you can send it from Connected journals.",
           );
       });
     return page.id;
@@ -655,7 +699,7 @@ export default function LivingBook({
       : place === "home"
         ? {
             title: "Start here",
-            text: "Try today’s suggestion, ask for another, or pick by how much time you have. What you keep goes into your book.",
+            text: "Lately shows what’s new in both journals: “Only me” is yours alone, “Family journal” is what everyone in the family can read. Pick something to write or do on the right.",
           }
         : place === "do"
           ? view === "session" || view === "bookmark"
@@ -665,25 +709,89 @@ export default function LivingBook({
               }
             : {
                 title: "Activities",
-                text: "Use the chips to filter by time or mood. Each card has a clear place to stop. Exercises are saved only when you keep the page; day-by-day checklists save each mark and wait for you. In Our family, things to do together come first.",
+                text: "Everything, On my own or Together narrows the shelves. Each card says whether it’s for you alone or for the family, and has a clear place to stop. Exercises are saved only when you keep the page; day-by-day checklists save each mark and wait for you.",
               }
-          : place === "journal"
+          : view === "journal"
             ? {
-                title: "Journal",
-                text: "Write a page. Drafts save as you write, even if you switch places or lock Relish. In Just me the page is only yours. In Our family, saving also adds the whole page to Our family book. Share a passage adds just the words you choose.",
+                title: "Writing",
+                text: "Drafts save as you write, even if you go somewhere else or lock Relish. A page in My journal is only yours. A page in Our family journal is added there, whole, when you choose Add to our family journal. Share a passage adds just the words you choose.",
               }
             : space === "family"
               ? {
-                  title: "Our family book",
-                  text: "The pages your family has chosen to share. Everyone in the family sees the same pages; whoever added a page can take it out. Family members opens your children’s books and invites a partner.",
+                  title: "Our family journal",
+                  text: "The entries your family has chosen to share. Everyone in the family sees the same pages; whoever added an entry can take it out. Who’s in our family opens your children’s journals and invites a partner.",
                 }
               : {
-                  title: "Your book",
-                  text: "What you’ve learned, what’s still going, and every page you’ve kept. Tap a person to see only their pages.",
+                  title: "My journal",
+                  text: "Every entry you’ve kept, only for you, with what you’ve learned and what’s still going. Tap a person to see only their entries.",
                 };
+  // Kids' journals: the children's books in this account, opened as before.
+  const kids: KidJournal[] = (family || []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    locked: p.locked,
+    onOpen: () => void headerAction(p.onOpen),
+  }));
+  // Phones: Journal opens onto the last journal, with Mine / Family on top
+  // and the kids' journals below (a dropdown on wider screens).
+  const phoneTop = (
+    <div className="rp-jswitch" role="group" aria-label="Which journal">
+      {(["me", "family"] as const).map((s) => (
+        <button
+          key={s}
+          type="button"
+          aria-pressed={space === s}
+          disabled={headerBusy}
+          onClick={() => {
+            if (space !== s) void headerAction(s === "family" ? openFamily : openMyBook);
+          }}
+        >
+          {s === "me" ? "Mine" : "Family"}
+        </button>
+      ))}
+    </div>
+  );
+  const kidLinks = (label: string, list: KidJournal[]) =>
+    list.length ? (
+      <p className="rp-jkids">
+        <span>{label}: </span>
+        {list.map((k, i) => (
+          <span key={k.id}>
+            {i > 0 && <span aria-hidden="true"> · </span>}
+            <button type="button" className="rp-link" disabled={headerBusy} onClick={k.onOpen}>
+              {kidJournalName(k.name)}
+            </button>
+          </span>
+        ))}
+      </p>
+    ) : null;
+  const phoneFoot = kids.length ? (
+    <>
+      {kidLinks("Kids’ journals", kids.filter((k) => !k.locked))}
+      {kidLinks("Earlier copies", kids.filter((k) => k.locked))}
+    </>
+  ) : null;
+  const adult = audienceOf(book) === "adult";
   const menuItems: MenuItem[] = [
+    // What the bookshelf used to hold (2026-11-21): the family, children's
+    // journals and a partner, now here and in the Journal menu.
+    ...(adult
+      ? [
+          {
+            label: "Who’s in our family",
+            onSelect: () => void headerAction(openMembers),
+          },
+          ...(!sample && online && onAddChild
+            ? [{ label: "Add a child", onSelect: () => void headerAction(onAddChild) }]
+            : []),
+          ...(canInvite
+            ? [{ label: "Invite a partner", onSelect: () => void headerAction(openInvite) }]
+            : []),
+        ]
+      : []),
     {
       label: "Settings",
+      divider: adult,
       onSelect: () => void headerAction(() => setModal("settings")),
     },
     "sound",
@@ -699,7 +807,7 @@ export default function LivingBook({
     ...(onAccount
       ? [
           {
-            // In a child's book this asks for the parent password first.
+            // In a child's journal this asks for the parent password first.
             label:
               book.profile?.kind === "child" && !sample && accountLabel === "Sign in"
                 ? "Parent account"
@@ -711,14 +819,14 @@ export default function LivingBook({
     ...(!sample && accountLabel === "Sign in"
       ? [
           {
-            label: "Books on this device",
+            label: "Journals on this device",
             onSelect: () => void headerAction(vault.shelf),
           },
         ]
       : []),
     sample
       ? {
-          label: "Create my private book",
+          label: "Create my private journal",
           divider: true,
           onSelect: () => void headerAction(() => setModal("create")),
         }
@@ -739,7 +847,7 @@ export default function LivingBook({
     !!privateEditorOpen || sharedView,
     sample,
   );
-  const personalTitle = `${book.owner}’s book`;
+  const personalTitle = `${book.owner}’s journal`;
   const headingText = closed
     ? sharedView
       ? "Our Family pages"
@@ -750,23 +858,25 @@ export default function LivingBook({
         ? "Activities"
         : view === "book"
           ? space === "family"
-            ? "Our family book"
-            : "Your book"
+            ? "Our family journal"
+            : "My journal"
           : view === "journal"
-            ? "Journal"
+            ? space === "family"
+              ? "Writing in Our family journal"
+              : "Writing in My journal"
             : view === "tools"
         ? "Exercises"
         : view === "manual"
         ? "Your living manual"
         : view === "words"
-          ? "Your pages"
+          ? "My journal"
           : view === "play"
             ? "Play together"
             : sharedView
               ? "Our Family pages"
               : view === "bookmark" || view === "session"
                 ? "Think it through"
-                : "Your book";
+                : "My journal";
   let right: ReactNode = null;
   const left = (
     <>
@@ -828,7 +938,7 @@ export default function LivingBook({
       right = (
         <>
           <p className="lb-kicker">
-            {v.kind === "practice" ? "Plan kept" : "Kept in your book"}
+            {v.kind === "practice" ? "Plan kept" : "Kept in your journal"}
           </p>
           <h2>{kept}</h2>
           {entry?.text && (
@@ -856,7 +966,7 @@ export default function LivingBook({
                   openPage(`moment:${entry.id}`);
                 }}
               >
-                Open it in Your book
+                Open it in My journal
               </button>
             )}
           </div>
@@ -945,7 +1055,7 @@ export default function LivingBook({
             disabled={headerBusy}
             onClick={() => void headerAction(() => setModal("create"))}
           >
-            Create my private book <ArrowUpRight size={13} />
+            Create my private journal <ArrowUpRight size={13} />
           </button>
         </div>
       )}
@@ -965,23 +1075,25 @@ export default function LivingBook({
           disabled={headerBusy}
           status={!sample && onAccount ? syncStatus : undefined}
           onPlace={(next) =>
-            void headerAction(() =>
-              next === "journal" ? openJournal() : navigate(next),
-            )
+            void headerAction(() => (next === "journal" ? navigate("book") : navigate(next)))
           }
           items={menuItems}
-          space={space}
-          onSpace={(next) =>
-            void headerAction(() => {
-              setSpace(next);
-              // Book shows the other book and Activities re-sorts. An open
-              // journal page or exercise stays where it is.
-              if (view === "book" || view === "words" || view === "manual")
-                navigate("book");
-              else if (view === "do") navigate("do");
-            })
+          journal={place === "journal" ? space : undefined}
+          kids={kids}
+          onJournal={(next) =>
+            void headerAction(() => (next === "family" ? openFamily() : openMyBook()))
           }
         />
+      )}
+      {book.profile?.kind === "child" && onBackHome && !sharedView && (
+        <div className="rp-kidbar">
+          <span>
+            <strong>{personalTitle}</strong>
+          </span>
+          <button type="button" disabled={headerBusy} onClick={() => void headerAction(onBackHome)}>
+            Back to my journal
+          </button>
+        </div>
       )}
       <div className="lb-desk">
         {!placeScreen && (
@@ -996,11 +1108,16 @@ export default function LivingBook({
                   sharedView
                     ? undefined
                     : {
-                        label: place === "book" ? "Back to your book" : "Back to Activities",
+                        label:
+                          place === "journal"
+                            ? space === "family"
+                              ? "Back to our family journal"
+                              : "Back to my journal"
+                            : "Back to Activities",
                         disabled: headerBusy,
                         onClick: () =>
                           void headerAction(() =>
-                            place === "do" ? backToDo() : navigate(place),
+                            place === "do" ? backToDo() : place === "journal" ? navigate("book") : navigate(place),
                           ),
                       }
                 }
@@ -1011,8 +1128,8 @@ export default function LivingBook({
                     : sample
                       ? "Fictional sample"
                       : book.profile?.kind === "child"
-                        ? `${ageLabels[book.profile.ageBand]} · private book`
-                        : "Your private pages"
+                        ? `${ageLabels[book.profile.ageBand]} · private journal`
+                        : "Only me"
                 }
               />
             )}
@@ -1051,19 +1168,19 @@ export default function LivingBook({
         ) : view === "home" && !sharedView ? (
           <Home
             book={book}
-            space={space}
             names={familyNames}
             busy={busy}
             headingRef={heading}
             familyPages={familyAccess.pages}
             myBookId={myBookId}
-            plan={book.familyPlan}
+            plan={adult ? book.familyPlan : undefined}
             onNudge={onNudge}
             onResume={resume}
             onDiscard={discard}
             onSaveDraft={keepDraft}
             onCheckBack={answerPlan}
-            onWrite={() => openJournal()}
+            onWrite={() => openJournal(undefined, false, false, "me")}
+            onWriteFamily={() => openJournal(undefined, false, false, "family")}
             onActivities={() => navigate("do")}
             onBook={openMyBook}
             onFamily={openFamily}
@@ -1133,7 +1250,8 @@ export default function LivingBook({
             roster={roster}
             headingRef={heading}
             initialGame={gameOffer}
-            together={space === "family"}
+            filter={actsFilter}
+            onFilter={setActsFilter}
             onOpen={onNudge}
             onResume={resume}
             onStartGame={createGame}
@@ -1149,7 +1267,7 @@ export default function LivingBook({
               if (play) await notePlay(play);
             }}
             planFeature={
-              space === "family" && audienceOf(book) === "adult"
+              adult && (members.length > 0 || familyAccess.pages.length > 0 || !!book.familyPlan)
                 ? {
                     plan: book.familyPlan,
                     owner: book.owner,
@@ -1219,6 +1337,10 @@ export default function LivingBook({
             headingRef={heading}
             photos={vault.photos}
             onOpenMine={openMyBook}
+            onWrite={() => openJournal(undefined, false, false, "family")}
+            initialMembers={showMembers}
+            phoneTop={phoneTop}
+            phoneFoot={phoneFoot}
             onInvite={canInvite ? openInvite : undefined}
             onAddChild={!sample && online ? onAddChild : undefined}
             onPlay={() => {
@@ -1239,7 +1361,7 @@ export default function LivingBook({
               )
             }
             onRemoved={(problem) =>
-              problem ? setError(problem) : setNotice("Taken out of Our family book.")
+              problem ? setError(problem) : setNotice("Taken out of Our family journal.")
             }
             onDelete={sample ? undefined : deleteFromBook}
           />
@@ -1255,8 +1377,11 @@ export default function LivingBook({
               // Keep the saved scroll and row until Back has used them.
               browse.current = { scroll: 0, ...browse.current, who, query };
             }}
-            onAddPage={() => quickEntry()}
+            onAddPage={() => openJournal(undefined, false, false, "me")}
             onIdea={() => navigate("do")}
+            phoneTop={phoneTop}
+            phoneFoot={phoneFoot}
+            onDiscardDraft={(d) => discard({ kind: "draft", key: d.id, title: d.title, at: d.updatedAt, label: "Keep writing", draft: d })}
             onOpenPage={(id) => {
               browse.current = {
                 who: browse.current?.who ?? "all",
@@ -1289,19 +1414,18 @@ export default function LivingBook({
           <Journal
             key={pageKey}
             family={family}
-            space={space}
             familyNames={members.map((m) => m.name)}
             onFamilyAdd={addToFamily}
             initialCelebrate={kept}
             initialPassage={passage}
             onKept={(id, problem) => {
-              // The saved page opens in Book with "Entry saved".
+              // The saved page opens in My journal with "Entry saved".
               navigate("words");
               setReading(`journal:${id}`);
               setKept(true);
               if (problem)
                 setError(
-                  `Saved in your book, but it wasn’t added to Our family book. ${problem}`,
+                  `Saved in My journal, but it wasn’t added to Our family journal. ${problem}`,
                 );
             }}
             navigation={journalNavigation}
@@ -1429,7 +1553,7 @@ export default function LivingBook({
       )}
       {modal === "profile" && !sample && !sharedView && (
         <Dialog
-          title="Who this book is for"
+          title="Who this journal is for"
           onClose={() => setModal(null)}
         >
           <EditionSetup
@@ -1453,43 +1577,43 @@ export default function LivingBook({
           <p className="lb-kicker">Privacy and storage</p>
           <h2>Privacy and settings</h2>
           <p>
-            This book’s pages, drafts, plans and games are{" "}
+            This journal’s entries, drafts, plans and games are{" "}
             {sample
               ? "examples in memory only"
               : accountManaged
-                ? "encrypted and saved automatically to your account, including its parent-managed child books"
+                ? "encrypted and saved automatically to your account, including its parent-managed children’s journals"
                 : "encrypted in this browser on this device"}
             .{" "}
             {online
-              ? "AI only sees words you review and choose to send. Suggestions in Your book have their own opt-in. Photos and people tags are never sent to AI. Saving to your account doesn’t give AI access to your book."
-              : "AI chat and online passage sharing are off in this book. Voice writing and Relish suggestions, where offered, need a parent’s permission through a parent’s account."}
+              ? "AI only sees words you review and choose to send. Suggestions in My journal have their own opt-in. Photos and people tags are never sent to AI. Saving to your account doesn’t give AI access to your journal."
+              : "AI chat and online passage sharing are off in this journal. Voice writing and Relish suggestions, where offered, need a parent’s permission through a parent’s account."}
           </p>
           {!sample && (
             <div className="lb-boundary">
-              <h3>Who this book is for</h3>
+              <h3>Who this journal is for</h3>
               <p>{ageLabels[audienceOf(book)]}</p>
               <p className="lb-fine">
                 {online
-                  ? "An adult’s book. AI help and family connections are available when you choose them."
+                  ? "An adult’s journal. AI help and family connections are available when you choose them."
                   : accountManaged
-                    ? "This child’s book belongs to the parent account and saves automatically online. The parent account password protects age changes and switching to other books. Voice writing needs a parent’s separate permission."
+                    ? "This child’s journal belongs to the parent account and saves automatically online. The parent account password protects age changes and switching to other journals. Voice writing needs a parent’s separate permission."
                     : "Prompts are written for this age. A separate parent passphrase protects these settings. Children have no account of their own and no online passage sharing."}
               </p>
               <button
                 className="lb-secondary"
                 onClick={() => setModal("profile")}
               >
-                Change who this book is for
+                Change who this journal is for
               </button>
             </div>
           )}
           <div className="lb-boundary">
-            <h3>Back up your book</h3>
+            <h3>Back up your journal</h3>
             <p>
               {sample
-                ? "The sample can’t be backed up. Create your own book to keep pages."
+                ? "The sample can’t be backed up. Create your own journal to keep entries."
                 : accountManaged
-                  ? "Your saved book is available whenever you sign in. For an extra portable copy, export a backup with a passphrase you choose and keep separately."
+                  ? "Your saved journal is available whenever you sign in. For an extra portable copy, export a backup with a passphrase you choose and keep separately."
                   : "Browser data can be cleared. Export encrypted backups regularly and keep your passphrase separately."}
             </p>
             <button
@@ -1508,7 +1632,7 @@ export default function LivingBook({
                 setModal("connections");
               }}
             >
-              <Users size={16} /> Connected books and your account
+              <Users size={16} /> Connected journals and your account
             </button>
           )}
           <p className="lb-fine">
@@ -1518,11 +1642,11 @@ export default function LivingBook({
           </p>
           {!sample && (
             <details className="lb-boundary">
-              <summary>Remove {book.owner}’s book from this device</summary>
+              <summary>Remove {book.owner}’s journal from this device</summary>
               <p>
-                This permanently deletes the copy of {book.owner}’s book on this
+                This permanently deletes the copy of {book.owner}’s journal on this
                 device. Export a backup first if you want to keep it. Online
-                connections, other books and backups are separate.
+                connections, other journals and backups are separate.
               </p>
               <label>
                 Type {book.owner} to confirm
@@ -1547,7 +1671,7 @@ export default function LivingBook({
                       setRemoveError(
                         e instanceof Error
                           ? e.message
-                          : "This book couldn’t be removed. It is still here.",
+                          : "This journal couldn’t be removed. It is still here.",
                       ),
                     )
                 }
@@ -1560,18 +1684,18 @@ export default function LivingBook({
           <TypingSoundSetting />
           {sample ? (
             <button className="lb-text" onClick={() => setModal("create")}>
-              Create my private book
+              Create my private journal
             </button>
           ) : (
             <button className="lb-text" onClick={vault.lock}>
-              <Lock size={16} /> Lock my book
+              <Lock size={16} /> Lock my journal
             </button>
           )}
         </Dialog>
       )}
       {modal === "create" && (
         <Dialog
-          title="Create a private book"
+          title="Create a private journal"
           onClose={() => !busy && setModal(null)}
         >
           <VaultForm
@@ -1585,7 +1709,7 @@ export default function LivingBook({
       )}
       {modal === "person" && (
         <Dialog
-          title="Add someone to your book"
+          title="Add someone to your journal"
           onClose={() => !busy && setModal(null)}
         >
           <PersonForm
@@ -1626,13 +1750,12 @@ export default function LivingBook({
           <h2>{help.title}</h2>
           <p>{help.text}</p>
           <div className="lb-boundary">
-            <strong>Four places</strong>
+            <strong>Three places</strong>
             <p>
-              Home suggests one small thing a day. Book holds what you’ve
-              learned and every page you’ve kept; switch to Our family for the
-              pages your family shares. Journal is where you write. Activities
-              has every activity, filtered by time or mood. Just me and Our
-              family, at the top, choose whose pages you see.
+              Home shows what’s new in both journals and a few things to do.
+              Journal opens My journal (only you), Our family journal
+              (everyone in the family) or a child’s journal. Activities has
+              every activity, on your own or together.
             </p>
           </div>
           <div className="lb-boundary">
@@ -1642,7 +1765,7 @@ export default function LivingBook({
             <p>
               {!online
                 ? "These are written prompts chosen for your age, not an AI conversation. Your words stay here. You can pause, pass, or ask a trusted grown-up for help."
-                : "Your pages stay private. Only passages and pages you choose go to Our family book or a partner’s book. Games never include private writing. AI help is optional, and you review the exact excerpt first."}
+                : "My journal stays private. Only passages and entries you choose go to Our family journal or a partner’s journal. Games never include private writing. AI help is optional, and you review the exact excerpt first."}
             </p>
           </div>
           <button className="lb-primary" onClick={() => setModal(null)}>

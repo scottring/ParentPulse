@@ -27,7 +27,7 @@ const focusable = (root: HTMLElement) =>
     ),
   ].filter((el) => !el.hasAttribute("disabled"));
 
-/** Share with our family: a passage or the whole page, into Our family book. */
+/** Share with our family: a passage or the whole page, into Our family journal. */
 export default function ShareSheet({
   title,
   text,
@@ -136,8 +136,8 @@ export default function ShareSheet({
         </div>
         <p className="rp-share-who">
           {others.length
-            ? `${list(others)} will see this in Our family book.`
-            : "It will be kept in Our family book."}
+            ? `${list(others)} will see this in Our family journal.`
+            : "It will be kept in Our family journal."}
         </p>
         <div className="rp-share-kind" role="group" aria-label="What to share">
           <button
@@ -229,8 +229,8 @@ export default function ShareSheet({
           {busy
             ? "Adding…"
             : kind === "passage"
-              ? "Add passage to family book"
-              : "Add page to family book"}
+              ? "Add passage to family journal"
+              : "Add page to family journal"}
         </button>
         <p className="rp-share-fine">
           {kind === "passage"

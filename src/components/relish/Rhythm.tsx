@@ -268,7 +268,7 @@ export function RhythmPage({
             {step.review && <Check size={17} />}
           </div>
           <p className="r-timing-note">
-            Guidance appears here when you open your book. No background
+            Guidance appears here when you open your journal. No background
             reminders are sent.
           </p>
         </div>

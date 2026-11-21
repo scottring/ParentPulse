@@ -64,7 +64,7 @@ export default function PassagePicker({
             stays private.
           </p>
           <button className="lb-primary" onClick={onClose}>
-            Back to my book <Check size={18} />
+            Back to my journal <Check size={18} />
           </button>
         </>
       ) : (
@@ -144,7 +144,7 @@ export default function PassagePicker({
                 disabled={busy || !text.trim() || chosen.length > 0}
                 onClick={() => onOffer({ title, text })}
               >
-                <Send size={17} /> Offer words to another book
+                <Send size={17} /> Offer words to another journal
               </button>
             )}
           </div>

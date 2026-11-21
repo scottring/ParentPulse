@@ -25,14 +25,10 @@ const adult = (extra: Partial<Book> = {}): Book => ({
   ],
   ...extra,
 });
-const toFamilySpace = () =>
-  fireEvent.click(
-    within(screen.getByRole("group", { name: "Whose pages" })).getByRole("button", { name: "Our family" }),
-  );
-/** The family plan is featured on Activities in Our family (2026-11-21). */
+/** The family plan is featured on Activities; Together always shows it (2026-11-21). */
 const toFamily = () => {
-  toFamilySpace();
   fireEvent.click(screen.getByRole("button", { name: "Activities" }));
+  fireEvent.click(within(screen.getByRole("group", { name: "Show" })).getByRole("button", { name: "Together" }));
 };
 const invite = () => document.querySelector(".fh-invite")!.textContent;
 const plan = (daysAgo: number) =>
@@ -46,31 +42,28 @@ const plan = (daysAgo: number) =>
     now: new Date(Date.now() - daysAgo * 86_400_000),
   });
 
-it("Home in both spaces: a welcome, then what's happened beside three painted choices", () => {
+it("Home is one page: a welcome, Lately from both journals, and four painted choices", () => {
   openBook(adult());
   expect(screen.getByRole("heading", { level: 1, name: "Welcome, Scott." })).toBeTruthy();
-  // Journal opens the editor; there is no second Write button in the header.
+  // No Write button, no Book tab, no Just me / Our family switch in the header.
   expect(screen.queryByRole("button", { name: /^\+?\s*Write$/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Book" })).toBeNull();
+  expect(screen.queryByRole("group", { name: "Whose pages" })).toBeNull();
   const todo = screen.getByRole("region", { name: "What would you like to do?" });
   expect(within(todo).getAllByRole("button").filter((b) => b.className.includes("ha-choice-main")).map((b) => b.textContent)).toEqual([
-    "Write a journal entry",
+    "Write in my journal",
+    "Write in our family journal",
     "Do an activity",
-    "Read about my family",
-  ]);
-  toFamilySpace();
-  const family = screen.getByRole("region", { name: "What would you like to do?" });
-  expect(within(family).getAllByRole("button").filter((b) => b.className.includes("ha-choice-main")).map((b) => b.textContent)).toEqual([
-    "Write in our family book",
-    "Do an activity together",
     "Read about our family",
   ]);
-  expect(within(family).getByText("This week: Hearing each other out, at dinner")).toBeTruthy();
-  expect(screen.getByRole("button", { name: /Our family book/ })).toBeTruthy();
+  expect(within(todo).getByText("Only you see it")).toBeTruthy();
+  expect(within(todo).getByText("Everyone in the family can read it")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Open family journal" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Open my journal" })).toBeTruthy();
 });
 
-it("Our family Home asks how the plan went and sends you to it in Activities", () => {
+it("Home asks how the family plan went and sends you to it in Activities", () => {
   openBook(adult({ familyPlan: plan(3) }));
-  toFamilySpace();
   const ask = screen.getByRole("region", { name: "How is it going?" });
   expect(within(ask).getByText("Hearing each other out · Day 4 of 14")).toBeTruthy();
   fireEvent.click(within(ask).getByRole("button", { name: "Say how it went" }));
@@ -131,7 +124,7 @@ it("first visit: choose, the small thing leads, adjust the plan, try it tonight"
   );
 });
 
-it("coming back: three equal answers, then keep a line in Our family book", async () => {
+it("coming back: three equal answers, then keep a line in Our family journal", async () => {
   const { stored } = openBook(adult({ familyPlan: plan(3) }));
   toFamily();
   expect(screen.getByText("Hearing each other out · Day 4 of 14")).toBeTruthy();
@@ -165,7 +158,7 @@ it("coming back: three equal answers, then keep a line in Our family book", asyn
     caption: "Ella · at dinner",
   });
   expect(stored().familyPlan!.kept[0]).toMatchObject({ id: family[0].id, who: "Ella" });
-  expect(screen.getByText("Kept in Our family book.")).toBeTruthy();
+  expect(screen.getByText("Kept in Our family journal.")).toBeTruthy();
   // The kept line sits under the answers.
   expect(document.querySelector(".fh-passage-small blockquote")!.textContent).toBe(
     "“Dad asked what happened next.”",
@@ -218,7 +211,7 @@ it("looking back: their words get the space, then what next; the look-back can g
 it("Finish for now without keeping the look-back adds nothing to the book", async () => {
   const { stored } = openBook(adult({ familyPlan: plan(20) }));
   toFamily();
-  fireEvent.click(screen.getByRole("checkbox", { name: "Keep this look-back in Our family book" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Keep this look-back in Our family journal" }));
   await act(async () => {
     fireEvent.click(screen.getByRole("button", { name: "Finish for now" }));
   });

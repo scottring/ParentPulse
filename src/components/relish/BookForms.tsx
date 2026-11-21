@@ -96,8 +96,8 @@ export function VaultForm({
       </h1>
       <p>
         {locked
-          ? "Unlock your book to pick up where you left off."
-          : "Your book starts encrypted on this device. You can enable encrypted sync from Account to use it on your other devices."}
+          ? "Unlock your journal to pick up where you left off."
+          : "Your journal starts encrypted on this device. You can enable encrypted sync from Account to use it on your other devices."}
       </p>
       {!locked && !restoring && (
         <label>
@@ -124,7 +124,7 @@ export function VaultForm({
           value={pass}
           onChange={(e) => setPass(e.target.value)}
           placeholder={
-            locked ? "Unlock your private book" : "At least 12 characters"
+            locked ? "Unlock your private journal" : "At least 12 characters"
           }
         />
       </label>
@@ -161,12 +161,12 @@ export function VaultForm({
           <Lock size={15} />
         )}{" "}
         {busy
-          ? "Opening your book…"
+          ? "Opening your journal…"
           : locked
-            ? "Unlock my book"
+            ? "Unlock my journal"
             : restoring
               ? "Restore encrypted book"
-              : "Create my private book"}
+              : "Create my private journal"}
       </button>
       {!locked && (
         <>

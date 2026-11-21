@@ -1,7 +1,7 @@
 "use client";
 import ConfirmDelete from "./ConfirmDelete";
 import { inviteFriend, inviteNotice } from "@/lib/relish/invite";
-import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Search, Users, X } from "lucide-react";
 import type { Book } from "@/lib/relish/model";
 import {
@@ -54,7 +54,7 @@ type AlbumItem = {
   lines?: { label: string; text: string }[];
 };
 
-/** Everything in this book that is shared: never a private page. */
+/** Everything in this journal that is shared: never a private page. */
 export function albumOf(book: Book): AlbumItem[] {
   const l = livingOf(book);
   return [
@@ -89,7 +89,7 @@ export function passedBetween(book: Book) {
   return [
     ...(c?.received || []).map((p) => ({
       id: p.id,
-      who: `From ${p.fromName}’s book`,
+      who: `From ${p.fromName}’s journal`,
       byName: p.fromName,
       tone: "sage" as Tone,
       title: p.title,
@@ -114,13 +114,13 @@ export function passedBetween(book: Book) {
 export type FamilyMember = {
   id: string;
   name: string;
-  /** Opens their own book in this account. */
+  /** Opens their own journal in this account. */
   onOpen?: () => void;
   /** An older copy that still needs its original passphrase. */
   locked?: boolean;
 };
 
-/** One page of Our family book as it is shown, from wherever it is kept. */
+/** One page of Our family journal as it is shown, from wherever it is kept. */
 type Shown = {
   id: string;
   kind: FamilyPageKind;
@@ -133,13 +133,15 @@ type Shown = {
   note: string;
   art?: IllustrationName;
   mine: boolean;
-  /** This writer added it to the family book, so they can take it out. */
+  /** This writer added it to the family journal, so they can take it out. */
   removable: boolean;
-  /** Kept in this book (a game page, an album passage, a page passed between
-   *  partners): deleting it removes this book's copy, by its page id. */
+  /** Kept in this journal (a game page, an album passage, a page passed between
+   *  partners): deleting it removes this journal's copy, by its page id. */
   deleteId?: string;
   lines?: { label: string; text: string }[];
   photos?: AlbumItem["photos"];
+  /** "Played Spot it! with Kaleb and Ella.": a round's one-line note. */
+  playNote?: boolean;
 };
 const kindLabel: Record<FamilyPageKind, string> = {
   passage: "Passage",
@@ -171,11 +173,12 @@ export function familyPagesOf(
         byName: p.byName,
         date: p.createdAt,
         note: mine
-          ? "You added this to Our family book."
-          : `${p.byName} added this to Our family book.`,
+          ? "You added this to Our family journal."
+          : `${p.byName} added this to Our family journal.`,
         art: artFor(p.activity),
         mine,
         removable: mine,
+        playNote: p.kind === "game" && p.id.startsWith("play-"),
       };
     }),
     ...l.sharedPages.map((p) => {
@@ -221,8 +224,8 @@ export function familyPagesOf(
       date: p.date,
       note:
         p.who === "You sent"
-          ? "You sent this to your partner’s book."
-          : `${p.who}. It’s kept in your book too.`,
+          ? "You sent this to your partner’s journal."
+          : `${p.who}. It’s kept in your journal too.`,
       mine: p.who === "You sent",
       removable: false,
       deleteId: `${p.who === "You sent" ? "sent" : "passage"}:${p.id}`,
@@ -259,16 +262,27 @@ export default function OurFamily({
   onCloseFinished,
   onRemoved,
   onDelete,
+  onWrite,
+  initialMembers = false,
+  phoneTop,
+  phoneFoot,
 }: {
   book: Book;
   access: FamilyAccess;
-  /** The writer of this book, and the id their family pages carry. */
+  /** Add to our family journal: a page written for everyone. */
+  onWrite?: () => void;
+  /** Opens with Who's in our family showing (from the avatar menu). */
+  initialMembers?: boolean;
+  /** Phones: Mine / Family and kids' journals, drawn above and below. */
+  phoneTop?: ReactNode;
+  phoneFoot?: ReactNode;
+  /** The writer of this journal, and the id their family pages carry. */
   me: { name: string; bookId: string };
   members: FamilyMember[];
   busy: boolean;
   headingRef: RefObject<HTMLHeadingElement | null>;
   photos?: PhotoAccess;
-  /** Back to this book's own pages (Book · Just me). */
+  /** Back to this journal's own pages (My journal). */
   onOpenMine: () => void;
   onInvite?: () => void;
   onAddChild?: () => void;
@@ -276,13 +290,13 @@ export default function OurFamily({
   onResumeGame: () => void;
   onCloseFinished: (again: boolean) => void;
   onRemoved?: (error?: string) => void;
-  /** Deletes this book's copy of a page (see Shown.deleteId). */
+  /** Deletes this journal's copy of a page (see Shown.deleteId). */
   onDelete?: (pageId: string) => Promise<boolean>;
 }) {
   const [who, setWho] = useState("all");
   const [query, setQuery] = useState("");
   const [reading, setReading] = useState<string | null>(null);
-  const [membersOpen, setMembersOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(initialMembers);
   const [inviting, setInviting] = useState(false);
   const [removing, setRemoving] = useState(false);
   const refresh = access.refresh;
@@ -309,9 +323,11 @@ export default function OurFamily({
   );
   const featured = shown.find((p) => p.art);
   const quote = shown.find((p) => p.kind === "passage" && p !== featured);
+  // The newest passage leads on butter paper, beside the newest entry with a
+  // painting; then everything else, newest first.
   const ordered = [
-    ...(featured ? [featured] : []),
     ...(quote ? [quote] : []),
+    ...(featured ? [featured] : []),
     ...shown.filter((p) => p !== featured && p !== quote),
   ];
   const first = all.at(-1);
@@ -333,23 +349,30 @@ export default function OurFamily({
   }
   return (
     <main className="rp-place rp-family rp-fb" aria-labelledby="rp-family-title">
+      {phoneTop}
       <header className="rp-fb-cover">
         <div className="rp-fb-cover-words">
           <h1 id="rp-family-title" ref={headingRef} tabIndex={-1}>
-            Our family book
+            Our family journal
           </h1>
           <p>
-            {count ? `${count} ${count === 1 ? "page" : "pages"}` : "No pages yet"}
+            Everyone in the family reads the same pages{" "}
+            <span aria-hidden="true">·</span>{" "}
+            {count ? `${count} ${count === 1 ? "entry" : "entries"}` : "No entries yet"}
             {first && (
               <>
                 {" "}
-                <span aria-hidden="true">·</span> Since{" "}
-                {new Date(first.date).toLocaleDateString(undefined, { month: "long" })}
+                since {new Date(first.date).toLocaleDateString(undefined, { month: "long" })}
               </>
             )}
           </p>
         </div>
         <Sprig className="rp-fb-cover-sprig" tone="gold" />
+        {onWrite && (
+          <button type="button" className="rp-fb-write" disabled={busy} onClick={onWrite}>
+            Add to our family journal
+          </button>
+        )}
       </header>
 
       {finished && (
@@ -361,7 +384,7 @@ export default function OurFamily({
               : !gameText(finished)
                 ? "Everyone passed. No shared page was saved."
                 : finished.contentVersion === 2
-                  ? "You finished a round together. Its answers are in your book; no shared page was kept."
+                  ? "You finished a round together. Its answers are in your journal; no shared page was kept."
                   : "You finished a round together. No shared page was saved."}
           </p>
           <div className="rp-finished-actions">
@@ -388,28 +411,13 @@ export default function OurFamily({
             </button>
           ))}
         </div>
-        <span className="rp-fb-divider" aria-hidden="true" />
         <div className="rp-fb-tools">
-          <MembersLink
-            open={membersOpen}
-            onToggle={setMembersOpen}
-            me={me}
-            members={members}
-            busy={busy}
-            onOpenMine={onOpenMine}
-            onSee={(name) => {
-              setWho(`name:${name}`);
-              setMembersOpen(false);
-            }}
-            onAddChild={onAddChild}
-            onInvite={onInvite ? () => setInviting(true) : undefined}
-          />
           <label className="rp-fb-search">
             <Search size={17} aria-hidden="true" />
             <input
               type="search"
-              aria-label="Find a page"
-              placeholder="Find a page"
+              aria-label="Find something you kept"
+              placeholder="Find something you kept"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -435,7 +443,7 @@ export default function OurFamily({
       )}
 
       {ordered.length > 0 ? (
-        <ul className="rp-fb-grid" aria-label="Pages in Our family book">
+        <ul className="rp-fb-grid" aria-label="Entries in Our family journal">
           {ordered.map((p) => (
             <li
               key={p.id}
@@ -454,7 +462,7 @@ export default function OurFamily({
         </ul>
       ) : all.length > 0 ? (
         <p className="rp-quiet rp-fb-none">
-          No pages match.{" "}
+          Nothing matches.{" "}
           <button
             className="rp-link"
             onClick={() => {
@@ -462,28 +470,27 @@ export default function OurFamily({
               setQuery("");
             }}
           >
-            Show every page
+            Show everything
           </button>
         </p>
       ) : access.loading ? (
         <p className="rp-quiet rp-fb-none" role="status">
-          Opening Our family book…
+          Opening Our family journal…
         </p>
       ) : (
         <section className="rp-fb-empty" aria-label="No pages yet">
           <Illustration name="family" size={120} className="rp-fb-empty-art" />
           <div>
-            <h2>The first page is waiting</h2>
+            <h2>The first entry is waiting</h2>
             <p>
-              Pages get here two ways: share a passage from Journal (choose Our
-              family at the top, or Share a passage), or keep a page from a
-              game you play together.
+              Entries get here three ways: Add to our family journal, share a
+              passage from My journal, or play a game together.
             </p>
             {access.kind === "local" && (
               <p className="rp-quiet">
-                This book isn’t in an account, so family pages are kept inside
-                it, on this device. Sign in to share one family book across
-                your family’s books.
+                This journal isn’t in an account, so family entries are kept
+                on this device. Sign in to share one family journal with
+                everyone in your family.
               </p>
             )}
           </div>
@@ -492,13 +499,27 @@ export default function OurFamily({
 
       <footer className="rp-fb-foot">
         <p className="rp-quiet">
-          Everyone in the family sees the same pages. Whoever added a page can
-          take it out.
+          Whoever added an entry can take it out.{" "}
         </p>
+        <MembersLink
+          open={membersOpen}
+          onToggle={setMembersOpen}
+          me={me}
+          members={members}
+          busy={busy}
+          onOpenMine={onOpenMine}
+          onSee={(name) => {
+            setWho(`name:${name}`);
+            setMembersOpen(false);
+          }}
+          onAddChild={onAddChild}
+          onInvite={onInvite ? () => setInviting(true) : undefined}
+        />
         <button className="rp-link" disabled={busy} onClick={onPlay}>
           Play a game
         </button>
       </footer>
+      {phoneFoot}
 
       {open && (
         <Dialog title={open.title || open.label} onClose={() => !removing && setReading(null)}>
@@ -526,17 +547,17 @@ export default function OurFamily({
                 disabled={removing}
                 onClick={() => void takeOut(open)}
               >
-                {removing ? "Taking it out…" : "Take out of the family book"}
+                {removing ? "Taking it out…" : "Take out of the family journal"}
               </button>
             )}
             {open.deleteId && onDelete && (
               <ConfirmDelete
-                label="Delete from my book"
-                question="Delete this from your book?"
+                label="Delete from my journal"
+                question="Delete this from your journal?"
                 detail={
                   open.deleteId.startsWith("sent:") || open.deleteId.startsWith("passage:")
-                    ? "Only your copy goes; the other book keeps its own. This can’t be undone."
-                    : "It’s removed from this book on every device. This can’t be undone."
+                    ? "Only your copy goes; the other journal keeps its own. This can’t be undone."
+                    : "It’s removed from this journal on every device. This can’t be undone."
                 }
                 busy={busy}
                 onConfirm={async () => {
@@ -583,20 +604,34 @@ function PageCard({
         <Sprig className="rp-fb-quote-sprig" berries />
       </button>
     );
+  const note = page.playNote;
+  const who =
+    page.kind === "game"
+      ? `Game · ${page.title || page.label}`
+      : page.kind === "highlights"
+        ? page.label
+        : page.mine
+          ? "You"
+          : page.byName;
   return (
     <button
       className={`rp-fb-card ${featured ? "rp-fb-card-featured" : ""}`}
       data-page-id={page.id}
       onClick={onOpen}
     >
-      <span className="rp-fb-date">{shortDate(page.date)}</span>
-      <span className="rp-fb-title">{page.title || page.label}</span>
-      <span className="rp-fb-text">{page.text}</span>
       {featured && page.art && (
-        <span className="rp-fb-art">
-          <Illustration name={page.art} size="100%" />
+        <span className="rp-fb-tile" aria-hidden="true">
+          <Illustration name={page.art} size={64} />
         </span>
       )}
+      <span className="rp-fb-meta">
+        <span>{who}</span>
+        <span className="rp-fb-date">{shortDate(page.date)}</span>
+      </span>
+      <span className="rp-fb-title">
+        {note ? page.text.trim().replace(/\.$/, "") : page.title || page.label}
+      </span>
+      {!note && <span className="rp-fb-text">{page.text}</span>}
     </button>
   );
 }
@@ -689,7 +724,7 @@ function MembersLink({
         aria-controls={id}
         onClick={() => onToggle(!open)}
       >
-        <Users size={20} aria-hidden="true" /> <span>Family members</span>
+        <Users size={18} aria-hidden="true" /> <span>Who’s in our family</span>
       </button>
       {open && (
         <>
@@ -699,16 +734,16 @@ function MembersLink({
             id={id}
             className="rp-fb-members"
             role="dialog"
-            aria-label="Family members"
+            aria-label="Who’s in our family"
             tabIndex={-1}
           >
             <span className="rp-fb-grab" aria-hidden="true" />
             <div className="rp-fb-members-head">
-              <h2>Family members</h2>
+              <h2>Who’s in our family</h2>
               <button
                 type="button"
                 className="rp-fb-x"
-                aria-label="Close family members"
+                aria-label="Close who’s in our family"
                 onClick={() => {
                   onToggle(false);
                   link.current?.focus();
@@ -719,7 +754,7 @@ function MembersLink({
             </div>
             <ul>
               {row("me", `${me.name} (you)`, 0, {
-                label: "Open my book",
+                label: "Open my journal",
                 onClick: () => {
                   onToggle(false);
                   onOpenMine();
@@ -732,16 +767,16 @@ function MembersLink({
                   i + 1,
                   m.onOpen
                     ? {
-                        label: `Open ${m.name}’s book`,
+                        label: `Open ${m.name}’s journal`,
                         aria: m.locked
-                          ? `Open ${m.name}’s book, an earlier copy that needs its original passphrase`
-                          : `Open ${m.name}’s book`,
+                          ? `Open ${m.name}’s journal, an earlier copy that needs its original passphrase`
+                          : `Open ${m.name}’s journal`,
                         onClick: () => {
                           onToggle(false);
                           m.onOpen!();
                         },
                       }
-                    : { label: "See shared pages", onClick: () => onSee(m.name) },
+                    : { label: "See what they shared", onClick: () => onSee(m.name) },
                   m.locked ? "Earlier copy · needs its original passphrase" : undefined,
                 ),
               )}
@@ -828,10 +863,10 @@ export function InviteSheet({
         <ol className="rp-steps">
           <li>Make an invitation code here and send it to them privately.</li>
           <li>
-            They make their own Relish account and enter the code. Their book
-            stays private, just like yours.
+            They make their own Relish account and enter the code. Their
+            journal stays private, just like yours.
           </li>
-          <li>Either of you can share a page with the other, one page at a time.</li>
+          <li>Either of you can share an entry with the other, one at a time.</li>
         </ol>
         <button className="rp-btn rp-btn-olive rp-sheet-start" onClick={onStart}>
           Make an invitation code
