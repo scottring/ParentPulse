@@ -26,7 +26,6 @@ import {
   leavingLine,
   missedDay,
   reminderDue,
-  STALE_DAYS,
   type HomeItem,
 } from "@/lib/relish/activities";
 import {
@@ -417,9 +416,8 @@ function MeSide({
   const draft = going.find((g): g is HomeItem & { kind: "draft"; draft: JournalEntry } => g.kind === "draft");
   const others = going.filter((g) => g.kind !== "draft").slice(0, 2);
   const pages = bookPages(book).toReversed();
-  const recent = pages
-    .filter((p) => now.getTime() - Date.parse(p.date) < STALE_DAYS * DAY)
-    .slice(0, Math.max(0, 3 - others.length));
+  // Kept pages always show, however old: only unfinished things go stale.
+  const recent = pages.slice(0, Math.max(0, 3 - others.length));
   // One check-back at a time leads: a plan to ask about, a reminder asked
   // for tonight, then a habit that slipped a day.
   const due = onCheckBack ? dueCheckBacks(book, now)[0] : undefined;
@@ -556,9 +554,7 @@ function MeSide({
         ))}
         {!draft && !rows.length && !recent.length && (
           <p className="ha-quiet ha-empty">
-            {pages.length
-              ? "Nothing new in the last two weeks. Everything you’ve kept is in your book."
-              : "Nothing kept yet. Your first page will show up here."}
+            Nothing kept yet. Your first page will show up here.
           </p>
         )}
         <button type="button" className="ha-link ha-open" disabled={busy} onClick={onBook}>

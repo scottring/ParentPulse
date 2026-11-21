@@ -1100,6 +1100,20 @@
     justify-content: flex-end;
     margin-top: -6px;
   }
+  /* One action fits beside the words; only two or more drop below. */
+  .lb-app.rp-shell .ha-row:has(.ha-row-actions > :only-child) {
+    flex-wrap: nowrap;
+  }
+  .lb-app.rp-shell .ha-row:has(.ha-row-actions > :only-child) .ha-row-words {
+    flex: 1;
+    flex-basis: auto;
+  }
+  .lb-app.rp-shell .ha-row:has(.ha-row-actions > :only-child) .ha-row-actions {
+    width: auto;
+    margin-top: 0;
+    white-space: nowrap;
+    flex: none;
+  }
   .lb-app.rp-shell .ha-cover {
     padding: 14px 16px 14px 30px;
     border-radius: 12px;
@@ -1454,10 +1468,6 @@
 .lb-app.rp-shell .ha-btn {
   border-radius: 999px;
 }
-/* Paintings sit in the paper rather than on a square of their own. */
-.lb-app.rp-shell img:is(.ha-welcome-art, .ha-feature-art, .ha-choice-art, .ha-row-art, .ha-card-art, .ha-done-art, .ha-game-art, .ha-habit-art) {
-  mix-blend-mode: multiply;
-}
 
 /* Illustration sets its size inline; these follow the width instead. */
 .lb-app.rp-shell .ha-welcome-art {
@@ -1516,3 +1526,4 @@
   font-size: 15px;
   white-space: nowrap;
 }
+
