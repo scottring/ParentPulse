@@ -2020,3 +2020,23 @@ img.ui-illustration.rk-cover-emblem,
     font-size: 20px;
   }
 }
+
+/* iPhone Duo open and other mid widths (721–940px): one row, tighter, so
+   the avatar doesn't wrap under the switch. */
+@media (min-width: 721px) and (max-width: 940px) {
+  .rp-topbar-inner {
+    gap: 8px 14px;
+    padding-left: max(18px, env(safe-area-inset-left));
+    padding-right: max(18px, env(safe-area-inset-right));
+  }
+  .rp-places {
+    flex-wrap: nowrap;
+  }
+  .lb-app .rp-places button {
+    margin: 0 7px;
+  }
+  .lb-app .rp-space button {
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+}
