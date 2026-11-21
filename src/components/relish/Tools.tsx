@@ -4,8 +4,12 @@ import { ArrowRight, Check, ChevronDown, Clock } from "lucide-react";
 import type { Book } from "@/lib/relish/model";
 import { audienceOf } from "@/lib/relish/profiles";
 import { libraryOnly, noteFamily } from "@/lib/relish/catalog";
+import { missedDay } from "@/lib/relish/activities";
+import { HabitNudge } from "./HabitNudge";
 import {
   activeFor,
+  remindTonight,
+  scheduleCheckBack,
   builderComplete,
   exerciseProgress,
   exerciseRunFor,
@@ -45,6 +49,8 @@ import type { Player } from "@/lib/relish/living";
 import Illustration from "./Illustration";
 import DayHighlights from "./DayHighlights";
 import { SubHead } from "./ui";
+import Sprig from "./Sprig";
+import "./home-acts.css";
 import { exerciseIllustration } from "./illustrations";
 import "./journal.css";
 import "./tools.css";
@@ -68,9 +74,15 @@ export default function Tools({
   sample = false,
   family = [],
   onProgress,
+  onDone,
+  onSharePassage,
 }: {
   book: Book;
   busy: boolean;
+  /** "Done for now" on the finish screen. */
+  onDone?: () => void;
+  /** Opens the kept page with its passage picker showing. */
+  onSharePassage?: (pageId: string) => void;
   /** Saves a sort or fill-in as it goes (null: set it aside); quiet, no notice. */
   onProgress?: Progress;
   /** Family to pick from for activities done together (Day’s highlights). */
@@ -101,58 +113,16 @@ export default function Tools({
 
   if (kept)
     return (
-      <main className="rt-screen" aria-labelledby="rt-title">
-        <SubHead
-          back={{
-            label: "Back to Activities",
-            onClick: onActivities,
-            disabled: busy,
-          }}
-          note="Your private pages"
-        />
-        <section className="rt-book rt-kept ui-card">
-          <Illustration name="saved" size={150} eager className="rt-kept-art" />
-          <div>
-            <p className="lb-kicker">{kept.title}</p>
-            <h2 id="rt-title">Kept in your book</h2>
-            <p className="rt-intro">That’s a good place to stop.</p>
-            {kept.note && <p className="rt-intro">{kept.note}</p>}
-            {kept.checkBack && (
-              <p className="rt-intro">
-                In {kept.checkBack === 3 ? "a few" : "a couple of"} days,
-                Relish will ask how it went, in your own words. It shows on
-                Home, and in Your book under Still going.
-              </p>
-            )}
-            <div className="rt-actions">
-              {kept.pageId && onOpenPage ? (
-                <button
-                  className="lb-primary"
-                  disabled={busy}
-                  onClick={() => onOpenPage(kept.pageId!)}
-                >
-                  Open this page <ArrowRight size={16} />
-                </button>
-              ) : (
-                <button className="lb-primary" disabled={busy} onClick={onPages}>
-                  Open Your book <ArrowRight size={16} />
-                </button>
-              )}
-              <button
-                className="lb-secondary"
-                disabled={busy}
-                onClick={() => {
-                  if (onBack) return onBack();
-                  setKept(null);
-                  setOpenId(null);
-                }}
-              >
-                {onBack ? "Find something else to do" : "Choose another exercise"}
-              </button>
-            </div>
-          </div>
-        </section>
-      </main>
+      <ExerciseDone
+        kept={kept}
+        book={book}
+        busy={busy}
+        onCommit={onCommit}
+        onOpenPage={onOpenPage}
+        onPages={onPages}
+        onSharePassage={onSharePassage}
+        onDone={onDone ?? onActivities}
+      />
     );
 
   if (tool && tool.audiences.includes(audience))
@@ -348,9 +318,11 @@ function OpenExercise({
   const running = tool.kind === "tracker" && activeFor(book, tool.id).length > 0;
   const keep: KeepPage = (page) => {
     let pageId: string | undefined;
+    // The plan is asked about only if they choose "Remind me to say it".
+    const { plan, ...rest } = page;
     onCommit(
       (b) => {
-        const next = keepToolPage(b, page);
+        const next = keepToolPage(b, rest);
         pageId = newJournalId(b, next);
         return next;
       },
@@ -358,8 +330,11 @@ function OpenExercise({
         onKept({
           title: page.title,
           pageId,
-          ...(page.plan && page.toolId && checkBackDays[page.toolId]
-            ? { checkBack: checkBackDays[page.toolId] }
+          toolId: page.toolId,
+          personId: page.personId,
+          text: page.text,
+          ...(plan && page.toolId && checkBackDays[page.toolId]
+            ? { checkBack: checkBackDays[page.toolId], plan }
             : {}),
         }),
       "Kept in your book.",
@@ -695,8 +670,14 @@ type Kept = {
   pageId?: string;
   /** Days until Relish asks about the plan, for exercises that check back. */
   checkBack?: number;
+  /** The plan in their words, asked about only on "Remind me to say it". */
+  plan?: string;
   /** One more line about what was kept (a trip's day number). */
   note?: string;
+  toolId?: string;
+  personId?: string;
+  /** The kept page's words, shown on the finish screen. */
+  text?: string;
 };
 /** The journal page a change added, as a Your book page id. */
 function newJournalId(before: Book, after: Book) {
@@ -1248,12 +1229,29 @@ function HabitScreen({
     return `${q.done} of ${q.total} ${days ? "days" : "marked"}`;
   };
 
+  // A day slipped by: today is offered back before anything else.
+  const slipped = days ? missedDay(book) : undefined;
+  const nudge = slipped && slipped.tool.id === tool.id ? slipped : undefined;
   return (
     <main className="rt-screen" aria-labelledby="rt-title">
       <SubHead
         back={{ label: backLabel, onClick: onBack, disabled: busy }}
         note="Your private pages"
       />
+      {nudge && (
+        <HabitNudge
+          key={nudge.run.id}
+          book={book}
+          run={nudge.run}
+          tool={nudge.tool}
+          busy={busy}
+          onMark={() => mark(nudge.run, true)}
+          onRemind={() =>
+            onCommit((b) => remindTonight(b, nudge.run.id), undefined, "Home will show this again this evening.")
+          }
+          onStop={() => onCommit((b) => stopTracker(b, nudge.run.id), undefined, "Stopped. Nothing else changes.")}
+        />
+      )}
       <section className="rt-book ui-card rt-habit">
         <div className="rt-habit-head">
           <h2 id="rt-title">{tool.title}</h2>
@@ -1589,5 +1587,185 @@ function SquareChanger({
         </form>
       )}
     </fieldset>
+  );
+}
+
+/** What someone came away with, in a sentence: the finish screen's headline. */
+function cameAway(book: Book, kept: Kept) {
+  const tool = kept.toolId ? toolById(kept.toolId) : undefined;
+  const name = book.people.find((p) => p.id === kept.personId)?.name;
+  switch (tool?.id) {
+    case "unseen":
+      return `You have something to say to ${name ?? "them"}.`;
+    case "repair":
+      return name ? `You have words for a repair with ${name}.` : "You have words for a repair.";
+    case "soft-start":
+      return name ? `You have a first sentence for ${name}.` : "You have a first sentence ready.";
+    case "thought-court":
+      return "You have a fairer thought to keep.";
+    case "iceberg":
+      return `You have a guess at what’s underneath${name ? ` for ${name}` : ""}.`;
+    case "helps-upset":
+      return "You have your own list for hard moments.";
+    case "drains-fills":
+      return "You know what to shrink and what to grow.";
+    case "load":
+      return "You can see how the load is split.";
+    case "day-highlights":
+      return "The day is kept.";
+  }
+  if (tool?.kind === "tracker" && tool.mode === "days" && tool.doneLine)
+    return `${tool.doneLine}${name ? ` with ${name}` : ""}.`;
+  return "Kept in your book.";
+}
+/** The page's paragraphs as label and words: "What to say: …" → label, words. */
+function sections(text: string) {
+  return text
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => {
+      const colon = p.match(/^([^:\n]{2,40}):\s+([\s\S]+)$/);
+      if (colon) return { label: colon[1], text: colon[2] };
+      const blank = p.match(/^([^\n]{2,40}…)\s+([\s\S]+)$/);
+      if (blank) return { label: blank[1], text: blank[2] };
+      return { label: "", text: p };
+    });
+}
+
+/**
+ * The exercise finish screen (Scott's board, 2026-11-21): what you came away
+ * with, the answer on a private journal page, then what now. "Remind me to
+ * say it" schedules the check-back, for exercises that have one.
+ */
+function ExerciseDone({
+  kept,
+  book,
+  busy,
+  onCommit,
+  onOpenPage,
+  onPages,
+  onSharePassage,
+  onDone,
+}: {
+  kept: Kept;
+  book: Book;
+  busy: boolean;
+  onCommit: Commit;
+  onOpenPage?: (id: string) => void;
+  onPages: () => void;
+  onSharePassage?: (pageId: string) => void;
+  onDone: () => void;
+}) {
+  const [reminded, setReminded] = useState(false);
+  const tool = kept.toolId ? toolById(kept.toolId) : undefined;
+  // "With Anna." / "About Anna." is already in the headline.
+  const parts = sections(kept.text || "").filter((p) => !/^(With|About) [^.]{1,60}\.$/.test(p.text));
+  const say = tool?.kind === "builder" ? parts.at(-1) : undefined;
+  const journalId = kept.pageId?.startsWith("journal:") ? kept.pageId.slice(8) : undefined;
+  const canRemind = !!kept.checkBack && !!kept.plan && !!journalId;
+  return (
+    <main className="rt-screen ha-done" aria-labelledby="rt-title">
+      <div className="ha-done-main">
+        <p className="ha-quiet">{tool ? `${tool.title} · finished` : kept.title}</p>
+        <h2 id="rt-title" className="ha-done-title">
+          {cameAway(book, kept)}
+        </h2>
+        {parts.length > 0 && (
+          <article className="ha-journal">
+            <Sprig className="ha-journal-sprig" />
+            <p className="ha-journal-meta">
+              <span className="ha-journal-date">
+                {new Date().toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}
+              </span>
+              <span className="ha-only">
+                <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+                  <rect x="5" y="11" width="14" height="10" rx="2" />
+                  <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                </svg>
+                Only me
+              </span>
+            </p>
+            {parts.map((part, i) => (
+              <div key={i}>
+                {part.label && <p className="ha-done-label">{part.label}</p>}
+                <p className={part === say ? "ha-done-say" : "ha-done-text"}>
+                  {part === say ? `“${part.text}”` : part.text}
+                </p>
+              </div>
+            ))}
+          </article>
+        )}
+        {kept.note && <p className="ha-quiet">{kept.note}</p>}
+        <p className="ha-saved">
+          <Check size={20} aria-hidden="true" color="#43513a" strokeWidth={2.6} />
+          Kept in your book. Only you can see it.
+        </p>
+      </div>
+      <aside className="ha-done-side" aria-labelledby="ha-done-now">
+        <Illustration
+          name={(tool && exerciseIllustration[tool.id]) || "saved"}
+          size={300}
+          eager
+          className="ha-done-art"
+        />
+        <h2 id="ha-done-now">What now?</h2>
+        {canRemind &&
+          (reminded ? (
+            <p className="ha-saved" role="status">
+              <Check size={20} aria-hidden="true" color="#43513a" strokeWidth={2.6} />
+              In {kept.checkBack === 3 ? "three" : "two"} days Relish asks how it went, here on Home.
+            </p>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="ha-btn"
+                disabled={busy}
+                onClick={() =>
+                  onCommit(
+                    (b) =>
+                      scheduleCheckBack(b, {
+                        toolId: kept.toolId!,
+                        pageId: journalId!,
+                        plan: kept.plan!,
+                        personId: kept.personId,
+                      }),
+                    () => setReminded(true),
+                    "We’ll ask how it went.",
+                  )
+                }
+              >
+                {tool?.id === "iceberg" ? "Remind me to try it" : "Remind me to say it"}
+              </button>
+              <p className="ha-quiet">
+                In {kept.checkBack === 3 ? "three" : "two"} days Relish asks how it went. Only in the app.
+              </p>
+            </>
+          ))}
+        {kept.pageId && onSharePassage && kept.pageId.startsWith("journal:") && (
+          <button
+            type="button"
+            className="ha-ghost"
+            disabled={busy}
+            onClick={() => onSharePassage(kept.pageId!)}
+          >
+            Share a passage
+          </button>
+        )}
+        {kept.pageId && onOpenPage ? (
+          <button type="button" className="ha-link" disabled={busy} onClick={() => onOpenPage(kept.pageId!)}>
+            Open this page
+          </button>
+        ) : (
+          <button type="button" className="ha-link" disabled={busy} onClick={onPages}>
+            Open my book
+          </button>
+        )}
+        <button type="button" className="ha-link" disabled={busy} onClick={onDone}>
+          Done for now
+        </button>
+      </aside>
+    </main>
   );
 }

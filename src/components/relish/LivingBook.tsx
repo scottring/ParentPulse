@@ -26,6 +26,7 @@ import {
   nextKind,
   pauseVisit,
   pendingPractice,
+  recordOfflinePlay,
   recordRound,
   startGame,
   updateDraft,
@@ -33,6 +34,7 @@ import {
   type Game,
   type GameAction,
   type Player,
+  type PlayRecord,
   type SessionKind,
 } from "@/lib/relish/living";
 import type { useLocalBook } from "./useLocalBook";
@@ -48,7 +50,6 @@ import {
 } from "@/lib/relish/journal";
 import "./duo.css";
 import "./places.css";
-import FamilyHome from "./FamilyHome";
 import Illustration, { Emblem } from "./Illustration";
 import { BookSpread, SubHead } from "./ui";
 import { gameIllustration, topicIllustration } from "./illustrations";
@@ -57,10 +58,15 @@ import { reviewManualIdea } from "@/lib/relish/manual";
 import {
   answerCheckBack,
   clearExerciseRun,
+  remindTonight,
   saveExerciseRun,
+  setMark,
+  stopTracker,
+  todayKey,
   type CheckBackAnswer,
   type ExerciseRun,
 } from "@/lib/relish/tools";
+import { playNotePage } from "@/lib/relish/play-notes";
 import GroupPlay from "./GroupPlay";
 import Tools from "./Tools";
 import ConnectedEditions from "./ConnectedEditions";
@@ -79,7 +85,7 @@ import { localFamily, type FamilyAccess } from "./useFamilyBook";
 import { newFamilyPage, type FamilyPage } from "@/lib/relish/family-pages";
 import { sendToPartners } from "@/lib/relish/partner-share";
 import { takeSuggestion, takenToday, type NudgeAction } from "@/lib/relish/nudges";
-import { isChild, isFamily, underWay, type DoFilter, type UnderWay } from "@/lib/relish/catalog";
+import { isChild, isFamily, type DoFilter, type UnderWay } from "@/lib/relish/catalog";
 import { canUseOnline, ageLabels, audienceOf } from "@/lib/relish/profiles";
 
 // Four places, plus the sub-screens that open inside them.
@@ -187,7 +193,8 @@ export default function LivingBook({
     [gameOffer, setGameOffer] = useState<Game["kind"] | undefined>(),
     [bookWho, setBookWho] = useState<string | undefined>(),
     [bookQuery, setBookQuery] = useState(""),
-    [kept, setKept] = useState(false);
+    [kept, setKept] = useState(false),
+    [passage, setPassage] = useState(false);
   const [space, setSpaceState] = useState<Space>(() =>
     startView === "family" ? "family" : (readSpace(vault.editionId) ?? "me"),
   );
@@ -265,6 +272,7 @@ export default function LivingBook({
     setBookWho(undefined);
     setBookQuery("");
     setKept(false);
+    setPassage(false);
     setView(next);
     setClosed(false);
     setPageKey((n) => n + 1);
@@ -371,6 +379,38 @@ export default function LivingBook({
     else if (g.kind === "draft") quickEntry(false, g.draft);
     else openExercise(g.toolId);
   }
+  /** Lets something under way go without keeping it. */
+  function discard(g: UnderWay) {
+    void commit(
+      (b) => discardUnderWay(b, g),
+      undefined,
+      g.kind === "game" ? "Round ended. Nothing was kept." : "Let go.",
+    );
+  }
+  /**
+   * A played round leaves one short note in Our family book (game, who, the
+   * day); the answers stay here unless everyone approves a shared page. The
+   * note's id comes from the play, so recording again never adds a second.
+   * Only an adult's book notes plays; a child's book doesn't.
+   */
+  const noted = useRef(new Set<string>());
+  async function notePlay(play: Pick<PlayRecord, "id" | "kind" | "players" | "playedAt">) {
+    if (audienceOf(book) !== "adult" || noted.current.has(play.id)) return;
+    noted.current.add(play.id);
+    const page = playNotePage(play, { name: book.owner, bookId: myBookId });
+    if (familyAccess.pages.some((p) => p.id === page.id)) return;
+    try {
+      await familyAccess.add(page);
+    } catch {
+      // The round is still in this book; the note can go up next time it's recorded.
+      noted.current.delete(play.id);
+    }
+  }
+  /** After a change that may have reached the reveal: note the play once. */
+  function notePlayOf(gameId: string | undefined, b: Book) {
+    const play = gameId ? (livingOf(b).plays || []).find((r) => r.id === gameId) : undefined;
+    if (play) void notePlay(play);
+  }
   /** Keeps a suggestion's draft just as it stands. */
   function keepDraft(entry: JournalEntry) {
     void commit(
@@ -449,16 +489,19 @@ export default function LivingBook({
   }
   function gameAction(action: GameAction) {
     const gameId = l.game?.id;
+    let after: Book | undefined;
     void commit(
-      (b) =>
-        changeLiving(b, (x) => {
+      (b) => {
+        after = changeLiving(b, (x) => {
           if (!x.game || x.game.id !== gameId)
             throw new Error("This game changed. Reopen its latest turn.");
           // A round that reaches its reveal is in the book straight away, even
           // if nobody taps Finish round (Scott, 2026-11-20).
           return recordRound({ ...x, game: advanceGame(x.game, action) });
-        }),
-      undefined,
+        });
+        return after;
+      },
+      () => after && notePlayOf(gameId, after),
       action.type === "approve" ? "Approval updated." : "",
     );
   }
@@ -502,11 +545,20 @@ export default function LivingBook({
       return false;
     }
   }
-  function finishGame() {
+  function finishGame(again = false) {
+    const gameId = l.game?.id;
+    const kind = l.game?.kind;
+    let after: Book | undefined;
     void commit(
-      finishRound,
-      () => openFamily(),
-      "A good place to stop.",
+      (b) => (after = finishRound(b)),
+      () => {
+        if (after) notePlayOf(gameId, after);
+        if (again && kind) {
+          navigate("do");
+          setGameOffer(kind);
+        } else openFamily();
+      },
+      again ? "" : "A good place to stop.",
     );
   }
   const sessionOpen = view === "session" && v && v.status !== "complete";
@@ -540,19 +592,6 @@ export default function LivingBook({
     ...(family || []).map((p) => p.name),
     ...book.people.filter(isChild).map((p) => p.name),
   ].filter((n, i, all) => all.indexOf(n) === i);
-  // Account books open directly; without them, family members noted in this
-  // book link to what you've written about them.
-  const homePeople: FamilyPerson[] = family?.length
-    ? family.map((p) => ({ ...p, hasBook: true }))
-    : book.people.filter(isFamily).map((p) => ({
-        id: p.id,
-        name: p.name,
-        note: `${p.role} · notes in your book`,
-        onOpen: () => {
-          openMyBook();
-          setBookWho(p.id);
-        },
-      }));
   // Our family book: the account's, or kept inside this book without one.
   const familyAccess = familyBook ?? localFamily(book, vault.save);
   const myBookId = sample
@@ -1009,64 +1048,45 @@ export default function LivingBook({
               </button>
             )}
           </div>
-        ) : view === "home" && !sharedView && space === "family" && audienceOf(book) === "adult" ? (
-          <FamilyHome
-            plan={book.familyPlan}
-            owner={book.owner}
-            names={[book.owner, ...members.map((m) => m.name)]}
-            busy={busy}
-            headingRef={heading}
-            latestShared={familyAccess.pages
-              .filter((p) => p.kind === "passage")
-              .map((p) => ({ text: p.text, caption: p.caption }))
-              .at(0)}
-            onPlan={(update) =>
-              vault.save((b) => {
-                const { familyPlan, ...rest } = b;
-                const next = update(familyPlan);
-                return next ? { ...rest, familyPlan: next } : rest;
-              })
-            }
-            onKeep={({ text, caption }) => addToFamily({ kind: "passage", text, caption })}
-            onReflect={async (page) => {
-              await addToFamily({ kind: "page", ...page });
-            }}
-            onFamilyBook={openFamily}
-            onWrite={() => quickEntry()}
-            onPlay={() => {
-              navigate("do");
-              setDoFilter("kids");
-            }}
-            going={underWay(book, 1)[0]}
-            onResume={resume}
-          />
         ) : view === "home" && !sharedView ? (
           <Home
             book={book}
+            space={space}
             names={familyNames}
-            people={homePeople}
             busy={busy}
             headingRef={heading}
+            familyPages={familyAccess.pages}
+            myBookId={myBookId}
+            plan={book.familyPlan}
             onNudge={onNudge}
             onResume={resume}
+            onDiscard={discard}
             onSaveDraft={keepDraft}
             onCheckBack={answerPlan}
-            onFilter={(f) => {
-              navigate("do");
-              setDoFilter(f);
-            }}
-            onInvite={canInvite ? () => openInvite() : undefined}
-            onFamily={openFamily}
+            onWrite={() => openJournal()}
+            onActivities={() => navigate("do")}
             onBook={openMyBook}
+            onFamily={openFamily}
             onPage={(id) => {
               browse.current = null;
               openPage(id);
             }}
-            onQuickSave={async (text) => {
-              const draft = { ...newJournalDraft(), text };
-              await vault.save((b) => writeJournalPage(b, draft, 0, "kept"));
-              sensory.play("place");
-              return `journal:${draft.id}`;
+            onMarkToday={(runId) =>
+              void commit((b) => setMark(b, runId, todayKey(), true), undefined, "Marked for today.")
+            }
+            onRemindTonight={(runId) =>
+              void commit(
+                (b) => remindTonight(b, runId),
+                undefined,
+                "Home will show this again this evening.",
+              )
+            }
+            onStopHabit={(runId) =>
+              void commit((b) => stopTracker(b, runId), undefined, "Stopped. Nothing else changes.")
+            }
+            onFilter={(f) => {
+              navigate("do");
+              setDoFilter(f);
             }}
             onQuickWrite={(text, voice) =>
               quickEntry(voice, { ...newJournalDraft(), text })
@@ -1109,23 +1129,48 @@ export default function LivingBook({
           <DoSomething
             key={pageKey}
             book={book}
-            filter={doFilter}
             busy={busy}
             roster={roster}
             headingRef={heading}
             initialGame={gameOffer}
             together={space === "family"}
-            onFilter={setDoFilter}
             onOpen={onNudge}
-            onDraft={(draft) => quickEntry(false, draft)}
-            onResumeGame={() => navigate("play")}
+            onResume={resume}
             onStartGame={createGame}
-            onDiscard={(g) =>
-              void commit(
-                (b) => discardUnderWay(b, g),
-                undefined,
-                g.kind === "game" ? "Round ended. Nothing was kept." : "Removed.",
-              )
+            onDiscard={discard}
+            onOfflinePlay={async (kind, players) => {
+              let play: PlayRecord | undefined;
+              await vault.save((b) => {
+                const [next, record] = recordOfflinePlay(b, kind, players);
+                play = record;
+                return next;
+              });
+              sensory.play("place");
+              if (play) await notePlay(play);
+            }}
+            planFeature={
+              space === "family" && audienceOf(book) === "adult"
+                ? {
+                    plan: book.familyPlan,
+                    owner: book.owner,
+                    names: [book.owner, ...members.map((m) => m.name)],
+                    latestShared: familyAccess.pages
+                      .filter((p) => p.kind === "passage")
+                      .map((p) => ({ text: p.text, caption: p.caption }))
+                      .at(0),
+                    onPlan: (update) =>
+                      vault.save((b) => {
+                        const { familyPlan, ...rest } = b;
+                        const next = update(familyPlan);
+                        return next ? { ...rest, familyPlan: next } : rest;
+                      }),
+                    onKeep: ({ text, caption }) => addToFamily({ kind: "passage", text, caption }),
+                    onReflect: async (page) => {
+                      await addToFamily({ kind: "page", ...page });
+                    },
+                    onFamilyBook: openFamily,
+                  }
+                : undefined
             }
           />
         ) : view === "tools" && !sharedView ? (
@@ -1148,6 +1193,12 @@ export default function LivingBook({
             onProgress={saveProgress}
             initialId={exercise}
             onBack={exercise ? backToDo : undefined}
+            onDone={() => navigate("home")}
+            onSharePassage={(id) => {
+              browse.current = null;
+              openPage(id);
+              setPassage(true);
+            }}
           />
         ) : view === "manual" && !sharedView ? (
           <Manual
@@ -1242,6 +1293,7 @@ export default function LivingBook({
             familyNames={members.map((m) => m.name)}
             onFamilyAdd={addToFamily}
             initialCelebrate={kept}
+            initialPassage={passage}
             onKept={(id, problem) => {
               // The saved page opens in Book with "Entry saved".
               navigate("words");
@@ -1323,7 +1375,9 @@ export default function LivingBook({
                   )
                 }
                 onPause={endGame}
-                onFinish={finishGame}
+                onFinish={() => finishGame()}
+                onPlayAgain={() => finishGame(true)}
+                familyNote={audienceOf(book) === "adult"}
                 onKeepNotes={
                   book.profile?.kind === "child"
                     ? undefined

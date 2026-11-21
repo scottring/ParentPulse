@@ -1,0 +1,1529 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Home and Activities, both spaces (Scott's approved boards, 2026-11-21):
+   a welcome with its painting, then what's happened beside "What would you
+   like to do?"; Activities with one featured thing, what's under way and
+   shelves by situation; the finish screens and the gentle nudges.
+   Paintings, journal-page cards with the sprig, the cloth cover, butter only
+   for words the family shared. Tokens come from ui.css.
+   One document at every width: the grid re-flows, nothing remounts.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.rp-shell.rp-at-home .lb-desk,
+.rp-shell.rp-at-do .lb-desk,
+.rp-shell.rp-at-tools .lb-desk {
+  max-width: 1280px;
+}
+@media (min-width: 1100px) {
+  .rp-shell.rp-at-home .lb-desk,
+  .rp-shell.rp-at-do .lb-desk,
+  .rp-shell.rp-at-tools .lb-desk {
+    padding-left: 64px;
+    padding-right: 64px;
+  }
+}
+
+.lb-app.rp-shell .ha-quiet {
+  margin: 0;
+  color: var(--ui-muted);
+  font: 400 16px/1.4 var(--sans);
+}
+.lb-app.rp-shell .ha-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--ui-ink);
+  font: 500 16px/1.3 var(--sans);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.lb-app.rp-shell .ha-link-quiet,
+.lb-app.rp-shell .ha-link-quiet.lb-text {
+  color: var(--ui-muted);
+}
+.lb-app.rp-shell .ha-link:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.lb-app.rp-shell .ha-btn {
+  min-height: 56px;
+  padding: 0 32px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ui-olive);
+  color: var(--ui-on-olive);
+  font: 500 19px/1.2 var(--serif);
+  cursor: pointer;
+}
+.lb-app.rp-shell .ha-btn:not(:disabled):hover {
+  background: var(--ui-olive-dark);
+}
+.lb-app.rp-shell .ha-ghost,
+.lb-app.rp-shell .ha-ghost.lb-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 22px;
+  border: 1.5px solid var(--ui-ink);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ui-ink);
+  font: 500 16px/1.2 var(--sans);
+  text-decoration: none;
+  cursor: pointer;
+}
+.lb-app.rp-shell .ha-btn:disabled,
+.lb-app.rp-shell .ha-ghost:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.lb-app.rp-shell :is(.ha-link, .ha-btn, .ha-ghost, .ha-choice-main, .ha-cover, .ha-page, .ha-card-go, .ha-answer):focus-visible {
+  outline: 3px solid var(--ui-olive);
+  outline-offset: 3px;
+}
+
+/* ── Home ─────────────────────────────────────────────────────────────── */
+.lb-app.rp-shell .ha-home {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  grid-template-rows: auto auto auto 1fr;
+  grid-template-areas:
+    "hero hero"
+    "lead todo"
+    "lately todo"
+    ". todo";
+  column-gap: 56px;
+  row-gap: 0;
+  align-items: start;
+  padding-top: 0;
+}
+.lb-app.rp-shell .ha-home-family {
+  grid-template-rows: auto auto auto auto 1fr;
+  grid-template-areas:
+    "hero hero"
+    "cover todo"
+    "lead todo"
+    "lately todo"
+    ". todo";
+}
+.lb-app.rp-shell .ha-home-family.is-asking {
+  grid-template-areas:
+    "hero hero"
+    "lead todo"
+    "cover todo"
+    "lately todo"
+    ". todo";
+}
+.lb-app.rp-shell .ha-welcome {
+  grid-area: hero;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 40px;
+}
+.lb-app.rp-shell .ha-welcome-words {
+  max-width: 640px;
+}
+.lb-app.rp-shell .ha-welcome h1 {
+  margin: 12px 0 16px;
+  font: 500 clamp(40px, 5.2vw, 66px) / 1.05 var(--serif);
+  letter-spacing: -0.015em;
+}
+.lb-app.rp-shell .ha-welcome h1:focus {
+  outline: none;
+}
+.lb-app.rp-shell .ha-welcome-line {
+  margin: 0;
+  color: var(--ui-ink-soft);
+  font: 400 clamp(19px, 2vw, 24px) / 1.4 var(--serif);
+}
+.lb-app.rp-shell .ha-welcome-art {
+  flex: none;
+  width: clamp(220px, 30vw, 380px);
+  height: auto;
+}
+.lb-app.rp-shell .ha-lead {
+  grid-area: lead;
+  margin-bottom: 18px;
+}
+.lb-app.rp-shell .ha-lately {
+  grid-area: lately;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.lb-app.rp-shell .ha-open {
+  align-self: flex-start;
+}
+.lb-app.rp-shell .ha-empty {
+  padding: 8px 0;
+}
+.lb-app.rp-shell .ha-todo {
+  grid-area: todo;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.lb-app.rp-shell .ha-todo h2 {
+  margin: 0 0 4px;
+  font: 500 30px/1.2 var(--serif);
+}
+
+/* A journal page: cream paper, dark rule, the sprig in its corner. */
+.lb-app.rp-shell .ha-journal {
+  position: relative;
+  padding: 26px 30px;
+  border: 2px solid var(--ui-ink);
+  border-radius: 18px;
+  background: var(--ui-card);
+  box-shadow: 0 2px 0 var(--ui-ink), 0 16px 34px rgba(48, 56, 44, 0.12);
+}
+.lb-app.rp-shell .ha-journal-sprig {
+  position: absolute;
+  top: 6px;
+  right: 14px;
+  width: 96px;
+  height: 96px;
+  pointer-events: none;
+}
+.lb-app.rp-shell .ha-journal-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+}
+.lb-app.rp-shell .ha-journal-date {
+  font: italic 400 17px/1.3 var(--serif);
+}
+.lb-app.rp-shell .ha-only {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #efe6cf;
+  font: 600 13px/1.4 var(--sans);
+}
+.lb-app.rp-shell .ha-journal-title {
+  margin: 14px 90px 10px 0;
+  font: 600 32px/1.15 var(--serif);
+}
+.lb-app.rp-shell .ha-journal-text {
+  margin: 0;
+  font: 400 20px/1.5 var(--serif);
+}
+.lb-app.rp-shell .ha-journal-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--ui-line);
+}
+.lb-app.rp-shell .ha-journal-foot .ha-quiet {
+  font-size: 14px;
+}
+.lb-app.rp-shell .ha-journal-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* A small row: painting, where it stands, the way back in. */
+.lb-app.rp-shell .ha-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 18px 12px 12px;
+  border: 1px solid #e2e0d4;
+  border-radius: 16px;
+  background: var(--ui-card);
+  box-shadow: 0 8px 20px rgba(48, 56, 44, 0.06);
+}
+.lb-app.rp-shell .ha-row.is-fading {
+  opacity: 0.78;
+}
+.lb-app.rp-shell .ha-row-art {
+  flex: none;
+  width: 76px;
+  height: 76px;
+}
+.lb-app.rp-shell .ha-row-words {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.lb-app.rp-shell .ha-row-kicker {
+  color: var(--ui-muted);
+  font: 400 13px/1.35 var(--sans);
+}
+.lb-app.rp-shell .ha-row-title {
+  font: 600 20px/1.25 var(--serif);
+}
+.lb-app.rp-shell .ha-row-detail {
+  color: var(--ui-ink-soft);
+  font: 400 14px/1.4 var(--sans);
+}
+.lb-app.rp-shell .ha-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0 14px;
+}
+.lb-app.rp-shell .ha-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.lb-app.rp-shell .ha-dots span {
+  width: 16px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--ui-line);
+}
+.lb-app.rp-shell .ha-dots span.is-on {
+  background: var(--ui-olive);
+}
+.lb-app.rp-shell .ha-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+.lb-app.rp-shell .ha-days span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--ui-olive-line);
+  border-radius: 50%;
+  font: 500 10px/1 var(--sans);
+}
+.lb-app.rp-shell .ha-days span.is-on {
+  border-color: var(--ui-olive);
+  background: var(--ui-olive);
+  color: var(--ui-on-olive);
+}
+
+/* The painted choices. The title is the button; it covers the card. */
+.lb-app.rp-shell .ha-choice {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 20px 14px 14px;
+  border: 1px solid #e2e0d4;
+  border-radius: 20px;
+  background: var(--ui-card);
+  box-shadow: 0 1px 2px rgba(48, 56, 44, 0.05), 0 12px 26px rgba(48, 56, 44, 0.08);
+}
+.lb-app.rp-shell .ha-choice:hover {
+  border-color: var(--ui-olive-line);
+}
+.lb-app.rp-shell .ha-choice-art {
+  flex: none;
+  width: 104px;
+  height: 104px;
+}
+.lb-app.rp-shell .ha-choice-words {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.lb-app.rp-shell .ha-choice-main {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ui-ink);
+  font: 600 23px/1.2 var(--serif);
+  text-align: left;
+  cursor: pointer;
+}
+.lb-app.rp-shell .ha-choice-main::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+}
+.lb-app.rp-shell .ha-choice-line,
+.lb-app.rp-shell .ha-choice-try {
+  color: var(--ui-ink-soft);
+  font: 400 15px/1.4 var(--sans);
+}
+.lb-app.rp-shell .ha-choice-try {
+  position: relative;
+  z-index: 1;
+  align-self: flex-start;
+  min-height: 32px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: var(--ui-olive-line);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* Our family book's cloth cover, a quote on butter paper, page cards. */
+.lb-app.rp-shell .ha-cover {
+  grid-area: cover;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 18px;
+  padding: 22px 30px 22px 44px;
+  border: 0;
+  border-radius: 14px;
+  color: #f6f4ed;
+  text-align: left;
+  cursor: pointer;
+  background-color: var(--ui-olive);
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.07) 0 1px, transparent 1px 3px),
+    radial-gradient(120% 140% at 30% 10%, rgba(255, 255, 255, 0.07), rgba(0, 0, 0, 0.12));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18), 0 2px 0 #2c3527, 0 14px 30px rgba(48, 56, 44, 0.18);
+}
+.lb-app.rp-shell .ha-cover::before {
+  content: "";
+  position: absolute;
+  left: 22px;
+  top: 14px;
+  bottom: 14px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--ui-gold);
+}
+.lb-app.rp-shell .ha-cover-words {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lb-app.rp-shell .ha-cover-title {
+  font: 500 34px/1.1 var(--serif);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+}
+.lb-app.rp-shell .ha-cover-line {
+  color: #e7dfc6;
+  font: 400 15px/1.3 var(--sans);
+}
+.lb-app.rp-shell .ha-cover-leaf {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  filter: brightness(1.1);
+}
+.lb-app.rp-shell .ha-passage {
+  position: relative;
+  margin: 0;
+  padding: 26px 96px 26px 30px;
+  border: 1px solid #ecdcaa;
+  border-radius: 16px;
+  background: #f9eec9;
+  box-shadow: 0 10px 24px rgba(48, 56, 44, 0.07);
+}
+.lb-app.rp-shell .ha-passage blockquote {
+  margin: 0;
+  font: italic 400 clamp(22px, 2.4vw, 30px) / 1.3 var(--serif);
+}
+.lb-app.rp-shell .ha-passage figcaption {
+  margin-top: 12px;
+  color: var(--ui-ink-soft);
+  font: 400 15px/1.4 var(--sans);
+}
+.lb-app.rp-shell .ha-passage-sprig {
+  position: absolute;
+  right: 14px;
+  bottom: 10px;
+  width: 72px;
+  height: 72px;
+}
+.lb-app.rp-shell .ha-pages {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.lb-app.rp-shell .ha-page {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px 22px;
+  border: 1px solid #e2e0d4;
+  border-radius: 16px;
+  background: var(--ui-card);
+  color: var(--ui-ink);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(48, 56, 44, 0.05), 0 10px 24px rgba(48, 56, 44, 0.07);
+}
+.lb-app.rp-shell .ha-page-meta {
+  display: flex;
+  justify-content: space-between;
+  color: var(--ui-muted);
+  font: 400 13px/1.3 var(--sans);
+}
+.lb-app.rp-shell .ha-page-title {
+  font: 600 22px/1.2 var(--serif);
+}
+.lb-app.rp-shell .ha-page-text {
+  font: 400 15px/1.45 var(--sans);
+}
+.lb-app.rp-shell .ha-page-from {
+  margin-top: 4px;
+  color: var(--ui-muted);
+  font: 400 13px/1.3 var(--sans);
+}
+.lb-app.rp-shell .ha-plan-ask {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 24px 28px;
+  border: 1px solid #e2e0d4;
+  border-radius: 18px;
+  background: var(--ui-card);
+  box-shadow: 0 10px 24px rgba(48, 56, 44, 0.07);
+}
+.lb-app.rp-shell .ha-plan-question {
+  margin: 0;
+  font: 500 clamp(22px, 2.4vw, 28px) / 1.25 var(--serif);
+}
+.lb-app.rp-shell .ha-plan-question em {
+  display: block;
+  margin-top: 6px;
+}
+
+/* ── Check-back: "You planned to … Did you get to say it?" ─────────────── */
+.lb-app.rp-shell .ha-checkback {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.lb-app.rp-shell .ha-cb-lead {
+  margin: 0;
+  font: 500 clamp(28px, 3.4vw, 46px) / 1.12 var(--serif);
+}
+.lb-app.rp-shell .ha-cb-quote {
+  margin: 0;
+  padding: 18px 22px;
+  border-left: 3px solid var(--ui-olive-line);
+  border-radius: 0 12px 12px 0;
+  background: var(--ui-card);
+  font: italic 400 clamp(19px, 2vw, 23px) / 1.45 var(--serif);
+}
+.lb-app.rp-shell .ha-cb-ask {
+  margin: 0;
+  font: italic 400 clamp(30px, 3.4vw, 44px) / 1.1 var(--serif);
+}
+.lb-app.rp-shell .ha-answers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.lb-app.rp-shell .ha-answer {
+  min-height: 58px;
+  padding: 0 16px;
+  border: 1.5px solid var(--ui-olive-line);
+  border-radius: 16px;
+  background: transparent;
+  color: var(--ui-ink);
+  font: 500 18px/1.2 var(--sans);
+  cursor: pointer;
+}
+.lb-app.rp-shell .ha-answer:not(:disabled):hover,
+.lb-app.rp-shell .ha-answer[aria-pressed="true"] {
+  border-color: var(--ui-olive);
+  background: var(--ui-sage-soft);
+}
+.lb-app.rp-shell .ha-cb-how {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lb-app.rp-shell .ha-cb-how label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font: 500 15px/1.3 var(--sans);
+}
+.lb-app.rp-shell .ha-cb-how textarea {
+  padding: 12px 14px;
+  border: 1px solid var(--ui-line);
+  border-radius: 12px;
+  background: var(--ui-card);
+  font: 400 17px/1.45 var(--serif);
+}
+.lb-app.rp-shell .ha-row-actions-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 22px;
+}
+
+/* ── A habit that slipped a day ───────────────────────────────────────── */
+.lb-app.rp-shell .ha-habit {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+}
+.lb-app.rp-shell .ha-habit-art {
+  align-self: center;
+  width: 180px;
+  height: 180px;
+}
+.lb-app.rp-shell .ha-habit.is-compact {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 22px 24px;
+  border: 1px solid #e2e0d4;
+  border-radius: 18px;
+  background: var(--ui-card);
+  box-shadow: 0 10px 24px rgba(48, 56, 44, 0.07);
+}
+.lb-app.rp-shell .ha-habit.is-compact .ha-habit-art {
+  align-self: flex-start;
+  flex: none;
+  width: 120px;
+  height: 120px;
+}
+.lb-app.rp-shell .ha-habit-words {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.lb-app.rp-shell .ha-habit-title {
+  margin: 0;
+  font: 500 clamp(26px, 2.8vw, 34px) / 1.15 var(--serif);
+}
+.lb-app.rp-shell .ha-habit-days {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  max-width: 420px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lb-app.rp-shell .ha-habit-days li {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  border: 1.5px solid var(--ui-disabled);
+  border-radius: 12px;
+  color: var(--ui-muted);
+  font: 400 14px/1 var(--sans);
+}
+.lb-app.rp-shell .ha-habit-days li.is-on {
+  border-color: var(--ui-olive);
+  background: var(--ui-olive);
+  color: var(--ui-on-olive);
+}
+.lb-app.rp-shell .ha-habit-days li.is-today {
+  border: 2px dashed var(--ui-olive);
+  color: var(--ui-ink);
+  font-weight: 600;
+}
+.lb-app.rp-shell .ha-habit-line {
+  margin: 0;
+  font: 400 16px/1.45 var(--sans);
+}
+.lb-app.rp-shell .ha-habit-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.lb-app.rp-shell .ha-habit-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.lb-app.rp-shell .ha-habit-more .ha-ghost {
+  border-color: var(--ui-olive-line);
+}
+.lb-app.rp-shell .ha-habit-fine {
+  font-size: 14px;
+}
+
+/* ── Activities ───────────────────────────────────────────────────────── */
+.lb-app.rp-shell .ha-acts {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  padding-top: 0;
+}
+.lb-app.rp-shell .ha-feature {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 40px;
+}
+.lb-app.rp-shell .ha-feature-words {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 24px;
+}
+.lb-app.rp-shell .ha-feature h1 {
+  margin: 0;
+  color: var(--ui-ink-soft);
+  font: 500 28px/1.2 var(--serif);
+}
+.lb-app.rp-shell .ha-feature h1:focus {
+  outline: none;
+}
+.lb-app.rp-shell .ha-feature-lead {
+  margin: 0;
+  font: 400 clamp(32px, 4vw, 50px) / 1.1 var(--serif);
+}
+.lb-app.rp-shell .ha-feature-small {
+  margin: 0;
+  font: 400 18px/1.45 var(--sans);
+}
+.lb-app.rp-shell .ha-feature-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 28px;
+  margin-top: 8px;
+}
+.lb-app.rp-shell .ha-feature-art {
+  justify-self: center;
+  width: min(100%, 470px);
+  height: auto;
+}
+.lb-app.rp-shell .ha-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.lb-app.rp-shell .ha-section > h2 {
+  margin: 0;
+  font: 500 28px/1.2 var(--serif);
+}
+.lb-app.rp-shell .ha-section > h2.ha-quiet-head {
+  color: var(--ui-muted);
+  font: 500 16px/1.4 var(--sans);
+}
+.lb-app.rp-shell .ha-picks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lb-app.rp-shell .ha-picks .ha-row {
+  height: 100%;
+  padding: 12px 22px 12px 12px;
+}
+.lb-app.rp-shell .ha-shelf {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lb-app.rp-shell .ha-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid #e2e0d4;
+  border-radius: 20px;
+  background: var(--ui-card);
+  box-shadow: 0 1px 2px rgba(48, 56, 44, 0.05), 0 12px 26px rgba(48, 56, 44, 0.08);
+}
+.lb-app.rp-shell .ha-card:hover {
+  border-color: var(--ui-olive-line);
+}
+.lb-app.rp-shell .ha-card-art {
+  display: block;
+  width: 100%;
+  height: 190px;
+  padding: 12px 0 4px;
+  background: var(--ui-page);
+  object-fit: contain;
+}
+.lb-app.rp-shell .ha-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 22px 20px;
+}
+.lb-app.rp-shell .ha-card-title {
+  margin: 0;
+  font: 600 22px/1.2 var(--serif);
+}
+.lb-app.rp-shell .ha-card-line {
+  margin: 0;
+  font: 400 15px/1.45 var(--sans);
+}
+.lb-app.rp-shell .ha-card-who {
+  color: var(--ui-muted);
+  font: 400 14px/1.4 var(--sans);
+}
+.lb-app.rp-shell .ha-card-go {
+  align-self: flex-start;
+  margin-top: auto;
+  min-height: 40px;
+  padding: 6px 0 0;
+  border: 0;
+  background: none;
+  color: var(--ui-ink);
+  font: 500 16px/1.3 var(--sans);
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.lb-app.rp-shell .ha-card-go::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+}
+.lb-app.rp-shell .ha-offline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 18px;
+  border-top: 1px solid var(--ui-line);
+}
+.lb-app.rp-shell .ha-offline-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid #e2e0d4;
+  border-radius: 16px;
+  background: var(--ui-card);
+}
+.lb-app.rp-shell .ha-offline-form fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.lb-app.rp-shell .ha-offline-form legend {
+  margin-bottom: 8px;
+  font: 500 15px/1.3 var(--sans);
+}
+
+/* The featured family plan reuses the Home plan pieces (family-home.css). */
+.lb-app.rp-shell .ha-feature-plan .fh-first,
+.lb-app.rp-shell .ha-feature-plan .fh-back,
+.lb-app.rp-shell .ha-feature-plan .fh-look {
+  margin: 0;
+}
+
+/* ── Finish screens ───────────────────────────────────────────────────── */
+.lb-app.rp-shell .ha-done {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 64px;
+  align-items: start;
+  padding: 12px 0 64px;
+}
+.lb-app.rp-shell .ha-done-main {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.lb-app.rp-shell .ha-done h1 {
+  margin: 0;
+  font: 500 clamp(34px, 4.4vw, 54px) / 1.08 var(--serif);
+}
+.lb-app.rp-shell .ha-done h1:focus {
+  outline: none;
+}
+.lb-app.rp-shell .ha-done-label {
+  margin: 18px 0 0;
+  color: var(--ui-muted);
+  font: 400 14px/1.4 var(--sans);
+}
+.lb-app.rp-shell .ha-done-label:first-of-type {
+  margin-top: 18px;
+}
+.lb-app.rp-shell .ha-done-text {
+  margin: 4px 0 0;
+  white-space: pre-line;
+  font: 400 21px/1.5 var(--serif);
+}
+.lb-app.rp-shell .ha-done-say {
+  margin: 4px 0 0;
+  font: italic 400 clamp(22px, 2.4vw, 26px) / 1.4 var(--serif);
+}
+.lb-app.rp-shell .ha-saved {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font: 400 16px/1.4 var(--sans);
+}
+.lb-app.rp-shell .ha-done-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 40px;
+}
+.lb-app.rp-shell .ha-done-art {
+  align-self: center;
+  width: 300px;
+  height: 300px;
+}
+.lb-app.rp-shell .ha-done-side h2 {
+  margin: 0;
+  font: 500 26px/1.2 var(--serif);
+}
+.lb-app.rp-shell .ha-done-side .ha-btn,
+.lb-app.rp-shell .ha-done-side .ha-ghost {
+  min-height: 56px;
+}
+.lb-app.rp-shell .ha-game-done {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lb-app.rp-shell .ha-scores {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lb-app.rp-shell .ha-score {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--ui-line);
+  font: 400 16px/1.3 var(--sans);
+}
+.lb-app.rp-shell .ha-score:last-child {
+  border-bottom: 1px solid var(--ui-line);
+}
+.lb-app.rp-shell .ha-score-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid var(--ui-ink);
+  border-radius: 50%;
+  font: 600 14px/1 var(--serif);
+}
+.lb-app.rp-shell .ha-score b {
+  margin-left: auto;
+}
+.lb-app.rp-shell .ha-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid #e2e0d4;
+  border-radius: 14px;
+  background: var(--ui-card);
+  font: 400 15px/1.45 var(--sans);
+}
+.lb-app.rp-shell .ha-note svg {
+  flex: none;
+  margin-top: 2px;
+}
+.lb-app.rp-shell .ha-game-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+}
+
+/* ── Narrower: open Duo, tablets ──────────────────────────────────────── */
+@media (max-width: 940px) {
+  .lb-app.rp-shell .ha-home,
+  .lb-app.rp-shell .ha-home-family,
+  .lb-app.rp-shell .ha-home-family.is-asking {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas: none;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+  .lb-app.rp-shell .ha-welcome {
+    order: 0;
+    margin-bottom: 14px;
+  }
+  .lb-app.rp-shell .ha-lead {
+    order: 1;
+  }
+  .lb-app.rp-shell .ha-todo {
+    order: 2;
+    margin-bottom: 26px;
+  }
+  .lb-app.rp-shell .ha-cover {
+    order: 3;
+  }
+  .lb-app.rp-shell .ha-lately {
+    order: 4;
+  }
+  .lb-app.rp-shell .ha-welcome-art {
+    width: clamp(104px, 26vw, 240px);
+  }
+  .lb-app.rp-shell .ha-feature,
+  .lb-app.rp-shell .ha-done {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  .lb-app.rp-shell .ha-feature-art {
+    order: -1;
+    width: min(100%, 360px);
+  }
+  .lb-app.rp-shell .ha-shelf {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .lb-app.rp-shell .ha-done-side {
+    padding-top: 0;
+  }
+  .lb-app.rp-shell .ha-done-art {
+    order: -1;
+    width: 200px;
+    height: 200px;
+  }
+}
+
+/* ── Phone and closed Duo ─────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .lb-app.rp-shell .ha-welcome {
+    gap: 8px;
+  }
+  .lb-app.rp-shell .ha-welcome .ha-quiet {
+    font-size: 14px;
+  }
+  .lb-app.rp-shell .ha-welcome h1 {
+    margin: 6px 0 6px;
+    font-size: 32px;
+    line-height: 1.08;
+  }
+  .lb-app.rp-shell .ha-welcome-line {
+    font-size: 17px;
+  }
+  .lb-app.rp-shell .ha-welcome-art {
+    width: 104px;
+    height: 104px;
+  }
+  .lb-app.rp-shell .ha-todo {
+    gap: 10px;
+  }
+  .lb-app.rp-shell .ha-todo h2 {
+    margin: 4px 0 2px;
+    font-size: 22px;
+  }
+  .lb-app.rp-shell .ha-choice {
+    gap: 14px;
+    padding: 8px 14px 8px 8px;
+    border-radius: 16px;
+  }
+  .lb-app.rp-shell .ha-choice-main::after {
+    border-radius: 16px;
+  }
+  .lb-app.rp-shell .ha-choice-art {
+    width: 64px;
+    height: 64px;
+  }
+  .lb-app.rp-shell .ha-choice-main {
+    min-height: 32px;
+    font-size: 18px;
+  }
+  .lb-app.rp-shell .ha-choice-line,
+  .lb-app.rp-shell .ha-choice-try {
+    font-size: 13px;
+  }
+  .lb-app.rp-shell .ha-journal {
+    padding: 20px 20px;
+  }
+  .lb-app.rp-shell .ha-journal-sprig {
+    width: 70px;
+    height: 70px;
+  }
+  .lb-app.rp-shell .ha-journal-title {
+    margin-right: 60px;
+    font-size: 26px;
+  }
+  .lb-app.rp-shell .ha-journal-text {
+    font-size: 18px;
+  }
+  .lb-app.rp-shell .ha-row {
+    gap: 12px;
+    padding: 8px 12px 8px 8px;
+  }
+  .lb-app.rp-shell .ha-row-art {
+    width: 64px;
+    height: 64px;
+  }
+  .lb-app.rp-shell .ha-row-title {
+    font-size: 18px;
+  }
+  .lb-app.rp-shell .ha-row {
+    flex-wrap: wrap;
+  }
+  .lb-app.rp-shell .ha-row-words {
+    flex-basis: calc(100% - 80px);
+  }
+  .lb-app.rp-shell .ha-row-actions {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: -6px;
+  }
+  /* One action fits beside the words; only two or more drop below. */
+  .lb-app.rp-shell .ha-row:has(.ha-row-actions > :only-child) {
+    flex-wrap: nowrap;
+  }
+  .lb-app.rp-shell .ha-row:has(.ha-row-actions > :only-child) .ha-row-words {
+    flex: 1;
+    flex-basis: auto;
+  }
+  .lb-app.rp-shell .ha-row:has(.ha-row-actions > :only-child) .ha-row-actions {
+    width: auto;
+    margin-top: 0;
+    white-space: nowrap;
+    flex: none;
+  }
+  .lb-app.rp-shell .ha-cover {
+    padding: 14px 16px 14px 30px;
+    border-radius: 12px;
+  }
+  .lb-app.rp-shell .ha-cover::before {
+    left: 15px;
+    top: 10px;
+    bottom: 10px;
+  }
+  .lb-app.rp-shell .ha-cover-title {
+    font-size: 22px;
+  }
+  .lb-app.rp-shell .ha-cover-line {
+    font-size: 13px;
+  }
+  .lb-app.rp-shell .ha-cover-leaf {
+    width: 48px;
+    height: 48px;
+  }
+  .lb-app.rp-shell .ha-passage {
+    padding: 18px 64px 18px 18px;
+  }
+  .lb-app.rp-shell .ha-passage blockquote {
+    font-size: 22px;
+  }
+  .lb-app.rp-shell .ha-passage figcaption {
+    font-size: 13px;
+  }
+  .lb-app.rp-shell .ha-passage-from {
+    display: none;
+  }
+  .lb-app.rp-shell .ha-passage-sprig {
+    width: 52px;
+    height: 52px;
+  }
+  .lb-app.rp-shell .ha-pages {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .lb-app.rp-shell .ha-page {
+    padding: 14px 16px;
+  }
+  .lb-app.rp-shell .ha-page-title {
+    font-size: 19px;
+  }
+  .lb-app.rp-shell .ha-answers {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lb-app.rp-shell .ha-habit.is-compact {
+    flex-direction: column;
+    padding: 18px;
+  }
+  .lb-app.rp-shell .ha-habit.is-compact .ha-habit-art {
+    align-self: center;
+  }
+  .lb-app.rp-shell .ha-habit-actions .ha-btn,
+  .lb-app.rp-shell .ha-habit-more {
+    align-self: stretch;
+  }
+  .lb-app.rp-shell .ha-habit-more > * {
+    flex: 1;
+  }
+
+  /* Activities on a phone: the same cards as rows, painting on the left. */
+  .lb-app.rp-shell .ha-acts {
+    gap: 22px;
+  }
+  .lb-app.rp-shell .ha-feature-words {
+    gap: 12px;
+    padding-top: 0;
+  }
+  .lb-app.rp-shell .ha-feature h1 {
+    font-size: 20px;
+  }
+  .lb-app.rp-shell .ha-feature-lead {
+    font-size: 31px;
+    line-height: 1.12;
+  }
+  .lb-app.rp-shell .ha-feature-small {
+    font-size: 15px;
+  }
+  .lb-app.rp-shell .ha-feature-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .lb-app.rp-shell .ha-feature-actions .ha-btn {
+    width: 100%;
+  }
+  .lb-app.rp-shell .ha-feature-actions .ha-link {
+    align-self: center;
+  }
+  .lb-app.rp-shell .ha-feature-art {
+    width: 220px;
+  }
+  .lb-app.rp-shell .ha-section {
+    gap: 10px;
+  }
+  .lb-app.rp-shell .ha-section > h2 {
+    margin-top: 8px;
+    font-size: 22px;
+  }
+  .lb-app.rp-shell .ha-picks,
+  .lb-app.rp-shell .ha-shelf {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .lb-app.rp-shell .ha-card {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    padding: 8px 14px 8px 8px;
+    border-radius: 16px;
+  }
+  .lb-app.rp-shell .ha-card-art {
+    flex: none;
+    width: 76px;
+    height: 76px;
+    padding: 0;
+    background: none;
+  }
+  .lb-app.rp-shell .ha-card-body {
+    gap: 2px;
+    padding: 0;
+  }
+  .lb-app.rp-shell .ha-card-title {
+    font-size: 18px;
+  }
+  .lb-app.rp-shell .ha-card-line {
+    display: none;
+  }
+  .lb-app.rp-shell .ha-card-who {
+    font-size: 12px;
+  }
+  .lb-app.rp-shell .ha-card-go {
+    min-height: 32px;
+    font-size: 14px;
+  }
+  .lb-app.rp-shell .ha-card-go::after {
+    border-radius: 16px;
+  }
+  .lb-app.rp-shell .ha-done-art {
+    width: 100%;
+    height: 200px;
+  }
+  .lb-app.rp-shell .ha-done-side .ha-btn,
+  .lb-app.rp-shell .ha-done-side .ha-ghost {
+    width: 100%;
+  }
+  .lb-app.rp-shell .ha-done h1 {
+    font-size: 34px;
+  }
+}
+
+/* ── Additions: headings, the featured family plan, game art ──────────── */
+.lb-app.rp-shell .ha-done-title {
+  margin: 0;
+  font: 500 clamp(34px, 4.4vw, 54px) / 1.08 var(--serif);
+  letter-spacing: -0.01em;
+}
+.lb-app.rp-shell .ha-quiet-title {
+  margin: 0;
+  font: 500 40px/1.1 var(--serif);
+}
+.lb-app.rp-shell .ha-game-art {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  height: 200px;
+  margin: 0 auto;
+  object-fit: contain;
+}
+.lb-app.rp-shell .ha-game-done {
+  margin-top: 18px;
+}
+.lb-app.rp-shell .ha-game-done .ha-btn {
+  align-self: stretch;
+  max-width: 420px;
+}
+.lb-app.rp-shell .rt-screen > .ha-habit {
+  margin: 8px 0 24px;
+  padding: 24px;
+  border: 1px solid #e2e0d4;
+  border-radius: 18px;
+  background: var(--ui-card);
+}
+
+.lb-app.rp-shell .ha-feature-plan h1 {
+  margin: 0;
+  font: 500 clamp(30px, 3.8vw, 48px) / 1.12 var(--serif);
+  letter-spacing: -0.01em;
+}
+.lb-app.rp-shell .ha-feature-plan h1:focus {
+  outline: none;
+}
+.lb-app.rp-shell .ha-feature-plan .fh-first.ha-feature {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 24px;
+  align-items: center;
+  margin-right: -64px;
+}
+.lb-app.rp-shell .ha-feature-plan .fh-first.ha-no-art {
+  grid-template-columns: minmax(0, 1fr);
+  margin-right: 0;
+}
+.lb-app.rp-shell .ha-feature-plan .fh-first h1 {
+  color: var(--ui-ink-soft);
+  font: 500 28px/1.2 var(--serif);
+}
+.lb-app.rp-shell .ha-feature-plan .fh-has-art .fh-first-words {
+  display: flex;
+  max-width: none;
+  padding-top: 30px;
+}
+.lb-app.rp-shell .ha-feature-plan .fh-invite.ha-feature-lead {
+  margin: 0;
+  font: 400 clamp(32px, 4vw, 52px) / 1.1 var(--serif);
+}
+.lb-app.rp-shell .ha-feature-plan .fh-commit {
+  margin: 0;
+  font: 400 18px/1.45 var(--sans);
+}
+.lb-app.rp-shell .ha-feature-plan .fh-first .fh-actions {
+  width: auto;
+  flex-direction: row;
+  align-items: center;
+  margin-top: 8px;
+}
+.lb-app.rp-shell .ha-feature-plan .fh-art-first.ha-bowls {
+  position: static;
+  order: 0;
+  width: 100%;
+  height: 520px;
+  margin: 0;
+  object-fit: cover;
+  -webkit-mask-image: radial-gradient(ellipse 62% 60% at 55% 52%, #000 50%, transparent 100%);
+  mask-image: radial-gradient(ellipse 62% 60% at 55% 52%, #000 50%, transparent 100%);
+}
+.lb-app.rp-shell .ha-feature-plan .fh-back,
+.lb-app.rp-shell .ha-feature-plan .fh-look {
+  padding-top: 24px;
+}
+@media (max-width: 1100px) {
+  .lb-app.rp-shell .ha-feature-plan .fh-first.ha-feature {
+    margin-right: 0;
+  }
+}
+@media (max-width: 940px) {
+  .lb-app.rp-shell .ha-feature-plan .fh-first.ha-feature {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+  .lb-app.rp-shell .ha-feature-plan .fh-has-art .fh-first-words {
+    display: contents;
+  }
+  .lb-app.rp-shell .ha-feature-plan .fh-first-words > * {
+    order: 0;
+  }
+  .lb-app.rp-shell .ha-feature-plan .fh-art-first.ha-bowls {
+    order: 1;
+    height: clamp(190px, 40vw, 320px);
+    align-self: stretch;
+    -webkit-mask-image: radial-gradient(ellipse 60% 62% at 50% 50%, #000 50%, transparent 100%);
+    mask-image: radial-gradient(ellipse 60% 62% at 50% 50%, #000 50%, transparent 100%);
+  }
+  .lb-app.rp-shell .ha-feature-plan .fh-first-words > .fh-actions,
+  .lb-app.rp-shell .ha-feature-plan .fh-first-words > .fh-error,
+  .lb-app.rp-shell .ha-feature-plan .fh-first-words > .fh-adjust {
+    order: 2;
+  }
+}
+@media (max-width: 600px) {
+  .lb-app.rp-shell .ha-feature-plan .fh-first h1 {
+    font-size: 18px;
+  }
+  .lb-app.rp-shell .ha-feature-plan .fh-invite.ha-feature-lead {
+    font-size: 31px;
+    line-height: 1.12;
+  }
+  .lb-app.rp-shell .ha-feature-plan .fh-commit {
+    font-size: 15px;
+  }
+  .lb-app.rp-shell .ha-feature-plan .fh-first .fh-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .lb-app.rp-shell .ha-feature-plan .fh-first .fh-actions .ha-link {
+    align-self: center;
+  }
+  .lb-app.rp-shell .ha-feature-plan h1 {
+    font-size: 28px;
+  }
+}
+
+/* ── Against the older global button rules (living-book.css) ──────────── */
+.lb-app.rp-shell :is(.ha-link, .ha-choice-main, .ha-choice-try, .ha-card-go, .ha-page, .ha-ghost, .ha-answer):not(:disabled):hover,
+.lb-app.rp-shell :is(.ha-link, .ha-choice-main, .ha-choice-try, .ha-card-go, .ha-page, .ha-ghost, .ha-answer):not(:disabled):active {
+  transform: none;
+}
+.lb-app.rp-shell :is(.ha-link, .ha-choice-main, .ha-choice-try, .ha-card-go):not(:disabled):hover {
+  background: none;
+  text-decoration-color: var(--ui-ink);
+}
+.lb-app.rp-shell .ha-page:not(:disabled):hover {
+  background: var(--ui-card);
+  border-color: var(--ui-olive-line);
+}
+.lb-app.rp-shell .ha-ghost:not(:disabled):hover {
+  background: var(--ui-sage-soft);
+}
+.lb-app.rp-shell .ha-cover:not(:disabled):hover {
+  background-color: var(--ui-olive-dark);
+  transform: none;
+}
+.lb-app.rp-shell .ha-btn:not(:disabled):active {
+  transform: translateY(1px);
+}
+.lb-app.rp-shell .ha-link,
+.lb-app.rp-shell .ha-card-go,
+.lb-app.rp-shell .ha-choice-try {
+  justify-content: flex-start;
+  gap: 0;
+}
+.lb-app.rp-shell .ha-choice-main {
+  display: block;
+  min-height: 0;
+  max-width: none;
+  border-radius: 0;
+}
+.lb-app.rp-shell .ha-page {
+  align-items: stretch;
+  justify-content: flex-start;
+  max-width: none;
+}
+.lb-app.rp-shell .ha-cover {
+  justify-content: flex-start;
+  max-width: none;
+}
+.lb-app.rp-shell .ha-cover-leaf {
+  transform: rotate(-12deg);
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.25));
+}
+.lb-app.rp-shell .ha-answer,
+.lb-app.rp-shell .ha-btn,
+.lb-app.rp-shell .ha-ghost {
+  max-width: none;
+}
+.lb-app.rp-shell .ha-btn {
+  border-radius: 999px;
+}
+
+/* Illustration sets its size inline; these follow the width instead. */
+.lb-app.rp-shell .ha-welcome-art {
+  width: clamp(220px, 30vw, 380px) !important;
+  height: auto !important;
+  aspect-ratio: 1;
+}
+.lb-app.rp-shell .ha-feature-art {
+  width: min(100%, 470px) !important;
+  height: auto !important;
+  aspect-ratio: 1;
+}
+.lb-app.rp-shell .ha-done-art {
+  width: 300px !important;
+  height: 300px !important;
+}
+@media (max-width: 940px) {
+  .lb-app.rp-shell .ha-welcome-art {
+    width: clamp(104px, 26vw, 240px) !important;
+  }
+  .lb-app.rp-shell .ha-feature-art {
+    width: min(100%, 360px) !important;
+  }
+  .lb-app.rp-shell .ha-done-art {
+    width: 200px !important;
+    height: 200px !important;
+  }
+}
+@media (max-width: 600px) {
+  .lb-app.rp-shell .ha-welcome-art {
+    width: 104px !important;
+  }
+  .lb-app.rp-shell .ha-choice-art {
+    width: 64px !important;
+    height: 64px !important;
+  }
+  .lb-app.rp-shell .ha-row-art {
+    width: 64px !important;
+    height: 64px !important;
+  }
+  .lb-app.rp-shell .ha-feature-art {
+    width: 220px !important;
+  }
+  .lb-app.rp-shell .ha-card-art {
+    width: 76px !important;
+    height: 76px !important;
+  }
+  .lb-app.rp-shell .ha-habit.is-compact .ha-habit-art,
+  .lb-app.rp-shell .ha-habit-art {
+    width: 140px !important;
+    height: 140px !important;
+  }
+}
+.lb-app.rp-shell .ha-habit-more .ha-ghost {
+  padding: 0 14px;
+  font-size: 15px;
+  white-space: nowrap;
+}
+

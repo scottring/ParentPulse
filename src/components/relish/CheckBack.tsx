@@ -2,6 +2,8 @@
 import { useState } from "react";
 import type { Book } from "@/lib/relish/model";
 import { outcomes, type Outcome } from "@/lib/relish/living";
+import { idleDays } from "@/lib/relish/activities";
+import "./home-acts.css";
 import {
   checkBackWords,
   toolById,
@@ -10,9 +12,10 @@ import {
 } from "@/lib/relish/tools";
 
 /**
- * "You planned to say … Did you get a chance?" A plan from an exercise,
- * asked about in the person's own words a few days after they kept it.
- * Yes / Not yet / Let it go, as Think it through does for its plans.
+ * "You planned to … Did you get to say it?" (Scott's check-back board,
+ * 2026-11-21). A plan from an exercise, asked about in the person's own
+ * words a few days after they kept it: I said it / Not yet / Let it go.
+ * "Not yet" asks again in two days; nothing is ever sent to anyone.
  */
 export default function CheckBackCard({
   book,
@@ -32,99 +35,90 @@ export default function CheckBackCard({
   const [tried, setTried] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | "">("");
   const [note, setNote] = useState("");
+  const days = idleDays(item.createdAt);
+  const said = words.quote !== undefined;
   return (
     <section
-      className={`rp-nudge rp-checkback ${className}`}
+      className={`ha-checkback ${className}`}
       aria-label={`Your plan from ${tool?.title || "an exercise"}`}
     >
-      <div className="rp-nudge-text">
-        <p className="rp-nudge-kicker">
-          <span>Your plan</span>
-          <span aria-hidden="true">·</span>
-          <span>{tool?.title}</span>
+      {tool && (
+        <p className="ha-quiet">
+          {days > 1 ? `${days} days after` : days === 1 ? "The day after" : "Today, from"} {tool.title}
         </p>
-        <p className="rp-checkback-lead">{words.lead}</p>
-        {words.quote && <blockquote className="rp-checkback-quote">“{words.quote}”</blockquote>}
-        <p className="rp-checkback-ask">{tried ? "How did it go?" : words.ask}</p>
-        {tried && (
-          <>
-            <div className="rp-checkback-outcomes" role="group" aria-label="How did it go?">
-              {(Object.keys(outcomes) as Outcome[]).map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  className="ui-chip"
-                  aria-pressed={outcome === key}
-                  disabled={busy}
-                  onClick={() => setOutcome(key)}
-                >
-                  {outcomes[key]}
-                </button>
-              ))}
-            </div>
-            <label className="rp-checkback-note">
-              What happened? · optional
-              <textarea
-                rows={2}
-                maxLength={500}
-                value={note}
-                placeholder="They hugged me and said it was okay."
-                onChange={(e) => setNote(e.target.value)}
-              />
-            </label>
-          </>
-        )}
-      </div>
-      <div className="rp-nudge-actions">
-        {tried ? (
-          <>
+      )}
+      <h2 className="ha-cb-lead">{words.lead}</h2>
+      {words.quote && <blockquote className="ha-cb-quote">“{words.quote}”</blockquote>}
+      <p className="ha-cb-ask">{tried ? "How did it go?" : words.ask}</p>
+      {tried ? (
+        <div className="ha-cb-how">
+          <div className="ha-answers" role="group" aria-label="How did it go?">
+            {(Object.keys(outcomes) as Outcome[]).map((key) => (
+              <button
+                key={key}
+                type="button"
+                className="ha-answer"
+                aria-pressed={outcome === key}
+                disabled={busy}
+                onClick={() => setOutcome(key)}
+              >
+                {outcomes[key]}
+              </button>
+            ))}
+          </div>
+          <label>
+            What happened? · optional
+            <textarea
+              rows={2}
+              maxLength={500}
+              value={note}
+              placeholder="They hugged me and said it was okay."
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </label>
+          <div className="ha-row-actions-inline">
             <button
-              className="rp-btn rp-btn-sun"
-              disabled={busy || !outcome}
-              onClick={() =>
-                onAnswer({ kind: "tried", outcome: outcome || undefined, note })
-              }
+              type="button"
+              className="ha-btn"
+              disabled={busy}
+              onClick={() => onAnswer({ kind: "tried", outcome: outcome || undefined, note })}
             >
               Save how it went
             </button>
-            <button
-              className="rp-btn rp-btn-ghost"
-              disabled={busy}
-              onClick={() => setTried(false)}
-            >
+            <button type="button" className="ha-link" disabled={busy} onClick={() => setTried(false)}>
               Back
             </button>
-          </>
-        ) : (
-          <>
-            <button
-              className="rp-btn rp-btn-sun"
-              disabled={busy}
-              onClick={() => setTried(true)}
-            >
-              Yes, I did
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="ha-answers" role="group" aria-label={words.ask}>
+            <button type="button" className="ha-answer" disabled={busy} onClick={() => setTried(true)}>
+              {said ? "I said it" : "I tried it"}
             </button>
             <button
-              className="rp-btn rp-btn-ghost"
+              type="button"
+              className="ha-answer"
               disabled={busy}
               onClick={() => onAnswer({ kind: "later" })}
             >
               Not yet
             </button>
             <button
-              className="rp-btn rp-btn-ghost"
+              type="button"
+              className="ha-answer"
               disabled={busy}
               onClick={() => onAnswer({ kind: "let-go" })}
             >
               Let it go
             </button>
-            <p className="rp-checkback-fine">
-              “Not yet” asks again in two days. “Let it go” sets it aside; the
-              page stays in Your book.
-            </p>
-          </>
-        )}
-      </div>
+          </div>
+          <p className="ha-quiet ha-cb-fine">
+            “Not yet” asks again in two days. “Let it go” stops asking; the page stays in your
+            book. Nothing else happens.
+          </p>
+        </>
+      )}
     </section>
   );
 }

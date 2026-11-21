@@ -108,6 +108,7 @@ export default function Journal({
   familyNames = [],
   onFamilyAdd,
   initialCelebrate = false,
+  initialPassage = false,
   onKept,
 }: {
   book: Book;
@@ -119,6 +120,8 @@ export default function Journal({
   onFamilyAdd?: FamilyAdd;
   /** Opens on a just-saved page with "Entry saved". */
   initialCelebrate?: boolean;
+  /** Opens the reading page with "Choose a passage" already showing. */
+  initialPassage?: boolean;
   /** After Save to my book: show the page in Book instead of here. */
   onKept?: (journalId: string, problem?: string) => void;
   /** Family with their own books in the library, so they can be tagged too. */
@@ -153,7 +156,7 @@ export default function Journal({
   );
   const [celebrate, setCelebrate] = useState(initialCelebrate);
   const [query, setQuery] = useState("");
-  const [excerpt, setExcerpt] = useState<string | null>(null);
+  const [excerpt, setExcerpt] = useState<string | null>(initialPassage ? "" : null);
   const [problem, setProblem] = useState("");
   const prose = useRef<HTMLElement>(null);
   const sensory = useSensory();

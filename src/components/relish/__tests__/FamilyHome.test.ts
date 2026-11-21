@@ -25,10 +25,16 @@ const adult = (extra: Partial<Book> = {}): Book => ({
   ],
   ...extra,
 });
-const toFamily = () =>
+const toFamilySpace = () =>
   fireEvent.click(
     within(screen.getByRole("group", { name: "Whose pages" })).getByRole("button", { name: "Our family" }),
   );
+/** The family plan is featured on Activities in Our family (2026-11-21). */
+const toFamily = () => {
+  toFamilySpace();
+  fireEvent.click(screen.getByRole("button", { name: "Activities" }));
+};
+const invite = () => document.querySelector(".fh-invite")!.textContent;
 const plan = (daysAgo: number) =>
   startPlan({
     goal: "hearing",
@@ -40,46 +46,76 @@ const plan = (daysAgo: number) =>
     now: new Date(Date.now() - daysAgo * 86_400_000),
   });
 
-it("Just me keeps today's Home; Our family opens on a suggestion already previewed", () => {
+it("Home in both spaces: a welcome, then what's happened beside three painted choices", () => {
   openBook(adult());
-  expect(screen.getByRole("heading", { name: "Hi Scott. Here’s one small thing." })).toBeTruthy();
+  expect(screen.getByRole("heading", { level: 1, name: "Welcome, Scott." })).toBeTruthy();
   // Journal opens the editor; there is no second Write button in the header.
   expect(screen.queryByRole("button", { name: /^\+?\s*Write$/ })).toBeNull();
+  const todo = screen.getByRole("region", { name: "What would you like to do?" });
+  expect(within(todo).getAllByRole("button").filter((b) => b.className.includes("ha-choice-main")).map((b) => b.textContent)).toEqual([
+    "Write a journal entry",
+    "Do an activity",
+    "Read about my family",
+  ]);
+  toFamilySpace();
+  const family = screen.getByRole("region", { name: "What would you like to do?" });
+  expect(within(family).getAllByRole("button").filter((b) => b.className.includes("ha-choice-main")).map((b) => b.textContent)).toEqual([
+    "Write in our family book",
+    "Do an activity together",
+    "Read about our family",
+  ]);
+  expect(within(family).getByText("This week: Hearing each other out, at dinner")).toBeTruthy();
+  expect(screen.getByRole("button", { name: /Our family book/ })).toBeTruthy();
+});
+
+it("Our family Home asks how the plan went and sends you to it in Activities", () => {
+  openBook(adult({ familyPlan: plan(3) }));
+  toFamilySpace();
+  const ask = screen.getByRole("region", { name: "How is it going?" });
+  expect(within(ask).getByText("Hearing each other out · Day 4 of 14")).toBeTruthy();
+  fireEvent.click(within(ask).getByRole("button", { name: "Say how it went" }));
+  expect(screen.getByRole("group", { name: "How did it go?" })).toBeTruthy();
+});
+
+it("Activities in Our family features the family plan, already previewed", () => {
+  openBook(adult());
   toFamily();
-  expect((screen.getByLabelText("What would you like a little more of in your family?") as HTMLSelectElement).value).toBe("hearing");
-  expect(
-    screen.getByRole("heading", {
-      level: 1,
-      name: "At dinner, let someone finish a story. Then ask one question about it.",
-    }),
-  ).toBeTruthy();
+  expect(screen.getByRole("heading", { level: 1, name: "Hearing each other out" })).toBeTruthy();
+  expect(invite()).toBe("At dinner, let someone finish a story. Then ask one question about it.");
   expect(document.querySelector(".fh-art-first")).toBeTruthy();
-  // Changing the selector previews another small thing; nothing is saved yet.
+  // The selector sits under Adjust the plan; changing it previews another small thing.
+  fireEvent.click(screen.getByRole("button", { name: "Adjust the plan" }));
+  expect((screen.getByLabelText("What would you like a little more of in your family?") as HTMLSelectElement).value).toBe("hearing");
   fireEvent.change(screen.getByLabelText("What would you like a little more of in your family?"), {
     target: { value: "laughing" },
   });
-  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
-    "At dinner, each person tells one thing that made them laugh today.",
-  );
+  expect(invite()).toBe("At dinner, each person tells one thing that made them laugh today.");
+  expect(screen.getByRole("heading", { level: 1, name: "Laughing together" })).toBeTruthy();
+});
+
+it("a plan card on a shelf previews that plan in the featured spot", async () => {
+  const { stored } = openBook(adult({ familyPlan: plan(3) }));
+  toFamily();
+  fireEvent.click(screen.getByRole("button", { name: "Kinder ways to disagree: Try it this week" }));
+  expect(screen.getByRole("heading", { level: 1, name: "Kinder ways to disagree" })).toBeTruthy();
+  expect(screen.getByText(/You’re trying “Hearing each other out” now\. Starting this one replaces it\./)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Keep what we’re trying" }));
+  expect(screen.getByRole("group", { name: "How did it go?" })).toBeTruthy();
+  expect(stored().familyPlan!.goal).toBe("hearing");
 });
 
 it("first visit: choose, the small thing leads, adjust the plan, try it tonight", async () => {
   const { stored } = openBook(adult());
   toFamily();
   expect(stored().familyPlan).toBeUndefined();
-  expect(
-    screen.getByRole("heading", {
-      level: 1,
-      name: "At dinner, let someone finish a story. Then ask one question about it.",
-    }),
-  ).toBeTruthy();
+  expect(invite()).toBe("At dinner, let someone finish a story. Then ask one question about it.");
   expect(screen.getByText(/Try it tonight\. Look back together in two weeks\./)).toBeTruthy();
   const adjust = screen.getByRole("button", { name: "Adjust the plan" });
   expect(adjust.getAttribute("aria-expanded")).toBe("false");
   fireEvent.click(adjust);
   fireEvent.click(screen.getByRole("button", { name: "1 week" }));
   fireEvent.click(screen.getByRole("button", { name: "In the car" }));
-  expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(/^In the car, /);
+  expect(invite()).toMatch(/^In the car, /);
   expect(document.querySelector(".fh-art-first")).toBeNull(); // dinner has the painting
   fireEvent.click(screen.getByRole("button", { name: "At dinner" }));
   expect(document.querySelector(".fh-art-first")).toBeTruthy();
@@ -188,5 +224,5 @@ it("Finish for now without keeping the look-back adds nothing to the book", asyn
   });
   expect(stored().familyPlan).toBeUndefined();
   expect(stored().familyPages || []).toHaveLength(0);
-  expect(screen.getByRole("button", { name: "Choose something to try together" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Try this tonight" })).toBeTruthy();
 });

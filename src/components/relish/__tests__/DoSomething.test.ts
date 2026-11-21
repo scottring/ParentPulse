@@ -28,7 +28,10 @@ vi.mock("../Sensory", () => ({
   SoundControl: () => null,
   SoundSettings: () => null,
 }));
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  localStorage.clear();
+});
 function open(book = emptyBook("Robin")) {
   let stored = book;
   let fail = false;
@@ -69,12 +72,19 @@ function open(book = emptyBook("Robin")) {
     unmount: mounted.unmount,
   };
 }
+const toFamily = () =>
+  fireEvent.click(
+    within(screen.getByRole("group", { name: "Whose pages" })).getByRole("button", { name: "Our family" }),
+  );
+const toMe = () =>
+  fireEvent.click(
+    within(screen.getByRole("group", { name: "Whose pages" })).getByRole("button", { name: "Just me" }),
+  );
 it("opens free writing in one click, keeps the latest words before leaving, and resumes the same page", async () => {
   const app = open();
-  expect(screen.getByRole("heading", { name: "What feels right?" })).toBeTruthy();
+  expect(screen.getByRole("main", { name: "Activities" })).toBeTruthy();
   expect(screen.getByRole("button", { name: /Think it through/ })).toBeTruthy();
-  expect(screen.getByRole("button", { name: /Same page\?/ })).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: /Jot something down/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Journal" }));
   const input = screen.getByRole("textbox", { name: "Your journal entry" });
   fireEvent.change(input, {
     target: { value: "A small adventure, still unfolding" },
@@ -86,13 +96,13 @@ it("opens free writing in one click, keeps the latest words before leaving, and 
   app.fail(true);
   fireEvent.click(screen.getByRole("button", { name: "Activities" }));
   await screen.findByRole("alert");
-  expect(screen.queryByRole("heading", { name: "What feels right?" })).toBeNull();
+  expect(screen.queryByRole("main", { name: "Activities" })).toBeNull();
   expect(screen.getByRole("textbox", { name: "Your journal entry" })).toBe(
     input,
   );
   app.fail(false);
   fireEvent.click(screen.getByRole("button", { name: "Activities" }));
-  await screen.findByRole("heading", { name: "What feels right?" });
+  await screen.findByRole("main", { name: "Activities" });
   expect(app.stored().journal?.[0].text).toBe(
     "A small adventure, still unfolding",
   );
@@ -110,25 +120,40 @@ it("opens free writing in one click, keeps the latest words before leaving, and 
   fireEvent.click(
     screen.getByRole("button", { name: "Choose another activity" }),
   );
-  await screen.findByRole("heading", { name: "What feels right?" });
+  await screen.findByRole("main", { name: "Activities" });
   expect(app.stored().journal).toHaveLength(1);
   expect(app.stored().journal?.[0].status).toBe("kept");
 });
-it("filters by time and mood, and the chosen filter stays pressed", () => {
+it("offers one featured activity, then shelves by situation in each space", () => {
   open({ ...emptyBook("Robin"), profile: { kind: "adult" } });
-  fireEvent.click(screen.getByRole("button", { name: "Something’s hard" }));
-  expect(
-    screen
-      .getByRole("button", { name: "Something’s hard" })
-      .getAttribute("aria-pressed"),
-  ).toBe("true");
-  expect(screen.getByRole("button", { name: /Think it through/ })).toBeTruthy();
-  expect(screen.getByRole("button", { name: /Rewrite the opener/ })).toBeTruthy();
-  expect(screen.queryByRole("button", { name: /Jot something down/ })).toBeNull();
+  // Just me: one featured thing, with a specific action, then the shelves.
+  const main = screen.getByRole("main", { name: "Activities" });
+  expect(within(main).getByText(/Featured this week · just for you/)).toBeTruthy();
+  expect(within(main).getByRole("button", { name: "Show me another" })).toBeTruthy();
+  const shelves = within(main)
+    .getAllByRole("heading", { level: 2 })
+    .map((h) => h.textContent);
+  expect(shelves.slice(0, 3)).toEqual([
+    "Something felt hard",
+    "Feeling stretched thin",
+    "A small thing each day",
+  ]);
+  const hard = screen.getByRole("list", { name: "Something felt hard" });
+  expect(within(hard).getByRole("button", { name: /Plan a repair: Plan what to say/ })).toBeTruthy();
+  // Games are played together: they're in Our family, not Just me.
   expect(screen.queryByRole("button", { name: /Same page\?/ })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "With the kids" }));
-  expect(screen.getByRole("button", { name: /Same page\?/ })).toBeTruthy();
-  expect(screen.queryByRole("button", { name: /Rewrite the opener/ })).toBeNull();
+  toFamily();
+  expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent).slice(0, 3)).toEqual([
+    "At dinner",
+    "In the car",
+    "Something felt hard",
+  ]);
+  const car = screen.getByRole("list", { name: "In the car" });
+  expect(within(car).getByRole("button", { name: "Spot it!: Play Spot it!" })).toBeTruthy();
+  expect(within(car).getByText("Everyone in the car · one phone, read aloud")).toBeTruthy();
+  // The family plan is the featured activity.
+  expect(screen.getByRole("heading", { level: 1, name: "Hearing each other out" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Try this tonight" })).toBeTruthy();
 });
 it("returns a paused child reflection to Do something and resumes its saved step and words after reopening", async () => {
   const child: Book = {
@@ -148,7 +173,7 @@ it("returns a paused child reflection to Do something and resumes its saved step
     target: { value: "We laughed at the same silly thing" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Pause here" }));
-  await screen.findByRole("heading", { name: "What feels right?" });
+  await screen.findByRole("main", { name: "Activities" });
   const paused = app.stored();
   expect(livingOf(paused).visit?.status).toBe("paused");
   app.unmount();
@@ -191,7 +216,7 @@ it("saves one moment, stops cleanly, and recalls the plan in the writer's words 
   fireEvent.click(screen.getByRole("button", { name: /Save my plan/ }));
   await screen.findByRole("heading", { name: "Your plan is kept." });
   fireEvent.click(screen.getByRole("button", { name: /Done for now/ }));
-  await screen.findByRole("heading", { name: /Hi Robin/ });
+  await screen.findByRole("heading", { name: /^Welcome/ });
   // Coming back: the plan, in their words, and whether they had a chance.
   fireEvent.click(screen.getByRole("button", { name: "Activities" }));
   fireEvent.click(screen.getByRole("button", { name: /Think it through/ }));
@@ -243,6 +268,7 @@ it("starts a game from a sheet with the family already filled in", async () => {
       { id: "nb", name: "Neighbor", role: "Friend", color: "sage", note: "", lessons: [] },
     ],
   });
+  toFamily();
   fireEvent.click(screen.getByRole("button", { name: /Guess my small joy/ }));
   const sheet = screen.getByRole("dialog", { name: "Guess my small joy" });
   expect(within(sheet).getByRole("button", { name: "✓ Robin" })).toBeTruthy();
@@ -271,67 +297,44 @@ it("resumes the same group round full-screen and ends the game without locking",
     { id: "b", name: "Sam" },
   ]);
   const app = open({ ...book, living: { ...livingOf(book), game } });
-  fireEvent.click(screen.getByRole("button", { name: /Guess my small joy.*Resume game/ }));
+  toFamily();
+  fireEvent.click(screen.getByRole("button", { name: /Guess my small joy.*Resume Guess my small joy/ }));
   expect(livingOf(app.stored()).game?.id).toBe(game.id);
   expect(screen.queryByRole("button", { name: "Activities" })).toBeNull();
-  expect(screen.queryByRole("button", { name: /Jot something down/ })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "End game" }));
   expect(app.lock).not.toHaveBeenCalled();
-  expect(screen.getByRole("heading", { name: "What feels right?" })).toBeTruthy();
+  expect(screen.getByRole("main", { name: "Activities" })).toBeTruthy();
   expect(livingOf(app.stored()).game?.id).toBe(game.id);
   expect(
-    screen.getByRole("button", { name: /Guess my small joy.*Resume game/ }),
+    screen.getByRole("button", { name: /Guess my small joy.*Resume Guess my small joy/ }),
   ).toBeTruthy();
 });
-it("with “5 min or less”, a paused Same page? still resumes while new 5–10 minute games are left out", async () => {
+it("a paused Same page? waits under Pick up where you left off in Our family", async () => {
   const book: Book = { ...emptyBook("Robin"), profile: { kind: "adult" } };
   const game = newGame("match", [
     { id: "a", name: "Robin" },
     { id: "b", name: "Sam" },
   ]);
   const app = open({ ...book, living: { ...livingOf(book), game } });
-  fireEvent.click(screen.getByRole("button", { name: "5 min or less" }));
-  expect(
-    screen.getByRole("button", { name: "5 min or less" }).getAttribute("aria-pressed"),
-  ).toBe("true");
-  // The row isn't filtered.
+  // Just me lists everything of yours that's under way.
+  expect(screen.getByRole("region", { name: "Pick up where you left off" })).toBeTruthy();
+  toFamily();
   const row = screen.getByRole("region", { name: "Pick up where you left off" });
-  expect(within(row).getByRole("button", { name: /Same page\?.*Resume game/ })).toBeTruthy();
-  // The grid is: no 5–10 minute game as a new card.
-  const grid = screen.getByRole("list", { name: "Activities" });
-  for (const name of [/Same page\?/, /Guess my small joy/, /One story, many voices/, /Spot it!/])
-    expect(within(grid).queryByRole("button", { name })).toBeNull();
-  expect(within(grid).getByRole("button", { name: /Plan a repair/ }).textContent).toContain(
-    "Exercise · 3 min",
-  );
-  expect(screen.getByText(/activities fit\./)).toBeTruthy();
-  fireEvent.click(within(row).getByRole("button", { name: /Same page\?.*Resume game/ }));
+  fireEvent.click(within(row).getByRole("button", { name: /Same page\?.*Resume Same page\?/ }));
   expect(await screen.findByRole("heading", { name: "Same page?" })).toBeTruthy();
   expect(livingOf(app.stored()).game?.id).toBe(game.id);
 });
-it("shows no resume row when nothing is under way, and every card has one sentence and one type line", () => {
+it("shows no resume row when nothing is under way, and every card says what, who, how long and what next", () => {
   open({ ...emptyBook("Robin"), profile: { kind: "adult" } });
   expect(screen.queryByRole("region", { name: "Pick up where you left off" })).toBeNull();
-  expect(screen.queryByRole("heading", { name: "New activities" })).toBeNull();
-  const chips = within(screen.getByRole("group", { name: "Filter by time or mood" }))
-    .getAllByRole("button")
-    .map((b) => b.textContent);
-  expect(chips).toEqual([
-    "All activities",
-    "1 min or less",
-    "5 min or less",
-    "With the kids",
-    "Road trip",
-    "Something’s hard",
-  ]);
-  const card = screen.getByRole("button", { name: /Ten real hellos/ });
-  expect(card.querySelectorAll(".rp-do-line")).toHaveLength(1);
-  expect(card.querySelector(".rp-do-meta")?.textContent).toBe(
-    "Habit · under a minute a day, 10 days",
+  const daily = screen.getByRole("list", { name: "A small thing each day" });
+  const go = within(daily).getByRole("button", { name: "Ten real hellos: Start ten hellos" });
+  const card = go.closest("article")!;
+  expect(card.querySelectorAll(".ha-card-line")).toHaveLength(1);
+  expect(card.querySelector(".ha-card-who")?.textContent).toBe(
+    "You · under a minute a day, 10 days",
   );
-  fireEvent.click(screen.getByRole("button", { name: "1 min or less" }));
-  expect(screen.getByRole("button", { name: /Ten real hellos/ })).toBeTruthy();
-  expect(screen.queryByRole("button", { name: /Notice the unseen work/ })).toBeNull();
+  expect(within(card).getByRole("heading", { name: "Ten real hellos" })).toBeTruthy();
 });
 it("starting a new round from the grid warns it ends the paused one", () => {
   const book: Book = { ...emptyBook("Robin"), profile: { kind: "adult" } };
@@ -340,13 +343,13 @@ it("starting a new round from the grid warns it ends the paused one", () => {
     { id: "b", name: "Sam" },
   ]);
   open({ ...book, living: { ...livingOf(book), game } });
-  expect(screen.getByRole("heading", { name: "New activities" })).toBeTruthy();
-  const grid = screen.getByRole("list", { name: "Activities" });
+  toFamily();
+  const grid = screen.getByRole("list", { name: "At dinner" });
   fireEvent.click(within(grid).getByRole("button", { name: /Same page\?/ }));
   const sheet = screen.getByRole("dialog", { name: "Same page?" });
   expect(within(sheet).getByText("This ends your unfinished round of Same page?.")).toBeTruthy();
 });
-it("continues an unfinished journal page from the resume row", () => {
+it("continues an unfinished journal page from Home, and Activities leaves drafts to Journal", () => {
   const book = writeJournalPage(
     { ...emptyBook("Robin"), profile: { kind: "adult" } },
     { ...newJournalDraft(), text: "Kit asked about the moon" },
@@ -354,8 +357,12 @@ it("continues an unfinished journal page from the resume row", () => {
     "draft",
   );
   open(book);
-  const row = screen.getByRole("region", { name: "Pick up where you left off" });
-  fireEvent.click(within(row).getByRole("button", { name: /Kit asked about the moon.*Keep writing/ }));
+  expect(screen.queryByRole("region", { name: "Pick up where you left off" })).toBeNull();
+  toMe();
+  fireEvent.click(screen.getByRole("button", { name: "Home" }));
+  const lately = screen.getByRole("region", { name: "Lately in your book" });
+  expect(within(lately).getByText("Kit asked about the moon")).toBeTruthy();
+  fireEvent.click(within(lately).getByRole("button", { name: "Keep writing" }));
   expect(
     (screen.getByRole("textbox", { name: "Your journal entry" }) as HTMLTextAreaElement).value,
   ).toBe("Kit asked about the moon");

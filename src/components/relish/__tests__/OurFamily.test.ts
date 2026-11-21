@@ -155,15 +155,12 @@ it("the sample shows its own fictional family pages, a featured page and a kept 
   expect(within(grid).getAllByRole("listitem")).toHaveLength(1);
 });
 
-it("Activities puts things to do together first in Our family", () => {
+it("Activities in Our family has shelves of things to do together", () => {
   openBook(adult());
   tab("Activities");
-  const titles = () =>
-    within(screen.getByRole("list", { name: "Activities" }))
-      .getAllByRole("button")
-      .map((b) => b.textContent || "");
   switchTo("Our family");
-  expect(screen.getByText("Things to do together come first.")).toBeTruthy();
-  expect(titles()[0]).toMatch(/Game/);
-  expect(titles().length).toBeGreaterThan(1);
+  const dinner = screen.getByRole("list", { name: "At dinner" });
+  const first = within(dinner).getAllByRole("button")[0];
+  expect(first.textContent).toMatch(/^Same page\?: Play Same page\?$/);
+  expect(screen.getByRole("list", { name: "In the car" })).toBeTruthy();
 });
