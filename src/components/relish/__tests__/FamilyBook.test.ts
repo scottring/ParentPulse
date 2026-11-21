@@ -246,7 +246,9 @@ it("a passage added in Scott's book shows in Kaleb's Our family, and taking it o
   await waitFor(async () => expect(await loadFamilyPages(library().remote)).toEqual([]), {
     timeout: 15000,
   });
-  expect(screen.getByRole("status").textContent).toBe("Taken out of Our family journal.");
+  expect(
+    screen.getAllByRole("status").some((s) => s.textContent === "Taken out of Our family journal."),
+  ).toBe(true);
 
   // And it's gone from Kaleb's Our family journal too.
   pickJournal("Kaleb’s journal");

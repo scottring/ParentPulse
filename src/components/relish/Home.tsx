@@ -260,11 +260,11 @@ function GoingRow({
     <div className={`ha-row ${leaving ? "is-fading" : ""}`}>
       <Illustration name={underWayArt(item)} size={76} className="ha-row-art" />
       <span className="ha-row-words">
-        <span className="ha-row-kicker">
-          {item.kind === "draft" ? "Draft" : "In progress"}
-          {idle && ` · ${idle}`}
-          {leaving && ` · ${leaving}`}
-        </span>
+        {/* Unfinished things are only yours until they're kept or shared. */}
+        <Whose
+          family={false}
+          extra={`${item.kind === "draft" ? "draft" : "in progress"}${idle ? ` · ${idle}` : ""}${leaving ? ` · ${leaving}` : ""}`}
+        />
         <span className="ha-row-title">{item.title}</span>
         <Progress book={book} item={item} />
       </span>

@@ -174,11 +174,13 @@ export default function Journal({
     setEditor(draft);
     sensory.play("touch");
   }
+  /** Save draft and close: back to the journal it was written in. */
   function leaveEditor() {
     onEditingChange(false);
     setEditor(null);
     setReading(null);
-    onActivities?.();
+    if (onBack) onBack();
+    else onActivities?.();
   }
   if (editor)
     return (

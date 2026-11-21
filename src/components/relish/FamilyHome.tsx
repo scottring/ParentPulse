@@ -203,7 +203,7 @@ function FirstVisit({
   return (
     <section className={`fh-first ha-feature ${dinnerArt(goal, place) ? "fh-has-art" : "ha-no-art"}`}>
       <div className="fh-first-words ha-feature-words">
-        <p className="ha-quiet">Featured this week · for the whole family</p>
+        <p className="ha-quiet">Featured this week · together</p>
         <h1 id="fh-title" ref={headingRef} tabIndex={-1}>
           {own ? "Something to try together, in your own words" : goals[goal].label}
         </h1>

@@ -359,6 +359,7 @@
   }
   .lb-app.rp-shell .rp-mine-head {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
   }
   .lb-app.rp-shell .rp-mine-head .rp-head-actions {
     display: flex;

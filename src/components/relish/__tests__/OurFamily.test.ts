@@ -285,3 +285,29 @@ it("Activities' Together filter has shelves of things to do together", () => {
   expect(first.textContent).toMatch(/^Same page\?: Play Same page\?$/);
   expect(screen.getByRole("list", { name: "In the car" })).toBeTruthy();
 });
+
+it("Save draft and close returns to the journal the draft belongs to, and it stays there", async () => {
+  const app = openBook(adult());
+  familyJournal();
+  fireEvent.click(screen.getByRole("button", { name: "Add to our family journal" }));
+  fireEvent.change(screen.getByRole("textbox", { name: "Your journal entry" }), {
+    target: { value: "Half a family page" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save draft and close" }));
+  await screen.findByRole("heading", { name: "Our family journal", level: 1 });
+  expect(app.stored().journal?.[0]).toMatchObject({ status: "draft", audience: "family" });
+  expect(app.stored().familyPages ?? []).toEqual([]);
+  // My journal shows it as a draft for the family journal; Write today's
+  // entry there starts a private page instead of resuming it.
+  myJournal();
+  expect(screen.getByText("Draft for our family journal")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Write today’s entry" }));
+  expect((screen.getByRole("textbox", { name: "Your journal entry" }) as HTMLTextAreaElement).value).toBe("");
+  expect(screen.getByRole("button", { name: "Save to my journal" })).toBeTruthy();
+  // Back in Our family journal, its button resumes the family draft.
+  familyJournal();
+  fireEvent.click(await screen.findByRole("button", { name: "Add to our family journal" }));
+  expect((screen.getByRole("textbox", { name: "Your journal entry" }) as HTMLTextAreaElement).value).toBe(
+    "Half a family page",
+  );
+});
