@@ -6,6 +6,7 @@ import { webcrypto } from "node:crypto";
 import { emptyBook, sampleBook, type Book } from "@/lib/relish/model";
 import { advanceGame, livingOf, turnPlan, type Game } from "@/lib/relish/living";
 import LivingBook from "../LivingBook";
+import { myJournal } from "./bookHarness";
 import { sameV2 } from "@/lib/relish/__tests__/same-page-v2";
 Object.defineProperty(globalThis, "crypto", {
   value: webcrypto,
@@ -74,10 +75,9 @@ function revealed(): Game {
   }
   return g;
 }
-const everyPage = () =>
-  within(screen.getByRole("heading", { name: "Every page" }).closest("section")!);
+const everyPage = () => within(screen.getByRole("region", { name: "Entries in my journal" }));
 
-it("a game finished without keeping a page shows in Your book under each player", async () => {
+it("a game finished without keeping a page shows in My journal under each player", async () => {
   const book = family();
   const app = openBook({ ...book, living: { ...livingOf(book), game: revealed() } });
   fireEvent.click(screen.getByRole("button", { name: "Activities" }));
@@ -89,30 +89,28 @@ it("a game finished without keeping a page shows in Your book under each player"
   fireEvent.click(await screen.findByRole("button", { name: "Done" }));
   await screen.findByRole("status");
   expect(livingOf(app.stored()).plays).toHaveLength(1);
-  // One short note in Our family book: the game and who played, no answers.
+  // One short note in Our family journal: the game and who played, no answers.
   await waitFor(() => expect(app.stored().familyPages ?? []).toHaveLength(1));
   expect(app.stored().familyPages![0]).toMatchObject({
     id: `play-${livingOf(app.stored()).plays![0].id}`,
     kind: "game",
     text: "Played Same page? with Ella and Kaleb.",
   });
-  // Finishing lands on Book · Our family; the round is in your own book too.
-  await screen.findByRole("heading", { name: "Our family book", level: 1 });
-  fireEvent.click(
-    within(screen.getByRole("group", { name: "Whose pages" })).getByRole("button", { name: "Just me" }),
-  );
+  // Finishing lands on Our family journal, with the note as an entry; the
+  // round is in your own journal too.
+  await screen.findByRole("heading", { name: "Our family journal", level: 1 });
+  expect(
+    within(screen.getByRole("list", { name: "Entries in Our family journal" })).getByRole("button", {
+      name: /Game · Same page\?.*Played Same page\? with Ella and Kaleb/,
+    }),
+  ).toBeTruthy();
+  myJournal();
   const record = everyPage().getByRole("button", { name: /Same page\? with Ella and Kaleb/ });
   expect(record.textContent).toMatch(/^Game/);
   fireEvent.click(screen.getByRole("button", { name: "Ella" }));
   expect(everyPage().getByRole("button", { name: /Same page\? with Ella and Kaleb/ })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Gran" }));
-  expect(everyPage().queryByRole("button", { name: /Same page\?/ })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Me" }));
-  expect(everyPage().queryByRole("button", { name: /Same page\?/ })).toBeNull();
-  fireEvent.click(
-    within(screen.getByRole("group", { name: "Show pages about" })).getByRole("button", { name: "Our family" }),
-  );
-  expect(everyPage().getByRole("button", { name: /Same page\? with Ella and Kaleb/ })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Same page\?/ })).toBeNull();
 });
 
 it("an exercise started with someone is labelled Exercise and filed under them", async () => {
@@ -137,21 +135,21 @@ it("an exercise started with someone is labelled Exercise and filed under them",
     }),
   );
   fireEvent.click(screen.getByRole("button", { name: /Keep this page/ }));
-  await screen.findByText("Kept in your book. Only you can see it.");
+  await screen.findByText("Kept in your journal. Only you can see it.");
   expect(app.stored().journal![0]).toMatchObject({
     title: "What helps when I’m upset",
     people: ["kaleb"],
     source: { kind: "exercise", toolId: "helps-upset" },
   });
   expect(app.stored().journal![0].text).not.toContain("Kaleb");
-  fireEvent.click(screen.getByRole("button", { name: "Book" }));
+  myJournal();
   const page = everyPage().getByRole("button", { name: /What helps when I’m upset/ });
   expect(page.textContent).toMatch(/^Exercise/);
   expect(page.className).toContain("rp-edge-sage");
   fireEvent.click(screen.getByRole("button", { name: "Kaleb" }));
   expect(everyPage().getByRole("button", { name: /What helps when I’m upset/ })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Ella" }));
-  expect(everyPage().queryByRole("button", { name: /What helps when I’m upset/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /What helps when I’m upset/ })).toBeNull();
 });
 
 it("a bingo started with someone carries them to its kept page", async () => {
@@ -167,7 +165,7 @@ it("a bingo started with someone carries them to its kept page", async () => {
 
 it("person chips filter What you’ve learned, and a card names who it is about", () => {
   openBook(sampleBook());
-  fireEvent.click(screen.getByRole("button", { name: "Book" }));
+  myJournal();
   const learned = () =>
     within(screen.getByRole("heading", { name: "What you’ve learned" }).closest("section")!);
   const leoCard = () => learned().queryByText("Endings go better with a heads-up");
@@ -180,10 +178,6 @@ it("person chips filter What you’ve learned, and a card names who it is about"
   expect(leoCard()).toBeNull();
   expect(learned().getByText("A little room to talk")).toBeTruthy();
   expect(learned().getByText(/Relish noticed something · Anna/)).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Me" }));
+  fireEvent.click(screen.getByRole("button", { name: "Everything" }));
   expect(leoCard()).toBeTruthy();
-  fireEvent.click(
-    within(screen.getByRole("group", { name: "Show pages about" })).getByRole("button", { name: "Our family" }),
-  );
-  expect(leoCard()).toBeNull();
 });

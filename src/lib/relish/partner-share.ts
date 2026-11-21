@@ -55,7 +55,7 @@ export async function sendToPartners(
   const circle = snapshot.circle;
   const others = circle.members.filter((m) => m.uid !== user.uid);
   if (!others.length) return 0;
-  const title = passage.title.trim().slice(0, 120) || "A page from our family book";
+  const title = passage.title.trim().slice(0, 120) || "A page from our family journal";
   const text = passage.text.trim().slice(0, 8000);
   const packets = Object.fromEntries(
     await Promise.all(

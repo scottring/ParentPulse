@@ -15,6 +15,7 @@ import {
 } from "@/lib/relish/living";
 import LivingBook from "../LivingBook";
 import GroupPlay from "../GroupPlay";
+import { myJournal } from "./bookHarness";
 Object.defineProperty(globalThis, "crypto", {
   value: webcrypto,
   configurable: true,
@@ -110,7 +111,7 @@ describe("living-book interaction boundaries", () => {
       });
     }
     render(createElement(Harness));
-    fireEvent.click(screen.getByRole("button", { name: "Book" }));
+    myJournal();
     expect(screen.getAllByText("A confidential sample sentence").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "Activities" }));
     fireEvent.click(screen.getByRole("button", { name: /Same page\?/ }));
@@ -196,7 +197,7 @@ describe("living-book interaction boundaries", () => {
     expect(screen.getByText("Making something together")).toBeTruthy();
     expect(screen.getByText("guessed it ✓")).toBeTruthy();
     expect(screen.getByText("passed")).toBeTruthy();
-    expect(screen.getByText(/What everyone said stays in Iris’s book/)).toBeTruthy();
+    expect(screen.getByText(/What everyone said stays in Iris’s journal/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Done" })).toBeTruthy();
     // A shared page is a quiet offer: approvals appear only when asked for.
     expect(screen.queryByRole("button", { name: "Keep in our Family pages" })).toBeNull();

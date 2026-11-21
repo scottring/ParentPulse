@@ -22,6 +22,8 @@ import "./living-book.css";
 import "./account.css";
 // Loaded last: the one set of tokens and shared pieces every screen uses.
 import "./ui.css";
+// Home · Journal ▾ · Activities (2026-11-21), over the screens it reorganizes.
+import "./journal-nav.css";
 
 /** Before a book is open: the wordmark, then one sheet of paper. */
 function Gate({
@@ -269,7 +271,7 @@ function BookGate() {
           <header className="lb-gate-head">
             <p className="lb-wordmark">relish</p>
             <p role="status">
-              {resting ? "Your book is resting. Tap to open it." : "Opening Relish…"}
+              {resting ? "Your journal is resting. Tap to open it." : "Opening Relish…"}
             </p>
           </header>
         </main>
@@ -282,13 +284,13 @@ function BookGate() {
           <section>
             <header className="lb-shelf-heading">
               <p className="lb-kicker">
-                Local books
+                Local journals
               </p>
-              <h1>Choose a book</h1>
+              <h1>Choose a journal</h1>
               <p className="lb-shelf-intro">
-                These books are stored on this device. Open one with its
+                These journals are stored on this device. Open one with its
                 original passphrase, then choose Account to add it to your
-                online library.
+                account.
               </p>
             </header>
             <div className="lb-edition-grid">
@@ -301,7 +303,7 @@ function BookGate() {
                       <ArrowUpRight size={18} />
                     </span>
                     <span className="lb-edition-title">
-                      {e.label}’s book
+                      {e.label}’s journal
                     </span>
                     <small>Enter its passphrase to open</small>
                   </button>
@@ -309,11 +311,11 @@ function BookGate() {
             </div>
             <footer className="lb-shelf-footer">
               <button className="lb-primary" onClick={() => vault.select()}>
-                <Plus size={16} aria-hidden="true" /> Add a book or restore a
+                <Plus size={16} aria-hidden="true" /> Add a journal or restore a
                 backup
               </button>
               <p className="lb-fine">
-                Book names are visible on this device. Writing, games and
+                Journal names are visible on this device. Writing, games and
                 private keys stay encrypted.
               </p>
             </footer>
@@ -330,10 +332,10 @@ function BookGate() {
             error={vault.error}
             onSubmit={vault.open}
             onCancel={vault.shelf}
-            cancelLabel="Back to the bookshelf"
+            cancelLabel="Back to journals on this device"
           />
           <p className="lb-fine lb-gate-note">
-            Choose your own passphrase. Other books on this device aren’t changed.
+            Choose your own passphrase. Other journals on this device aren’t changed.
           </p>
         </Gate>
       );
@@ -341,7 +343,7 @@ function BookGate() {
       return (
         <Gate className="lb-gate-form">
           <Illustration name="locked" size={120} eager className="lb-gate-art-img" />
-          <p className="lb-kicker">Unlock your local book</p>
+          <p className="lb-kicker">Unlock your local journal</p>
           <PrivateNote>Encrypted. Yours to unlock.</PrivateNote>
           <VaultForm
             locked
@@ -349,7 +351,7 @@ function BookGate() {
             error={vault.error}
             onSubmit={vault.open}
             onCancel={vault.shelf}
-            cancelLabel="Choose another book"
+            cancelLabel="Choose another journal"
           />
         </Gate>
       );
@@ -381,7 +383,7 @@ function BookGate() {
             .map((h) => ({
               id: h.id,
               name: h.label,
-              note: "Book in your account",
+              note: "Journal in your account",
               locked: !h.accountManaged,
               onOpen: h.accountManaged
                 ? () => void sync.open(h).catch(() => setAccountOpen(true))
@@ -390,11 +392,23 @@ function BookGate() {
                     setAccountOpen(true);
                   },
             }))
-        : [];
+        : vault.mode === "sample" && vault.book.profile?.kind === "adult"
+          ? // The sample's child, so Kids' journals can be explored too.
+            [{ id: "sample-leo", name: "Leo", onOpen: vault.openSampleChild }]
+          : [];
     return (
       <LivingBook
-        key={`${vault.mode}:${vault.editionId}`}
+        key={`${vault.mode}:${vault.editionId}:${vault.book.profile?.kind ?? ""}`}
         family={family}
+        onBackHome={
+          vault.book.profile?.kind !== "child"
+            ? undefined
+            : vault.mode === "sample"
+              ? vault.closeSampleChild
+              : sync.user
+                ? () => setAccountOpen(true)
+                : undefined
+        }
         familyBook={accountFamily}
         startView={startOn && binding?.remoteId === startOn ? "family" : undefined}
         onAddChild={() => {
@@ -425,7 +439,7 @@ function BookGate() {
           !sync.user
             ? "Sign in"
             : vault.book.profile?.kind === "child"
-              ? "Switch book"
+              ? "Switch journal"
               : "Account"
         }
         syncStatus={sync.status}
@@ -444,7 +458,7 @@ function BookGate() {
           >
             <Cloud size={16} />
             {sync.user
-              ? "Account & synced books"
+              ? "Account & synced journals"
               : "Already use Relish? Sign in"}
           </button>
         )}

@@ -109,18 +109,18 @@ async function setup(mismatch?: "account" | "key", initialPassage?: {title:strin
   }
   render(createElement(Harness));
   await screen.findByText("What gets shared");
-  expect(screen.getByText("Fictional A’s book")).toBeTruthy();
+  expect(screen.getByText("Fictional A’s journal")).toBeTruthy();
   fireEvent.click(screen.getByRole("checkbox", { name: /18 or older/ }));
-  fireEvent.click(screen.getByRole("button", { name: "Connect this book" }));
+  fireEvent.click(screen.getByRole("button", { name: "Connect this journal" }));
   if (mismatch)
     await screen.findByText(
       mismatch === "account"
-        ? /This book belongs to a different online account/
-        : /This account already has a book/,
+        ? /This journal belongs to a different online account/
+        : /This account already has a journal/,
     );
   else {
     await screen.findByText("Test family");
-    fireEvent.click(screen.getByText("Send a passage from your book"));
+    fireEvent.click(screen.getByText("Send a passage from your journal"));
   }
   return {
     sent,
@@ -136,7 +136,7 @@ describe("sharing recovery", () => {
     await setup("key");
     expect(screen.queryByText("Test family")).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Connect this book" }),
+      screen.getByRole("button", { name: "Connect this journal" }),
     ).toBeTruthy();
   });
   it("never removes another edition’s identity when deleting the signed-in account", async () => {

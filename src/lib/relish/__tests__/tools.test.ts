@@ -311,7 +311,7 @@ describe("a habit with several people", () => {
     // Ella can start again later; her finished run is kept with its page.
     expect(() => startTracker(book, "hellos", "ella")).not.toThrow();
   });
-  it("groups habits for Do something and Your book, and names people plainly", () => {
+  it("groups habits for Do something and Your journal, and names people plainly", () => {
     let book = both();
     book = startTracker(book, "thanks-week", "anna");
     expect(runningByTool(book).map((g) => [g.toolId, g.runs.length])).toEqual([
@@ -688,7 +688,7 @@ describe("Same page? in your own words", () => {
     expect(gameText(playWords([{ answer: null }, { answer: null }, { answer: null }]))).toBe("");
   });
 
-  it("keeps an approved page and remembers the round's words in this book only", () => {
+  it("keeps an approved page and remembers the round's words in this journal only", () => {
     const g = playWords([
       { answer: "pancakes", guesses: ["pancakes", "waffles"], marks: ["got", "not"] },
       { answer: "the swings", guesses: ["swings", "slide"], marks: ["got", "close"] },
@@ -956,7 +956,7 @@ describe("sorts and fill-ins under way", () => {
     updatedAt: at(m),
     values: { feel: "tired" },
   });
-  it("keeps one run per exercise, the newest few, and checks them when a book opens", () => {
+  it("keeps one run per exercise, the newest few, and checks them when a journal opens", () => {
     let b = emptyBook("Robin");
     b = saveExerciseRun(b, run("soft-start", 1));
     b = saveExerciseRun(b, { ...run("soft-start", 2), values: { feel: "worn out" } });

@@ -35,7 +35,7 @@ describe("parent edition setup", () => {
       }),
     );
     const submit = screen.getByRole("button", {
-      name: "Open this book",
+      name: "Open this journal",
     }) as HTMLButtonElement;
     expect(submit.disabled).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: /A child or teen/ }));

@@ -444,7 +444,7 @@ export function markTried(book: Book, entryId: string): Book {
   const entry = livingOf(book).entries.find(
     (e) => e.id === entryId && e.kind === "practice",
   );
-  if (!entry) throw new Error("This plan is no longer in your book.");
+  if (!entry) throw new Error("This plan is no longer in your journal.");
   return changeLiving(book, (l) => ({
     ...l,
     entries: l.entries.map((e) =>

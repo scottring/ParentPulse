@@ -178,7 +178,7 @@ const adultWords: GuidedWords = {
     "Write down one moment. That can be the whole thing. If you want, make a small plan to try, and next time note how it went.",
   saveMoment: "Save this moment",
   momentKept: "That moment is kept.",
-  stop: "That’s a good place to stop. You’ll find it in Your book.",
+  stop: "That’s a good place to stop. You’ll find it in My journal.",
   makePlan: "Make a small plan",
   planLabel: "What you’ll try, and when",
   savePlan: "Save my plan",
@@ -279,8 +279,8 @@ export function guidanceFor(book: Pick<Book, "profile">) {
     saveMoment: young ? "Keep my page" : "Save this moment",
     momentKept: young ? "Your page is kept." : "That moment is kept.",
     stop: young
-      ? "That’s a good place to stop. It’s in your book."
-      : "That’s a good place to stop. It’s in your book.",
+      ? "That’s a good place to stop. It’s in your journal."
+      : "That’s a good place to stop. It’s in your journal.",
     makePlan: young ? "Choose something to try" : "Make a small plan",
     planLabel: young ? "What you’ll try" : "What you’ll try, and when",
     savePlan: young ? "Keep my plan" : "Save my plan",

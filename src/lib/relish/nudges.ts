@@ -162,7 +162,7 @@ export const nudgeTemplates: Template[] = [
     audiences: tween,
     time: "About 1 minute",
     text: "What was the best part of your day? Write it, say it, or add a photo.",
-    why: "Your book keeps it safe for later.",
+    why: "Your journal keeps it safe for later.",
     cta: "Write it now",
     action: { kind: "journal" },
   },

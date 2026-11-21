@@ -59,7 +59,7 @@ export function addFamilyPage<B extends Pick<Book, "familyPages">>(book: B, page
   if (!isFamilyPage(page)) throw new Error("This page couldn’t be added. Try a shorter passage.");
   const pages = book.familyPages || [];
   if (pages.some((p) => p.id === page.id)) return book;
-  if (pages.length >= MAX_PAGES) throw new Error("Our family book is full.");
+  if (pages.length >= MAX_PAGES) throw new Error("Our family journal is full.");
   return { ...book, familyPages: [...pages, page] };
 }
 export function removeFamilyPage<B extends Pick<Book, "familyPages">>(book: B, id: string): B {

@@ -195,7 +195,7 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
       if (alive.current)
         setError(
           action === "sign-in"
-            ? "That sign-in didn’t work. Use your Relish account password, not your book passphrase."
+            ? "That sign-in didn’t work. Use your Relish account password, not your journal passphrase."
             : "We couldn’t check your account. Please try again.",
         );
     } finally {
@@ -420,7 +420,7 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
         </div>
         {sample ? (
           <p>
-            Voice writing is available in your private book. This sample never
+            Voice writing is available in your private journal. This sample never
             opens the microphone or sends a recording.
           </p>
         ) : !book.profile ? (
@@ -474,7 +474,7 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
               />
             </label>
             <p className="rj-voice-note">
-              Use your account password here, rather than your book’s
+              Use your account password here, rather than your journal’s
               passphrase. Your writing stays right where it is.
             </p>
             <button className="lb-primary" disabled={busy}>
@@ -556,7 +556,7 @@ function VoiceSession({ book, sample, onClose, remaining, onInsert }: Props) {
             <p className="lb-fine">
               Relish does not save the recording. OpenAI documents no retention
               of audio or transcripts for this transcription endpoint. You’ll
-              review the words before adding them to your private book.
+              review the words before adding them to your private journal.
             </p>
             <button className="lb-primary" disabled={busy || !consent}>
               {busy ? "Getting ready…" : "Continue to recording"}

@@ -1259,29 +1259,6 @@
   }
 }
 
-/* Write from anywhere */
-.lb-app .rp-write {
-  margin-left: auto;
-  min-height: 44px;
-  padding: 10px 18px;
-  border-radius: 999px;
-  border: none;
-  background: var(--olive);
-  color: var(--on-olive);
-  font: 700 15px/1 var(--sans);
-  gap: 6px;
-}
-.lb-app .rp-write span {
-  font-size: 19px;
-  line-height: 1;
-}
-.lb-app .rp-write:not(:disabled):hover {
-  background: var(--ink);
-}
-.rp-write + .rp-menu-wrap {
-  margin-left: 0;
-}
-
 /* Home: jot something down */
 .rp-jot {
   display: flex;
@@ -1861,40 +1838,7 @@ img.ui-illustration.rk-cover-emblem,
   }
 }
 
-/* ── Just me / Our family (Scott's mockups 33 and 36) ─────────────────── */
-.rp-space {
-  display: inline-flex;
-  align-items: stretch;
-  flex: none;
-  margin-left: auto;
-  padding: 2px;
-  border: 1.5px solid var(--olive);
-  border-radius: 999px;
-  background: var(--card);
-}
-.lb-app .rp-space button {
-  min-height: 40px;
-  padding: 6px 16px;
-  border-radius: 999px;
-  color: var(--ink);
-  font: 500 15px/1 var(--sans);
-  white-space: nowrap;
-}
-.lb-app .rp-space button[aria-pressed="true"],
-.lb-app .rp-space button[aria-pressed="true"]:not(:disabled):hover {
-  background: var(--olive);
-  color: var(--on-olive);
-}
-.lb-app .rp-space button:not([aria-pressed="true"]):not(:disabled):hover {
-  background: var(--ui-sage-soft);
-  transform: none;
-}
-.lb-app .rp-space + .rp-write {
-  margin-left: 0;
-}
-.lb-app .rp-write .rp-write-word {
-  font-size: inherit;
-}
+/* Phones: the wordmark and avatar on one row, the places on the next. */
 @media (max-width: 720px) {
   .lb-app .rp-wordmark {
     font-size: 27px;
@@ -1905,13 +1849,7 @@ img.ui-illustration.rk-cover-emblem,
   .lb-app .rp-places button {
     margin: 0 4px;
   }
-  .lb-app .rp-space button {
-    min-height: 40px;
-    padding: 6px 12px;
-    font-size: 14px;
-  }
 }
-/* A phone keeps the switch beside the wordmark; Write shrinks to "+". */
 @media (max-width: 560px) {
   .rp-topbar-inner {
     gap: 8px 6px;
@@ -1920,45 +1858,11 @@ img.ui-illustration.rk-cover-emblem,
     font-size: 25px;
     padding: 4px 0;
   }
-  .lb-app .rp-write {
-    width: 44px;
-    padding: 0;
-    justify-content: center;
-  }
-  .lb-app .rp-write .rp-write-word {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
-  .lb-app .rp-write span[aria-hidden="true"] {
-    font-size: 24px;
-  }
-  .lb-app .rp-space button {
-    min-height: 38px;
-    padding: 6px 9px;
-    font-size: 13.5px;
-  }
 }
 @media (max-width: 380px) {
   .lb-app .rp-wordmark {
     font-size: 24px;
   }
-  .lb-app .rp-space button {
-    padding: 6px 8px;
-    font-size: 13px;
-  }
-}
-/* Each half's tap area reaches the pill's full 44px height. */
-.lb-app .rp-space button {
-  position: relative;
-}
-.lb-app .rp-space button::after {
-  content: "";
-  position: absolute;
-  inset: -4px 0;
 }
 .lb-app .rp-resume li.rp-resume-row {
   flex-wrap: wrap;
@@ -2022,7 +1926,7 @@ img.ui-illustration.rk-cover-emblem,
 }
 
 /* iPhone Duo open and other mid widths (721–940px): one row, tighter, so
-   the avatar doesn't wrap under the switch. */
+   the avatar doesn't wrap under the places. */
 @media (min-width: 721px) and (max-width: 940px) {
   .rp-topbar-inner {
     gap: 8px 14px;
@@ -2034,9 +1938,5 @@ img.ui-illustration.rk-cover-emblem,
   }
   .lb-app .rp-places button {
     margin: 0 7px;
-  }
-  .lb-app .rp-space button {
-    padding: 6px 12px;
-    font-size: 14px;
   }
 }

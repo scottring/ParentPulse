@@ -20,7 +20,7 @@ import {
   removeEditionLabel,
   type Edition,
 } from "@/lib/relish/editions";
-import { emptyBook, sampleBook, isBook, type Book } from "@/lib/relish/model";
+import { emptyBook, sampleBook, sampleChildBook, isBook, type Book } from "@/lib/relish/model";
 import {
   createVault,
   decryptVault,
@@ -45,7 +45,7 @@ export const HIDDEN_LOCK_MS = 15 * 60 * 1000;
 async function withVaultWrite<T>(operation: () => Promise<T>): Promise<T> {
   if (!navigator.locks?.request)
     throw new Error(
-      "This browser cannot safely save this book. Please try a newer browser.",
+      "This browser cannot safely save this journal. Please try a newer browser.",
     );
   return navigator.locks.request(
     "relish-vault-write-v1",
@@ -70,6 +70,8 @@ export function useLocalBook() {
     envelope = useRef<Envelope | null>(null),
     epoch = useRef(0);
   const samplePhotos = useRef(new Map<string, Blob>());
+  // The sample adult's journal while the sample child's is open.
+  const sampleParent = useRef<Book | null>(null);
   const currentBook = useRef(book);
   const queue = useRef<Promise<void>>(Promise.resolve());
   const pending = useRef(0);
@@ -85,13 +87,14 @@ export function useLocalBook() {
     } catch {
       setMode("sample");
       setError(
-        "Browser storage is unavailable. You can explore the sample book.",
+        "Browser storage is unavailable. You can explore the sample journal.",
       );
     }
   }, []);
   const lock = useCallback(() => {
     epoch.current++;
     samplePhotos.current.clear();
+    sampleParent.current = null;
     key.current = null;
     envelope.current = null;
     currentBook.current = emptyBook("");
@@ -165,22 +168,22 @@ export function useLocalBook() {
       if (!raw || importRaw) {
         await withVaultWrite(async () => {
           if (token !== epoch.current)
-            throw new Error("The book was locked before it could be created.");
+            throw new Error("The journal was locked before it could be created.");
           if (localStorage.getItem(storageKey))
             throw new Error(
-              "A book was created in another tab. Reload to open it.",
+              "A journal was created in another tab. Reload to open it.",
             );
           if (importRaw)
             await restorePhotos(importRaw, result.book, result.key, id);
           if (token !== epoch.current)
-            throw new Error("The book was locked before it could be restored.");
+            throw new Error("The journal was locked before it could be restored.");
           localStorage.setItem(storageKey, JSON.stringify(result.envelope));
           labelEdition(id, result.book.owner);
           setEditions(listEditions());
         });
       } else if (localStorage.getItem(storageKey) !== raw) {
         throw new Error(
-          "This book changed in another tab. Please unlock its latest version.",
+          "This journal changed in another tab. Please unlock its latest version.",
         );
       }
       if (token !== epoch.current) return;
@@ -192,7 +195,7 @@ export function useLocalBook() {
       navigator.storage?.persist?.().catch(() => {});
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "Your book could not be opened.",
+        e instanceof Error ? e.message : "Your journal could not be opened.",
       );
     } finally {
       if (token === epoch.current) setBusy(false);
@@ -210,7 +213,7 @@ export function useLocalBook() {
       .then(async () => {
         if (token !== epoch.current)
           throw new Error(
-            "Your book locked before saving. Unlock it to continue.",
+            "Your journal locked before saving. Unlock it to continue.",
           );
         const next =
           typeof change === "function" ? change(currentBook.current) : change;
@@ -220,15 +223,15 @@ export function useLocalBook() {
           await withVaultWrite(async () => {
             if (token !== epoch.current)
               throw new Error(
-                "Your book locked before saving. Unlock it to continue.",
+                "Your journal locked before saving. Unlock it to continue.",
               );
             if (!key.current || !envelope.current)
-              throw new Error("Unlock your book first.");
+              throw new Error("Unlock your journal first.");
             const previous = JSON.stringify(envelope.current);
             if (localStorage.getItem(storageKey) !== previous) {
               lock();
               throw new Error(
-                "This book changed in another tab. Unlock its latest version.",
+                "This journal changed in another tab. Unlock its latest version.",
               );
             }
             const encrypted = await seal(
@@ -238,12 +241,12 @@ export function useLocalBook() {
             );
             if (token !== epoch.current)
               throw new Error(
-                "Your book locked before saving. Unlock it to continue.",
+                "Your journal locked before saving. Unlock it to continue.",
               );
             if (localStorage.getItem(storageKey) !== previous) {
               lock();
               throw new Error(
-                "This book changed in another tab. Unlock its latest version.",
+                "This journal changed in another tab. Unlock its latest version.",
               );
             }
             localStorage.setItem(storageKey, JSON.stringify(encrypted));
@@ -274,13 +277,13 @@ export function useLocalBook() {
       const token = epoch.current,
         id = selected.current,
         sample = mode === "sample";
-      if (!sample && !key.current) throw new Error("Unlock your book first.");
+      if (!sample && !key.current) throw new Error("Unlock your journal first.");
       if (photoIds(currentBook.current).length >= 200)
         throw new Error(
-          "This book holds up to 200 photos. Save a backup before starting another edition.",
+          "This journal holds up to 200 photos. Save a backup before starting another edition.",
         );
       const prepared = await preparePhoto(file);
-      if (token !== epoch.current) throw new Error("This book was locked.");
+      if (token !== epoch.current) throw new Error("This journal was locked.");
       if (sample) samplePhotos.current.set(prepared.photo.id, prepared.blob);
       else {
         const encrypted = await encryptPhoto(
@@ -288,10 +291,10 @@ export function useLocalBook() {
           prepared.blob,
           key.current!,
         );
-        if (token !== epoch.current) throw new Error("This book was locked.");
+        if (token !== epoch.current) throw new Error("This journal was locked.");
         await putPhoto(id, encrypted);
       }
-      if (token !== epoch.current) throw new Error("This book was locked.");
+      if (token !== epoch.current) throw new Error("This journal was locked.");
       return prepared.photo;
     },
     load: async (id) => {
@@ -300,9 +303,9 @@ export function useLocalBook() {
         activeKey = key.current;
       const sample = samplePhotos.current.get(id);
       if (mode === "sample" && sample) return sample;
-      if (!activeKey) throw new Error("Unlock this book to see its photos.");
+      if (!activeKey) throw new Error("Unlock this journal to see its photos.");
       const blob = await decryptPhoto(await getPhoto(edition, id), activeKey);
-      if (token !== epoch.current) throw new Error("This book was locked.");
+      if (token !== epoch.current) throw new Error("This journal was locked.");
       return blob;
     },
   };
@@ -311,13 +314,13 @@ export function useLocalBook() {
     try {
       await queue.current;
       if (token !== epoch.current || !key.current)
-        throw new Error("Unlock your book before making a backup.");
+        throw new Error("Unlock your journal before making a backup.");
       const raw = localStorage.getItem(editionKey(selected.current));
-      if (!raw) throw new Error("This book has not been saved yet.");
+      if (!raw) throw new Error("This journal has not been saved yet.");
       let encrypted = parseEnvelope(raw);
       if (JSON.stringify(encrypted) !== JSON.stringify(envelope.current))
         throw new Error(
-          "This book changed in another tab. Unlock its latest version before making a backup.",
+          "This journal changed in another tab. Unlock its latest version before making a backup.",
         );
       let media = await backupPhotos(currentBook.current, selected.current);
       if (readBinding(selected.current)?.accountManaged) {
@@ -350,14 +353,14 @@ export function useLocalBook() {
         encrypted = result.envelope;
         media = converted;
       }
-      if (token !== epoch.current) throw new Error("This book was locked.");
+      if (token !== epoch.current) throw new Error("This journal was locked.");
       const bundle = JSON.stringify({
         ...encrypted,
         ...(media.length ? { media } : {}),
       });
       if (bundle.length > BACKUP_BYTES)
         throw new Error(
-          "This book is too large for a single backup. Please contact support before adding more photos.",
+          "This journal is too large for a single backup. Please contact support before adding more photos.",
         );
       const url = URL.createObjectURL(
         new Blob([bundle], { type: "application/json" }),
@@ -372,7 +375,7 @@ export function useLocalBook() {
         setError(
           e instanceof Error
             ? e.message
-            : "The backup could not be made. Your book is still here.",
+            : "The backup could not be made. Your journal is still here.",
         );
     }
   };
@@ -389,7 +392,7 @@ export function useLocalBook() {
         localStorage.getItem(storageKey) !== JSON.stringify(envelope.current)
       )
         throw new Error(
-          "This book changed. Unlock its latest version before removing it.",
+          "This journal changed. Unlock its latest version before removing it.",
         );
       localStorage.removeItem(storageKey);
       localStorage.removeItem(bindingKey(id));
@@ -422,14 +425,14 @@ export function useLocalBook() {
     await queue.current;
     return withVaultWrite(async () => {
       if (token !== epoch.current || !key.current || !envelope.current)
-        throw new Error("Unlock this book before syncing it.");
+        throw new Error("Unlock this journal before syncing it.");
       const encrypted = envelope.current;
       if (localStorage.getItem(editionKey(id)) !== JSON.stringify(encrypted))
         throw new Error(
-          "This book changed in another tab. Unlock its latest version.",
+          "This journal changed in another tab. Unlock its latest version.",
         );
       const media = await backupPhotos(currentBook.current, id);
-      if (token !== epoch.current) throw new Error("This book was locked.");
+      if (token !== epoch.current) throw new Error("This journal was locked.");
       return {
         envelope: encrypted,
         media,
@@ -456,7 +459,7 @@ export function useLocalBook() {
         localStorage.getItem(editionKey(selected.current)) !==
           JSON.stringify(before)
       )
-        throw new Error("Reopen your book before adding it to your account.");
+        throw new Error("Reopen your journal before adding it to your account.");
       const next: Book = {
         ...source,
         ...(source.profile?.kind === "child"
@@ -475,7 +478,7 @@ export function useLocalBook() {
           ),
         );
       if (token !== epoch.current || before !== envelope.current)
-        throw new Error("Your book changed. Try adding it again.");
+        throw new Error("Your journal changed. Try adding it again.");
       return {
         envelope: result.envelope,
         media,
@@ -512,10 +515,10 @@ export function useLocalBook() {
         token !== epoch.current ||
         localStorage.getItem(editionKey(id)) !== before
       )
-        throw new Error("This book changed while opening. Please try again.");
+        throw new Error("This journal changed while opening. Please try again.");
       if (!dirty) await restorePhotos(raw, result.book, result.key, id);
       signal?.throwIfAborted();
-      if (token !== epoch.current) throw new Error("This book was locked.");
+      if (token !== epoch.current) throw new Error("This journal was locked.");
       // Persist ciphertext first. If the binding write fails, the next sync
       // recognizes the remote fingerprint without treating old data as a new edit.
       localStorage.setItem(editionKey(id), JSON.stringify(result.envelope));
@@ -554,7 +557,7 @@ export function useLocalBook() {
     const token = epoch.current,
       id = selected.current,
       activeKey = key.current;
-    if (!activeKey) throw new Error("Unlock your book first.");
+    if (!activeKey) throw new Error("Unlock your journal first.");
     const encrypted = parseEnvelope(raw);
     const next = await decryptVault(encrypted, activeKey);
     await queue.current;
@@ -588,7 +591,7 @@ export function useLocalBook() {
         signal?.throwIfAborted();
         if (!canApply())
           throw new Error("Finish this activity before bringing in new pages.");
-        if (token !== epoch.current) throw new Error("This book was locked.");
+        if (token !== epoch.current) throw new Error("This journal was locked.");
         localStorage.setItem(editionKey(copyId), JSON.stringify(current));
         labelEdition(copyId, `${currentBook.current.owner} — device copy`);
       }
@@ -596,7 +599,7 @@ export function useLocalBook() {
       signal?.throwIfAborted();
       if (!canApply())
         throw new Error("Finish this activity before bringing in new pages.");
-      if (token !== epoch.current) throw new Error("This book was locked.");
+      if (token !== epoch.current) throw new Error("This journal was locked.");
       localStorage.setItem(editionKey(id), JSON.stringify(encrypted));
       envelope.current = encrypted;
       currentBook.current = next;
@@ -612,6 +615,20 @@ export function useLocalBook() {
       setEditions(listEditions());
     });
   };
+  // The sample's Kids' journals: Leo's journal stands in for a child's book,
+  // and Back returns to the sample adult's journal as it was left.
+  const openSampleChild = useCallback(() => {
+    if (mode !== "sample" || sampleParent.current) return;
+    sampleParent.current = currentBook.current;
+    currentBook.current = sampleChildBook();
+    setBook(currentBook.current);
+  }, [mode]);
+  const closeSampleChild = useCallback(() => {
+    if (!sampleParent.current) return;
+    currentBook.current = sampleParent.current;
+    sampleParent.current = null;
+    setBook(currentBook.current);
+  }, []);
   return {
     syncSnapshot,
     accountSnapshot,
@@ -632,5 +649,7 @@ export function useLocalBook() {
     shelf,
     select,
     remove,
+    openSampleChild,
+    closeSampleChild,
   };
 }

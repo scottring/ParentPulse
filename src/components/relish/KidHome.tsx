@@ -68,7 +68,7 @@ export function KidCover({ name }: { name: string }) {
           <span className="rk-cover-name">
             {name}’s
             <br />
-            book
+            journal
           </span>
           <Illustration name={emblemArt} size="56%" eager className="rk-cover-emblem" />
         </span>
@@ -87,7 +87,7 @@ export function KidCover({ name }: { name: string }) {
         <span className="rk-cover-name">
           {name}’s
           <br />
-          book
+          journal
         </span>
         <svg className="rk-cover-emblem" viewBox="0 0 200 200" focusable="false">
           <Emblem kind={emblem} />
@@ -98,7 +98,7 @@ export function KidCover({ name }: { name: string }) {
   );
 }
 
-/** The emblem alone, for the inside cover of a child's Your book. */
+/** The emblem alone, for the inside cover of a child's Your journal. */
 export function KidCoverMark({ name }: { name: string }) {
   const emblem = emblemFor(name);
   return (
@@ -188,7 +188,7 @@ export default function KidHome({
             )}
           </div>
           <button type="button" className="ui-link rk-open" disabled={busy} onClick={onBook}>
-            Open my book
+            Open my journal
           </button>
         </div>
       </section>

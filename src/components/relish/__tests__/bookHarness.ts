@@ -1,6 +1,6 @@
 import { createElement, useState } from "react";
 import { vi } from "vitest";
-import { render } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { emptyBook, type Book } from "@/lib/relish/model";
 import LivingBook from "../LivingBook";
 import type { FamilyPerson } from "../Home";
@@ -12,7 +12,7 @@ export function openBook(
 ) {
   let stored = book;
   const lock = vi.fn();
-  // Just me / Our family is remembered per book; each test starts in Just me.
+  // The last journal is remembered per book; each test starts in My journal.
   try {
     localStorage.removeItem("relish.space.v1:places-test");
   } catch {
@@ -45,4 +45,20 @@ export function openBook(
   }
   render(createElement(Harness));
   return { stored: () => stored, lock };
+}
+
+/** Journal ▾ in the top bar, then one of its items (2026-11-21). */
+export function pickJournal(item: RegExp | string = /^My journal/) {
+  const nav = screen.getByRole("navigation", { name: "Main" });
+  fireEvent.click(within(nav).getByRole("button", { name: /^Journal/ }));
+  fireEvent.click(screen.getByRole("menuitem", { name: item }));
+}
+/** My journal, from the Journal menu. */
+export const myJournal = () => pickJournal(/^My journal/);
+/** Our family journal, from the Journal menu. */
+export const familyJournal = () => pickJournal(/^Our family journal/);
+/** One of the three places in the top bar. */
+export function place(name: "Home" | "Activities") {
+  const nav = screen.getByRole("navigation", { name: "Main" });
+  fireEvent.click(within(nav).getByRole("button", { name }));
 }

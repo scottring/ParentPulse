@@ -39,6 +39,7 @@ import { PageSoundToggle } from "./PageSound";
 import VoiceWriter from "./VoiceWriter";
 import type { Book } from "@/lib/relish/model";
 import {
+  audienceOfEntry,
   journalStyles,
   newJournalDraft,
   writeJournalPage,
@@ -104,7 +105,6 @@ export default function Journal({
   onBack,
   navigation,
   family,
-  space = "me",
   familyNames = [],
   onFamilyAdd,
   initialCelebrate = false,
@@ -112,17 +112,15 @@ export default function Journal({
   onKept,
 }: {
   book: Book;
-  /** Just me or Our family: who a saved page is for. */
-  space?: Space;
   /** The rest of the family, named in Share with our family. */
   familyNames?: string[];
-  /** Adds a page or passage to Our family book. */
+  /** Adds a page or passage to Our family journal. */
   onFamilyAdd?: FamilyAdd;
   /** Opens on a just-saved page with "Entry saved". */
   initialCelebrate?: boolean;
   /** Opens the reading page with "Choose a passage" already showing. */
   initialPassage?: boolean;
-  /** After Save to my book: show the page in Book instead of here. */
+  /** After Save to my journal: show the page in the journal instead of here. */
   onKept?: (journalId: string, problem?: string) => void;
   /** Family with their own books in the library, so they can be tagged too. */
   family?: { name: string }[];
@@ -176,11 +174,13 @@ export default function Journal({
     setEditor(draft);
     sensory.play("touch");
   }
+  /** Save draft and close: back to the journal it was written in. */
   function leaveEditor() {
     onEditingChange(false);
     setEditor(null);
     setReading(null);
-    onActivities?.();
+    if (onBack) onBack();
+    else onActivities?.();
   }
   if (editor)
     return (
@@ -197,7 +197,6 @@ export default function Journal({
           book={book}
           family={family}
           photos={photos}
-          space={space}
           familyNames={familyNames}
           onFamilyAdd={onFamilyAdd}
           onPause={leaveEditor}
@@ -222,21 +221,21 @@ export default function Journal({
         <SubHead
           className="rj-reading-top"
           back={{
-            label: onBack ? "Back to your book" : "Back to my pages",
+            label: onBack ? "Back to my journal" : "Back to my entries",
             onClick: () => {
               if (onBack) return onBack();
               setReading(null);
               setCelebrate(false);
             },
           }}
-          note={sample ? "Fictional sample" : "Your private pages"}
+          note={sample ? "Fictional sample" : "Only me"}
         />
         {celebrate && (
           <div className="rj-celebration" role="status">
             <Illustration name="saved" size={72} eager className="rj-celebration-mark" />
             <div>
               <strong>Entry saved</strong>
-              <p>It’s in your book. That’s a good place to stop.</p>
+              <p>It’s in your journal. That’s a good place to stop.</p>
             </div>
           </div>
         )}
@@ -325,7 +324,7 @@ export default function Journal({
             <ConfirmDelete
               label="Delete this page"
               question="Delete this page?"
-              detail={`It’s removed from this book on every device${page.kind === "Received passage" ? "; the sender’s copy stays with them" : ""}. This can’t be undone.`}
+              detail={`It’s removed from this journal on every device${page.kind === "Received passage" ? "; the sender’s copy stays with them" : ""}. This can’t be undone.`}
               onConfirm={async () => {
                 try {
                   await save((b) => deletePage(b, page.id));
@@ -392,8 +391,8 @@ export default function Journal({
     <main className="rj-workspace">
       {onBack && (
         <SubHead
-          back={{ label: "Back to your book", onClick: onBack }}
-          note={sample ? "Fictional sample" : "Your private pages"}
+          back={{ label: "Back to my journal", onClick: onBack }}
+          note={sample ? "Fictional sample" : "Only me"}
         />
       )}
       <header className="rj-welcome">
@@ -414,7 +413,7 @@ export default function Journal({
             <Lock size={14} />{" "}
             {sample
               ? "Sample pages disappear when you reload."
-              : "Encrypted in your private book."}
+              : "Encrypted in your private journal."}
           </p>
         </div>
         <Illustration name="your-book" size={260} eager className="rj-welcome-art" />
@@ -554,12 +553,10 @@ export function JournalEditor({
   initialPhoto = false,
   navigation,
   family,
-  space = "me",
   familyNames = [],
   onFamilyAdd,
 }: {
   family?: { name: string }[];
-  space?: Space;
   familyNames?: string[];
   onFamilyAdd?: FamilyAdd;
   initial: JournalDraft;
@@ -575,7 +572,7 @@ export function JournalEditor({
   photos?: PhotoAccess;
 }) {
   const [draft, setDraft] = useState<JournalDraft>(initial);
-  // Family from the library who aren't in this book yet; tagging one notes them.
+  // Family from the library who aren't in this journal yet; tagging one notes them.
   const extra = book ? libraryOnly(book.people, family) : [];
   const canTag = !!book?.people.length || extra.length > 0;
   const editorTyping = useTypingSound();
@@ -685,6 +682,7 @@ export function JournalEditor({
   }, [dirty, pending, mediaBusy, voiceOpen]);
   async function finish(keep: boolean) {
     if (finalizing.current) return;
+    const wasKept = status.current === "kept";
     finalizing.current = true;
     setFinishing(true);
     if (timer.current) clearTimeout(timer.current);
@@ -696,18 +694,18 @@ export function JournalEditor({
       const entry = await persist(current.current, keep);
       if (!alive.current) return;
       if (!keep) return onPause();
-      // Our family: the whole page also goes into Our family book.
+      // Written for Our family journal: the whole page also goes there, once.
       let problem: string | undefined;
-      if (space === "family" && onFamilyAdd) {
+      if (forFamily && onFamilyAdd && !wasKept) {
         const page = current.current;
         if (!page.text.trim())
-          problem = "A page needs words to go in Our family book.";
+          problem = "An entry needs words to go in Our family journal.";
         else
           try {
             await onFamilyAdd({ kind: "page", title: pageTitle(page), text: page.text });
           } catch (e) {
             problem =
-              e instanceof Error ? e.message : "Our family book couldn’t be reached.";
+              e instanceof Error ? e.message : "Our family journal couldn’t be reached.";
           }
       }
       if (alive.current) onKeep(entry, problem);
@@ -767,7 +765,10 @@ export function JournalEditor({
     !!draft.text.trim() || !!draft.title.trim() || !!draft.photos?.length;
   const toggle = (next: "photo" | "people" | "options") =>
     setPanel((open) => (open === next ? null : next));
-  const forFamily = space === "family";
+  // The journal comes from the draft itself, never from where you navigated:
+  // a private draft can't become a family entry by switching journals.
+  const forFamily = audienceOfEntry(draft) === "family";
+  const space: Space = forFamily ? "family" : "me";
   // The page grows with the words instead of scrolling inside itself.
   useLayoutEffect(() => {
     const el = body.current;
@@ -874,7 +875,7 @@ export function JournalEditor({
             <span className={`rj-audience ${forFamily ? "rj-audience-family" : ""}`}>
               {forFamily ? (
                 <>
-                  <Users size={15} aria-hidden="true" /> Our family
+                  <Users size={15} aria-hidden="true" /> Our family journal
                 </>
               ) : (
                 <>
@@ -885,8 +886,8 @@ export function JournalEditor({
           </div>
           {forFamily && (
             <p className="rj-audience-note">
-              Saving keeps this page in your book and adds the whole page to
-              Our family book, where everyone in the family can read it.
+              Adding keeps a copy in My journal and puts the whole entry in
+              Our family journal, where everyone in the family can read it.
             </p>
           )}
           <label className="rj-title-label rj-title-first">
@@ -1138,8 +1139,8 @@ export function JournalEditor({
               {finishing
                 ? "Saving…"
                 : forFamily
-                  ? "Add to our family book"
-                  : "Save to my book"}
+                    ? "Add to our family journal"
+                  : "Save to my journal"}
             </button>
           </div>
         </section>
@@ -1161,7 +1162,7 @@ export function JournalEditor({
           onClose={() => setSharing(null)}
           onAdd={async (page) => {
             if (timer.current) clearTimeout(timer.current);
-            // An unsaved draft is saved to your book first.
+            // An unsaved draft is saved to your journal first.
             if (dirty || revision.current === 0) await persist(current.current);
             await onFamilyAdd(page);
             if (alive.current) setSharing(null);

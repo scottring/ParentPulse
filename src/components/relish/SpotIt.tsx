@@ -238,7 +238,7 @@ export function SpotSetup({
       </div>
       <p className="lb-fine lb-setup-note">
         Whoever holds the phone reads the card aloud and taps. Every tap is
-        saved, and the card stays with this round in {book.owner}’s book (never
+        saved, and the card stays with this round in {book.owner}’s journal (never
         sent to AI).
         {g.audience
           ? ` Squares picked for ${g.audience === "under-6" ? "under-6s" : g.audience === "adult" ? "grown-ups" : ageLabels[g.audience].toLowerCase()}.`

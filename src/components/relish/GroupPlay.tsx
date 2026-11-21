@@ -95,7 +95,7 @@ export default function GroupPlay({
   onFinish: () => void;
   /** Ends this round and sets up a new one of the same game. */
   onPlayAgain?: () => void;
-  /** The book notes plays in Our family book (an adult's book). */
+  /** The book notes plays in Our family journal (an adult's book). */
   familyNote?: boolean;
   onCancel: () => void;
   /** A parent's book keeps notes about the players; children's books don't. */
@@ -231,10 +231,10 @@ export default function GroupPlay({
           </div>
           <p className="lb-fine lb-setup-note">
             {inWords
-              ? `Each answer stays hidden until everyone has guessed. The answers and guesses stay with this round in ${book.owner}’s book (${aiNote})`
+              ? `Each answer stays hidden until everyone has guessed. The answers and guesses stay with this round in ${book.owner}’s journal (${aiNote})`
               : "Answers stay hidden until the reveal"}
             {remembers(g) && !inWords
-              ? `, then stay with this round in ${book.owner}’s book (${aiNote})`
+              ? `, then stay with this round in ${book.owner}’s journal (${aiNote})`
               : ""}
             . Passing is always fine.
             {g.audience
@@ -368,11 +368,11 @@ export default function GroupPlay({
               <span>
                 {familyNote ? (
                   <>
-                    Noted in our family book: <b>{playNoteText(g, book.owner).replace(/\.$/, "")}</b>, today.
+                    Noted in our family journal: <b>{playNoteText(g, book.owner).replace(/\.$/, "")}</b>, today.
                   </>
                 ) : (
                   <>
-                    Noted in {book.owner}’s book: <b>played {titles[g.kind]}</b> today.
+                    Noted in {book.owner}’s journal: <b>played {titles[g.kind]}</b> today.
                   </>
                 )}
               </span>
@@ -381,8 +381,8 @@ export default function GroupPlay({
               {g.savedPageId
                 ? "A shared page was kept with everyone’s approval."
                 : spot || remembers(g)
-                  ? `What everyone said stays in ${book.owner}’s book${text ? " unless everyone approves a shared page" : ""}.`
-                  : "Your book notes that you played, without anyone’s answers."}
+                  ? `What everyone said stays in ${book.owner}’s journal${text ? " unless everyone approves a shared page" : ""}.`
+                  : "Your journal notes that you played, without anyone’s answers."}
             </p>
             <button className="ha-btn" disabled={busy} onClick={onFinish}>
               Done
@@ -416,7 +416,7 @@ export default function GroupPlay({
             <section className="lb-sharing" aria-label="Create a shared page">
               <p>
                 Each player approves these exact words. They’ll be kept as a
-                shared page in {book.owner}’s book. Anyone can say no.
+                shared page in {book.owner}’s journal. Anyone can say no.
               </p>
               <blockquote>{text}</blockquote>
               <div className="lb-players">

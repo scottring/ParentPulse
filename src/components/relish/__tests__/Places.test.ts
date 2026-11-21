@@ -15,17 +15,13 @@ vi.mock("../Sensory", () => ({
 }));
 afterEach(cleanup);
 
-import { openBook } from "./bookHarness";
+import { familyJournal, myJournal, openBook } from "./bookHarness";
 export { openBook };
-/** Book, then Our family in the switch at the top. */
-const ourFamily = () => {
-  fireEvent.click(screen.getByRole("button", { name: "Book" }));
-  fireEvent.click(
-    within(screen.getByRole("group", { name: "Whose pages" })).getByRole("button", { name: "Our family" }),
-  );
-};
+const ourFamily = familyJournal;
+const journalTab = () =>
+  within(screen.getByRole("navigation", { name: "Main" })).getByRole("button", { name: /^Journal/ });
 
-it("opens on Home with a welcome and three things to do", () => {
+it("opens on Home with a welcome and four things to do", () => {
   openBook();
   expect(screen.getByRole("heading", { level: 1, name: /^Welcome/ })).toBeTruthy();
   expect(
@@ -50,26 +46,24 @@ it("lists the latest kept pages and opens one in the reader", () => {
   openBook(book);
   fireEvent.click(screen.getByRole("button", { name: /Pancakes at dawn/ }));
   expect(screen.getByText("We flipped them high.")).toBeTruthy();
-  expect(
-    screen.getByRole("button", { name: "Book" }).getAttribute("aria-current"),
-  ).toBe("page");
+  expect(journalTab().getAttribute("aria-current")).toBe("page");
 });
 
-it("Read about my family names the people in this book and opens it", () => {
+it("Read about our family opens Our family journal", () => {
   openBook(sampleBook(), { mode: "sample" });
   const todo = screen.getByRole("region", { name: "What would you like to do?" });
-  expect(within(todo).getByText("What you’ve kept about Leo")).toBeTruthy();
+  expect(within(todo).getByText("The family journal, newest first")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Invite a partner" })).toBeNull();
-  fireEvent.click(within(todo).getByRole("button", { name: "Read about my family" }));
-  expect(
-    screen.getByRole("button", { name: "Book" }).getAttribute("aria-current"),
-  ).toBe("page");
+  fireEvent.click(within(todo).getByRole("button", { name: "Read about our family" }));
+  expect(screen.getByRole("heading", { name: "Our family journal", level: 1 })).toBeTruthy();
+  expect(journalTab().getAttribute("aria-current")).toBe("page");
 });
 
-it("Your book: reviews one suggestion at a time and filters by person", async () => {
+it("My journal: reviews one suggestion at a time and filters by person", async () => {
   const app = openBook(sampleBook(), { mode: "sample" });
-  fireEvent.click(screen.getByRole("button", { name: "Book" }));
-  expect(screen.getByRole("heading", { name: "Your book", level: 1 })).toBeTruthy();
+  myJournal();
+  expect(screen.getByRole("heading", { name: "My journal", level: 1 })).toBeTruthy();
+  expect(screen.getByText("Only me")).toBeTruthy();
   expect(screen.getByText("A little room to talk")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Yes, keep it" }));
   await screen.findByText(/Try: If you both feel like it/);
@@ -82,17 +76,17 @@ it("Your book: reviews one suggestion at a time and filters by person", async ()
   expect(screen.queryByText(/An unhurried walk/)).toBeNull();
   expect(screen.getByRole("button", { name: /Leaving the playground was hard/ })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /We went for a walk/ })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Everyone" }));
-  fireEvent.change(screen.getByRole("searchbox", { name: "Find a page" }), {
+  fireEvent.click(screen.getByRole("button", { name: "Everything" }));
+  fireEvent.change(screen.getByRole("searchbox", { name: "Find an entry" }), {
     target: { value: "spaceship" },
   });
   const found = screen.getByRole("button", { name: /The blanket-fort expedition/ });
   expect(screen.queryByRole("button", { name: /Leaving the playground/ })).toBeNull();
   fireEvent.click(found);
-  expect(screen.getByRole("button", { name: /Back to your book/ })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /Back to my journal/ })).toBeTruthy();
 });
 
-it("Your book: unfinished drafts are under Still going", () => {
+it("My journal: an unfinished draft comes first, with Keep writing", () => {
   const draft = { ...newJournalDraft(), title: "Half a thought", text: "and then" };
   const book = writeJournalPage(
     { ...emptyBook("Robin"), profile: { kind: "adult" } },
@@ -101,8 +95,10 @@ it("Your book: unfinished drafts are under Still going", () => {
     "draft",
   );
   openBook(book);
-  fireEvent.click(screen.getByRole("button", { name: "Book" }));
-  fireEvent.click(screen.getByRole("button", { name: /Keep writing: Half a thought/ }));
+  myJournal();
+  const entries = screen.getByRole("list");
+  expect(within(entries).getAllByRole("listitem")[0].textContent).toContain("Half a thought");
+  fireEvent.click(screen.getByRole("button", { name: "Half a thought: Keep writing" }));
   expect(
     (screen.getByRole("textbox", { name: "Your journal entry" }) as HTMLTextAreaElement)
       .value,
@@ -146,15 +142,15 @@ it("Our family: members, pages passed between you, and kept game pages, without 
     },
   };
   const app = openBook(book, {
-    family: [{ id: "b1", name: "Ella", onOpen: vi.fn(), note: "Book in your account" }],
+    family: [{ id: "b1", name: "Ella", onOpen: vi.fn(), note: "Journal in your account" }],
   });
   ourFamily();
-  expect(screen.getByRole("heading", { name: "Our family book", level: 1 })).toBeTruthy();
-  // Family members: your own book first, then account books, then invitations.
-  fireEvent.click(screen.getByRole("button", { name: "Family members" }));
-  const members = screen.getByRole("dialog", { name: "Family members" });
-  const mine = within(members).getByRole("button", { name: "Open my book" });
-  const ella = within(members).getByRole("button", { name: "Open Ella’s book" });
+  expect(screen.getByRole("heading", { name: "Our family journal", level: 1 })).toBeTruthy();
+  // Who's in our family: your own journal first, then account journals, then invitations.
+  fireEvent.click(screen.getByRole("button", { name: "Who’s in our family" }));
+  const members = screen.getByRole("dialog", { name: "Who’s in our family" });
+  const mine = within(members).getByRole("button", { name: "Open my journal" });
+  const ella = within(members).getByRole("button", { name: "Open Ella’s journal" });
   expect(
     mine.compareDocumentPosition(ella) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
@@ -167,18 +163,18 @@ it("Our family: members, pages passed between you, and kept game pages, without 
   ).toBeTruthy();
   // Escape closes it and puts focus back on the link.
   fireEvent.keyDown(document, { key: "Escape" });
-  expect(screen.queryByRole("dialog", { name: "Family members" })).toBeNull();
-  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Family members" }));
+  expect(screen.queryByRole("dialog", { name: "Who’s in our family" })).toBeNull();
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Who’s in our family" }));
   // Pages passed between partners and kept game pages are both here.
   expect(screen.getByText("A note from Sam")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /Our story/ }));
   expect(screen.getAllByText("A fox in yellow boots.").length).toBeGreaterThan(0);
   expect(screen.getByRole("dialog", { name: "Our story" })).toBeTruthy();
-  // A game page wasn't added by this writer to the family book: no take-out.
-  expect(screen.queryByRole("button", { name: "Take out of the family book" })).toBeNull();
+  // A game page wasn't added by this writer to the family journal: no take-out.
+  expect(screen.queryByRole("button", { name: "Take out of the family journal" })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Close dialog" }));
   expect(app.lock).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole("button", { name: "Family members" }));
+  fireEvent.click(screen.getByRole("button", { name: "Who’s in our family" }));
   fireEvent.click(screen.getByRole("button", { name: /Invite a partner/ }));
   expect(screen.getByRole("dialog", { name: "Invite a partner" })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Close" }));
@@ -191,13 +187,13 @@ it("Our family in a child's book offers no invitations or other books", () => {
     profile: { kind: "child", ageBand: "6-8", parentLock: { accountUid: "parent" } },
   });
   ourFamily();
-  // Kids can read and add to the family book, but invite no one.
-  expect(screen.getByRole("heading", { name: "Our family book", level: 1 })).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Family members" }));
+  // Kids can read and add to the family journal, but invite no one.
+  expect(screen.getByRole("heading", { name: "Our family journal", level: 1 })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Who’s in our family" }));
   expect(screen.queryByRole("button", { name: /Invite a partner/ })).toBeNull();
   expect(screen.queryByRole("button", { name: /Add a child/ })).toBeNull();
-  expect(screen.queryByRole("button", { name: /^Open .*’s book/ })).toBeNull();
-  expect(screen.getByRole("button", { name: "Open my book" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /^Open .*’s journal/ })).toBeNull();
+  expect(screen.getByRole("button", { name: "Open my journal" })).toBeTruthy();
   // Inviting a friend to start their own Relish is open to everyone.
   expect(screen.getByRole("button", { name: /Invite a friend/ })).toBeTruthy();
 });
@@ -207,7 +203,7 @@ it("Invite a friend copies the link where there's no share sheet", async () => {
   ourFamily();
   const writeText = vi.fn().mockResolvedValue(undefined);
   Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
-  fireEvent.click(screen.getByRole("button", { name: "Family members" }));
+  fireEvent.click(screen.getByRole("button", { name: "Who’s in our family" }));
   fireEvent.click(screen.getByRole("button", { name: /Invite a friend/ }));
   expect(await screen.findByText(/Invite link copied/)).toBeTruthy();
   expect(writeText.mock.calls[0][0]).toContain("https://app.relish.my/");

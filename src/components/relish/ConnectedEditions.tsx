@@ -33,7 +33,7 @@ const receiptWords: Record<string, string> = {
 export default function ConnectedEditions(props: Props) {
   if (!canUseOnline(props.book))
     return (
-      <Dialog title="Book on this device" onClose={props.onClose}>
+      <Dialog title="Journal on this device" onClose={props.onClose}>
         <h2>Child profile</h2>
         <p>
           Online connections are available only in adult books. Children can
@@ -74,7 +74,7 @@ function AdultConnectedEditions({
   const [title, setTitle] = useState(
       initialPassage?.title ||
         book.connections?.draft?.title ||
-        "A passage from my book",
+        "A passage from my journal",
     ),
     [text, setText] = useState(
       initialPassage?.text || book.connections?.draft?.text || "",
@@ -105,7 +105,7 @@ function AdultConnectedEditions({
       .catch(() => {
         if (alive.current)
           setError(
-            "Online connections are unavailable. Your book is still here on this device.",
+            "Online connections are unavailable. Your journal is still here on this device.",
           );
       });
     return () => {
@@ -116,10 +116,10 @@ function AdultConnectedEditions({
   }, []);
   async function api(data: Record<string, unknown>, account = user) {
     if (!account || !account.emailVerified)
-      throw new Error("Verify your email to connect books.");
+      throw new Error("Verify your email to connect journals.");
     const token = await account.getIdToken();
     if (abort.current.signal.aborted)
-      throw new Error("This book was closed.");
+      throw new Error("This journal was closed.");
     const res = await fetch("/api/relish/connections/", {
       method: "POST",
       headers: {
@@ -164,13 +164,13 @@ function AdultConnectedEditions({
     if (!user) return;
     if (!adult)
       throw new Error(
-        "Online connections are for adults. Children’s books can stay on the family’s device.",
+        "Online connections are for adults. Children’s journals can stay on the family’s device.",
       );
     const next = await refresh();
     let identity = book.connections?.identity;
     if (identity && identity.uid !== user.uid)
       throw new Error(
-        "This book belongs to a different online account. Sign in with that account, or open another book.",
+        "This journal belongs to a different online account. Sign in with that account, or open another journal.",
       );
     if (
       next.profile &&
@@ -178,7 +178,7 @@ function AdultConnectedEditions({
         (await keyFingerprint(identity.publicKey)) !== next.profile.keyId)
     )
       throw new Error(
-        "This account already has a book. Open it from Account & synced books, or restore its encrypted backup from the bookshelf.",
+        "This account already has a journal. Open it from Account & synced journals, or restore its encrypted backup from Journals on this device.",
       );
     if (!identity) {
       identity = await makeIdentity(user.uid);
@@ -199,21 +199,21 @@ function AdultConnectedEditions({
     });
     await refresh();
     setNotice(
-      "Your book is connected. Export a fresh encrypted backup so its sharing key travels with you.",
+      "Your journal is connected. Export a fresh encrypted backup so its sharing key travels with you.",
     );
   }
   async function signIn() {
     const { connectAI } = await import("@/lib/relish/ai-auth");
     if (create && !adult)
       throw new Error(
-        "Online accounts are for adults. Children can use books kept on this device.",
+        "Online accounts are for adults. Children can use journals kept on this device.",
       );
     await connectAI(email, password, create);
     setPassword("");
     setNotice(
       create
         ? "Open the verification link in your email, then return here."
-        : "Signed in. Connect this book when you’re ready.",
+        : "Signed in. Connect this journal when you’re ready.",
     );
   }
   async function disconnect() {
@@ -222,7 +222,7 @@ function AdultConnectedEditions({
     setSnapshot(null);
     setOpened(null);
     setInvite("");
-    setNotice("Signed out. Your book stays here on this device.");
+    setNotice("Signed out. Your journal stays here on this device.");
   }
   const identity = book.connections?.identity;
   const connected = !!(
@@ -256,7 +256,7 @@ function AdultConnectedEditions({
     }));
     await refresh();
     setNotice(
-      "Sent. Each person chooses whether to save it in their own book.",
+      "Sent. Each person chooses whether to save it in their own journal.",
     );
   }
   async function send() {
@@ -340,7 +340,7 @@ function AdultConnectedEditions({
     setOpened(null);
     await refresh();
     setNotice(
-      "Passage saved in your book with the author’s name.",
+      "Passage saved in your journal with the author’s name.",
     );
   }
   async function closeWithDraft() {
@@ -363,13 +363,13 @@ function AdultConnectedEditions({
   }
   return (
     <Dialog
-      title="Connected books"
+      title="Connected journals"
       // Narrow while connecting (Scott's mockup); wide once family tools appear.
       wide={!!(user && connected)}
       onClose={() => void closeWithDraft()}
     >
       <section className="lb-connections rc-connect" data-verification={tick}>
-        <h2>Connected books</h2>
+        <h2>Connected journals</h2>
         <p className="rc-intro">
           Connect with another adult to share passages you choose. They decide
           whether to save them.
@@ -395,7 +395,7 @@ function AdultConnectedEditions({
             <h3>
               {create
                 ? "Create an optional online account"
-                : "Sign in to connect books"}
+                : "Sign in to connect journals"}
             </h3>
             <p className="lb-fine">
               Each person uses their own account. Children can keep a local
@@ -425,7 +425,7 @@ function AdultConnectedEditions({
               />
             </label>
             <p className="lb-fine">
-              Use your Relish account password. Local-only book passphrases are
+              Use your Relish account password. Local-only journal passphrases are
               separate.
             </p>
             {create && (
@@ -479,7 +479,7 @@ function AdultConnectedEditions({
             <div className="rc-edition">
               <BookIcon />
               <span className="rc-edition-name">
-                <strong>{book.owner}’s book</strong>
+                <strong>{book.owner}’s journal</strong>
                 <span>
                   <span className="rp-sr">Signed in as </span>
                   {user.email}
@@ -507,7 +507,7 @@ function AdultConnectedEditions({
                       setTick((n) => n + 1);
                       setNotice(
                         user.emailVerified
-                          ? "Email verified. You can connect this book."
+                          ? "Email verified. You can connect this journal."
                           : "Your email has not been verified yet.",
                       );
                     })
@@ -537,11 +537,11 @@ function AdultConnectedEditions({
                     <Lock size={18} aria-hidden="true" /> What gets shared
                   </h3>
                   <p>
-                    Connecting publishes your book name and public sharing
+                    Connecting publishes your journal name and public sharing
                     key. Your writing stays on this device.
                   </p>
                   <p>
-                    To open this book on another device, keep an encrypted
+                    To open this journal on another device, keep an encrypted
                     backup.
                   </p>
                 </div>
@@ -551,14 +551,14 @@ function AdultConnectedEditions({
                     checked={adult}
                     onChange={(e) => setAdult(e.target.checked)}
                   />
-                  I’m 18 or older and connecting my own book.
+                  I’m 18 or older and connecting my own journal.
                 </label>
                 <button
                   className="rp-btn rp-btn-olive rc-go"
                   disabled={busy || !adult}
                   onClick={() => void run(connectEdition)}
                 >
-                  Connect this book
+                  Connect this journal
                 </button>
               </div>
             ) : (
@@ -589,7 +589,7 @@ function AdultConnectedEditions({
                     >
                       <h3>Create a family sharing group</h3>
                       <label>
-                        Family book name
+                        Family group name
                         <input
                           required
                           maxLength={60}
@@ -635,7 +635,7 @@ function AdultConnectedEditions({
                         <div className="lb-boundary">
                           <p>
                             Join <strong>{joinName}</strong>? Members will see
-                            your book name and public sharing key.
+                            your journal name and public sharing key.
                           </p>
                           <button
                             type="button"
@@ -764,11 +764,11 @@ function AdultConnectedEditions({
                       className="lb-boundary"
                       open={initialPassage ? true : undefined}
                     >
-                      <summary>Send a passage from your book</summary>
+                      <summary>Send a passage from your journal</summary>
                       <p>
                         Choose the exact words and who receives them.{" "}
                         {initialPassage && book.connections?.draft
-                          ? "Your earlier unfinished draft stays in your book. Send this selection before closing to keep edits to it; its original page is always kept."
+                          ? "Your earlier unfinished draft stays in your journal. Send this selection before closing to keep edits to it; its original page is always kept."
                           : "Closing this window keeps your text as an encrypted local draft. Choose recipients again when you return."}
                       </p>
                       <form
@@ -864,7 +864,7 @@ function AdultConnectedEditions({
                         </button>
                         <p className="lb-fine">
                           Each person gets an invitation to read it and decide
-                          whether to save it in their own book. You can
+                          whether to save it in their own journal. You can
                           withdraw it until they do.
                         </p>
                       </form>
@@ -890,7 +890,7 @@ function AdultConnectedEditions({
                       ))}
                     <h3>Received passages</h3>
                     <p className="lb-fine">
-                      Review a passage and choose whether to save it. The latest 60 invitations appear here; saved passages remain in your book.
+                      Review a passage and choose whether to save it. The latest 60 invitations appear here; saved passages remain in your journal.
                     </p>
                     {snapshot.deliveries.filter(
                       (d) =>
@@ -945,7 +945,7 @@ function AdultConnectedEditions({
                         <h3>{opened.title}</h3>
                         <blockquote>{opened.text}</blockquote>
                         <p>
-                          Save this passage in your own book? It stays with
+                          Save this passage in your own journal? It stays with
                           your private pages. It isn’t added to shared game
                           pages or sent to AI.
                         </p>
@@ -954,7 +954,7 @@ function AdultConnectedEditions({
                           disabled={busy}
                           onClick={() => void run(accept)}
                         >
-                          <Check size={16} /> Save to my book
+                          <Check size={16} /> Save to my journal
                         </button>
                         <button
                           className="lb-text"
@@ -974,7 +974,7 @@ function AdultConnectedEditions({
                             <p>
                               {book.connections?.outgoing?.find(
                                 (o) => o.id === d.id,
-                              )?.title || "A passage from your book"}
+                              )?.title || "A passage from your journal"}
                             </p>
                             <p className="lb-fine">
                               {d.revoked
@@ -1007,7 +1007,7 @@ function AdultConnectedEditions({
                       <summary>Leave this family</summary>
                       <p>
                         Future invitations will stop. People keep passages they
-                        already saved. Your private book stays here.
+                        already saved. Your private journal stays here.
                       </p>
                       <button
                         className="lb-secondary"
@@ -1081,7 +1081,7 @@ function AdultConnectedEditions({
                     await disconnect();
                     setDeleteConfirmation("");
                     setNotice(
-                      "Your online account was removed. This book and its kept passages remain here on this device.",
+                      "Your online account was removed. This journal and its kept passages remain here on this device.",
                     );
                   })
                 }

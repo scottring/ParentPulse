@@ -238,7 +238,7 @@ export const tools: Tool[] = [
     ],
     picks: [{ pile: "me", label: "One job to talk about sharing" }],
     closing:
-      "This is your view. The other person can sort the same list in their own book; compare when you’re both ready.",
+      "This is your view. The other person can sort the same list in their own journal; compare when you’re both ready.",
   },
   {
     kind: "builder",
@@ -915,7 +915,7 @@ export function startTracker(book: Book, toolId: string, personId?: string): Boo
         : "This exercise is already in progress.",
     );
   if (personId && !book.people.some((p) => p.id === personId))
-    throw new Error("Choose someone from your book.");
+    throw new Error("Choose someone from your journal.");
   if (tool.aboutPerson?.required && !personId)
     throw new Error("Choose who this is with first.");
   const run: TrackerRun = {

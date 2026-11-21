@@ -30,6 +30,13 @@ export type JournalDraft = {
   photos?: Photo[];
   people?: string[];
   source?: JournalSource;
+  /**
+   * Written in Our family journal: keeping it also adds the whole page there.
+   * Absent means Only me. Set when the draft starts and never changed after
+   * the first save, so a private draft can't become a family page by
+   * navigating (2026-11-21). Older pages have none.
+   */
+  audience?: "family";
 };
 export type JournalEntry = JournalDraft & {
   updatedAt: string;
@@ -65,6 +72,7 @@ function isDraft(value: unknown): value is JournalDraft {
     ["sky", "moss", "blush"].includes(e.style) &&
     (e.photos === undefined || isPhotos(e.photos)) &&
     (e.source === undefined || isSource(e.source)) &&
+    (e.audience === undefined || e.audience === "family") &&
     (e.people === undefined ||
       (Array.isArray(e.people) &&
         e.people.length <= 30 &&
@@ -91,15 +99,19 @@ export function isJournal(value: unknown): value is JournalEntry[] {
     new Set(value.map((e) => e.id)).size === value.length
   );
 }
-export function newJournalDraft(): JournalDraft {
+export function newJournalDraft(audience: "me" | "family" = "me"): JournalDraft {
   return {
     id: crypto.randomUUID(),
     title: "",
     text: "",
     style: "sky",
     createdAt: new Date().toISOString(),
+    ...(audience === "family" ? { audience: "family" as const } : {}),
   };
 }
+/** Which journal a page or draft belongs to: Only me unless it was started in Our family journal. */
+export const audienceOfEntry = (e: Pick<JournalDraft, "audience">): "me" | "family" =>
+  e.audience === "family" ? "family" : "me";
 export function writeJournalPage(
   book: Book,
   draft: JournalDraft,
@@ -120,6 +132,8 @@ export function writeJournalPage(
     throw new Error("A kept page cannot become an unfinished draft.");
   // Where a page came from never changes once it is saved.
   const source = previous ? previous.source : draft.source;
+  // So is whose journal it was written for.
+  const audience = previous ? previous.audience : draft.audience;
   const entry: JournalEntry = {
     id: draft.id,
     title: draft.title,
@@ -128,6 +142,7 @@ export function writeJournalPage(
     photos: draft.photos?.map((p) => ({ ...p })),
     people: draft.people?.filter((id) => book.people.some((p) => p.id === id)),
     ...(source ? { source: { ...source } } : {}),
+    ...(audience === "family" ? { audience } : {}),
     createdAt: previous?.createdAt || draft.createdAt,
     updatedAt: new Date().toISOString(),
     revision: expectedRevision + 1,

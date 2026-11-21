@@ -120,7 +120,7 @@ const same = (a: string, b: string) =>
  */
 export function keepNotes(book: Book, drafts: NoteDraft[], now = new Date()): Book {
   if (book.profile?.kind === "child")
-    throw new Error("Notes about family members are kept in a parent’s book.");
+    throw new Error("Notes about family members are kept in a parent’s journal.");
   const at = now.toISOString();
   const people: Person[] = book.people.map((p) => ({ ...p }));
   for (const d of drafts) {

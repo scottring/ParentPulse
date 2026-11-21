@@ -1,6 +1,6 @@
 "use client";
 import ConfirmDelete from "./ConfirmDelete";
-import { useEffect, useState, type RefObject } from "react";
+import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import type { Book, Person } from "@/lib/relish/model";
 import { bookPages, PLAY_RECORD, type BookPage } from "@/lib/relish/pages";
 import { cardPeople, manualOf, type ManualCard } from "@/lib/relish/manual";
@@ -18,12 +18,11 @@ import {
 } from "@/lib/relish/tools";
 import CheckBackCard from "./CheckBack";
 import { pageKind, type Tone } from "@/lib/relish/catalog";
-import type { JournalDraft } from "@/lib/relish/journal";
+import type { JournalDraft, JournalEntry } from "@/lib/relish/journal";
 import { icons, personTones } from "./Home";
 import { audienceOf, canUseOnline } from "@/lib/relish/profiles";
 import { KidCoverMark } from "./KidHome";
 import { BookSpread } from "./ui";
-import Illustration from "./Illustration";
 
 /** "all", "me", "family", or a person's id. */
 export type Who = string;
@@ -88,6 +87,9 @@ export default function YourBook({
   onEditPerson,
   onCheckBack,
   onDeleteNote,
+  onDiscardDraft,
+  phoneTop,
+  phoneFoot,
 }: {
   book: Book;
   busy: boolean;
@@ -113,6 +115,11 @@ export default function YourBook({
   onCheckBack?: (id: string, answer: CheckBackAnswer) => void;
   /** Removes a note kept from a game. */
   onDeleteNote?: (personId: string, noteId: string) => void;
+  /** Lets an unfinished draft go. */
+  onDiscardDraft?: (draft: JournalEntry) => void;
+  /** Phones: Mine / Family and kids' journals, drawn above and below. */
+  phoneTop?: ReactNode;
+  phoneFoot?: ReactNode;
 }) {
   const [asking, setAsking] = useState<string | null>(null);
   const [who, setWho] = useState<Who>(
@@ -131,11 +138,10 @@ export default function YourBook({
     personTones[
       Math.max(0, book.people.findIndex((p) => p.id === id)) % personTones.length
     ];
+  // People only (2026-11-21): what's shared lives in Our family journal now.
   const chips = [
-    { id: "all", label: "Everyone" },
-    { id: "me", label: "Me" },
+    { id: "all", label: "Everything" },
     ...book.people.map((p) => ({ id: p.id, label: p.name })),
-    { id: "family", label: "Our family" },
   ];
   const manual = manualOf(book).cards;
   const about = cardPeople(book, manual);
@@ -233,63 +239,59 @@ export default function YourBook({
         onIdea={onIdea}
         onOpenPage={onOpenPage}
         onDraft={onDraft}
+        top={phoneTop}
       />
     );
   const allPages = bookPages(book);
   const filtered = who !== "all" || !!query.trim();
-  // A genuinely empty adult book gets one invitation, not three empty sections.
-  if (!filtered && !learned.length && !going && !allPages.length && !suggestion)
-    return (
-      <main className="rp-place rp-book" aria-labelledby="rp-book-title">
-        <section className="rp-book-empty ui-card">
-          <Illustration name="empty-pages" size={170} eager />
-          <div>
-            <h1 id="rp-book-title" ref={headingRef} tabIndex={-1}>
-              Your book
-            </h1>
-            <p className="rp-lede">
-              Nothing kept yet. Your first page can be a few words, a photo or
-              your voice.
-            </p>
-            <div className="rp-book-empty-actions">
-              <button className="ui-btn" disabled={busy} onClick={onAddPage}>
-                + Add a page
-              </button>
-              {onIdea && (
-                <button className="ui-link" disabled={busy} onClick={onIdea}>
-                  Give me an idea
-                </button>
-              )}
-            </div>
-          </div>
-        </section>
-      </main>
-    );
+  const q = query.trim().toLocaleLowerCase();
+  const shownDrafts = drafts.filter(
+    (d) =>
+      (who === "all" || (d.people || []).includes(who)) &&
+      (!q || `${d.title}\n${d.text}`.toLocaleLowerCase().includes(q)),
+  );
+  const familyEntry = new Set(
+    (book.journal || []).filter((e) => e.audience === "family").map((e) => `journal:${e.id}`),
+  );
+  const first = allPages[0];
   const showSuggestion = !!suggestion && canUseOnline(book);
+  const others = going - drafts.length;
   return (
-    <main className="rp-place rp-book" aria-labelledby="rp-book-title">
-      <section className="rp-stack">
-        <div className="rp-head-row">
-          <div className="rp-stack-tight">
-            <h1 id="rp-book-title" ref={headingRef} tabIndex={-1}>
-              Your book
-            </h1>
-            <p className="rp-lede">
-              What you’ve learned about your people, and every page you’ve kept.
-            </p>
-          </div>
-          <div className="rp-head-actions">
-            <button className="rp-btn rp-btn-olive" disabled={busy} onClick={onAddPage}>
-              + Add a page
-            </button>
-            {onIdea && (
-              <button className="ui-link" disabled={busy} onClick={onIdea}>
-                Give me an idea
-              </button>
+    <main className="rp-place rp-book rp-mine" aria-labelledby="rp-book-title">
+      {phoneTop}
+      <section className="rp-mine-head">
+        <div>
+          <span className="rp-only">
+            <LockIcon /> Only me
+          </span>
+          <h1 id="rp-book-title" ref={headingRef} tabIndex={-1}>
+            My journal
+          </h1>
+          <p className="rp-quiet rp-mine-count">
+            {allPages.length
+              ? `${allPages.length} ${allPages.length === 1 ? "entry" : "entries"}`
+              : "No entries yet"}
+            {first && (
+              <span className="rp-mine-since">
+                {" "}
+                since {new Date(first.date).toLocaleDateString(undefined, { month: "long" })}
+              </span>
             )}
-          </div>
+          </p>
         </div>
-        <div className="rp-chips" role="group" aria-label="Show pages about">
+        <div className="rp-head-actions">
+          <button className="rp-btn rp-btn-olive" disabled={busy} onClick={onAddPage}>
+            Write today’s entry
+          </button>
+          {onIdea && (
+            <button className="ui-link" disabled={busy} onClick={onIdea}>
+              Give me an idea
+            </button>
+          )}
+        </div>
+      </section>
+      <div className="rp-mine-bar">
+        <div className="rp-chips" role="group" aria-label="Show entries about">
           {chips.map((c) => (
             <button
               key={c.id}
@@ -303,117 +305,131 @@ export default function YourBook({
             + Add someone
           </button>
         </div>
-        {person && (
-          <div className="rp-about">
-            <p>
-              <strong>{person.role || "About"}.</strong>{" "}
-              {person.note || `No notes about ${person.name} yet.`}
-            </p>
-            <button
-              className="rp-link"
-              disabled={busy}
-              onClick={() => onEditPerson(person)}
-            >
-              Edit what you know about {person.name}
-            </button>
-          </div>
-        )}
-      </section>
-
-      <section className="rp-stack" aria-labelledby="rp-learned">
-        <div className="rp-panel-head">
-          <h2 id="rp-learned">What you’ve learned</h2>
-          <button className="rp-link" disabled={busy} onClick={onManual}>
-            {suggestion ? "All suggestions" : "Suggestions from Relish"}
+        <label className="rp-search">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
+          <span className="rp-sr">Find an entry</span>
+          <input
+            type="search"
+            placeholder="Find an entry"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
+      </div>
+      {person && (
+        <div className="rp-about">
+          <p>
+            <strong>{person.role || "About"}.</strong>{" "}
+            {person.note || `No notes about ${person.name} yet.`}
+          </p>
+          <button
+            className="rp-link"
+            disabled={busy}
+            onClick={() => onEditPerson(person)}
+          >
+            Edit what you know about {person.name}
           </button>
         </div>
-        {showSuggestion && suggestion && (
-          <div className="rp-suggestion">
-            <div className="rp-suggestion-text">
-              <span className="rp-nudge-kicker">
-                Relish noticed something ·{" "}
-                {cardWho(suggestion).length > 1
-                  ? namesOf(cardWho(suggestion))
-                  : suggestion.scope === "family"
-                    ? "Our family"
-                    : "You"}
-              </span>
-              <span className="rp-suggestion-main">{suggestion.title}</span>
-              <span className="rp-nudge-why">{suggestion.observation}</span>
-              <span className="rp-nudge-why">
-                From {suggestion.sources.length}{" "}
-                {suggestion.sources.length === 1 ? "page" : "pages"} you kept. Is
-                that right?
-              </span>
-            </div>
-            <div className="rp-suggestion-actions">
-              <button
-                className="rp-btn rp-btn-sun"
-                disabled={busy}
-                onClick={() => onReview(suggestion, "kept")}
-              >
-                Yes, keep it
-              </button>
-              <button
-                className="rp-btn rp-btn-ghost"
-                disabled={busy}
-                onClick={() => onReview(suggestion, "dismissed")}
-              >
-                Not quite
-              </button>
-            </div>
-          </div>
-        )}
-        {learned.length ? (
-          <div className="rp-learned-grid">
-            {learned.map((c) => (
-              <article key={c.id} className={`rp-learned rp-shadow-${c.tone}`}>
-                <span className="rp-learned-who">
-                  <span className={`rp-dot rp-tone-${c.tone}`} aria-hidden="true">
-                    {c.who[0] === "family" ? "★" : nameOf(c.who[0]).charAt(0)}
-                  </span>
-                  <span>{namesOf(c.who)}</span>
-                </span>
-                <span className="rp-learned-text">{c.text}</span>
-                {c.tryThis && <span className="rp-learned-try">Try: {c.tryThis}</span>}
-                {c.note && onDeleteNote && (
-                  <ConfirmDelete
-                    label="Remove"
-                    ariaLabel={`Remove the note “${c.text}”`}
-                    question="Remove this note?"
-                    yes="Yes, remove"
-                    busy={busy}
-                    className="rp-learned-remove"
-                    onConfirm={() => onDeleteNote(c.note!.personId, c.note!.noteId)}
-                  />
-                )}
-              </article>
-            ))}
-          </div>
-        ) : (
-          <p className="rp-quiet">
-            {person
-              ? `Nothing noted about ${person.name} yet. Edit what you know about them, or keep a page tagged with their name.`
-              : "Nothing here yet. What you learn shows up as you keep pages and save suggestions."}
-          </p>
-        )}
-      </section>
+      )}
 
+      {shownDrafts.length + pages.length > 0 ? (
+        <section aria-label="Entries in my journal">
+          <ul className="rp-entries">
+            {shownDrafts.map((d) => (
+              <li key={d.id}>
+                <article className="rp-entry rp-entry-draft">
+                  <span className="rp-page-meta">
+                    <strong>{d.audience === "family" ? "Draft for our family journal" : "Draft"}</strong>
+                    <span>{shortDate(d.updatedAt)}</span>
+                  </span>
+                  <span className="rp-page-title">
+                    {d.title.trim() || d.text.trim().split("\n")[0].slice(0, 60) || "An unfinished page"}
+                  </span>
+                  {d.text.trim() && (
+                    <span className="rp-page-excerpt">{d.text.split("\n")[0]}</span>
+                  )}
+                  <span className="rp-entry-actions">
+                    <button className="rp-link" disabled={busy} onClick={() => onDraft(d)}>
+                      <span className="ui-sr-only">{d.title.trim() || "Your draft"}: </span>
+                      Keep writing
+                    </button>
+                    {onDiscardDraft && (
+                      <ConfirmDelete
+                        label="Discard"
+                        icon={false}
+                        ariaLabel={`Discard ${d.title.trim() || "this draft"}`}
+                        question="Discard this draft?"
+                        yes="Yes, discard"
+                        busy={busy}
+                        className="rp-link rp-link-quiet"
+                        onConfirm={() => onDiscardDraft(d)}
+                      />
+                    )}
+                  </span>
+                </article>
+              </li>
+            ))}
+            {pages.map((page) => {
+              const kind = pageKind(page);
+              return (
+                <li key={page.id}>
+                  <button
+                    className={`rp-page rp-entry rp-edge-${kind.tone}`}
+                    data-page-id={page.id}
+                    disabled={busy}
+                    onClick={() => onOpenPage(page.id)}
+                  >
+                    <span className="rp-page-meta">
+                      <strong>
+                        {kind.label}
+                        {page.exercise && !page.title.includes(page.exercise)
+                          ? ` · ${page.exercise}`
+                          : ""}
+                      </strong>
+                      <span>{shortDate(page.date)}</span>
+                    </span>
+                    <span className="rp-page-title">{page.title}</span>
+                    <span className="rp-page-excerpt">
+                      {page.text.split("\n")[0] || "Photo entry"}
+                    </span>
+                    {familyEntry.has(page.id) && (
+                      <span className="rp-entry-note">Also in our family journal</span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : (
+        <div className="rp-quiet rp-empty-filter">
+          <p>
+            {query
+              ? "No entries match that yet. Try another word."
+              : filtered
+                ? "No entries here for this filter yet."
+                : "Nothing kept yet. Your first entry can be a few words, a photo or your voice."}
+          </p>
+          {query && (
+            <button className="ui-link" onClick={() => setQuery("")}>
+              Clear search
+            </button>
+          )}
+          {who !== "all" && (
+            <button className="ui-link" onClick={() => setWho("all")}>
+              Clear filter
+            </button>
+          )}
+        </div>
+      )}
+
+      {others > 0 && (
       <section className="rp-stack" aria-labelledby="rp-going">
         <h2 id="rp-going">Still going</h2>
-        {going ? (
           <div className="rp-going">
-            {drafts.map((d) => (
-              <button key={d.id} className="rp-going-item" disabled={busy} onClick={() => onDraft(d)}>
-                {icons.write}
-                <span>
-                  <span className="rp-going-kicker">Draft</span>
-                  <span className="rp-going-title">
-                    Keep writing: {d.title.trim() || d.text.trim().split("\n")[0].slice(0, 60) || "an unfinished page"}
-                  </span>
-                </span>
-              </button>
-            ))}
             {visit && (
               <button className="rp-going-item" disabled={busy} onClick={onResumeVisit}>
                 {icons.think}
@@ -502,9 +518,6 @@ export default function YourBook({
               );
             })}
           </div>
-        ) : (
-          <p className="rp-quiet">Nothing half-finished. Start something new any time.</p>
-        )}
         {askingPlan && onCheckBack && (
           <CheckBackCard
             key={askingPlan.id}
@@ -519,76 +532,99 @@ export default function YourBook({
           />
         )}
       </section>
+      )}
 
-      <section className="rp-stack" aria-labelledby="rp-every">
-        <div className="rp-panel-head rp-every-head">
-          <h2 id="rp-every">Every page</h2>
-          <label className="rp-search">
-            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-3.5-3.5" />
-            </svg>
-            <span className="rp-sr">Find a page</span>
-            <input
-              type="search"
-              placeholder="Find a page…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </label>
+      {(learned.length > 0 || showSuggestion || allPages.length > 0) && (
+      <section className="rp-stack" aria-labelledby="rp-learned">
+        <div className="rp-panel-head">
+          <h2 id="rp-learned">What you’ve learned</h2>
+          <button className="rp-link" disabled={busy} onClick={onManual}>
+            {suggestion ? "All suggestions" : "Suggestions from Relish"}
+          </button>
         </div>
-        {pages.length ? (
-          <div className="rp-pages">
-            {pages.map((page) => {
-              const kind = pageKind(page);
-              return (
-                <button
-                  key={page.id}
-                  className={`rp-page rp-edge-${kind.tone}`}
-                  data-page-id={page.id}
-                  disabled={busy}
-                  onClick={() => onOpenPage(page.id)}
-                >
-                  <span className="rp-page-meta">
-                    <strong>
-                      {kind.label}
-                      {page.exercise && !page.title.includes(page.exercise)
-                        ? ` · ${page.exercise}`
-                        : ""}
-                    </strong>
-                    <span>{shortDate(page.date)}</span>
-                  </span>
-                  <span className="rp-page-title">{page.title}</span>
-                  <span className="rp-page-excerpt">
-                    {page.text.split("\n")[0] || "Photo entry"}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="rp-quiet rp-empty-filter">
-            <p>
-              {query
-                ? "No pages match that yet. Try another word."
-                : filtered
-                  ? "No pages here for this filter yet."
-                  : "No pages here yet. Add one when you’re ready."}
-            </p>
-            {query && (
-              <button className="ui-link" onClick={() => setQuery("")}>
-                Clear search
+        {showSuggestion && suggestion && (
+          <div className="rp-suggestion">
+            <div className="rp-suggestion-text">
+              <span className="rp-nudge-kicker">
+                Relish noticed something ·{" "}
+                {cardWho(suggestion).length > 1
+                  ? namesOf(cardWho(suggestion))
+                  : suggestion.scope === "family"
+                    ? "Our family"
+                    : "You"}
+              </span>
+              <span className="rp-suggestion-main">{suggestion.title}</span>
+              <span className="rp-nudge-why">{suggestion.observation}</span>
+              <span className="rp-nudge-why">
+                From {suggestion.sources.length}{" "}
+                {suggestion.sources.length === 1 ? "entry" : "entries"} you kept. Is
+                that right?
+              </span>
+            </div>
+            <div className="rp-suggestion-actions">
+              <button
+                className="rp-btn rp-btn-sun"
+                disabled={busy}
+                onClick={() => onReview(suggestion, "kept")}
+              >
+                Yes, keep it
               </button>
-            )}
-            {who !== "all" && (
-              <button className="ui-link" onClick={() => setWho("all")}>
-                Clear filter
+              <button
+                className="rp-btn rp-btn-ghost"
+                disabled={busy}
+                onClick={() => onReview(suggestion, "dismissed")}
+              >
+                Not quite
               </button>
-            )}
+            </div>
           </div>
         )}
+        {learned.length ? (
+          <div className="rp-learned-grid">
+            {learned.map((c) => (
+              <article key={c.id} className={`rp-learned rp-shadow-${c.tone}`}>
+                <span className="rp-learned-who">
+                  <span className={`rp-dot rp-tone-${c.tone}`} aria-hidden="true">
+                    {c.who[0] === "family" ? "★" : nameOf(c.who[0]).charAt(0)}
+                  </span>
+                  <span>{namesOf(c.who)}</span>
+                </span>
+                <span className="rp-learned-text">{c.text}</span>
+                {c.tryThis && <span className="rp-learned-try">Try: {c.tryThis}</span>}
+                {c.note && onDeleteNote && (
+                  <ConfirmDelete
+                    label="Remove"
+                    ariaLabel={`Remove the note “${c.text}”`}
+                    question="Remove this note?"
+                    yes="Yes, remove"
+                    busy={busy}
+                    className="rp-learned-remove"
+                    onConfirm={() => onDeleteNote(c.note!.personId, c.note!.noteId)}
+                  />
+                )}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="rp-quiet">
+            {person
+              ? `Nothing noted about ${person.name} yet. Edit what you know about them, or keep an entry tagged with their name.`
+              : "Nothing here yet. What you learn shows up as you keep entries and save suggestions."}
+          </p>
+        )}
       </section>
+      )}
+      {phoneFoot}
     </main>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </svg>
   );
 }
 
@@ -602,7 +638,7 @@ function Clock() {
 }
 
 /**
- * A child's Your book: their own cover on the left leaf; on the right, the
+ * A child's Your journal: their own cover on the left leaf; on the right, the
  * first-page invitation, the draft to keep going, or their latest kept page.
  * No AI suggestions or adult sharing controls appear here.
  */
@@ -617,7 +653,9 @@ function ChildBook({
   onIdea,
   onOpenPage,
   onDraft,
+  top,
 }: {
+  top?: ReactNode;
   book: Book;
   busy: boolean;
   headingRef: RefObject<HTMLHeadingElement | null>;
@@ -686,13 +724,14 @@ function ChildBook({
   );
   return (
     <main className="rp-place rp-book rp-child-book" aria-labelledby="rp-book-title">
+      {top}
       <BookSpread
         className="rp-child-spread"
         left={
           <div className="rp-child-cover">
             <KidCoverMark name={name} />
             <h1 id="rp-book-title" ref={headingRef} tabIndex={-1}>
-              {name}’s book
+              {name}’s journal
             </h1>
           </div>
         }

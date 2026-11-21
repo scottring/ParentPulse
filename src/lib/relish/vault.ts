@@ -104,7 +104,7 @@ export async function decryptVault(
     );
   } catch {
     throw new Error(
-      "The passphrase didn’t unlock this book. Check it and try again.",
+      "The passphrase didn’t unlock this journal. Check it and try again.",
     );
   }
   const book: unknown = JSON.parse(new TextDecoder().decode(decrypted));

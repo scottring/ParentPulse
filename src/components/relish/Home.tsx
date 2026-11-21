@@ -30,9 +30,7 @@ import {
 } from "@/lib/relish/activities";
 import {
   dayOf,
-  goals,
   momentOf,
-  places,
   todaysAnswer,
   wantedLine,
   type FamilyPlan,
@@ -58,7 +56,7 @@ export type FamilyPerson = {
   onOpen: () => void;
   /** A short line under the name on Family, e.g. "Book in your account". */
   note?: string;
-  /** Their own book in this account: shown as a cover on Family. */
+  /** Their own journal in this account: shown as a cover on Family. */
   hasBook?: boolean;
   /** An older copy that still needs its original passphrase. */
   locked?: boolean;
@@ -86,7 +84,7 @@ const Icon = ({ children }: { children: ReactNode }) => (
     {children}
   </svg>
 );
-/** Line icons the kids' Home and Your book still use. */
+/** Line icons the kids' Home and Your journal still use. */
 export const icons = {
   write: (
     <Icon>
@@ -121,8 +119,6 @@ export const icons = {
 const DAY = 86_400_000;
 const longDate = (d = new Date()) =>
   d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
-const pageDate = (iso: string) =>
-  new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 /** "today", "yesterday", "Wednesday" within the week, else "Nov 3". */
@@ -264,11 +260,11 @@ function GoingRow({
     <div className={`ha-row ${leaving ? "is-fading" : ""}`}>
       <Illustration name={underWayArt(item)} size={76} className="ha-row-art" />
       <span className="ha-row-words">
-        <span className="ha-row-kicker">
-          {item.kind === "draft" ? "Draft" : "In progress"}
-          {idle && ` · ${idle}`}
-          {leaving && ` · ${leaving}`}
-        </span>
+        {/* Unfinished things are only yours until they're kept or shared. */}
+        <Whose
+          family={false}
+          extra={`${item.kind === "draft" ? "draft" : "in progress"}${idle ? ` · ${idle}` : ""}${leaving ? ` · ${leaving}` : ""}`}
+        />
         <span className="ha-row-title">{item.title}</span>
         <Progress book={book} item={item} />
       </span>
@@ -302,11 +298,10 @@ function GoingRow({
 
 export type HomeProps = {
   book: Book;
-  space: "me" | "family";
   names: string[];
   busy: boolean;
   headingRef: RefObject<HTMLHeadingElement | null>;
-  /** Our family book's pages, and which book is this one (for "From … book"). */
+  /** Our family journal's pages, and which book is this one (to tell yours apart). */
   familyPages?: FamilyPage[];
   myBookId?: string;
   plan?: FamilyPlan;
@@ -315,10 +310,14 @@ export type HomeProps = {
   onResume?: (item: UnderWay) => void;
   onDiscard?: (item: UnderWay) => void;
   onCheckBack?: (id: string, answer: CheckBackAnswer) => void;
-  /** Journal in this space: a private page, or a page for Our family book. */
+  /** Writes in My journal (Only me). */
   onWrite: () => void;
+  /** Writes in Our family journal. */
+  onWriteFamily?: () => void;
   onActivities: () => void;
+  /** Opens My journal. */
   onBook: () => void;
+  /** Opens Our family journal. */
   onFamily: () => void;
   onPage: (id: string) => void;
   /** Today's mark on a habit, "Remind me tonight", and "Stop this one". */
@@ -333,11 +332,13 @@ export type HomeProps = {
 };
 
 /**
- * Home, in both spaces (Scott, 2026-11-21): a welcome with its painting, then
- * two sides. On the left, what's happened lately with a way back to each; on
- * the right, "What would you like to do?" with three painted choices. One
- * check-back at a time leads the left side. Layout follows width in CSS
- * only, so opening or closing a Duo keeps everything in place.
+ * Home, one page for both journals (Scott, 2026-11-21): a welcome with its
+ * painting, then two sides. On the left, "Lately" mixes My journal and Our
+ * family journal, each item labelled "Only me" or "Family journal", with a
+ * way back to each; on the right, "What would you like to do?" with four
+ * painted choices. One check-back at a time leads the left side. Layout
+ * follows width in CSS only, so opening or closing a Duo keeps everything in
+ * place.
  */
 export default function Home(props: HomeProps) {
   const { book, busy, headingRef, onNudge } = props;
@@ -362,7 +363,7 @@ export default function Home(props: HomeProps) {
       />
     );
   }
-  return props.space === "family" ? <FamilySide {...props} /> : <MeSide {...props} />;
+  return <OneHome {...props} />;
 }
 
 function Welcome({
@@ -394,18 +395,39 @@ function Welcome({
   );
 }
 
-function MeSide({
+/** "Only me" or "Family journal", on everything Lately lists. */
+function Whose({ family, extra }: { family: boolean; extra?: string }) {
+  return (
+    <span className={`ha-whose ${family ? "is-family" : "is-mine"}`}>
+      {!family && <LockIcon />}
+      {family ? "Family journal" : "Only me"}
+      {extra && ` · ${extra}`}
+    </span>
+  );
+}
+
+type Lately =
+  | { kind: "going"; at: string; item: HomeItem }
+  | { kind: "page"; at: string; page: BookPage }
+  | { kind: "family"; at: string; page: ReturnType<typeof familyPagesOf>[number] };
+
+function OneHome({
   book,
   names,
   busy,
   headingRef,
+  familyPages = [],
+  myBookId = "",
+  plan,
   onNudge,
   onResume,
   onDiscard,
   onCheckBack,
   onWrite,
+  onWriteFamily,
   onActivities,
   onBook,
+  onFamily,
   onPage,
   onMarkToday,
   onRemindTonight,
@@ -415,17 +437,47 @@ function MeSide({
   const going = homeUnderWay(book, now, 4);
   const draft = going.find((g): g is HomeItem & { kind: "draft"; draft: JournalEntry } => g.kind === "draft");
   const others = going.filter((g) => g.kind !== "draft").slice(0, 2);
-  const pages = bookPages(book).toReversed();
-  // Kept pages always show, however old: only unfinished things go stale.
-  const recent = pages.slice(0, Math.max(0, 3 - others.length));
+  const shown = familyPagesOf(book, familyPages, { name: book.owner, bookId: myBookId });
+  const passage = shown.find((p) => p.kind === "passage");
+  const familyIds = new Set(
+    (book.journal || []).filter((e) => e.audience === "family").map((e) => `journal:${e.id}`),
+  );
+  const familyDays = new Set(shown.filter((p) => p.kind === "game").map((p) => p.date));
+  // Kept pages always show, however old: only unfinished things go stale. A
+  // page written for the family journal, or a round with its note there,
+  // shows once, from the family journal.
+  const pages = bookPages(book)
+    .toReversed()
+    .filter((p) => !familyIds.has(p.id) && !(p.record && familyDays.has(p.date)));
   // One check-back at a time leads: a plan to ask about, a reminder asked
-  // for tonight, then a habit that slipped a day.
+  // for tonight, the family plan's "How did it go?", then a habit that
+  // slipped a day.
   const due = onCheckBack ? dueCheckBacks(book, now)[0] : undefined;
   const reminder = !due ? reminderDue(book, now) : undefined;
-  const missed = !due && !reminder ? missedDay(book, now) : undefined;
+  const moment = plan ? momentOf(plan, now) : "first";
+  const asking = !due && !reminder && !!plan && (moment === "lookback" || !todaysAnswer(plan, now));
+  const missed = !due && !reminder && !asking ? missedDay(book, now) : undefined;
   const habit = reminder ?? missed;
   // The habit asking for today isn't listed twice.
   const rows = habit ? others.filter((g) => !(g.kind === "habit" && g.toolId === habit.tool.id)) : others;
+  // Lately: what's still going first, then the newest kept pages from both
+  // journals, newest first, four rows at most beside the family's newest
+  // passage. Each journal keeps at least one row when it has something.
+  const room = Math.max(0, 4 - (draft ? 1 : 0) - rows.length);
+  const mine = pages.map((p) => ({ kind: "page" as const, at: p.date, page: p }));
+  const ours = shown
+    .filter((p) => p !== passage)
+    .map((p) => ({ kind: "family" as const, at: p.date, page: p }));
+  const half = Math.ceil(room / 2);
+  const mineCount = Math.min(mine.length, Math.max(room - ours.length, half));
+  const kept: Lately[] = [
+    ...mine.slice(0, mineCount),
+    ...ours.slice(0, room - mineCount),
+  ].toSorted((a, b) => b.at.localeCompare(a.at));
+  const lately: Lately[] = [
+    ...rows.map((g) => ({ kind: "going" as const, at: g.at, item: g })),
+    ...kept,
+  ];
   // At most one line under Write: a writing suggestion, rotating daily.
   const writing = nudgesFor(book, names).filter((n) => n.action.kind === "journal");
   const taken = takenToday(book);
@@ -433,31 +485,41 @@ function MeSide({
     writing.find((n) => n.id === taken?.id) ?? writing[nudgeStart(writing.length)];
   const status = suggestion && nudgeStatus(book, suggestion);
   const featured = featuredFor("adult", going, now);
-  const family = names.slice(0, 3);
+  const fresh = shown.filter((p) => now.getTime() - Date.parse(p.date) < 7 * DAY && !p.mine).length;
   const about = draft?.draft.people
     ?.map((id) => book.people.find((p) => p.id === id)?.name)
     .find(Boolean);
+  const waiting = draft
+    ? about
+      ? `your page about ${about} is waiting where you left it`
+      : "a page of yours is waiting where you left it"
+    : "";
+  const newLine = fresh
+    ? `${count(fresh)} new ${fresh === 1 ? "entry" : "entries"} in the family journal`
+    : "";
   const line = due
     ? "Something you planned is ready to check on."
-    : draft
-      ? about
-        ? `Your page about ${about} is waiting where you left it.`
-        : "Your page is waiting where you left it."
-      : pages.length
-        ? "Here’s what you’ve been keeping, and a few things to do next."
-        : "Your book is ready for its first page.";
+    : newLine && waiting
+      ? `${newLine}, and ${waiting}.`
+      : newLine
+        ? `${newLine} this week.`
+        : waiting
+          ? `${waiting.charAt(0).toUpperCase()}${waiting.slice(1)}.`
+          : pages.length || shown.length
+            ? "Here’s what’s been kept lately, and a few things to do next."
+            : "Your journal is ready for its first entry.";
   return (
     <main className="rp-place ha-home" aria-labelledby="ha-title">
       <Welcome
         owner={book.owner}
-        first={!pages.length && !going.length}
+        first={!pages.length && !going.length && !shown.length}
         line={line}
         art="welcome"
         kicker={longDate(now)}
         headingRef={headingRef}
       />
-      {(due || habit) && (
-        <div className="ha-lead">
+      {(due || habit || asking) && (
+        <div className={`ha-lead ${asking ? "is-asking" : ""}`}>
           {due && onCheckBack ? (
             <CheckBackCard
               key={due.id}
@@ -466,106 +528,167 @@ function MeSide({
               busy={busy}
               onAnswer={(answer) => onCheckBack(due.id, answer)}
             />
-          ) : habit && onMarkToday && onRemindTonight && onStopHabit ? (
+          ) : reminder && onMarkToday && onRemindTonight && onStopHabit ? (
             <HabitNudge
-              key={habit.run.id}
+              key={reminder.run.id}
               book={book}
-              run={habit.run}
-              tool={habit.tool}
-              reminded={!!reminder}
+              run={reminder.run}
+              tool={reminder.tool}
+              reminded
               busy={busy}
               compact
-              onMark={() => onMarkToday(habit.run.id)}
-              onRemind={() => onRemindTonight(habit.run.id)}
-              onStop={() => onStopHabit(habit.run.id)}
+              onMark={() => onMarkToday(reminder.run.id)}
+              onRemind={() => onRemindTonight(reminder.run.id)}
+              onStop={() => onStopHabit(reminder.run.id)}
+            />
+          ) : asking && plan ? (
+            <section className="ha-plan-ask" aria-label="How is it going?">
+              <p className="ha-quiet">
+                <Whose family />{" "}
+                {moment === "lookback"
+                  ? `${plan.goalLabel} · time to look back`
+                  : `${plan.goalLabel} · Day ${Math.min(dayOf(plan, now), plan.days)} of ${plan.days}`}
+              </p>
+              <p className="ha-plan-question">
+                {moment === "lookback" ? "Your two weeks are up." : wantedLine(plan)}{" "}
+                <em>{moment === "lookback" ? "Does it feel any different?" : "How did it go?"}</em>
+              </p>
+              <button type="button" className="ha-ghost" disabled={busy} onClick={onActivities}>
+                {moment === "lookback" ? "Look back together" : "Say how it went"}
+              </button>
+            </section>
+          ) : missed && onMarkToday && onRemindTonight && onStopHabit ? (
+            <HabitNudge
+              key={missed.run.id}
+              book={book}
+              run={missed.run}
+              tool={missed.tool}
+              reminded={false}
+              busy={busy}
+              compact
+              onMark={() => onMarkToday(missed.run.id)}
+              onRemind={() => onRemindTonight(missed.run.id)}
+              onStop={() => onStopHabit(missed.run.id)}
             />
           ) : null}
         </div>
       )}
-      <section className="ha-lately" aria-label="Lately in your book">
+      <section className="ha-lately" aria-labelledby="ha-lately-title">
+        <h2 id="ha-lately-title" className="ha-lately-title">
+          Lately
+        </h2>
+        {passage && <PassageCard passage={passage} />}
         {draft && onResume && (
-          <article className="ha-journal">
-            <Sprig className="ha-journal-sprig" />
-            <p className="ha-journal-meta">
-              <span className="ha-journal-date">{pageDate(draft.draft.updatedAt)}</span>
-              <span className="ha-only">
-                <LockIcon /> Only me
+          <div className="ha-row">
+            <Illustration name="jot" size={76} className="ha-row-art" />
+            <span className="ha-row-words">
+              <Whose
+                family={false}
+                extra={draft.draft.audience === "family" ? "draft for the family journal" : "draft"}
+              />
+              <span className="ha-row-title ha-row-quote">
+                {draft.draft.title.trim() ||
+                  (draft.draft.text.trim() ? `“${firstWords(draft.draft.text, 60)}”` : "Your unfinished page")}
               </span>
-            </p>
-            <h2 className="ha-journal-title">{draft.draft.title.trim() || "Your unfinished page"}</h2>
-            {draft.draft.text.trim() && (
-              <p className="ha-journal-text">{firstWords(draft.draft.text, 160)}</p>
-            )}
-            <div className="ha-journal-foot">
-              <span className="ha-quiet">
-                Draft saved {savedWhen(draft.draft.updatedAt)}
+              <span className="ha-row-detail">
+                Saved {savedWhen(draft.draft.updatedAt)}
                 {idleLine(draft) && ` · ${idleLine(draft)}`}
                 {leavingLine(draft) && ` · ${leavingLine(draft)}`}
               </span>
-              <span className="ha-journal-actions">
-                {idleLine(draft) && onDiscard && (
-                  <ConfirmDelete
-                    label="Let it go"
-            icon={false}
-                    ariaLabel="Let this draft go"
-                    question="Let this draft go?"
-                    detail="It’s removed for good. This can’t be undone."
-                    yes="Yes, let it go"
-                    busy={busy}
-                    className="ha-link ha-link-quiet"
-                    onConfirm={() => onDiscard(draft)}
-                  />
+            </span>
+            <span className="ha-row-actions">
+              <button type="button" className="ha-link" disabled={busy} onClick={() => onResume(draft)}>
+                <span className="ui-sr-only">{draft.draft.title.trim() || "Your draft"}: </span>
+                Keep writing
+              </button>
+              {idleLine(draft) && onDiscard && (
+                <ConfirmDelete
+                  label="Let it go"
+                  icon={false}
+                  ariaLabel="Let this draft go"
+                  question="Let this draft go?"
+                  detail="It’s removed for good. This can’t be undone."
+                  yes="Yes, let it go"
+                  busy={busy}
+                  className="ha-link ha-link-quiet"
+                  onConfirm={() => onDiscard(draft)}
+                />
+              )}
+            </span>
+          </div>
+        )}
+        {lately.map((x) =>
+          x.kind === "going" ? (
+            onResume && (
+              <GoingRow
+                key={`${x.item.kind}:${x.item.key}`}
+                book={book}
+                item={x.item}
+                busy={busy}
+                onResume={onResume}
+                onDiscard={onDiscard}
+              />
+            )
+          ) : x.kind === "page" ? (
+            <div key={x.page.id} className="ha-row">
+              <Illustration name={pageArt(x.page)} size={76} className="ha-row-art" />
+              <span className="ha-row-words">
+                <Whose family={false} extra={`${x.page.record ? "played" : "kept"} ${when(x.page.date)}`} />
+                <span className="ha-row-title">{x.page.title}</span>
+                {x.page.record && x.page.text && (
+                  <span className="ha-row-detail">{firstWords(x.page.text, 70)}</span>
                 )}
-                <button type="button" className="ha-ghost" disabled={busy} onClick={() => onResume(draft)}>
-                  Keep writing
+              </span>
+              <span className="ha-row-actions">
+                <button type="button" className="ha-link" disabled={busy} onClick={() => onPage(x.page.id)}>
+                  <span className="ui-sr-only">{x.page.title}: </span>
+                  {x.page.record ? "See it" : "Read it"}
                 </button>
               </span>
             </div>
-          </article>
-        )}
-        {onResume &&
-          rows.map((g) => (
-            <GoingRow
-              key={`${g.kind}:${g.key}`}
-              book={book}
-              item={g}
-              busy={busy}
-              onResume={onResume}
-              onDiscard={onDiscard}
-            />
-          ))}
-        {recent.map((p) => (
-          <div key={p.id} className="ha-row">
-            <Illustration name={pageArt(p)} size={76} className="ha-row-art" />
-            <span className="ha-row-words">
-              <span className="ha-row-kicker">
-                {p.record ? "Played" : "Kept"} {when(p.date)}
+          ) : (
+            <div key={x.page.id} className="ha-row">
+              <Illustration name={x.page.art ?? "your-book"} size={76} className="ha-row-art" />
+              <span className="ha-row-words">
+                <Whose family />
+                <span className="ha-row-title">
+                  {x.page.kind === "game" ? firstWords(x.page.text, 70).replace(/\.$/, "") : x.page.title || x.page.label}
+                </span>
+                <span className="ha-row-detail">
+                  {x.page.kind === "game" ? "" : `${x.page.mine ? "You" : x.page.byName} · `}
+                  {when(x.page.date) === "today" ? "Today" : shortDate(x.page.date)}
+                </span>
               </span>
-              <span className="ha-row-title">{p.title}</span>
-              {p.record && p.text && <span className="ha-row-detail">{firstWords(p.text, 70)}</span>}
-            </span>
-            <span className="ha-row-actions">
-              <button type="button" className="ha-link" disabled={busy} onClick={() => onPage(p.id)}>
-                <span className="ui-sr-only">{p.title}: </span>
-                {p.record ? "See it" : "Read it"}
-              </button>
-            </span>
-          </div>
-        ))}
-        {!draft && !rows.length && !recent.length && (
+              <span className="ha-row-actions">
+                <button type="button" className="ha-link" disabled={busy} onClick={onFamily}>
+                  <span className="ui-sr-only">{x.page.title || x.page.label}: </span>
+                  See it
+                </button>
+              </span>
+            </div>
+          ),
+        )}
+        {!draft && !lately.length && !passage && (
           <p className="ha-quiet ha-empty">
-            Nothing kept yet. Your first page will show up here.
+            Nothing kept yet. Your first entry will show up here.
           </p>
         )}
-        <button type="button" className="ha-link ha-open" disabled={busy} onClick={onBook}>
-          Open my book
-        </button>
+        <p className="ha-open">
+          <button type="button" className="ha-link" disabled={busy} onClick={onBook}>
+            Open my journal
+          </button>
+          <span aria-hidden="true"> · </span>
+          <button type="button" className="ha-link" disabled={busy} onClick={onFamily}>
+            Open family journal
+          </button>
+        </p>
       </section>
       <section className="ha-todo" aria-labelledby="ha-todo-title">
         <h2 id="ha-todo-title">What would you like to do?</h2>
         <Choice
           art="jot"
-          title="Write a journal entry"
+          title="Write in my journal"
+          line="Only you see it"
           busy={busy}
           onOpen={onWrite}
           extra={
@@ -582,23 +705,34 @@ function MeSide({
             ) : undefined
           }
         />
+        {onWriteFamily && (
+          <Choice
+            art="your-book"
+            title="Write in our family journal"
+            line="Everyone in the family can read it"
+            busy={busy}
+            onOpen={onWriteFamily}
+          />
+        )}
         <Choice
-          art="do-something"
+          art="same-page"
           title="Do an activity"
-          line={featured ? `This week: ${featured.title}, ${featured.time}` : undefined}
+          line={
+            asking && plan
+              ? `This week together: ${plan.goalLabel}`
+              : featured
+                ? `On your own or together · this week: ${featured.title}`
+                : "On your own or together"
+          }
           busy={busy}
           onOpen={onActivities}
         />
         <Choice
-          art="your-book"
-          title="Read about my family"
-          line={
-            family.length
-              ? `What you’ve kept about ${family.length < 2 ? family[0] : `${family.slice(0, -1).join(", ")} and ${family.at(-1)}`}`
-              : "Every page you’ve kept"
-          }
+          art="home"
+          title="Read about our family"
+          line="The family journal, newest first"
           busy={busy}
-          onOpen={onBook}
+          onOpen={onFamily}
         />
       </section>
     </main>
@@ -614,141 +748,18 @@ function LockIcon() {
   );
 }
 
-function FamilySide({
-  book,
-  busy,
-  headingRef,
-  familyPages = [],
-  myBookId = "",
-  plan,
-  onWrite,
-  onActivities,
-  onFamily,
-}: HomeProps) {
-  const now = new Date();
-  const shown = familyPagesOf(book, familyPages, { name: book.owner, bookId: myBookId });
-  const passage = shown.find((p) => p.kind === "passage");
-  const cards = shown.filter((p) => p !== passage).slice(0, 2);
-  const fresh = shown.filter((p) => now.getTime() - Date.parse(p.date) < 7 * DAY).length;
-  const since = shown.at(-1);
-  const moment = plan ? momentOf(plan, now) : "first";
-  const asking = !!plan && (moment === "lookback" || !todaysAnswer(plan, now));
-  const goalLabel = plan?.goalLabel ?? goals.hearing.label;
-  const where = plan ? places[plan.place].at : places.dinner.at;
-  const line = fresh
-    ? `${count(fresh)} new ${fresh === 1 ? "page" : "pages"} in the family book this week${plan ? "." : ", and something to try together tonight."}`
-    : plan
-      ? `Day ${Math.min(dayOf(plan, now), plan.days)} of trying ${goalLabel.charAt(0).toLowerCase()}${goalLabel.slice(1)}.`
-      : "Something to try together tonight is waiting in Activities.";
-  return (
-    <main
-      className={`rp-place ha-home ha-home-family ${asking ? "is-asking" : ""}`}
-      aria-labelledby="ha-title"
-    >
-      <Welcome
-        owner={book.owner}
-        first={!shown.length && !plan}
-        line={line}
-        art="home"
-        kicker={longDate(now)}
-        headingRef={headingRef}
-      />
-      {(asking || passage) && (
-        <div className={`ha-lead ${asking ? "is-asking" : ""}`}>
-          {asking && plan ? (
-            <section className="ha-plan-ask" aria-label="How is it going?">
-              <p className="ha-quiet">
-                {moment === "lookback"
-                  ? `${plan.goalLabel} · time to look back`
-                  : `${plan.goalLabel} · Day ${Math.min(dayOf(plan, now), plan.days)} of ${plan.days}`}
-              </p>
-              <p className="ha-plan-question">
-                {moment === "lookback" ? "Your two weeks are up." : wantedLine(plan)}{" "}
-                <em>{moment === "lookback" ? "Does it feel any different?" : "How did it go?"}</em>
-              </p>
-              <button type="button" className="ha-ghost" disabled={busy} onClick={onActivities}>
-                {moment === "lookback" ? "Look back together" : "Say how it went"}
-              </button>
-            </section>
-          ) : passage ? (
-            <PassageCard passage={passage} />
-          ) : null}
-        </div>
-      )}
-      <button type="button" className="ha-cover" disabled={busy} onClick={onFamily}>
-          <span className="ha-cover-words">
-            <span className="ha-cover-title">Our family book</span>
-            <span className="ha-cover-line">
-              {shown.length ? `${shown.length} ${shown.length === 1 ? "page" : "pages"}` : "No pages yet"}
-              {since && ` · since ${new Date(since.date).toLocaleDateString(undefined, { month: "long" })}`}
-              {fresh > 0 && ` · ${fresh} new this week`}
-            </span>
-          </span>
-          <Sprig className="ha-cover-leaf" tone="gold" />
-      </button>
-      <section className="ha-lately" aria-label="Lately in our family book">
-        {asking && passage && <PassageCard passage={passage} />}
-        {cards.length > 0 && (
-          <div className="ha-pages">
-            {cards.map((p) => (
-              <button key={p.id} type="button" className="ha-page" disabled={busy} onClick={onFamily}>
-                <span className="ha-page-meta">
-                  <span>{p.label}</span>
-                  <span>{when(p.date) === "today" ? "Today" : shortDate(p.date)}</span>
-                </span>
-                <span className="ha-page-title">{p.title || p.label}</span>
-                <span className="ha-page-text">{firstWords(p.text, 110)}</span>
-                <span className="ha-page-from">
-                  {p.byName.includes(" + ") ? p.byName : `From ${p.byName}’s book`}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-        {!shown.length && (
-          <p className="ha-quiet ha-empty">
-            Pages your family chooses to share show up here.
-          </p>
-        )}
-        <button type="button" className="ha-link ha-open" disabled={busy} onClick={onFamily}>
-          Open family book
-        </button>
-      </section>
-      <section className="ha-todo" aria-labelledby="ha-todo-title">
-        <h2 id="ha-todo-title">What would you like to do?</h2>
-        <Choice
-          art="jot"
-          title="Write in our family book"
-          line="Everyone in the family can read it."
-          busy={busy}
-          onOpen={onWrite}
-        />
-        <Choice
-          art="same-page"
-          title="Do an activity together"
-          line={`This week: ${goalLabel}${plan && !goals[plan.goal as keyof typeof goals]?.placed ? "" : `, ${where}`}`}
-          busy={busy}
-          onOpen={onActivities}
-        />
-        <Choice
-          art="your-book"
-          title="Read about our family"
-          line="Every page anyone has shared"
-          busy={busy}
-          onOpen={onFamily}
-        />
-      </section>
-    </main>
-  );
-}
-
-function PassageCard({ passage }: { passage: { text: string; caption?: string; byName: string; date: string } }) {
+function PassageCard({
+  passage,
+}: {
+  passage: { text: string; caption?: string; byName: string; date: string };
+}) {
   return (
     <figure className="ha-passage">
+      <Whose family />
       <blockquote>“{passage.text.trim()}”</blockquote>
       <figcaption>
         {passage.caption || passage.byName} · {shortDate(passage.date)}
-        {passage.caption && <span className="ha-passage-from"> · From {passage.byName}’s book</span>}
+        {passage.caption && <span className="ha-passage-from"> · shared by {passage.byName}</span>}
       </figcaption>
       <Sprig className="ha-passage-sprig" berries />
     </figure>

@@ -10,6 +10,7 @@ import {
   reminderDue,
   shelvesFor,
   isPlanCard,
+  kindLabel,
   STALE_DAYS,
   weekIndex,
 } from "../activities";
@@ -76,19 +77,25 @@ describe("featured this week", () => {
 });
 
 describe("shelves by situation", () => {
-  it("Just me and Our family get their own shelves; plan cards only in an adult's family", () => {
-    expect(shelvesFor("adult", false).map((s) => s.title).slice(0, 3)).toEqual([
+  it("one set of shelves mixes both kinds; the filter narrows them; plan cards only in an adult's family", () => {
+    expect(shelvesFor("adult").map((s) => s.title).slice(0, 3)).toEqual([
+      "At dinner",
       "Something felt hard",
-      "Feeling stretched thin",
-      "A small thing each day",
+      "In the car",
     ]);
-    const family = shelvesFor("adult", true);
-    expect(family.map((s) => s.title).slice(0, 3)).toEqual(["At dinner", "In the car", "Something felt hard"]);
-    expect(family.flatMap((s) => s.cards).filter(isPlanCard).map((c) => c.goal)).toContain("laughing");
-    expect(shelvesFor("9-12", true).flatMap((s) => s.cards).some(isPlanCard)).toBe(false);
+    const dinner = shelvesFor("adult")[0].cards;
+    expect(dinner.map(kindLabel)).toContain("Together");
+    expect(dinner.map(kindLabel)).toContain("On your own");
+    expect(shelvesFor("adult", "solo").flatMap((s) => s.cards).every((c) => kindLabel(c) === "On your own")).toBe(true);
+    expect(shelvesFor("adult", "together").flatMap((s) => s.cards).every((c) => kindLabel(c) === "Together")).toBe(true);
+    expect(shelvesFor("adult").flatMap((s) => s.cards).filter(isPlanCard).map((c) => c.goal)).toContain("laughing");
+    expect(
+      shelvesFor("adult", "all", [], { plansOk: false }).flatMap((s) => s.cards).some(isPlanCard),
+    ).toBe(false);
+    expect(shelvesFor("9-12", "together").flatMap((s) => s.cards).some(isPlanCard)).toBe(false);
   });
   it("a child's book keeps every activity it can do, and nothing it can't", () => {
-    const shown = new Set(shelvesFor("6-8", false).flatMap((s) => s.cards.map((c) => c.key)));
+    const shown = new Set(shelvesFor("6-8").flatMap((s) => s.cards.map((c) => c.key)));
     for (const item of doItems("6-8").filter((i) => i.key !== "write")) expect(shown.has(item.key)).toBe(true);
     expect(shown.has("repair")).toBe(false);
   });

@@ -62,7 +62,7 @@ describe("persistent family account", () => {
     );
     window.dispatchEvent(new Event("relish:locked"));
     resolve({ user: {} });
-    await expect(pending).rejects.toThrow("book locked");
+    await expect(pending).rejects.toThrow("journal locked");
     expect(mock.signout).toHaveBeenCalledTimes(1);
   });
   it("explicit sign-out ends the persistent account", async () => {

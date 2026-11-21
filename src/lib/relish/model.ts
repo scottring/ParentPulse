@@ -186,6 +186,32 @@ export function sampleBook(): Book {
     ],
   };
 }
+/**
+ * The sample's child: Leo's own journal, opened from Kids' journals in the
+ * sample (2026-11-21) so the child view can be explored without an account.
+ */
+export function sampleChildBook(): Book {
+  return {
+    version: 1,
+    owner: "Leo",
+    profile: { kind: "child", ageBand: "6-8", parentLock: { accountUid: "sample" } },
+    people: [],
+    moments: [],
+    familyPages: sampleBook().familyPages,
+    journal: [
+      {
+        id: "sample-leo-tooth", title: "My tooth came out", style: "sky", status: "kept", revision: 1,
+        text: "It was in an apple! I put it under my pillow. The tooth fairy wrote back in tiny letters.",
+        createdAt: "2026-11-01T18:00:00Z", updatedAt: "2026-11-01T18:00:00Z",
+      },
+      {
+        id: "sample-leo-snow", title: "Snow lion cat", style: "moss", status: "kept", revision: 1,
+        text: "Mom said it was a cat. I said lion. Now it is a snow lion cat.",
+        createdAt: "2026-11-03T17:00:00Z", updatedAt: "2026-11-03T17:00:00Z",
+      },
+    ],
+  };
+}
 export function isBook(value: unknown): value is Book {
   if (!value || typeof value !== "object") return false;
   const b = value as Book;

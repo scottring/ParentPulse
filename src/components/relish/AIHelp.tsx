@@ -24,7 +24,7 @@ export function AIHelp(props: {
   if (!canUseOnline({ profile: props.profile }))
     return (
       <p className="lb-boundary">
-        AI is available only in an adult book. This book’s written guide
+        AI is available only in an adult book. This journal’s written guide
         works without sending your words anywhere.
       </p>
     );
@@ -84,7 +84,7 @@ function AdultAIHelp({
   async function connect() {
     if (create && !adult) {
       setError(
-        "Online accounts are for adults. Children can keep books on this device and play together without an account.",
+        "Online accounts are for adults. Children can keep journals on this device and play together without an account.",
       );
       return;
     }
@@ -243,7 +243,7 @@ function AdultAIHelp({
             ) : (
               <>
                 Only the excerpt below passes through Relish’s server to OpenAI.
-                The rest of your book is not included in this AI request. OpenAI’s{" "}
+                The rest of your journal is not included in this AI request. OpenAI’s{" "}
                 <a
                   href="https://platform.openai.com/docs/guides/your-data"
                   target="_blank"
@@ -329,7 +329,7 @@ function AdultAIHelp({
                     />
                   </label>
                   <p className="r-small">
-                    Use a different password from your book’s passphrase.
+                    Use a different password from your journal’s passphrase.
                   </p>
                   {create && (
                     <label className="lb-consent-check">
