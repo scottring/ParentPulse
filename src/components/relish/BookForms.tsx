@@ -92,7 +92,7 @@ export function VaultForm({
           ? "Welcome back."
           : restoring
             ? "Restore a backup"
-            : "Create a local book"}
+            : "Create a local journal"}
       </h1>
       <p>
         {locked
@@ -165,7 +165,7 @@ export function VaultForm({
           : locked
             ? "Unlock my journal"
             : restoring
-              ? "Restore encrypted book"
+              ? "Restore encrypted journal"
               : "Create my private journal"}
       </button>
       {!locked && (

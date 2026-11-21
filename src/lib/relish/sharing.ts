@@ -163,7 +163,7 @@ export async function encryptPassage(
   const keyId = await keyFingerprint(to.publicKey);
   if (keyId !== to.keyId)
     throw new Error(
-      "This book’s key changed. Refresh the family before sharing.",
+      "This journal’s key changed. Refresh the family before sharing.",
     );
   const pair = await crypto.subtle.generateKey(
     { name: "ECDH", namedCurve: "P-256" },
@@ -197,7 +197,7 @@ export async function decryptPassage(
     packet.keyId !== (await keyFingerprint(identity.publicKey))
   )
     throw new Error(
-      "Restore the encrypted backup for this book to read this passage.",
+      "Restore the encrypted backup for this journal to read this passage.",
     );
   const priv = await crypto.subtle.importKey(
     "jwk",

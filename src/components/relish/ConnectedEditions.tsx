@@ -33,7 +33,7 @@ const receiptWords: Record<string, string> = {
 export default function ConnectedEditions(props: Props) {
   if (!canUseOnline(props.book))
     return (
-      <Dialog title="Book on this device" onClose={props.onClose}>
+      <Dialog title="Journal on this device" onClose={props.onClose}>
         <h2>Child profile</h2>
         <p>
           Online connections are available only in adult books. Children can
@@ -116,7 +116,7 @@ function AdultConnectedEditions({
   }, []);
   async function api(data: Record<string, unknown>, account = user) {
     if (!account || !account.emailVerified)
-      throw new Error("Verify your email to connect books.");
+      throw new Error("Verify your email to connect journals.");
     const token = await account.getIdToken();
     if (abort.current.signal.aborted)
       throw new Error("This journal was closed.");
@@ -206,7 +206,7 @@ function AdultConnectedEditions({
     const { connectAI } = await import("@/lib/relish/ai-auth");
     if (create && !adult)
       throw new Error(
-        "Online accounts are for adults. Children can use books kept on this device.",
+        "Online accounts are for adults. Children can use journals kept on this device.",
       );
     await connectAI(email, password, create);
     setPassword("");
@@ -363,13 +363,13 @@ function AdultConnectedEditions({
   }
   return (
     <Dialog
-      title="Connected books"
+      title="Connected journals"
       // Narrow while connecting (Scott's mockup); wide once family tools appear.
       wide={!!(user && connected)}
       onClose={() => void closeWithDraft()}
     >
       <section className="lb-connections rc-connect" data-verification={tick}>
-        <h2>Connected books</h2>
+        <h2>Connected journals</h2>
         <p className="rc-intro">
           Connect with another adult to share passages you choose. They decide
           whether to save them.
@@ -395,7 +395,7 @@ function AdultConnectedEditions({
             <h3>
               {create
                 ? "Create an optional online account"
-                : "Sign in to connect books"}
+                : "Sign in to connect journals"}
             </h3>
             <p className="lb-fine">
               Each person uses their own account. Children can keep a local

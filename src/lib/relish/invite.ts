@@ -4,7 +4,7 @@
 // into your family is a different flow, in Family.)
 export const INVITE_URL = "https://app.relish.my/";
 export const INVITE_TEXT =
-  "I’ve been using Relish, a private journal our family keeps together. Start your own family’s book here:";
+  "I’ve been using Relish, a private journal our family keeps together. Start your own family’s journal here:";
 
 type Nav = {
   share?: (data: { title?: string; text?: string; url?: string }) => Promise<void>;

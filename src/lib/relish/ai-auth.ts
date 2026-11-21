@@ -53,7 +53,7 @@ export async function connectAI(
   )(session, email.trim(), password);
   if (before !== generation) {
     await signOut(session);
-    throw new Error("The book locked. Please sign in again.");
+    throw new Error("The journal locked. Please sign in again.");
   }
   if (create) await sendEmailVerification(result.user);
   setParentGate(null);

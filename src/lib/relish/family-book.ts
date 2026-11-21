@@ -108,7 +108,7 @@ export async function changeFamilyBook(remote: FamilyRemote, change: FamilyChang
       if ("add" in change) {
         const target = heads.length ? await openFamily(remote, heads[0]) : null;
         if (!heads.length) await create(remote, addFamilyPage<Pick<Book, "familyPages">>({}, change.add).familyPages!);
-        else if (!target) throw new Error("Our family book couldn’t be read.");
+        else if (!target) throw new Error("Our family journal couldn’t be read.");
         else {
           const next = addFamilyPage(target.book, change.add);
           if (next !== target.book) await write(remote, target, next);

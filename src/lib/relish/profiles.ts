@@ -110,7 +110,7 @@ export async function configureProfile(
     !(await verifyParent(book.profile.parentLock, parentPass))
   )
     throw new Error(
-      "That parent passphrase did not match. The book has not changed.",
+      "That parent passphrase did not match. The journal has not changed.",
     );
   if (accountUid && book.profile?.kind !== "child") {
     const { verifyAccountPassword } = await import("./ai-auth");

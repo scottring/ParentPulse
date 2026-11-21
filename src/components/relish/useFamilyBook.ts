@@ -59,8 +59,8 @@ export function useAccountFamily(remote: Remote | null, bookKey: string): Family
           return;
         setError(
           e instanceof Error && e.message
-            ? `Our family book didn’t load. ${e.message}`
-            : "Our family book didn’t load. Try again in a moment.",
+            ? `Our family journal didn’t load. ${e.message}`
+            : "Our family journal didn’t load. Try again in a moment.",
         );
       })
       .finally(() => {
@@ -76,7 +76,7 @@ export function useAccountFamily(remote: Remote | null, bookKey: string): Family
   }, [enabled, bookKey, refresh]);
   async function change(change: FamilyChange, optimistic: (p: FamilyPage[]) => FamilyPage[]) {
     const r = latest.current;
-    if (!r) throw new Error("Sign in to add to Our family book.");
+    if (!r) throw new Error("Sign in to add to Our family journal.");
     generation.current++;
     const before = pages;
     setPages(optimistic(pages));

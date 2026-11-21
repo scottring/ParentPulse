@@ -39,7 +39,7 @@ export async function authorizeAI(
 ): Promise<string> {
   if (!authorization?.startsWith("Bearer ") || authorization.length > 8192)
     throw new AIError(
-      "Sign in to use cloud AI. Your book stays on this computer.",
+      "Sign in to use cloud AI. Your journal stays on this computer.",
       401,
     );
   const { auth } = services();
@@ -76,7 +76,7 @@ export async function reserveAI(uid: string, now = Date.now()): Promise<void> {
     const minuteCount = user?.minute === minute ? user.minuteCount : 0;
     if (userCount >= AI_DAILY_LIMIT)
       throw new AIError(
-        "You’ve used today’s 20 AI reflections. Your book is still here; come back tomorrow for another perspective.",
+        "You’ve used today’s 20 AI reflections. Your journal is still here; come back tomorrow for another perspective.",
         429,
         retryDay,
       );

@@ -84,7 +84,7 @@ function AdultAIHelp({
   async function connect() {
     if (create && !adult) {
       setError(
-        "Online accounts are for adults. Children can keep books on this device and play together without an account.",
+        "Online accounts are for adults. Children can keep journals on this device and play together without an account.",
       );
       return;
     }
