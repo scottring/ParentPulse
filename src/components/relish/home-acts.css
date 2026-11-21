@@ -765,7 +765,7 @@
   width: 100%;
   height: 190px;
   padding: 12px 0 4px;
-  background: var(--ui-page);
+  background: #f5f5f0; /* the paintings' own paper, so the band is seamless */
   object-fit: contain;
 }
 .lb-app.rp-shell .ha-card-body {
@@ -1527,3 +1527,10 @@
   white-space: nowrap;
 }
 
+
+/* The paintings' cream paper (#f5f5f0) all but matches the page; multiply
+   (ui.css) darkened it into a visible square on these screens, so they
+   draw normally here. */
+.lb-app.rp-shell img:is(.ha-welcome-art, .ha-feature-art, .ha-choice-art, .ha-row-art, .ha-card-art, .ha-done-art, .ha-game-art, .ha-habit-art) {
+  mix-blend-mode: normal;
+}
