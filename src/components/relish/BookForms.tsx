@@ -61,7 +61,7 @@ export function VaultForm({
   error,
   onSubmit,
   onCancel,
-  cancelLabel = "Keep exploring the sample book",
+  cancelLabel = "Keep exploring the sample journal",
 }: {
   locked: boolean;
   busy: boolean;

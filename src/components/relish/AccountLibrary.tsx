@@ -466,7 +466,7 @@ export default function AccountLibrary({
         )}
         {onExplore && (
           <button type="button" onClick={onExplore}>
-            Explore a sample book
+            Explore a sample journal
           </button>
         )}
       </div>
@@ -868,7 +868,7 @@ export default function AccountLibrary({
             </button>
           )}
           {onExplore && (
-            <button onClick={onExplore}>Explore a sample book</button>
+            <button onClick={onExplore}>Explore a sample journal</button>
           )}
         </footer>
       )}

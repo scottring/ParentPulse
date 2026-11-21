@@ -87,7 +87,7 @@ export function useLocalBook() {
     } catch {
       setMode("sample");
       setError(
-        "Browser storage is unavailable. You can explore the sample book.",
+        "Browser storage is unavailable. You can explore the sample journal.",
       );
     }
   }, []);
