@@ -14,7 +14,7 @@ struct RelishBook: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.816, green: 0.851, blue: 0.839).ignoresSafeArea()
+            Color(red: 0.965, green: 0.957, blue: 0.929).ignoresSafeArea()
             BookWebView(browser: browser)
             if let error = browser.error {
                 ContentUnavailableView {
@@ -30,17 +30,17 @@ struct RelishBook: View {
             // Cover app-switcher snapshots without rebuilding the web view or
             // destroying a draft when a fold briefly changes scene activation.
             if phase != .active {
-                Color(red: 0.816, green: 0.851, blue: 0.839).ignoresSafeArea()
+                Color(red: 0.965, green: 0.957, blue: 0.929).ignoresSafeArea()
                 VStack(spacing: 16) {
                     Image(systemName: "book.closed").font(.largeTitle)
                     Text("relish").font(.system(size: 40, design: .serif))
                     Text("Content hidden while Relish is inactive.").font(.subheadline)
                 }
-                .foregroundStyle(Color(red: 0.24, green: 0.31, blue: 0.32))
-                .accessibilityLabel("Relish. Your private book is covered.")
+                .foregroundStyle(Color(red: 0.188, green: 0.220, blue: 0.173))
+                .accessibilityLabel("Relish. Your journal is covered.")
             }
         }
-        .tint(Color(red: 0.27, green: 0.40, blue: 0.42))
+        .tint(Color(red: 0.263, green: 0.318, blue: 0.227))
         .sheet(item: $browser.export) { item in
             BackupShare(url: item.url) { browser.finishExport(item) }
         }
@@ -98,7 +98,7 @@ final class BookBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUID
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.isOpaque = false
-        webView.backgroundColor = UIColor(red: 0.816, green: 0.851, blue: 0.839, alpha: 1)
+        webView.backgroundColor = UIColor(red: 0.965, green: 0.957, blue: 0.929, alpha: 1)
         webView.scrollView.contentInsetAdjustmentBehavior = .automatic
         // WKWebView handles its safe region and keyboard. No UIScreen/idiom,
         // orientation lock, custom JS bridge, or speculative posture APIs.
@@ -122,11 +122,11 @@ final class BookBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUID
     }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError failure: Error) {
         guard (failure as NSError).code != NSURLErrorCancelled else { return }
-        error = "Connect to the internet to open Relish. Your encrypted books on this device have not been removed."
+        error = "Connect to the internet to open Relish. Your journals on this device are still here."
     }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { error = nil }
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-        error = "Relish needs to reopen. Your last saved words are still in your encrypted book."
+        error = "Relish needs to reopen. Your last saved words are still in your journal."
     }
     func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping @MainActor @Sendable (WKPermissionDecision) -> Void) {
         let allowed = policy.permitsMedia(scheme: origin.protocol, host: origin.host, port: origin.port, mainFrame: frame.isMainFrame)
@@ -149,7 +149,7 @@ final class BookBrowser: NSObject, ObservableObject, WKNavigationDelegate, WKUID
     }
     func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
         if let url = downloads.removeValue(forKey: ObjectIdentifier(download)) { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
-        self.error = "The backup could not be exported. Your book is still on this device."
+        self.error = "The backup could not be exported. Your journal is still on this device."
     }
     func finishExport(_ item: BackupExport) {
         export = nil
