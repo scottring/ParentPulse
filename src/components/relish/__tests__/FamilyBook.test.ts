@@ -172,7 +172,8 @@ const library = () => world.library as ReturnType<typeof fakeLibrary>;
 /** Journal ▾, then Our family journal. Leaving a page being written saves it first. */
 async function ourFamily() {
   familyJournal();
-  await screen.findByRole("heading", { name: "Our family journal", level: 1 });
+  // A grown-up's whole page; in a child's journal, the section under their cover.
+  await screen.findByRole("heading", { name: "Our family journal" });
 }
 const QUOTE = "When I’m big I’ll still hold your hand. Just not in front of people.";
 
@@ -254,6 +255,6 @@ it("a passage added in Scott's book shows in Kaleb's Our family, and taking it o
   pickJournal("Kaleb’s journal");
   await screen.findByRole("heading", { name: /Kaleb/ });
   await ourFamily();
-  await screen.findByRole("heading", { name: "The first entry is waiting" }, { timeout: 15000 });
+  await screen.findByText(/Nothing in Our family journal yet/, {}, { timeout: 15000 });
   expect(screen.queryByText(`“${QUOTE}”`)).toBeNull();
 }, 60000);

@@ -75,7 +75,7 @@ function revealed(): Game {
   }
   return g;
 }
-const everyPage = () => within(screen.getByRole("region", { name: "Entries in my journal" }));
+const everyPage = () => within(screen.getByRole("region", { name: "Entries in the journal" }));
 
 it("a game finished without keeping a page shows in My journal under each player", async () => {
   const book = family();
@@ -96,19 +96,18 @@ it("a game finished without keeping a page shows in My journal under each player
     kind: "game",
     text: "Played Same page? with Ella and Kaleb.",
   });
-  // Finishing lands on Our family journal, with the note as an entry; the
-  // round is in your own journal too.
+  // Finishing lands on the journal's family spine, with the note as an
+  // entry for everyone; the round is a branch of your own too.
   await screen.findByRole("heading", { name: "Our family journal", level: 1 });
-  expect(
-    within(screen.getByRole("list", { name: "Entries in Our family journal" })).getByRole("button", {
-      name: /Game · Same page\?.*Played Same page\? with Ella and Kaleb/,
-    }),
-  ).toBeTruthy();
+  const note = everyPage().getByRole("button", { name: /Played Same page\? with Ella and Kaleb/ });
+  expect(note.closest("li")?.className).toContain("rt-spine");
+  expect(note.textContent).toMatch(/Everyone/);
   myJournal();
-  const record = everyPage().getByRole("button", { name: /Same page\? with Ella and Kaleb/ });
-  expect(record.textContent).toMatch(/^You played/);
+  const record = everyPage().getByRole("button", { name: /^You played Same page\? with Ella and Kaleb/ });
+  expect(record.closest("li")?.className).toContain("rt-branch");
+  expect(record.textContent).toMatch(/You, Ella and Kaleb|You, Kaleb and Ella/);
   fireEvent.click(screen.getByRole("button", { name: "Ella" }));
-  expect(everyPage().getByRole("button", { name: /Same page\? with Ella and Kaleb/ })).toBeTruthy();
+  expect(everyPage().getByRole("button", { name: /^You played Same page\? with Ella and Kaleb/ })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Gran" }));
   expect(screen.queryByRole("button", { name: /Same page\?/ })).toBeNull();
 });

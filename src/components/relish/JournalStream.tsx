@@ -6,12 +6,15 @@ import type { JournalEntry } from "@/lib/relish/journal";
 import type { ManualCard } from "@/lib/relish/manual";
 import { bookPages } from "@/lib/relish/pages";
 import { groupStream, sayingOf, type StreamItem } from "@/lib/relish/journal-stream";
+import { seenLabel, type Lane, type TimelineItem } from "@/lib/relish/journal-timeline";
+import { Users } from "lucide-react";
 import { sameName } from "@/lib/relish/mentions";
 import { namesList } from "@/lib/relish/tools";
 import Illustration from "./Illustration";
 import MentionText from "./MentionText";
 import { exerciseIllustration, gameIllustration, type IllustrationName } from "./illustrations";
 import { personTones } from "./Home";
+import type { Shown } from "./Family";
 import "./journal-stream.css";
 
 const shortDate = (iso: string) =>
@@ -70,44 +73,205 @@ export type StreamActions = {
   onOpenFamily?: (pageId: string) => void;
 };
 
-/** The stream, newest first, under Today / This week / Earlier. */
-export function StreamList({
+/**
+ * The one journal (2026-11-22): Our family journal runs down the spine; what
+ * only some people can see branches off it at the moment it happened, saying
+ * who can see it. Newest first, under Today / This week / Earlier.
+ */
+export function TimelineList({
   book,
   items,
   now = new Date(),
+  onOpenSpine,
+  ownLabel,
   ...actions
-}: { book: Book; items: StreamItem[]; now?: Date } & StreamActions) {
+}: {
+  book: Book;
+  items: TimelineItem<Shown>[];
+  now?: Date;
+  /** Opens a page of Our family journal to read. */
+  onOpenSpine: (page: Shown) => void;
+  /**
+   * How a page of your own is labelled, instead of "Only you": a child's
+   * journal can be opened by their grown-up, so it never claims that.
+   */
+  ownLabel?: string;
+} & StreamActions) {
   return (
-    <>
+    <div className="rt-timeline">
       {groupStream(items, now).map((g) => (
-        <section key={g.label} className="rs-group" aria-label={g.label}>
-          <h3 className="rs-when">{g.label}</h3>
-          <ul className="rp-entries rs-items">
-            {g.items.map((item) => (
-              <li key={item.key}>
-                <StreamCard book={book} item={item} now={now} {...actions} />
+        <section key={g.label} className="rs-group rt-group" aria-label={g.label}>
+          <h3 className="rs-when rt-when">{g.label}</h3>
+          <ul className="rt-items">
+            {g.items.map((t) => (
+              <li key={t.key} className={`rt-item rt-${t.lane}`}>
+                {t.page ? (
+                  <SpineCard book={book} t={t} page={t.page} now={now} onOpen={onOpenSpine} {...actions} />
+                ) : (
+                  <StreamCard
+                    book={book}
+                    item={t.item!}
+                    now={now}
+                    lane={t.lane}
+                    seenWith={t.seenWith}
+                    ownLabel={ownLabel}
+                    {...actions}
+                  />
+                )}
               </li>
             ))}
           </ul>
         </section>
       ))}
-    </>
+    </div>
   );
 }
 
-function Lock() {
+/** Who can see a branch: "Only you", or "You and Anna" with their faces. */
+function Seen({ book, names, own }: { book: Book; names: string[]; own?: string }) {
+  if (!names.length && own) return <span className="rs-lock rt-seen">{own}</span>;
+  const label = seenLabel(names);
   return (
-    <span className="rs-lock">
-      <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-        <rect x="5" y="11" width="14" height="10" rx="2" />
-        <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-      </svg>
-      Only me
+    <span className="rs-lock rt-seen" title={`Who can see this: ${label}`}>
+      {names.length ? (
+        <span className="rt-seen-faces" aria-hidden="true">
+          {names.slice(0, 3).map((n) => (
+            <Face key={n} book={book} name={n} small />
+          ))}
+        </span>
+      ) : (
+        <LockIcon />
+      )}
+      {label}
+    </span>
+  );
+}
+function LockIcon() {
+  return (
+    <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
+/** On the spine: everyone in the family can read it. */
+function Everyone() {
+  return (
+    <span className="rt-everyone">
+      <Users size={14} aria-hidden="true" /> Everyone
     </span>
   );
 }
 
-function StreamCard({
+/** What a page of Our family journal is to this writer, when it's more than a page. */
+function tagOf(i: StreamItem | undefined, page: Shown) {
+  if (!i) return "";
+  if (i.kind === "mention") return `${i.from || page.byName} mentioned you`;
+  if (i.kind === "sent") return `${i.from || page.byName} sent you this`;
+  if (i.kind === "played") return i.familyPage ? `${i.from} played with you` : "";
+  return "";
+}
+
+/** A page of Our family journal on the spine: on butter paper, for everyone. */
+function SpineCard({
+  book,
+  page: p,
+  t,
+  now,
+  busy,
+  onOpen,
+  onKeep,
+  onSetAside,
+  canWriteBack,
+  onWriteBack,
+}: { book: Book; t: TimelineItem<Shown>; page: Shown; now: Date; onOpen: (page: Shown) => void } & StreamActions) {
+  const i = t.item;
+  const date = when(p.date, now);
+  const tag = tagOf(i, p);
+  const quote = p.kind === "passage" && !p.title;
+  const what = p.kind === "highlights" || (p.kind === "game" && !p.playNote) ? ` · ${p.label}` : "";
+  const head = (
+    <span className="rs-from">
+      {p.art ? (
+        <Tile name={p.art} />
+      ) : (
+        <Face book={book} name={p.mine ? book.owner : p.byName.split(" + ")[0]} />
+      )}
+      <span>
+        <strong>{p.mine ? "You" : p.byName}</strong>
+        {what} · {date}
+      </span>
+      <span className="rt-marks">
+        {i?.offer && <span className="rs-new">New</span>}
+        <Everyone />
+      </span>
+    </span>
+  );
+  const body = (
+    <>
+      {tag && <span className="rt-tag">{tag}</span>}
+      {quote ? (
+        <>
+          <span className="rs-quote rt-quote">“{p.text.trim()}”</span>
+          {p.caption && <span className="rs-caption">{p.caption}</span>}
+        </>
+      ) : p.playNote ? (
+        <span className="rp-page-title rt-note-title">{p.text.trim().replace(/\.$/, "")}</span>
+      ) : (
+        <>
+          {p.title && <span className="rp-page-title">{p.title}</span>}
+          <span className="rp-page-excerpt rs-body">
+            <MentionText text={p.text} />
+          </span>
+        </>
+      )}
+    </>
+  );
+  // A page passed on from a partner, waiting: keep it or set it aside here.
+  if (i?.offer) {
+    const from = i.from || p.byName;
+    const reply = !!onWriteBack && !!canWriteBack?.(i);
+    return (
+      <article className="rp-entry rs-card rs-butter rt-card" aria-label={`${from} sent you this`}>
+        {head}
+        {body}
+        <span className="rp-entry-actions">
+          {reply && (
+            <button className="rp-link" disabled={busy} onClick={() => onWriteBack!(i)}>
+              Write back
+            </button>
+          )}
+          {onKeep && (
+            <button className="rp-link" disabled={busy} onClick={() => onKeep(i)}>
+              Keep it
+            </button>
+          )}
+          {onSetAside && (
+            <button className="rp-link rp-link-quiet" disabled={busy} onClick={() => onSetAside(i)}>
+              Set aside
+            </button>
+          )}
+          <button className="rp-link" disabled={busy} data-page-id={p.id} onClick={() => onOpen(p)}>
+            Read the whole entry
+          </button>
+        </span>
+      </article>
+    );
+  }
+  return (
+    <button
+      className="rp-page rp-entry rs-card rs-butter rt-card"
+      data-page-id={p.id}
+      disabled={busy}
+      onClick={() => onOpen(p)}
+    >
+      {head}
+      {body}
+    </button>
+  );
+}
+
+export function StreamCard({
   book,
   item: i,
   now,
@@ -120,8 +284,25 @@ function StreamCard({
   canWriteBack,
   onWriteBack,
   onOpenFamily,
-}: { book: Book; item: StreamItem; now: Date } & StreamActions) {
+  lane = "branch",
+  seenWith = [],
+  ownLabel,
+}: {
+  book: Book;
+  item: StreamItem;
+  now: Date;
+  lane?: Lane;
+  seenWith?: string[];
+  ownLabel?: string;
+} & StreamActions) {
   const date = when(i.date, now);
+  // A branch says who can see it; the odd stream item on the spine, everyone.
+  const seen = (
+    <span className="rt-marks">
+      {i.offer && <span className="rs-new">New</span>}
+      {lane === "branch" ? <Seen book={book} names={seenWith} own={ownLabel} /> : <Everyone />}
+    </span>
+  );
   if (i.draft) {
     const d = i.draft;
     const title = d.title.trim() || d.text.trim().split("\n")[0].slice(0, 60) || "An unfinished page";
@@ -132,6 +313,7 @@ function StreamCard({
           <span>
             <strong>{d.audience === "family" ? "Draft for our family journal" : "Your draft"}</strong> · {date}
           </span>
+          {seen}
         </span>
         <span className="rp-page-title">{title}</span>
         {d.text.trim() && (
@@ -164,14 +346,17 @@ function StreamCard({
     const from = i.from || "Someone";
     const reply = !!onWriteBack && !!canWriteBack?.(i);
     return (
-      <article className="rp-entry rs-card rs-butter" aria-label={`${from} sent you this`}>
+      <article
+        className={`rp-entry rs-card ${lane === "spine" ? "rs-butter" : ""}`}
+        aria-label={`${from} sent you this`}
+      >
         <span className="rs-from">
           <Face book={book} name={from} />
           <span>
             <strong>{from} sent you this</strong>
             {i.direct ? "" : " · shared with the family"} · {date}
           </span>
-          {i.offer && <span className="rs-new">New</span>}
+          {seen}
         </span>
         <blockquote className="rs-quote">“{i.text.trim()}”</blockquote>
         {(i.caption || i.direct) && (
@@ -206,7 +391,6 @@ function StreamCard({
               </button>
             )
           )}
-          {i.direct && <span className="rs-fine">Only you and {from} see this</span>}
         </span>
       </article>
     );
@@ -220,6 +404,7 @@ function StreamCard({
           <span>
             <strong>{from} mentioned you</strong> · in Our family journal · {date}
           </span>
+          {seen}
         </span>
         {i.title && <span className="rp-page-title">{i.title}</span>}
         <span className="rp-page-excerpt rs-body">
@@ -245,6 +430,7 @@ function StreamCard({
             <strong>You sent {to}</strong>
             {i.title ? ` · from ${i.title}` : ""} · {date}
           </span>
+          {seen}
         </span>
         <span className="rs-sent">“{i.text.trim()}”</span>
         {i.note && <p className="rs-note">{i.note}</p>}
@@ -263,6 +449,7 @@ function StreamCard({
             </strong>{" "}
             · in Our family journal · {date}
           </span>
+          {seen}
         </span>
         {onOpenFamily && (
           <span className="rp-entry-actions">
@@ -284,7 +471,6 @@ function StreamCard({
       ? "You wrote"
       : `${kind.label}${page.exercise && !page.title.includes(page.exercise) ? ` · ${page.exercise}` : ""}`;
   const note = sharedNote(i);
-  const familyEntry = i.shared?.page && !i.shared.lines && !i.shared.sentTo.length;
   return (
     <button
       className={`rp-page rp-entry rs-card rp-edge-${kind.tone}`}
@@ -297,7 +483,7 @@ function StreamCard({
         <span>
           <strong>{label}</strong> · {date}
         </span>
-        {!played && !familyEntry && <Lock />}
+        {seen}
       </span>
       {!played && <span className="rp-page-title">{page.title}</span>}
       <span className="rp-page-excerpt">
@@ -390,9 +576,10 @@ export function StreamSide({
         </section>
       )}
       <p className="rs-privacy">
-        Only you see this view. Nothing from anyone’s private entries shows up
-        here, only what they chose to send or share. Relish’s reflections are
-        for grown-ups and can be turned off.
+        The middle is the same for everyone in the family. Each branch says who
+        can see it, and nobody else does. Nothing from anyone’s private entries
+        shows up here, only what they chose to send or share. Relish’s
+        reflections are for grown-ups and can be turned off.
       </p>
     </aside>
   );

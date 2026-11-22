@@ -4,9 +4,9 @@ import { SoundControl } from "./Sensory";
 import Illustration from "./Illustration";
 
 /**
- * Three places (Scott, 2026-11-21): Home · Journal · Activities. Book and the
- * Just me / Our family switch are gone; which journal is open decides whose
- * pages you're in.
+ * Three places (Scott, 2026-11-21): Home · Journal · Activities. Journal is
+ * one page (2026-11-22): Our family journal down the spine, your own entries
+ * branching off it. With children's journals, Journal is a menu that lists them.
  */
 export type Place = "home" | "journal" | "do";
 export const places: { id: Place; label: string }[] = [
@@ -14,7 +14,7 @@ export const places: { id: Place; label: string }[] = [
   { id: "journal", label: "Journal" },
   { id: "do", label: "Activities" },
 ];
-/** Whose journal: your own, or the whole family's. The last one is remembered per book. */
+/** Who a page is written for: only me, or the whole family (a draft's audience). */
 export type Space = "me" | "family";
 
 export type MenuItem =
@@ -29,7 +29,7 @@ export type MenuItem =
 /** A child's journal the parent can open from the Journal menu. */
 export type KidJournal = { id: string; name: string; locked?: boolean; onOpen: () => void };
 
-/** Phones (and a closed Duo) skip the menu: Journal opens straight onto the last journal. */
+/** Phones (and a closed Duo) skip the menu: Journal opens straight onto the journal. */
 export const PHONE_QUERY = "(max-width: 720px)";
 const isPhone = () =>
   typeof window !== "undefined" &&
@@ -56,12 +56,12 @@ export default function TopBar({
   onPlace: (place: Place) => void;
   items: MenuItem[];
   status?: string;
-  /** Which journal is open, when one is. */
-  journal?: Space;
+  /** The journal is open. */
+  journal?: boolean;
   /** Children's journals in this account, listed under Kids' journals. */
   kids?: KidJournal[];
-  /** Opens My journal or Our family journal. Without it, Journal is a plain tab. */
-  onJournal?: (space: Space) => void;
+  /** Opens the journal from the menu. Without it, Journal is a plain tab. */
+  onJournal?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [journalOpen, setJournalOpen] = useState(false);
@@ -153,7 +153,7 @@ export default function TopBar({
           aria-expanded={journalOpen}
           aria-controls={journalOpen ? journalId : undefined}
           onClick={() => {
-            // A phone opens the journal page itself, with Mine / Family on it.
+            // A phone opens the journal page itself, with kids' journals below.
             if (isPhone()) {
               setJournalOpen(false);
               return onPlace("journal");
@@ -195,27 +195,14 @@ export default function TopBar({
             <button
               type="button"
               role="menuitem"
-              className={`rp-jm-item ${journal === "me" ? "is-on" : ""}`}
-              aria-current={journal === "me" ? "page" : undefined}
-              onClick={() => pick(() => onJournal("me"))}
-            >
-              <Illustration name="jot" size={46} className="rp-jm-art" />
-              <span className="rp-jm-words">
-                <span className="rp-jm-title">My journal</span>
-                <span className="rp-jm-note">Only me</span>
-              </span>
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              className={`rp-jm-item ${journal === "family" ? "is-on" : ""}`}
-              aria-current={journal === "family" ? "page" : undefined}
-              onClick={() => pick(() => onJournal("family"))}
+              className={`rp-jm-item ${journal ? "is-on" : ""}`}
+              aria-current={journal ? "page" : undefined}
+              onClick={() => pick(onJournal)}
             >
               <Illustration name="your-book" size={46} className="rp-jm-art" />
               <span className="rp-jm-words">
                 <span className="rp-jm-title">Our family journal</span>
-                <span className="rp-jm-note">Everyone in the family</span>
+                <span className="rp-jm-note">The family’s pages, and yours</span>
               </span>
             </button>
             {[

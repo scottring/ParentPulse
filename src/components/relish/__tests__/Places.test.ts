@@ -62,8 +62,7 @@ it("Read about our family opens Our family journal", () => {
 it("My journal: reviews one suggestion at a time and filters by person", async () => {
   const app = openBook(sampleBook(), { mode: "sample" });
   myJournal();
-  expect(screen.getByRole("heading", { name: "My journal", level: 1 })).toBeTruthy();
-  expect(within(document.querySelector(".rp-mine-head") as HTMLElement).getByText("Only me")).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Our family journal", level: 1 })).toBeTruthy();
   // Relish noticed sits beside the stream (2026-11-22), one suggestion at a time.
   const noticed = () => within(screen.getByRole("region", { name: "Relish noticed" }));
   expect(noticed().getByText("A little room to talk")).toBeTruthy();
@@ -189,15 +188,14 @@ it("Our family in a child's book offers no invitations or other books", () => {
     profile: { kind: "child", ageBand: "6-8", parentLock: { accountUid: "parent" } },
   });
   ourFamily();
-  // Kids can read and add to the family journal, but invite no one.
-  expect(screen.getByRole("heading", { name: "Our family journal", level: 1 })).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Who’s in our family" }));
+  // Kids read and add to the family journal in their own, but invite no one.
+  expect(screen.getByRole("heading", { name: "Ella’s journal", level: 1 })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Our family journal", level: 2 })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Add to our family journal" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Who’s in our family" })).toBeNull();
   expect(screen.queryByRole("button", { name: /Invite a partner/ })).toBeNull();
   expect(screen.queryByRole("button", { name: /Add a child/ })).toBeNull();
   expect(screen.queryByRole("button", { name: /^Open .*’s journal/ })).toBeNull();
-  expect(screen.getByRole("button", { name: "Open my journal" })).toBeTruthy();
-  // Inviting a friend to start their own Relish is open to everyone.
-  expect(screen.getByRole("button", { name: /Invite a friend/ })).toBeTruthy();
 });
 
 it("Invite a friend copies the link where there's no share sheet", async () => {

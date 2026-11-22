@@ -12,51 +12,90 @@ vi.mock("../Sensory", () => ({
 afterEach(cleanup);
 import { familyJournal, myJournal, openBook } from "./bookHarness";
 
-const stream = () => within(screen.getByRole("region", { name: "Entries in my journal" }));
+const stream = () => within(screen.getByRole("region", { name: "Entries in the journal" }));
 
-it("My journal is everything that's yours, each item saying where it came from", () => {
+/** The timeline row an entry sits on: the family's spine, or a branch off it. */
+const laneOf = (el: HTMLElement) => (el.closest("li")?.className.match(/rt-(spine|branch)/) || [])[1];
+
+it("the journal is one timeline: the family's spine, with branches that say who can see them", () => {
   openBook(sampleBook(), { mode: "sample" });
   myJournal();
-  expect(
-    screen.getByText("What you wrote, and what your family sent you, shared about you, or did with you."),
-  ).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Our family journal", level: 1 })).toBeTruthy();
+  expect(screen.getByText(/What the family shares runs down the middle/)).toBeTruthy();
+  // No Mine / Family switch: one journal, with filters.
+  expect(screen.queryByRole("group", { name: "Which journal" })).toBeNull();
+  // A line Anna sent Alex alone: a branch only they see, waiting to be kept.
   const sent = stream().getByRole("article", { name: "Anna sent you this" });
   expect(sent.textContent).toMatch(/You stayed so calm with Leo at the pool today/);
   expect(within(sent).getByText("New")).toBeTruthy();
-  expect(stream().getByRole("article", { name: "Leo mentioned you" }).textContent).toMatch(/@Dad read it to me/);
-  expect(stream().getByRole("button", { name: /You played Same page\? with Anna/ })).toBeTruthy();
-  expect(stream().getByRole("article", { name: "You sent Anna" }).textContent).toMatch(/field trip form/);
-  expect(stream().getByRole("button", { name: /You wrote.*The blanket-fort expedition/ }).textContent).toMatch(/Only me/);
+  expect(laneOf(sent)).toBe("branch");
+  expect(sent.textContent).toMatch(/You and Anna/);
+  // Leo's family page that mentions Alex: on the spine, for everyone, saying so.
+  const mention = stream().getByRole("button", { name: /Leo mentioned you/ });
+  expect(mention.textContent).toMatch(/@Dad read it to me/);
+  expect(laneOf(mention)).toBe("spine");
+  expect(mention.textContent).toMatch(/Everyone/);
+  // A round Alex and Anna played; a line Alex sent Anna.
+  const played = stream().getByRole("button", { name: /You played Same page\? with Anna/ });
+  expect([laneOf(played), played.textContent?.includes("You and Anna")]).toEqual(["branch", true]);
+  const line = stream().getByRole("article", { name: "You sent Anna" });
+  expect([laneOf(line), line.textContent?.includes("You and Anna")]).toEqual(["branch", true]);
+  // A private entry: a branch, Only you.
+  const own = stream().getByRole("button", { name: /You wrote.*The blanket-fort expedition/ });
+  expect([laneOf(own), own.textContent?.includes("Only you")]).toEqual(["branch", true]);
+  // The family's own pages run down the spine.
+  expect(laneOf(stream().getByRole("button", { name: /When I’m big I’ll still hold your hand/ }))).toBe("spine");
+  expect(stream().getAllByRole("listitem").filter((li) => li.className.includes("rt-spine"))).toHaveLength(6);
   // Today / This week / Earlier.
   expect(screen.getByRole("region", { name: "Today" })).toBeTruthy();
   // The side column: what the family says, and what this view can see.
   const says = screen.getByRole("region", { name: "What your family says about you" });
   expect(within(says).getByRole("button", { name: "See all 2" })).toBeTruthy();
-  expect(screen.getByText(/Only you see this view\. Nothing from anyone’s private entries/)).toBeTruthy();
+  expect(screen.getByText(/Each branch says who can see it, and nobody else does\./)).toBeTruthy();
 });
 
-it("filters by kind and person, and See all shows what the family says", () => {
+it("filters: Family is the spine, Just me the branches, then kind and person", () => {
   openBook(sampleBook(), { mode: "sample" });
   myJournal();
   const show = within(screen.getByRole("group", { name: "Show" }));
+  const rows = () => stream().getAllByRole("listitem");
+  fireEvent.click(show.getByRole("button", { name: "Family" }));
+  expect(rows()).toHaveLength(6);
+  expect(rows().every((li) => li.className.includes("rt-spine"))).toBe(true);
+  expect(stream().queryByText(/Only you|You and Anna/)).toBeNull();
+  fireEvent.click(show.getByRole("button", { name: "Just me" }));
+  expect(rows().every((li) => li.className.includes("rt-branch"))).toBe(true);
+  expect(stream().queryByText("Everyone")).toBeNull();
+  expect(stream().getByRole("article", { name: "Anna sent you this" })).toBeTruthy();
   fireEvent.click(show.getByRole("button", { name: /Sent to me.*1 new/ }));
-  expect(stream().getAllByRole("listitem")).toHaveLength(1);
+  expect(rows()).toHaveLength(1);
   fireEvent.click(show.getByRole("button", { name: "We played" }));
-  expect(stream().getAllByRole("listitem").map((li) => li.textContent)).toEqual([
-    expect.stringMatching(/You played Same page\? with Anna/),
-  ]);
+  expect(rows().map((li) => li.textContent)).toEqual([expect.stringMatching(/You played Same page\? with Anna/)]);
   fireEvent.click(show.getByRole("button", { name: "Everything" }));
   fireEvent.click(within(screen.getByRole("group", { name: "Show entries about" })).getByRole("button", { name: "Leo" }));
   expect(stream().queryByRole("article", { name: "Anna sent you this" })).toBeNull();
-  expect(stream().getByRole("article", { name: "Leo mentioned you" })).toBeTruthy();
+  expect(stream().getByRole("button", { name: /Leo mentioned you/ })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "See all 2" }));
-  expect(stream().getAllByRole("article").map((a) => a.getAttribute("aria-label"))).toEqual([
-    "Anna sent you this",
-    "Leo mentioned you",
+  expect(rows().map((li) => li.textContent)).toEqual([
+    expect.stringMatching(/Anna sent you this/),
+    expect.stringMatching(/Leo mentioned you/),
   ]);
 });
 
-it("Keep it saves a line in My journal; it never goes to Our family journal", async () => {
+it("a page of the family journal opens to read, right here", () => {
+  openBook(sampleBook(), { mode: "sample" });
+  myJournal();
+  fireEvent.click(stream().getByRole("button", { name: /Leo mentioned you/ }));
+  const reader = screen.getByRole("dialog", { name: "My tooth came out!!" });
+  expect(reader.textContent).toMatch(/Leo added this to Our family journal\./);
+  // Leo added it, so Alex can't take it out.
+  expect(within(reader).queryByRole("button", { name: "Take out of the family journal" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Close dialog" }));
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(screen.getByRole("heading", { name: "Our family journal", level: 1 })).toBeTruthy();
+});
+
+it("Keep it saves a line in your own journal; it never goes on the family spine", async () => {
   const app = openBook(sampleBook(), { mode: "sample" });
   myJournal();
   const sent = stream().getByRole("article", { name: "Anna sent you this" });
@@ -66,9 +105,11 @@ it("Keep it saves a line in My journal; it never goes to Our family journal", as
   const kept = stream().getByRole("article", { name: "Anna sent you this" });
   expect(within(kept).queryByText("New")).toBeNull();
   expect(within(kept).getByRole("button", { name: "Open" })).toBeTruthy();
+  expect(laneOf(kept)).toBe("branch");
   familyJournal();
-  expect(screen.queryByText(/You stayed so calm/)).toBeNull();
-  expect(screen.getByText(/6 entries since September/)).toBeTruthy();
+  expect(stream().queryByText(/You stayed so calm/)).toBeNull();
+  expect(stream().getAllByRole("listitem")).toHaveLength(6);
+  expect(app.stored().familyPages).toHaveLength(6);
 });
 
 it("Write back sends a line to the sender only", async () => {

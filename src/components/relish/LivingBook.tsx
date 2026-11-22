@@ -87,7 +87,7 @@ import { deletePage, deletePersonNote, discardUnderWay } from "@/lib/relish/dele
 import Home, { type FamilyPerson } from "./Home";
 import DoSomething from "./DoSomething";
 import YourBook from "./YourBook";
-import OurFamily, { type FamilyMember } from "./Family";
+import type { FamilyMember } from "./Family";
 import { localFamily, type FamilyAccess } from "./useFamilyBook";
 import { newFamilyPage, type FamilyPage } from "@/lib/relish/family-pages";
 import {
@@ -99,7 +99,8 @@ import {
   type Recipient,
 } from "@/lib/relish/partner-share";
 import { keepReceived } from "@/lib/relish/sharing";
-import type { StreamFilter, StreamItem } from "@/lib/relish/journal-stream";
+import type { StreamItem } from "@/lib/relish/journal-stream";
+import type { TimelineFilter } from "@/lib/relish/journal-timeline";
 import { sameName as sameMention } from "@/lib/relish/mentions";
 import { namesList } from "@/lib/relish/tools";
 import ShareSheet, { type SendWords } from "./ShareSheet";
@@ -244,8 +245,7 @@ export default function LivingBook({
     [gameOffer, setGameOffer] = useState<Game["kind"] | undefined>(),
     [bookWho, setBookWho] = useState<string | undefined>(),
     [bookQuery, setBookQuery] = useState(""),
-    [bookFilter, setBookFilter] = useState<StreamFilter>("all"),
-    [familyReading, setFamilyReading] = useState<string | undefined>(),
+    [bookFilter, setBookFilter] = useState<TimelineFilter>("all"),
     [replyTo, setReplyTo] = useState<Recipient | null>(null),
     [kept, setKept] = useState(false),
     [passage, setPassage] = useState(false),
@@ -327,7 +327,7 @@ export default function LivingBook({
   const browse = useRef<{
     who: string;
     query: string;
-    filter?: StreamFilter;
+    filter?: TimelineFilter;
     scroll: number;
     page?: string;
   } | null>(null);
@@ -381,7 +381,6 @@ export default function LivingBook({
     setBookWho(undefined);
     setBookQuery("");
     setBookFilter("all");
-    setFamilyReading(undefined);
     setReplyTo(null);
     setKept(false);
     setPassage(false);
@@ -433,15 +432,19 @@ export default function LivingBook({
   function quickEntry(voice = false, draft = newJournalDraft(), photo = false) {
     openJournal(draft, voice, photo);
   }
-  /** My journal: this writer's own pages. */
+  /**
+   * The one Journal page (2026-11-22): Our family journal down the spine, this
+   * writer's own branches off it. "My journal" opens all of it.
+   */
   function openMyBook() {
     setSpace("me");
     navigate("book");
   }
-  /** Our family journal. */
+  /** The same page, showing only the family's spine. */
   function openFamily() {
     setSpace("family");
     navigate("book");
+    setBookFilter("family");
   }
   /** Who's in our family, from the avatar menu: Our family journal with the list open. */
   function openMembers() {
@@ -836,8 +839,11 @@ export default function LivingBook({
   ].filter((n, i, all) => all.indexOf(n) === i);
   // Our family journal: the account's, or kept inside this journal without one.
   const familyAccess = familyBook ?? localFamily(book, vault.save);
+  // The sample's child (Leo) has his own id, so his pages read as his.
   const myBookId = sample
-    ? "sample"
+    ? book.profile?.kind === "child"
+      ? `sample-${book.owner.trim().toLowerCase()}`
+      : "sample"
     : (readBinding(vault.editionId)?.remoteId ?? vault.editionId);
   const sameName = (a: string, b: string) =>
     a.trim().toLowerCase() === b.trim().toLowerCase();
@@ -1085,15 +1091,10 @@ export default function LivingBook({
                 title: "Writing",
                 text: "Drafts save as you write, even if you go somewhere else or lock Relish. A page in My journal is only yours. A page in Our family journal is added there, whole, when you choose Add to our family journal. Share a passage adds just the words you choose.",
               }
-            : space === "family"
-              ? {
-                  title: "Our family journal",
-                  text: "The entries your family has chosen to share. Everyone in the family sees the same pages; whoever added an entry can take it out. Who’s in our family opens your children’s journals and invites a partner.",
-                }
-              : {
-                  title: "My journal",
-                  text: "Every entry you’ve kept, only for you, with what you’ve learned and what’s still going. Tap a person to see only their entries.",
-                };
+            : {
+                title: "Our family journal",
+                text: "One journal. Down the middle runs what the family shares: everyone sees the same pages, and whoever added one can take it out. Off to the side are branches only some people see: your own entries, a line sent between two of you, a game you played. Each branch says who can see it. Family shows only the middle; Just me shows only your branches.",
+              };
   // Kids' journals: the children's books in this account, opened as before.
   const kids: KidJournal[] = (family || []).map((p) => ({
     id: p.id,
@@ -1101,25 +1102,8 @@ export default function LivingBook({
     locked: p.locked,
     onOpen: () => void headerAction(p.onOpen),
   }));
-  // Phones: Journal opens onto the last journal, with Mine / Family on top
-  // and the kids' journals below (a dropdown on wider screens).
-  const phoneTop = (
-    <div className="rp-jswitch" role="group" aria-label="Which journal">
-      {(["me", "family"] as const).map((s) => (
-        <button
-          key={s}
-          type="button"
-          aria-pressed={space === s}
-          disabled={headerBusy}
-          onClick={() => {
-            if (space !== s) void headerAction(s === "family" ? openFamily : openMyBook);
-          }}
-        >
-          {s === "me" ? "Mine" : "Family"}
-        </button>
-      ))}
-    </div>
-  );
+  // Phones: the kids' journals below the one journal (in the Journal menu on
+  // wider screens). The Mine / Family switch is gone: it's one journal now.
   const kidLinks = (label: string, list: KidJournal[]) =>
     list.length ? (
       <p className="rp-jkids">
@@ -1226,9 +1210,7 @@ export default function LivingBook({
       : view === "do"
         ? "Activities"
         : view === "book"
-          ? space === "family"
-            ? "Our family journal"
-            : "My journal"
+          ? "Our family journal"
           : view === "journal"
             ? space === "family"
               ? "Writing in Our family journal"
@@ -1468,11 +1450,9 @@ export default function LivingBook({
             void headerAction(() => (next === "journal" ? navigate("book") : navigate(next)))
           }
           items={menuItems}
-          journal={place === "journal" ? space : undefined}
+          journal={place === "journal"}
           kids={kids}
-          onJournal={(next) =>
-            void headerAction(() => (next === "family" ? openFamily() : openMyBook()))
-          }
+          onJournal={kids.length ? () => void headerAction(openMyBook) : undefined}
         />
       )}
       {book.profile?.kind === "child" && onBackHome && !sharedView && (
@@ -1686,46 +1666,6 @@ export default function LivingBook({
             sample={sample}
             onPages={openMyBook}
           />
-        ) : view === "book" && !sharedView && space === "family" ? (
-          <OurFamily
-            key={pageKey}
-            book={book}
-            access={familyAccess}
-            me={{ name: book.owner, bookId: myBookId }}
-            members={members}
-            busy={busy}
-            headingRef={heading}
-            photos={vault.photos}
-            onOpenMine={openMyBook}
-            onWrite={() => openJournal(undefined, false, false, "family")}
-            initialMembers={showMembers}
-            initialReading={familyReading}
-            phoneTop={phoneTop}
-            phoneFoot={phoneFoot}
-            onInvite={canInvite ? openInvite : undefined}
-            onAddChild={!sample && online ? onAddChild : undefined}
-            onPlay={() => {
-              navigate("do");
-              if (audienceOf(book) === "adult") setDoFilter("kids");
-            }}
-            onResumeGame={() => navigate("play")}
-            onCloseFinished={(again) =>
-              void commit(
-                (b) =>
-                  changeLiving(b, (x) => ({ ...recordRound(x), game: undefined })),
-                again
-                  ? () => {
-                      navigate("do");
-                      if (audienceOf(book) === "adult") setDoFilter("kids");
-                    }
-                  : undefined,
-              )
-            }
-            onRemoved={(problem) =>
-              problem ? setError(problem) : setNotice("Taken out of Our family journal.")
-            }
-            onDelete={sample ? undefined : deleteFromBook}
-          />
         ) : view === "book" && !sharedView ? (
           <>
           {replyTo && (
@@ -1753,7 +1693,33 @@ export default function LivingBook({
             initialWho={bookWho}
             initialQuery={bookQuery}
             initialFilter={bookFilter}
-            familyPages={familyAccess.pages}
+            family={{
+              access: familyAccess,
+              members,
+              photos: vault.photos,
+              onWrite: () => openJournal(undefined, false, false, "family"),
+              onInvite: canInvite ? openInvite : undefined,
+              onAddChild: !sample && online ? onAddChild : undefined,
+              onPlay: () => {
+                navigate("do");
+                if (audienceOf(book) === "adult") setDoFilter("kids");
+              },
+              onResumeGame: () => navigate("play"),
+              onCloseFinished: (again) =>
+                void commit(
+                  (b) => changeLiving(b, (x) => ({ ...recordRound(x), game: undefined })),
+                  again
+                    ? () => {
+                        navigate("do");
+                        if (audienceOf(book) === "adult") setDoFilter("kids");
+                      }
+                    : undefined,
+                ),
+              onRemoved: (problem) =>
+                problem ? setError(problem) : setNotice("Taken out of Our family journal."),
+              onDelete: sample ? undefined : deleteFromBook,
+              initialMembers: showMembers,
+            }}
             myBookId={myBookId}
             incoming={waiting}
             onKeepOffer={keepOffer}
@@ -1763,17 +1729,12 @@ export default function LivingBook({
               const to = circle.find((r) => r.uid === i.fromUid);
               if (to) setReplyTo(to);
             }}
-            onOpenFamily={(id) => {
-              openFamily();
-              setFamilyReading(id);
-            }}
             onBrowse={(who, query, filter) => {
               // Keep the saved scroll and row until Back has used them.
               browse.current = { scroll: 0, ...browse.current, who, query, filter };
             }}
             onAddPage={() => openJournal(undefined, false, false, "me")}
             onIdea={() => navigate("do")}
-            phoneTop={phoneTop}
             phoneFoot={phoneFoot}
             onDiscardDraft={(d) => discard({ kind: "draft", key: d.id, title: d.title, at: d.updatedAt, label: "Keep writing", draft: d })}
             onOpenPage={(id) => {
