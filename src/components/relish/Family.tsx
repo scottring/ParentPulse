@@ -19,6 +19,7 @@ import { PhotoGallery } from "./Photos";
 import { personTones } from "./Home";
 import Illustration from "./Illustration";
 import Sprig from "./Sprig";
+import MentionText from "./MentionText";
 import {
   exerciseIllustration,
   gameIllustration,
@@ -84,10 +85,15 @@ export function albumOf(book: Book): AlbumItem[] {
   ].toSorted((a, b) => b.date.localeCompare(a.date));
 }
 
+/**
+ * Pages passed between partners' journals that belong in Our family journal.
+ * A line sent to one person ("Send a line") stays out: it's in their My
+ * journal under Sent to me, and in yours under You sent.
+ */
 export function passedBetween(book: Book) {
   const c = book.connections;
   return [
-    ...(c?.received || []).map((p) => ({
+    ...(c?.received || []).filter((p) => p.audience !== "direct").map((p) => ({
       id: p.id,
       who: `From ${p.fromName}’s journal`,
       byName: p.fromName,
@@ -97,7 +103,7 @@ export function passedBetween(book: Book) {
       date: p.acceptedAt,
     })),
     ...(c?.outgoing || [])
-      .filter((o) => o.sent)
+      .filter((o) => o.sent && o.audience !== "direct")
       .map((o) => ({
         id: o.id,
         who: "You sent",
@@ -264,11 +270,14 @@ export default function OurFamily({
   onDelete,
   onWrite,
   initialMembers = false,
+  initialReading,
   phoneTop,
   phoneFoot,
 }: {
   book: Book;
   access: FamilyAccess;
+  /** Opens with one page showing (Read the whole entry, from My journal). */
+  initialReading?: string;
   /** Add to our family journal: a page written for everyone. */
   onWrite?: () => void;
   /** Opens with Who's in our family showing (from the avatar menu). */
@@ -295,7 +304,7 @@ export default function OurFamily({
 }) {
   const [who, setWho] = useState("all");
   const [query, setQuery] = useState("");
-  const [reading, setReading] = useState<string | null>(null);
+  const [reading, setReading] = useState<string | null>(initialReading ?? null);
   const [membersOpen, setMembersOpen] = useState(initialMembers);
   const [inviting, setInviting] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -528,7 +537,11 @@ export default function OurFamily({
               {shortDate(open.date)} · {open.label}
             </p>
             {open.title && <h3>{open.title}</h3>}
-            {open.text && <blockquote>{open.text}</blockquote>}
+            {open.text && (
+              <blockquote>
+                <MentionText text={open.text} />
+              </blockquote>
+            )}
             {open.caption && <p className="rp-fb-caption">{open.caption}</p>}
             {!!open.lines?.length && (
               <div className="rp-album-lines">
@@ -631,7 +644,11 @@ function PageCard({
       <span className="rp-fb-title">
         {note ? page.text.trim().replace(/\.$/, "") : page.title || page.label}
       </span>
-      {!note && <span className="rp-fb-text">{page.text}</span>}
+      {!note && (
+        <span className="rp-fb-text">
+          <MentionText text={page.text} />
+        </span>
+      )}
     </button>
   );
 }

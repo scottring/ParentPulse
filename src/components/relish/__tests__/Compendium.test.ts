@@ -106,7 +106,7 @@ it("a game finished without keeping a page shows in My journal under each player
   ).toBeTruthy();
   myJournal();
   const record = everyPage().getByRole("button", { name: /Same page\? with Ella and Kaleb/ });
-  expect(record.textContent).toMatch(/^Game/);
+  expect(record.textContent).toMatch(/^You played/);
   fireEvent.click(screen.getByRole("button", { name: "Ella" }));
   expect(everyPage().getByRole("button", { name: /Same page\? with Ella and Kaleb/ })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Gran" }));
@@ -172,12 +172,13 @@ it("person chips filter What you’ve learned, and a card names who it is about"
   expect(leoCard()?.closest("article")?.textContent).toMatch(/^LLeo/);
   fireEvent.click(screen.getByRole("button", { name: "Leo" }));
   expect(leoCard()).toBeTruthy();
-  // Anna's suggestion is offered under Anna, not under Leo.
-  expect(learned().queryByText("A little room to talk")).toBeNull();
+  // Anna's suggestion is offered under Anna, not under Leo, in Relish noticed.
+  const noticed = () => screen.queryByRole("region", { name: "Relish noticed" });
+  expect(noticed()).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Anna" }));
   expect(leoCard()).toBeNull();
-  expect(learned().getByText("A little room to talk")).toBeTruthy();
-  expect(learned().getByText(/Relish noticed something · Anna/)).toBeTruthy();
+  expect(within(noticed()!).getByText("A little room to talk")).toBeTruthy();
+  expect(within(noticed()!).getByText("About Anna")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Everything" }));
   expect(leoCard()).toBeTruthy();
 });

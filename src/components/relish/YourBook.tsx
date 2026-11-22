@@ -23,6 +23,14 @@ import { icons, personTones } from "./Home";
 import { audienceOf, canUseOnline } from "@/lib/relish/profiles";
 import { KidCoverMark } from "./KidHome";
 import { BookSpread } from "./ui";
+import type { FamilyPage } from "@/lib/relish/family-pages";
+import type { Incoming } from "@/lib/relish/partner-share";
+import {
+  filterStream,
+  journalStream,
+  type StreamFilter,
+} from "@/lib/relish/journal-stream";
+import { StreamList, StreamSide, type StreamActions } from "./JournalStream";
 
 /** "all", "me", "family", or a person's id. */
 export type Who = string;
@@ -73,6 +81,15 @@ export default function YourBook({
   headingRef,
   initialWho = "all",
   initialQuery = "",
+  initialFilter = "all",
+  familyPages,
+  myBookId,
+  incoming,
+  onKeepOffer,
+  onSetAside,
+  canWriteBack,
+  onWriteBack,
+  onOpenFamily,
   onBrowse,
   onAddPage,
   onIdea,
@@ -96,8 +113,21 @@ export default function YourBook({
   headingRef: RefObject<HTMLHeadingElement | null>;
   initialWho?: Who;
   initialQuery?: string;
-  /** Reports the filter and search so Back from a page can restore them. */
-  onBrowse?: (who: Who, query: string) => void;
+  initialFilter?: StreamFilter;
+  /** Our family journal's pages: the ones that mention you, or games you were in. */
+  familyPages?: FamilyPage[];
+  /** The id this journal's family pages carry (so your own aren't "mentions"). */
+  myBookId?: string;
+  /** Lines sent to you that are waiting to be kept. */
+  incoming?: Incoming[];
+  onKeepOffer?: StreamActions["onKeep"];
+  onSetAside?: StreamActions["onSetAside"];
+  canWriteBack?: StreamActions["canWriteBack"];
+  onWriteBack?: StreamActions["onWriteBack"];
+  /** Opens a page in Our family journal. */
+  onOpenFamily?: (pageId: string) => void;
+  /** Reports the filters and search so Back from a page can restore them. */
+  onBrowse?: (who: Who, query: string, filter: StreamFilter) => void;
   /** Opens the journal composer straight away. */
   onAddPage: () => void;
   /** A separate trip to the age-fitted catalog. */
@@ -122,27 +152,19 @@ export default function YourBook({
   phoneFoot?: ReactNode;
 }) {
   const [asking, setAsking] = useState<string | null>(null);
+  // "all" or a person's id. (Me and Our family are the kind chips now.)
   const [who, setWho] = useState<Who>(
-    initialWho === "all" ||
-      initialWho === "me" ||
-      initialWho === "family" ||
-      book.people.some((p) => p.id === initialWho)
-      ? initialWho
-      : "all",
+    book.people.some((p) => p.id === initialWho) ? initialWho : "all",
   );
   const [query, setQuery] = useState(initialQuery);
+  const [filter, setFilter] = useState<StreamFilter>(initialFilter);
   useEffect(() => {
-    onBrowse?.(who, query);
-  }, [who, query, onBrowse]);
+    onBrowse?.(who, query, filter);
+  }, [who, query, filter, onBrowse]);
   const tone = (id: string) =>
     personTones[
       Math.max(0, book.people.findIndex((p) => p.id === id)) % personTones.length
     ];
-  // People only (2026-11-21): what's shared lives in Our family journal now.
-  const chips = [
-    { id: "all", label: "Everything" },
-    ...book.people.map((p) => ({ id: p.id, label: p.name })),
-  ];
   const manual = manualOf(book).cards;
   const about = cardPeople(book, manual);
   // A suggestion shows under "Me" or "Our family" by its scope, and under each
@@ -215,7 +237,6 @@ export default function YourBook({
   const running = runningByTool(book);
   const day = toolsOf(book).day;
   const plans = onCheckBack ? openCheckBacks(book) : [];
-  const pages = pagesFor(book, who, query);
   const going =
     drafts.length +
     (practice ? 1 : 0) +
@@ -243,23 +264,26 @@ export default function YourBook({
       />
     );
   const allPages = bookPages(book);
-  const filtered = who !== "all" || !!query.trim();
-  const q = query.trim().toLocaleLowerCase();
-  const shownDrafts = drafts.filter(
-    (d) =>
-      (who === "all" || (d.people || []).includes(who)) &&
-      (!q || `${d.title}\n${d.text}`.toLocaleLowerCase().includes(q)),
-  );
-  const familyEntry = new Set(
-    (book.journal || []).filter((e) => e.audience === "family").map((e) => `journal:${e.id}`),
-  );
+  const stream = journalStream(book, { familyPages, myBookId, incoming });
+  const shownItems = filterStream(book, stream, filter, who, query);
+  const filtered = who !== "all" || filter !== "all" || !!query.trim();
+  const fresh = stream.filter((i) => i.offer).length;
+  // Lines others chose to send or share about you, for the side column.
+  const sayings = stream.filter((i) => i.kind === "sent" || i.kind === "mention");
   const first = allPages[0];
   const showSuggestion = !!suggestion && canUseOnline(book);
   const others = going - drafts.length;
+  const kinds: { id: StreamFilter; label: string }[] = [
+    { id: "sent", label: "Sent to me" },
+    { id: "mentions", label: "Mentions me" },
+    { id: "wrote", label: "I wrote" },
+    { id: "played", label: "We played" },
+  ];
+  const everything = filter === "all" && who === "all";
   return (
     <main className="rp-place rp-book rp-mine" aria-labelledby="rp-book-title">
       {phoneTop}
-      <section className="rp-mine-head">
+      <section className="rp-mine-head rs-head-mine">
         <div>
           <span className="rp-only">
             <LockIcon /> Only me
@@ -267,6 +291,9 @@ export default function YourBook({
           <h1 id="rp-book-title" ref={headingRef} tabIndex={-1}>
             My journal
           </h1>
+          <p className="rp-quiet rs-subtitle">
+            What you wrote, and what your family sent you, shared about you, or did with you.
+          </p>
           <p className="rp-quiet rp-mine-count">
             {allPages.length
               ? `${allPages.length} ${allPages.length === 1 ? "entry" : "entries"}`
@@ -290,20 +317,44 @@ export default function YourBook({
           )}
         </div>
       </section>
-      <div className="rp-mine-bar">
-        <div className="rp-chips" role="group" aria-label="Show entries about">
-          {chips.map((c) => (
+      <div className="rp-mine-bar rs-bar">
+        <div className="rs-chip-row">
+        <div className="rp-chips rs-chips" role="group" aria-label="Show">
+          <button
+            aria-pressed={everything}
+            onClick={() => {
+              setFilter("all");
+              setWho("all");
+            }}
+          >
+            Everything
+          </button>
+          {kinds.map((k) => (
             <button
-              key={c.id}
-              aria-pressed={who === c.id}
-              onClick={() => setWho(c.id)}
+              key={k.id}
+              aria-pressed={filter === k.id}
+              onClick={() => setFilter(filter === k.id ? "all" : k.id)}
             >
-              {c.label}
+              {k.label}
+              {k.id === "sent" && fresh > 0 && <span className="rs-n">{fresh} new</span>}
+            </button>
+          ))}
+        </div>
+        <div className="rp-chips rs-chips rs-people" role="group" aria-label="Show entries about">
+          {book.people.length > 0 && <span className="rs-with">With:</span>}
+          {book.people.map((p) => (
+            <button
+              key={p.id}
+              aria-pressed={who === p.id}
+              onClick={() => setWho(who === p.id ? "all" : p.id)}
+            >
+              {p.name}
             </button>
           ))}
           <button className="rp-chip-add" disabled={busy} onClick={onAddPerson}>
             + Add someone
           </button>
+        </div>
         </div>
         <label className="rp-search">
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -334,97 +385,78 @@ export default function YourBook({
           </button>
         </div>
       )}
-
-      {shownDrafts.length + pages.length > 0 ? (
-        <section aria-label="Entries in my journal">
-          <ul className="rp-entries">
-            {shownDrafts.map((d) => (
-              <li key={d.id}>
-                <article className="rp-entry rp-entry-draft">
-                  <span className="rp-page-meta">
-                    <strong>{d.audience === "family" ? "Draft for our family journal" : "Draft"}</strong>
-                    <span>{shortDate(d.updatedAt)}</span>
-                  </span>
-                  <span className="rp-page-title">
-                    {d.title.trim() || d.text.trim().split("\n")[0].slice(0, 60) || "An unfinished page"}
-                  </span>
-                  {d.text.trim() && (
-                    <span className="rp-page-excerpt">{d.text.split("\n")[0]}</span>
-                  )}
-                  <span className="rp-entry-actions">
-                    <button className="rp-link" disabled={busy} onClick={() => onDraft(d)}>
-                      <span className="ui-sr-only">{d.title.trim() || "Your draft"}: </span>
-                      Keep writing
-                    </button>
-                    {onDiscardDraft && (
-                      <ConfirmDelete
-                        label="Discard"
-                        icon={false}
-                        ariaLabel={`Discard ${d.title.trim() || "this draft"}`}
-                        question="Discard this draft?"
-                        yes="Yes, discard"
-                        busy={busy}
-                        className="rp-link rp-link-quiet"
-                        onConfirm={() => onDiscardDraft(d)}
-                      />
-                    )}
-                  </span>
-                </article>
-              </li>
-            ))}
-            {pages.map((page) => {
-              const kind = pageKind(page);
-              return (
-                <li key={page.id}>
-                  <button
-                    className={`rp-page rp-entry rp-edge-${kind.tone}`}
-                    data-page-id={page.id}
-                    disabled={busy}
-                    onClick={() => onOpenPage(page.id)}
-                  >
-                    <span className="rp-page-meta">
-                      <strong>
-                        {kind.label}
-                        {page.exercise && !page.title.includes(page.exercise)
-                          ? ` · ${page.exercise}`
-                          : ""}
-                      </strong>
-                      <span>{shortDate(page.date)}</span>
-                    </span>
-                    <span className="rp-page-title">{page.title}</span>
-                    <span className="rp-page-excerpt">
-                      {page.text.split("\n")[0] || "Photo entry"}
-                    </span>
-                    {familyEntry.has(page.id) && (
-                      <span className="rp-entry-note">Also in our family journal</span>
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : (
-        <div className="rp-quiet rp-empty-filter">
-          <p>
-            {query
-              ? "No entries match that yet. Try another word."
-              : filtered
-                ? "No entries here for this filter yet."
-                : "Nothing kept yet. Your first entry can be a few words, a photo or your voice."}
-          </p>
-          {query && (
-            <button className="ui-link" onClick={() => setQuery("")}>
-              Clear search
-            </button>
-          )}
-          {who !== "all" && (
-            <button className="ui-link" onClick={() => setWho("all")}>
-              Clear filter
-            </button>
-          )}
-        </div>
+      {filter === "said" && (
+        <p className="rp-quiet rs-showing">
+          What your family sent you or wrote about you.{" "}
+          <button className="ui-link" onClick={() => setFilter("all")}>
+            Show everything
+          </button>
+        </p>
       )}
+
+      <div className="rs-layout">
+        {shownItems.length > 0 ? (
+          <section className="rs-stream" aria-label="Entries in my journal">
+            <StreamList
+              book={book}
+              items={shownItems}
+              busy={busy}
+              onOpenPage={onOpenPage}
+              onDraft={onDraft}
+              onDiscardDraft={onDiscardDraft}
+              onKeep={onKeepOffer}
+              onSetAside={onSetAside}
+              canWriteBack={canWriteBack}
+              onWriteBack={onWriteBack}
+              onOpenFamily={onOpenFamily}
+            />
+          </section>
+        ) : (
+          <div className="rp-quiet rp-empty-filter rs-stream">
+            <p>
+              {query
+                ? "No entries match that yet. Try another word."
+                : filtered
+                  ? "Nothing here for this filter yet."
+                  : "Nothing kept yet. Your first entry can be a few words, a photo or your voice."}
+            </p>
+            {query && (
+              <button className="ui-link" onClick={() => setQuery("")}>
+                Clear search
+              </button>
+            )}
+            {(who !== "all" || filter !== "all") && (
+              <button
+                className="ui-link"
+                onClick={() => {
+                  setWho("all");
+                  setFilter("all");
+                }}
+              >
+                Clear filter
+              </button>
+            )}
+          </div>
+        )}
+        <StreamSide
+          book={book}
+          busy={busy}
+          suggestion={showSuggestion ? suggestion : undefined}
+          about={
+            suggestion && cardWho(suggestion).length > 1
+              ? namesOf(cardWho(suggestion))
+              : suggestion?.scope === "family"
+                ? "your family"
+                : "you"
+          }
+          sayings={sayings}
+          onReview={onReview}
+          onSeeAll={() => {
+            setWho("all");
+            setFilter("said");
+          }}
+        />
+      </div>
 
       {others > 0 && (
       <section className="rp-stack" aria-labelledby="rp-going">
@@ -542,43 +574,6 @@ export default function YourBook({
             {suggestion ? "All suggestions" : "Suggestions from Relish"}
           </button>
         </div>
-        {showSuggestion && suggestion && (
-          <div className="rp-suggestion">
-            <div className="rp-suggestion-text">
-              <span className="rp-nudge-kicker">
-                Relish noticed something ·{" "}
-                {cardWho(suggestion).length > 1
-                  ? namesOf(cardWho(suggestion))
-                  : suggestion.scope === "family"
-                    ? "Our family"
-                    : "You"}
-              </span>
-              <span className="rp-suggestion-main">{suggestion.title}</span>
-              <span className="rp-nudge-why">{suggestion.observation}</span>
-              <span className="rp-nudge-why">
-                From {suggestion.sources.length}{" "}
-                {suggestion.sources.length === 1 ? "entry" : "entries"} you kept. Is
-                that right?
-              </span>
-            </div>
-            <div className="rp-suggestion-actions">
-              <button
-                className="rp-btn rp-btn-sun"
-                disabled={busy}
-                onClick={() => onReview(suggestion, "kept")}
-              >
-                Yes, keep it
-              </button>
-              <button
-                className="rp-btn rp-btn-ghost"
-                disabled={busy}
-                onClick={() => onReview(suggestion, "dismissed")}
-              >
-                Not quite
-              </button>
-            </div>
-          </div>
-        )}
         {learned.length ? (
           <div className="rp-learned-grid">
             {learned.map((c) => (

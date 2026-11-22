@@ -9,7 +9,7 @@ import {
   Lock,
   Users,
 } from "lucide-react";
-import type { Book, Person } from "@/lib/relish/model";
+import { sampleIncoming, sampleRecipients, type Book, type Person } from "@/lib/relish/model";
 import {
   advanceGame,
   beginNewMoment,
@@ -90,7 +90,20 @@ import YourBook from "./YourBook";
 import OurFamily, { type FamilyMember } from "./Family";
 import { localFamily, type FamilyAccess } from "./useFamilyBook";
 import { newFamilyPage, type FamilyPage } from "@/lib/relish/family-pages";
-import { sendToPartners } from "@/lib/relish/partner-share";
+import {
+  keepIncoming,
+  loadCircle,
+  sendToPartners,
+  setAsideIncoming,
+  type Incoming,
+  type Recipient,
+} from "@/lib/relish/partner-share";
+import { keepReceived } from "@/lib/relish/sharing";
+import type { StreamFilter, StreamItem } from "@/lib/relish/journal-stream";
+import { sameName as sameMention } from "@/lib/relish/mentions";
+import { namesList } from "@/lib/relish/tools";
+import ShareSheet, { type SendWords } from "./ShareSheet";
+import type { Mentionable } from "./Journal";
 import { takeSuggestion, takenToday, type NudgeAction } from "@/lib/relish/nudges";
 import { isChild, isFamily, type DoFilter, type UnderWay } from "@/lib/relish/catalog";
 import type { ActsFilter } from "@/lib/relish/activities";
@@ -216,6 +229,9 @@ export default function LivingBook({
     [gameOffer, setGameOffer] = useState<Game["kind"] | undefined>(),
     [bookWho, setBookWho] = useState<string | undefined>(),
     [bookQuery, setBookQuery] = useState(""),
+    [bookFilter, setBookFilter] = useState<StreamFilter>("all"),
+    [familyReading, setFamilyReading] = useState<string | undefined>(),
+    [replyTo, setReplyTo] = useState<Recipient | null>(null),
     [kept, setKept] = useState(false),
     [passage, setPassage] = useState(false),
     [showMembers, setShowMembers] = useState(false),
@@ -245,9 +261,56 @@ export default function LivingBook({
       alive.current = false;
     };
   }, []);
+  // The circle, for My journal and Send a line: who a line can go to, and
+  // what's waiting to be kept. Grown-ups' journals only. The sample has Anna.
+  const [recipients, setRecipients] = useState<Recipient[]>(() =>
+    sample ? sampleRecipients() : [],
+  );
+  const [incoming, setIncoming] = useState<Incoming[]>(() => (sample ? sampleIncoming() : []));
+  const grownUp = audienceOf(book) === "adult";
+  const circle = grownUp ? recipients : [];
+  const waiting = grownUp ? incoming : [];
+  const identityUid = book.connections?.identity?.uid;
+  const latestBook = useRef(book);
+  useEffect(() => {
+    latestBook.current = book;
+  });
+  // Read again each time My journal opens; nothing is ever pushed to anyone.
+  const circleKey = view === "book" ? pageKey : -1;
+  useEffect(() => {
+    if (sample || !online || !identityUid) return;
+    let live = true;
+    let unsubscribe: undefined | (() => void);
+    Promise.all([import("@/lib/relish/ai-auth"), import("firebase/auth")])
+      .then(([a, f]) => {
+        if (!live) return;
+        unsubscribe = f.onAuthStateChanged(a.getAIAuth(), (user) => {
+          loadCircle(user, latestBook.current)
+            .then((c) => {
+              if (!live) return;
+              setRecipients(c?.recipients ?? []);
+              setIncoming(c?.incoming ?? []);
+            })
+            .catch(() => {
+              // My journal still opens; Connected journals has the details.
+            });
+        });
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+      unsubscribe?.();
+    };
+  }, [sample, online, identityUid, circleKey]);
   // Where the writer was in My journal when they opened a page, so Back can
   // put them there again. Opening My journal from the menu starts a fresh browse.
-  const browse = useRef<{ who: string; query: string; scroll: number; page?: string } | null>(null);
+  const browse = useRef<{
+    who: string;
+    query: string;
+    filter?: StreamFilter;
+    scroll: number;
+    page?: string;
+  } | null>(null);
   const restoring = useRef(false);
   // The Do something filter in use when an activity was opened from it.
   const doReturn = useRef<DoFilter>("all");
@@ -277,6 +340,7 @@ export default function LivingBook({
       restoring.current = true;
       setBookWho(saved.who);
       setBookQuery(saved.query);
+      setBookFilter(saved.filter ?? "all");
     }
   }
   /** Back to Activities with the chip that was chosen (the filter is kept across visits). */
@@ -296,6 +360,9 @@ export default function LivingBook({
     setGameOffer(undefined);
     setBookWho(undefined);
     setBookQuery("");
+    setBookFilter("all");
+    setFamilyReading(undefined);
+    setReplyTo(null);
     setKept(false);
     setPassage(false);
     setShowMembers(false);
@@ -497,6 +564,115 @@ export default function LivingBook({
       if (alive.current) setWorking(false);
     }
   }
+  /** Runs something that reaches past this journal (the circle), like commit. */
+  async function act(task: () => Promise<void>, message = "") {
+    if (operation.current) return;
+    operation.current = true;
+    setWorking(true);
+    setError("");
+    try {
+      await task();
+      if (alive.current && message) {
+        setNotice(message);
+        sensory.play("place");
+      }
+    } catch (e) {
+      if (alive.current)
+        setError(e instanceof Error ? e.message : "That didn’t go through. Please try again.");
+    } finally {
+      operation.current = false;
+      if (alive.current) setWorking(false);
+    }
+  }
+  /** Keep it: a line someone sent is saved in My journal. */
+  function keepOffer(item: StreamItem) {
+    const offer = item.offer;
+    if (!offer) return;
+    void act(
+      async () => {
+        if (sample)
+          await vault.save((b) => ({ ...b, connections: keepReceived(b.connections, offer) }));
+        else {
+          const auth = await import("@/lib/relish/ai-auth");
+          await keepIncoming(auth.currentAIUser(), book, vault.save, offer);
+        }
+        if (alive.current) setIncoming((list) => list.filter((o) => o.id !== offer.id));
+      },
+      sample ? "Kept in the sample for this visit." : "Kept in your journal.",
+    );
+  }
+  /** Set aside: not kept. The sender's copy says you passed; nobody is told anything else. */
+  function setAside(item: StreamItem) {
+    const offer = item.offer;
+    if (!offer) return;
+    void act(async () => {
+      if (!sample) {
+        const auth = await import("@/lib/relish/ai-auth");
+        await setAsideIncoming(auth.currentAIUser(), book, offer.id);
+      }
+      if (alive.current) setIncoming((list) => list.filter((o) => o.id !== offer.id));
+    }, "Set aside. It isn’t kept in your journal.");
+  }
+  /**
+   * Send a line: the chosen words go to these people's journals, under Sent
+   * to me, and nowhere else. Relish doesn't ping them.
+   */
+  async function sendLine(to: Recipient[], words: SendWords & { sourceId?: string }) {
+    const names = to.map((r) => r.name);
+    const title = words.title.trim().slice(0, 120) || `A line from ${book.owner}`;
+    const extras = {
+      ...(words.note.trim() ? { note: words.note.trim().slice(0, 1000) } : {}),
+      ...(words.caption.trim() ? { caption: words.caption.trim().slice(0, 200) } : {}),
+      ...(words.sourceId ? { sourceId: words.sourceId } : {}),
+    };
+    if (sample) {
+      const createdAt = new Date().toISOString();
+      await vault.save((b) => ({
+        ...b,
+        connections: {
+          ...b.connections,
+          received: b.connections?.received || [],
+          outgoing: [
+            ...(b.connections?.outgoing || []),
+            {
+              id: crypto.randomUUID(),
+              circleId: "sample",
+              title,
+              text: words.text.trim().slice(0, 8000),
+              recipients: to.map((r) => r.uid),
+              recipientNames: names,
+              packets: {},
+              createdAt,
+              sent: true,
+              audience: "direct",
+              ...extras,
+            },
+          ],
+        },
+      }));
+    } else {
+      const auth = await import("@/lib/relish/ai-auth");
+      const sent = await sendToPartners(
+        auth.currentAIUser(),
+        book,
+        vault.save,
+        { id: crypto.randomUUID(), title, text: words.text },
+        { recipients: to.map((r) => r.uid), audience: "direct", ...extras },
+      );
+      if (!sent)
+        throw new Error(
+          "This journal isn’t connected right now. Open Connected journals, then try again.",
+        );
+    }
+    if (!alive.current) return;
+    const whose = namesList(names.map((n) => `${n}’s`));
+    setNotice(
+      sample
+        ? `Sent to ${namesList(names)} in the sample. In a real journal it shows up in ${whose} journal under “Sent to me.”`
+        : `Sent to ${namesList(names)}. It shows up in ${whose} journal under “Sent to me.”`,
+    );
+    sensory.play("place");
+  }
   function start(kind?: SessionKind) {
     void commit(
       (b) => beginVisit(b, kind),
@@ -660,9 +836,22 @@ export default function LivingBook({
       !sameName(m.name, book.owner) &&
       all.findIndex((x) => sameName(x.name, m.name)) === i,
   );
+  // Who can be @-mentioned while writing: this journal's people, the family,
+  // and whoever writes in Our family journal.
+  const mentionable: Mentionable[] = [
+    ...book.people.map((p) => ({ name: p.name, id: p.id, role: p.role })),
+    ...members.map((m) => ({ name: m.name })),
+    ...familyAccess.pages.map((p) => ({ name: p.byName })),
+  ].filter(
+    (m, i, all) =>
+      !!m.name.trim() &&
+      !sameMention(m.name, book.owner) &&
+      !m.name.includes(" + ") &&
+      all.findIndex((x) => sameMention(x.name, m.name)) === i,
+  );
   /** Adds a page to Our family journal, and sends it on to a connected partner. */
   async function addToFamily(data: Pick<FamilyPage, "kind" | "text"> &
-    Partial<Pick<FamilyPage, "title" | "caption" | "activity">>) {
+    Partial<Pick<FamilyPage, "title" | "caption" | "activity" | "mentions" | "sourceId">>) {
     const page = newFamilyPage({ ...data, byName: book.owner, byBookId: myBookId });
     await familyAccess.add(page);
     if (!alive.current) return page.id;
@@ -676,7 +865,7 @@ export default function LivingBook({
           id: page.id,
           title: page.title || `From ${owner}’s family journal`,
           text: page.caption ? `${page.text}\n\n— ${page.caption}` : page.text,
-        }),
+        }, { audience: "family" }),
       )
       .then((sent) => {
         if (sent && alive.current)
@@ -1339,6 +1528,7 @@ export default function LivingBook({
             onOpenMine={openMyBook}
             onWrite={() => openJournal(undefined, false, false, "family")}
             initialMembers={showMembers}
+            initialReading={familyReading}
             phoneTop={phoneTop}
             phoneFoot={phoneFoot}
             onInvite={canInvite ? openInvite : undefined}
@@ -1366,6 +1556,24 @@ export default function LivingBook({
             onDelete={sample ? undefined : deleteFromBook}
           />
         ) : view === "book" && !sharedView ? (
+          <>
+          {replyTo && (
+            <ShareSheet
+              title=""
+              text=""
+              selected=""
+              caption=""
+              owner={book.owner}
+              others={[]}
+              recipients={circle}
+              replyTo={replyTo}
+              onSend={async (to, words) => {
+                await sendLine(to, words);
+                if (alive.current) setReplyTo(null);
+              }}
+              onClose={() => setReplyTo(null)}
+            />
+          )}
           <YourBook
             key={pageKey}
             book={book}
@@ -1373,9 +1581,24 @@ export default function LivingBook({
             headingRef={heading}
             initialWho={bookWho}
             initialQuery={bookQuery}
-            onBrowse={(who, query) => {
+            initialFilter={bookFilter}
+            familyPages={familyAccess.pages}
+            myBookId={myBookId}
+            incoming={waiting}
+            onKeepOffer={keepOffer}
+            onSetAside={sample || online ? setAside : undefined}
+            canWriteBack={(i) => !!i.fromUid && circle.some((r) => r.uid === i.fromUid)}
+            onWriteBack={(i) => {
+              const to = circle.find((r) => r.uid === i.fromUid);
+              if (to) setReplyTo(to);
+            }}
+            onOpenFamily={(id) => {
+              openFamily();
+              setFamilyReading(id);
+            }}
+            onBrowse={(who, query, filter) => {
               // Keep the saved scroll and row until Back has used them.
-              browse.current = { scroll: 0, ...browse.current, who, query };
+              browse.current = { scroll: 0, ...browse.current, who, query, filter };
             }}
             onAddPage={() => openJournal(undefined, false, false, "me")}
             onIdea={() => navigate("do")}
@@ -1386,6 +1609,7 @@ export default function LivingBook({
               browse.current = {
                 who: browse.current?.who ?? "all",
                 query: browse.current?.query ?? "",
+                filter: browse.current?.filter ?? "all",
                 scroll: window.scrollY,
                 page: id,
               };
@@ -1410,12 +1634,17 @@ export default function LivingBook({
               void commit((b) => deletePersonNote(b, personId, noteId), undefined, "Note removed.")
             }
           />
+          </>
         ) : (view === "words" || view === "journal") && !sharedView ? (
           <Journal
             key={pageKey}
             family={family}
             familyNames={members.map((m) => m.name)}
             onFamilyAdd={addToFamily}
+            mentionable={mentionable}
+            recipients={circle}
+            onSend={grownUp ? sendLine : undefined}
+            onConnect={canInvite && !circle.length ? openInvite : undefined}
             initialCelebrate={kept}
             initialPassage={passage}
             onKept={(id, problem) => {
