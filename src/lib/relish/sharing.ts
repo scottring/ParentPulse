@@ -4,6 +4,25 @@ export type Identity = {
   publicKey: PublicKey;
   privateKey: JsonWebKey;
 };
+/**
+ * Who a passage was meant for: "direct" was sent to chosen people (it shows
+ * under Sent to me, never in Our family journal); "family" is a page added
+ * to Our family journal and passed on to a partner's journal. Older passages
+ * have none and count as family, as they always did.
+ */
+export type PassageAudience = "direct" | "family";
+/** What is encrypted for each recipient. Only title and text are required. */
+export type PassagePayload = {
+  title: string;
+  text: string;
+  /** A line from the sender to go with it ("He climbed out on his own."). */
+  note?: string;
+  /** Under the words: who said them and where, e.g. "Leo, at the pool". */
+  caption?: string;
+  audience?: PassageAudience;
+};
+export const NOTE_LIMIT = 1000;
+export const CAPTION_LIMIT = 200;
 export type Passage = {
   id: string;
   title: string;
@@ -12,6 +31,9 @@ export type Passage = {
   fromName: string;
   createdAt: string;
   acceptedAt: string;
+  note?: string;
+  caption?: string;
+  audience?: PassageAudience;
 };
 export type Outgoing = {
   id: string;
@@ -22,6 +44,13 @@ export type Outgoing = {
   packets: Record<string, Packet>;
   createdAt: string;
   sent: boolean;
+  /** The recipients' names when it was sent, for "You sent Anna". */
+  recipientNames?: string[];
+  audience?: PassageAudience;
+  note?: string;
+  caption?: string;
+  /** The private entry it came from (its id), for "Sent to Anna" on that entry. */
+  sourceId?: string;
 };
 export type Connections = {
   identity?: Identity;
@@ -151,8 +180,25 @@ async function exchange(
     ["encrypt", "decrypt"],
   );
 }
+/** The optional parts of a payload, checked; undefined parts are left out. */
+function payloadExtras(p: Partial<PassagePayload>): Omit<PassagePayload, "title" | "text"> | null {
+  const out: Omit<PassagePayload, "title" | "text"> = {};
+  if (p.note !== undefined) {
+    if (typeof p.note !== "string" || p.note.length > NOTE_LIMIT) return null;
+    if (p.note.trim()) out.note = p.note;
+  }
+  if (p.caption !== undefined) {
+    if (typeof p.caption !== "string" || p.caption.length > CAPTION_LIMIT) return null;
+    if (p.caption.trim()) out.caption = p.caption;
+  }
+  if (p.audience !== undefined) {
+    if (p.audience !== "direct" && p.audience !== "family") return null;
+    out.audience = p.audience;
+  }
+  return out;
+}
 export async function encryptPassage(
-  text: { title: string; text: string },
+  text: PassagePayload,
   to: Member,
   id: string,
   circle: string,
@@ -160,6 +206,8 @@ export async function encryptPassage(
 ): Promise<Packet> {
   if (!text.text.trim() || text.text.length > 8000 || text.title.length > 120)
     throw new Error("Choose a passage of up to 8,000 characters.");
+  const extras = payloadExtras(text);
+  if (!extras) throw new Error("Keep the note under 1,000 characters.");
   const keyId = await keyFingerprint(to.publicKey);
   if (keyId !== to.keyId)
     throw new Error(
@@ -177,7 +225,7 @@ export async function encryptPassage(
   const cipher = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv, additionalData: aad as BufferSource },
     key,
-    enc.encode(JSON.stringify(text)),
+    enc.encode(JSON.stringify({ title: text.title, text: text.text, ...extras })),
   );
   return {
     version: 1,
@@ -224,8 +272,10 @@ export async function decryptPassage(
     un64(packet.ciphertext),
   );
   const result = JSON.parse(new TextDecoder().decode(raw));
+  const extras = result && typeof result === "object" ? payloadExtras(result) : null;
   if (
     !result ||
+    !extras ||
     typeof result.title !== "string" ||
     result.title.length > 120 ||
     typeof result.text !== "string" ||
@@ -233,7 +283,7 @@ export async function decryptPassage(
     result.text.length > 8000
   )
     throw new Error("This passage could not be read safely.");
-  return result as { title: string; text: string };
+  return { title: result.title, text: result.text, ...extras } as PassagePayload;
 }
 export function isPacket(p: unknown): p is Packet {
   if (!p || typeof p !== "object") return false;
@@ -277,7 +327,14 @@ export function isConnections(c: unknown): c is Connections {
             Array.isArray(o.recipients) &&
             o.recipients.every((u) => typeof u === "string") &&
             o.packets &&
-            Object.values(o.packets).every(isPacket),
+            Object.values(o.packets).every(isPacket) &&
+            (o.recipientNames === undefined ||
+              (Array.isArray(o.recipientNames) &&
+                o.recipientNames.length <= 12 &&
+                o.recipientNames.every((n) => typeof n === "string" && n.length <= 60))) &&
+            (o.sourceId === undefined ||
+              (typeof o.sourceId === "string" && o.sourceId.length <= 100)) &&
+            !!payloadExtras(o),
         ))) &&
     (!v.identity ||
       (typeof v.identity.uid === "string" &&
@@ -304,7 +361,41 @@ export function isConnections(c: unknown): c is Connections {
         p.text.length <= 8000 &&
         p.title.length <= 120 &&
         Number.isFinite(Date.parse(p.createdAt)) &&
-        Number.isFinite(Date.parse(p.acceptedAt)),
+        Number.isFinite(Date.parse(p.acceptedAt)) &&
+        !!payloadExtras(p),
     )
   );
+}
+
+/** A passage someone sent, as it is kept: with who sent it and when. */
+export type ReceivedOffer = Pick<Delivery, "id" | "sender" | "senderName" | "createdAt"> &
+  PassagePayload;
+/**
+ * Keep it: saves a received passage in this journal's connections, once. The
+ * same change Connected journals makes when someone saves a passage.
+ */
+export function keepReceived(
+  connections: Connections | undefined,
+  offer: ReceivedOffer,
+  acceptedAt = new Date().toISOString(),
+): Connections {
+  const c = connections || { received: [] };
+  if (c.received.some((p) => p.id === offer.id)) return c;
+  const extras = payloadExtras(offer) || {};
+  return {
+    ...c,
+    received: [
+      ...c.received,
+      {
+        id: offer.id,
+        title: offer.title,
+        text: offer.text,
+        from: offer.sender,
+        fromName: offer.senderName,
+        createdAt: offer.createdAt,
+        acceptedAt,
+        ...extras,
+      },
+    ],
+  };
 }
