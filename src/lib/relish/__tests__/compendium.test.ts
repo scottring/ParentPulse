@@ -364,7 +364,9 @@ describe("storage compatibility", () => {
   it("old-shape books (the sample and an empty book) still open", () => {
     expect(isBook(sampleBook())).toBe(true);
     expect(isBook(emptyBook("A"))).toBe(true);
-    expect(livingOf(sampleBook()).plays).toBeUndefined();
+    expect(livingOf(emptyBook("A")).plays).toBeUndefined();
+    // The sample has one round of Same page? with Anna for My journal's stream (2026-11-22).
+    expect(livingOf(sampleBook()).plays).toHaveLength(1);
   });
 
   it("new-shape books survive an encrypt/decrypt round trip unchanged", async () => {

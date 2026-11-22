@@ -132,7 +132,9 @@ export function sampleBook(): Book {
       },
       {
         id: "sample-family-tooth", kind: "page", title: "My tooth came out!!",
-        text: "It was in an apple. I put it under my pillow and the tooth fairy wrote back in tiny letters.",
+        text: "It was in an apple. I put it under my pillow and the tooth fairy wrote back in tiny letters. @Dad read it to me with a flashlight.",
+        // Leo calls Alex "Dad": the page says whom it mentions (mentions.ts).
+        mentions: ["Alex"],
         byName: "Leo", byBookId: "sample-leo", createdAt: "2026-11-01T18:00:00Z",
       },
       {
@@ -141,6 +143,32 @@ export function sampleBook(): Book {
         caption: "June, on the porch", byName: "June", byBookId: "sample-june", createdAt: "2026-09-21T15:00:00Z",
       },
     ],
+    // My journal's stream (journal-stream.ts): a line Alex sent Anna, and a
+    // round of Same page? they played. Anna's line to Alex waits to be kept
+    // (sampleIncoming). Fictional.
+    connections: {
+      received: [],
+      outgoing: [{
+        id: "sample-sent-anna", circleId: "sample", title: "Notice the unseen work",
+        text: "I saw you sorted out Leo’s field trip form. Thank you. I know nobody notices that.",
+        recipients: ["sample-anna"], recipientNames: ["Anna"], packets: {},
+        createdAt: "2026-11-18T20:10:00Z", sent: true, audience: "direct",
+      }],
+    },
+    living: {
+      version: 1, entries: [], sharedPages: [],
+      plays: [{
+        id: "sample-play-anna", kind: "match", playedAt: "2026-11-19T19:30:00Z",
+        players: [{ id: "owner", name: "Alex" }, { id: "anna", name: "Anna" }],
+        questions: [
+          { id: "a-saturday", picks: [0, 0] },
+          { id: "a-bored", picks: [2, 2] },
+          { id: "a-screens-dinner", picks: [1, 1] },
+          { id: "a-bedtime-late", picks: [1, 2] },
+          { id: "a-toy", picks: [0, 1] },
+        ],
+      }],
+    },
     journal: [{
       id: "sample-story", title: "The blanket-fort expedition", style: "sky", status: "kept", revision: 1,
       text: "The couch became a spaceship. Everyone found a job: one captain, one blanket engineer, one very important snack supplier.\n\nMy favorite part was helping each other find a way in.",
@@ -185,6 +213,21 @@ export function sampleBook(): Book {
       },
     ],
   };
+}
+/** The sample's partner: Anna, connected, so lines can be sent to her. */
+export const sampleRecipients = () => [{ uid: "sample-anna", name: "Anna" }];
+/**
+ * A line Anna sent Alex, waiting to be kept: New in My journal's stream.
+ * Dated a couple of hours ago so the sample always opens on it.
+ */
+export function sampleIncoming(now = Date.now()) {
+  return [{
+    id: "sample-offer-anna", sender: "sample-anna", senderName: "Anna",
+    createdAt: new Date(now - 2 * 3_600_000).toISOString(),
+    title: "At the pool",
+    text: "You stayed so calm with Leo at the pool today. I noticed.",
+    audience: "direct" as const,
+  }];
 }
 /**
  * The sample's child: Leo's own journal, opened from Kids' journals in the
