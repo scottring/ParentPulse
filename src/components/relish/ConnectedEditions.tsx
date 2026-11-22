@@ -10,7 +10,9 @@ import {
   encryptPassage,
   makeIdentity,
   keyFingerprint,
+  keepReceived,
   type ConnectionSnapshot,
+  type PassagePayload,
   type Delivery,
   type Outgoing,
 } from "@/lib/relish/sharing";
@@ -80,11 +82,9 @@ function AdultConnectedEditions({
       initialPassage?.text || book.connections?.draft?.text || "",
     ),
     [recipients, setRecipients] = useState<string[]>([]);
-  const [opened, setOpened] = useState<{
-    delivery: Delivery;
-    title: string;
-    text: string;
-  } | null>(null);
+  const [opened, setOpened] = useState<
+    ({ delivery: Delivery } & PassagePayload) | null
+  >(null);
   const alive = useRef(true),
     operation = useRef(false),
     abort = useRef(new AbortController());
@@ -312,25 +312,13 @@ function AdultConnectedEditions({
     const passage = opened;
     await save((b) => ({
       ...b,
-      connections: {
-        ...b.connections!,
-        received: b.connections!.received.some(
-          (p) => p.id === passage.delivery.id,
-        )
-          ? b.connections!.received
-          : [
-              ...b.connections!.received,
-              {
-                id: passage.delivery.id,
-                title: passage.title,
-                text: passage.text,
-                from: passage.delivery.sender,
-                fromName: passage.delivery.senderName,
-                createdAt: passage.delivery.createdAt,
-                acceptedAt: new Date().toISOString(),
-              },
-            ],
-      },
+      connections: keepReceived(b.connections, {
+        ...passage,
+        id: passage.delivery.id,
+        sender: passage.delivery.sender,
+        senderName: passage.delivery.senderName,
+        createdAt: passage.delivery.createdAt,
+      }),
     }));
     await api({
       action: "receipt",

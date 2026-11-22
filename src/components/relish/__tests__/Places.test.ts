@@ -63,12 +63,14 @@ it("My journal: reviews one suggestion at a time and filters by person", async (
   const app = openBook(sampleBook(), { mode: "sample" });
   myJournal();
   expect(screen.getByRole("heading", { name: "My journal", level: 1 })).toBeTruthy();
-  expect(screen.getByText("Only me")).toBeTruthy();
-  expect(screen.getByText("A little room to talk")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Yes, keep it" }));
+  expect(within(document.querySelector(".rp-mine-head") as HTMLElement).getByText("Only me")).toBeTruthy();
+  // Relish noticed sits beside the stream (2026-11-22), one suggestion at a time.
+  const noticed = () => within(screen.getByRole("region", { name: "Relish noticed" }));
+  expect(noticed().getByText("A little room to talk")).toBeTruthy();
+  fireEvent.click(noticed().getByRole("button", { name: "Keep it" }));
   await screen.findByText(/Try: If you both feel like it/);
   expect(app.stored().manual?.cards[0].status).toBe("kept");
-  expect(screen.queryByRole("button", { name: "Yes, keep it" })).toBeNull();
+  expect(screen.queryByRole("region", { name: "Relish noticed" })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Leo" }));
   expect(
     screen.getByText("Getting down to his eye level changes the whole conversation."),

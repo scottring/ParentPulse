@@ -1,0 +1,553 @@
+/* ── My journal, everything that's yours (2026-11-22) ────────────────────
+   The stream beside a side column; mockups StreamMine / StreamIris.
+   Butter (#f9eec9) is only for family members' words. */
+
+.lb-app .rj-mention {
+  background: #e6eddf;
+  border-radius: 6px;
+  padding: 0 4px;
+  font-weight: 600;
+}
+
+.lb-app.rp-shell .rs-subtitle {
+  margin: 0 0 4px;
+  font-size: 17px;
+  max-width: 46ch;
+}
+
+/* Filters: what kind, then who it's with, then search. */
+.lb-app.rp-shell .rs-bar {
+  justify-content: flex-start;
+}
+.lb-app.rp-shell .rs-bar .rp-search {
+  margin-left: auto;
+}
+.lb-app.rp-shell .rs-chip-row {
+  display: contents;
+}
+.lb-app.rp-shell .rs-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+.lb-app.rp-shell .rs-bar .rs-chips button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1.5px solid #c9ccbe;
+  font: 500 15px/1 var(--sans);
+}
+.lb-app.rp-shell .rs-bar .rs-chips button[aria-pressed="true"] {
+  border-color: var(--olive);
+}
+.lb-app.rp-shell .rs-bar .rs-chips .rp-chip-add {
+  border: 1.5px dashed var(--olive);
+}
+.lb-app.rp-shell .rs-n {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #efe6cf;
+  color: var(--ink);
+  font: 600 12px/1.4 var(--sans);
+}
+.lb-app.rp-shell .rs-with {
+  color: var(--muted);
+  font-size: 14px;
+}
+.lb-app.rp-shell .rs-showing {
+  margin: 0;
+}
+
+/* The stream and its side column. */
+.lb-app.rp-shell .rs-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.lb-app.rp-shell .rs-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.lb-app.rp-shell .rs-group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.lb-app.rp-shell .rs-group + .rs-group {
+  margin-top: 8px;
+}
+.lb-app.rp-shell .rs-when {
+  margin: 0;
+  color: var(--muted);
+  font: 600 13px/1.3 var(--sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.lb-app.rp-shell .rp-entries.rs-items {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+.lb-app.rp-shell .rs-card {
+  gap: 8px;
+}
+.lb-app.rp-shell .rp-entry.rs-butter {
+  background: #f9eec9;
+  border-color: #ecdcaa;
+}
+.lb-app.rp-shell .rs-from {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: #4b5145;
+  font: 400 14px/1.4 var(--sans);
+}
+.lb-app.rp-shell .rs-from strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.lb-app.rp-shell .rs-from > span:not(.rs-face) {
+  min-width: 0;
+}
+.lb-app.rp-shell .rs-tile {
+  flex: none;
+  object-fit: contain;
+}
+.lb-app.rp-shell .rs-face {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink);
+  color: var(--ink);
+  font: 600 13px/1 var(--serif);
+}
+.lb-app.rp-shell .rs-face-small {
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+}
+.lb-app.rp-shell .rs-new {
+  flex: none;
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--olive);
+  color: var(--on-olive);
+  font: 700 11px/1.4 var(--sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.lb-app.rp-shell .rs-lock {
+  flex: none;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: #efe6cf;
+  color: var(--ink);
+  font: 600 13px/1.2 var(--sans);
+}
+.lb-app.rp-shell .rs-quote {
+  margin: 0;
+  font: italic 400 24px/1.35 var(--serif);
+  color: var(--ink);
+}
+.lb-app.rp-shell .rs-caption {
+  color: #4b5145;
+  font-size: 14px;
+}
+.lb-app.rp-shell .rs-note {
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px solid #ecdcaa;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.lb-app.rp-shell .rs-sent {
+  font: 400 18px/1.45 var(--serif);
+}
+.lb-app.rp-shell .rs-body {
+  -webkit-line-clamp: 4;
+}
+.lb-app.rp-shell .rs-fine {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.lb-app.rp-shell .rs-card .rp-entry-actions {
+  gap: 0 22px;
+}
+
+/* Side column. */
+.lb-app.rp-shell .rs-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.lb-app.rp-shell .rs-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px 24px;
+  border: 1px solid #e2e0d4;
+  border-radius: 18px;
+  background: var(--ui-card);
+}
+.lb-app.rp-shell .rs-panel h2 {
+  margin: 0;
+  font: 600 22px/1.25 var(--serif);
+}
+.lb-app.rp-shell .rs-says h2 {
+  font-size: 20px;
+}
+.lb-app.rp-shell .rs-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.lb-app.rp-shell .rs-panel-art {
+  flex: none;
+  object-fit: contain;
+}
+.lb-app.rp-shell .rs-noticed-title {
+  margin: 0;
+  font: 400 19px/1.45 var(--serif);
+}
+.lb-app.rp-shell .rs-noticed-why {
+  margin: 0;
+  color: #4b5145;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.lb-app.rp-shell .rs-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid #e8e6db;
+}
+.lb-app.rp-shell .rs-sources > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #4b5145;
+  font-size: 13px;
+}
+.lb-app.rp-shell .rs-sources .rs-sources-head {
+  color: var(--ink);
+  font-weight: 600;
+}
+.lb-app.rp-shell .rs-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.lb-app.rp-shell .rs-ghost {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1.5px solid var(--olive);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: 500 15px/1 var(--sans);
+}
+.lb-app.rp-shell .rs-ghost-quiet {
+  border-color: #c9ccbe;
+}
+.lb-app.rp-shell .rs-ghost:not(:disabled):hover {
+  background: #eef1e6;
+}
+.lb-app.rp-shell .rs-says ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lb-app.rp-shell .rs-says li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #4b5145;
+  font-size: 14px;
+}
+.lb-app.rp-shell .rs-says .rp-link {
+  align-self: flex-start;
+  min-height: 44px;
+}
+.lb-app.rp-shell .rs-privacy {
+  margin: 0;
+  padding: 0 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@media (max-width: 940px) {
+  .lb-app.rp-shell .rs-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lb-app.rp-shell .rp-entries.rs-items {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .lb-app.rp-shell .rs-subtitle {
+    font-size: 15px;
+  }
+  /* A memory in the first screenful: the count goes, the two actions share
+     a row, and all the chips share one sideways-scrolling row. */
+  .lb-app.rp-shell .rp-mine-head.rs-head-mine .rp-mine-count {
+    display: none;
+  }
+  .lb-app.rp-shell .rp-mine-head.rs-head-mine .rp-head-actions {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+  .lb-app.rp-shell .rp-mine-head.rs-head-mine .rp-head-actions .rp-btn {
+    flex: 1;
+  }
+  .lb-app.rp-shell .rp-mine-head.rs-head-mine .rp-head-actions .ui-link {
+    align-self: center;
+  }
+  .lb-app.rp-shell .rs-bar {
+    gap: 10px;
+  }
+  .lb-app.rp-shell .rs-chip-row {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .lb-app.rp-shell .rs-chip-row::-webkit-scrollbar {
+    display: none;
+  }
+  .lb-app.rp-shell .rs-bar .rs-chip-row .rs-chips {
+    width: auto;
+    flex: none;
+    overflow: visible;
+  }
+  .lb-app.rp-shell .rs-bar .rs-chips {
+    flex-wrap: nowrap;
+    padding-bottom: 2px;
+  }
+  .lb-app.rp-shell .rs-bar .rs-chips button {
+    flex: none;
+    white-space: nowrap;
+    min-height: 40px;
+    padding: 0 13px;
+    font-size: 14px;
+  }
+  .lb-app.rp-shell .rs-bar .rp-search {
+    margin-left: 0;
+  }
+  .lb-app.rp-shell .rs-quote {
+    font-size: 21px;
+  }
+  .lb-app.rp-shell .rs-from {
+    font-size: 13px;
+  }
+  .lb-app.rp-shell .rs-tile {
+    width: 36px !important;
+    height: 36px !important;
+  }
+  .lb-app.rp-shell .rs-panel {
+    padding: 18px;
+  }
+}
+
+/* Send a line (ShareSheet when the journal is connected). */
+.lb-app.rp-shell .rs-share-note textarea {
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 14px;
+  border: 1.5px solid #c9ccbe;
+  border-radius: 12px;
+  background: var(--ui-card);
+  color: var(--ink);
+  font: 400 16px/1.45 var(--sans);
+  resize: vertical;
+}
+.lb-app.rp-shell .rs-who {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.lb-app.rp-shell .rs-who legend {
+  margin-bottom: 8px;
+  padding: 0;
+  font: 600 15px/1.3 var(--sans);
+}
+.lb-app.rp-shell .rs-who label {
+  position: relative;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 14px;
+  border: 1.5px solid #c9ccbe;
+  border-radius: 14px;
+  background: var(--ui-card);
+  font-size: 16px;
+  cursor: pointer;
+}
+.lb-app.rp-shell .rs-who label.is-on {
+  border-color: var(--olive);
+  background: #eef1e6;
+}
+.lb-app.rp-shell .rs-who input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.lb-app.rp-shell .rs-who label:has(input:focus-visible) {
+  outline: 3px solid var(--olive);
+  outline-offset: 2px;
+}
+.lb-app.rp-shell .rs-box {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--olive);
+  border-radius: 6px;
+  color: var(--olive);
+}
+.lb-app.rp-shell .rs-who .rs-face {
+  background: #cfe0c4;
+}
+.lb-app.rp-shell .rs-who-art {
+  flex: none;
+  object-fit: contain;
+}
+.lb-app.rp-shell .rs-who-hint {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+}
+.lb-app.rp-shell .rs-share-connect {
+  align-self: center;
+  font: 500 14px/1.3 var(--sans);
+}
+
+/* The one-time note under the editor after a first @-mention. */
+.lb-app .rj-mention-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 14px 0 0;
+  padding: 14px 16px;
+  border: 1px solid #e2e0d4;
+  border-radius: 14px;
+  background: var(--ui-card);
+  color: #4b5145;
+  font: 400 14px/1.5 var(--sans);
+}
+.lb-app .rj-mention-note strong {
+  color: var(--ink);
+}
+.lb-app .rj-mention-note .rj-mention {
+  flex: none;
+}
+.lb-app .rj-mention-note button {
+  flex: none;
+  margin-left: auto;
+  min-height: 32px;
+  color: var(--ink);
+  font: 500 14px/1 var(--sans);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* @-mentions in the editor: a mirror behind the textarea draws the green. */
+.lb-app .rj-mention-field {
+  position: relative;
+}
+.lb-app .rj-mention-field textarea {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+.lb-app .rj-mention-mirror {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  color: transparent;
+  pointer-events: none;
+}
+.lb-app .rj-mention-mirror .rj-mention {
+  padding: 0;
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px #e6eddf;
+  font-weight: inherit;
+}
+.lb-app .rj-mention-pick {
+  position: absolute;
+  z-index: 5;
+  min-width: 200px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid #dcded2;
+  border-radius: 14px;
+  background: var(--ui-card);
+  box-shadow: 0 18px 40px rgba(48, 56, 44, 0.18);
+  font-family: var(--sans);
+}
+.lb-app .rj-mention-pick li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  color: var(--ink);
+  font-size: 16px;
+  cursor: pointer;
+}
+.lb-app .rj-mention-pick li[aria-selected="true"] {
+  background: #eef1e6;
+}
+.lb-app .rj-mention-pick .rs-face {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  background: #cfe0c4;
+  font: 600 12px/1 var(--serif);
+}
+.lb-app .rj-mention-pick .rj-mention-role {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+}
