@@ -21,6 +21,34 @@
                ReferencedContainer = "container:Relish.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "992048647674755DEA1C56C9"
+               BuildableName = "RelishShare.appex"
+               BlueprintName = "RelishShare"
+               ReferencedContainer = "container:Relish.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "BC0F3378BC32C64B22DA6769"
+               BuildableName = "RelishWidgets.appex"
+               BlueprintName = "RelishWidgets"
+               ReferencedContainer = "container:Relish.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction

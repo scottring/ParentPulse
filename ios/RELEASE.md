@@ -22,6 +22,35 @@ Relish 1.0.0 (2), bundle `my.relish.book`, iOS 27.1+, iPhone and iPad. The nativ
 - Privacy manifest covers the hosted account experience, not merely the Swift code.
 - Direct labels and instructions across journals, guided sessions, account setup, games, sharing, voice entry and AI suggestions. Previous-entry panels no longer contain decorative advice.
 - Native tests for URL, download and permission boundaries; an archive checker that distinguishes unsigned compilation from signed distribution readiness.
+- Native features (2026-11-22), below: Table mode with posture, widgets, quick actions, Share to Relish, Siri.
+
+## Native features for guideline 4.2 (2026-11-22)
+
+Relish is more than its web pages on iPhone: Table mode (posture-aware), home-screen and lock-screen widgets, home-screen quick actions, Share to Relish, and Siri / App Shortcuts. The page and the app talk over one `WKScriptMessageHandler` named `relish`, with a versioned message set (`v: 1`) checked on both sides and accepted only from the trusted origin's main frame (`RelishBridge.swift`, `src/lib/relish/native-bridge.ts`). Deep links (`relish://new-entry`, `table`, `spot`, `play`, `family`, `share`) are parsed by `BookURLPolicy.route(from:)` and delivered to the trusted page over the bridge; nothing is ever loaded from a deep link. Shared words and photos wait in the App Group, never in a URL.
+
+| Feature | What it does |
+| --- | --- |
+| Table mode | One big card at a time on the outer screen; tap anywhere for the next. Tonight's activity, a question for each person in turn, Spot it!'s board, and a finish card offering one note to Our family journal (Keep the note / Skip it; nobody's answers are saved). The status bar hides and the screen stays awake while it's open. |
+| Posture | `UIHingeInteraction` (iOS 27.1, confirmed in the SDK headers): hinge partly open while Relish is on the compact outer screen in landscape opens Table mode; closing or opening the hinge leaves it. The web entry "Stand it up at the table" always works. Not verified on hardware: the simulator has no tent posture. |
+| Widgets | Small "Write a line about today" (opens a new private entry), medium "Tonight" (opens Table mode), medium "From Our family journal" (off until a grown-up turns it on in Settings; only words already shared there; turning it off clears the stored line), lock-screen Write circle and Tonight rectangle (never family words; a plan in the family's own words shows as "Something to try together"). Passive: nothing notifies anyone. |
+| Quick actions | Long-press the icon: New entry, Play a game. |
+| Share to Relish | Text, one link or one photo from another app becomes a new private draft in My journal. Never shared automatically. |
+| Siri | "Write in Relish" and "Start a car game in Relish" (Spot it! in Table mode), registered as App Shortcuts, so they work by voice and in CarPlay. |
+
+### Developer Portal: what Scott registers before the next signed archive
+
+Team `XT33G7U496`. Xcode's automatic signing with `-allowProvisioningUpdates` can create most of this itself once the account is signed in, but check each item in Certificates, Identifiers & Profiles:
+
+1. **App Group:** Identifiers → App Groups → register `group.my.relish.book` (description "Relish shared").
+2. **Main app ID `my.relish.book`:** edit it, turn on **App Groups**, and assign `group.my.relish.book`. Keep Data Protection (Complete) as it is.
+3. **Widget extension App ID:** register `my.relish.book.widgets` (description "Relish Widgets") with **App Groups** → `group.my.relish.book`.
+4. **Share extension App ID:** register `my.relish.book.share` (description "Relish Share") with **App Groups** → `group.my.relish.book`.
+5. **Profiles:** App Store distribution profiles for all three IDs (the app's existing one must be regenerated after step 2). Automatic signing does this during `archive`/`-exportArchive` with `-allowProvisioningUpdates`.
+6. **Nothing else:** App Shortcuts need no Siri capability; there are no push notifications, associated domains or iCloud.
+
+`my.relish.book.tour` is the UI-test runner for the screenshot walk; it is never archived and needs no registration for the simulator.
+
+In App Store Connect, the privacy answers below still hold: widgets and Share to Relish keep their words on the device (the App Group) and send nothing anywhere new. For App Review notes, list the five native features above and how to reach each one in the fictional sample journal (no login needed).
 
 ## App Store Connect preparation
 
@@ -51,6 +80,9 @@ The native app links Apple frameworks only. TLS and the hosted vault's AES-GCM/P
 Web validation: all 208 Relish tests, targeted ESLint, authentication-runtime verification and the production build pass. Direct copy was checked in the desktop journal and through a complete guided session. Browser checks at 382px and 669px preserve a draft when switching between compact and spread layouts. The native simulator repeat of the latest wording was interrupted by the Mac locking; the earlier native fold/save/cross-device flow passed.
 
 - [x] Six native XCTest checks passed on the iPhone Duo / iOS 27.1 simulator.
+- [x] 2026-11-22: sixteen native XCTest checks (adds bridge-message validation, deep-link routing, quick actions, posture, App Group storage) passed on the iPhone Duo / iOS 27.1 simulator.
+- [ ] Signed archive with both extensions after the Developer Portal steps above; `check-release.py --signed` now checks the App Group and each extension's profile.
+- [ ] Tent posture on a physical iPhone Duo (the simulator has none); widgets and lock-screen widgets on a physical device.
 - [x] Unsigned iOS Release archive compiles with Xcode 27.2.
 - [x] Signed archive and exported IPA checker; unsigned archive correctly rejected by `--signed`.
 - [x] Native signed-in outer → inner → outer journal capture in a parent-managed child book; save once, then verify the entry appears exactly once in a separate production browser client. Only a fictional family was used.

@@ -79,6 +79,7 @@ export default function GroupPlay({
   onAction,
   onKeep,
   onPause,
+  onTable,
   onFinish,
   onPlayAgain,
   familyNote = false,
@@ -92,6 +93,8 @@ export default function GroupPlay({
   onAction: (action: GameAction) => void;
   onKeep: () => void;
   onPause: () => void;
+  /** Spot it!: stand the phone up and show the card in Table mode. */
+  onTable?: () => void;
   onFinish: () => void;
   /** Ends this round and sets up a new one of the same game. */
   onPlayAgain?: () => void;
@@ -171,7 +174,7 @@ export default function GroupPlay({
           onCancel={onCancel}
         />
       ) : g.stage === "choose" && spot ? (
-        <SpotBoard game={g} busy={busy} onAction={onAction} onPause={onPause} />
+        <SpotBoard game={g} busy={busy} onAction={onAction} onPause={onPause} onTable={onTable} />
       ) : g.stage === "ready" ? (
         <>
           <h2>{title}</h2>

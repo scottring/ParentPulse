@@ -254,11 +254,14 @@ export function SpotBoard({
   busy,
   onAction,
   onPause,
+  onTable,
 }: {
   game: Game;
   busy: boolean;
   onAction: (action: GameAction) => void;
   onPause: () => void;
+  /** Table mode: the phone stands up and shows the card to everyone. */
+  onTable?: () => void;
 }) {
   const card = g.spot!;
   const [picking, setPicking] = useState<number | null>(null);
@@ -355,9 +358,16 @@ export function SpotBoard({
             {spotted} of {squares.length} spotted
           </p>
         </div>
-        <button className="lb-text" disabled={busy} onClick={onPause}>
-          Pause here
-        </button>
+        <span className="lb-session-actions">
+          {onTable && (
+            <button className="lb-text" disabled={busy} onClick={onTable}>
+              Stand it up at the table
+            </button>
+          )}
+          <button className="lb-text" disabled={busy} onClick={onPause}>
+            Pause here
+          </button>
+        </span>
       </div>
       <h2 className="ui-sr-only">Your card</h2>
       <ol className="lb-spot-card is-playing" aria-label="Your card">

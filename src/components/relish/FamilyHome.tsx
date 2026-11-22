@@ -36,6 +36,7 @@ import {
   type PlaceId,
   type PlanLength,
 } from "@/lib/relish/family-plan";
+import { tonightFor, tonightPreview, type TableTonight } from "@/lib/relish/table-mode";
 import "./family-home.css";
 
 type PlanUpdate = (plan: FamilyPlan | undefined) => FamilyPlan | undefined;
@@ -61,6 +62,7 @@ export default function FamilyPlanFeature({
   onFamilyBook,
   preview,
   onClearPreview,
+  onTable,
 }: {
   plan: FamilyPlan | undefined;
   owner: string;
@@ -79,6 +81,8 @@ export default function FamilyPlanFeature({
   /** A plan card chosen on a shelf: shown here to try, nothing started yet. */
   preview?: { goal: Exclude<GoalId, "own">; place: PlaceId };
   onClearPreview?: () => void;
+  /** "Stand it up at the table": Table mode with this activity. */
+  onTable?: (tonight: TableTonight) => void;
 }) {
   const moment = momentOf(plan);
   return (
@@ -92,6 +96,7 @@ export default function FamilyPlanFeature({
           initialPlace={preview?.place}
           replacing={preview && plan ? plan.goalLabel : undefined}
           onKeepCurrent={onClearPreview}
+          onTable={onTable}
           onStart={async (next) => {
             await onPlan(() => next);
             onClearPreview?.();
@@ -108,6 +113,7 @@ export default function FamilyPlanFeature({
           onPlan={onPlan}
           onKeep={onKeep}
           onFamilyBook={onFamilyBook}
+          onTable={onTable}
         />
       ) : (
         <LookingBack
@@ -139,6 +145,17 @@ function Painting({ which, className }: { which: keyof typeof art; className: st
     <img className={className} src={a.src} width={a.w} height={a.h} alt="" aria-hidden="true" />
   );
 }
+/** Into Table mode: the phone stands up and shows one card at a time. */
+function TableLink({ onClick }: { onClick: () => void }) {
+  return (
+    <p className="tm-enter-row">
+      <button type="button" className="tm-enter" onClick={onClick}>
+        Stand it up at the table
+      </button>
+      <span className="ha-quiet">One big card at a time. Tap for the next.</span>
+    </p>
+  );
+}
 function Problem({ text }: { text: string }) {
   return text ? (
     <p className="fh-error" role="alert">
@@ -157,10 +174,12 @@ function FirstVisit({
   initialPlace = "dinner",
   replacing,
   onKeepCurrent,
+  onTable,
 }: {
   busy: boolean;
   headingRef: RefObject<HTMLHeadingElement | null>;
   onStart: (plan: FamilyPlan) => Promise<void>;
+  onTable?: (tonight: TableTonight) => void;
   initialGoal?: GoalId;
   initialPlace?: PlaceId;
   /** What the family is trying now, when this would replace it. */
@@ -263,6 +282,9 @@ function FirstVisit({
             Adjust the plan
           </button>
         </div>
+        {onTable && !own && invitation && (
+          <TableLink onClick={() => onTable(tonightPreview(goal, place, invitation))} />
+        )}
         <Problem text={error} />
         {adjusting && (
           <div className="fh-adjust" id="fh-adjust">
@@ -357,6 +379,7 @@ function ComingBack({
   onPlan,
   onKeep,
   onFamilyBook,
+  onTable,
 }: {
   plan: FamilyPlan;
   names: string[];
@@ -366,6 +389,7 @@ function ComingBack({
   onPlan: (update: PlanUpdate) => Promise<void>;
   onKeep: (line: { text: string; caption: string }) => Promise<string>;
   onFamilyBook: () => void;
+  onTable?: (tonight: TableTonight) => void;
 }) {
   const answer = todaysAnswer(plan);
   const [open, setOpen] = useState(true);
@@ -422,6 +446,7 @@ function ComingBack({
           <h1 id="fh-title" ref={headingRef} tabIndex={-1} className="fh-question">
             {wantedLine(plan)} <em>How did it go?</em>
           </h1>
+          {onTable && <TableLink onClick={() => onTable(tonightFor(plan))} />}
         </div>
         {dinnerArt(plan.goal, plan.place) && <Painting which="back" className="fh-art fh-art-back" />}
       </div>
