@@ -54,7 +54,16 @@ import { useSensory } from "./Sensory";
 import { TypingSoundToggle, useTypingSound } from "./TypingSound";
 import Illustration from "./Illustration";
 import Sprig from "./Sprig";
-import ShareSheet from "./ShareSheet";
+import ShareSheet, { type SendLine } from "./ShareSheet";
+import MentionText from "./MentionText";
+import {
+  insertMention,
+  mentionAt,
+  mentionChoices,
+  resolveMentions,
+  sameName,
+} from "@/lib/relish/mentions";
+import type { Recipient } from "@/lib/relish/partner-share";
 import type { Space } from "./TopBar";
 import type { FamilyPage } from "@/lib/relish/family-pages";
 import { SubHead } from "./ui";
@@ -63,8 +72,23 @@ import "./journal.css";
 type Save = (change: (book: Book) => Book) => Promise<void>;
 export type FamilyAdd = (
   page: Pick<FamilyPage, "kind" | "text"> &
-    Partial<Pick<FamilyPage, "title" | "caption" | "activity">>,
+    Partial<Pick<FamilyPage, "title" | "caption" | "activity" | "mentions" | "sourceId">>,
 ) => Promise<unknown>;
+/** Someone who can be @-mentioned: a person in this journal (with an id) or another family member. */
+export type Mentionable = { name: string; id?: string; role?: string };
+/** Send a line from the editor; `sourceId` is the entry it came from. */
+export type SendFromEntry = (
+  to: Recipient[],
+  words: Parameters<SendLine>[1] & { sourceId?: string },
+) => Promise<void>;
+const MENTION_NOTE = "relish.mention-note.v1";
+function mentionNoteSeen() {
+  try {
+    return localStorage.getItem(MENTION_NOTE) === "seen";
+  } catch {
+    return false;
+  }
+}
 export type JournalNavigation = RefObject<(() => Promise<boolean>) | null>;
 const dateLabel = (date: string) =>
   new Date(date).toLocaleDateString(undefined, {
@@ -110,8 +134,19 @@ export default function Journal({
   initialCelebrate = false,
   initialPassage = false,
   onKept,
+  mentionable,
+  recipients,
+  onSend,
+  onConnect,
 }: {
   book: Book;
+  /** People who can be @-mentioned while writing. */
+  mentionable?: Mentionable[];
+  /** Connected grown-ups a line can be sent to (Send a line). */
+  recipients?: Recipient[];
+  onSend?: SendFromEntry;
+  /** Not connected: connect a partner's journal from the share sheet. */
+  onConnect?: () => void;
   /** The rest of the family, named in Share with our family. */
   familyNames?: string[];
   /** Adds a page or passage to Our family journal. */
@@ -199,6 +234,10 @@ export default function Journal({
           photos={photos}
           familyNames={familyNames}
           onFamilyAdd={onFamilyAdd}
+          mentionable={mentionable}
+          recipients={recipients}
+          onSend={onSend}
+          onConnect={onConnect}
           onPause={leaveEditor}
           onKeep={(entry, problem) => {
             if (onKept) {
@@ -285,7 +324,9 @@ export default function Journal({
               </p>
             )}
           </header>
-          <div className="rj-prose">{page.text}</div>
+          <div className="rj-prose">
+            <MentionText text={page.text} />
+          </div>
           <PhotoGallery photos={page.photos} access={photos} />
           {page.sections.map((section, i) => (
             <section className="rj-page-section" key={`${i}:${section.label}`}>
@@ -555,10 +596,18 @@ export function JournalEditor({
   family,
   familyNames = [],
   onFamilyAdd,
+  mentionable = [],
+  recipients = [],
+  onSend,
+  onConnect,
 }: {
   family?: { name: string }[];
   familyNames?: string[];
   onFamilyAdd?: FamilyAdd;
+  mentionable?: Mentionable[];
+  recipients?: Recipient[];
+  onSend?: SendFromEntry;
+  onConnect?: () => void;
   initial: JournalDraft;
   initialVoice?: boolean;
   initialPhoto?: boolean;
@@ -589,7 +638,13 @@ export function JournalEditor({
   const [error, setError] = useState("");
   const [showPrevious, setShowPrevious] = useState(false);
   const [sharing, setSharing] = useState<string | null>(null);
+  // @-mentions: what's being typed after an @, and which choice is lit.
+  const [pick, setPick] = useState<{ start: number; query: string; index: number } | null>(null);
+  const [noteSeen, setNoteSeen] = useState(mentionNoteSeen);
   const body = useRef<HTMLTextAreaElement>(null);
+  const mirror = useRef<HTMLDivElement>(null);
+  const marker = useRef<HTMLSpanElement>(null);
+  const [pickAt, setPickAt] = useState<{ top: number; left: number } | null>(null);
   const current = useRef(initial),
     revision = useRef(initialEntry?.revision || 0),
     status = useRef(initialEntry?.status || "draft");
@@ -776,10 +831,99 @@ export function JournalEditor({
     el.style.height = "auto";
     el.style.height = `${el.scrollHeight + 2}px`;
   }, [draft.text]);
+  // Who can be @-mentioned: the family as LivingBook knows it, else this journal's people.
+  const people: Mentionable[] = (
+    mentionable.length
+      ? mentionable
+      : [
+          ...(book?.people || []).map((p) => ({ name: p.name, id: p.id, role: p.role })),
+          ...extra.map((name) => ({ name })),
+        ]
+  ).filter((m) => !book || !sameName(m.name, book.owner));
+  const choices = pick ? mentionChoices(people, pick.query) : [];
+  const mentionedNames = resolveMentions(draft.text, people.map((m) => m.name));
+  // The mirror behind the textarea draws mentions in green; it copies the
+  // textarea's type and spacing so the two line up, and finds the caret for
+  // the list of people.
+  useLayoutEffect(() => {
+    const el = body.current,
+      m = mirror.current;
+    if (!el || !m) return;
+    const cs = getComputedStyle(el);
+    for (const k of [
+      "fontFamily",
+      "fontSize",
+      "fontWeight",
+      "fontStyle",
+      "lineHeight",
+      "letterSpacing",
+      "wordSpacing",
+      "textIndent",
+      "paddingTop",
+      "paddingRight",
+      "paddingBottom",
+      "paddingLeft",
+      "borderTopWidth",
+      "borderRightWidth",
+      "borderBottomWidth",
+      "borderLeftWidth",
+      "boxSizing",
+    ] as const)
+      m.style[k] = cs[k];
+    m.style.borderStyle = "solid";
+    m.style.borderColor = "transparent";
+    const mark = marker.current;
+    if (!pick || !mark) return;
+    const line = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.5 || 28;
+    setPickAt({
+      top: mark.offsetTop + line,
+      left: Math.max(0, Math.min(mark.offsetLeft, m.clientWidth - 230)),
+    });
+  }, [draft.text, pick]);
+  function updatePick(el: HTMLTextAreaElement) {
+    const at = el.selectionStart === el.selectionEnd ? mentionAt(el.value, el.selectionStart) : null;
+    setPick((old) =>
+      at && people.length
+        ? { ...at, index: old && old.start === at.start ? old.index : 0 }
+        : null,
+    );
+  }
+  /** Writes "@Name" and files the entry under them. Mentioning shares nothing. */
+  function chooseMention(m: Mentionable) {
+    if (!pick) return;
+    const el = body.current;
+    const next = insertMention(current.current.text, pick, m.name);
+    const id = m.id ?? book?.people.find((p) => sameName(p.name, m.name))?.id;
+    const tags = current.current.people || [];
+    change({
+      text: next.text.slice(0, JOURNAL_TEXT_LIMIT),
+      ...(id && !tags.includes(id) ? { people: [...tags, id] } : {}),
+    });
+    setPick(null);
+    // Family from the library who aren't in this journal yet are noted, then tagged.
+    if (!id && extra.some((n) => sameName(n, m.name))) {
+      let noted = "";
+      void save((b) => {
+        const [after, chosen] = noteFamily(b, m.name);
+        noted = chosen;
+        return after;
+      })
+        .then(() => {
+          if (noted && !(current.current.people || []).includes(noted))
+            change({ people: [...(current.current.people || []), noted] });
+        })
+        .catch(() => setError("Could not tag. Please try again."));
+    }
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(next.caret, next.caret);
+    });
+  }
   const taggedPeople = (draft.people || [])
     .map((id) => book?.people.find((p) => p.id === id))
     .filter((p): p is NonNullable<typeof p> => !!p);
-  const canShare = !!onFamilyAdd && !!draft.text.trim();
+  const canSend = !!onSend && recipients.length > 0;
+  const canShare = (!!onFamilyAdd || canSend) && !!draft.text.trim();
   function openShare() {
     const el = body.current;
     const picked =
@@ -902,20 +1046,118 @@ export function JournalEditor({
               placeholder="Give this page a title"
             />
           </label>
-          <label className="rj-writing-label">
+          <div className="rj-writing-label rj-mention-field">
             <span className="rj-sr-only">Your journal entry</span>
+            <div className="rj-mention-mirror" ref={mirror} aria-hidden="true">
+              {pick ? (
+                <>
+                  <MentionText text={draft.text.slice(0, pick.start)} />
+                  <span ref={marker} />
+                  <MentionText text={draft.text.slice(pick.start)} />
+                </>
+              ) : (
+                <MentionText text={draft.text} />
+              )}
+              {"\n"}
+            </div>
             <textarea
               ref={body}
               aria-label="Your journal entry"
+              aria-autocomplete="list"
+              aria-controls={choices.length ? "rj-mention-pick" : undefined}
+              aria-activedescendant={
+                pick && choices.length ? `rj-mention-${pick.index}` : undefined
+              }
               value={draft.text}
               maxLength={JOURNAL_TEXT_LIMIT}
               disabled={finishing}
-              onChange={(e) => change({ text: e.target.value })}
-              {...editorTyping}
+              onChange={(e) => {
+                change({ text: e.target.value });
+                updatePick(e.target);
+              }}
+              onSelect={(e) => updatePick(e.currentTarget)}
+              onBlur={() => setPick(null)}
+              onFocus={editorTyping.onFocus}
+              onKeyUp={editorTyping.onKeyUp}
+              onKeyDown={(e) => {
+                if (pick && choices.length) {
+                  const n = choices.length;
+                  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setPick({ ...pick, index: (pick.index + (e.key === "ArrowDown" ? 1 : n - 1)) % n });
+                    return;
+                  }
+                  if (e.key === "Enter" || e.key === "Tab") {
+                    e.preventDefault();
+                    chooseMention(choices[Math.min(pick.index, n - 1)]);
+                    return;
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setPick(null);
+                    return;
+                  }
+                }
+                editorTyping.onKeyDown(e);
+              }}
               placeholder="Start writing…"
               rows={5}
             />
-          </label>
+            {pick && choices.length > 0 && (
+              <ul
+                id="rj-mention-pick"
+                className="rj-mention-pick"
+                role="listbox"
+                aria-label="Mention someone"
+                style={pickAt ? { top: pickAt.top, left: pickAt.left } : undefined}
+              >
+                {choices.map((m, i) => (
+                  <li
+                    key={`${m.id ?? ""}:${m.name}`}
+                    id={`rj-mention-${i}`}
+                    role="option"
+                    aria-selected={i === pick.index}
+                    // Keep the textarea's focus and caret while choosing.
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => chooseMention(m)}
+                  >
+                    <span className="rs-face" aria-hidden="true">
+                      {m.name.trim().charAt(0).toLocaleUpperCase()}
+                    </span>
+                    {m.name}
+                    {m.role && <span className="rj-mention-role">{m.role}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          {mentionedNames.length > 0 && !noteSeen && (
+            <p className="rj-mention-note" role="note">
+              <span className="rj-mention">@</span>
+              <span>
+                <strong>Mentioning someone doesn’t share anything.</strong> It
+                files this entry under{" "}
+                {mentionedNames.length < 3
+                  ? mentionedNames.join(" and ")
+                  : "them"}{" "}
+                in your journal. To let them read it, send it.
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setNoteSeen(true);
+                  try {
+                    localStorage.setItem(MENTION_NOTE, "seen");
+                  } catch {
+                    /* It shows again next time; nothing else depends on it. */
+                  }
+                }}
+              >
+                Got it
+              </button>
+            </p>
+          )}
           {navigationNotice && (mediaBusy || voiceOpen) && (
             <p className="lb-fine" role="status">
               {navigationNotice}
@@ -1119,7 +1361,7 @@ export function JournalEditor({
               <FileText size={18} aria-hidden="true" />
               {saveLabel || (hasContent ? "Draft" : "Empty draft")}
             </span>
-            {onFamilyAdd && (
+            {(onFamilyAdd || canSend) && (
               <button
                 type="button"
                 className="rj-share"
@@ -1145,7 +1387,7 @@ export function JournalEditor({
           </div>
         </section>
       </div>
-      {sharing !== null && onFamilyAdd && (
+      {sharing !== null && (onFamilyAdd || canSend) && (
         <ShareSheet
           title={pageTitle(draft)}
           text={draft.text}
@@ -1160,13 +1402,45 @@ export function JournalEditor({
             ""
           }
           onClose={() => setSharing(null)}
-          onAdd={async (page) => {
-            if (timer.current) clearTimeout(timer.current);
-            // An unsaved draft is saved to your journal first.
-            if (dirty || revision.current === 0) await persist(current.current);
-            await onFamilyAdd(page);
-            if (alive.current) setSharing(null);
-          }}
+          recipients={canSend ? recipients : []}
+          mentioned={[...mentionedNames, ...taggedPeople.map((p) => p.name)]}
+          onConnect={
+            onConnect
+              ? () => {
+                  setSharing(null);
+                  onConnect();
+                }
+              : undefined
+          }
+          onSend={
+            canSend
+              ? async (to, words) => {
+                  if (timer.current) clearTimeout(timer.current);
+                  if (dirty || revision.current === 0) await persist(current.current);
+                  await onSend!(to, { ...words, sourceId: current.current.id });
+                  if (alive.current) setSharing(null);
+                }
+              : undefined
+          }
+          onAdd={
+            onFamilyAdd
+              ? async (page) => {
+                  if (timer.current) clearTimeout(timer.current);
+                  // An unsaved draft is saved to your journal first.
+                  if (dirty || revision.current === 0) await persist(current.current);
+                  const mentions = resolveMentions(
+                    `${page.title || ""}\n${page.text}`,
+                    people.map((m) => m.name),
+                  );
+                  await onFamilyAdd({
+                    ...page,
+                    ...(mentions.length ? { mentions } : {}),
+                    sourceId: current.current.id,
+                  });
+                  if (alive.current) setSharing(null);
+                }
+              : undefined
+          }
         />
       )}
     </div>

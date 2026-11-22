@@ -15,6 +15,16 @@ export type FamilyPage = {
   byBookId: string;
   /** The activity it came from (a game kind or an exercise id), for its picture. */
   activity?: string;
+  /**
+   * Who the page @-mentions, by name (mentions.ts). Optional: older pages
+   * have none, and "@Name" in the words is read too.
+   */
+  mentions?: string[];
+  /**
+   * The private entry it was shared from (an opaque id, never its words), so
+   * the writer's own journal can say "One line shared to Our family journal".
+   */
+  sourceId?: string;
   createdAt: string;
 };
 export const FAMILY_TEXT_LIMIT = 8000;
@@ -36,6 +46,11 @@ export function isFamilyPage(value: unknown): value is FamilyPage {
     str(p.byName, 200) &&
     str(p.byBookId, 100) &&
     optional(p.activity, 60) &&
+    (p.mentions === undefined ||
+      (Array.isArray(p.mentions) &&
+        p.mentions.length <= 30 &&
+        p.mentions.every((n) => str(n, 80) && !!n.trim()))) &&
+    optional(p.sourceId, 100) &&
     typeof p.createdAt === "string" &&
     Number.isFinite(Date.parse(p.createdAt))
   );
@@ -76,7 +91,8 @@ export function newFamilyPage(
     createdAt: data.createdAt ?? new Date().toISOString(),
     text: data.text.trim().slice(0, FAMILY_TEXT_LIMIT),
   };
-  for (const key of ["title", "caption", "activity"] as const)
+  for (const key of ["title", "caption", "activity", "sourceId"] as const)
     if (!page[key]?.trim()) delete page[key];
+  if (!page.mentions?.length) delete page.mentions;
   return page;
 }

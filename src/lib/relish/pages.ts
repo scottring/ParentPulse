@@ -174,6 +174,11 @@ export function bookPages(book: Book): BookPage[] {
         date: p.acceptedAt,
         style: "blush",
         from: p.fromName,
+        // A line sent with a note and who said it (Send a line, 2026-11-22).
+        sections: [
+          { label: "Who said it", text: p.caption || "" },
+          { label: `${p.fromName}’s note`, text: p.note || "" },
+        ].filter((x) => x.text),
       }),
     ),
     ...livingOf(book).sharedPages.map((p) => {
