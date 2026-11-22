@@ -108,6 +108,19 @@ import { takeSuggestion, takenToday, type NudgeAction } from "@/lib/relish/nudge
 import { isChild, isFamily, type DoFilter, type UnderWay } from "@/lib/relish/catalog";
 import type { ActsFilter } from "@/lib/relish/activities";
 import { canUseOnline, ageLabels, audienceOf } from "@/lib/relish/profiles";
+import TableMode, { type TableOpen } from "./TableMode";
+import { tableNotePage, tonightFor } from "@/lib/relish/table-mode";
+import {
+  familyLineFor,
+  inNativeApp,
+  listenToNative,
+  postToNative,
+  readFamilyLineWidget,
+  sharedImageFile,
+  widgetMessage,
+  writeFamilyLineWidget,
+  type NativeMessage,
+} from "@/lib/relish/native-bridge";
 
 // Three places, plus the sub-screens that open inside them. "book" is the
 // Journal place's page: My journal or Our family journal, by `space`.
@@ -119,10 +132,12 @@ type View =
   | "session"
   | "words"
   | "play"
+  | "table"
   | "tools";
 const placeOf: Record<View, Place> = {
   home: "home",
   do: "do",
+  table: "do",
   tools: "do",
   session: "do",
   bookmark: "do",
@@ -235,7 +250,12 @@ export default function LivingBook({
     [kept, setKept] = useState(false),
     [passage, setPassage] = useState(false),
     [showMembers, setShowMembers] = useState(false),
-    [actsFilter, setActsFilter] = useState<ActsFilter>("all");
+    [actsFilter, setActsFilter] = useState<ActsFilter>("all"),
+    // Table mode: what's on the table, and whether the phone itself stood up.
+    [table, setTable] = useState<TableOpen | null>(null),
+    [tablePosture, setTablePosture] = useState(false),
+    // The family-line widget, off until a grown-up turns it on (iPhone app only).
+    [familyLineOn, setFamilyLineOn] = useState(() => readFamilyLineWidget(vault.editionId));
   const [space, setSpaceState] = useState<Space>(() =>
     startView === "family" ? "family" : (readSpace(vault.editionId) ?? "me"),
   );
@@ -366,6 +386,8 @@ export default function LivingBook({
     setKept(false);
     setPassage(false);
     setShowMembers(false);
+    setTable(null);
+    setTablePosture(false);
     setView(next);
     setClosed(false);
     setPageKey((n) => n + 1);
@@ -879,6 +901,161 @@ export default function LivingBook({
       });
     return page.id;
   }
+  // ── Table mode ────────────────────────────────────────────────────────────
+  const adultBook = audienceOf(book) === "adult";
+  const tonight = tonightFor(adultBook ? book.familyPlan : undefined);
+  const tableSitting = useRef("");
+  const tableFrom = useRef<View>("do");
+  /** Stands the phone up: one card at a time, tap for the next. */
+  function openTable(open: TableOpen, posture = false) {
+    if (view !== "table") tableFrom.current = view;
+    navigate("table");
+    tableSitting.current = crypto.randomUUID();
+    setTable(open);
+    setTablePosture(posture);
+  }
+  function leaveTable() {
+    const from = tableFrom.current;
+    navigate(from === "home" || from === "book" ? from : "do");
+  }
+  /** Spot it! in Table mode: the round under way, or a new one with everyone. */
+  function startSpotTable(players: Player[] = roster) {
+    if (activeGame?.kind === "spot") return openTable({ kind: "spot" });
+    if (players.length < 2) {
+      // Nobody else in this journal yet: choose who's in the car first.
+      navigate("do");
+      setGameOffer("spot");
+      return;
+    }
+    void commit(
+      (b) =>
+        changeLiving(b, (x) =>
+          startGame(
+            x,
+            "spot",
+            players,
+            b.profile?.kind === "child" ? b.profile.ageBand : undefined,
+          ),
+        ),
+      () => openTable({ kind: "spot" }),
+    );
+  }
+  /** Done spotting: the card stays in this journal; the note only if they keep it. */
+  function finishSpotTable(keepNote: boolean) {
+    const gameId = l.game?.id;
+    let after: Book | undefined;
+    void commit(
+      (b) =>
+        (after = finishRound(
+          changeLiving(b, (x) =>
+            x.game?.stage === "choose"
+              ? { ...x, game: advanceGame(x.game, { type: "done" }) }
+              : x,
+          ),
+        )),
+      () => {
+        if (keepNote && after) notePlayOf(gameId, after);
+        navigate("do");
+      },
+      keepNote ? "Kept. A note is in Our family journal." : "Done. The card is in your journal.",
+    );
+  }
+  /** Tonight's one note: who told their stories, never what they said. */
+  async function keepTableNote(names: string[]) {
+    if (table?.kind !== "tonight") return;
+    const page = tableNotePage(tableSitting.current, names, table.tonight, {
+      name: book.owner,
+      bookId: myBookId,
+    });
+    if (!familyAccess.pages.some((p) => p.id === page.id)) await familyAccess.add(page);
+    if (!alive.current) return;
+    setNotice(sample ? "Kept in the sample for this visit." : "Added to Our family journal.");
+    sensory.play("place");
+  }
+  /** A new private draft with a photo; the photo picker if it can't be added. */
+  function quickPhoto(text: string, file: File) {
+    const photos = vault.photos;
+    if (!photos) {
+      quickEntry(false, { ...newJournalDraft(), text }, true);
+      return;
+    }
+    setWorking(true);
+    setError("");
+    Promise.resolve()
+      .then(() => photos.add(file))
+      .then((photo) => {
+        if (!alive.current) return;
+        if (!photo) throw new Error("That photo couldn’t be added. Try another.");
+        quickEntry(false, { ...newJournalDraft(), text, photos: [photo] });
+      })
+      .catch((e) => {
+        if (!alive.current) return;
+        setError(e instanceof Error ? e.message : "That photo couldn’t be added. Try another.");
+        quickEntry(false, { ...newJournalDraft(), text }, true);
+      })
+      .finally(() => {
+        if (alive.current) setWorking(false);
+      });
+  }
+
+  // ── The iPhone app (native-bridge.ts) ─────────────────────────────────────
+  /** What the app asks for: a place to open, words shared to Relish, the phone standing up. */
+  function fromNative(m: NativeMessage): boolean {
+    if (m.type === "posture") {
+      if (m.tent && view !== "table") {
+        // Never over an editor, a guided visit or an open dialog.
+        if (privateEditorOpen || modal !== null || busy) return false;
+        openTable({ kind: "tonight", tonight }, true);
+      } else if (m.tent) setTablePosture(true);
+      else if (view === "table" && tablePosture) leaveTable();
+      return true;
+    }
+    if (m.type === "share") {
+      // Always a new page in this writer's private journal, never shared.
+      void headerAction(() => {
+        if (m.image)
+          void sharedImageFile(m.image)
+            .then((file) => quickPhoto(m.text, file))
+            .catch(() => quickEntry(false, { ...newJournalDraft(), text: m.text }));
+        else quickEntry(false, { ...newJournalDraft(), text: m.text });
+        postToNative({ v: 1, type: "share-received", id: m.id });
+      });
+      return true;
+    }
+    void headerAction(() => {
+      if (m.place === "new-entry") quickEntry();
+      else if (m.place === "table") openTable({ kind: "tonight", tonight });
+      else if (m.place === "spot") startSpotTable();
+      else if (m.place === "family") openFamily();
+      else {
+        navigate("do");
+        setActsFilter("together");
+      }
+    });
+    return true;
+  }
+  const native = useRef(fromNative);
+  useEffect(() => {
+    native.current = fromNative;
+  });
+  useEffect(() => {
+    const stop = listenToNative((m) => native.current(m));
+    // Anything the app was holding (a shortcut, a share) can come now.
+    postToNative({ v: 1, type: "ready" });
+    return stop;
+  }, []);
+  // Widgets: tonight's activity, and a family line only if a grown-up turned it on.
+  const familyLine = adultBook && familyLineOn ? familyLineFor(familyAccess.pages) : null;
+  const widgets = JSON.stringify(
+    widgetMessage({ when: tonight.when, title: tonight.title, prompt: tonight.prompt }, familyLine),
+  );
+  useEffect(() => {
+    postToNative(JSON.parse(widgets));
+  }, [widgets]);
+  const tableOpen = view === "table";
+  useEffect(() => {
+    postToNative({ v: 1, type: "table", open: tableOpen });
+  }, [tableOpen]);
   const help =
     view === "play"
       ? {
@@ -1231,6 +1408,27 @@ export default function LivingBook({
       );
     }
   }
+  if (view === "table" && table)
+    return (
+      <div className="r-app lb-app rp-shell rp-at-table">
+        <TableMode
+          open={table}
+          names={roster.map((p) => p.name)}
+          owner={book.owner}
+          game={table.kind === "spot" ? activeGame : undefined}
+          busy={busy}
+          canNote={adultBook}
+          posture={tablePosture}
+          onAction={gameAction}
+          onKeepNote={keepTableNote}
+          onFinishSpot={finishSpotTable}
+          onLeave={leaveTable}
+        />
+        <p className="lb-announcement" role="status" aria-live="polite">
+          {error || notice}
+        </p>
+      </div>
+    );
   return (
     <div
       className={`r-app lb-app rp-shell ${journalEditing ? "lb-capturing" : ""} rp-at-${view}`}
@@ -1397,39 +1595,7 @@ export default function LivingBook({
             onQuickWrite={(text, voice) =>
               quickEntry(voice, { ...newJournalDraft(), text })
             }
-            onQuickPhoto={(text, file) => {
-              const photos = vault.photos;
-              if (!photos) {
-                quickEntry(false, { ...newJournalDraft(), text }, true);
-                return;
-              }
-              setWorking(true);
-              setError("");
-              Promise.resolve()
-                .then(() => photos.add(file))
-                .then((photo) => {
-                  if (!alive.current) return;
-                  if (!photo)
-                    throw new Error("That photo couldn’t be added. Try another.");
-                  quickEntry(false, {
-                    ...newJournalDraft(),
-                    text,
-                    photos: [photo],
-                  });
-                })
-                .catch((e) => {
-                  if (!alive.current) return;
-                  setError(
-                    e instanceof Error
-                      ? e.message
-                      : "That photo couldn’t be added. Try another.",
-                  );
-                  quickEntry(false, { ...newJournalDraft(), text }, true);
-                })
-                .finally(() => {
-                  if (alive.current) setWorking(false);
-                });
-            }}
+            onQuickPhoto={quickPhoto}
           />
         ) : view === "do" && !sharedView ? (
           <DoSomething
@@ -1444,6 +1610,7 @@ export default function LivingBook({
             onOpen={onNudge}
             onResume={resume}
             onStartGame={createGame}
+            onSpotTable={startSpotTable}
             onDiscard={discard}
             onOfflinePlay={async (kind, players) => {
               let play: PlayRecord | undefined;
@@ -1476,6 +1643,7 @@ export default function LivingBook({
                       await addToFamily({ kind: "page", ...page });
                     },
                     onFamilyBook: openFamily,
+                    onTable: (t) => openTable({ kind: "tonight", tonight: t }),
                   }
                 : undefined
             }
@@ -1728,6 +1896,7 @@ export default function LivingBook({
                   )
                 }
                 onPause={endGame}
+                onTable={activeGame.kind === "spot" ? () => openTable({ kind: "spot" }) : undefined}
                 onFinish={() => finishGame()}
                 onPlayAgain={() => finishGame(true)}
                 familyNote={audienceOf(book) === "adult"}
@@ -1853,6 +2022,35 @@ export default function LivingBook({
               <Download size={16} /> Export encrypted backup
             </button>
           </div>
+          {adultBook && inNativeApp() && (
+            <div className="lb-boundary">
+              <h3>Relish widgets</h3>
+              <p>
+                Widgets show a writing prompt and tonight’s activity. The “From Our family
+                journal” widget can also show a line your family already shared there. Anyone
+                near your phone can see it, so it’s off until you turn it on. The lock screen
+                never shows family words.
+              </p>
+              <button
+                type="button"
+                className="lb-secondary"
+                aria-pressed={familyLineOn}
+                onClick={() => {
+                  setFamilyLineOn(!familyLineOn);
+                  writeFamilyLineWidget(vault.editionId, !familyLineOn);
+                }}
+              >
+                {familyLineOn
+                  ? "Turn the family line off"
+                  : "Show a line from Our family journal"}
+              </button>
+              {familyLineOn && (
+                <p className="lb-fine">
+                  On. The widget shows the newest passage in Our family journal.
+                </p>
+              )}
+            </div>
+          )}
           {!sample && online && (
             <button
               className="lb-secondary"

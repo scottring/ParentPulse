@@ -16,6 +16,7 @@ import { PaperCard, PrivateNote } from "./ui";
 import type { ReactNode } from "react";
 import { readBinding, type SyncedEdition } from "@/lib/relish/book-sync";
 import { disconnectAI, getParentGate, setParentGate } from "@/lib/relish/ai-auth";
+import { postToNative, widgetMessage } from "@/lib/relish/native-bridge";
 import "./relish.css";
 import "./experience.css";
 import "./living-book.css";
@@ -422,6 +423,8 @@ function BookGate() {
             else vault.shelf();
           },
           lock: () => {
+            // The iPhone app's widgets forget this family until it opens again.
+            postToNative(widgetMessage(null, null));
             // Signs out too; tell sync so the sign-in screen shows at once.
             void disconnectAI().finally(() =>
               window.dispatchEvent(new Event("relish:account")),

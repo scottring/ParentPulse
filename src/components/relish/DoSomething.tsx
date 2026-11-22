@@ -42,6 +42,7 @@ import {
   gameIllustration,
   type IllustrationName,
 } from "./illustrations";
+import type { TableTonight } from "@/lib/relish/table-mode";
 import "./home-acts.css";
 
 /** The picture on a catalog card. */
@@ -69,6 +70,8 @@ export type PlanFeatureProps = {
   onKeep: (line: { text: string; caption: string }) => Promise<string>;
   onReflect: (page: { title: string; text: string }) => Promise<void>;
   onFamilyBook: () => void;
+  /** "Stand it up at the table": Table mode with tonight's activity. */
+  onTable?: (tonight: TableTonight) => void;
 };
 
 /**
@@ -87,6 +90,7 @@ export default function DoSomething({
   onOpen,
   onResume,
   onStartGame,
+  onSpotTable,
   onDiscard,
   onOfflinePlay,
   initialGame,
@@ -106,6 +110,8 @@ export default function DoSomething({
   /** Reopens something under way. */
   onResume: (item: UnderWay) => void;
   onStartGame: (kind: Game["kind"], players: Player[]) => void;
+  /** Spot it! in Table mode: the phone stands up and shows the whole card. */
+  onSpotTable?: (players: Player[]) => void;
   /** Ends something under way without keeping it. */
   onDiscard?: (item: UnderWay) => void;
   /** "We did this": a game played without the app. */
@@ -373,6 +379,11 @@ export default function DoSomething({
           replacing={game ? gameNames[game.kind] : undefined}
           onClose={() => setSheet(null)}
           onStart={(players) => onStartGame(sheet.action.game, players)}
+          onTable={
+            sheet.action.game === "spot" && onSpotTable
+              ? (players) => onSpotTable(players)
+              : undefined
+          }
         />
       )}
     </main>
@@ -571,6 +582,7 @@ function GameSheet({
   replacing,
   onClose,
   onStart,
+  onTable,
 }: {
   item: GameItem;
   book: Book;
@@ -579,6 +591,7 @@ function GameSheet({
   replacing?: string;
   onClose: () => void;
   onStart: (players: Player[]) => void;
+  onTable?: (players: Player[]) => void;
 }) {
   const [guests, setGuests] = useState<Player[]>([]);
   const [out, setOut] = useState<string[]>([]);
@@ -749,6 +762,16 @@ function GameSheet({
             ? "Start · one phone, read aloud"
             : "Start game · pass the device around"}
         </button>
+        {onTable && (
+          <button
+            type="button"
+            className="tm-enter rp-sheet-table"
+            disabled={busy || players.length < 2 || players.length > 12}
+            onClick={() => onTable(players)}
+          >
+            Stand it up at the table
+          </button>
+        )}
         {players.length < 2 && (
           <p className="rp-quiet">Choose at least two players.</p>
         )}
