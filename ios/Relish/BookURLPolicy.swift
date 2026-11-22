@@ -24,8 +24,29 @@ struct BookURLPolicy {
         return trusts(source)
     }
     func permitsMedia(scheme: String, host: String, port suppliedPort: Int, mainFrame: Bool) -> Bool {
+        mainFrame && isOrigin(scheme: scheme, host: host, port: suppliedPort)
+    }
+    /// A WebKit security origin (port 0 means the scheme's default) matches the book exactly.
+    func isOrigin(scheme: String, host: String, port suppliedPort: Int) -> Bool {
         let effectivePort = suppliedPort == 0 ? (scheme == "https" ? 443 : 80) : suppliedPort
-        return mainFrame && scheme == origin.scheme && host == origin.host && effectivePort == port(origin)
+        return scheme == origin.scheme && host == origin.host && effectivePort == port(origin)
+    }
+    /// Bridge messages count only from the book's own main frame, never an iframe or another site.
+    func acceptsBridgeMessage(scheme: String, host: String, port: Int, mainFrame: Bool) -> Bool {
+        mainFrame && isOrigin(scheme: scheme, host: host, port: port)
+    }
+    /// Routes go only to a page loaded from the trusted origin.
+    func canDeliver(to page: URL?) -> Bool {
+        guard let page else { return false }
+        return trusts(page)
+    }
+    /// `relish://new-entry`, `relish://table`, … The host names the place and nothing
+    /// else may ride along: no path, query, fragment, user or port. Nothing here is ever loaded.
+    static func route(from url: URL) -> RelishRoute? {
+        guard url.scheme?.lowercased() == RelishRoute.scheme, url.user == nil, url.password == nil,
+              url.port == nil, url.query == nil, url.fragment == nil,
+              url.path.isEmpty || url.path == "/", let host = url.host?.lowercased() else { return nil }
+        return RelishRoute(rawValue: host)
     }
     func permitsExternalLink(_ url: URL) -> Bool {
         ["https", "mailto"].contains(url.scheme ?? "") && url.user == nil && url.password == nil

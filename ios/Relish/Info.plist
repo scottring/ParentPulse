@@ -18,6 +18,17 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>my.relish.book</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>relish</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
@@ -28,7 +39,7 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Take a photo you choose to keep in your encrypted Relish book.</string>
+	<string>Take a photo you choose to keep in your encrypted Relish journal.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Record a short story. You choose whether to send it for transcription.</string>
 	<key>RelishStartURL</key>
@@ -38,6 +49,25 @@
 		<key>UIApplicationSupportsMultipleScenes</key>
 		<false/>
 	</dict>
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>square.and.pencil</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>New entry</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>my.relish.book.new-entry</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>die.face.5</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Play a game</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>my.relish.book.play</string>
+		</dict>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

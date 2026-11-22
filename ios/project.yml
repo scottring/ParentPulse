@@ -19,7 +19,7 @@ targets:
   Relish:
     type: application
     platform: iOS
-    sources: [Relish]
+    sources: [Relish, Shared]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: my.relish.book
@@ -42,12 +42,73 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
           - UIInterfaceOrientationPortraitUpsideDown
-        NSCameraUsageDescription: Take a photo you choose to keep in your encrypted Relish book.
+        NSCameraUsageDescription: Take a photo you choose to keep in your encrypted Relish journal.
         NSMicrophoneUsageDescription: Record a short story. You choose whether to send it for transcription.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+        # relish://new-entry, relish://table, … read only by BookURLPolicy.route(from:).
+        CFBundleURLTypes:
+          - CFBundleURLName: my.relish.book
+            CFBundleURLSchemes: [relish]
+        UIApplicationShortcutItems:
+          - UIApplicationShortcutItemType: my.relish.book.new-entry
+            UIApplicationShortcutItemTitle: New entry
+            UIApplicationShortcutItemIconSymbolName: square.and.pencil
+          - UIApplicationShortcutItemType: my.relish.book.play
+            UIApplicationShortcutItemTitle: Play a game
+            UIApplicationShortcutItemIconSymbolName: die.face.5
     dependencies:
       - sdk: WebKit.framework
+      - sdk: WidgetKit.framework
+      - target: RelishWidgets
+      - target: RelishShare
+  RelishWidgets:
+    type: app-extension
+    platform: iOS
+    sources: [RelishWidgets, Shared]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: my.relish.book.widgets
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_ENTITLEMENTS: RelishWidgets/RelishWidgets.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: ''
+        SKIP_INSTALL: YES
+    info:
+      path: RelishWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Relish
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+  RelishShare:
+    type: app-extension
+    platform: iOS
+    sources: [RelishShare, Shared]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: my.relish.book.share
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_ENTITLEMENTS: RelishShare/RelishShare.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: ''
+        SKIP_INSTALL: YES
+    info:
+      path: RelishShare/Info.plist
+      properties:
+        CFBundleDisplayName: Relish
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsText: true
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsImageWithMaxCount: 1
   RelishTests:
     type: bundle.unit-test
     platform: iOS
@@ -58,11 +119,35 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: my.relish.book.tests
     dependencies:
       - target: Relish
+  # A screenshot walk through the native features (see README). Not in the Relish scheme.
+  RelishTour:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [RelishTour]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: my.relish.book.tour
+        TEST_TARGET_NAME: Relish
+        # UI automation only; XCUIElement queries are main-thread by design.
+        SWIFT_VERSION: '5.0'
+        SWIFT_STRICT_CONCURRENCY: minimal
+    dependencies:
+      - target: Relish
 schemes:
+  RelishTour:
+    build:
+      targets:
+        RelishTour: [test]
+    test:
+      config: Debug
+      targets: [RelishTour]
   Relish:
     build:
       targets:
         Relish: all
+        RelishWidgets: all
+        RelishShare: all
     run:
       config: Debug
     test:
