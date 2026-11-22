@@ -21,7 +21,8 @@ export const SHARE_TEXT_LIMIT = 8000;
 /** A shared photo arrives as a JPEG data URL of at most this many characters (about 6 MB). */
 export const SHARE_IMAGE_LIMIT = 8_000_000;
 
-export type WidgetTonight = Pick<TableTonight, "when" | "title" | "prompt">;
+/** `own`: the family's own words, which the lock-screen widget never shows. */
+export type WidgetTonight = Pick<TableTonight, "when" | "title" | "prompt" | "own">;
 export type WidgetFamilyLine = { text: string; who: string };
 /** Page → app. */
 export type PageMessage =
@@ -55,6 +56,7 @@ export function widgetMessage(
       when: clip(tonight.when, WIDGET_LIMITS.when),
       title: clip(tonight.title, WIDGET_LIMITS.title),
       prompt: clip(tonight.prompt, WIDGET_LIMITS.prompt),
+      own: tonight.own,
     },
     familyLine:
       familyLine && familyLine.text.trim()

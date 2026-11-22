@@ -33,6 +33,8 @@ export type TableTonight = {
   prompt: string;
   /** Where it happens, for the note: "at dinner". Empty when it has no place. */
   at: string;
+  /** The family wrote this one in their own words: the lock screen never shows it. */
+  own: boolean;
 };
 
 const sentence = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -59,6 +61,7 @@ export function tonightPreview(
     title: goals[goal].label,
     prompt: withoutLead(invitation, goal, place),
     at: isPlaced(goal) ? places[place].at : "",
+    own: false,
   };
 }
 /**
@@ -74,6 +77,7 @@ export function tonightFor(plan: FamilyPlan | undefined, now = new Date()): Tabl
     title: plan.goalLabel,
     prompt: withoutLead(plan.invitation, plan.goal, plan.place),
     at: placed && plan.goal !== "own" ? places[plan.place].at : "",
+    own: plan.goal === "own",
   };
 }
 

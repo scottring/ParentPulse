@@ -31,6 +31,7 @@ describe("tonight's activity", () => {
       title: "Hearing each other out",
       prompt: "Let someone finish a story. Then ask one question about it.",
       at: "at dinner",
+      own: false,
     });
   });
   it("says where and when for each kind of plan", () => {

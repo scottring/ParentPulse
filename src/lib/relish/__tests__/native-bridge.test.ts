@@ -85,7 +85,7 @@ describe("messages to the app", () => {
   });
   it("clips widget words and clears the family line with null", () => {
     const m = widgetMessage(
-      { when: "Tonight at dinner", title: "Hearing each other out", prompt: "x ".repeat(400) },
+      { when: "Tonight at dinner", title: "Hearing each other out", prompt: "x ".repeat(400), own: false },
       { text: "  ", who: "Leo" },
     );
     expect(m).toMatchObject({ v: 1, type: "widgets", familyLine: null });

@@ -1047,7 +1047,10 @@ export default function LivingBook({
   // Widgets: tonight's activity, and a family line only if a grown-up turned it on.
   const familyLine = adultBook && familyLineOn ? familyLineFor(familyAccess.pages) : null;
   const widgets = JSON.stringify(
-    widgetMessage({ when: tonight.when, title: tonight.title, prompt: tonight.prompt }, familyLine),
+    widgetMessage(
+      { when: tonight.when, title: tonight.title, prompt: tonight.prompt, own: tonight.own },
+      familyLine,
+    ),
   );
   useEffect(() => {
     postToNative(JSON.parse(widgets));

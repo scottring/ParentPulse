@@ -432,6 +432,10 @@
   .tm .tm-rule {
     bottom: calc(max(26px, env(safe-area-inset-bottom)) + 48px);
   }
+  /* Narrow: whose turn sits below Leave, never under it. */
+  .tm .tm-turn {
+    margin-top: 48px;
+  }
 }
 @media (prefers-reduced-motion: no-preference) {
   .tm .tm-card {
