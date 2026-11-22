@@ -47,16 +47,30 @@ export function openBook(
   return { stored: () => stored, lock };
 }
 
-/** Journal ▾ in the top bar, then one of its items (2026-11-21). */
-export function pickJournal(item: RegExp | string = /^My journal/) {
+/**
+ * Journal in the top bar (2026-11-22: one journal, the family spine with your
+ * branches). With kids' journals it's a menu; its first item is the journal.
+ */
+export function openJournal() {
+  const nav = screen.getByRole("navigation", { name: "Main" });
+  fireEvent.click(within(nav).getByRole("button", { name: /^Journal/ }));
+  const menu = screen.queryByRole("menu", { name: "Journals" });
+  if (menu) fireEvent.click(within(menu).getByRole("menuitem", { name: /^Our family journal/ }));
+}
+/** Journal ▾, then one of its items (a kid's journal). */
+export function pickJournal(item: RegExp | string) {
   const nav = screen.getByRole("navigation", { name: "Main" });
   fireEvent.click(within(nav).getByRole("button", { name: /^Journal/ }));
   fireEvent.click(screen.getByRole("menuitem", { name: item }));
 }
-/** My journal, from the Journal menu. */
-export const myJournal = () => pickJournal(/^My journal/);
-/** Our family journal, from the Journal menu. */
-export const familyJournal = () => pickJournal(/^Our family journal/);
+/** The whole journal: the family's spine and your own branches. */
+export const myJournal = () => openJournal();
+/** The journal showing only the family's spine (the Family filter). */
+export function familyJournal() {
+  openJournal();
+  const show = screen.queryByRole("group", { name: "Show" });
+  if (show) fireEvent.click(within(show).getByRole("button", { name: "Family" }));
+}
 /** One of the three places in the top bar. */
 export function place(name: "Home" | "Activities") {
   const nav = screen.getByRole("navigation", { name: "Main" });

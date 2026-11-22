@@ -1,8 +1,8 @@
 "use client";
 import ConfirmDelete from "./ConfirmDelete";
 import { inviteFriend, inviteNotice } from "@/lib/relish/invite";
-import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
-import { Search, Users, X } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Users, X } from "lucide-react";
 import type { Book } from "@/lib/relish/model";
 import {
   gameText,
@@ -17,8 +17,6 @@ import { Dialog } from "./BookForms";
 import { KidCoverMark } from "./KidHome";
 import { PhotoGallery } from "./Photos";
 import { personTones } from "./Home";
-import Illustration from "./Illustration";
-import Sprig from "./Sprig";
 import MentionText from "./MentionText";
 import {
   exerciseIllustration,
@@ -127,7 +125,7 @@ export type FamilyMember = {
 };
 
 /** One page of Our family journal as it is shown, from wherever it is kept. */
-type Shown = {
+export type Shown = {
   id: string;
   kind: FamilyPageKind;
   label: string;
@@ -243,147 +241,26 @@ export function familyPagesOf(
     .toSorted((a, b) => b.date.localeCompare(a.date));
 }
 
-const mentions = (p: Shown, name: string) => {
-  const word = new RegExp(`\\b${name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
-  return (
-    same(p.byName, name) ||
-    p.byName.split(" + ").some((n) => same(n, name)) ||
-    word.test(`${p.caption || ""}\n${p.title}\n${p.text}`)
-  );
-};
-
-export default function OurFamily({
+/**
+ * The banners Our family journal shows about a game: a round just finished,
+ * or one still under way. (2026-11-22: drawn on the one Journal page.)
+ */
+export function GameBanners({
   book,
-  access,
-  me,
-  members,
   busy,
-  headingRef,
-  photos,
-  onOpenMine,
-  onInvite,
-  onAddChild,
-  onPlay,
   onResumeGame,
   onCloseFinished,
-  onRemoved,
-  onDelete,
-  onWrite,
-  initialMembers = false,
-  initialReading,
-  phoneTop,
-  phoneFoot,
 }: {
   book: Book;
-  access: FamilyAccess;
-  /** Opens with one page showing (Read the whole entry, from My journal). */
-  initialReading?: string;
-  /** Add to our family journal: a page written for everyone. */
-  onWrite?: () => void;
-  /** Opens with Who's in our family showing (from the avatar menu). */
-  initialMembers?: boolean;
-  /** Phones: Mine / Family and kids' journals, drawn above and below. */
-  phoneTop?: ReactNode;
-  phoneFoot?: ReactNode;
-  /** The writer of this journal, and the id their family pages carry. */
-  me: { name: string; bookId: string };
-  members: FamilyMember[];
   busy: boolean;
-  headingRef: RefObject<HTMLHeadingElement | null>;
-  photos?: PhotoAccess;
-  /** Back to this journal's own pages (My journal). */
-  onOpenMine: () => void;
-  onInvite?: () => void;
-  onAddChild?: () => void;
-  onPlay: () => void;
   onResumeGame: () => void;
   onCloseFinished: (again: boolean) => void;
-  onRemoved?: (error?: string) => void;
-  /** Deletes this journal's copy of a page (see Shown.deleteId). */
-  onDelete?: (pageId: string) => Promise<boolean>;
 }) {
-  const [who, setWho] = useState("all");
-  const [query, setQuery] = useState("");
-  const [reading, setReading] = useState<string | null>(initialReading ?? null);
-  const [membersOpen, setMembersOpen] = useState(initialMembers);
-  const [inviting, setInviting] = useState(false);
-  const [removing, setRemoving] = useState(false);
-  const refresh = access.refresh;
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
   const l = livingOf(book);
   const active = l.game && l.game.stage !== "finished" ? l.game : undefined;
   const finished = l.game?.stage === "finished" ? l.game : undefined;
-  const all = familyPagesOf(book, access.pages, me);
-  const chips = [
-    { id: "all", label: "Everyone" },
-    ...members
-      .filter((m) => !same(m.name, me.name))
-      .map((m) => ({ id: `name:${m.name}`, label: m.name })),
-    { id: "me", label: "Me" },
-  ];
-  const q = query.trim().toLocaleLowerCase();
-  const shown = all.filter(
-    (p) =>
-      (who === "all" ||
-        (who === "me" ? p.mine || same(p.byName, me.name) : mentions(p, who.slice(5)))) &&
-      (!q || `${p.title}\n${p.text}\n${p.caption || ""}`.toLocaleLowerCase().includes(q)),
-  );
-  const featured = shown.find((p) => p.art);
-  const quote = shown.find((p) => p.kind === "passage" && p !== featured);
-  // The newest passage leads on butter paper, beside the newest entry with a
-  // painting; then everything else, newest first.
-  const ordered = [
-    ...(quote ? [quote] : []),
-    ...(featured ? [featured] : []),
-    ...shown.filter((p) => p !== featured && p !== quote),
-  ];
-  const first = all.at(-1);
-  const open = all.find((p) => p.id === reading);
-  const count = all.length;
-  async function takeOut(page: Shown) {
-    setRemoving(true);
-    try {
-      await access.remove(page.id);
-      setReading(null);
-      onRemoved?.();
-    } catch (e) {
-      onRemoved?.(
-        e instanceof Error ? e.message : "This page couldn’t be taken out. Try again.",
-      );
-    } finally {
-      setRemoving(false);
-    }
-  }
   return (
-    <main className="rp-place rp-family rp-fb" aria-labelledby="rp-family-title">
-      {phoneTop}
-      <header className="rp-fb-cover">
-        <div className="rp-fb-cover-words">
-          <h1 id="rp-family-title" ref={headingRef} tabIndex={-1}>
-            Our family journal
-          </h1>
-          <p>
-            Everyone in the family reads the same pages{" "}
-            <span aria-hidden="true">·</span>{" "}
-            {count ? `${count} ${count === 1 ? "entry" : "entries"}` : "No entries yet"}
-            {first && (
-              <>
-                {" "}
-                since {new Date(first.date).toLocaleDateString(undefined, { month: "long" })}
-              </>
-            )}
-          </p>
-        </div>
-        <Sprig className="rp-fb-cover-sprig" tone="gold" />
-        {onWrite && (
-          <button type="button" className="rp-fb-write" disabled={busy} onClick={onWrite}>
-            Add to our family journal
-          </button>
-        )}
-      </header>
-
+    <>
       {finished && (
         <section className="rp-finished" aria-label="Game finished">
           <p>
@@ -406,34 +283,6 @@ export default function OurFamily({
           </div>
         </section>
       )}
-
-      <div className="rp-fb-bar">
-        <div className="rp-fb-chips" role="group" aria-label="Show pages from">
-          {chips.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              aria-pressed={who === c.id}
-              onClick={() => setWho(c.id)}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-        <div className="rp-fb-tools">
-          <label className="rp-fb-search">
-            <Search size={17} aria-hidden="true" />
-            <input
-              type="search"
-              aria-label="Find something you kept"
-              placeholder="Find something you kept"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </label>
-        </div>
-      </div>
-
       {active && (
         <button className="rp-fb-resume" disabled={busy} onClick={onResumeGame}>
           <span className="rp-fb-kind">Unfinished game</span>
@@ -441,219 +290,98 @@ export default function OurFamily({
           <span aria-hidden="true">→</span>
         </button>
       )}
-
-      {access.error && (
-        <p className="rp-fb-error" role="alert">
-          {access.error}{" "}
-          <button className="rp-link" onClick={access.refresh}>
-            Try again
-          </button>
-        </p>
-      )}
-
-      {ordered.length > 0 ? (
-        <ul className="rp-fb-grid" aria-label="Entries in Our family journal">
-          {ordered.map((p) => (
-            <li
-              key={p.id}
-              className={
-                p === featured ? "rp-fb-featured" : p === quote ? "rp-fb-quote-cell" : undefined
-              }
-            >
-              <PageCard
-                page={p}
-                featured={p === featured}
-                quote={p.kind === "passage"}
-                onOpen={() => setReading(p.id)}
-              />
-            </li>
-          ))}
-        </ul>
-      ) : all.length > 0 ? (
-        <p className="rp-quiet rp-fb-none">
-          Nothing matches.{" "}
-          <button
-            className="rp-link"
-            onClick={() => {
-              setWho("all");
-              setQuery("");
-            }}
-          >
-            Show everything
-          </button>
-        </p>
-      ) : access.loading ? (
-        <p className="rp-quiet rp-fb-none" role="status">
-          Opening Our family journal…
-        </p>
-      ) : (
-        <section className="rp-fb-empty" aria-label="No pages yet">
-          <Illustration name="family" size={120} className="rp-fb-empty-art" />
-          <div>
-            <h2>The first entry is waiting</h2>
-            <p>
-              Entries get here three ways: Add to our family journal, share a
-              passage from My journal, or play a game together.
-            </p>
-            {access.kind === "local" && (
-              <p className="rp-quiet">
-                This journal isn’t in an account, so family entries are kept
-                on this device. Sign in to share one family journal with
-                everyone in your family.
-              </p>
-            )}
-          </div>
-        </section>
-      )}
-
-      <footer className="rp-fb-foot">
-        <p className="rp-quiet">
-          Whoever added an entry can take it out.{" "}
-        </p>
-        <MembersLink
-          open={membersOpen}
-          onToggle={setMembersOpen}
-          me={me}
-          members={members}
-          busy={busy}
-          onOpenMine={onOpenMine}
-          onSee={(name) => {
-            setWho(`name:${name}`);
-            setMembersOpen(false);
-          }}
-          onAddChild={onAddChild}
-          onInvite={onInvite ? () => setInviting(true) : undefined}
-        />
-        <button className="rp-link" disabled={busy} onClick={onPlay}>
-          Play a game
-        </button>
-      </footer>
-      {phoneFoot}
-
-      {open && (
-        <Dialog title={open.title || open.label} onClose={() => !removing && setReading(null)}>
-          <article className="rp-album-open rp-fb-reader">
-            <p className="rp-eyebrow">
-              {shortDate(open.date)} · {open.label}
-            </p>
-            {open.title && <h3>{open.title}</h3>}
-            {open.text && (
-              <blockquote>
-                <MentionText text={open.text} />
-              </blockquote>
-            )}
-            {open.caption && <p className="rp-fb-caption">{open.caption}</p>}
-            {!!open.lines?.length && (
-              <div className="rp-album-lines">
-                {open.lines.map((line, i) => (
-                  <p key={i}>
-                    <strong>{line.label}:</strong> {line.text}
-                  </p>
-                ))}
-              </div>
-            )}
-            {open.photos && <PhotoGallery photos={open.photos} access={photos} />}
-            <p className="rp-quiet">{open.note}</p>
-            {open.removable && (
-              <button
-                className="rp-link rp-fb-takeout"
-                disabled={removing}
-                onClick={() => void takeOut(open)}
-              >
-                {removing ? "Taking it out…" : "Take out of the family journal"}
-              </button>
-            )}
-            {open.deleteId && onDelete && (
-              <ConfirmDelete
-                label="Delete from my journal"
-                question="Delete this from your journal?"
-                detail={
-                  open.deleteId.startsWith("sent:") || open.deleteId.startsWith("passage:")
-                    ? "Only your copy goes; the other journal keeps its own. This can’t be undone."
-                    : "It’s removed from this journal on every device. This can’t be undone."
-                }
-                busy={busy}
-                onConfirm={async () => {
-                  if (await onDelete(open.deleteId!)) setReading(null);
-                }}
-              />
-            )}
-          </article>
-        </Dialog>
-      )}
-
-      {inviting && onInvite && (
-        <InviteSheet
-          onClose={() => setInviting(false)}
-          onStart={() => {
-            setInviting(false);
-            onInvite();
-          }}
-        />
-      )}
-    </main>
+    </>
   );
 }
 
-function PageCard({
-  page,
-  featured,
-  quote,
-  onOpen,
+/** One page of Our family journal, open to read; whoever added it can take it out. */
+export function FamilyReader({
+  page: open,
+  access,
+  busy,
+  photos,
+  onClose,
+  onRemoved,
+  onDelete,
 }: {
   page: Shown;
-  featured: boolean;
-  quote: boolean;
-  onOpen: () => void;
+  access: Pick<FamilyAccess, "remove">;
+  busy: boolean;
+  photos?: PhotoAccess;
+  onClose: () => void;
+  onRemoved?: (error?: string) => void;
+  /** Deletes this journal's copy of a page (see Shown.deleteId). */
+  onDelete?: (pageId: string) => Promise<boolean>;
 }) {
-  if (quote && !featured)
-    return (
-      <button className="rp-fb-card rp-fb-quote" data-page-id={page.id} onClick={onOpen}>
-        <span className="ui-sr-only">{page.label}: </span>
-        <span className="rp-fb-quote-text">“{page.text.trim()}”</span>
-        <span className="rp-fb-caption">
-          {page.caption || page.byName} <span aria-hidden="true">·</span> {shortDate(page.date)}
-        </span>
-        <Sprig className="rp-fb-quote-sprig" berries />
-      </button>
-    );
-  const note = page.playNote;
-  const who =
-    page.kind === "game"
-      ? `Game · ${page.title || page.label}`
-      : page.kind === "highlights"
-        ? page.label
-        : page.mine
-          ? "You"
-          : page.byName;
+  const [removing, setRemoving] = useState(false);
+  async function takeOut(page: Shown) {
+    setRemoving(true);
+    try {
+      await access.remove(page.id);
+      onClose();
+      onRemoved?.();
+    } catch (e) {
+      onRemoved?.(
+        e instanceof Error ? e.message : "This page couldn’t be taken out. Try again.",
+      );
+    } finally {
+      setRemoving(false);
+    }
+  }
   return (
-    <button
-      className={`rp-fb-card ${featured ? "rp-fb-card-featured" : ""}`}
-      data-page-id={page.id}
-      onClick={onOpen}
-    >
-      {featured && page.art && (
-        <span className="rp-fb-tile" aria-hidden="true">
-          <Illustration name={page.art} size={64} />
-        </span>
-      )}
-      <span className="rp-fb-meta">
-        <span>{who}</span>
-        <span className="rp-fb-date">{shortDate(page.date)}</span>
-      </span>
-      <span className="rp-fb-title">
-        {note ? page.text.trim().replace(/\.$/, "") : page.title || page.label}
-      </span>
-      {!note && (
-        <span className="rp-fb-text">
-          <MentionText text={page.text} />
-        </span>
-      )}
-    </button>
+    <Dialog title={open.title || open.label} onClose={() => !removing && onClose()}>
+      <article className="rp-album-open rp-fb-reader">
+        <p className="rp-eyebrow">
+          {shortDate(open.date)} · {open.label}
+        </p>
+        {open.title && <h3>{open.title}</h3>}
+        {open.text && (
+          <blockquote>
+            <MentionText text={open.text} />
+          </blockquote>
+        )}
+        {open.caption && <p className="rp-fb-caption">{open.caption}</p>}
+        {!!open.lines?.length && (
+          <div className="rp-album-lines">
+            {open.lines.map((line, i) => (
+              <p key={i}>
+                <strong>{line.label}:</strong> {line.text}
+              </p>
+            ))}
+          </div>
+        )}
+        {open.photos && <PhotoGallery photos={open.photos} access={photos} />}
+        <p className="rp-quiet">{open.note}</p>
+        {open.removable && (
+          <button
+            className="rp-link rp-fb-takeout"
+            disabled={removing}
+            onClick={() => void takeOut(open)}
+          >
+            {removing ? "Taking it out…" : "Take out of the family journal"}
+          </button>
+        )}
+        {open.deleteId && onDelete && (
+          <ConfirmDelete
+            label="Delete from my journal"
+            question="Delete this from your journal?"
+            detail={
+              open.deleteId.startsWith("sent:") || open.deleteId.startsWith("passage:")
+                ? "Only your copy goes; the other journal keeps its own. This can’t be undone."
+                : "It’s removed from this journal on every device. This can’t be undone."
+            }
+            busy={busy}
+            onConfirm={async () => {
+              if (await onDelete(open.deleteId!)) onClose();
+            }}
+          />
+        )}
+      </article>
+    </Dialog>
   );
 }
 
-function MembersLink({
+export function MembersLink({
   open,
   onToggle,
   me,

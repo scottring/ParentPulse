@@ -351,7 +351,7 @@
   .lb-app.rp-shell .rs-bar .rs-chips button {
     flex: none;
     white-space: nowrap;
-    min-height: 40px;
+    min-height: 44px;
     padding: 0 13px;
     font-size: 14px;
   }
@@ -370,6 +370,231 @@
   }
   .lb-app.rp-shell .rs-panel {
     padding: 18px;
+  }
+}
+
+/* ── One journal: the family spine with branches (2026-11-22) ───────────
+   Our family journal runs down a quiet line; butter cards sit on it. What
+   only some people can see hangs off it on cream, saying who can see it. */
+.lb-app.rp-shell .rt-timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  --rt-x: 15px;
+  --rt-spine: 44px;
+  --rt-branch: 78px;
+}
+.lb-app.rp-shell .rt-timeline::before {
+  content: "";
+  position: absolute;
+  left: var(--rt-x);
+  top: 8px;
+  bottom: 18px;
+  width: 2px;
+  border-radius: 2px;
+  background: #c9ccbe;
+}
+.lb-app.rp-shell .rt-group {
+  position: relative;
+}
+.lb-app.rp-shell .rt-when {
+  position: relative;
+  padding-left: var(--rt-spine);
+}
+.lb-app.rp-shell .rt-when::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--rt-x) - 4px);
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  border: 2px solid #c9ccbe;
+  border-radius: 50%;
+  background: var(--paper, #f6f4ed);
+}
+.lb-app.rp-shell .rt-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.lb-app.rp-shell .rt-item {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+.lb-app.rp-shell .rt-spine {
+  padding-left: var(--rt-spine);
+}
+/* A knot on the spine where a family page sits. */
+.lb-app.rp-shell .rt-spine::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--rt-x) - 6px);
+  top: 26px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--olive);
+  border-radius: 50%;
+  background: #f9eec9;
+}
+.lb-app.rp-shell .rt-spine::after {
+  content: "";
+  position: absolute;
+  left: calc(var(--rt-x) + 10px);
+  top: 34px;
+  width: calc(var(--rt-spine) - var(--rt-x) - 10px);
+  height: 2px;
+  background: #ecdcaa;
+}
+.lb-app.rp-shell .rt-branch {
+  padding-left: var(--rt-branch);
+}
+/* A branch: a soft curve off the spine into the card. */
+.lb-app.rp-shell .rt-branch::before {
+  content: "";
+  position: absolute;
+  left: var(--rt-x);
+  top: -6px;
+  width: calc(var(--rt-branch) - var(--rt-x));
+  height: 40px;
+  border-left: 2px solid #c9ccbe;
+  border-bottom: 2px solid #c9ccbe;
+  border-bottom-left-radius: 22px;
+}
+.lb-app.rp-shell .rt-item > .rp-entry {
+  flex: 1;
+}
+/* Who it's from, then who can see it: on the right, or under the name on a phone. */
+.lb-app.rp-shell .rt-item .rs-from {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 6px 10px;
+}
+.lb-app.rp-shell .rt-marks {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lb-app.rp-shell .rt-marks .rs-new,
+.lb-app.rp-shell .rt-marks .rs-lock,
+.lb-app.rp-shell .rt-marks .rt-everyone {
+  margin-left: 0;
+}
+.lb-app.rp-shell .rp-page.rs-butter.rt-card:not(:disabled):hover {
+  background: #f6e7bc;
+  border-color: #dfcb8f;
+}
+.lb-app.rp-shell .rt-seen {
+  gap: 7px;
+  padding: 3px 11px 3px 8px;
+}
+.lb-app.rp-shell .rt-seen-faces {
+  display: inline-flex;
+}
+.lb-app.rp-shell .rt-seen-faces .rs-face + .rs-face {
+  margin-left: -6px;
+}
+.lb-app.rp-shell .rt-seen .rs-face-small {
+  width: 20px;
+  height: 20px;
+  background: var(--ui-card);
+  font-size: 10px;
+}
+.lb-app.rp-shell .rt-everyone {
+  flex: none;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #6b6a4f;
+  font: 500 13px/1.2 var(--sans);
+}
+.lb-app.rp-shell .rt-tag {
+  align-self: flex-start;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #e6eddf;
+  color: var(--ink);
+  font: 600 13px/1.5 var(--sans);
+}
+.lb-app.rp-shell .rs-quote.rt-quote {
+  font-size: 21px;
+}
+.lb-app.rp-shell .rt-note-title {
+  font-size: 18px;
+}
+.lb-app.rp-shell .rt-chip-rule {
+  width: 1px;
+  height: 26px;
+  background: #c9ccbe;
+}
+.lb-app.rp-shell .rt-add-family {
+  align-self: flex-start;
+  min-height: 44px;
+}
+.lb-app.rp-shell .rt-foot {
+  margin-top: 4px;
+}
+.lb-app.rp-shell .rt-kid-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lb-app.rp-shell .rt-kid-chips button {
+  min-height: 44px;
+  padding: 0 16px;
+}
+
+@media (max-width: 600px) {
+  .lb-app.rp-shell .rt-timeline {
+    --rt-x: 9px;
+    --rt-spine: 28px;
+    --rt-branch: 46px;
+  }
+  .lb-app.rp-shell .rt-spine::before {
+    top: 22px;
+    width: 12px;
+    height: 12px;
+    left: calc(var(--rt-x) - 5px);
+  }
+  .lb-app.rp-shell .rt-spine::after {
+    top: 29px;
+    left: calc(var(--rt-x) + 7px);
+    width: calc(var(--rt-spine) - var(--rt-x) - 7px);
+  }
+  .lb-app.rp-shell .rt-branch::before {
+    height: 34px;
+    border-bottom-left-radius: 16px;
+  }
+  .lb-app.rp-shell .rt-item .rp-entry {
+    padding: 14px 15px;
+  }
+  .lb-app.rp-shell .rt-item .rs-from {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .lb-app.rp-shell .rt-item .rt-marks {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+  .lb-app.rp-shell .rs-quote.rt-quote {
+    font-size: 19px;
+  }
+  .lb-app.rp-shell .rt-chip-rule {
+    flex: none;
+    align-self: center;
+  }
+  .lb-app.rp-shell .rp-mine-head.rs-head-mine.rt-head .rp-head-actions {
+    flex-wrap: wrap;
+  }
+  .lb-app.rp-shell .rp-mine-head.rs-head-mine.rt-head .rp-head-actions .rp-btn {
+    flex: 1 1 100%;
   }
 }
 

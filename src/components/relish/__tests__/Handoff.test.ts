@@ -180,8 +180,7 @@ it("hands a shared device from Scott's book to Kaleb's and back to Our family, t
   // Scott's journal: the Journal menu lists the children's journals, then
   // the older copy that needs its passphrase. Kaleb's opens without a password.
   expect(journalMenu()).toEqual([
-    "My journalOnly me",
-    "Our family journalEveryone in the family",
+    "Our family journalThe family’s pages, and yours",
     "Kaleb’s journal",
     "Ella’s journal",
     "Iris’s journalNeeds its original passphrase",
@@ -204,17 +203,16 @@ it("hands a shared device from Scott's book to Kaleb's and back to Our family, t
   expect(sync.open).toHaveBeenLastCalledWith(heads.kaleb);
   expect(screen.queryByLabelText(/password|passphrase/i)).toBeNull();
 
-  // Kaleb's journal: Our family journal works, but leads to no other
-  // journals, and his lock is set.
+  // Kaleb's journal: Our family journal runs through it, but it leads to no
+  // other journals, and his lock is set.
   await screen.findByRole("heading", { name: /Kaleb/ });
   expect(world.gate).toEqual({ accountUid: "parent-one" });
-  expect(journalMenu()).toEqual(["My journalOnly me", "Our family journalEveryone in the family"]);
   ourFamily();
-  expect(screen.getByRole("heading", { name: "Our family journal", level: 1 })).toBeTruthy();
-  members();
+  expect(screen.queryByRole("menu")).toBeNull();
+  expect(screen.getByRole("heading", { name: "Our family journal" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Who’s in our family" })).toBeNull();
   expect(screen.queryByRole("button", { name: /^Open .*’s journal/ })).toBeNull();
   expect(screen.queryByRole("button", { name: /Add a child|Invite a partner/ })).toBeNull();
-  fireEvent.keyDown(document, { key: "Escape" });
 
   // Back to my journal (a clear way back) asks for the parent password; a
   // wrong one is rejected.

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
-// Home · Journal ▾ · Activities on one device (2026-11-21): the Journal menu,
-// the phone's Mine / Family switch, each journal's audience, and family pages
-// kept inside a book that has no account.
+// Home · Journal · Activities on one device: one journal with the family's
+// spine and your branches (2026-11-22), the Journal menu of kids' journals,
+// each page's audience, and family pages kept inside a book with no account.
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { webcrypto } from "node:crypto";
@@ -43,7 +43,7 @@ function asPhone() {
   return () => Object.defineProperty(window, "matchMedia", { configurable: true, value: real });
 }
 
-it("has three places, and Journal is a menu: My journal, Our family journal, then kids' journals", () => {
+it("has three places; with kids' journals, Journal is a menu: the one journal, then theirs", () => {
   const openElla = vi.fn();
   openBook(adult(), {
     family: [{ id: "b1", name: "Ella", onOpen: openElla, note: "Journal in your account" }],
@@ -60,8 +60,7 @@ it("has three places, and Journal is a menu: My journal, Our family journal, the
   fireEvent.click(journalTab());
   const menu = screen.getByRole("menu", { name: "Journals" });
   expect(within(menu).getAllByRole("menuitem").map((i) => i.textContent)).toEqual([
-    "My journalOnly me",
-    "Our family journalEveryone in the family",
+    "Our family journalThe family’s pages, and yours",
     "Ella’s journal",
   ]);
   expect(within(menu).getByText("Kids’ journals")).toBeTruthy();
@@ -77,63 +76,46 @@ it("has three places, and Journal is a menu: My journal, Our family journal, the
   expect(document.activeElement).toBe(items[1]);
   fireEvent.keyDown(items[1], { key: "ArrowUp" });
   fireEvent.keyDown(items[0], { key: "ArrowUp" });
-  expect(document.activeElement).toBe(items[2]);
+  expect(document.activeElement).toBe(items[1]);
   // A kid's journal opens their own view.
-  fireEvent.click(items[2]);
+  fireEvent.click(items[1]);
   expect(openElla).toHaveBeenCalledOnce();
-  // My journal and Our family journal, each marked as the open one.
+  // The one journal, marked as the open one.
   myJournal();
-  expect(screen.getByRole("heading", { name: "My journal", level: 1 })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Our family journal", level: 1 })).toBeTruthy();
   expect(journalTab().getAttribute("aria-current")).toBe("page");
   fireEvent.click(journalTab());
-  expect(screen.getByRole("menuitem", { name: /^My journal/ }).getAttribute("aria-current")).toBe("page");
-  fireEvent.click(screen.getByRole("menuitem", { name: /^Our family journal/ }));
-  expect(screen.getByRole("heading", { name: "Our family journal", level: 1 })).toBeTruthy();
-  expect(localStorage.getItem("relish.space.v1:places-test")).toBe("family");
+  expect(screen.getByRole("menuitem", { name: /^Our family journal/ }).getAttribute("aria-current")).toBe("page");
+  fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
   // Honest about where the pages are kept without an account.
   expect(screen.getByText(/isn’t in an account, so family entries are kept/)).toBeTruthy();
 });
 
-it("on a phone, Journal opens the last journal with a Mine / Family switch it remembers, and kids' journals below", () => {
+it("without kids' journals, Journal is a plain tab onto the one journal", () => {
+  openBook(adult());
+  expect(journalTab().getAttribute("aria-haspopup")).toBeNull();
+  tab("Journal");
+  expect(screen.queryByRole("menu")).toBeNull();
+  expect(screen.getByRole("heading", { name: "Our family journal", level: 1 })).toBeTruthy();
+});
+
+it("on a phone, Journal opens the one journal, with no Mine / Family switch, and kids' journals below", () => {
   const restore = asPhone();
   try {
     const openElla = vi.fn();
     openBook(adult(), { family: [{ id: "b1", name: "Ella", onOpen: openElla }] });
     tab("Journal");
     expect(screen.queryByRole("menu")).toBeNull();
-    expect(screen.getByRole("heading", { name: "My journal", level: 1 })).toBeTruthy();
-    const which = () => within(screen.getByRole("group", { name: "Which journal" }));
-    expect(which().getByRole("button", { name: "Mine" }).getAttribute("aria-pressed")).toBe("true");
-    fireEvent.click(which().getByRole("button", { name: "Family" }));
     expect(screen.getByRole("heading", { name: "Our family journal", level: 1 })).toBeTruthy();
-    expect(localStorage.getItem("relish.space.v1:places-test")).toBe("family");
-    // Home, then Journal again: still Our family journal.
-    tab("Home");
-    tab("Journal");
-    expect(screen.getByRole("heading", { name: "Our family journal", level: 1 })).toBeTruthy();
-    expect(which().getByRole("button", { name: "Family" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.queryByRole("group", { name: "Which journal" })).toBeNull();
+    // Filters over the one journal instead.
+    const show = within(screen.getByRole("group", { name: "Show" }));
+    expect(show.getByRole("button", { name: "Everything" }).getAttribute("aria-pressed")).toBe("true");
+    expect(show.getByRole("button", { name: "Family" })).toBeTruthy();
+    expect(show.getByRole("button", { name: "Just me" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Ella’s journal" }));
     expect(openElla).toHaveBeenCalledOnce();
   } finally {
-    restore();
-  }
-});
-
-it("works without storage: the phone switch still changes journals for this visit", () => {
-  const restore = asPhone();
-  const spy = vi.spyOn(localStorage, "setItem").mockImplementation(() => {
-    throw new Error("blocked");
-  });
-  try {
-    openBook(adult());
-    tab("Journal");
-    const which = () => within(screen.getByRole("group", { name: "Which journal" }));
-    fireEvent.click(which().getByRole("button", { name: "Family" }));
-    expect(screen.getByRole("heading", { name: "Our family journal", level: 1 })).toBeTruthy();
-    fireEvent.click(which().getByRole("button", { name: "Mine" }));
-    expect(screen.getByRole("heading", { name: "My journal", level: 1 })).toBeTruthy();
-  } finally {
-    spy.mockRestore();
     restore();
   }
 });
@@ -252,28 +234,30 @@ it("Share a passage suggests the selected words, keeps the draft, and shares onl
   expect(screen.getByRole("textbox", { name: "Your journal entry" })).toBeTruthy();
 });
 
-it("the sample shows its own fictional family pages, a featured page and a kept passage", () => {
+it("the sample's family spine: its own fictional pages, a painted page and a kept passage", () => {
   openBook(sampleBook(), { mode: "sample" });
   familyJournal();
-  expect(screen.getByText(/6 entries since September/)).toBeTruthy();
-  // The cloth cover carries the one way to write here.
+  // One way to write for everyone, beside writing your own.
   expect(screen.getByRole("button", { name: "Add to our family journal" })).toBeTruthy();
-  const grid = screen.getByRole("list", { name: "Entries in Our family journal" });
-  const cells = within(grid).getAllByRole("listitem");
-  // The newest passage leads on butter paper, beside the newest painted entry.
-  expect(cells[0].className).toContain("rp-fb-quote-cell");
-  expect(cells[0].textContent).toMatch(/hold your hand/);
-  expect(cells[1].className).toContain("rp-fb-featured");
-  expect(cells[1].querySelector("[data-illustration]")).toBeTruthy();
-  // Chips filter by who's in a page; search reads titles and words.
-  fireEvent.click(within(screen.getByRole("group", { name: "Show pages from" })).getByRole("button", { name: "June" }));
-  expect(within(grid).getAllByRole("listitem").map((c) => c.textContent)).toEqual([
-    expect.stringMatching(/tomatoes/),
+  const entries = within(screen.getByRole("region", { name: "Entries in the journal" }));
+  const rows = () => entries.getAllByRole("listitem");
+  expect(rows()).toHaveLength(6);
+  expect(rows().every((li) => li.className.includes("rt-spine"))).toBe(true);
+  // Newest first: the painted day's highlights, then the passage on butter paper.
+  expect(rows()[0].textContent).toMatch(/drive to Grandma June/);
+  expect(rows()[0].querySelector("[data-illustration]")).toBeTruthy();
+  const passage = entries.getByRole("button", { name: /hold your hand/ });
+  expect(passage.className).toContain("rs-butter");
+  expect(passage.textContent).toMatch(/Leo, at bedtime/);
+  // People filter by who's in a page; search reads titles and words.
+  fireEvent.click(within(screen.getByRole("group", { name: "Show entries about" })).getByRole("button", { name: "June" }));
+  expect(rows().map((c) => c.textContent)).toEqual([
     expect.stringMatching(/drive to Grandma June/),
+    expect.stringMatching(/tomatoes/),
   ]);
-  fireEvent.click(within(screen.getByRole("group", { name: "Show pages from" })).getByRole("button", { name: "Everyone" }));
-  fireEvent.change(screen.getByRole("searchbox", { name: "Find something you kept" }), { target: { value: "tooth" } });
-  expect(within(grid).getAllByRole("listitem")).toHaveLength(1);
+  fireEvent.click(within(screen.getByRole("group", { name: "Show entries about" })).getByRole("button", { name: "June" }));
+  fireEvent.change(screen.getByRole("searchbox"), { target: { value: "tooth" } });
+  expect(rows()).toHaveLength(1);
 });
 
 it("Activities' Together filter has shelves of things to do together", () => {

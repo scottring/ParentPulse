@@ -2,7 +2,7 @@
 import ConfirmDelete from "./ConfirmDelete";
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import type { Book, Person } from "@/lib/relish/model";
-import { bookPages, PLAY_RECORD, type BookPage } from "@/lib/relish/pages";
+import { bookPages } from "@/lib/relish/pages";
 import { cardPeople, manualOf, type ManualCard } from "@/lib/relish/manual";
 import { livingOf, pendingPractice } from "@/lib/relish/living";
 import {
@@ -17,7 +17,7 @@ import {
   type CheckBackAnswer,
 } from "@/lib/relish/tools";
 import CheckBackCard from "./CheckBack";
-import { pageKind, type Tone } from "@/lib/relish/catalog";
+import type { Tone } from "@/lib/relish/catalog";
 import type { JournalDraft, JournalEntry } from "@/lib/relish/journal";
 import { icons, personTones } from "./Home";
 import { audienceOf, canUseOnline } from "@/lib/relish/profiles";
@@ -25,12 +25,26 @@ import { KidCoverMark } from "./KidHome";
 import { BookSpread } from "./ui";
 import type { FamilyPage } from "@/lib/relish/family-pages";
 import type { Incoming } from "@/lib/relish/partner-share";
+import type { PhotoAccess } from "@/lib/relish/photos";
+import { journalStream } from "@/lib/relish/journal-stream";
 import {
-  filterStream,
-  journalStream,
-  type StreamFilter,
-} from "@/lib/relish/journal-stream";
-import { StreamList, StreamSide, type StreamActions } from "./JournalStream";
+  filterTimeline,
+  journalTimeline,
+  type TimelineFilter,
+  type TimelineItem,
+} from "@/lib/relish/journal-timeline";
+import { sameName } from "@/lib/relish/mentions";
+import { StreamSide, TimelineList, type StreamActions } from "./JournalStream";
+import {
+  FamilyReader,
+  GameBanners,
+  InviteSheet,
+  MembersLink,
+  familyPagesOf,
+  type FamilyMember,
+  type Shown,
+} from "./Family";
+import type { FamilyAccess } from "./useFamilyBook";
 
 /** "all", "me", "family", or a person's id. */
 export type Who = string;
@@ -46,34 +60,24 @@ type Learned = {
 };
 const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-const shared = (p: BookPage) =>
-  p.kind === "Made together" ||
-  p.kind === PLAY_RECORD ||
-  p.kind === "Received passage";
-
-export function pagesFor(book: Book, who: Who, query = "") {
-  const q = query.trim().toLocaleLowerCase();
-  return bookPages(book)
-    .filter((p) =>
-      who === "all"
-        ? true
-        : who === "me"
-          ? !shared(p)
-          : who === "family"
-            ? shared(p)
-            : p.people.includes(who),
-    )
-    .filter(
-      (p) =>
-        !q ||
-        `${p.title}\n${p.text}\n${p.people
-          .map((id) => book.people.find((x) => x.id === id)?.name || "")
-          .join(" ")}`
-          .toLocaleLowerCase()
-          .includes(q),
-    )
-    .toReversed();
-}
+/** Our family journal, as the one Journal page draws it (2026-11-22). */
+export type FamilyParts = {
+  access: FamilyAccess;
+  members: FamilyMember[];
+  photos?: PhotoAccess;
+  /** Add to our family journal: a page written for everyone. */
+  onWrite?: () => void;
+  onInvite?: () => void;
+  onAddChild?: () => void;
+  onPlay: () => void;
+  onResumeGame: () => void;
+  onCloseFinished: (again: boolean) => void;
+  onRemoved?: (error?: string) => void;
+  /** Deletes this journal's copy of a page (see Shown.deleteId). */
+  onDelete?: (pageId: string) => Promise<boolean>;
+  /** Opens with Who's in our family showing (from the avatar menu). */
+  initialMembers?: boolean;
+};
 
 export default function YourBook({
   book,
@@ -83,13 +87,13 @@ export default function YourBook({
   initialQuery = "",
   initialFilter = "all",
   familyPages,
+  family,
   myBookId,
   incoming,
   onKeepOffer,
   onSetAside,
   canWriteBack,
   onWriteBack,
-  onOpenFamily,
   onBrowse,
   onAddPage,
   onIdea,
@@ -113,9 +117,11 @@ export default function YourBook({
   headingRef: RefObject<HTMLHeadingElement | null>;
   initialWho?: Who;
   initialQuery?: string;
-  initialFilter?: StreamFilter;
-  /** Our family journal's pages: the ones that mention you, or games you were in. */
+  initialFilter?: TimelineFilter;
+  /** Our family journal's pages, when there's no `family` to read them from. */
   familyPages?: FamilyPage[];
+  /** Our family journal: the spine of this page, and what can be done with it. */
+  family?: FamilyParts;
   /** The id this journal's family pages carry (so your own aren't "mentions"). */
   myBookId?: string;
   /** Lines sent to you that are waiting to be kept. */
@@ -124,10 +130,8 @@ export default function YourBook({
   onSetAside?: StreamActions["onSetAside"];
   canWriteBack?: StreamActions["canWriteBack"];
   onWriteBack?: StreamActions["onWriteBack"];
-  /** Opens a page in Our family journal. */
-  onOpenFamily?: (pageId: string) => void;
   /** Reports the filters and search so Back from a page can restore them. */
-  onBrowse?: (who: Who, query: string, filter: StreamFilter) => void;
+  onBrowse?: (who: Who, query: string, filter: TimelineFilter) => void;
   /** Opens the journal composer straight away. */
   onAddPage: () => void;
   /** A separate trip to the age-fitted catalog. */
@@ -147,20 +151,55 @@ export default function YourBook({
   onDeleteNote?: (personId: string, noteId: string) => void;
   /** Lets an unfinished draft go. */
   onDiscardDraft?: (draft: JournalEntry) => void;
-  /** Phones: Mine / Family and kids' journals, drawn above and below. */
+  /** Phones: kids' journals, drawn above and below. */
   phoneTop?: ReactNode;
   phoneFoot?: ReactNode;
 }) {
   const [asking, setAsking] = useState<string | null>(null);
-  // "all" or a person's id. (Me and Our family are the kind chips now.)
+  // "all", a person's id, or anyone in the family by name ("name:June").
   const [who, setWho] = useState<Who>(
-    book.people.some((p) => p.id === initialWho) ? initialWho : "all",
+    book.people.some((p) => p.id === initialWho) || initialWho.startsWith("name:")
+      ? initialWho
+      : "all",
   );
   const [query, setQuery] = useState(initialQuery);
-  const [filter, setFilter] = useState<StreamFilter>(initialFilter);
+  const [filter, setFilter] = useState<TimelineFilter>(initialFilter);
+  const [reading, setReading] = useState<string | null>(null);
+  const [membersOpen, setMembersOpen] = useState(!!family?.initialMembers);
+  const [inviting, setInviting] = useState(false);
   useEffect(() => {
     onBrowse?.(who, query, filter);
   }, [who, query, filter, onBrowse]);
+  const refresh = family?.access.refresh;
+  useEffect(() => {
+    refresh?.();
+  }, [refresh]);
+  // The spine: Our family journal, the same pages for everyone.
+  const me = { name: book.owner, bookId: myBookId ?? "" };
+  const pagesOfFamily = family?.access.pages ?? familyPages ?? [];
+  const spine = familyPagesOf(book, pagesOfFamily, me);
+  const opened = spine.find((p) => p.id === reading);
+  const reader = opened && family && (
+    <FamilyReader
+      page={opened}
+      access={family.access}
+      busy={busy}
+      photos={family.photos}
+      onClose={() => setReading(null)}
+      onRemoved={family.onRemoved}
+      onDelete={family.onDelete}
+    />
+  );
+  const openSpine = (p: Shown) => setReading(p.id);
+  // A game just finished, or one still going: said here, where it's kept.
+  const banners = family && (
+    <GameBanners
+      book={book}
+      busy={busy}
+      onResumeGame={family.onResumeGame}
+      onCloseFinished={family.onCloseFinished}
+    />
+  );
   const tone = (id: string) =>
     personTones[
       Math.max(0, book.people.findIndex((p) => p.id === id)) % personTones.length
@@ -261,42 +300,57 @@ export default function YourBook({
         onOpenPage={onOpenPage}
         onDraft={onDraft}
         top={phoneTop}
+        // Drafts already lead their spread and Still going.
+        timeline={journalTimeline(book, journalStream(book, { familyPages: pagesOfFamily, myBookId }), spine).filter(
+          (t) => !t.item?.draft,
+        )}
+        onOpenSpine={openSpine}
+        reader={reader}
+        banners={banners}
+        onWriteFamily={family?.onWrite}
+        loading={!!family?.access.loading}
       />
     );
   const allPages = bookPages(book);
-  const stream = journalStream(book, { familyPages, myBookId, incoming });
-  const shownItems = filterStream(book, stream, filter, who, query);
+  const stream = journalStream(book, { familyPages: pagesOfFamily, myBookId, incoming });
+  const timeline = journalTimeline(book, stream, spine);
+  const shownItems = filterTimeline(book, timeline, filter, who, query);
   const filtered = who !== "all" || filter !== "all" || !!query.trim();
   const fresh = stream.filter((i) => i.offer).length;
   // Lines others chose to send or share about you, for the side column.
   const sayings = stream.filter((i) => i.kind === "sent" || i.kind === "mention");
-  const first = allPages[0];
+  const first = timeline.at(-1);
   const showSuggestion = !!suggestion && canUseOnline(book);
   const others = going - drafts.length;
-  const kinds: { id: StreamFilter; label: string }[] = [
+  // One journal: the whole of it, the family's spine, or only my branches;
+  // then the stream's kinds.
+  const scopes: { id: TimelineFilter; label: string }[] = [
+    { id: "family", label: "Family" },
+    { id: "mine", label: "Just me" },
+  ];
+  const kinds: { id: TimelineFilter; label: string }[] = [
     { id: "sent", label: "Sent to me" },
     { id: "mentions", label: "Mentions me" },
-    { id: "wrote", label: "I wrote" },
     { id: "played", label: "We played" },
   ];
   const everything = filter === "all" && who === "all";
+  // Someone in the family who isn't one of this journal's people (Who's in our family).
+  const named = who.startsWith("name:") ? who.slice("name:".length) : "";
   return (
     <main className="rp-place rp-book rp-mine" aria-labelledby="rp-book-title">
       {phoneTop}
-      <section className="rp-mine-head rs-head-mine">
+      <section className="rp-mine-head rs-head-mine rt-head">
         <div>
-          <span className="rp-only">
-            <LockIcon /> Only me
-          </span>
           <h1 id="rp-book-title" ref={headingRef} tabIndex={-1}>
-            My journal
+            Our family journal
           </h1>
           <p className="rp-quiet rs-subtitle">
-            What you wrote, and what your family sent you, shared about you, or did with you.
+            What the family shares runs down the middle. What’s only yours, or just
+            between you and someone, branches off it and says who can see it.
           </p>
           <p className="rp-quiet rp-mine-count">
-            {allPages.length
-              ? `${allPages.length} ${allPages.length === 1 ? "entry" : "entries"}`
+            {timeline.length
+              ? `${timeline.length} ${timeline.length === 1 ? "entry" : "entries"}`
               : "No entries yet"}
             {first && (
               <span className="rp-mine-since">
@@ -310,6 +364,11 @@ export default function YourBook({
           <button className="rp-btn rp-btn-olive" disabled={busy} onClick={onAddPage}>
             Write today’s entry
           </button>
+          {family?.onWrite && (
+            <button className="rs-ghost rt-add-family" disabled={busy} onClick={family.onWrite}>
+              Add to our family journal
+            </button>
+          )}
           {onIdea && (
             <button className="ui-link" disabled={busy} onClick={onIdea}>
               Give me an idea
@@ -317,6 +376,7 @@ export default function YourBook({
           )}
         </div>
       </section>
+      {banners}
       <div className="rp-mine-bar rs-bar">
         <div className="rs-chip-row">
         <div className="rp-chips rs-chips" role="group" aria-label="Show">
@@ -329,6 +389,16 @@ export default function YourBook({
           >
             Everything
           </button>
+          {scopes.map((k) => (
+            <button
+              key={k.id}
+              aria-pressed={filter === k.id}
+              onClick={() => setFilter(filter === k.id ? "all" : k.id)}
+            >
+              {k.label}
+            </button>
+          ))}
+          <span className="rt-chip-rule" aria-hidden="true" />
           {kinds.map((k) => (
             <button
               key={k.id}
@@ -393,13 +463,30 @@ export default function YourBook({
           </button>
         </p>
       )}
+      {named && (
+        <p className="rp-quiet rs-showing">
+          What {named} shared, and what mentions them.{" "}
+          <button className="ui-link" onClick={() => setWho("all")}>
+            Show everyone
+          </button>
+        </p>
+      )}
+      {family?.access.error && (
+        <p className="rp-fb-error" role="alert">
+          {family.access.error}{" "}
+          <button className="rp-link" onClick={family.access.refresh}>
+            Try again
+          </button>
+        </p>
+      )}
 
       <div className="rs-layout">
         {shownItems.length > 0 ? (
-          <section className="rs-stream" aria-label="Entries in my journal">
-            <StreamList
+          <section className="rs-stream" aria-label="Entries in the journal">
+            <TimelineList
               book={book}
               items={shownItems}
+              onOpenSpine={openSpine}
               busy={busy}
               onOpenPage={onOpenPage}
               onDraft={onDraft}
@@ -408,7 +495,7 @@ export default function YourBook({
               onSetAside={onSetAside}
               canWriteBack={canWriteBack}
               onWriteBack={onWriteBack}
-              onOpenFamily={onOpenFamily}
+              onOpenFamily={setReading}
             />
           </section>
         ) : (
@@ -418,7 +505,9 @@ export default function YourBook({
                 ? "No entries match that yet. Try another word."
                 : filtered
                   ? "Nothing here for this filter yet."
-                  : "Nothing kept yet. Your first entry can be a few words, a photo or your voice."}
+                  : family?.access.loading
+                    ? "Opening Our family journal…"
+                    : "Nothing kept yet. Your first entry can be a few words, a photo or your voice."}
             </p>
             {query && (
               <button className="ui-link" onClick={() => setQuery("")}>
@@ -457,6 +546,54 @@ export default function YourBook({
           }}
         />
       </div>
+
+      {family && (
+        <footer className="rp-fb-foot rt-foot">
+          <p className="rp-quiet">
+            Whoever added an entry to the family journal can take it out.
+            {family.access.kind === "local" && !spine.length && (
+              <>
+                {" "}
+                This journal isn’t in an account, so family entries are kept on
+                this device. Sign in to share one family journal with everyone in
+                your family.
+              </>
+            )}
+          </p>
+          <MembersLink
+            open={membersOpen}
+            onToggle={setMembersOpen}
+            me={me}
+            members={family.members}
+            busy={busy}
+            onOpenMine={() => {
+              setWho("all");
+              setFilter("mine");
+            }}
+            onSee={(name) => {
+              const person = book.people.find((p) => sameName(p.name, name));
+              setWho(person ? person.id : `name:${name}`);
+              setFilter("all");
+              setMembersOpen(false);
+            }}
+            onAddChild={family.onAddChild}
+            onInvite={family.onInvite ? () => setInviting(true) : undefined}
+          />
+          <button className="rp-link" disabled={busy} onClick={family.onPlay}>
+            Play a game
+          </button>
+        </footer>
+      )}
+      {reader}
+      {inviting && family?.onInvite && (
+        <InviteSheet
+          onClose={() => setInviting(false)}
+          onStart={() => {
+            setInviting(false);
+            family.onInvite!();
+          }}
+        />
+      )}
 
       {others > 0 && (
       <section className="rp-stack" aria-labelledby="rp-going">
@@ -614,15 +751,6 @@ export default function YourBook({
   );
 }
 
-function LockIcon() {
-  return (
-    <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-      <rect x="5" y="11" width="14" height="10" rx="2" />
-      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-    </svg>
-  );
-}
-
 function Clock() {
   return (
     <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -649,8 +777,25 @@ function ChildBook({
   onOpenPage,
   onDraft,
   top,
+  timeline,
+  onOpenSpine,
+  reader,
+  banners,
+  onWriteFamily,
+  loading,
 }: {
+  /** Add to our family journal: a page written for everyone. */
+  onWriteFamily?: () => void;
+  /** A game just finished, or one still going. */
+  banners?: ReactNode;
+  /** Our family journal is still being read. */
+  loading?: boolean;
   top?: ReactNode;
+  /** The family's spine and this child's own pages, in one line. */
+  timeline: TimelineItem<Shown>[];
+  onOpenSpine: (page: Shown) => void;
+  /** A page of Our family journal, open to read. */
+  reader?: ReactNode;
   book: Book;
   busy: boolean;
   headingRef: RefObject<HTMLHeadingElement | null>;
@@ -666,7 +811,13 @@ function ChildBook({
   const all = bookPages(book).toReversed();
   const latest = all[0];
   const draft = drafts[0];
-  const pages = pagesFor(book, "all", query);
+  const [filter, setFilter] = useState<TimelineFilter>("all");
+  const shown = filterTimeline(book, timeline, filter, "all", query);
+  const addFamily = onWriteFamily && (
+    <button className="rs-ghost rt-add-family" disabled={busy} onClick={onWriteFamily}>
+      Add to our family journal
+    </button>
+  );
   const right = draft ? (
     <>
       <p className="lb-kicker">A page in progress</p>
@@ -732,6 +883,7 @@ function ChildBook({
         }
         right={<div className="rp-child-leaf">{right}</div>}
       />
+      {banners}
       {drafts.length > 1 && (
         <section className="rp-stack" aria-labelledby="rp-going">
           <h2 id="rp-going">Still going</h2>
@@ -750,10 +902,20 @@ function ChildBook({
           </div>
         </section>
       )}
-      {all.length > 0 && (
+      {!timeline.length && !loading && (
+        <section className="rp-stack" aria-labelledby="rp-every">
+          <h2 id="rp-every">Our family journal</h2>
+          <p className="rp-quiet">
+            Nothing in Our family journal yet. When someone in the family shares a
+            page, it shows up here.
+          </p>
+          {addFamily}
+        </section>
+      )}
+      {timeline.length > 0 && (
         <section className="rp-stack" aria-labelledby="rp-every">
           <div className="rp-panel-head rp-every-head">
-            <h2 id="rp-every">Every page</h2>
+            <h2 id="rp-every">Our family journal</h2>
             <label className="rp-search">
               <span className="rp-sr">Find a page</span>
               <input
@@ -764,40 +926,52 @@ function ChildBook({
               />
             </label>
           </div>
-          {pages.length ? (
-            <div className="rp-pages">
-              {pages.map((page) => {
-                const kind = pageKind(page);
-                return (
-                  <button
-                    key={page.id}
-                    className={`rp-page rp-edge-${kind.tone}`}
-                    data-page-id={page.id}
-                    disabled={busy}
-                    onClick={() => onOpenPage(page.id)}
-                  >
-                    <span className="rp-page-meta">
-                      <strong>{kind.label}</strong>
-                      <span>{shortDate(page.date)}</span>
-                    </span>
-                    <span className="rp-page-title">{page.title}</span>
-                    <span className="rp-page-excerpt">
-                      {page.text.split("\n")[0] || "Photo entry"}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+          <p className="rp-quiet rs-subtitle">
+            The family’s pages run down the middle. Your own pages branch off it.
+          </p>
+          {addFamily}
+          <div className="rp-chips rs-chips rt-kid-chips" role="group" aria-label="Show">
+            {(
+              [
+                { id: "all", label: "Everything" },
+                { id: "family", label: "Family" },
+                { id: "mine", label: "Just me" },
+              ] as const
+            ).map((c) => (
+              <button key={c.id} aria-pressed={filter === c.id} onClick={() => setFilter(c.id)}>
+                {c.label}
+              </button>
+            ))}
+          </div>
+          {shown.length ? (
+            <section className="rs-stream" aria-label="Entries in the journal">
+              <TimelineList
+                book={book}
+                items={shown}
+                busy={busy}
+                onOpenSpine={onOpenSpine}
+                ownLabel="Your page"
+                onOpenPage={onOpenPage}
+                onDraft={onDraft}
+              />
+            </section>
           ) : (
             <div className="rp-quiet rp-empty-filter">
               <p>No pages match that yet. Try another word.</p>
-              <button className="ui-link" onClick={() => onQuery("")}>
-                Clear search
+              <button
+                className="ui-link"
+                onClick={() => {
+                  onQuery("");
+                  setFilter("all");
+                }}
+              >
+                Show everything
               </button>
             </div>
           )}
         </section>
       )}
+      {reader}
     </main>
   );
 }
