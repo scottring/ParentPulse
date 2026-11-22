@@ -254,10 +254,10 @@ export function filterStream(
   );
 }
 
-export type StreamGroup = { label: "Today" | "This week" | "Earlier"; items: StreamItem[] };
+export type StreamGroup<T = StreamItem> = { label: "Today" | "This week" | "Earlier"; items: T[] };
 const DAY = 86_400_000;
 /** Today, This week (the six days before) and Earlier, by the writer's own calendar. */
-export function groupStream(items: StreamItem[], now = new Date()): StreamGroup[] {
+export function groupStream<T extends { date: string } = StreamItem>(items: T[], now = new Date()): StreamGroup<T>[] {
   const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const label = (iso: string): StreamGroup["label"] => {
     const t = time(iso);
@@ -265,7 +265,7 @@ export function groupStream(items: StreamItem[], now = new Date()): StreamGroup[
     if (t >= midnight - 6 * DAY) return "This week";
     return "Earlier";
   };
-  const groups: StreamGroup[] = [];
+  const groups: StreamGroup<T>[] = [];
   for (const item of items) {
     const l = label(item.date);
     const last = groups.at(-1);
