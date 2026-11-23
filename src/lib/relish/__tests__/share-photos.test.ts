@@ -40,7 +40,7 @@ import { changeFamilyBook, loadFamilyPages } from "../family-book";
 import { isFamilyPage, newFamilyPage } from "../family-pages";
 import { expiredRelayPhotos, photosDone, sentPhotoIds } from "../connections-server";
 import { backupPhotos, restorePhotos } from "../photos";
-import { clientMaySave, RELISH_UPDATED, SYNC_CLIENT } from "../book-sync";
+import { clientMaySync, RELISH_UPDATED, SYNC_CLIENT } from "../book-sync";
 import { syncRequest } from "../book-sync-client";
 import { syncAction } from "../book-sync-server";
 import { journalStream } from "../journal-stream";
@@ -486,19 +486,34 @@ describe("where shared photos show", () => {
 });
 
 describe("an older Relish can't save over shared photos", () => {
-  it("sync saves need this version; reads don't", async () => {
-    expect(clientMaySave({ action: "commit" })).toBe(false);
-    expect(clientMaySave({ action: "put", client: 1 })).toBe(false);
-    expect(clientMaySave({ action: "remove" })).toBe(false);
-    expect(clientMaySave({ action: "commit", client: SYNC_CLIENT })).toBe(true);
-    expect(clientMaySave({ action: "list" })).toBe(true);
-    expect(clientMaySave({ action: "get" })).toBe(true);
-    // The server says so before touching anything (426, shown as is).
-    await expect(syncAction("uid", { action: "commit", id: crypto.randomUUID() })).rejects.toMatchObject({
-      message: RELISH_UPDATED,
-      status: 426,
-    });
-    await expect(syncAction("uid", { action: "put", blob: {} })).rejects.toMatchObject({ status: 426 });
+  it("every sync request needs this version: saves, and the reads an old tab would loop on", async () => {
+    expect(clientMaySync({ action: "commit" })).toBe(false);
+    expect(clientMaySync({ action: "put", client: 1 })).toBe(false);
+    expect(clientMaySync({ action: "list" })).toBe(false);
+    expect(clientMaySync({ action: "get", hash: "x" })).toBe(false);
+    expect(clientMaySync({ action: "commit", client: SYNC_CLIENT })).toBe(true);
+    expect(clientMaySync({ action: "list", client: SYNC_CLIENT })).toBe(true);
+    expect(clientMaySync({ action: "list", client: SYNC_CLIENT + 1 })).toBe(true);
+    // The server says so before touching anything: no Firestore, no quota
+    // (services() isn't configured here, so reaching it would throw otherwise).
+    for (const data of [
+      { action: "commit", id: crypto.randomUUID() },
+      { action: "put", blob: {} },
+      { action: "list" },
+      { action: "get", hash: "0".repeat(64) },
+      { action: "account-key", id: crypto.randomUUID() },
+    ])
+      await expect(syncAction("uid", data)).rejects.toMatchObject({ message: RELISH_UPDATED, status: 426 });
+  });
+
+  it("an older Relish gets the message as an ordinary sync error, once per check", async () => {
+    // What deployed main does with a 426 on list: syncRequest throws a
+    // SyncError with the server's words; its 30-second check shows it and
+    // waits for the next check. No retry inside the request.
+    const fetch = vi.fn(async () => ({ ok: false, status: 426, json: async () => ({ error: RELISH_UPDATED }) }) as Response);
+    vi.stubGlobal("fetch", fetch);
+    await expect(syncRequest(user("me"), { action: "list" })).rejects.toMatchObject({ message: RELISH_UPDATED, status: 426 });
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   it("this Relish says which version it is on every sync request", async () => {

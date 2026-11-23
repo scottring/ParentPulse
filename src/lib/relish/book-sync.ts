@@ -37,16 +37,18 @@ export type EncryptedSnapshot = {
 export const SYNC_CHUNK = 450_000;
 /**
  * Which Relish is syncing. Since shared pages carry photos (2026-11-23), an
- * older Relish would save a journal or Our family journal without them, so
- * the server takes saves only from this version on. Reads stay open; nothing
- * on the device is touched, and the message asks for a reload.
+ * older Relish would save a journal or Our family journal without them, and
+ * would download a newer journal again and again (its photo check refuses the
+ * shared copies), so the server answers an older Relish only with 426 "Relish
+ * was updated": before any quota or storage is touched. It shows that once
+ * per sync check (every 30 s), keeps everything on the device, and stops
+ * polling for nothing. Every request from this Relish says its version.
  */
 export const SYNC_CLIENT = 2;
 export const RELISH_UPDATED = "Relish was updated. Reload to keep saving.";
-/** Whether a sync request may save: reads are always fine. */
-export function clientMaySave(data: Record<string, unknown>) {
-  const saving = data.action === "put" || data.action === "commit" || data.action === "remove";
-  return !saving || (typeof data.client === "number" && data.client >= SYNC_CLIENT);
+/** Whether this sync request comes from this Relish (or newer). */
+export function clientMaySync(data: Record<string, unknown>) {
+  return typeof data.client === "number" && data.client >= SYNC_CLIENT;
 }
 export const isSyncId = (v: unknown): v is string =>
   typeof v === "string" &&
