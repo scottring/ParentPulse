@@ -1040,7 +1040,7 @@ function Preview({
         Keep this page <Check size={16} />
       </button>
       <p className="lb-fine">
-        It is saved privately in My journal. Sharing is a separate choice.
+        It’s saved as a private page. Sharing is a separate choice.
       </p>
     </div>
   );
@@ -1683,7 +1683,7 @@ function ExerciseDone({
                   <rect x="5" y="11" width="14" height="10" rx="2" />
                   <path d="M8 11V8a4 4 0 0 1 8 0v3" />
                 </svg>
-                Only me
+                Only you
               </span>
             </p>
             {parts.map((part, i) => (
@@ -1759,7 +1759,7 @@ function ExerciseDone({
           </button>
         ) : (
           <button type="button" className="ha-link" disabled={busy} onClick={onPages}>
-            Open my journal
+            Open the journal
           </button>
         )}
         <button type="button" className="ha-link" disabled={busy} onClick={onDone}>

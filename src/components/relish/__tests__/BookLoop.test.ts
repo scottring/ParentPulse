@@ -77,7 +77,7 @@ it("Back from a page restores the person filter and the search", () => {
   fireEvent.click(screen.getByRole("button", { name: "Leo", pressed: false }));
   fireEvent.change(screen.getByRole("searchbox"), { target: { value: "blanket" } });
   fireEvent.click(screen.getByRole("button", { name: /The blanket-fort expedition/ }));
-  fireEvent.click(screen.getByRole("button", { name: /Back to my journal/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Back to the journal/ }));
   expect(screen.getByRole("button", { name: "Leo" }).getAttribute("aria-pressed")).toBe("true");
   expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("blanket");
   expect(document.activeElement?.getAttribute("data-page-id")).toBe("journal:sample-story");

@@ -124,8 +124,8 @@ it("each journal names its audience; Add to our family journal keeps a copy and 
   const app = openBook(adult());
   myJournal();
   fireEvent.click(screen.getByRole("button", { name: "Write today’s entry" }));
-  expect(screen.getByText("Only me")).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Save to my journal" })).toBeTruthy();
+  expect(screen.getByText("Only you")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Save privately" })).toBeTruthy();
   // The facing page is hidden until asked for.
   expect(screen.queryByRole("complementary", { name: "Previous entry" })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Previous entry" }));
@@ -167,15 +167,15 @@ it("a private draft never reaches the family journal by navigation alone", async
   fireEvent.click(screen.getByRole("button", { name: "Add to our family journal" }));
   const body = screen.getByRole("textbox", { name: "Your journal entry" }) as HTMLTextAreaElement;
   expect(body.value).toBe("");
-  // Opening the private draft from anywhere keeps it Only me.
+  // Opening the private draft from anywhere keeps it Only you.
   myJournal();
   fireEvent.click(await screen.findByRole("button", { name: "Only for me: Keep writing" }));
   expect((screen.getByRole("textbox", { name: "Your journal entry" }) as HTMLTextAreaElement).value).toBe(
     "PRIVATE DRAFT WORDS",
   );
-  expect(screen.getByText("Only me", { selector: ".rj-audience" })).toBeTruthy();
+  expect(screen.getByText("Only you", { selector: ".rj-audience" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Add to our family journal" })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Save to my journal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save privately" }));
   await screen.findByText("Entry saved");
   const kept = app.stored().journal!.find((e) => e.id === draft.id)!;
   expect(kept.status).toBe("kept");
@@ -290,7 +290,7 @@ it("Save draft and close returns to the journal the draft belongs to, and it sta
   expect(screen.getByText("Draft for our family journal")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Write today’s entry" }));
   expect((screen.getByRole("textbox", { name: "Your journal entry" }) as HTMLTextAreaElement).value).toBe("");
-  expect(screen.getByRole("button", { name: "Save to my journal" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Save privately" })).toBeTruthy();
   // Back in Our family journal, its button resumes the family draft.
   familyJournal();
   fireEvent.click(await screen.findByRole("button", { name: "Add to our family journal" }));

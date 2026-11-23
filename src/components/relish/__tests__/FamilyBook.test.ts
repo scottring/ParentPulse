@@ -235,11 +235,11 @@ it("a passage added in Scott's book shows in Kaleb's Our family, and taking it o
   fireEvent.click(screen.getByRole("button", { name: "Close dialog" }));
 
   // Back to Scott's journal (parent password), straight onto Our family journal.
-  fireEvent.click(screen.getByRole("button", { name: "Back to my journal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Back to our family journal" }));
   fireEvent.change(screen.getByLabelText("Parent account password"), {
     target: { value: "parent password" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Open my journal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Open our family journal" }));
   await screen.findByRole("heading", { name: "Our family journal", level: 1 });
   fireEvent.click(await screen.findByText(`“${QUOTE}”`, {}, { timeout: 15000 }));
   fireEvent.click(screen.getByRole("button", { name: "Take out of the family journal" }));

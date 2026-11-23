@@ -363,8 +363,8 @@ export function FamilyReader({
         )}
         {open.deleteId && onDelete && (
           <ConfirmDelete
-            label="Delete from my journal"
-            question="Delete this from your journal?"
+            label="Delete this page"
+            question="Delete this page?"
             detail={
               open.deleteId.startsWith("sent:") || open.deleteId.startsWith("passage:")
                 ? "Only your copy goes; the other journal keeps its own. This can’t be undone."
@@ -499,7 +499,7 @@ export function MembersLink({
             </div>
             <ul>
               {row("me", `${me.name} (you)`, 0, {
-                label: "Open my journal",
+                label: "See just my pages",
                 onClick: () => {
                   onToggle(false);
                   onOpenMine();

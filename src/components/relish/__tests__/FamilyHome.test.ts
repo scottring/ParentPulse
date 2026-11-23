@@ -42,7 +42,7 @@ const plan = (daysAgo: number) =>
     now: new Date(Date.now() - daysAgo * 86_400_000),
   });
 
-it("Home is one page: a welcome, Lately from both journals, and four painted choices", () => {
+it("Home is one page: a welcome, Lately from the journal, and four painted choices", () => {
   openBook(adult());
   expect(screen.getByRole("heading", { level: 1, name: "Welcome, Scott." })).toBeTruthy();
   // No Write button, no Book tab, no Just me / Our family switch in the header.
@@ -58,8 +58,8 @@ it("Home is one page: a welcome, Lately from both journals, and four painted cho
   ]);
   expect(within(todo).getByText("Only you see it")).toBeTruthy();
   expect(within(todo).getByText("Everyone in the family can read it")).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Open family journal" })).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Open my journal" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Open the journal" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Open (my|family) journal/ })).toBeNull();
 });
 
 it("Home asks how the family plan went and sends you to it in Activities", () => {
