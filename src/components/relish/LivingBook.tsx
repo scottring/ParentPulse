@@ -1117,7 +1117,7 @@ export default function LivingBook({
           : view === "journal"
             ? {
                 title: "Writing",
-                text: "Drafts save as you write, even if you go somewhere else or lock Relish. A private page is only yours. A page in Our family journal is added there, whole, when you choose Add to our family journal. Share a passage adds just the words you choose.",
+                text: "Drafts save as you write, even if you go somewhere else or lock Relish. A private page is only yours. A page in Our family journal is added there, whole, when you choose Add to our family journal. Share sends the whole page, or just the words you choose, to the family journal or to one person.",
               }
             : {
                 title: "Our family journal",
