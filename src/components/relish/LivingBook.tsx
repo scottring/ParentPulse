@@ -103,7 +103,7 @@ import type { StreamItem } from "@/lib/relish/journal-stream";
 import type { TimelineFilter } from "@/lib/relish/journal-timeline";
 import { sameName as sameMention } from "@/lib/relish/mentions";
 import { namesList } from "@/lib/relish/tools";
-import ShareSheet, { type SendWords } from "./ShareSheet";
+import ShareSheet, { ShareEntrySheet, type SendWords } from "./ShareSheet";
 import type { Mentionable } from "./Journal";
 import { takeSuggestion, takenToday, type NudgeAction } from "@/lib/relish/nudges";
 import { isChild, isFamily, type DoFilter, type UnderWay } from "@/lib/relish/catalog";
@@ -247,6 +247,8 @@ export default function LivingBook({
     [bookQuery, setBookQuery] = useState(""),
     [bookFilter, setBookFilter] = useState<TimelineFilter>("all"),
     [replyTo, setReplyTo] = useState<Recipient | null>(null),
+    // Share, from a page you wrote: its journal id while the sheet is open.
+    [sharingEntry, setSharingEntry] = useState<string | null>(null),
     [kept, setKept] = useState(false),
     [passage, setPassage] = useState(false),
     [showMembers, setShowMembers] = useState(false),
@@ -382,6 +384,7 @@ export default function LivingBook({
     setBookQuery("");
     setBookFilter("all");
     setReplyTo(null);
+    setSharingEntry(null);
     setKept(false);
     setPassage(false);
     setShowMembers(false);
@@ -907,6 +910,31 @@ export default function LivingBook({
       });
     return page.id;
   }
+  /**
+   * Share, from a saved page you wrote (the timeline or the page itself): the
+   * whole entry, or a passage, to Our family journal or to chosen grown-ups.
+   * Grown-ups' journals only; nothing goes anywhere until the sheet's button.
+   */
+  const entrySheet = grownUp && sharingEntry && (
+    <ShareEntrySheet
+      book={book}
+      journalId={sharingEntry}
+      others={members.map((m) => m.name)}
+      mentionable={mentionable.map((m) => m.name)}
+      recipients={circle}
+      onAdd={addToFamily}
+      onSend={sendLine}
+      onConnect={
+        canInvite && !circle.length
+          ? () => {
+              setSharingEntry(null);
+              openInvite();
+            }
+          : undefined
+      }
+      onClose={() => setSharingEntry(null)}
+    />
+  );
   // ── Table mode ────────────────────────────────────────────────────────────
   const adultBook = audienceOf(book) === "adult";
   const tonight = tonightFor(adultBook ? book.familyPlan : undefined);
@@ -1668,6 +1696,7 @@ export default function LivingBook({
           />
         ) : view === "book" && !sharedView ? (
           <>
+          {entrySheet}
           {replyTo && (
             <ShareSheet
               title=""
@@ -1736,6 +1765,7 @@ export default function LivingBook({
             onAddPage={() => openJournal(undefined, false, false, "me")}
             onIdea={() => navigate("do")}
             phoneFoot={phoneFoot}
+            onShareEntry={grownUp ? setSharingEntry : undefined}
             onDiscardDraft={(d) => discard({ kind: "draft", key: d.id, title: d.title, at: d.updatedAt, label: "Keep writing", draft: d })}
             onOpenPage={(id) => {
               browse.current = {
@@ -1768,8 +1798,11 @@ export default function LivingBook({
           />
           </>
         ) : (view === "words" || view === "journal") && !sharedView ? (
+          <>
+          {entrySheet}
           <Journal
             key={pageKey}
+            onShareEntry={grownUp ? setSharingEntry : undefined}
             family={family}
             familyNames={members.map((m) => m.name)}
             onFamilyAdd={addToFamily}
@@ -1811,6 +1844,7 @@ export default function LivingBook({
             onActivities={() => navigate("do")}
             onDone={() => navigate("home")}
           />
+          </>
         ) : view === "play" && !activeGame ? (
           <main className="rp-place">
             <p className="rp-lede">This round is over.</p>

@@ -11,6 +11,7 @@ import {
 } from "react";
 import {
   Share2,
+  Quote,
   ArrowUpRight,
   Check,
   Feather,
@@ -138,8 +139,11 @@ export default function Journal({
   recipients,
   onSend,
   onConnect,
+  onShareEntry,
 }: {
   book: Book;
+  /** Share a saved page (its journal id) while reading it. Grown-ups' journals only. */
+  onShareEntry?: (journalId: string) => void;
   /** People who can be @-mentioned while writing. */
   mentionable?: Mentionable[];
   /** Connected grown-ups a line can be sent to (Send a line). */
@@ -378,6 +382,11 @@ export default function Journal({
               }}
             />
           )}
+          {onShareEntry && page.journalId && (
+            <button className="lb-text" onClick={() => onShareEntry(page.journalId!)}>
+              <Share2 size={15} /> Share
+            </button>
+          )}
           {!page.record && (
             <button
               className="lb-text"
@@ -391,7 +400,7 @@ export default function Journal({
                 setExcerpt(within ? selection!.toString() : "");
               }}
             >
-              <Share2 size={15} /> Choose a passage
+              <Quote size={15} /> Choose a passage
             </button>
           )}
           {onActivities && (
@@ -1368,7 +1377,7 @@ export function JournalEditor({
                 disabled={busyNow || !canShare}
                 onClick={openShare}
               >
-                Share a passage
+                Share
               </button>
             )}
             <button
@@ -1394,6 +1403,7 @@ export function JournalEditor({
           selected={sharing}
           owner={book?.owner || ""}
           others={familyNames}
+          photos={draft.photos?.length || 0}
           caption={
             taggedPeople[0]?.name ??
             familyNames.find((n) =>

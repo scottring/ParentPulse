@@ -776,3 +776,34 @@
   color: var(--muted);
   font-size: 13px;
 }
+
+/* A page you wrote, with Share in its own row along the card's foot. */
+.lb-app.rp-shell .rt-item .rt-shareable {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-width: 0;
+}
+.lb-app.rp-shell .rt-item .rt-shareable > .rp-entry {
+  flex: 1;
+  padding-bottom: 56px;
+}
+.lb-app.rp-shell .rt-item .rt-share {
+  position: absolute;
+  left: 22px;
+  bottom: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 4px 0 0;
+}
+@media (max-width: 600px) {
+  .lb-app.rp-shell .rt-item .rt-shareable > .rp-entry {
+    padding-bottom: 52px;
+  }
+  .lb-app.rp-shell .rt-item .rt-share {
+    left: 15px;
+    bottom: 4px;
+  }
+}

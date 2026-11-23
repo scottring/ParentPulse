@@ -202,8 +202,9 @@ it("a passage added in Scott's book shows in Kaleb's Our family, and taking it o
       value: `Forty minutes of stalling.\n\nThen Kaleb said: “${QUOTE}”\n\nI want to remember that.`,
     },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Share a passage" }));
+  fireEvent.click(screen.getByRole("button", { name: "Share" }));
   const sheet = screen.getByRole("dialog", { name: "Share with our family" });
+  fireEvent.click(within(sheet).getByRole("button", { name: "Just a passage" }));
   expect(within(sheet).getByText("Kaleb and Ella will see this in Our family journal.")).toBeTruthy();
   // The first quoted sentence is suggested; the caption names Kaleb.
   expect(within(sheet).getByText(QUOTE)).toBeTruthy();

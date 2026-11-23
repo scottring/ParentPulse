@@ -35,6 +35,37 @@ describe("One journal: the family spine with branches", () => {
     expect(dates).toEqual([...dates].sort((a, b) => b - a));
   });
 
+  it("an entry shared whole: on the spine for everyone, or a You and Anna branch, never twice", () => {
+    let book = sampleBook();
+    const draft = { ...newJournalDraft(), title: "The pool", text: "He climbed out on his own." };
+    book = writeJournalPage(book, draft, 0, "kept");
+    const key = `journal:${draft.id}`;
+    // Private: a branch, only you.
+    expect(timeline(book).find((t) => t.key === key)).toMatchObject({ lane: "branch", seenWith: [] });
+    // Sent whole to Anna: the entry's own branch says You and Anna, with no second copy.
+    const sent = {
+      ...book,
+      connections: {
+        ...book.connections!,
+        outgoing: [
+          ...(book.connections?.outgoing || []),
+          { id: "whole-anna", circleId: "sample", title: "The pool", text: draft.text, recipients: ["sample-anna"], recipientNames: ["Anna"], packets: {}, createdAt: new Date().toISOString(), sent: true, audience: "direct" as const, sourceId: draft.id },
+        ],
+      },
+    };
+    const items = timeline(sent);
+    expect(items.find((t) => t.key === key)).toMatchObject({ lane: "branch", seenWith: ["Anna"] });
+    expect(seenLabel(items.find((t) => t.key === key)!.seenWith)).toBe("You and Anna");
+    expect(items.some((t) => t.key === "sent:whole-anna")).toBe(false);
+    // Added whole to Our family journal: one card, on the spine, saying where it came from.
+    const page = newFamilyPage({ kind: "page", title: "The pool", text: draft.text, byName: "Alex", byBookId: me.bookId, sourceId: draft.id });
+    const family = { ...book, familyPages: [...(book.familyPages || []), page] };
+    const all = timeline(family);
+    expect(all.some((t) => t.key === key)).toBe(false);
+    const spine = all.find((t) => t.page?.id === page.id)!;
+    expect(spine).toMatchObject({ lane: "spine", item: { key, shared: { whole: true } } });
+  });
+
   it("labels who can see each branch", () => {
     const items = timeline();
     const seen = (key: string) => seenLabel(items.find((t) => t.key === key)!.seenWith);

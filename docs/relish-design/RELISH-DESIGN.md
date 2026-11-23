@@ -46,7 +46,7 @@ Progress belongs to the people experiencing it. “Dad asked what happened next�
 | Activities | One page. One **Featured** (the family plan when the account has a family, taking turns week by week with one to do on your own), a segmented **Everything / On my own / Together** filter with an inline **Pick up:** line, then situation shelves such as “At dinner” or “Something felt hard” that mix both kinds. Every card says **On your own** or **Together**, what people will do, with whom and roughly how long. A child's journal shows only what fits their age. |
 | Avatar menu | Who’s in our family, Add a child, Invite a partner, then settings, sound, help, account and Sign out: what the bookshelf used to offer. |
 
-**Audience comes from the journal, never from navigation.** A draft is written for the journal it was started in and keeps that audience after its first save. A private draft can never end up in Our family journal by switching journals; only **Add to our family journal** or **Share a passage** sends words there. Every writing surface names its audience by the date (**Only me** or **Our family journal**) and on the save button (**Save to my journal** or **Add to our family journal**). Home and Activities don't depend on which journal was open last.
+**Audience comes from the journal, never from navigation.** A draft is written for the journal it was started in and keeps that audience after its first save. A private draft can never end up in Our family journal by switching journals; only **Add to our family journal** or **Share** sends words there. Every writing surface names its audience by the date (**Only me** or **Our family journal**) and on the save button (**Save to my journal** or **Add to our family journal**). Home and Activities don't depend on which journal was open last.
 
 ## Visual language
 
@@ -82,9 +82,10 @@ Platform reference: Apple’s guidance for designing for iPhone Duo.
 
 A tag helps the writer find a page. Sharing is a separate, deliberate action. Our family journal is one collection visible to its members.
 
-- On a private page, show **Only me** and **Save to my journal**. A secondary **Share a passage** opens a preview.
-- Let the writer select the exact words. Show them on the same pale-yellow card the family will see, with attribution and **Change passage**. Name the audience in ordinary language.
-- Offer **Whole page** as an explicit choice. Update the preview, confirmation label, and privacy copy when that choice changes.
+- On a private page, show **Only me** and **Save to my journal**. A secondary **Share** opens a preview. A saved private page offers the same **Share** on its timeline card and while reading it.
+- **Share** opens on **Whole page**, with **Just a passage** as the second choice. The confirmation says exactly what happens: **Add the whole entry to our family journal** or **Send the whole entry to Anna**. Photos stay in the private page; the sheet says so when the entry has any.
+- For a passage, let the writer select the exact words. Show them on the same pale-yellow card the family will see, with attribution and **Change passage**. Name the audience in ordinary language. Update the preview, confirmation label, and privacy copy when the choice changes.
+- An entry shared whole shows once in the timeline: on the spine (**Everyone**, "Shared from your private page") or as its own branch (**You and Anna**, "Sent to Anna").
 - Confirm a passage with **Add passage to family journal**. Only the previewed content and attribution appear there. A later private edit cannot silently reveal more text.
 - A direct family entry starts from **Add to our family journal** in Our family journal (or **Write in our family journal** on Home) and is saved with **Add to our family journal**; a copy stays in My journal. Returning to private writing restores the private draft. Member actions say exactly where they lead, such as **Open Kaleb’s journal** or **See what they shared**, according to actual access.
 

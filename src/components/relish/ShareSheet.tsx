@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { Check, X } from "lucide-react";
-import type { FamilyAdd } from "./Journal";
+import type { FamilyAdd, SendFromEntry } from "./Journal";
 import type { Recipient } from "@/lib/relish/partner-share";
-import { sameName } from "@/lib/relish/mentions";
+import type { Book } from "@/lib/relish/model";
+import { resolveMentions, sameName } from "@/lib/relish/mentions";
 import Illustration from "./Illustration";
 import "./family.css";
 import "./journal-stream.css";
@@ -36,12 +37,19 @@ const focusable = (root: HTMLElement) =>
     ),
   ].filter((el) => !el.hasAttribute("disabled"));
 
+/** How much of an entry can be shared, whole or in part. */
+export const SHARE_TEXT_LIMIT = 8000;
+
 /**
- * Share with our family: a passage or the whole page, into Our family journal.
+ * Share with our family: the whole page or a passage, into Our family journal.
  * When the journal is connected to other grown-ups' journals it becomes Send
  * a line (2026-11-22): the same words can go to chosen people instead, into
  * their My journal under Sent to me. Children's journals can't get lines of
  * their own; they see Our family journal. Nobody is ever pinged.
+ *
+ * Share opens on the whole page (2026-11-23, Scott: "need to be able to
+ * easily share entire entries"); Just a passage is the second choice. Photos
+ * stay in the private page: Our family journal and sent lines carry words only.
  */
 export default function ShareSheet({
   title,
@@ -57,6 +65,8 @@ export default function ShareSheet({
   onConnect,
   mentioned = [],
   replyTo,
+  initialKind = "page",
+  photos = 0,
 }: {
   title: string;
   text: string;
@@ -77,10 +87,14 @@ export default function ShareSheet({
   mentioned?: string[];
   /** Write back: a few words of your own, to the person who sent you a line. */
   replyTo?: Recipient;
+  /** What it opens on: the whole page, unless a passage was asked for. */
+  initialKind?: "passage" | "page";
+  /** How many photos the entry has; they stay in the private page. */
+  photos?: number;
 }) {
   const direct = !!onSend && recipients.length > 0;
   const compose = !!replyTo && direct;
-  const [kind, setKind] = useState<"passage" | "page">("passage");
+  const [kind, setKind] = useState<"passage" | "page">(initialKind);
   const [passage, setPassage] = useState(() => (compose ? "" : defaultPassage(text, selected)));
   const [choosing, setChoosing] = useState(false);
   const [caption, setCaption] = useState(initialCaption);
@@ -132,7 +146,11 @@ export default function ShareSheet({
       (returnTo.current as HTMLElement | null)?.focus?.();
     };
   }, []);
-  const words = compose || kind === "passage" ? passage.trim() : text.trim();
+  const whole = text.trim();
+  const long = whole.length > SHARE_TEXT_LIMIT;
+  const words = compose || kind === "passage" ? passage.trim() : whole.slice(0, SHARE_TEXT_LIMIT);
+  // The photos note already says where they stay.
+  const pageFine = photos > 0 ? "Your tags stay private too." : "Your tags and photos stay private.";
   const people = recipients.filter((r) => chosen.includes(r.uid));
   const names = people.map((r) => r.name);
   async function add() {
@@ -153,7 +171,7 @@ export default function ShareSheet({
       await onAdd(
         kind === "passage"
           ? { kind: "passage", text: passage.trim(), caption: caption.trim() }
-          : { kind: "page", title, text: text.trim(), caption: caption.trim() },
+          : { kind: "page", title, text: words, caption: caption.trim() },
       );
     } catch (e) {
       setError(
@@ -220,14 +238,6 @@ export default function ShareSheet({
         <div className="rp-share-kind" role="group" aria-label="What to share">
           <button
             type="button"
-            aria-pressed={kind === "passage"}
-            disabled={busy}
-            onClick={() => setKind("passage")}
-          >
-            Passage
-          </button>
-          <button
-            type="button"
             aria-pressed={kind === "page"}
             disabled={busy}
             onClick={() => {
@@ -236,6 +246,14 @@ export default function ShareSheet({
             }}
           >
             Whole page
+          </button>
+          <button
+            type="button"
+            aria-pressed={kind === "passage"}
+            disabled={busy}
+            onClick={() => setKind("passage")}
+          >
+            Just a passage
           </button>
         </div>
         <div className="rp-share-card">
@@ -267,6 +285,16 @@ export default function ShareSheet({
               {kind === "page" && <strong>{title}</strong>}
               {words}
             </blockquote>
+          )}
+          {kind === "page" && (photos > 0 || long) && (
+            <p className="rp-share-hint rp-share-stays">
+              {[
+                photos > 0 ? "Photos stay in your private page." : "",
+                long ? `It’s long, so the first ${SHARE_TEXT_LIMIT.toLocaleString("en-US")} characters are shared.` : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            </p>
           )}
           <div className="rp-share-foot">
             <label className="rp-share-caption">
@@ -383,22 +411,28 @@ export default function ShareSheet({
             ? busy
               ? "Sending…"
               : people.length
-                ? `Send to ${list(names)}`
+                ? kind === "page" && !compose
+                  ? `Send the whole entry to ${list(names)}`
+                  : `Send to ${list(names)}`
                 : "Choose who gets it"
             : busy
               ? "Adding…"
               : kind === "passage"
                 ? "Add passage to family journal"
-                : "Add page to family journal"}
+                : "Add the whole entry to our family journal"}
         </button>
         <p className="rp-share-fine">
           {direct && !toFamily && people.length
             ? `It shows up in ${list(names.map((n) => `${n}’s`))} journal under “Sent to me.” ${
-                compose ? "Relish doesn’t ping anyone about it." : "The rest of your entry stays private."
+                compose
+                  ? "Relish doesn’t ping anyone about it."
+                  : kind === "passage"
+                    ? "The rest of your entry stays private."
+                    : pageFine
               }`
             : kind === "passage"
               ? "The rest of your entry stays private."
-              : "Your tags and photos stay private."}
+              : pageFine}
         </p>
         {!direct && onConnect && (
           <button type="button" className="rp-share-link rs-share-connect" disabled={busy} onClick={onConnect}>
@@ -407,5 +441,80 @@ export default function ShareSheet({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Share a page you've already saved, from the journal's timeline or while
+ * reading it: the same sheet, on the whole page, with what came from it
+ * remembered (`sourceId`) so the page can say where it went. Nothing leaves
+ * until the button in the sheet is pressed.
+ */
+export function ShareEntrySheet({
+  book,
+  journalId,
+  others,
+  mentionable,
+  recipients = [],
+  onAdd,
+  onSend,
+  onConnect,
+  onClose,
+}: {
+  book: Book;
+  /** The private entry being shared (a JournalEntry id). */
+  journalId: string;
+  /** Everyone else in the family, by name. */
+  others: string[];
+  /** Who the words can @-mention, by name. */
+  mentionable: string[];
+  recipients?: Recipient[];
+  onAdd?: FamilyAdd;
+  onSend?: SendFromEntry;
+  onConnect?: () => void;
+  onClose: () => void;
+}) {
+  const entry = (book.journal || []).find((e) => e.id === journalId);
+  if (!entry) return null;
+  const title = (entry.title.trim() || "Untitled entry").slice(0, 120);
+  const tagged = (entry.people || [])
+    .map((id) => book.people.find((p) => p.id === id)?.name)
+    .filter((n): n is string => !!n);
+  const mentioned = resolveMentions(entry.text, mentionable);
+  const caption =
+    tagged[0] ??
+    others.find((n) => new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(entry.text)) ??
+    "";
+  return (
+    <ShareSheet
+      title={title}
+      text={entry.text}
+      selected=""
+      owner={book.owner}
+      others={others}
+      caption={caption}
+      photos={entry.photos?.length || 0}
+      mentioned={[...mentioned, ...tagged]}
+      recipients={onSend ? recipients : []}
+      onConnect={onConnect}
+      onClose={onClose}
+      onSend={
+        onSend
+          ? async (to, words) => {
+              await onSend(to, { ...words, sourceId: entry.id });
+              onClose();
+            }
+          : undefined
+      }
+      onAdd={
+        onAdd
+          ? async (page) => {
+              const mentions = resolveMentions(`${page.title || ""}\n${page.text}`, mentionable);
+              await onAdd({ ...page, ...(mentions.length ? { mentions } : {}), sourceId: entry.id });
+              onClose();
+            }
+          : undefined
+      }
+    />
   );
 }

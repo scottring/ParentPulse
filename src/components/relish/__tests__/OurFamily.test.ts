@@ -207,26 +207,31 @@ it("Home's Lately labels each item with who can see it, as the journal does", ()
   expect(lately.getByText("Same page? with Anna", { selector: ".ha-row-title" }).closest(".ha-row")!.textContent).toMatch(/You and Anna · played/);
 });
 
-it("Share a passage suggests the selected words, keeps the draft, and shares only the passage", async () => {
+it("Share opens on the whole page; Just a passage suggests the selected words, keeps the draft, and shares only the passage", async () => {
   const app = openBook(adult());
   myJournal();
   fireEvent.click(screen.getByRole("button", { name: "Write today’s entry" }));
   const body = screen.getByRole("textbox", { name: "Your journal entry" }) as HTMLTextAreaElement;
   fireEvent.change(body, { target: { value: "A long day.\n\nThe best bit: pancakes at dawn." } });
   body.setSelectionRange(body.value.indexOf("pancakes"), body.value.length - 1);
-  fireEvent.click(screen.getByRole("button", { name: "Share a passage" }));
+  fireEvent.click(screen.getByRole("button", { name: "Share" }));
   const sheet = screen.getByRole("dialog", { name: "Share with our family" });
   expect(within(sheet).getByText("Kaleb will see this in Our family journal.")).toBeTruthy();
+  // It opens on the whole page; Just a passage is the second choice.
+  expect(within(sheet).getByRole("button", { name: "Whole page" }).getAttribute("aria-pressed")).toBe("true");
+  expect(within(sheet).getByRole("button", { name: "Add the whole entry to our family journal" })).toBeTruthy();
+  fireEvent.click(within(sheet).getByRole("button", { name: "Just a passage" }));
   expect(within(sheet).getByText("pancakes at dawn")).toBeTruthy();
   // Keyboard: Escape closes it.
   fireEvent.keyDown(document, { key: "Escape" });
   expect(screen.queryByRole("dialog", { name: "Share with our family" })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Share a passage" }));
+  fireEvent.click(screen.getByRole("button", { name: "Share" }));
+  fireEvent.click(screen.getByRole("button", { name: "Just a passage" }));
   fireEvent.click(screen.getByRole("button", { name: "Change passage" }));
   fireEvent.change(screen.getByLabelText("Only these words"), { target: { value: "A long day." } });
   fireEvent.click(screen.getByRole("button", { name: "Whole page" }));
-  expect(screen.getByRole("button", { name: "Add page to family journal" })).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Passage" }));
+  expect(screen.getByRole("button", { name: "Add the whole entry to our family journal" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Just a passage" }));
   fireEvent.click(screen.getByRole("button", { name: "Add passage to family journal" }));
   await waitFor(() => expect(app.stored().familyPages).toHaveLength(1));
   expect(app.stored().familyPages![0]).toMatchObject({ kind: "passage", text: "A long day.", byName: "Robin" });

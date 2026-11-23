@@ -1,13 +1,14 @@
 "use client";
+import { useId } from "react";
 import ConfirmDelete from "./ConfirmDelete";
 import type { Book } from "@/lib/relish/model";
 import { pageKind, gameNames } from "@/lib/relish/catalog";
 import type { JournalEntry } from "@/lib/relish/journal";
 import type { ManualCard } from "@/lib/relish/manual";
 import { bookPages } from "@/lib/relish/pages";
-import { groupStream, sayingOf, type StreamItem } from "@/lib/relish/journal-stream";
+import { groupStream, sayingOf, sharedNote, type StreamItem } from "@/lib/relish/journal-stream";
 import { EVERYONE, seenLabel, type Lane, type TimelineItem } from "@/lib/relish/journal-timeline";
-import { Users } from "lucide-react";
+import { Share2, Users } from "lucide-react";
 import { sameName } from "@/lib/relish/mentions";
 import { namesList } from "@/lib/relish/tools";
 import Illustration from "./Illustration";
@@ -46,19 +47,6 @@ const artFor = (i: StreamItem): IllustrationName =>
   (i.toolId && exerciseIllustration[i.toolId]) ||
   "jot";
 
-/** "One line shared to Our family journal · Sent to Anna": where an entry went. */
-function sharedNote(i: StreamItem) {
-  const s = i.shared;
-  if (!s) return "";
-  return [
-    s.lines ? `${s.lines === 1 ? "One line" : `${s.lines} lines`} shared to Our family journal` : "",
-    s.page ? "Also in our family journal" : "",
-    s.sentTo.length ? `Sent to ${namesList(s.sentTo)}` : "",
-  ]
-    .filter(Boolean)
-    .join(" · ");
-}
-
 export type StreamActions = {
   busy: boolean;
   onOpenPage: (id: string) => void;
@@ -71,6 +59,8 @@ export type StreamActions = {
   canWriteBack?: (item: StreamItem) => boolean;
   onWriteBack?: (item: StreamItem) => void;
   onOpenFamily?: (pageId: string) => void;
+  /** Share a saved private entry (its journal id): whole, or a passage of it. */
+  onShare?: (journalId: string) => void;
 };
 
 /**
@@ -169,6 +159,8 @@ function tagOf(i: StreamItem | undefined, page: Shown) {
   if (i.kind === "mention") return `${i.from || page.byName} mentioned you`;
   if (i.kind === "sent") return `${i.from || page.byName} sent you this`;
   if (i.kind === "played") return i.familyPage ? `${i.from} played with you` : "";
+  // Your own entry, shared whole from its private page: the page is still yours alone.
+  if (i.kind === "wrote" && i.shared?.whole) return "Shared from your private page";
   return "";
 }
 
@@ -287,6 +279,7 @@ export function StreamCard({
   lane = "branch",
   seenWith = [],
   ownLabel,
+  onShare,
 }: {
   book: Book;
   item: StreamItem;
@@ -295,6 +288,7 @@ export function StreamCard({
   seenWith?: string[];
   ownLabel?: string;
 } & StreamActions) {
+  const titleId = useId();
   const date = when(i.date, now);
   // A branch says who can see it; the odd stream item on the spine, everyone.
   const seen = (
@@ -470,8 +464,8 @@ export function StreamCard({
     : kind.label === "Journal"
       ? "You wrote"
       : `${kind.label}${page.exercise && !page.title.includes(page.exercise) ? ` · ${page.exercise}` : ""}`;
-  const note = sharedNote(i);
-  return (
+  const note = sharedNote(i.shared);
+  const card = (
     <button
       className={`rp-page rp-entry rs-card rp-edge-${kind.tone}`}
       data-page-id={page.id}
@@ -485,12 +479,32 @@ export function StreamCard({
         </span>
         {seen}
       </span>
-      {!played && <span className="rp-page-title">{page.title}</span>}
+      {!played && (
+        <span className="rp-page-title" id={titleId}>
+          {page.title}
+        </span>
+      )}
       <span className="rp-page-excerpt">
         <MentionText text={page.text.split("\n")[0] || "Photo entry"} />
       </span>
       {note && <span className="rp-entry-note">{note}</span>}
     </button>
+  );
+  // A page you wrote can be shared from here: whole, or a passage of it.
+  if (!onShare || played || !page.journalId) return card;
+  return (
+    <div className="rt-shareable">
+      {card}
+      <button
+        type="button"
+        className="rp-link rt-share"
+        disabled={busy}
+        aria-describedby={titleId}
+        onClick={() => onShare(page.journalId!)}
+      >
+        <Share2 size={15} aria-hidden="true" /> Share
+      </button>
+    </div>
   );
 }
 

@@ -6,8 +6,10 @@ import {
   groupStream,
   isDirectSend,
   journalStream,
+  isWholeSend,
   mentionsOwner,
   sayingOf,
+  sharedNote,
   type StreamItem,
 } from "../journal-stream";
 import { newJournalDraft, writeJournalPage } from "../journal";
@@ -93,7 +95,48 @@ describe("My journal's stream", () => {
     };
     const line = newFamilyPage({ kind: "passage", text: "Like a cold hug.", byName: "Robin", byBookId: "mine", sourceId: draft.id });
     const items = journalStream(book, { familyPages: [line], myBookId: "mine" });
-    expect(items.find((i) => i.key === `journal:${draft.id}`)?.shared).toEqual({ lines: 1, page: false, sentTo: ["Sam"] });
+    // The words sent were the whole entry: Sam has it, and it isn't shown twice.
+    expect(items.find((i) => i.key === `journal:${draft.id}`)?.shared).toEqual({ lines: 1, page: false, sentTo: ["Sam"], pageTo: ["Sam"] });
+    expect(items.some((i) => i.kind === "you-sent")).toBe(false);
+  });
+
+  it("a line from an entry is a line; the whole entry, sent or shared, says so on the entry", () => {
+    let book: Book = { ...emptyBook("Robin"), profile: { kind: "adult" } };
+    const draft = { ...newJournalDraft(), title: "Pool", text: "Like a cold hug.\n\nHe climbed out on his own." };
+    book = writeJournalPage(book, draft, 0, "kept");
+    const send = (id: string, text: string, to: string) => ({
+      id, circleId: "c", title: "Pool", text, recipients: [to], recipientNames: [to], packets: {},
+      createdAt: "2026-11-20T10:00:00Z", sent: true, audience: "direct" as const, sourceId: draft.id,
+    });
+    book.connections = {
+      received: [],
+      outgoing: [send("o1", "Like a cold hug.", "Sam"), send("o2", "Like a cold hug.\n\nHe climbed out on his own.", "Anna")],
+    };
+    const whole = newFamilyPage({ kind: "page", title: "Pool", text: draft.text, byName: "Robin", byBookId: "mine", sourceId: draft.id });
+    const items = journalStream(book, { familyPages: [whole], myBookId: "mine" });
+    const shared = items.find((i) => i.key === `journal:${draft.id}`)!.shared;
+    expect(shared).toEqual({ lines: 0, page: true, whole: true, sentTo: ["Sam", "Anna"], pageTo: ["Anna"] });
+    // The line to Sam is its own card; the whole entry to Anna is the entry itself.
+    expect(items.filter((i) => i.kind === "you-sent").map((i) => i.to)).toEqual([["Sam"]]);
+    expect(sharedNote(shared)).toBe("Shared with the family · Sent to Sam and Anna");
+  });
+
+  it("an entry changed after it was sent whole shows the copy that went", () => {
+    const entry = { id: "e1", text: "Like a cold hug.", status: "kept" as const };
+    expect(isWholeSend({ sourceId: "e1", text: " Like a  cold hug. " }, entry)).toBe(true);
+    expect(isWholeSend({ sourceId: "e1", text: "Like a cold hug." }, { ...entry, text: "Like a cold hug. Then lunch." })).toBe(false);
+    expect(isWholeSend({ sourceId: "e1", text: "Like a cold hug." }, { ...entry, status: "draft" })).toBe(false);
+    expect(isWholeSend({ sourceId: "e2", text: "Like a cold hug." }, entry)).toBe(false);
+    expect(isWholeSend({ text: "Like a cold hug." }, undefined)).toBe(false);
+  });
+
+  it("says where an entry went, in a few words", () => {
+    expect(sharedNote(undefined)).toBe("");
+    expect(sharedNote({ lines: 1, page: false, sentTo: [] })).toBe("One line shared to Our family journal");
+    expect(sharedNote({ lines: 2, page: true, whole: true, sentTo: ["Anna"], pageTo: ["Anna"] })).toBe(
+      "2 lines shared to Our family journal · Shared with the family · Sent to Anna",
+    );
+    expect(sharedNote({ lines: 0, page: false, sentTo: ["Anna", "Sam", "Leo"] })).toBe("Sent to Anna, Sam and Leo");
   });
 
   it("groups Today, This week and Earlier by the writer's calendar", () => {
