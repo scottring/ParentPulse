@@ -2,6 +2,7 @@ import type { User } from "firebase/auth";
 import {
   hashSync,
   SYNC_CHUNK,
+  SYNC_CLIENT,
   validManifest,
   validSyncBlob,
   type SyncManifest,
@@ -33,7 +34,7 @@ export async function syncRequest<T>(
       Authorization: `Bearer ${token}`,
       "X-Relish-Consent": "encrypted-library",
     },
-    body: JSON.stringify(data),
+    body: JSON.stringify({ ...data, client: SYNC_CLIENT }),
   });
   const result = await response.json();
   if (!response.ok)

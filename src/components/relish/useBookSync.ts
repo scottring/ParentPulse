@@ -8,9 +8,11 @@ import {
   writeBinding,
   bindingKey,
   hashSync,
+  RELISH_UPDATED,
   type SyncedEdition,
 } from "@/lib/relish/book-sync";
 import {
+  SyncError,
   syncRequest,
   uploadBook,
   downloadBook,
@@ -313,9 +315,14 @@ export function useBookSync(vault: Vault) {
         setStatus("Saved here · waiting for internet");
         return;
       }
-      void runRef
-        .current()
-        .catch(() => setStatus("Saved here · sync needs attention"));
+      void runRef.current().catch((e) =>
+        // A newer Relish is live: this one's saves stay on this device.
+        setStatus(
+          e instanceof SyncError && e.status === 426
+            ? RELISH_UPDATED
+            : "Saved here · sync needs attention",
+        ),
+      );
     };
     const first = setTimeout(check, 1800),
       interval = setInterval(check, 30000);

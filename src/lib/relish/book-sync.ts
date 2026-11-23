@@ -35,6 +35,19 @@ export type EncryptedSnapshot = {
   keep?: SyncManifest["photos"];
 };
 export const SYNC_CHUNK = 450_000;
+/**
+ * Which Relish is syncing. Since shared pages carry photos (2026-11-23), an
+ * older Relish would save a journal or Our family journal without them, so
+ * the server takes saves only from this version on. Reads stay open; nothing
+ * on the device is touched, and the message asks for a reload.
+ */
+export const SYNC_CLIENT = 2;
+export const RELISH_UPDATED = "Relish was updated. Reload to keep saving.";
+/** Whether a sync request may save: reads are always fine. */
+export function clientMaySave(data: Record<string, unknown>) {
+  const saving = data.action === "put" || data.action === "commit" || data.action === "remove";
+  return !saving || (typeof data.client === "number" && data.client >= SYNC_CLIENT);
+}
 export const isSyncId = (v: unknown): v is string =>
   typeof v === "string" &&
   /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(v);
