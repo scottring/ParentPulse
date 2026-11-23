@@ -293,7 +293,8 @@ it("Share is on the page while reading it, and not in a child's journal", () => 
   cleanup();
   // A child's journal keeps the parent-managed way it shares: no Share on its pages.
   openBook(sampleChildBook(), { mode: "sample" });
-  fireEvent.click(screen.getByRole("button", { name: "Open my journal" }));
+  // #71 renames this to "Open your journal".
+  fireEvent.click(screen.getByRole("button", { name: /^Open (my|your) journal$/ }));
   const page = stream()
     .getAllByRole("button", { name: /My tooth came out/ })
     .find((b) => b.closest("li.rt-item"))!;
