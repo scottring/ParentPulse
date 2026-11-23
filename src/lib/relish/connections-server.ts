@@ -80,27 +80,66 @@ export function expiredRelayPhotos(
     })
     .map((p) => p.id);
 }
+/** The relay's cleanup reads a sender's photos this many at a time, at most this many pages a run. */
+export const RELAY_PAGE = 100;
+export const RELAY_PAGES = 10;
+/**
+ * Pages through a sender's relay photos in document-id order from `start`,
+ * handing each page on, for at most `pages` pages. Returns where to pick up
+ * next run, or null once it reached the end (the next run starts over), so
+ * every photo is reached over successive runs however many there are.
+ */
+export async function pageThrough<T extends { id: string }>(
+  start: string | null,
+  page: (after: string | null, size: number) => Promise<T[]>,
+  handle: (docs: T[]) => Promise<void>,
+  pages = RELAY_PAGES,
+  size = RELAY_PAGE,
+): Promise<string | null> {
+  let after = start;
+  for (let i = 0; i < pages; i++) {
+    const docs = await page(after, size);
+    if (docs.length) await handle(docs);
+    if (docs.length < size) return null;
+    after = docs.at(-1)!.id;
+  }
+  return after;
+}
 /**
  * The relay's cleanup for one sender, at most once a day from their list
  * (the same request that reads their passages). Bounded, and best effort.
+ * The query is an equality on `sender` ordered by document id, which the
+ * automatic single-field index serves: no composite index.
  */
-async function collectRelayPhotos(uid: string) {
+async function collectRelayPhotos(uid: string, start: string | null): Promise<string | null> {
   const { db } = services();
-  const mine = await db.collection(`${root}_photos`).where("sender", "==", uid).limit(100).get();
-  if (mine.empty) return;
-  const ids = [...new Set(mine.docs.map((d) => d.data().passageId as string))];
-  const passages = await db.getAll(...ids.map((p) => db.doc(`${root}_passages/${p}`)));
-  const byId = new Map(passages.map((p) => [p.id, p.exists ? p.data() : undefined]));
-  const gone = new Set(
-    expiredRelayPhotos(
-      mine.docs.map((d) => ({ id: d.id, passageId: d.data().passageId, createdAt: d.data().createdAt })),
-      byId,
-    ),
+  return pageThrough(
+    start,
+    async (after, size) => {
+      let query = db
+        .collection(`${root}_photos`)
+        .where("sender", "==", uid)
+        .orderBy(FieldPath.documentId())
+        .limit(size);
+      if (after) query = query.startAfter(after);
+      return (await query.get()).docs;
+    },
+    async (mine) => {
+      const ids = [...new Set(mine.map((d) => d.data().passageId as string))];
+      const passages = await db.getAll(...ids.map((p) => db.doc(`${root}_passages/${p}`)));
+      const byId = new Map(passages.map((p) => [p.id, p.exists ? p.data() : undefined]));
+      const gone = new Set(
+        expiredRelayPhotos(
+          mine.map((d) => ({ id: d.id, passageId: d.data().passageId, createdAt: d.data().createdAt })),
+          byId,
+        ),
+      );
+      if (!gone.size) return;
+      const batch = db.batch();
+      mine.filter((d) => gone.has(d.id)).forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    },
   );
-  if (!gone.size) return;
-  const batch = db.batch();
-  mine.docs.filter((d) => gone.has(d.id)).forEach((d) => batch.delete(d.ref));
-  await batch.commit();
 }
 export async function connectionAction(
   uid: string,
@@ -143,10 +182,16 @@ export async function connectionAction(
       sends: sends + (action === "send" ? 1 : 0),
       photos: photos + (action === "photo" ? 1 : 0),
       swept: sweep ? day : old?.swept ?? null,
+      relayCursor: old?.relayCursor ?? null,
     });
-    return sweep;
+    return sweep ? { cursor: (old?.relayCursor as string | null | undefined) ?? null } : null;
   });
-  if (sweep) await collectRelayPhotos(uid).catch(() => {});
+  if (sweep)
+    await collectRelayPhotos(uid, sweep.cursor)
+      .then((relayCursor) =>
+        db.doc(`${root}_usage/${hash(uid)}`).set({ relayCursor }, { merge: true }),
+      )
+      .catch(() => {});
   if (action === "list") {
     const profile = (await profileRef.get()).data();
     if (!profile) return { profile: null, circle: null, deliveries: [] };

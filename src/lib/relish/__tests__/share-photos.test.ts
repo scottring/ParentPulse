@@ -38,7 +38,7 @@ import {
 import { keepIncoming, loadCircle, openIncomingPhoto, sendOutgoing, sendToPartners } from "../partner-share";
 import { changeFamilyBook, loadFamilyPages } from "../family-book";
 import { isFamilyPage, newFamilyPage } from "../family-pages";
-import { expiredRelayPhotos, photosDone, sentPhotoIds } from "../connections-server";
+import { expiredRelayPhotos, pageThrough, photosDone, sentPhotoIds } from "../connections-server";
 import { backupPhotos, restorePhotos } from "../photos";
 import { clientMaySync, RELISH_UPDATED, SYNC_CLIENT } from "../book-sync";
 import { syncRequest } from "../book-sync-client";
@@ -433,6 +433,33 @@ describe("the relay's rules", () => {
     expect(sentPhotoIds(Array.from({ length: 5 }, () => crypto.randomUUID()))).toBeNull();
     expect(photosDone({ anna: "accepted", sam: "pending" })).toBe(false);
     expect(photosDone({ anna: "accepted", sam: "declined" })).toBe(true);
+  });
+
+  it("reaches every relay photo over successive runs, a bounded number of pages each", async () => {
+    // 250 photos in document-id order, read as the query does (after a cursor, by size).
+    let docs = Array.from({ length: 250 }, (_, i) => ({ id: `p${String(i).padStart(3, "0")}`, old: i % 2 === 0 }));
+    const reads: (string | null)[] = [];
+    const page = async (after: string | null, size: number) => {
+      reads.push(after);
+      return docs.filter((d) => after === null || d.id > after).slice(0, size);
+    };
+    const seen = new Set<string>();
+    // The cleanup deletes some of what it reads; the cursor still moves on.
+    const handle = async (batch: { id: string; old: boolean }[]) => {
+      batch.forEach((d) => seen.add(d.id));
+      docs = docs.filter((d) => !batch.some((b) => b.id === d.id && b.old));
+    };
+    const first = await pageThrough(null, page, handle, 1, 100);
+    expect(first).toBe("p099");
+    const second = await pageThrough(first, page, handle, 1, 100);
+    expect(second).toBe("p199");
+    expect(await pageThrough(second, page, handle, 1, 100)).toBeNull();
+    expect(seen.size).toBe(250);
+    expect(docs.every((d) => !d.old)).toBe(true);
+    // With room for ten pages, one run reaches the end and starts over next time.
+    reads.length = 0;
+    expect(await pageThrough(null, page, handle, 10, 100)).toBeNull();
+    expect(reads).toEqual([null, "p199"]);
   });
 
   it("lets go of relay photos a send left behind, after a while", () => {
