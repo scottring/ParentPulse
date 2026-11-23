@@ -36,6 +36,8 @@ import {
   type FamilyPlan,
 } from "@/lib/relish/family-plan";
 import type { FamilyPage } from "@/lib/relish/family-pages";
+import { journalStream } from "@/lib/relish/journal-stream";
+import { EVERYONE, audienceLabels, journalTimeline, seenLabel } from "@/lib/relish/journal-timeline";
 import Illustration from "./Illustration";
 import KidHome from "./KidHome";
 import CheckBackCard from "./CheckBack";
@@ -262,7 +264,7 @@ function GoingRow({
       <span className="ha-row-words">
         {/* Unfinished things are only yours until they're kept or shared. */}
         <Whose
-          family={false}
+          label={ONLY_YOU}
           extra={`${item.kind === "draft" ? "draft" : "in progress"}${idle ? ` · ${idle}` : ""}${leaving ? ` · ${leaving}` : ""}`}
         />
         <span className="ha-row-title">{item.title}</span>
@@ -310,7 +312,7 @@ export type HomeProps = {
   onResume?: (item: UnderWay) => void;
   onDiscard?: (item: UnderWay) => void;
   onCheckBack?: (id: string, answer: CheckBackAnswer) => void;
-  /** Writes in My journal (Only me). */
+  /** Writes a private page (Only you). */
   onWrite: () => void;
   /** Writes in Our family journal. */
   onWriteFamily?: () => void;
@@ -333,9 +335,10 @@ export type HomeProps = {
 
 /**
  * Home, one page for both journals (Scott, 2026-11-21): a welcome with its
- * painting, then two sides. On the left, "Lately" mixes My journal and Our
- * family journal, each item labelled "Only me" or "Family journal", with a
- * way back to each; on the right, "What would you like to do?" with four
+ * painting, then two sides. On the left, "Lately" mixes your own pages and
+ * Our family journal, each item labelled with who can see it as the journal
+ * timeline says it (Everyone / Only you / You and Anna), with a way back to
+ * each; on the right, "What would you like to do?" with four
  * painted choices. One check-back at a time leads the left side. Layout
  * follows width in CSS only, so opening or closing a Duo keeps everything in
  * place.
@@ -395,12 +398,18 @@ function Welcome({
   );
 }
 
-/** "Only me" or "Family journal", on everything Lately lists. */
-function Whose({ family, extra }: { family: boolean; extra?: string }) {
+const ONLY_YOU = seenLabel([]);
+
+/**
+ * Who can see it, on everything Lately lists: the journal timeline's own
+ * label (Everyone on the spine; Only you, or You and Anna, on a branch).
+ */
+function Whose({ label, extra }: { label: string; extra?: string }) {
+  const everyone = label === EVERYONE;
   return (
-    <span className={`ha-whose ${family ? "is-family" : "is-mine"}`}>
-      {!family && <LockIcon />}
-      {family ? "Family journal" : "Only me"}
+    <span className={`ha-whose ${everyone ? "is-family" : "is-mine"}`}>
+      {!everyone && <LockIcon />}
+      {label}
       {extra && ` · ${extra}`}
     </span>
   );
@@ -443,6 +452,9 @@ function OneHome({
     (book.journal || []).filter((e) => e.audience === "family").map((e) => `journal:${e.id}`),
   );
   const familyDays = new Set(shown.filter((p) => p.kind === "game").map((p) => p.date));
+  // Who can see each page, worked out the way the journal's timeline does.
+  const audience = audienceLabels(journalTimeline(book, journalStream(book, { familyPages, myBookId }), shown));
+  const whoSees = (id: string, fallback = ONLY_YOU) => audience.get(id) ?? fallback;
   // Kept pages always show, however old: only unfinished things go stale. A
   // page written for the family journal, or a round with its note there,
   // shows once, from the family journal.
@@ -544,7 +556,7 @@ function OneHome({
           ) : asking && plan ? (
             <section className="ha-plan-ask" aria-label="How is it going?">
               <p className="ha-quiet">
-                <Whose family />{" "}
+                <Whose label={EVERYONE} />{" "}
                 {moment === "lookback"
                   ? `${plan.goalLabel} · time to look back`
                   : `${plan.goalLabel} · Day ${Math.min(dayOf(plan, now), plan.days)} of ${plan.days}`}
@@ -583,7 +595,7 @@ function OneHome({
             <Illustration name="jot" size={76} className="ha-row-art" />
             <span className="ha-row-words">
               <Whose
-                family={false}
+                label={whoSees(`draft:${draft.draft.id}`)}
                 extra={draft.draft.audience === "family" ? "draft for the family journal" : "draft"}
               />
               <span className="ha-row-title ha-row-quote">
@@ -633,7 +645,10 @@ function OneHome({
             <div key={x.page.id} className="ha-row">
               <Illustration name={pageArt(x.page)} size={76} className="ha-row-art" />
               <span className="ha-row-words">
-                <Whose family={false} extra={`${x.page.record ? "played" : "kept"} ${when(x.page.date)}`} />
+                <Whose
+                  label={whoSees(x.page.id)}
+                  extra={`${x.page.record ? "played" : "kept"} ${when(x.page.date)}`}
+                />
                 <span className="ha-row-title">{x.page.title}</span>
                 {x.page.record && x.page.text && (
                   <span className="ha-row-detail">{firstWords(x.page.text, 70)}</span>
@@ -650,7 +665,7 @@ function OneHome({
             <div key={x.page.id} className="ha-row">
               <Illustration name={x.page.art ?? "your-book"} size={76} className="ha-row-art" />
               <span className="ha-row-words">
-                <Whose family />
+                <Whose label={whoSees(x.page.id, EVERYONE)} />
                 <span className="ha-row-title">
                   {x.page.kind === "game" ? firstWords(x.page.text, 70).replace(/\.$/, "") : x.page.title || x.page.label}
                 </span>
@@ -687,7 +702,7 @@ function OneHome({
         <h2 id="ha-todo-title">What would you like to do?</h2>
         <Choice
           art="jot"
-          title="Write in my journal"
+          title="Write a private page"
           line="Only you see it"
           busy={busy}
           onOpen={onWrite}
@@ -708,7 +723,7 @@ function OneHome({
         {onWriteFamily && (
           <Choice
             art="your-book"
-            title="Write in our family journal"
+            title="Add to our family journal"
             line="Everyone in the family can read it"
             busy={busy}
             onOpen={onWriteFamily}
@@ -755,7 +770,7 @@ function PassageCard({
 }) {
   return (
     <figure className="ha-passage">
-      <Whose family />
+      <Whose label={EVERYONE} />
       <blockquote>“{passage.text.trim()}”</blockquote>
       <figcaption>
         {passage.caption || passage.byName} · {shortDate(passage.date)}

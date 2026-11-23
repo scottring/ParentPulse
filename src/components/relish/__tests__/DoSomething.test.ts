@@ -381,7 +381,7 @@ it("continues an unfinished journal page from Home, and Activities leaves drafts
   fireEvent.click(screen.getByRole("button", { name: "Home" }));
   const lately = screen.getByRole("region", { name: "Lately" });
   expect(within(lately).getByText(/Kit asked about the moon/)).toBeTruthy();
-  expect(within(lately).getByText("Only me · draft")).toBeTruthy();
+  expect(within(lately).getByText("Only you · draft")).toBeTruthy();
   fireEvent.click(within(lately).getByRole("button", { name: /Keep writing/ }));
   expect(
     (screen.getByRole("textbox", { name: "Your journal entry" }) as HTMLTextAreaElement).value,

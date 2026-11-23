@@ -6,7 +6,7 @@ import type { JournalEntry } from "@/lib/relish/journal";
 import type { ManualCard } from "@/lib/relish/manual";
 import { bookPages } from "@/lib/relish/pages";
 import { groupStream, sayingOf, type StreamItem } from "@/lib/relish/journal-stream";
-import { seenLabel, type Lane, type TimelineItem } from "@/lib/relish/journal-timeline";
+import { EVERYONE, seenLabel, type Lane, type TimelineItem } from "@/lib/relish/journal-timeline";
 import { Users } from "lucide-react";
 import { sameName } from "@/lib/relish/mentions";
 import { namesList } from "@/lib/relish/tools";
@@ -158,7 +158,7 @@ function LockIcon() {
 function Everyone() {
   return (
     <span className="rt-everyone">
-      <Users size={14} aria-hidden="true" /> Everyone
+      <Users size={14} aria-hidden="true" /> {EVERYONE}
     </span>
   );
 }

@@ -181,27 +181,30 @@ it("a private draft never reaches the family journal by navigation alone", async
   expect(kept.status).toBe("kept");
   expect(kept.audience).toBeUndefined();
   expect(app.stored().familyPages ?? []).toEqual([]);
-  // Home labels it Only me, never Family journal.
+  // Home labels it Only you, never Everyone.
   tab("Home");
   const lately = within(screen.getByRole("region", { name: "Lately" }));
   const row = lately.getByText("Only for me").closest(".ha-row")!;
-  expect(row.textContent).toMatch(/Only me · kept/);
-  expect(row.textContent).not.toMatch(/Family journal/);
+  expect(row.textContent).toMatch(/Only you · kept/);
+  expect(row.textContent).not.toMatch(/Everyone/);
 });
 
-it("Home's Lately labels each item Only me or Family journal", () => {
+it("Home's Lately labels each item with who can see it, as the journal does", () => {
   openBook(sampleBook(), { mode: "sample" });
   const lately = within(screen.getByRole("region", { name: "Lately" }));
   // The family's newest passage leads, on butter paper.
   const passage = document.querySelector(".ha-passage")!;
-  expect(passage.textContent).toMatch(/^Family journal/);
+  expect(passage.textContent).toMatch(/^Everyone/);
   expect(passage.textContent).toMatch(/hold your hand/);
-  // Both journals have rows, each saying whose.
+  // Rows from the spine and from branches, each saying who can see it.
   const kinds = Array.from(document.querySelectorAll(".ha-lately .ha-row .ha-whose")).map((w) => w.textContent);
-  expect(kinds.some((k) => k?.startsWith("Only me"))).toBe(true);
-  expect(kinds.some((k) => k === "Family journal")).toBe(true);
-  expect(lately.getByText("The blanket-fort expedition").closest(".ha-row")!.textContent).toMatch(/Only me · kept/);
-  expect(lately.getByText("The drive to Grandma June’s").closest(".ha-row")!.textContent).toMatch(/Family journal/);
+  expect(kinds.some((k) => k?.startsWith("Only you"))).toBe(true);
+  expect(kinds.some((k) => k === "Everyone")).toBe(true);
+  expect(kinds.some((k) => /Only me|Family journal/.test(k || ""))).toBe(false);
+  expect(lately.getByText("The blanket-fort expedition").closest(".ha-row")!.textContent).toMatch(/Only you · kept/);
+  expect(lately.getByText("The drive to Grandma June’s").closest(".ha-row")!.textContent).toMatch(/Everyone/);
+  // A round played with Anna says so, like its branch in the journal.
+  expect(lately.getByText("Same page? with Anna", { selector: ".ha-row-title" }).closest(".ha-row")!.textContent).toMatch(/You and Anna · played/);
 });
 
 it("Share a passage suggests the selected words, keeps the draft, and shares only the passage", async () => {
