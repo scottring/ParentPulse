@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { webcrypto } from "node:crypto";
 import { sampleBook, sampleChildBook, sampleIncoming, type Book } from "../model";
 import { journalStream } from "../journal-stream";
-import { filterTimeline, journalTimeline, seenLabel, type TimelineItem } from "../journal-timeline";
+import { audienceLabel, audienceLabels, filterTimeline, journalTimeline, seenLabel, type TimelineItem } from "../journal-timeline";
 import { newJournalDraft, writeJournalPage } from "../journal";
 import { newFamilyPage } from "../family-pages";
 import type { Incoming } from "../partner-share";
@@ -45,6 +45,19 @@ describe("One journal: the family spine with branches", () => {
     expect(seen("play:sample-play-anna")).toBe("You and Anna");
     expect(seenLabel(["Anna", "Leo", "anna"])).toBe("You, Anna and Leo");
     expect(seenLabel(["Anna", "Leo", "June"])).toBe("You, Anna, Leo and June");
+  });
+
+  it("gives other views (Home's Lately) the same who-can-see-it label, by stream key or family page id", () => {
+    const items = timeline();
+    const labels = audienceLabels(items);
+    // A round played with Anna, by its page id on Home.
+    expect(labels.get("play:sample-play-anna")).toBe("You and Anna");
+    expect(labels.get("journal:sample-story")).toBe("Only you");
+    // Every family page is Everyone, by its own id.
+    for (const p of sampleBook().familyPages || []) expect(labels.get(p.id)).toBe("Everyone");
+    expect(audienceLabel({ lane: "spine", seenWith: ["Anna"] })).toBe("Everyone");
+    expect(audienceLabel({ lane: "branch", seenWith: [] })).toBe("Only you");
+    expect(audienceLabel({ lane: "branch", seenWith: ["Anna", "Leo"] })).toBe("You, Anna and Leo");
   });
 
   it("a mention shows once, on the spine, saying it mentions you", () => {

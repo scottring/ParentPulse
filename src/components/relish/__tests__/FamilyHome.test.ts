@@ -51,8 +51,8 @@ it("Home is one page: a welcome, Lately from both journals, and four painted cho
   expect(screen.queryByRole("group", { name: "Whose pages" })).toBeNull();
   const todo = screen.getByRole("region", { name: "What would you like to do?" });
   expect(within(todo).getAllByRole("button").filter((b) => b.className.includes("ha-choice-main")).map((b) => b.textContent)).toEqual([
-    "Write in my journal",
-    "Write in our family journal",
+    "Write a private page",
+    "Add to our family journal",
     "Do an activity",
     "Read about our family",
   ]);

@@ -680,7 +680,7 @@ it("Home's one writing suggestion under Write: a started one says Keep writing a
   fireEvent.click(screen.getByRole("button", { name: "Home" }));
   const todo = await screen.findByRole("region", { name: "What would you like to do?" });
   const line = within(todo).getByRole("button", { name: /^Keep writing: .*made you laugh/ });
-  // The draft also leads Lately, as Only me.
+  // The draft also leads Lately, as Only you.
   const lately = screen.getByRole("region", { name: "Lately" });
   expect(within(lately).getByText(/Sam wore rain boots on his hands\./)).toBeTruthy();
   fireEvent.click(line);

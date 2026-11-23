@@ -125,6 +125,28 @@ export function seenLabel(seenWith: string[]) {
     : `You, ${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 }
 
+/** What the spine says: everyone in the family can read it. */
+export const EVERYONE = "Everyone";
+
+/** Who can see a timeline item, as the journal says it: "Everyone" on the spine, else seenLabel. */
+export function audienceLabel(t: Pick<TimelineItem, "lane" | "seenWith">) {
+  return t.lane === "spine" ? EVERYONE : seenLabel(t.seenWith);
+}
+
+/**
+ * Who can see each thing in the timeline, by its stream key ("play:…",
+ * "journal:…") and by its family page id, so another view (Home's Lately)
+ * labels a page exactly as the journal does.
+ */
+export function audienceLabels(items: Pick<TimelineItem, "key" | "lane" | "seenWith" | "item" | "page">[]) {
+  const labels = new Map<string, string>();
+  for (const t of items) {
+    const label = audienceLabel(t);
+    for (const k of [t.key, t.item?.key, t.page?.id]) if (k && !labels.has(k)) labels.set(k, label);
+  }
+  return labels;
+}
+
 const wholeWord = (text: string, name: string) =>
   !!name.trim() &&
   new RegExp(`(^|[^\\p{L}])@?${name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^\\p{L}]|$)`, "iu").test(text);

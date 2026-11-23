@@ -1074,7 +1074,7 @@ export default function LivingBook({
       : place === "home"
         ? {
             title: "Start here",
-            text: "Lately shows what’s new in both journals: “Only me” is yours alone, “Family journal” is what everyone in the family can read. Pick something to write or do on the right.",
+            text: "Lately shows what’s new in the journal, each saying who can see it: “Everyone” in the family, “Only you”, or you and someone you shared it with. Pick something to write or do on the right.",
           }
         : place === "do"
           ? view === "session" || view === "bookmark"
