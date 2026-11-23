@@ -62,7 +62,7 @@ describe("the account's family book", () => {
     const lib = fakeLibrary([
       { id: "r-scott", label: "Scott", revision: "1", updatedAt: 0, manifest: {} as never, accountManaged: true },
     ]);
-    expect(await loadFamilyPages(lib.remote)).toEqual([]);
+    expect((await loadFamilyPages(lib.remote)).pages).toEqual([]);
     await changeFamilyBook(lib.remote, { add: page("a", "When I’m big I’ll still hold your hand.") });
     const [head] = [...lib.heads.values()];
     expect(head.label).toBe(FAMILY_LABEL);
@@ -70,7 +70,7 @@ describe("the account's family book", () => {
     expect(lib.raw.get(head.id)).not.toContain("hold your hand");
     const opened = await unlockVault(lib.raw.get(head.id)!, await lib.remote.secret(head.id));
     expect(opened.book.profile).toEqual({ kind: "family" });
-    expect((await loadFamilyPages(lib.remote)).map((p) => p.text)).toEqual([
+    expect((await loadFamilyPages(lib.remote)).pages.map((p) => p.text)).toEqual([
       "When I’m big I’ll still hold your hand.",
     ]);
   });
@@ -81,7 +81,7 @@ describe("the account's family book", () => {
     lib.beforeNextUpload(() => changeFamilyBook(lib.remote, { add: page("b") }));
     await changeFamilyBook(lib.remote, { add: page("c") });
     expect(lib.calls.conflicts).toBe(1);
-    expect((await loadFamilyPages(lib.remote)).map((p) => p.id).toSorted()).toEqual(["a", "b", "c"]);
+    expect((await loadFamilyPages(lib.remote)).pages.map((p) => p.id).toSorted()).toEqual(["a", "b", "c"]);
   });
   it("gives up after three conflicting tries and says so", async () => {
     const lib = fakeLibrary();
@@ -110,7 +110,7 @@ describe("the account's family book", () => {
         lib.raw.set(id, source.raw.get(id)!);
         lib.secrets.set(id, source.secrets.get(id)!);
       }
-    expect((await loadFamilyPages(lib.remote)).map((p) => p.id).toSorted()).toEqual(["from-a", "from-b"]);
+    expect((await loadFamilyPages(lib.remote)).pages.map((p) => p.id).toSorted()).toEqual(["from-a", "from-b"]);
     const smaller = [...lib.heads.keys()].toSorted()[0];
     const before = lib.heads.get(smaller)!.revision;
     await changeFamilyBook(lib.remote, { add: page("new") });
@@ -119,7 +119,7 @@ describe("the account's family book", () => {
     await changeFamilyBook(lib.remote, { add: page("from-a") });
     await changeFamilyBook(lib.remote, { remove: "from-a" });
     await changeFamilyBook(lib.remote, { remove: "from-b" });
-    expect((await loadFamilyPages(lib.remote)).map((p) => p.id)).toEqual(["new"]);
+    expect((await loadFamilyPages(lib.remote)).pages.map((p) => p.id)).toEqual(["new"]);
   });
   it("never writes into another account book that shares the label", async () => {
     const lib = fakeLibrary();
@@ -132,7 +132,7 @@ describe("the account's family book", () => {
       await lib.remote.secret(head.id),
     );
     lib.raw.set(head.id, JSON.stringify({ ...envelope, media: [] }));
-    expect(await loadFamilyPages(lib.remote)).toEqual([]);
+    expect((await loadFamilyPages(lib.remote)).pages).toEqual([]);
     await expect(changeFamilyBook(lib.remote, { add: page("b") })).rejects.toThrow(
       /couldn’t be read/,
     );

@@ -71,9 +71,13 @@ import { SubHead } from "./ui";
 import "./journal.css";
 
 type Save = (change: (book: Book) => Book) => Promise<void>;
+/**
+ * Adds to Our family journal. `photos` are the private entry's own photos to
+ * go with a whole page; copies are made for the family journal.
+ */
 export type FamilyAdd = (
   page: Pick<FamilyPage, "kind" | "text"> &
-    Partial<Pick<FamilyPage, "title" | "caption" | "activity" | "mentions" | "sourceId">>,
+    Partial<Pick<FamilyPage, "title" | "caption" | "activity" | "mentions" | "sourceId" | "photos">>,
 ) => Promise<unknown>;
 /** Someone who can be @-mentioned: a person in this journal (with an id) or another family member. */
 export type Mentionable = { name: string; id?: string; role?: string };
@@ -331,7 +335,7 @@ export default function Journal({
           <div className="rj-prose">
             <MentionText text={page.text} />
           </div>
-          <PhotoGallery photos={page.photos} access={photos} />
+          <PhotoGallery photos={page.photos} access={photos} shared={page.kind === "Received passage"} />
           {page.sections.map((section, i) => (
             <section className="rj-page-section" key={`${i}:${section.label}`}>
               <p className="lb-kicker">{section.label}</p>
@@ -1403,7 +1407,8 @@ export function JournalEditor({
           selected={sharing}
           owner={book?.owner || ""}
           others={familyNames}
-          photos={draft.photos?.length || 0}
+          photos={draft.photos || []}
+          photoAccess={photos}
           caption={
             taggedPeople[0]?.name ??
             familyNames.find((n) =>

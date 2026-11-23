@@ -16,6 +16,8 @@ import MentionText from "./MentionText";
 import { exerciseIllustration, gameIllustration, type IllustrationName } from "./illustrations";
 import { personTones } from "./Home";
 import type { Shown } from "./Family";
+import type { PhotoLoader } from "@/lib/relish/photos";
+import { PhotoThumbs } from "./Photos";
 import "./journal-stream.css";
 
 const shortDate = (iso: string) =>
@@ -61,6 +63,8 @@ export type StreamActions = {
   onOpenFamily?: (pageId: string) => void;
   /** Share a saved private entry (its journal id): whole, or a passage of it. */
   onShare?: (journalId: string) => void;
+  /** Opens photos that went with a shared page, for the small ones on its card. */
+  photos?: PhotoLoader;
 };
 
 /**
@@ -176,6 +180,7 @@ function SpineCard({
   onSetAside,
   canWriteBack,
   onWriteBack,
+  photos,
 }: { book: Book; t: TimelineItem<Shown>; page: Shown; now: Date; onOpen: (page: Shown) => void } & StreamActions) {
   const i = t.item;
   const date = when(p.date, now);
@@ -217,6 +222,7 @@ function SpineCard({
           </span>
         </>
       )}
+      <PhotoThumbs photos={p.photos || i?.offer?.photos} access={photos} />
     </>
   );
   // A page passed on from a partner, waiting: keep it or set it aside here.
@@ -280,6 +286,7 @@ export function StreamCard({
   seenWith = [],
   ownLabel,
   onShare,
+  photos,
 }: {
   book: Book;
   item: StreamItem;
@@ -353,6 +360,7 @@ export function StreamCard({
           {seen}
         </span>
         <blockquote className="rs-quote">“{i.text.trim()}”</blockquote>
+        <PhotoThumbs photos={i.photos} access={photos} />
         {(i.caption || i.direct) && (
           <span className="rs-caption">
             {[i.caption, `from ${from}’s journal`].filter(Boolean).join(" · ")}
@@ -427,6 +435,7 @@ export function StreamCard({
           {seen}
         </span>
         <span className="rs-sent">“{i.text.trim()}”</span>
+        <PhotoThumbs photos={i.photos} access={photos} />
         {i.note && <p className="rs-note">{i.note}</p>}
       </article>
     );
@@ -487,6 +496,7 @@ export function StreamCard({
       <span className="rp-page-excerpt">
         <MentionText text={page.text.split("\n")[0] || "Photo entry"} />
       </span>
+      <PhotoThumbs photos={i.photos} access={photos} />
       {note && <span className="rp-entry-note">{note}</span>}
     </button>
   );

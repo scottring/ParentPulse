@@ -10,7 +10,7 @@ import {
   reflectionSections,
   type GameKind,
 } from "@/lib/relish/living";
-import type { PhotoAccess } from "@/lib/relish/photos";
+import type { PhotoLoader } from "@/lib/relish/photos";
 import type { Tone } from "@/lib/relish/catalog";
 import type { FamilyPage, FamilyPageKind } from "@/lib/relish/family-pages";
 import { Dialog } from "./BookForms";
@@ -99,6 +99,7 @@ export function passedBetween(book: Book) {
       title: p.title,
       text: p.text,
       date: p.acceptedAt,
+      photos: p.photos,
     })),
     ...(c?.outgoing || [])
       .filter((o) => o.sent && o.audience !== "direct")
@@ -110,6 +111,7 @@ export function passedBetween(book: Book) {
         title: o.title,
         text: o.text,
         date: o.createdAt,
+        photos: o.photos,
       })),
   ].toSorted((a, b) => b.date.localeCompare(a.date));
 }
@@ -183,6 +185,7 @@ export function familyPagesOf(
         mine,
         removable: mine,
         playNote: p.kind === "game" && p.id.startsWith("play-"),
+        ...(p.photos?.length ? { photos: p.photos } : {}),
       };
     }),
     ...l.sharedPages.map((p) => {
@@ -233,6 +236,7 @@ export function familyPagesOf(
       mine: p.who === "You sent",
       removable: false,
       deleteId: `${p.who === "You sent" ? "sent" : "passage"}:${p.id}`,
+      ...(p.photos?.length ? { photos: p.photos } : {}),
     })),
   ];
   const seen = new Set<string>();
@@ -307,7 +311,7 @@ export function FamilyReader({
   page: Shown;
   access: Pick<FamilyAccess, "remove">;
   busy: boolean;
-  photos?: PhotoAccess;
+  photos?: PhotoLoader;
   onClose: () => void;
   onRemoved?: (error?: string) => void;
   /** Deletes this journal's copy of a page (see Shown.deleteId). */
@@ -350,7 +354,9 @@ export function FamilyReader({
             ))}
           </div>
         )}
-        {open.photos && <PhotoGallery photos={open.photos} access={photos} />}
+        {open.photos && (
+          <PhotoGallery photos={open.photos} access={photos} shared={!open.id.startsWith("album:")} />
+        )}
         <p className="rp-quiet">{open.note}</p>
         {open.removable && (
           <button

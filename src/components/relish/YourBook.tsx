@@ -25,7 +25,7 @@ import { KidCoverMark } from "./KidHome";
 import { BookSpread } from "./ui";
 import type { FamilyPage } from "@/lib/relish/family-pages";
 import type { Incoming } from "@/lib/relish/partner-share";
-import type { PhotoAccess } from "@/lib/relish/photos";
+import type { PhotoLoader } from "@/lib/relish/photos";
 import { journalStream } from "@/lib/relish/journal-stream";
 import {
   filterTimeline,
@@ -64,7 +64,8 @@ const shortDate = (iso: string) =>
 export type FamilyParts = {
   access: FamilyAccess;
   members: FamilyMember[];
-  photos?: PhotoAccess;
+  /** Opens photos on shared pages, wherever each is kept. */
+  photos?: PhotoLoader;
   /** Add to our family journal: a page written for everyone. */
   onWrite?: () => void;
   onInvite?: () => void;
@@ -311,6 +312,7 @@ export default function YourBook({
         reader={reader}
         banners={banners}
         onWriteFamily={family?.onWrite}
+        photos={family?.photos}
         loading={!!family?.access.loading}
       />
     );
@@ -500,6 +502,7 @@ export default function YourBook({
               onWriteBack={onWriteBack}
               onOpenFamily={setReading}
               onShare={onShareEntry}
+              photos={family?.photos}
             />
           </section>
         ) : (
@@ -787,7 +790,10 @@ function ChildBook({
   banners,
   onWriteFamily,
   loading,
+  photos,
 }: {
+  /** Opens photos on shared pages. */
+  photos?: PhotoLoader;
   /** Add to our family journal: a page written for everyone. */
   onWriteFamily?: () => void;
   /** A game just finished, or one still going. */
@@ -957,6 +963,7 @@ function ChildBook({
                 ownLabel="Your page"
                 onOpenPage={onOpenPage}
                 onDraft={onDraft}
+                photos={photos}
               />
             </section>
           ) : (

@@ -1,7 +1,8 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { FieldValue, FieldPath } from "firebase-admin/firestore";
 import { AIError, services } from "./hosted-ai";
-import { canonicalKey, isPacket, isPublicKey, type Member } from "./sharing";
+import { canonicalKey, isPacket, isPublicKey, PHOTOS_MISSING, type Member } from "./sharing";
+import { isEncryptedPhoto, PHOTO_LIMIT } from "./photos";
 function fail(message: string, status = 400): never {
   throw new AIError(message, status);
 }
@@ -30,6 +31,116 @@ function stable(v: unknown): string {
   );
 }
 const root = "relish_connections";
+/**
+ * Photos sent with a passage (2026-11-23): one encrypted copy per photo, at
+ * `relish_connections_photos/{passageId}_{photoId}`. The key to them is only
+ * inside each recipient's encrypted packet; this server never has it. Like
+ * every relish_connections collection, only this server reads or writes it.
+ */
+const photoDoc = (passageId: string, photoId: string) =>
+  `${root}_photos/${passageId}_${photoId}`;
+const uuid = /^[a-f0-9-]{36}$/;
+/** The photo ids a send names: none, or up to PHOTO_LIMIT distinct ids. */
+export function sentPhotoIds(value: unknown): string[] | null {
+  if (value === undefined) return [];
+  if (
+    !Array.isArray(value) ||
+    value.length > PHOTO_LIMIT ||
+    new Set(value).size !== value.length ||
+    !value.every((p) => typeof p === "string" && uuid.test(p))
+  )
+    return null;
+  return value;
+}
+/** Once nobody is still deciding, a passage's photos leave the relay. */
+export const photosDone = (receipts: Record<string, string>) =>
+  Object.values(receipts).every((r) => r !== "pending");
+const DAY = 86_400_000;
+/** A send that never went keeps its relay photos this long, for a retry. */
+export const UNSENT_PHOTO_DAYS = 14;
+/** However long someone takes to decide, relay photos go after this. */
+export const RELAY_PHOTO_DAYS = 60;
+/**
+ * Which of a sender's relay photos to remove: those of a send that never
+ * went (after UNSENT_PHOTO_DAYS), of one withdrawn or answered by everyone
+ * (whatever was left), and any older than RELAY_PHOTO_DAYS.
+ */
+export function expiredRelayPhotos(
+  photos: { id: string; passageId: string; createdAt: string }[],
+  passages: Map<string, { revoked?: boolean; receipts?: Record<string, string> } | undefined>,
+  now = Date.now(),
+): string[] {
+  return photos
+    .filter((p) => {
+      const age = now - (Date.parse(p.createdAt) || 0);
+      const passage = passages.get(p.passageId);
+      if (age > RELAY_PHOTO_DAYS * DAY) return true;
+      if (!passage) return age > UNSENT_PHOTO_DAYS * DAY;
+      return !!passage.revoked || photosDone(passage.receipts || {});
+    })
+    .map((p) => p.id);
+}
+/** The relay's cleanup reads a sender's photos this many at a time, at most this many pages a run. */
+export const RELAY_PAGE = 100;
+export const RELAY_PAGES = 10;
+/**
+ * Pages through a sender's relay photos in document-id order from `start`,
+ * handing each page on, for at most `pages` pages. Returns where to pick up
+ * next run, or null once it reached the end (the next run starts over), so
+ * every photo is reached over successive runs however many there are.
+ */
+export async function pageThrough<T extends { id: string }>(
+  start: string | null,
+  page: (after: string | null, size: number) => Promise<T[]>,
+  handle: (docs: T[]) => Promise<void>,
+  pages = RELAY_PAGES,
+  size = RELAY_PAGE,
+): Promise<string | null> {
+  let after = start;
+  for (let i = 0; i < pages; i++) {
+    const docs = await page(after, size);
+    if (docs.length) await handle(docs);
+    if (docs.length < size) return null;
+    after = docs.at(-1)!.id;
+  }
+  return after;
+}
+/**
+ * The relay's cleanup for one sender, at most once a day from their list
+ * (the same request that reads their passages). Bounded, and best effort.
+ * The query is an equality on `sender` ordered by document id, which the
+ * automatic single-field index serves: no composite index.
+ */
+async function collectRelayPhotos(uid: string, start: string | null): Promise<string | null> {
+  const { db } = services();
+  return pageThrough(
+    start,
+    async (after, size) => {
+      let query = db
+        .collection(`${root}_photos`)
+        .where("sender", "==", uid)
+        .orderBy(FieldPath.documentId())
+        .limit(size);
+      if (after) query = query.startAfter(after);
+      return (await query.get()).docs;
+    },
+    async (mine) => {
+      const ids = [...new Set(mine.map((d) => d.data().passageId as string))];
+      const passages = await db.getAll(...ids.map((p) => db.doc(`${root}_passages/${p}`)));
+      const byId = new Map(passages.map((p) => [p.id, p.exists ? p.data() : undefined]));
+      const gone = new Set(
+        expiredRelayPhotos(
+          mine.map((d) => ({ id: d.id, passageId: d.data().passageId, createdAt: d.data().createdAt })),
+          byId,
+        ),
+      );
+      if (!gone.size) return;
+      const batch = db.batch();
+      mine.filter((d) => gone.has(d.id)).forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    },
+  );
+}
 export async function connectionAction(
   uid: string,
   data: Record<string, unknown>,
@@ -44,7 +155,7 @@ export async function connectionAction(
     );
   if (typeof action !== "string") fail("Choose an action.");
   // Durable quotas protect reads, invitation guessing, and writes across instances.
-  await db.runTransaction(async (tx) => {
+  const sweep = await db.runTransaction(async (tx) => {
     const ref = db.doc(`${root}_usage/${hash(uid)}`),
       snap = await tx.get(ref),
       old = snap.data();
@@ -53,16 +164,34 @@ export async function connectionAction(
     const count = old?.minute === minute ? old.count : 0,
       daily = old?.day === day ? old.daily : 0;
     const sends = old?.day === day ? old.sends : 0;
-    if (count >= 60 || daily >= 2000 || (action === "send" && sends >= 40))
+    const photos = old?.day === day ? old.photos || 0 : 0;
+    if (
+      count >= 60 ||
+      daily >= 2000 ||
+      (action === "send" && sends >= 40) ||
+      (action === "photo" && photos >= 160)
+    )
       throw new AIError("A little breathing room. Please try later.", 429, 60);
+    // The relay's daily cleanup rides on the first list of the day.
+    const sweep = action === "list" && old?.swept !== day;
     tx.set(ref, {
       minute,
       day,
       count: count + 1,
       daily: daily + 1,
       sends: sends + (action === "send" ? 1 : 0),
+      photos: photos + (action === "photo" ? 1 : 0),
+      swept: sweep ? day : old?.swept ?? null,
+      relayCursor: old?.relayCursor ?? null,
     });
+    return sweep ? { cursor: (old?.relayCursor as string | null | undefined) ?? null } : null;
   });
+  if (sweep)
+    await collectRelayPhotos(uid, sweep.cursor)
+      .then((relayCursor) =>
+        db.doc(`${root}_usage/${hash(uid)}`).set({ relayCursor }, { merge: true }),
+      )
+      .catch(() => {});
   if (action === "list") {
     const profile = (await profileRef.get()).data();
     if (!profile) return { profile: null, circle: null, deliveries: [] };
@@ -280,10 +409,49 @@ export async function connectionAction(
       tx.update(circleRef, { ownerId: data.uid, inviteHash: null });
       return { ok: true };
     }
+    if (action === "photo") {
+      // Uploaded before its passage is sent, by whoever is sending it.
+      const passageId = id(data.id),
+        photo = data.photo;
+      if (!isEncryptedPhoto(photo) || Object.keys(photo).length !== 3)
+        fail("This photo could not be stored safely.");
+      const ref = db.doc(photoDoc(passageId, photo.id));
+      const [passage, existing] = await tx.getAll(
+        db.doc(`${root}_passages/${passageId}`),
+        ref,
+      );
+      if (passage.exists) fail("This passage was already sent.", 409);
+      if (existing.exists && existing.data()?.sender !== uid)
+        fail("This photo already exists.", 409);
+      tx.set(ref, {
+        passageId,
+        photoId: photo.id,
+        sender: uid,
+        circleId,
+        photo: { id: photo.id, iv: photo.iv, ciphertext: photo.ciphertext },
+        createdAt: new Date().toISOString(),
+      });
+      return { ok: true };
+    }
+    if (action === "photo-get") {
+      const passageId = id(data.id),
+        photoId = typeof data.photo === "string" && uuid.test(data.photo) ? data.photo : "";
+      const p = (await tx.get(db.doc(`${root}_passages/${passageId}`))).data();
+      if (!p || p.circleId !== circleId || p.revoked || !photoId || !(p.photoIds || []).includes(photoId))
+        fail("This photo is no longer available.", 404);
+      if (p.sender !== uid && !(p.recipients.includes(uid) && p.receipts[uid] === "pending"))
+        fail("This photo wasn’t sent to your journal.", 403);
+      const kept = (await tx.get(db.doc(photoDoc(passageId, photoId)))).data();
+      if (!kept || kept.sender !== p.sender || !isEncryptedPhoto(kept.photo))
+        fail("This photo is no longer available.", 404);
+      return { photo: kept.photo };
+    }
     if (action === "send") {
       const passageId = id(data.id),
         recipients = data.recipients,
-        packets = data.packets;
+        packets = data.packets,
+        photoIds = sentPhotoIds(data.photos);
+      if (!photoIds) fail("Send up to four photos with a passage.");
       if (
         !Array.isArray(recipients) ||
         recipients.length < 1 ||
@@ -320,6 +488,9 @@ export async function connectionAction(
       });
       const ref = db.doc(`${root}_passages/${passageId}`),
         previous = await tx.get(ref);
+      const uploaded = photoIds.length
+        ? await tx.getAll(...photoIds.map((p) => db.doc(photoDoc(passageId, p))))
+        : [];
       if (previous.exists) {
         const old = previous.data()!;
         if (
@@ -331,6 +502,8 @@ export async function connectionAction(
           fail("This passage already exists.", 409);
         return { ok: true };
       }
+      if (uploaded.some((d) => d.data()?.sender !== uid || d.data()?.passageId !== passageId))
+        fail(PHOTOS_MISSING, 409);
       const createdAt = new Date().toISOString();
       tx.create(ref, {
         id: passageId,
@@ -343,6 +516,7 @@ export async function connectionAction(
         createdAt,
         revoked: false,
         receipts: Object.fromEntries(recipients.map((u) => [u, "pending"])),
+        ...(photoIds.length ? { photoIds } : {}),
       });
       for (const participant of [uid, ...recipients])
         tx.set(db.doc(`${root}_profiles/${participant}/inbox/${passageId}`), {
@@ -359,6 +533,7 @@ export async function connectionAction(
         if (p.sender !== uid)
           fail("Only the author can withdraw this invitation.", 403);
         tx.update(ref, { revoked: true, packets: {} });
+        for (const photo of p.photoIds || []) tx.delete(db.doc(photoDoc(p.id, photo)));
         return { ok: true };
       }
       if (!p.recipients.includes(uid))
@@ -375,6 +550,8 @@ export async function connectionAction(
         new FieldPath("packets", uid),
         FieldValue.delete(),
       );
+      if (photosDone({ ...p.receipts, [uid]: data.status as string }))
+        for (const photo of p.photoIds || []) tx.delete(db.doc(photoDoc(p.id, photo)));
       return { ok: true };
     }
     fail("That action is unavailable.");

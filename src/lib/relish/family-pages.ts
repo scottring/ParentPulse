@@ -1,5 +1,6 @@
 /** Pages in Our family book: their shape, checks and the changes made to them. */
 import type { Book } from "./model";
+import { isPhotos, type Photo } from "./photos";
 
 export const familyPageKinds = ["passage", "page", "game", "highlights"] as const;
 export type FamilyPageKind = (typeof familyPageKinds)[number];
@@ -25,6 +26,12 @@ export type FamilyPage = {
    * the writer's own journal can say "One line shared to Our family journal".
    */
   sourceId?: string;
+  /**
+   * Photos shared with a whole entry (2026-11-23): copies with their own ids,
+   * kept encrypted wherever this page is kept (the account's family book, or
+   * the journal it lives in). Never the private page's own photos.
+   */
+  photos?: Photo[];
   createdAt: string;
 };
 export const FAMILY_TEXT_LIMIT = 8000;
@@ -51,6 +58,7 @@ export function isFamilyPage(value: unknown): value is FamilyPage {
         p.mentions.length <= 30 &&
         p.mentions.every((n) => str(n, 80) && !!n.trim()))) &&
     optional(p.sourceId, 100) &&
+    (p.photos === undefined || isPhotos(p.photos)) &&
     typeof p.createdAt === "string" &&
     Number.isFinite(Date.parse(p.createdAt))
   );
@@ -94,5 +102,6 @@ export function newFamilyPage(
   for (const key of ["title", "caption", "activity", "sourceId"] as const)
     if (!page[key]?.trim()) delete page[key];
   if (!page.mentions?.length) delete page.mentions;
+  if (!page.photos?.length) delete page.photos;
   return page;
 }

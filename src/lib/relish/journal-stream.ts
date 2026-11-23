@@ -16,6 +16,7 @@ import type { JournalEntry } from "./journal";
 import type { FamilyPage } from "./family-pages";
 import type { Incoming } from "./partner-share";
 import type { Passage } from "./sharing";
+import type { Photo } from "./photos";
 import { resolveMentions, sameName } from "./mentions";
 
 export type StreamKind = "wrote" | "sent" | "mention" | "played" | "you-sent";
@@ -50,6 +51,8 @@ export type StreamItem = {
   game?: GameKind;
   /** The exercise a page came from (its tool id), for its painting. */
   toolId?: string;
+  /** Photos that went with it (sent, kept, or shared from this entry). */
+  photos?: Photo[];
 };
 
 /**
@@ -64,6 +67,8 @@ export type EntryShared = {
   sentTo: string[];
   whole?: boolean;
   pageTo?: string[];
+  /** Its photos went too (to Our family journal, or with a whole entry sent). */
+  photos?: boolean;
 };
 
 const time = (iso: string) => Date.parse(iso) || 0;
@@ -139,6 +144,7 @@ export function journalStream(
     const lines = pages.filter((p) => p.kind === "passage").length;
     const whole = pages.some((p) => p.kind === "page");
     const page = family || whole;
+    const photos = pages.some((p) => !!p.photos?.length) || sends.some((o) => !!o.photos?.length);
     if (!lines && !page && !sentTo.length) return undefined;
     return {
       lines,
@@ -146,6 +152,7 @@ export function journalStream(
       sentTo,
       ...(whole ? { whole } : {}),
       ...(pageTo.length ? { pageTo } : {}),
+      ...(photos ? { photos } : {}),
     };
   };
   const items: StreamItem[] = [];
@@ -177,6 +184,7 @@ export function journalStream(
         note: p?.note,
         caption: p?.caption,
         direct: !!p && isDirectPassage(p),
+        ...(p?.photos?.length ? { photos: p.photos } : {}),
       });
     } else if (page.kind === PLAY_RECORD || page.kind === "Made together") {
       const id = page.id.slice(page.id.indexOf(":") + 1);
@@ -187,6 +195,7 @@ export function journalStream(
       items.push({ key: page.id, kind: "played", date: page.date, title: page.title, text: page.text, people: page.people, page, game });
     } else {
       const entry = entryOf(page.journalId);
+      const where = shared(page.journalId, entry?.audience === "family");
       items.push({
         key: page.id,
         kind: "wrote",
@@ -195,8 +204,10 @@ export function journalStream(
         text: page.text,
         people: page.people,
         page,
-        shared: shared(page.journalId, entry?.audience === "family"),
+        shared: where,
         toolId: entry?.source?.toolId,
+        // The entry's own photos, shown on it once they've gone somewhere with it.
+        ...(where?.photos && page.photos.length ? { photos: page.photos } : {}),
       });
     }
   }
@@ -216,6 +227,7 @@ export function journalStream(
         note: offer.note,
         caption: offer.caption,
         direct: offer.audience === "direct",
+        ...(offer.photos?.length ? { photos: offer.photos } : {}),
       });
   const passedOn = new Set([...keptIds, ...incoming.map((o) => o.id)]);
   for (const p of familyPages) {
@@ -264,6 +276,7 @@ export function journalStream(
         note: o.note,
         caption: o.caption,
         toolId: entryOf(o.sourceId)?.source?.toolId,
+        ...(o.photos?.length ? { photos: o.photos } : {}),
       });
     }
   return items.toSorted((a, b) => time(b.date) - time(a.date) || a.key.localeCompare(b.key));

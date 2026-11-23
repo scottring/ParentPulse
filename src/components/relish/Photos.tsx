@@ -1,16 +1,22 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Camera, ImagePlus, X } from "lucide-react";
-import { PHOTO_LIMIT, type Photo, type PhotoAccess } from "@/lib/relish/photos";
+import { PHOTO_LIMIT, type Photo, type PhotoAccess, type PhotoLoader } from "@/lib/relish/photos";
 import { cameraEnv, usesNativeCamera } from "@/lib/relish/camera";
 import CameraSheet from "./CameraSheet";
 
 export function PhotoImage({
   photo,
   access,
+  thumb = false,
+  shared = false,
 }: {
   photo: Photo;
-  access: PhotoAccess;
+  access: PhotoLoader;
+  /** A small square, for a card or the share sheet: no words while it opens. */
+  thumb?: boolean;
+  /** A copy on a shared page: one that didn't come through says so plainly. */
+  shared?: boolean;
 }) {
   const [src, setSrc] = useState("");
   const [error, setError] = useState("");
@@ -31,19 +37,32 @@ export function PhotoImage({
       .catch(() => {
         if (alive)
           setError(
-            "This photo couldn’t be opened. Restore a backup with its photos.",
+            shared
+              ? "Photo unavailable. It didn’t come through with this page."
+              : "This photo couldn’t be opened. Restore a backup with its photos.",
           );
       });
     return () => {
       alive = false;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [photo.id]);
+  }, [photo.id, shared]);
   if (error)
-    return (
+    return thumb ? (
+      <span className="rp-thumb rp-thumb-missing" role="img" aria-label="Photo unavailable">
+        Photo unavailable
+      </span>
+    ) : (
       <p role="status" className="lb-fine">
         {error}
       </p>
+    );
+  if (thumb)
+    return src ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img className="rp-thumb" src={src} alt={photo.caption || "A photo shared with this page"} />
+    ) : (
+      <span className="rp-thumb rp-thumb-loading" role="img" aria-label="Opening photo" />
     );
   // Decrypted object URLs stay in memory and are revoked as soon as this view closes.
   return src ? (
@@ -61,20 +80,42 @@ export function PhotoImage({
 export function PhotoGallery({
   photos,
   access,
+  shared = false,
 }: {
   photos: Photo[];
-  access?: PhotoAccess;
+  access?: PhotoLoader;
+  /** Copies on a shared page (see PhotoImage). */
+  shared?: boolean;
 }) {
   if (!photos.length || !access) return null;
   return (
     <div className="rj-photos">
       {photos.map((photo) => (
         <figure key={photo.id}>
-          <PhotoImage photo={photo} access={access} />
+          <PhotoImage photo={photo} access={access} shared={shared} />
           {photo.caption && <figcaption>{photo.caption}</figcaption>}
         </figure>
       ))}
     </div>
+  );
+}
+/** A row of small photos on a card: what went with a shared page. */
+export function PhotoThumbs({
+  photos,
+  access,
+  label = "Photos with this page",
+}: {
+  photos?: Photo[];
+  access?: PhotoLoader;
+  label?: string;
+}) {
+  if (!photos?.length || !access) return null;
+  return (
+    <span className="rp-thumbs" role="group" aria-label={label}>
+      {photos.map((photo) => (
+        <PhotoImage key={photo.id} photo={photo} access={access} thumb shared />
+      ))}
+    </span>
   );
 }
 export function PhotoPicker({

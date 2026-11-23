@@ -4,6 +4,8 @@ import { Check, X } from "lucide-react";
 import type { FamilyAdd, SendFromEntry } from "./Journal";
 import type { Recipient } from "@/lib/relish/partner-share";
 import type { Book } from "@/lib/relish/model";
+import type { Photo, PhotoLoader } from "@/lib/relish/photos";
+import { PhotoThumbs } from "./Photos";
 import { resolveMentions, sameName } from "@/lib/relish/mentions";
 import Illustration from "./Illustration";
 import "./family.css";
@@ -14,8 +16,11 @@ const list = (names: string[]) =>
     ? names.join("")
     : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 
-/** What Send a line hands on: the words, and a note for the people chosen. */
-export type SendWords = { title: string; text: string; caption: string; note: string };
+/**
+ * What Send a line hands on: the words, a note for the people chosen, and
+ * the entry's photos when they go too (a whole entry, Include photos on).
+ */
+export type SendWords = { title: string; text: string; caption: string; note: string; photos?: Photo[] };
 /** Sends words to chosen people's journals (Sent to me). */
 export type SendLine = (to: Recipient[], words: SendWords) => Promise<void>;
 
@@ -48,8 +53,11 @@ export const SHARE_TEXT_LIMIT = 8000;
  * their own; they see Our family journal. Nobody is ever pinged.
  *
  * Share opens on the whole page (2026-11-23, Scott: "need to be able to
- * easily share entire entries"); Just a passage is the second choice. Photos
- * stay in the private page: Our family journal and sent lines carry words only.
+ * easily share entire entries"); Just a passage is the second choice.
+ *
+ * A whole page can take its photos along (2026-11-23, Scott: "go on all"):
+ * Include photos is on when the entry has photos, showing them. Copies go,
+ * encrypted for where they're going; a passage carries words only.
  */
 export default function ShareSheet({
   title,
@@ -66,7 +74,8 @@ export default function ShareSheet({
   mentioned = [],
   replyTo,
   initialKind = "page",
-  photos = 0,
+  photos = [],
+  photoAccess,
 }: {
   title: string;
   text: string;
@@ -89,8 +98,10 @@ export default function ShareSheet({
   replyTo?: Recipient;
   /** What it opens on: the whole page, unless a passage was asked for. */
   initialKind?: "passage" | "page";
-  /** How many photos the entry has; they stay in the private page. */
-  photos?: number;
+  /** The entry's photos: they can go with the whole page. */
+  photos?: Photo[];
+  /** Opens them, for the thumbnails. Without it they stay in the private page. */
+  photoAccess?: PhotoLoader;
 }) {
   const direct = !!onSend && recipients.length > 0;
   const compose = !!replyTo && direct;
@@ -107,6 +118,7 @@ export default function ShareSheet({
     return named ? [named.uid] : [];
   });
   const [toFamily, setToFamily] = useState(() => !compose && !!onAdd && chosen.length === 0);
+  const [includePhotos, setIncludePhotos] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const sheet = useRef<HTMLDivElement>(null);
@@ -149,8 +161,16 @@ export default function ShareSheet({
   const whole = text.trim();
   const long = whole.length > SHARE_TEXT_LIMIT;
   const words = compose || kind === "passage" ? passage.trim() : whole.slice(0, SHARE_TEXT_LIMIT);
+  // Photos can go with the whole page; a passage, and a line written back, are words only.
+  const canPhotos = kind === "page" && !compose && photos.length > 0 && !!photoAccess;
+  const withPhotos = canPhotos && includePhotos;
+  const going = withPhotos ? photos : [];
   // The photos note already says where they stay.
-  const pageFine = photos > 0 ? "Your tags stay private too." : "Your tags and photos stay private.";
+  const pageFine = withPhotos
+    ? "Your tags stay private."
+    : photos.length > 0
+      ? "Your tags stay private too."
+      : "Your tags and photos stay private.";
   const people = recipients.filter((r) => chosen.includes(r.uid));
   const names = people.map((r) => r.name);
   async function add() {
@@ -164,6 +184,7 @@ export default function ShareSheet({
           text: words,
           caption: compose ? "" : caption.trim(),
           note: note.trim(),
+          ...(going.length ? { photos: going } : {}),
         });
         return;
       }
@@ -171,7 +192,13 @@ export default function ShareSheet({
       await onAdd(
         kind === "passage"
           ? { kind: "passage", text: passage.trim(), caption: caption.trim() }
-          : { kind: "page", title, text: words, caption: caption.trim() },
+          : {
+              kind: "page",
+              title,
+              text: words,
+              caption: caption.trim(),
+              ...(going.length ? { photos: going } : {}),
+            },
       );
     } catch (e) {
       setError(
@@ -286,10 +313,30 @@ export default function ShareSheet({
               {words}
             </blockquote>
           )}
-          {kind === "page" && (photos > 0 || long) && (
+          {canPhotos && (
+            <div className={`rp-share-photos${includePhotos ? " is-on" : ""}`}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={includePhotos}
+                  disabled={busy}
+                  onChange={(e) => setIncludePhotos(e.target.checked)}
+                />
+                <span className="rs-box" aria-hidden="true">
+                  {includePhotos && <Check size={14} strokeWidth={3.2} />}
+                </span>
+                Include photos
+                <span className="rp-share-photos-count">
+                  {photos.length === 1 ? "1 photo" : `${photos.length} photos`}
+                </span>
+              </label>
+              <PhotoThumbs photos={photos} access={photoAccess} label="This entry’s photos" />
+            </div>
+          )}
+          {kind === "page" && ((photos.length > 0 && !withPhotos) || long) && (
             <p className="rp-share-hint rp-share-stays">
               {[
-                photos > 0 ? "Photos stay in your private page." : "",
+                photos.length > 0 && !withPhotos ? "Photos stay in your private page." : "",
                 long ? `It’s long, so the first ${SHARE_TEXT_LIMIT.toLocaleString("en-US")} characters are shared.` : "",
               ]
                 .filter(Boolean)
@@ -460,10 +507,13 @@ export function ShareEntrySheet({
   onSend,
   onConnect,
   onClose,
+  photoAccess,
 }: {
   book: Book;
   /** The private entry being shared (a JournalEntry id). */
   journalId: string;
+  /** Opens the entry's photos (the journal's own), so they can go too. */
+  photoAccess?: PhotoLoader;
   /** Everyone else in the family, by name. */
   others: string[];
   /** Who the words can @-mention, by name. */
@@ -493,7 +543,8 @@ export function ShareEntrySheet({
       owner={book.owner}
       others={others}
       caption={caption}
-      photos={entry.photos?.length || 0}
+      photos={entry.photos || []}
+      photoAccess={photoAccess}
       mentioned={[...mentioned, ...tagged]}
       recipients={onSend ? recipients : []}
       onConnect={onConnect}

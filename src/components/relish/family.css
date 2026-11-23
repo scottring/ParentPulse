@@ -924,3 +924,45 @@
 .lb-app.rp-shell .rp-share-card .rp-share-stays {
   margin: 0;
 }
+/* Include photos (2026-11-23): a whole entry's photos can go with it. */
+.lb-app.rp-shell .rp-share-photos {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(48, 56, 44, 0.16);
+}
+.lb-app.rp-shell .rp-share-photos label {
+  position: relative;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font: 600 16px/1.2 var(--sans);
+  cursor: pointer;
+}
+.lb-app.rp-shell .rp-share-photos input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.lb-app.rp-shell .rp-share-photos label:has(input:focus-visible) .rs-box {
+  outline: 3px solid var(--olive);
+  outline-offset: 2px;
+}
+.lb-app.rp-shell .rp-share-photos .rs-box {
+  background: #fffdf2;
+}
+.lb-app.rp-shell .rp-share-photos-count {
+  margin-left: auto;
+  color: var(--ui-ink-soft);
+  font: 400 14px/1.3 var(--sans);
+}
+.lb-app.rp-shell .rp-share-photos .rp-thumbs {
+  transition: opacity 0.15s ease;
+}
+.lb-app.rp-shell .rp-share-photos:not(.is-on) .rp-thumbs {
+  opacity: 0.42;
+}

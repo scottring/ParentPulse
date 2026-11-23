@@ -7,6 +7,8 @@ import {
   validSyncBlob,
   validManifest,
   manifestHashes,
+  clientMaySync,
+  RELISH_UPDATED,
   type SyncedEdition,
   type SyncManifest,
 } from "./book-sync";
@@ -19,6 +21,10 @@ const bad = (message = "This sync request could not be read.", status = 400) =>
 // recovery secret in a separate owner-scoped collection; local book passphrases
 // are never uploaded. This is account security, not zero-knowledge storage.
 export async function syncAction(uid: string, data: Record<string, unknown>) {
+  // An older Relish could save a book without its shared photos, or download
+  // newer ones in a loop: every action gets 426, before quota or storage
+  // (it's shown as is, and the device keeps everything it has).
+  if (!clientMaySync(data)) throw bad(RELISH_UPDATED, 426);
   const { db } = services();
   const root = db.doc(`relish_sync/${uid}`),
     books = root.collection("books"),
