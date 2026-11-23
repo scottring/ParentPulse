@@ -31,6 +31,8 @@ export type PassagePayload = {
   photoKey?: string;
 };
 export const NOTE_LIMIT = 1000;
+/** The relay's answer to a send whose photos aren't there (any more). */
+export const PHOTOS_MISSING = "This passage’s photos didn’t finish uploading. Try again.";
 export const CAPTION_LIMIT = 200;
 export type Passage = {
   id: string;
@@ -64,6 +66,13 @@ export type Outgoing = {
   sourceId?: string;
   /** Copies of the photos sent with it, kept in this journal. */
   photos?: Photo[];
+  /**
+   * Until it's sent: the photos uploaded to the relay for it, and the key
+   * they're encrypted with, so a retry sends them (or uploads them again
+   * from where they're kept) instead of going without. Gone once sent.
+   */
+  relayPhotos?: string[];
+  photoKey?: string;
 };
 export type Connections = {
   identity?: Identity;
@@ -368,6 +377,11 @@ export function isConnections(c: unknown): c is Connections {
                 o.recipientNames.every((n) => typeof n === "string" && n.length <= 60))) &&
             (o.sourceId === undefined ||
               (typeof o.sourceId === "string" && o.sourceId.length <= 100)) &&
+            (o.relayPhotos === undefined ||
+              (Array.isArray(o.relayPhotos) &&
+                o.relayPhotos.length <= 4 &&
+                o.relayPhotos.every((id) => typeof id === "string" && /^[a-f0-9-]{36}$/.test(id)))) &&
+            (o.photoKey === undefined || isPhotoKey(o.photoKey)) &&
             !!payloadExtras(o),
         ))) &&
     (!v.identity ||

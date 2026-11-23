@@ -372,7 +372,7 @@ it("a whole entry's photos go to Our family journal and show on the spine; takin
   await waitFor(() => expect(photos.discard).toHaveBeenCalledWith(page.photos!.map((p) => p.id)));
 });
 
-it("a kept entry someone sent with photos shows them on its card", async () => {
+it("a kept entry someone sent with photos shows them on its card, and one that didn't come through as unavailable", async () => {
   const { photos, kept } = withPhotos();
   const sent = { id: crypto.randomUUID(), width: 800, height: 600, caption: "Snow fort" };
   kept.set(sent.id, new Blob([new Uint8Array([0xff, 0xd8, 0xff, 2])], { type: "image/jpeg" }));
@@ -380,7 +380,7 @@ it("a kept entry someone sent with photos shows them on its card", async () => {
     ...sampleBook(),
     connections: {
       received: [
-        { id: "r-snow", title: "Snow day", text: "Leo built a fort.", from: "anna", fromName: "Anna", createdAt: "2026-11-23T08:00:00Z", acceptedAt: "2026-11-23T08:00:00Z", audience: "direct", photos: [sent] },
+        { id: "r-snow", title: "Snow day", text: "Leo built a fort.", from: "anna", fromName: "Anna", createdAt: "2026-11-23T08:00:00Z", acceptedAt: "2026-11-23T08:00:00Z", audience: "direct", photos: [sent, { ...sent, id: crypto.randomUUID() }] },
       ],
     },
   };
@@ -392,6 +392,7 @@ it("a kept entry someone sent with photos shows them on its card", async () => {
     .find((a) => a.textContent?.includes("Leo built a fort."))!;
   await waitFor(() => expect(within(card).getByRole("group", { name: "Photos with this page" })).toBeTruthy());
   expect(photos.load).toHaveBeenCalledWith(sent.id);
+  await waitFor(() => expect(within(card).getByRole("img", { name: "Photo unavailable" }).textContent).toBe("Photo unavailable"));
 });
 
 it("Share is on the page while reading it, and not in a child's journal", () => {

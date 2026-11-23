@@ -31,13 +31,18 @@ import {
   keepReceived,
   keyFingerprint,
   makeIdentity,
+  PHOTOS_MISSING,
   type Identity,
   type Packet,
 } from "../sharing";
-import { keepIncoming, loadCircle, openIncomingPhoto, sendToPartners } from "../partner-share";
+import { keepIncoming, loadCircle, openIncomingPhoto, sendOutgoing, sendToPartners } from "../partner-share";
 import { changeFamilyBook, loadFamilyPages } from "../family-book";
 import { isFamilyPage, newFamilyPage } from "../family-pages";
-import { photosDone, sentPhotoIds } from "../connections-server";
+import { expiredRelayPhotos, photosDone, sentPhotoIds } from "../connections-server";
+import { backupPhotos, restorePhotos } from "../photos";
+import { clientMaySave, RELISH_UPDATED, SYNC_CLIENT } from "../book-sync";
+import { syncRequest } from "../book-sync-client";
+import { syncAction } from "../book-sync-server";
 import { journalStream } from "../journal-stream";
 import { createVault } from "../vault";
 import { fakeLibrary } from "./family-remote";
@@ -118,9 +123,12 @@ async function relay() {
         return respond(200, { ok: true });
       }
       if (body.action === "send") {
-        if (failSend) return respond(503, { error: "The connection is unavailable." });
+        if (failSend) {
+          failSend = false;
+          return respond(503, { error: "The connection is unavailable." });
+        }
         for (const p of body.photos || [])
-          if (!photos.has(`${body.id}_${p}`)) return respond(409, { error: "photos missing" });
+          if (!photos.has(`${body.id}_${p}`)) return respond(409, { error: PHOTOS_MISSING });
         sent.set(body.id, body);
         return respond(200, { ok: true });
       }
@@ -308,16 +316,52 @@ describe("photos sent with a whole entry", () => {
     expect(r.alex.get().connections!.outgoing![0].photos).toBeUndefined();
   });
 
-  it("removes uploaded photos when the send doesn't go", async () => {
+  it("a send that doesn't go keeps its relay photos, and trying again sends them", async () => {
+    const r = await relay();
+    const source = photo();
+    const copies = await copyPhotos([source], journal(source));
+    const id = crypto.randomUUID();
+    r.failNextSend();
+    await expect(
+      sendToPartners(user("me"), r.alex.get(), r.alex.save, { id, title: "t", text: "w" }, { recipients: ["anna"], photos: copies, keepPhotoCopies: true }),
+    ).rejects.toThrow(/unavailable/);
+    expect(r.photos.size).toBe(1);
+    expect(r.calls.some((c) => c.action === "photo-discard")).toBe(false);
+    // The unsent record remembers which photos and their key (inside this encrypted journal).
+    const unsent = r.alex.get().connections!.outgoing![0];
+    expect(unsent).toMatchObject({ sent: false, relayPhotos: [copies[0].photo.id] });
+    expect(isPhotoKey(unsent.photoKey)).toBe(true);
+    expect(isConnections(r.alex.get().connections)).toBe(true);
+
+    // Connected journals' Send again: the passage goes with its photos.
+    await sendOutgoing(user("me"), r.alex.save, unsent);
+    expect(r.calls.filter((c) => c.action === "send").at(-1)!.photos).toEqual([copies[0].photo.id]);
+    const sent = r.alex.get().connections!.outgoing![0];
+    expect(sent.sent).toBe(true);
+    expect(sent.relayPhotos === undefined && sent.photoKey === undefined).toBe(true);
+    const offer = (await loadCircle(user("anna"), r.annaBook.get()))!.incoming[0];
+    expect(await bytes((await openIncomingPhoto(user("anna"), offer, copies[0].photo.id))!)).toEqual(await bytes(copies[0].blob));
+  });
+
+  it("if the relay photos expired, a retry uploads them again from where they're kept", async () => {
     const r = await relay();
     const source = photo();
     const copies = await copyPhotos([source], journal(source));
     r.failNextSend();
     await expect(
-      sendToPartners(user("me"), r.alex.get(), r.alex.save, { id: crypto.randomUUID(), title: "t", text: "w" }, { recipients: ["anna"], photos: copies }),
-    ).rejects.toThrow(/unavailable/);
-    expect(r.calls.at(-1)!.action).toBe("photo-discard");
-    expect(r.photos.size).toBe(0);
+      sendToPartners(user("me"), r.alex.get(), r.alex.save, { id: crypto.randomUUID(), title: "t", text: "w" }, { recipients: ["anna"], photos: copies, keepPhotoCopies: true }),
+    ).rejects.toThrow();
+    r.photos.clear();
+    const unsent = r.alex.get().connections!.outgoing![0];
+    // Nowhere to open them from: it says so instead of going without them.
+    await expect(sendOutgoing(user("me"), r.alex.save, unsent)).rejects.toThrow(/Share it again/);
+    expect(r.alex.get().connections!.outgoing![0].sent).toBe(false);
+    const mine = journal();
+    await mine.store(copies);
+    await sendOutgoing(user("me"), r.alex.save, unsent, mine);
+    expect(r.alex.get().connections!.outgoing![0].sent).toBe(true);
+    const offer = (await loadCircle(user("anna"), r.annaBook.get()))!.incoming[0];
+    expect(await bytes((await openIncomingPhoto(user("anna"), offer, copies[0].photo.id))!)).toEqual(await bytes(copies[0].blob));
   });
 
   it("Keep it brings the photos into the recipient's journal under its own key, and drops the send's key", async () => {
@@ -333,17 +377,21 @@ describe("photos sent with a whole entry", () => {
     await expect(openIncomingPhoto(user("anna"), offer, crypto.randomUUID())).rejects.toThrow(/isn’t part/);
 
     const annas = journal();
-    await keepIncoming(user("anna"), r.annaBook.get(), r.annaBook.save, offer, annas.store);
-    expect(await bytes(annas.kept.get(copies[0].photo.id)!)).toEqual(await bytes(copies[0].blob));
+    expect(await keepIncoming(user("anna"), r.annaBook.get(), r.annaBook.save, offer, annas.store)).toEqual({ missing: 0 });
     const kept = r.annaBook.get().connections!.received[0];
-    expect(kept.photos).toEqual([copies[0].photo]);
+    // Anna's copy has an id of its own, never the sender's.
+    expect(kept.photos).toHaveLength(1);
+    expect(kept.photos![0].id).not.toBe(copies[0].photo.id);
+    expect(kept.photos![0]).toMatchObject({ caption: "The fort", width: 800, height: 600 });
+    expect(annas.kept.has(copies[0].photo.id)).toBe(false);
+    expect(await bytes(annas.kept.get(kept.photos![0].id)!)).toEqual(await bytes(copies[0].blob));
     expect(JSON.stringify(kept)).not.toContain("photoKey");
     expect(isConnections(r.annaBook.get().connections)).toBe(true);
-    expect(photoIds(r.annaBook.get())).toEqual([copies[0].photo.id]);
+    expect(photoIds(r.annaBook.get())).toEqual([kept.photos![0].id]);
     expect(r.calls.at(-1)).toMatchObject({ action: "receipt", status: "accepted" });
   });
 
-  it("keeps the words when the relay no longer has a photo", async () => {
+  it("a photo the relay no longer has stays on the kept page as unavailable, and is counted", async () => {
     const r = await relay();
     const source = photo();
     const copies = await copyPhotos([source], journal(source));
@@ -351,10 +399,14 @@ describe("photos sent with a whole entry", () => {
     r.photos.clear();
     const offer = (await loadCircle(user("anna"), r.annaBook.get()))!.incoming[0];
     const store = vi.fn();
-    await keepIncoming(user("anna"), r.annaBook.get(), r.annaBook.save, offer, store);
+    expect(await keepIncoming(user("anna"), r.annaBook.get(), r.annaBook.save, offer, store)).toEqual({ missing: 1 });
     expect(store).not.toHaveBeenCalled();
-    expect(r.annaBook.get().connections!.received[0]).toMatchObject({ text: "words" });
-    expect(r.annaBook.get().connections!.received[0].photos).toBeUndefined();
+    const kept = r.annaBook.get().connections!.received[0];
+    expect(kept).toMatchObject({ text: "words" });
+    // Its place is kept (shown as "Photo unavailable"); no picture is.
+    expect(kept.photos).toHaveLength(1);
+    expect(kept.photos![0].id).not.toBe(copies[0].photo.id);
+    expect(isConnections(r.annaBook.get().connections)).toBe(true);
   });
 
   it("refuses a passage that claims photos without their key, or a key without photos", async () => {
@@ -381,6 +433,27 @@ describe("the relay's rules", () => {
     expect(sentPhotoIds(Array.from({ length: 5 }, () => crypto.randomUUID()))).toBeNull();
     expect(photosDone({ anna: "accepted", sam: "pending" })).toBe(false);
     expect(photosDone({ anna: "accepted", sam: "declined" })).toBe(true);
+  });
+
+  it("lets go of relay photos a send left behind, after a while", () => {
+    const now = Date.parse("2026-12-31T00:00:00Z");
+    const ago = (days: number) => new Date(now - days * 86_400_000).toISOString();
+    const passages = new Map<string, { revoked?: boolean; receipts?: Record<string, string> } | undefined>([
+      ["waiting", { receipts: { anna: "pending" } }],
+      ["answered", { receipts: { anna: "accepted" } }],
+      ["withdrawn", { revoked: true, receipts: { anna: "pending" } }],
+    ]);
+    const photos = [
+      { id: "unsent-new", passageId: "never-sent", createdAt: ago(3) },
+      { id: "unsent-old", passageId: "never-sent", createdAt: ago(15) },
+      { id: "waiting", passageId: "waiting", createdAt: ago(30) },
+      { id: "waiting-very-old", passageId: "waiting", createdAt: ago(61) },
+      { id: "answered", passageId: "answered", createdAt: ago(1) },
+      { id: "withdrawn", passageId: "withdrawn", createdAt: ago(1) },
+    ];
+    expect(expiredRelayPhotos(photos, passages, now).toSorted()).toEqual(
+      ["answered", "unsent-old", "waiting-very-old", "withdrawn"].toSorted(),
+    );
   });
 });
 
@@ -409,5 +482,72 @@ describe("where shared photos show", () => {
     expect(of("journal:j")?.shared).toMatchObject({ pageTo: ["Anna"], photos: true });
     // An entry whose photos stayed private shows none on its card.
     expect(of("journal:k")?.photos).toBeUndefined();
+  });
+});
+
+describe("an older Relish can't save over shared photos", () => {
+  it("sync saves need this version; reads don't", async () => {
+    expect(clientMaySave({ action: "commit" })).toBe(false);
+    expect(clientMaySave({ action: "put", client: 1 })).toBe(false);
+    expect(clientMaySave({ action: "remove" })).toBe(false);
+    expect(clientMaySave({ action: "commit", client: SYNC_CLIENT })).toBe(true);
+    expect(clientMaySave({ action: "list" })).toBe(true);
+    expect(clientMaySave({ action: "get" })).toBe(true);
+    // The server says so before touching anything (426, shown as is).
+    await expect(syncAction("uid", { action: "commit", id: crypto.randomUUID() })).rejects.toMatchObject({
+      message: RELISH_UPDATED,
+      status: 426,
+    });
+    await expect(syncAction("uid", { action: "put", blob: {} })).rejects.toMatchObject({ status: 426 });
+  });
+
+  it("this Relish says which version it is on every sync request", async () => {
+    const fetch = vi.fn(async () => ({ ok: true, json: async () => ({ books: [] }) }) as Response);
+    vi.stubGlobal("fetch", fetch);
+    await syncRequest(user("me"), { action: "list" });
+    const calls = fetch.mock.calls as unknown as [string, { body: string }][];
+    expect(JSON.parse(calls[0][1].body)).toEqual({ action: "list", client: SYNC_CLIENT });
+  });
+});
+
+describe("restoring a journal whose shared copies are missing", () => {
+  const entryPhoto = photo(),
+    sharedPhoto = photo();
+  const book = (): Book => ({
+    ...emptyBook("Alex"),
+    journal: [
+      { id: "j", title: "t", text: "w", style: "sky", status: "kept", revision: 1, createdAt: "2026-11-23T09:00:00Z", updatedAt: "2026-11-23T09:00:00Z", photos: [entryPhoto] },
+    ],
+    connections: {
+      received: [{ id: "r", title: "t", text: "w", from: "anna", fromName: "Anna", createdAt: "2026-11-23T09:00:00Z", acceptedAt: "2026-11-23T09:00:00Z", photos: [sharedPhoto] }],
+    },
+  });
+  it("restores without a shared copy (it shows as unavailable), but never without the journal's own photo", async () => {
+    const { key } = await createVault(emptyBook("A"), "fictional passphrase A");
+    const own = await encryptPhoto(entryPhoto.id, jpeg(1), key);
+    const shared = await encryptPhoto(sharedPhoto.id, jpeg(2), key);
+    const edition = crypto.randomUUID();
+    await restorePhotos(JSON.stringify({ media: [own] }), book(), key, edition);
+    expect(await bytes(await decryptPhoto(await getPhoto(edition, entryPhoto.id), key))).toEqual(await bytes(jpeg(1)));
+    await expect(getPhoto(edition, sharedPhoto.id)).rejects.toThrow(/missing/);
+    await expect(restorePhotos(JSON.stringify({ media: [shared] }), book(), key, crypto.randomUUID())).rejects.toThrow(
+      /missing photos/,
+    );
+    // Nothing unexpected, and no duplicates.
+    const stranger = await encryptPhoto(crypto.randomUUID(), jpeg(3), key);
+    await expect(restorePhotos(JSON.stringify({ media: [own, stranger] }), book(), key, crypto.randomUUID())).rejects.toThrow();
+    await expect(restorePhotos(JSON.stringify({ media: [own, own] }), book(), key, crypto.randomUUID())).rejects.toThrow();
+    // Both there: both restored.
+    const full = crypto.randomUUID();
+    await restorePhotos(JSON.stringify({ media: [own, shared] }), book(), key, full);
+    expect(await bytes(await decryptPhoto(await getPhoto(full, sharedPhoto.id), key))).toEqual(await bytes(jpeg(2)));
+  });
+
+  it("a backup leaves out a missing shared copy, and still refuses without the journal's own photo", async () => {
+    const { key } = await createVault(emptyBook("A"), "fictional passphrase A");
+    const edition = crypto.randomUUID();
+    await putPhoto(edition, await encryptPhoto(entryPhoto.id, jpeg(1), key));
+    expect((await backupPhotos(book(), edition)).map((p) => p.id)).toEqual([entryPhoto.id]);
+    await expect(backupPhotos(book(), crypto.randomUUID())).rejects.toThrow(/missing/);
   });
 });

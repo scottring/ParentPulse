@@ -17,8 +17,8 @@ import {
   type Outgoing,
 } from "@/lib/relish/sharing";
 import { bookPages } from "@/lib/relish/pages";
-import { openIncomingPhoto } from "@/lib/relish/partner-share";
-import type { PhotoAccess, PhotoCopy } from "@/lib/relish/photos";
+import { bringPhotosIn, sendOutgoing } from "@/lib/relish/partner-share";
+import type { PhotoAccess, PhotoLoader } from "@/lib/relish/photos";
 import { canUseOnline } from "@/lib/relish/profiles";
 type Save = (change: (b: Book) => Book) => Promise<void>;
 type Props = {
@@ -29,6 +29,8 @@ type Props = {
   initialPassage?: { title: string; text: string };
   /** Keeps a saved passage's photos in this journal. */
   photos?: PhotoAccess;
+  /** Opens photos of a page not sent yet, to upload them again on a retry. */
+  sentPhotos?: PhotoLoader;
 };
 /** What a recipient has done with a passage, in plain words. */
 const receiptWords: Record<string, string> = {
@@ -56,6 +58,7 @@ function AdultConnectedEditions({
   onClose,
   initialPassage,
   photos,
+  sentPhotos,
 }: Props) {
   const [user, setUser] = useState<User | null>(null),
     [snapshot, setSnapshot] = useState<ConnectionSnapshot | null>(null);
@@ -238,21 +241,9 @@ function AdultConnectedEditions({
     .filter((p) => !p.record && p.text.trim())
     .map((p) => ({ id: p.id, label: p.title, text: p.text }));
   async function sendPrepared(outgoing: Outgoing) {
-    await api({
-      action: "send",
-      id: outgoing.id,
-      recipients: outgoing.recipients,
-      packets: outgoing.packets,
-    });
-    await save((b) => ({
-      ...b,
-      connections: {
-        ...b.connections!,
-        outgoing: (b.connections?.outgoing || []).map((o) =>
-          o.id === outgoing.id ? { ...o, sent: true, packets: {} } : o,
-        ),
-      },
-    }));
+    if (!user) throw new Error("Sign in to send this.");
+    // Its photos go too: from the relay, or uploaded again if they expired.
+    await sendOutgoing(user, save, outgoing, sentPhotos);
     await refresh();
     setNotice(
       "Sent. Each person chooses whether to save it in their own journal.",
@@ -316,17 +307,16 @@ function AdultConnectedEditions({
       senderName: passage.delivery.senderName,
       createdAt: passage.delivery.createdAt,
     };
-    // Its photos are opened here and kept in this journal, as Keep it does.
-    const copies: PhotoCopy[] = [];
-    if (user && photos?.store)
-      for (const photo of offer.photos || []) {
-        const blob = await openIncomingPhoto(user, offer, photo.id);
-        if (blob) copies.push({ photo, blob });
-      }
-    if (copies.length) await photos!.store!(copies);
+    // Its photos are opened here and kept in this journal, as Keep it does;
+    // one that didn't come through shows as unavailable.
+    const brought =
+      user && photos?.store && offer.photos?.length
+        ? await bringPhotosIn(user, offer)
+        : { photos: [], copies: [], missing: 0 };
+    if (brought.copies.length) await photos!.store!(brought.copies);
     await save((b) => ({
       ...b,
-      connections: keepReceived(b.connections, offer, undefined, copies.map((c) => c.photo)),
+      connections: keepReceived(b.connections, offer, undefined, brought.photos),
     }));
     await api({
       action: "receipt",

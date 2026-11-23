@@ -620,18 +620,22 @@ export default function LivingBook({
   function keepOffer(item: StreamItem) {
     const offer = item.offer;
     if (!offer) return;
-    void act(
-      async () => {
-        if (sample)
-          await vault.save((b) => ({ ...b, connections: keepReceived(b.connections, offer) }));
-        else {
-          const auth = await import("@/lib/relish/ai-auth");
-          await keepIncoming(auth.currentAIUser(), book, vault.save, offer, vault.photos.store);
-        }
-        if (alive.current) setIncoming((list) => list.filter((o) => o.id !== offer.id));
-      },
-      sample ? "Kept in the sample for this visit." : "Kept in your journal.",
-    );
+    void act(async () => {
+      let lost = "";
+      if (sample)
+        await vault.save((b) => ({ ...b, connections: keepReceived(b.connections, offer) }));
+      else {
+        const auth = await import("@/lib/relish/ai-auth");
+        const { missing } = await keepIncoming(auth.currentAIUser(), book, vault.save, offer, vault.photos.store);
+        // Said plainly, not implied: the page shows "Photo unavailable" for it.
+        if (missing)
+          lost = missing === 1 ? " One photo didn’t come through." : ` ${missing} photos didn’t come through.`;
+      }
+      if (!alive.current) return;
+      setIncoming((list) => list.filter((o) => o.id !== offer.id));
+      setNotice((sample ? "Kept in the sample for this visit." : "Kept in your journal.") + lost);
+      sensory.play("place");
+    });
   }
   /** Set aside: not kept. The sender's copy says you passed; nobody is told anything else. */
   function setAside(item: StreamItem) {
@@ -2005,6 +2009,7 @@ export default function LivingBook({
           save={vault.save}
           backup={vault.backup}
           photos={vault.photos}
+          sentPhotos={sharedPhotos}
           initialPassage={offered}
           onClose={() => setModal(null)}
         />
