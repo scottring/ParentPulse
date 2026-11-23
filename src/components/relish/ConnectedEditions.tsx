@@ -17,6 +17,8 @@ import {
   type Outgoing,
 } from "@/lib/relish/sharing";
 import { bookPages } from "@/lib/relish/pages";
+import { openIncomingPhoto } from "@/lib/relish/partner-share";
+import type { PhotoAccess, PhotoCopy } from "@/lib/relish/photos";
 import { canUseOnline } from "@/lib/relish/profiles";
 type Save = (change: (b: Book) => Book) => Promise<void>;
 type Props = {
@@ -25,6 +27,8 @@ type Props = {
   backup: () => void;
   onClose: () => void;
   initialPassage?: { title: string; text: string };
+  /** Keeps a saved passage's photos in this journal. */
+  photos?: PhotoAccess;
 };
 /** What a recipient has done with a passage, in plain words. */
 const receiptWords: Record<string, string> = {
@@ -51,13 +55,8 @@ function AdultConnectedEditions({
   backup,
   onClose,
   initialPassage,
-}: {
-  book: Book;
-  save: Save;
-  backup: () => void;
-  onClose: () => void;
-  initialPassage?: { title: string; text: string };
-}) {
+  photos,
+}: Props) {
   const [user, setUser] = useState<User | null>(null),
     [snapshot, setSnapshot] = useState<ConnectionSnapshot | null>(null);
   const [email, setEmail] = useState(""),
@@ -310,15 +309,24 @@ function AdultConnectedEditions({
   async function accept() {
     if (!opened) return;
     const passage = opened;
+    const offer = {
+      ...passage,
+      id: passage.delivery.id,
+      sender: passage.delivery.sender,
+      senderName: passage.delivery.senderName,
+      createdAt: passage.delivery.createdAt,
+    };
+    // Its photos are opened here and kept in this journal, as Keep it does.
+    const copies: PhotoCopy[] = [];
+    if (user && photos?.store)
+      for (const photo of offer.photos || []) {
+        const blob = await openIncomingPhoto(user, offer, photo.id);
+        if (blob) copies.push({ photo, blob });
+      }
+    if (copies.length) await photos!.store!(copies);
     await save((b) => ({
       ...b,
-      connections: keepReceived(b.connections, {
-        ...passage,
-        id: passage.delivery.id,
-        sender: passage.delivery.sender,
-        senderName: passage.delivery.senderName,
-        createdAt: passage.delivery.createdAt,
-      }),
+      connections: keepReceived(b.connections, offer, undefined, copies.map((c) => c.photo)),
     }));
     await api({
       action: "receipt",

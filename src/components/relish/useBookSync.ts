@@ -14,6 +14,7 @@ import {
   syncRequest,
   uploadBook,
   downloadBook,
+  downloadPhoto,
 } from "@/lib/relish/book-sync-client";
 import type { useLocalBook } from "./useLocalBook";
 import { emptyBook } from "@/lib/relish/model";
@@ -151,7 +152,9 @@ export function useBookSync(vault: Vault) {
               signal,
             )
           ).secret,
-        download: (head) => downloadBook(account, head, signal),
+        download: (head) => downloadBook(account, head, signal, { media: false }),
+        // Opened later, as each photo is shown; closing the book cancels it.
+        photo: (entry) => downloadPhoto(account, entry, signal),
         upload: (snapshot, id, base, previous, secret) =>
           uploadBook(account, snapshot, id, base, signal, previous, secret),
       });

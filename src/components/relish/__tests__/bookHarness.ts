@@ -4,11 +4,16 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { emptyBook, type Book } from "@/lib/relish/model";
 import LivingBook from "../LivingBook";
 import type { FamilyPerson } from "../Home";
+import type { PhotoAccess } from "@/lib/relish/photos";
 
 /** Renders a book in LivingBook with an in-memory vault. Mock ../Sensory in the test. */
 export function openBook(
   book: Book = { ...emptyBook("Robin"), profile: { kind: "adult" } },
-  extra: { family?: FamilyPerson[]; mode?: "open" | "sample" } = {},
+  extra: {
+    family?: FamilyPerson[];
+    mode?: "open" | "sample";
+    photos?: PhotoAccess;
+  } = {},
 ) {
   let stored = book;
   const lock = vi.fn();
@@ -35,7 +40,7 @@ export function openBook(
         open: vi.fn(),
         lock,
         backup: vi.fn(),
-        photos: { add: vi.fn(), load: vi.fn() },
+        photos: extra.photos || { add: vi.fn(), load: vi.fn() },
         save: async (change) => {
           stored = typeof change === "function" ? change(stored) : change;
           setCurrent(stored);

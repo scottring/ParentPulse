@@ -37,6 +37,20 @@ export async function deleteOnlineAccount(uid: string) {
         503,
       );
   };
+  // Photos this account sent with passages (encrypted copies in the relay).
+  while (true) {
+    time();
+    const photos = await db
+      .collection("relish_connections_photos")
+      .where("sender", "==", uid)
+      .limit(100)
+      .select()
+      .get();
+    if (photos.empty) break;
+    const batch = db.batch();
+    photos.docs.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+  }
   const passages = db.collection("relish_connections_passages");
   while (true) {
     time();

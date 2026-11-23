@@ -9,9 +9,25 @@
  * Anna): it shows in their My journal under Sent to me and never in Our
  * family journal. Relish never notifies anyone; it's there next time they open
  * their journal.
+ *
+ * Since 2026-11-23 a whole entry can take its photos along. Each photo is
+ * encrypted once, on this device, with a new key made for that one send; the
+ * key travels only inside each chosen person's encrypted passage, so the relay
+ * keeps ciphertext it can't open. Whoever keeps the passage opens the photos
+ * and keeps them in their own journal under its own key; the relay's copy is
+ * removed once everyone has kept or set it aside, or the send is withdrawn.
  */
 import type { User } from "firebase/auth";
 import type { Book } from "./model";
+import {
+  decryptPhoto,
+  encryptPhoto,
+  importPhotoKey,
+  isEncryptedPhoto,
+  newPhotoKey,
+  PHOTO_LIMIT,
+  type PhotoCopy,
+} from "./photos";
 import {
   canonicalKey,
   decryptPassage,
@@ -41,7 +57,10 @@ async function api(user: User, data: Record<string, unknown>) {
     body: JSON.stringify(data),
   });
   const result = await res.json();
-  if (!res.ok) throw new Error(result.error || "The connection is unavailable.");
+  if (!res.ok)
+    throw Object.assign(new Error(result.error || "The connection is unavailable."), {
+      status: res.status,
+    });
   return result;
 }
 
@@ -77,6 +96,14 @@ export type SendOptions = {
   note?: string;
   caption?: string;
   sourceId?: string;
+  /** Photos to send with it: copies already given their own ids (photos.ts copyPhotos). */
+  photos?: PhotoCopy[];
+  /**
+   * The copies are kept in this journal too (a line sent from an entry), so
+   * the outgoing record lists them. A family page's copies live in Our family
+   * journal instead.
+   */
+  keepPhotoCopies?: boolean;
 };
 
 /**
@@ -104,13 +131,20 @@ export async function sendToPartners(
   const circle = snapshot.circle;
   const others = chooseRecipients(circle.members, user.uid, options.recipients);
   if (!others.length) return 0;
-  const payload: PassagePayload = {
+  const copies = (options.photos || []).slice(0, PHOTO_LIMIT);
+  const photoKey = copies.length ? await newPhotoKey() : null;
+  const sealed = photoKey
+    ? await Promise.all(copies.map((c) => encryptPhoto(c.photo.id, c.blob, photoKey.key)))
+    : [];
+  const photos = copies.map((c) => c.photo);
+  const words: PassagePayload = {
     title: passage.title.trim().slice(0, 120) || "A page from our family journal",
     text: passage.text.trim().slice(0, 8000),
     ...(options.note?.trim() ? { note: options.note.trim().slice(0, 1000) } : {}),
     ...(options.caption?.trim() ? { caption: options.caption.trim().slice(0, 200) } : {}),
     ...(options.audience ? { audience: options.audience } : {}),
   };
+  const payload: PassagePayload = photoKey ? { ...words, photos, photoKey: photoKey.raw } : words;
   const packets = Object.fromEntries(
     await Promise.all(
       others.map(async (m) => [
@@ -122,7 +156,8 @@ export async function sendToPartners(
   const outgoing: Outgoing = {
     id: passage.id,
     circleId: circle.id,
-    ...payload,
+    ...words,
+    ...(photos.length && options.keepPhotoCopies ? { photos } : {}),
     recipients: others.map((m) => m.uid),
     recipientNames: others.map((m) => m.name.slice(0, 60)),
     packets,
@@ -141,12 +176,22 @@ export async function sendToPartners(
       ],
     },
   }));
-  await api(user, {
-    action: "send",
-    id: outgoing.id,
-    recipients: outgoing.recipients,
-    packets: outgoing.packets,
-  });
+  try {
+    // The photos go first, so a passage is never there without them.
+    for (const photo of sealed) await api(user, { action: "photo", id: outgoing.id, photo });
+    await api(user, {
+      action: "send",
+      id: outgoing.id,
+      recipients: outgoing.recipients,
+      packets: outgoing.packets,
+      ...(sealed.length ? { photos: sealed.map((p) => p.id) } : {}),
+    });
+  } catch (e) {
+    // Photos uploaded for a send that didn't go are removed from the relay.
+    if (sealed.length)
+      await api(user, { action: "photo-discard", id: outgoing.id }).catch(() => {});
+    throw e;
+  }
   await save((b) => ({
     ...b,
     connections: {
@@ -207,10 +252,55 @@ export async function loadCircle(
   return { recipients, incoming };
 }
 
-/** Keep it: saves the passage in this journal, then tells the sender's copy it was kept. */
-export async function keepIncoming(user: User | null, book: Book, save: Save, offer: Incoming) {
+/**
+ * One photo of a passage waiting to be kept, opened on this device with the
+ * key inside the passage. Null when the relay no longer has it (404).
+ */
+export async function openIncomingPhoto(
+  user: User,
+  offer: Pick<Incoming, "id" | "photos" | "photoKey">,
+  photoId: string,
+): Promise<Blob | null> {
+  if (!offer.photoKey || !offer.photos?.some((p) => p.id === photoId))
+    throw new Error("This photo isn’t part of the passage.");
+  let result: { photo?: unknown };
+  try {
+    result = await api(user, { action: "photo-get", id: offer.id, photo: photoId });
+  } catch (e) {
+    if ((e as { status?: number }).status === 404) return null;
+    throw e;
+  }
+  if (!isEncryptedPhoto(result.photo) || result.photo.id !== photoId)
+    throw new Error("This photo could not be read safely.");
+  return decryptPhoto(result.photo, await importPhotoKey(offer.photoKey));
+}
+
+/**
+ * Keep it: saves the passage in this journal, then tells the sender's copy it
+ * was kept. Its photos are opened first and kept in this journal under its
+ * own key (`store`); one the relay no longer has is left out.
+ */
+export async function keepIncoming(
+  user: User | null,
+  book: Book,
+  save: Save,
+  offer: Incoming,
+  store?: (copies: PhotoCopy[]) => Promise<void>,
+) {
   if (!connectedIdentity(user, book) || !user) throw new Error("Sign in to keep this passage.");
-  await save((b) => ({ ...b, connections: keepReceived(b.connections, offer) }));
+  const copies: PhotoCopy[] = [];
+  for (const photo of offer.photos || []) {
+    const blob = await openIncomingPhoto(user, offer, photo.id);
+    if (blob) copies.push({ photo, blob });
+  }
+  if (copies.length) {
+    if (!store) throw new Error("This journal can’t keep photos. Unlock it and try again.");
+    await store(copies);
+  }
+  await save((b) => ({
+    ...b,
+    connections: keepReceived(b.connections, offer, undefined, copies.map((c) => c.photo)),
+  }));
   await api(user, { action: "receipt", id: offer.id, status: "accepted" });
 }
 

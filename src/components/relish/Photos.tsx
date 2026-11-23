@@ -1,16 +1,19 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Camera, ImagePlus, X } from "lucide-react";
-import { PHOTO_LIMIT, type Photo, type PhotoAccess } from "@/lib/relish/photos";
+import { PHOTO_LIMIT, type Photo, type PhotoAccess, type PhotoLoader } from "@/lib/relish/photos";
 import { cameraEnv, usesNativeCamera } from "@/lib/relish/camera";
 import CameraSheet from "./CameraSheet";
 
 export function PhotoImage({
   photo,
   access,
+  thumb = false,
 }: {
   photo: Photo;
-  access: PhotoAccess;
+  access: PhotoLoader;
+  /** A small square, for a card or the share sheet: no words while it opens. */
+  thumb?: boolean;
 }) {
   const [src, setSrc] = useState("");
   const [error, setError] = useState("");
@@ -40,10 +43,19 @@ export function PhotoImage({
     };
   }, [photo.id]);
   if (error)
-    return (
+    return thumb ? (
+      <span className="rp-thumb rp-thumb-missing" role="img" aria-label="A photo that couldn’t be opened" />
+    ) : (
       <p role="status" className="lb-fine">
         {error}
       </p>
+    );
+  if (thumb)
+    return src ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img className="rp-thumb" src={src} alt={photo.caption || "A photo shared with this page"} />
+    ) : (
+      <span className="rp-thumb rp-thumb-loading" role="img" aria-label="Opening photo" />
     );
   // Decrypted object URLs stay in memory and are revoked as soon as this view closes.
   return src ? (
@@ -63,7 +75,7 @@ export function PhotoGallery({
   access,
 }: {
   photos: Photo[];
-  access?: PhotoAccess;
+  access?: PhotoLoader;
 }) {
   if (!photos.length || !access) return null;
   return (
@@ -75,6 +87,25 @@ export function PhotoGallery({
         </figure>
       ))}
     </div>
+  );
+}
+/** A row of small photos on a card: what went with a shared page. */
+export function PhotoThumbs({
+  photos,
+  access,
+  label = "Photos with this page",
+}: {
+  photos?: Photo[];
+  access?: PhotoLoader;
+  label?: string;
+}) {
+  if (!photos?.length || !access) return null;
+  return (
+    <span className="rp-thumbs" role="group" aria-label={label}>
+      {photos.map((photo) => (
+        <PhotoImage key={photo.id} photo={photo} access={access} thumb />
+      ))}
+    </span>
   );
 }
 export function PhotoPicker({

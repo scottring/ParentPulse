@@ -27,6 +27,12 @@ export type EncryptedSnapshot = {
   envelope: Envelope;
   media: EncryptedPhoto[];
   label: string;
+  /**
+   * Photos already in this edition's current revision, carried into the next
+   * one by id and hash without downloading or uploading them again (Our
+   * family book). The server checks each is still there.
+   */
+  keep?: SyncManifest["photos"];
 };
 export const SYNC_CHUNK = 450_000;
 export const isSyncId = (v: unknown): v is string =>

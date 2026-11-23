@@ -281,6 +281,119 @@ it("Share on a private entry's card adds the whole entry to Our family journal, 
   ]);
 });
 
+/** The sample, with two photos on the blanket-fort entry, kept in memory. */
+function withPhotos() {
+  const book = sampleBook();
+  const fort = [
+    { id: crypto.randomUUID(), width: 800, height: 600, caption: "The spaceship" },
+    { id: crypto.randomUUID(), width: 600, height: 800, caption: "" },
+  ];
+  book.journal = book.journal!.map((e) => (e.id === "sample-story" ? { ...e, photos: fort } : e));
+  const kept = new Map<string, Blob>(
+    fort.map((p) => [p.id, new Blob([new Uint8Array([0xff, 0xd8, 0xff, 1])], { type: "image/jpeg" })]),
+  );
+  const photos = {
+    add: vi.fn(),
+    load: vi.fn(async (id: string) => {
+      const b = kept.get(id);
+      if (!b) throw new Error("missing");
+      return b;
+    }),
+    store: vi.fn(async (copies: { photo: { id: string }; blob: Blob }[]) => {
+      copies.forEach((c) => kept.set(c.photo.id, c.blob));
+    }),
+    discard: vi.fn(async () => {}),
+  };
+  return { book, fort, kept, photos };
+}
+
+it("a whole entry's photos go with it to Anna by default, as copies, and show on its card", async () => {
+  const { book, fort, kept, photos } = withPhotos();
+  const app = openBook(book, { mode: "sample", photos });
+  myJournal();
+  const card = () => stream().getByRole("button", { name: /You wrote.*The blanket-fort expedition/ });
+  fireEvent.click(within(card().closest("li")!).getByRole("button", { name: "Share" }));
+  const sheet = screen.getByRole("dialog", { name: "Send this entry" });
+  const include = within(sheet).getByRole("checkbox", { name: /Include photos/ }) as HTMLInputElement;
+  expect(include.checked).toBe(true);
+  expect(within(sheet).getByRole("group", { name: "This entry’s photos" })).toBeTruthy();
+  expect(within(sheet).getByText("2 photos")).toBeTruthy();
+  expect(within(sheet).queryByText(/Photos stay in your private page/)).toBeNull();
+  fireEvent.click(within(sheet).getByRole("button", { name: "Send the whole entry to Anna" }));
+  await waitFor(() => expect(app.stored().connections?.outgoing).toHaveLength(2));
+  const sent = app.stored().connections!.outgoing!.at(-1)!;
+  // Copies with their own ids, the same pictures, kept in this journal.
+  expect(sent.photos).toHaveLength(2);
+  expect(sent.photos!.map((p) => p.id)).not.toContain(fort[0].id);
+  expect(sent.photos![0]).toMatchObject({ caption: "The spaceship", width: 800 });
+  expect(photos.store).toHaveBeenCalledTimes(1);
+  expect(kept.has(sent.photos![0].id)).toBe(true);
+  // The entry, now a You and Anna branch, shows the photos that went.
+  await waitFor(() => expect(within(card()).getByRole("group", { name: "Photos with this page" })).toBeTruthy());
+});
+
+it("Include photos can be turned off: the family page gets the words only", async () => {
+  const { book, photos } = withPhotos();
+  const app = openBook(book, { mode: "sample", photos });
+  myJournal();
+  const card = stream().getByRole("button", { name: /You wrote.*The blanket-fort expedition/ });
+  fireEvent.click(within(card.closest("li")!).getByRole("button", { name: "Share" }));
+  const sheet = screen.getByRole("dialog", { name: "Send this entry" });
+  fireEvent.click(within(sheet).getByRole("checkbox", { name: /Everyone · Our family journal/ }));
+  fireEvent.click(within(sheet).getByRole("checkbox", { name: /Include photos/ }));
+  expect(within(sheet).getByText(/Photos stay in your private page/)).toBeTruthy();
+  // A passage never carries photos.
+  fireEvent.click(within(sheet).getByRole("button", { name: "Just a passage" }));
+  expect(within(sheet).queryByRole("checkbox", { name: /Include photos/ })).toBeNull();
+  fireEvent.click(within(sheet).getByRole("button", { name: "Whole page" }));
+  fireEvent.click(within(sheet).getByRole("button", { name: "Add the whole entry to our family journal" }));
+  await waitFor(() => expect(app.stored().familyPages).toHaveLength(7));
+  expect(app.stored().familyPages!.at(-1)!.photos).toBeUndefined();
+  expect(photos.store).not.toHaveBeenCalled();
+});
+
+it("a whole entry's photos go to Our family journal and show on the spine; taking it out lets them go", async () => {
+  const { book, photos } = withPhotos();
+  const app = openBook(book, { mode: "sample", photos });
+  myJournal();
+  const card = stream().getByRole("button", { name: /You wrote.*The blanket-fort expedition/ });
+  fireEvent.click(within(card.closest("li")!).getByRole("button", { name: "Share" }));
+  const sheet = screen.getByRole("dialog", { name: "Send this entry" });
+  fireEvent.click(within(sheet).getByRole("checkbox", { name: /Everyone · Our family journal/ }));
+  fireEvent.click(within(sheet).getByRole("button", { name: "Add the whole entry to our family journal" }));
+  await waitFor(() => expect(app.stored().familyPages).toHaveLength(7));
+  const page = app.stored().familyPages!.at(-1)!;
+  expect(page.photos).toHaveLength(2);
+  const spine = await waitFor(() => stream().getByRole("button", { name: /Shared from your private page/ }));
+  expect(within(spine).getByRole("group", { name: "Photos with this page" })).toBeTruthy();
+  fireEvent.click(spine);
+  fireEvent.click(screen.getByRole("button", { name: "Take out of the family journal" }));
+  await waitFor(() => expect(app.stored().familyPages).toHaveLength(6));
+  await waitFor(() => expect(photos.discard).toHaveBeenCalledWith(page.photos!.map((p) => p.id)));
+});
+
+it("a kept entry someone sent with photos shows them on its card", async () => {
+  const { photos, kept } = withPhotos();
+  const sent = { id: crypto.randomUUID(), width: 800, height: 600, caption: "Snow fort" };
+  kept.set(sent.id, new Blob([new Uint8Array([0xff, 0xd8, 0xff, 2])], { type: "image/jpeg" }));
+  const book: Book = {
+    ...sampleBook(),
+    connections: {
+      received: [
+        { id: "r-snow", title: "Snow day", text: "Leo built a fort.", from: "anna", fromName: "Anna", createdAt: "2026-11-23T08:00:00Z", acceptedAt: "2026-11-23T08:00:00Z", audience: "direct", photos: [sent] },
+      ],
+    },
+  };
+  openBook(book, { mode: "sample", photos });
+  myJournal();
+  // Anna's line waiting in the sample is the other one; this one is kept.
+  const card = stream()
+    .getAllByRole("article", { name: "Anna sent you this" })
+    .find((a) => a.textContent?.includes("Leo built a fort."))!;
+  await waitFor(() => expect(within(card).getByRole("group", { name: "Photos with this page" })).toBeTruthy());
+  expect(photos.load).toHaveBeenCalledWith(sent.id);
+});
+
 it("Share is on the page while reading it, and not in a child's journal", () => {
   openBook(sampleBook(), { mode: "sample" });
   myJournal();

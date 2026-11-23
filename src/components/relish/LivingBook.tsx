@@ -93,12 +93,14 @@ import { newFamilyPage, type FamilyPage } from "@/lib/relish/family-pages";
 import {
   keepIncoming,
   loadCircle,
+  openIncomingPhoto,
   sendToPartners,
   setAsideIncoming,
   type Incoming,
   type Recipient,
 } from "@/lib/relish/partner-share";
 import { keepReceived } from "@/lib/relish/sharing";
+import { copyPhotos, type PhotoLoader } from "@/lib/relish/photos";
 import type { StreamItem } from "@/lib/relish/journal-stream";
 import type { TimelineFilter } from "@/lib/relish/journal-timeline";
 import { sameName as sameMention } from "@/lib/relish/mentions";
@@ -289,6 +291,8 @@ export default function LivingBook({
     sample ? sampleRecipients() : [],
   );
   const [incoming, setIncoming] = useState<Incoming[]>(() => (sample ? sampleIncoming() : []));
+  // Photos of passages waiting to be kept, opened once each while this is open.
+  const incomingPhotos = useRef(new Map<string, Promise<Blob>>());
   const grownUp = audienceOf(book) === "adult";
   const circle = grownUp ? recipients : [];
   const waiting = grownUp ? incoming : [];
@@ -622,7 +626,7 @@ export default function LivingBook({
           await vault.save((b) => ({ ...b, connections: keepReceived(b.connections, offer) }));
         else {
           const auth = await import("@/lib/relish/ai-auth");
-          await keepIncoming(auth.currentAIUser(), book, vault.save, offer);
+          await keepIncoming(auth.currentAIUser(), book, vault.save, offer, vault.photos.store);
         }
         if (alive.current) setIncoming((list) => list.filter((o) => o.id !== offer.id));
       },
@@ -653,6 +657,11 @@ export default function LivingBook({
       ...(words.caption.trim() ? { caption: words.caption.trim().slice(0, 200) } : {}),
       ...(words.sourceId ? { sourceId: words.sourceId } : {}),
     };
+    // A whole entry's photos: copies, kept in this journal as what you sent,
+    // and encrypted on this device for the people chosen.
+    const copies = await copyPhotos(words.photos, vault.photos);
+    if (copies.length) await vault.photos.store!(copies);
+    const photos = copies.map((c) => c.photo);
     if (sample) {
       const createdAt = new Date().toISOString();
       await vault.save((b) => ({
@@ -674,6 +683,7 @@ export default function LivingBook({
               sent: true,
               audience: "direct",
               ...extras,
+              ...(photos.length ? { photos } : {}),
             },
           ],
         },
@@ -685,12 +695,24 @@ export default function LivingBook({
         book,
         vault.save,
         { id: crypto.randomUUID(), title, text: words.text },
-        { recipients: to.map((r) => r.uid), audience: "direct", ...extras },
-      );
-      if (!sent)
+        {
+          recipients: to.map((r) => r.uid),
+          audience: "direct",
+          ...extras,
+          ...(copies.length ? { photos: copies, keepPhotoCopies: true } : {}),
+        },
+      ).catch(async (e) => {
+        // Copies nothing kept refers to (the send never started) are let go;
+        // discard keeps any an unsent record still lists.
+        if (copies.length) await vault.photos.discard?.(photos.map((p) => p.id)).catch(() => {});
+        throw e;
+      });
+      if (!sent) {
+        if (copies.length) await vault.photos.discard?.(photos.map((p) => p.id)).catch(() => {});
         throw new Error(
           "This journal isn’t connected right now. Open Connected journals, then try again.",
         );
+      }
     }
     if (!alive.current) return;
     const whose = namesList(names.map((n) => `${n}’s`));
@@ -841,7 +863,35 @@ export default function LivingBook({
     ...book.people.filter(isChild).map((p) => p.name),
   ].filter((n, i, all) => all.indexOf(n) === i);
   // Our family journal: the account's, or kept inside this journal without one.
-  const familyAccess = familyBook ?? localFamily(book, vault.save);
+  const familyAccess = familyBook ?? localFamily(book, vault.save, vault.photos);
+  /**
+   * Photos on shared pages, from wherever each is kept: Our family journal
+   * (the account's family book), a passage still waiting to be kept (opened
+   * from the relay with the key inside it), else this journal itself.
+   */
+  const sharedPhotos: PhotoLoader = {
+    load: (id) => {
+      if (familyAccess.photos && familyAccess.kind === "account" && familyAccess.pages.some((p) => p.photos?.some((x) => x.id === id)))
+        return familyAccess.photos.load(id);
+      const offer = waiting.find((o) => o.photos?.some((p) => p.id === id));
+      if (offer && !sample) {
+        const key = `${offer.id}:${id}`;
+        const known = incomingPhotos.current.get(key);
+        if (known) return known;
+        const next = import("@/lib/relish/ai-auth").then(async (auth) => {
+          const user = auth.currentAIUser();
+          if (!user) throw new Error("Sign in to see this photo.");
+          const blob = await openIncomingPhoto(user, offer, id);
+          if (!blob) throw new Error("This photo is no longer available.");
+          return blob;
+        });
+        next.catch(() => incomingPhotos.current.delete(key));
+        incomingPhotos.current.set(key, next);
+        return next;
+      }
+      return vault.photos.load(id);
+    },
+  };
   // The sample's child (Leo) has his own id, so his pages read as his.
   const myBookId = sample
     ? book.profile?.kind === "child"
@@ -880,11 +930,21 @@ export default function LivingBook({
       !m.name.includes(" + ") &&
       all.findIndex((x) => sameMention(x.name, m.name)) === i,
   );
-  /** Adds a page to Our family journal, and sends it on to a connected partner. */
+  /**
+   * Adds a page to Our family journal, and sends it on to a connected
+   * partner. A whole entry's photos go as copies: encrypted with the family
+   * journal's key there, and for each partner on the way to them.
+   */
   async function addToFamily(data: Pick<FamilyPage, "kind" | "text"> &
-    Partial<Pick<FamilyPage, "title" | "caption" | "activity" | "mentions" | "sourceId">>) {
-    const page = newFamilyPage({ ...data, byName: book.owner, byBookId: myBookId });
-    await familyAccess.add(page);
+    Partial<Pick<FamilyPage, "title" | "caption" | "activity" | "mentions" | "sourceId" | "photos">>) {
+    const copies = await copyPhotos(data.photos, vault.photos);
+    const page = newFamilyPage({
+      ...data,
+      photos: copies.map((c) => c.photo),
+      byName: book.owner,
+      byBookId: myBookId,
+    });
+    await familyAccess.add(page, copies);
     if (!alive.current) return page.id;
     setNotice(sample ? "Kept in the sample for this visit." : "Added to Our family journal.");
     sensory.play("place");
@@ -896,7 +956,7 @@ export default function LivingBook({
           id: page.id,
           title: page.title || `From ${owner}’s family journal`,
           text: page.caption ? `${page.text}\n\n— ${page.caption}` : page.text,
-        }, { audience: "family" }),
+        }, { audience: "family", ...(copies.length ? { photos: copies } : {}) }),
       )
       .then((sent) => {
         if (sent && alive.current)
@@ -922,6 +982,7 @@ export default function LivingBook({
       others={members.map((m) => m.name)}
       mentionable={mentionable.map((m) => m.name)}
       recipients={circle}
+      photoAccess={vault.photos}
       onAdd={addToFamily}
       onSend={sendLine}
       onConnect={
@@ -1117,7 +1178,7 @@ export default function LivingBook({
           : view === "journal"
             ? {
                 title: "Writing",
-                text: "Drafts save as you write, even if you go somewhere else or lock Relish. A private page is only yours. A page in Our family journal is added there, whole, when you choose Add to our family journal. Share sends the whole page, or just the words you choose, to the family journal or to one person.",
+                text: "Drafts save as you write, even if you go somewhere else or lock Relish. A private page is only yours. A page in Our family journal is added there, whole, when you choose Add to our family journal. Share sends the whole page (with its photos, if you like), or just the words you choose, to the family journal or to one person.",
               }
             : {
                 title: "Our family journal",
@@ -1725,7 +1786,7 @@ export default function LivingBook({
             family={{
               access: familyAccess,
               members,
-              photos: vault.photos,
+              photos: sharedPhotos,
               onWrite: () => openJournal(undefined, false, false, "family"),
               onInvite: canInvite ? openInvite : undefined,
               onAddChild: !sample && online ? onAddChild : undefined,
@@ -1943,6 +2004,7 @@ export default function LivingBook({
           book={book}
           save={vault.save}
           backup={vault.backup}
+          photos={vault.photos}
           initialPassage={offered}
           onClose={() => setModal(null)}
         />

@@ -216,7 +216,7 @@ it("a passage added in Scott's book shows in Kaleb's Our family, and taking it o
   // The entry was saved to Scott's book first; only the passage went out.
   const scott = world.books["ed-scott"] as { journal: { text: string }[] };
   expect(scott.journal[0].text).toContain("Forty minutes");
-  const stored = await loadFamilyPages(library().remote);
+  const stored = (await loadFamilyPages(library().remote)).pages;
   expect(stored).toMatchObject([
     { kind: "passage", text: QUOTE, caption: "Kaleb", byName: "Scott", byBookId: "r-scott" },
   ]);
@@ -245,7 +245,7 @@ it("a passage added in Scott's book shows in Kaleb's Our family, and taking it o
   fireEvent.click(await screen.findByText(`“${QUOTE}”`, {}, { timeout: 15000 }));
   fireEvent.click(screen.getByRole("button", { name: "Take out of the family journal" }));
   await waitFor(() => expect(screen.queryByText(`“${QUOTE}”`)).toBeNull(), { timeout: 15000 });
-  await waitFor(async () => expect(await loadFamilyPages(library().remote)).toEqual([]), {
+  await waitFor(async () => expect((await loadFamilyPages(library().remote)).pages).toEqual([]), {
     timeout: 15000,
   });
   expect(

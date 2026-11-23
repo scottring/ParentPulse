@@ -10,7 +10,18 @@ export type EncryptedPhoto = { id: string; iv: string; ciphertext: string };
 export type PhotoAccess = {
   add: (file: File) => Promise<Photo>;
   load: (id: string) => Promise<Blob>;
+  /**
+   * Keeps already-prepared photos (JPEGs from `load`) in this journal under
+   * their own ids, encrypted with this journal's key: a shared copy's photos.
+   */
+  store?: (copies: PhotoCopy[]) => Promise<void>;
+  /** Forgets photos this journal no longer holds (a shared copy taken out). */
+  discard?: (ids: string[]) => Promise<void>;
 };
+/** Anything that can open a photo by id: a journal, Our family journal, a passage waiting. */
+export type PhotoLoader = Pick<PhotoAccess, "load">;
+/** A photo going somewhere else: its new id and details, and its (decrypted) JPEG. */
+export type PhotoCopy = { photo: Photo; blob: Blob };
 export const PHOTO_LIMIT = 4;
 export const PHOTO_BYTES = 350_000;
 export const BACKUP_BYTES = 120_000_000;
@@ -37,15 +48,56 @@ export function isPhotos(value: unknown): value is Photo[] {
     )
   );
 }
+/**
+ * Every photo this journal holds, so backups, sync and restores carry them:
+ * its pages and album, plus the copies on shared pages kept in it (Our family
+ * journal without an account, passages kept, and lines sent).
+ */
 export function photoIds(book: Book): string[] {
   return [
     ...new Set(
       [
         ...(book.journal || []).flatMap((e) => e.photos || []),
         ...(book.album || []).flatMap((e) => e.photos || []),
+        ...(book.familyPages || []).flatMap((p) => p.photos || []),
+        ...(book.connections?.received || []).flatMap((p) => p.photos || []),
+        ...(book.connections?.outgoing || []).flatMap((o) => o.photos || []),
       ].map((p) => p.id),
     ),
   ];
+}
+/**
+ * Copies of photos to send or share: each opened from where it is kept and
+ * given a new id, so the copy and the private page never share a photo.
+ * Only these chosen photos are opened, and at most PHOTO_LIMIT of them.
+ */
+export async function copyPhotos(
+  photos: Photo[] | undefined,
+  from: PhotoLoader,
+): Promise<PhotoCopy[]> {
+  const chosen = (photos || []).slice(0, PHOTO_LIMIT);
+  return Promise.all(
+    chosen.map(async (p) => {
+      const blob = await from.load(p.id);
+      if (blob.type !== "image/jpeg" || blob.size > PHOTO_BYTES)
+        throw new Error("A photo on this page couldn’t be shared.");
+      return { photo: { ...p, id: crypto.randomUUID() }, blob };
+    }),
+  );
+}
+/** A new key for one send's photos; it travels inside each person's encrypted passage. */
+export async function newPhotoKey(): Promise<{ key: CryptoKey; raw: string }> {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return { key: await importPhotoKey(b64(bytes)), raw: b64(bytes) };
+}
+export const isPhotoKey = (v: unknown): v is string =>
+  typeof v === "string" && /^[A-Za-z0-9+/]{43}=$/.test(v);
+export async function importPhotoKey(raw: string): Promise<CryptoKey> {
+  if (!isPhotoKey(raw)) throw new Error("This passage’s photos can’t be opened.");
+  return crypto.subtle.importKey("raw", un64(raw), "AES-GCM", false, [
+    "encrypt",
+    "decrypt",
+  ]);
 }
 export async function preparePhoto(
   file: File,
@@ -225,6 +277,14 @@ export async function getPhoto(
       "A photo is missing on this device. Restore a backup that includes its photos.",
     );
   return { id: photo.id, iv: photo.iv, ciphertext: photo.ciphertext };
+}
+export async function deletePhotos(edition: string, ids: string[]) {
+  if (!ids.length) return;
+  await transaction("readwrite", (store) => {
+    let last!: IDBRequest<undefined>;
+    for (const id of ids) last = store.delete([edition, id]);
+    return last;
+  });
 }
 export async function removePhotos(edition: string) {
   await transaction("readwrite", (store) =>

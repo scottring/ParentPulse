@@ -76,6 +76,7 @@ export async function uploadBook(
     parts.push(
       await put({ kind: "text", data: ciphertext.slice(i, i + SYNC_CHUNK) }),
     );
+  for (const kept of snapshot.keep || []) photos.push(kept);
   for (const photo of snapshot.media)
     photos.push({
       id: photo.id,
@@ -101,10 +102,35 @@ export async function uploadBook(
     )
   ).book;
 }
+/** One synced photo by its hash, checked against it (Our family book's photos, on demand). */
+export async function downloadPhoto(
+  user: User,
+  photo: SyncManifest["photos"][number],
+  signal?: AbortSignal,
+) {
+  const { blob } = await syncRequest<{ blob: SyncBlob }>(
+    user,
+    { action: "get", hash: photo.hash },
+    signal,
+  );
+  if (
+    !validSyncBlob(blob) ||
+    blob.kind !== "photo" ||
+    blob.data.id !== photo.id ||
+    (await hashSync(blob)) !== photo.hash
+  )
+    throw new Error("This photo is damaged.");
+  return blob.data;
+}
+/**
+ * A synced book's encrypted envelope, with its photos unless `media` is
+ * false (Our family book opens its photos one at a time, when shown).
+ */
 export async function downloadBook(
   user: User,
   head: SyncedEdition,
   signal: AbortSignal,
+  { media: withMedia = true }: { media?: boolean } = {},
 ): Promise<string> {
   const m = head.manifest;
   if (!validManifest(m)) throw new Error("This synced book could not be read.");
@@ -130,7 +156,7 @@ export async function downloadBook(
       "This book’s encrypted contents do not match its revision.",
     );
   const media = [];
-  for (const p of m.photos) {
+  if (withMedia) for (const p of m.photos) {
     const b = await get(p.hash);
     if (b.kind !== "photo" || b.data.id !== p.id)
       throw new Error("This photo is damaged.");

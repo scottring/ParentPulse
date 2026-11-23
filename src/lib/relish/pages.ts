@@ -174,6 +174,8 @@ export function bookPages(book: Book): BookPage[] {
         date: p.acceptedAt,
         style: "blush",
         from: p.fromName,
+        // Photos sent with a whole entry, kept in this journal.
+        photos: p.photos || [],
         // A line sent with a note and who said it (Send a line, 2026-11-22).
         sections: [
           { label: "Who said it", text: p.caption || "" },

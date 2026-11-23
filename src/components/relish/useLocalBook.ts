@@ -10,6 +10,8 @@ import {
   backupPhotos,
   restorePhotos,
   removePhotos,
+  deletePhotos,
+  PHOTO_BYTES,
   BACKUP_BYTES,
   type PhotoAccess,
 } from "@/lib/relish/photos";
@@ -307,6 +309,33 @@ export function useLocalBook() {
       const blob = await decryptPhoto(await getPhoto(edition, id), activeKey);
       if (token !== epoch.current) throw new Error("This journal was locked.");
       return blob;
+    },
+    // A shared copy's photos, kept here under this journal's key.
+    store: async (copies) => {
+      const token = epoch.current,
+        id = selected.current,
+        sample = mode === "sample",
+        activeKey = key.current;
+      if (!sample && !activeKey) throw new Error("Unlock your journal first.");
+      if (photoIds(currentBook.current).length + copies.length > 200)
+        throw new Error(
+          "This journal holds up to 200 photos. Share this page without its photos, or start another edition.",
+        );
+      for (const c of copies) {
+        if (c.blob.type !== "image/jpeg" || c.blob.size > PHOTO_BYTES)
+          throw new Error("A photo couldn’t be kept safely.");
+        if (token !== epoch.current) throw new Error("This journal was locked.");
+        if (sample) samplePhotos.current.set(c.photo.id, c.blob);
+        else await putPhoto(id, await encryptPhoto(c.photo.id, c.blob, activeKey!));
+      }
+      if (token !== epoch.current) throw new Error("This journal was locked.");
+    },
+    // Only photos nothing in this journal still shows.
+    discard: async (ids) => {
+      const still = new Set(photoIds(currentBook.current));
+      const gone = ids.filter((i) => !still.has(i));
+      if (mode === "sample") gone.forEach((i) => samplePhotos.current.delete(i));
+      else await deletePhotos(selected.current, gone);
     },
   };
   const backup = async (exportPassphrase?: string) => {

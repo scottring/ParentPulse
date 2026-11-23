@@ -1,3 +1,5 @@
+import { isPhotoKey, isPhotos, type Photo } from "./photos";
+
 export type PublicKey = { kty: "EC"; crv: "P-256"; x: string; y: string };
 export type Identity = {
   uid: string;
@@ -20,6 +22,13 @@ export type PassagePayload = {
   /** Under the words: who said them and where, e.g. "Leo, at the pool". */
   caption?: string;
   audience?: PassageAudience;
+  /**
+   * Photos sent with a whole entry: their details here, their pictures in
+   * the relay, encrypted with `photoKey` (see partner-share.ts).
+   */
+  photos?: Photo[];
+  /** The key to this send's photos, readable only inside this encrypted payload. */
+  photoKey?: string;
 };
 export const NOTE_LIMIT = 1000;
 export const CAPTION_LIMIT = 200;
@@ -34,6 +43,8 @@ export type Passage = {
   note?: string;
   caption?: string;
   audience?: PassageAudience;
+  /** Its photos, kept in this journal (re-encrypted with this journal's key). */
+  photos?: Photo[];
 };
 export type Outgoing = {
   id: string;
@@ -51,6 +62,8 @@ export type Outgoing = {
   caption?: string;
   /** The private entry it came from (its id), for "Sent to Anna" on that entry. */
   sourceId?: string;
+  /** Copies of the photos sent with it, kept in this journal. */
+  photos?: Photo[];
 };
 export type Connections = {
   identity?: Identity;
@@ -180,9 +193,15 @@ async function exchange(
     ["encrypt", "decrypt"],
   );
 }
-/** The optional parts of a payload, checked; undefined parts are left out. */
-function payloadExtras(p: Partial<PassagePayload>): Omit<PassagePayload, "title" | "text"> | null {
-  const out: Omit<PassagePayload, "title" | "text"> = {};
+/**
+ * The optional parts of a payload, checked; undefined parts are left out.
+ * Photo details are kept; the photo key is checked separately (photoKeyOf),
+ * since only the payload in transit carries one.
+ */
+function payloadExtras(
+  p: Partial<PassagePayload>,
+): Omit<PassagePayload, "title" | "text" | "photoKey"> | null {
+  const out: Omit<PassagePayload, "title" | "text" | "photoKey"> = {};
   if (p.note !== undefined) {
     if (typeof p.note !== "string" || p.note.length > NOTE_LIMIT) return null;
     if (p.note.trim()) out.note = p.note;
@@ -195,7 +214,18 @@ function payloadExtras(p: Partial<PassagePayload>): Omit<PassagePayload, "title"
     if (p.audience !== "direct" && p.audience !== "family") return null;
     out.audience = p.audience;
   }
+  if (p.photos !== undefined) {
+    if (!isPhotos(p.photos)) return null;
+    if (p.photos.length)
+      out.photos = p.photos.map((x) => ({ id: x.id, width: x.width, height: x.height, caption: x.caption }));
+  }
   return out;
+}
+/** A payload's photo key: required with photos, never without them. Null if it doesn't fit. */
+function photoKeyOf(p: Partial<PassagePayload>): { photoKey?: string } | null {
+  const has = !!p.photos?.length;
+  if (!has) return p.photoKey === undefined ? {} : null;
+  return isPhotoKey(p.photoKey) ? { photoKey: p.photoKey } : null;
 }
 export async function encryptPassage(
   text: PassagePayload,
@@ -208,6 +238,8 @@ export async function encryptPassage(
     throw new Error("Choose a passage of up to 8,000 characters.");
   const extras = payloadExtras(text);
   if (!extras) throw new Error("Keep the note under 1,000 characters.");
+  const photoKey = photoKeyOf(text);
+  if (!photoKey) throw new Error("This entry’s photos couldn’t be prepared.");
   const keyId = await keyFingerprint(to.publicKey);
   if (keyId !== to.keyId)
     throw new Error(
@@ -225,7 +257,7 @@ export async function encryptPassage(
   const cipher = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv, additionalData: aad as BufferSource },
     key,
-    enc.encode(JSON.stringify({ title: text.title, text: text.text, ...extras })),
+    enc.encode(JSON.stringify({ title: text.title, text: text.text, ...extras, ...photoKey })),
   );
   return {
     version: 1,
@@ -273,9 +305,11 @@ export async function decryptPassage(
   );
   const result = JSON.parse(new TextDecoder().decode(raw));
   const extras = result && typeof result === "object" ? payloadExtras(result) : null;
+  const photoKey = result && typeof result === "object" ? photoKeyOf(result) : null;
   if (
     !result ||
     !extras ||
+    !photoKey ||
     typeof result.title !== "string" ||
     result.title.length > 120 ||
     typeof result.text !== "string" ||
@@ -283,7 +317,7 @@ export async function decryptPassage(
     result.text.length > 8000
   )
     throw new Error("This passage could not be read safely.");
-  return { title: result.title, text: result.text, ...extras } as PassagePayload;
+  return { title: result.title, text: result.text, ...extras, ...photoKey } as PassagePayload;
 }
 export function isPacket(p: unknown): p is Packet {
   if (!p || typeof p !== "object") return false;
@@ -373,15 +407,20 @@ export type ReceivedOffer = Pick<Delivery, "id" | "sender" | "senderName" | "cre
 /**
  * Keep it: saves a received passage in this journal's connections, once. The
  * same change Connected journals makes when someone saves a passage.
+ *
+ * `photos` are the passage's photos once they are kept in this journal
+ * (partner-share.ts keepIncoming); without them only the words are kept.
  */
 export function keepReceived(
   connections: Connections | undefined,
   offer: ReceivedOffer,
   acceptedAt = new Date().toISOString(),
+  photos: Photo[] = [],
 ): Connections {
   const c = connections || { received: [] };
   if (c.received.some((p) => p.id === offer.id)) return c;
-  const extras = payloadExtras(offer) || {};
+  const { photos: _offered, ...extras } = payloadExtras(offer) || {};
+  void _offered;
   return {
     ...c,
     received: [
@@ -395,6 +434,7 @@ export function keepReceived(
         createdAt: offer.createdAt,
         acceptedAt,
         ...extras,
+        ...(photos.length ? { photos } : {}),
       },
     ],
   };
