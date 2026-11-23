@@ -354,7 +354,9 @@ export function FamilyReader({
             ))}
           </div>
         )}
-        {open.photos && <PhotoGallery photos={open.photos} access={photos} />}
+        {open.photos && (
+          <PhotoGallery photos={open.photos} access={photos} shared={!open.id.startsWith("album:")} />
+        )}
         <p className="rp-quiet">{open.note}</p>
         {open.removable && (
           <button

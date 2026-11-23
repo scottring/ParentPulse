@@ -335,7 +335,7 @@ export default function Journal({
           <div className="rj-prose">
             <MentionText text={page.text} />
           </div>
-          <PhotoGallery photos={page.photos} access={photos} />
+          <PhotoGallery photos={page.photos} access={photos} shared={page.kind === "Received passage"} />
           {page.sections.map((section, i) => (
             <section className="rj-page-section" key={`${i}:${section.label}`}>
               <p className="lb-kicker">{section.label}</p>

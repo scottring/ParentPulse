@@ -54,15 +54,36 @@ export function isPhotos(value: unknown): value is Photo[] {
  * journal without an account, passages kept, and lines sent).
  */
 export function photoIds(book: Book): string[] {
+  return [...new Set([...ownPhotoIds(book), ...sharedPhotoIds(book)])];
+}
+/** Photos on this journal's own pages and album: a backup must carry every one. */
+export function ownPhotoIds(book: Book): string[] {
   return [
     ...new Set(
       [
         ...(book.journal || []).flatMap((e) => e.photos || []),
         ...(book.album || []).flatMap((e) => e.photos || []),
+      ].map((p) => p.id),
+    ),
+  ];
+}
+/**
+ * Copies on shared pages kept in this journal. One can be missing (it didn't
+ * come through, or a device that didn't have it saved the journal): backups,
+ * sync and restores carry what's there, and the page shows "Photo
+ * unavailable" for the rest, instead of refusing the whole journal.
+ */
+export function sharedPhotoIds(book: Book): string[] {
+  const own = new Set(ownPhotoIds(book));
+  return [
+    ...new Set(
+      [
         ...(book.familyPages || []).flatMap((p) => p.photos || []),
         ...(book.connections?.received || []).flatMap((p) => p.photos || []),
         ...(book.connections?.outgoing || []).flatMap((o) => o.photos || []),
-      ].map((p) => p.id),
+      ]
+        .map((p) => p.id)
+        .filter((id) => !own.has(id)),
     ),
   ];
 }
@@ -295,7 +316,12 @@ export async function backupPhotos(
   book: Book,
   edition: string,
 ): Promise<EncryptedPhoto[]> {
-  return Promise.all(photoIds(book).map((id) => getPhoto(edition, id)));
+  const own = await Promise.all(ownPhotoIds(book).map((id) => getPhoto(edition, id)));
+  // A shared copy missing on this device is left out, not a reason to fail.
+  const shared = await Promise.all(
+    sharedPhotoIds(book).map((id) => getPhoto(edition, id).catch(() => null)),
+  );
+  return [...own, ...shared.filter((p): p is EncryptedPhoto => !!p)];
 }
 export async function restorePhotos(
   raw: string,
@@ -304,13 +330,15 @@ export async function restorePhotos(
   edition: string,
 ) {
   const supplied: unknown = JSON.parse(raw).media ?? [];
-  const ids = photoIds(book);
+  const ids = new Set(photoIds(book));
+  // Every photo on the journal's own pages must be there; shared copies may
+  // be missing (they show as unavailable). Nothing unexpected is accepted.
   if (
     !Array.isArray(supplied) ||
-    supplied.length !== ids.length ||
     !supplied.every(isEncryptedPhoto) ||
-    new Set(supplied.map((p) => p.id)).size !== ids.length ||
-    supplied.some((p) => !ids.includes(p.id))
+    new Set(supplied.map((p) => p.id)).size !== supplied.length ||
+    supplied.some((p) => !ids.has(p.id)) ||
+    ownPhotoIds(book).some((id) => !supplied.some((p) => p.id === id))
   )
     throw new Error(
       "This backup is missing photos or contains unexpected photo data.",

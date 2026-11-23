@@ -833,3 +833,12 @@
     height: 64px;
   }
 }
+.lb-app .rp-thumb-missing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  color: #5d6452;
+  font: 500 11px/1.2 var(--sans, system-ui);
+  text-align: center;
+}
