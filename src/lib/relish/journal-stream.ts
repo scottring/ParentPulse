@@ -46,13 +46,48 @@ export type StreamItem = {
   /** Sent to this writer alone (not a family page passed on). */
   direct?: boolean;
   /** Where this writer's own entry went: lines and pages in Our family journal, and who it was sent to. */
-  shared?: { lines: number; page: boolean; sentTo: string[] };
+  shared?: EntryShared;
   game?: GameKind;
   /** The exercise a page came from (its tool id), for its painting. */
   toolId?: string;
 };
 
+/**
+ * Where a writer's own entry went. `lines`: passages of it in Our family
+ * journal; `page`: the whole entry is there too; `whole`: it was shared there
+ * whole from the private page (Share); `sentTo`: who was sent words from it;
+ * `pageTo`: who was sent the whole entry, unchanged since.
+ */
+export type EntryShared = {
+  lines: number;
+  page: boolean;
+  sentTo: string[];
+  whole?: boolean;
+  pageTo?: string[];
+};
+
 const time = (iso: string) => Date.parse(iso) || 0;
+const flat = (s: string) => s.replace(/\s+/g, " ").trim();
+const list = (names: string[]) =>
+  names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+/**
+ * Whether a line sent from an entry was the whole entry, as it still reads:
+ * then the entry itself shows who has it, instead of a second copy beside it.
+ */
+export const isWholeSend = (o: { sourceId?: string; text: string }, entry?: Pick<JournalEntry, "id" | "text" | "status">) =>
+  !!entry && entry.status === "kept" && o.sourceId === entry.id && !!flat(o.text) && flat(o.text) === flat(entry.text);
+
+/** "One line shared to Our family journal · Sent to Anna": where an entry went, said on it. */
+export function sharedNote(s: EntryShared | undefined) {
+  if (!s) return "";
+  return [
+    s.lines ? `${s.lines === 1 ? "One line" : `${s.lines} lines`} shared to Our family journal` : "",
+    s.page ? "Shared with the family" : "",
+    s.sentTo.length ? `Sent to ${list(s.sentTo)}` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
 const named = (book: Book, name: string) =>
   book.people.filter((p) => sameName(p.name, name)).map((p) => p.id);
 /** Whole-word name, for a game note ("Played Same page? with Alex."). */
@@ -91,17 +126,28 @@ export function journalStream(
   const outgoing = (book.connections?.outgoing || []).filter((o) => o.sent);
   const fromFamily = (id: string) =>
     familyPages.filter((p) => p.sourceId === id && (p.byBookId === myBookId || sameName(p.byName, owner)));
-  const shared = (journalId?: string, family = false) => {
+  const entryOf = (id?: string) => (book.journal || []).find((e) => e.id === id);
+  const shared = (journalId?: string, family = false): EntryShared | undefined => {
     if (!journalId) return undefined;
     const pages = fromFamily(journalId);
-    const sentTo = outgoing
-      .filter((o) => o.sourceId === journalId && isDirectSend(o, familyPages))
-      .flatMap((o) => o.recipientNames || []);
+    const sends = outgoing.filter((o) => o.sourceId === journalId && isDirectSend(o, familyPages));
+    const sentTo = [...new Set(sends.flatMap((o) => o.recipientNames || []))];
+    const entry = entryOf(journalId);
+    const pageTo = [
+      ...new Set(sends.filter((o) => isWholeSend(o, entry)).flatMap((o) => o.recipientNames || [])),
+    ];
     const lines = pages.filter((p) => p.kind === "passage").length;
-    const page = family || pages.some((p) => p.kind === "page");
-    return lines || page || sentTo.length ? { lines, page, sentTo: [...new Set(sentTo)] } : undefined;
+    const whole = pages.some((p) => p.kind === "page");
+    const page = family || whole;
+    if (!lines && !page && !sentTo.length) return undefined;
+    return {
+      lines,
+      page,
+      sentTo,
+      ...(whole ? { whole } : {}),
+      ...(pageTo.length ? { pageTo } : {}),
+    };
   };
-  const entryOf = (id?: string) => (book.journal || []).find((e) => e.id === id);
   const items: StreamItem[] = [];
   for (const d of book.journal || [])
     if (d.status === "draft")
@@ -203,7 +249,8 @@ export function journalStream(
       });
   }
   for (const o of outgoing)
-    if (isDirectSend(o, familyPages)) {
+    // A whole entry sent on shows on the entry itself ("You and Anna"), not twice.
+    if (isDirectSend(o, familyPages) && !isWholeSend(o, entryOf(o.sourceId))) {
       const names = o.recipientNames?.length ? o.recipientNames : [];
       items.push({
         key: `sent:${o.id}`,

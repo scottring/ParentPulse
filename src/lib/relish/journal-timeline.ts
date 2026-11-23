@@ -78,6 +78,8 @@ function seenWithOf(book: Book, i: StreamItem): string[] {
   if (i.kind === "sent") return i.from ? [i.from] : [];
   if (i.kind === "you-sent") return i.to || [];
   if (i.kind === "played") return playedWith(book, i);
+  // Your own entry, sent whole to someone: it's theirs to read too.
+  if (i.kind === "wrote" && !i.draft) return i.shared?.pageTo || [];
   return [];
 }
 

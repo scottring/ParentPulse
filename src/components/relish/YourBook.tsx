@@ -109,6 +109,7 @@ export default function YourBook({
   onCheckBack,
   onDeleteNote,
   onDiscardDraft,
+  onShareEntry,
   phoneTop,
   phoneFoot,
 }: {
@@ -151,6 +152,8 @@ export default function YourBook({
   onDeleteNote?: (personId: string, noteId: string) => void;
   /** Lets an unfinished draft go. */
   onDiscardDraft?: (draft: JournalEntry) => void;
+  /** Share a page you wrote (its journal id). Grown-ups' journals only. */
+  onShareEntry?: (journalId: string) => void;
   /** Phones: kids' journals, drawn above and below. */
   phoneTop?: ReactNode;
   phoneFoot?: ReactNode;
@@ -496,6 +499,7 @@ export default function YourBook({
               canWriteBack={canWriteBack}
               onWriteBack={onWriteBack}
               onOpenFamily={setReading}
+              onShare={onShareEntry}
             />
           </section>
         ) : (
