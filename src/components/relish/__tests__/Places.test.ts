@@ -84,7 +84,7 @@ it("My journal: reviews one suggestion at a time and filters by person", async (
   const found = screen.getByRole("button", { name: /The blanket-fort expedition/ });
   expect(screen.queryByRole("button", { name: /Leaving the playground/ })).toBeNull();
   fireEvent.click(found);
-  expect(screen.getByRole("button", { name: /Back to my journal/ })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /Back to the journal/ })).toBeTruthy();
 });
 
 it("My journal: an unfinished draft comes first, with Keep writing", () => {
@@ -150,7 +150,7 @@ it("Our family: members, pages passed between you, and kept game pages, without 
   // Who's in our family: your own journal first, then account journals, then invitations.
   fireEvent.click(screen.getByRole("button", { name: "Who’s in our family" }));
   const members = screen.getByRole("dialog", { name: "Who’s in our family" });
-  const mine = within(members).getByRole("button", { name: "Open my journal" });
+  const mine = within(members).getByRole("button", { name: "See just my pages" });
   const ella = within(members).getByRole("button", { name: "Open Ella’s journal" });
   expect(
     mine.compareDocumentPosition(ella) & Node.DOCUMENT_POSITION_FOLLOWING,

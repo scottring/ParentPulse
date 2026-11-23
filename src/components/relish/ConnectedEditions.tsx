@@ -942,7 +942,7 @@ function AdultConnectedEditions({
                           disabled={busy}
                           onClick={() => void run(accept)}
                         >
-                          <Check size={16} /> Save to my journal
+                          <Check size={16} /> Save privately
                         </button>
                         <button
                           className="lb-text"

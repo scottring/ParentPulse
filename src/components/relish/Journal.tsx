@@ -155,7 +155,7 @@ export default function Journal({
   initialCelebrate?: boolean;
   /** Opens the reading page with "Choose a passage" already showing. */
   initialPassage?: boolean;
-  /** After Save to my journal: show the page in the journal instead of here. */
+  /** After Save privately: show the page in the journal instead of here. */
   onKept?: (journalId: string, problem?: string) => void;
   /** Family with their own books in the library, so they can be tagged too. */
   family?: { name: string }[];
@@ -260,14 +260,14 @@ export default function Journal({
         <SubHead
           className="rj-reading-top"
           back={{
-            label: onBack ? "Back to my journal" : "Back to my entries",
+            label: onBack ? "Back to the journal" : "Back to my entries",
             onClick: () => {
               if (onBack) return onBack();
               setReading(null);
               setCelebrate(false);
             },
           }}
-          note={sample ? "Fictional sample" : "Only me"}
+          note={sample ? "Fictional sample" : "Only you"}
         />
         {celebrate && (
           <div className="rj-celebration" role="status">
@@ -432,8 +432,8 @@ export default function Journal({
     <main className="rj-workspace">
       {onBack && (
         <SubHead
-          back={{ label: "Back to my journal", onClick: onBack }}
-          note={sample ? "Fictional sample" : "Only me"}
+          back={{ label: "Back to the journal", onClick: onBack }}
+          note={sample ? "Fictional sample" : "Only you"}
         />
       )}
       <header className="rj-welcome">
@@ -1023,14 +1023,14 @@ export function JournalEditor({
                 </>
               ) : (
                 <>
-                  <Lock size={14} aria-hidden="true" /> Only me
+                  <Lock size={14} aria-hidden="true" /> Only you
                 </>
               )}
             </span>
           </div>
           {forFamily && (
             <p className="rj-audience-note">
-              Adding keeps a copy in My journal and puts the whole entry in
+              Adding keeps a private copy for you and puts the whole entry in
               Our family journal, where everyone in the family can read it.
             </p>
           )}
@@ -1382,7 +1382,7 @@ export function JournalEditor({
                 ? "Saving…"
                 : forFamily
                     ? "Add to our family journal"
-                  : "Save to my journal"}
+                  : "Save privately"}
             </button>
           </div>
         </section>

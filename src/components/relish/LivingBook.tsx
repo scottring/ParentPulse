@@ -451,7 +451,7 @@ export default function LivingBook({
     openFamily();
     setShowMembers(true);
   }
-  /** Reads a kept page; pages live in My journal, so Back goes there. */
+  /** Reads a kept page; Back goes to the journal. */
   function openPage(id: string) {
     setSpace("me");
     navigate("words");
@@ -758,7 +758,7 @@ export default function LivingBook({
       answer.kind === "later"
         ? "We’ll ask again in two days."
         : answer.kind === "let-go"
-          ? "Set aside. The page stays in My journal."
+          ? "Set aside. Only you can see it."
           : "Saved with your plan.",
     );
   }
@@ -1089,7 +1089,7 @@ export default function LivingBook({
           : view === "journal"
             ? {
                 title: "Writing",
-                text: "Drafts save as you write, even if you go somewhere else or lock Relish. A page in My journal is only yours. A page in Our family journal is added there, whole, when you choose Add to our family journal. Share a passage adds just the words you choose.",
+                text: "Drafts save as you write, even if you go somewhere else or lock Relish. A private page is only yours. A page in Our family journal is added there, whole, when you choose Add to our family journal. Share a passage adds just the words you choose.",
               }
             : {
                 title: "Our family journal",
@@ -1214,20 +1214,20 @@ export default function LivingBook({
           : view === "journal"
             ? space === "family"
               ? "Writing in Our family journal"
-              : "Writing in My journal"
+              : "Writing a private page"
             : view === "tools"
         ? "Exercises"
         : view === "manual"
         ? "Your living manual"
         : view === "words"
-          ? "My journal"
+          ? "Your private pages"
           : view === "play"
             ? "Play together"
             : sharedView
               ? "Our Family pages"
               : view === "bookmark" || view === "session"
                 ? "Think it through"
-                : "My journal";
+                : "Our family journal";
   let right: ReactNode = null;
   const left = (
     <>
@@ -1317,7 +1317,7 @@ export default function LivingBook({
                   openPage(`moment:${entry.id}`);
                 }}
               >
-                Open it in My journal
+                Open this page
               </button>
             )}
           </div>
@@ -1461,7 +1461,7 @@ export default function LivingBook({
             <strong>{personalTitle}</strong>
           </span>
           <button type="button" disabled={headerBusy} onClick={() => void headerAction(onBackHome)}>
-            Back to my journal
+            Back to our family journal
           </button>
         </div>
       )}
@@ -1482,7 +1482,7 @@ export default function LivingBook({
                           place === "journal"
                             ? space === "family"
                               ? "Back to our family journal"
-                              : "Back to my journal"
+                              : "Back to the journal"
                             : "Back to Activities",
                         disabled: headerBusy,
                         onClick: () =>
@@ -1499,7 +1499,7 @@ export default function LivingBook({
                       ? "Fictional sample"
                       : book.profile?.kind === "child"
                         ? `${ageLabels[book.profile.ageBand]} · private journal`
-                        : "Only me"
+                        : "Only you"
                 }
               />
             )}
@@ -1780,13 +1780,13 @@ export default function LivingBook({
             initialCelebrate={kept}
             initialPassage={passage}
             onKept={(id, problem) => {
-              // The saved page opens in My journal with "Entry saved".
+              // The saved page opens in the journal with "Entry saved".
               navigate("words");
               setReading(`journal:${id}`);
               setKept(true);
               if (problem)
                 setError(
-                  `Saved in My journal, but it wasn’t added to Our family journal. ${problem}`,
+                  `Saved as a private page, but it wasn’t added to Our family journal. ${problem}`,
                 );
             }}
             navigation={journalNavigation}
@@ -1947,7 +1947,7 @@ export default function LivingBook({
                 : "encrypted in this browser on this device"}
             .{" "}
             {online
-              ? "AI only sees words you review and choose to send. Suggestions in My journal have their own opt-in. Photos and people tags are never sent to AI. Saving to your account doesn’t give AI access to your journal."
+              ? "AI only sees words you review and choose to send. Suggestions from your private pages have their own opt-in. Photos and people tags are never sent to AI. Saving to your account doesn’t give AI access to your journal."
               : "AI chat and online passage sharing are off in this journal. Voice writing and Relish suggestions, where offered, need a parent’s permission through a parent’s account."}
           </p>
           {!sample && (
@@ -2079,7 +2079,7 @@ export default function LivingBook({
             </button>
           ) : (
             <button className="lb-text" onClick={vault.lock}>
-              <Lock size={16} /> Lock my journal
+              <Lock size={16} /> Lock Relish
             </button>
           )}
         </Dialog>
@@ -2143,10 +2143,10 @@ export default function LivingBook({
           <div className="lb-boundary">
             <strong>Three places</strong>
             <p>
-              Home shows what’s new in both journals and a few things to do.
-              Journal opens My journal (only you), Our family journal
-              (everyone in the family) or a child’s journal. Activities has
-              every activity, on your own or together.
+              Home shows what’s new in the journal and a few things to do.
+              Journal opens Our family journal (the pages everyone shares,
+              with your private pages beside them) or a child’s journal.
+              Activities has every activity, on your own or together.
             </p>
           </div>
           <div className="lb-boundary">
@@ -2156,7 +2156,7 @@ export default function LivingBook({
             <p>
               {!online
                 ? "These are written prompts chosen for your age, not an AI conversation. Your words stay here. You can pause, pass, or ask a trusted grown-up for help."
-                : "My journal stays private. Only passages and entries you choose go to Our family journal or a partner’s journal. Games never include private writing. AI help is optional, and you review the exact excerpt first."}
+                : "Your private pages are only yours. Only passages and entries you choose go to Our family journal or a partner’s journal. Games never include private writing. AI help is optional, and you review the exact excerpt first."}
             </p>
           </div>
           <button className="lb-primary" onClick={() => setModal(null)}>

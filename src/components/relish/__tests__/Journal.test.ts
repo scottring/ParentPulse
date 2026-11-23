@@ -69,7 +69,7 @@ describe("freeform journal", () => {
     fireEvent.click(screen.getByRole("button", { name: /Keep writing:/ }));
     expect((input() as HTMLTextAreaElement).value).toContain("second line");
     fill("The ending arrived.");
-    fireEvent.click(screen.getByRole("button", { name: "Save to my journal" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save privately" }));
     await screen.findByText("Entry saved");
     expect(stored.journal).toHaveLength(1);
     expect(stored.journal?.[0].status).toBe("kept");
@@ -110,7 +110,7 @@ describe("freeform journal", () => {
         "A moment from the outside screen",
       );
     }
-    fireEvent.click(screen.getByRole("button", { name: "Save to my journal" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save privately" }));
     await waitFor(() => expect(book.journal?.[0].status).toBe("kept"));
     view.rerender(createElement(Journal, { ...props, book }));
     await screen.findByText("Entry saved");
@@ -139,7 +139,7 @@ describe("freeform journal", () => {
       }),
     );
     fill("Words we must not lose");
-    fireEvent.click(screen.getByRole("button", { name: "Save to my journal" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save privately" }));
     await screen.findByRole("alert");
     expect(onKeep).not.toHaveBeenCalled();
     expect(onPause).not.toHaveBeenCalled();
@@ -147,7 +147,7 @@ describe("freeform journal", () => {
       "Words we must not lose",
     );
     failing = false;
-    fireEvent.click(screen.getByRole("button", { name: "Save to my journal" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save privately" }));
     await waitFor(() => expect(onKeep).toHaveBeenCalledOnce());
     expect(book.journal?.[0].text).toBe("Words we must not lose");
   });

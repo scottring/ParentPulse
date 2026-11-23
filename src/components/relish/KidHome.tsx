@@ -188,7 +188,7 @@ export default function KidHome({
             )}
           </div>
           <button type="button" className="ui-link rk-open" disabled={busy} onClick={onBook}>
-            Open my journal
+            Open your journal
           </button>
         </div>
       </section>

@@ -193,11 +193,11 @@ it("hands a shared device from Scott's book to Kaleb's and back to Our family, t
       .getAllByRole("button", { name: /^Open / })
       .map((b) => b.getAttribute("aria-label") ?? b.textContent),
   ).toEqual([
-    "Open my journal",
     "Open Kaleb’s journal",
     "Open Ella’s journal",
     "Open Iris’s journal, an earlier copy that needs its original passphrase",
   ]);
+  expect(within(shelf).getByRole("button", { name: "See just my pages" })).toBeTruthy();
   fireEvent.keyDown(document, { key: "Escape" });
   pickJournal("Kaleb’s journal");
   expect(sync.open).toHaveBeenLastCalledWith(heads.kaleb);
@@ -214,18 +214,18 @@ it("hands a shared device from Scott's book to Kaleb's and back to Our family, t
   expect(screen.queryByRole("button", { name: /^Open .*’s journal/ })).toBeNull();
   expect(screen.queryByRole("button", { name: /Add a child|Invite a partner/ })).toBeNull();
 
-  // Back to my journal (a clear way back) asks for the parent password; a
+  // Back to our family journal (a clear way back) asks for the parent password; a
   // wrong one is rejected.
   expect(screen.getByText("Kaleb’s journal", { selector: ".rp-kidbar strong" })).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Back to my journal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Back to our family journal" }));
   expect(screen.getByRole("heading", { name: "Parent sign-in" })).toBeTruthy();
   const password = screen.getByLabelText("Parent account password");
   fireEvent.change(password, { target: { value: "a guess" } });
-  fireEvent.click(screen.getByRole("button", { name: "Open my journal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Open our family journal" }));
   await screen.findByText(/parent password didn’t match/);
   expect(sync.open).toHaveBeenLastCalledWith(heads.kaleb);
   fireEvent.change(password, { target: { value: "parent password" } });
-  fireEvent.click(screen.getByRole("button", { name: "Open my journal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Open our family journal" }));
 
   // Scott's journal opens straight onto Our family journal: no list of
   // journals in between.
@@ -236,7 +236,7 @@ it("hands a shared device from Scott's book to Kaleb's and back to Our family, t
       .getByRole("button", { name: /^Journal/ })
       .getAttribute("aria-current"),
   ).toBe("page");
-  expect(screen.queryByRole("button", { name: "Back to my journal" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Back to our family journal" })).toBeNull();
   expect(world.gate).toBeNull();
   expect(screen.queryByRole("heading", { name: "Parent sign-in" })).toBeNull();
 

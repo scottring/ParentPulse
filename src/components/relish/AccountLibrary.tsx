@@ -271,7 +271,7 @@ export default function AccountLibrary({
             disabled={working}
             onClick={() => startCreating("adult")}
           >
-            Create my journal <ArrowRight size={18} aria-hidden="true" />
+            Start our family journal <ArrowRight size={18} aria-hidden="true" />
           </button>
           <p className="lb-fine">{OWN_BOOK_NOTE}</p>
         </div>
@@ -350,7 +350,7 @@ export default function AccountLibrary({
             disabled={working}
             onClick={() => void act(() => open(homeHead))}
           >
-            Open my journal <ArrowRight size={18} aria-hidden="true" />
+            Open our family journal <ArrowRight size={18} aria-hidden="true" />
           </button>
           {others.length > 0 && (
             <p className="lb-lib-pick-kids">
@@ -521,7 +521,7 @@ export default function AccountLibrary({
         </label>
         <button className="lb-primary" disabled={working}>
           <ShieldCheck size={17} />
-          Open my journal
+          Open our family journal
         </button>
       </form>
     </>

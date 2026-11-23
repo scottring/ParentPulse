@@ -163,7 +163,7 @@ export function VaultForm({
         {busy
           ? "Opening your journal…"
           : locked
-            ? "Unlock my journal"
+            ? "Unlock the journal"
             : restoring
               ? "Restore encrypted journal"
               : "Create my private journal"}
