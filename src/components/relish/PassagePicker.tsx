@@ -64,7 +64,7 @@ export default function PassagePicker({
             stays private.
           </p>
           <button className="lb-primary" onClick={onClose}>
-            Back to my journal <Check size={18} />
+            Back to the journal <Check size={18} />
           </button>
         </>
       ) : (

@@ -317,9 +317,9 @@ export type HomeProps = {
   /** Writes in Our family journal. */
   onWriteFamily?: () => void;
   onActivities: () => void;
-  /** Opens My journal. */
+  /** Opens the journal (Everything). */
   onBook: () => void;
-  /** Opens Our family journal. */
+  /** Opens the journal on the Family filter. */
   onFamily: () => void;
   onPage: (id: string) => void;
   /** Today's mark on a habit, "Remind me tonight", and "Stop this one". */
@@ -690,11 +690,7 @@ function OneHome({
         )}
         <p className="ha-open">
           <button type="button" className="ha-link" disabled={busy} onClick={onBook}>
-            Open my journal
-          </button>
-          <span aria-hidden="true"> · </span>
-          <button type="button" className="ha-link" disabled={busy} onClick={onFamily}>
-            Open family journal
+            Open the journal
           </button>
         </p>
       </section>

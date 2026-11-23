@@ -24,7 +24,7 @@ it("greets a child with their own journal and three ways to add a page", () => {
   const add = screen.getByRole("group", { name: "Add a page" });
   for (const name of ["Write", "Record", "Add a photo"])
     expect(within(add).getByRole("button", { name })).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Open my journal" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Open your journal" })).toBeTruthy();
   const cover = document.querySelector(".rk-cover")!;
   expect(cover.textContent).toContain("Kaleb’s");
   expect(cover.getAttribute("data-emblem")).toBe("beetle");

@@ -109,13 +109,13 @@ it("keeps the account's books behind the parent gate after a child-view reload",
   fireEvent.change(screen.getByLabelText("Parent account password"), {
     target: { value: "incorrect" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Open my journal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Open our family journal" }));
   await screen.findByRole("alert");
   expect(sync.refresh).not.toHaveBeenCalled();
   fireEvent.change(screen.getByLabelText("Parent account password"), {
     target: { value: "parent password" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Open my journal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Open our family journal" }));
   // This device doesn't know the adult's journal: it asks which one is theirs.
   await screen.findByText(/Parent private journal/);
   expect(
@@ -139,7 +139,7 @@ it("after the parent password, goes straight back to the adult's own journal", a
   fireEvent.change(screen.getByLabelText("Parent account password"), {
     target: { value: "parent password" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Open my journal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Open our family journal" }));
   await waitFor(() => expect(sync.open).toHaveBeenCalledWith(mine));
   expect(onSwitchHome).toHaveBeenCalledWith(mine);
   await waitFor(() => expect(close).toHaveBeenCalled());
@@ -160,7 +160,7 @@ it("keeps original passphrase protection for an earlier synced book", async () =
     expect(sync.open).toHaveBeenCalledWith(head, "original passphrase"),
   );
 });
-it("if opening the adult's book on sign-in didn't work, it's below without a second Create my journal", () => {
+it("if opening the adult's book on sign-in didn't work, it's below without a second Start our family journal", () => {
   localStorage.setItem("relish:home-book:parent-one", "mine");
   mount({
     books: [
@@ -172,10 +172,10 @@ it("if opening the adult's book on sign-in didn't work, it's below without a sec
     screen.getByRole("heading", { name: "Welcome back, Scott." }),
   ).toBeTruthy();
   // One way back into your own journal; the others are quiet links. No shelf.
-  expect(screen.getByRole("button", { name: "Open my journal" }).className).toContain("lb-primary");
+  expect(screen.getByRole("button", { name: "Open our family journal" }).className).toContain("lb-primary");
   expect(screen.getByRole("button", { name: "Ella’s journal" }).className).toContain("lb-lib-link");
   expect(document.querySelector(".lb-bookshelf, [data-cloth]")).toBeNull();
-  expect(screen.queryByRole("button", { name: /Create my journal/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Start our family journal/ })).toBeNull();
   expect(screen.queryByRole("button", { name: "Create a new journal" })).toBeNull();
   expect(
     screen.getByRole("button", { name: "Create a child’s journal" }),
@@ -222,7 +222,7 @@ it("first visit: invites the adult to start a journal once the empty list has lo
     screen.getByRole("button", { name: "Open a local journal or restore a backup" }),
   );
   expect(onLocal).toHaveBeenCalled();
-  fireEvent.click(screen.getByRole("button", { name: "Create my journal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Start our family journal" }));
   expect(screen.getByLabelText("Your name")).toBeTruthy();
   expect(screen.queryByLabelText("Age range")).toBeNull();
 });
@@ -231,7 +231,7 @@ it("shows a loading state, never the invitation, while books are fetched", () =>
   mount({ refresh: vi.fn(() => new Promise(() => {})) });
   expect(screen.getByRole("status").textContent).toContain("Loading your journals");
   expect(screen.queryByText(invitation)).toBeNull();
-  expect(screen.queryByRole("button", { name: "Create my journal" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Start our family journal" })).toBeNull();
 });
 
 it("shows a failed load with Try again instead of the invitation", async () => {
@@ -272,7 +272,7 @@ it("new device: asks which book is yours, with create as quiet links", async () 
   ).toBeTruthy();
   expect(screen.queryByRole("heading", { name: "Start your journal" })).toBeNull();
   // No primary Create my book; creating stays available, quietly.
-  expect(screen.queryByRole("button", { name: /Create my journal/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Start our family journal/ })).toBeNull();
   expect(
     screen.getByRole("button", { name: "Create a new journal" }).className,
   ).toContain("lb-lib-link");
@@ -289,7 +289,7 @@ it("new device: asks which book is yours, with create as quiet links", async () 
   await waitFor(() => expect(sync.open).toHaveBeenCalledWith(kid));
 });
 
-it("no bookshelf: a returning device with several journals offers Open my journal, then the others", () => {
+it("no bookshelf: a returning device with several journals offers Open our family journal, then the others", () => {
   localStorage.setItem("relish:home-book:parent-one", "mine");
   const { sync } = mount({
     books: [
@@ -303,7 +303,7 @@ it("no bookshelf: a returning device with several journals offers Open my journa
   expect(screen.getByText(/Kids’ journals are in the Journal menu/)).toBeTruthy();
   expect(screen.getByRole("button", { name: "Kaleb’s journal" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Ella’s journal" })).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Open my journal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Open our family journal" }));
   return waitFor(() => expect(sync.open).toHaveBeenCalledWith(expect.objectContaining({ id: "mine" }))).finally(
     () => localStorage.removeItem("relish:home-book:parent-one"),
   );

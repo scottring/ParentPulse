@@ -114,7 +114,7 @@ it("opens free writing in one click, keeps the latest words before leaving, and 
       }) as HTMLTextAreaElement
     ).value,
   ).toBe("A small adventure, still unfolding");
-  fireEvent.click(screen.getByRole("button", { name: "Save to my journal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save privately" }));
   await screen.findByText("Entry saved");
   fireEvent.click(
     screen.getByRole("button", { name: "Choose another activity" }),

@@ -151,7 +151,7 @@ it("follows the iPhone app: places, the phone standing up, and shared words", as
   act(() => {
     native.receive({ v: 1, type: "open", place: "new-entry" });
   });
-  expect(await screen.findByText("Writing in My journal")).toBeTruthy();
+  expect(await screen.findByText("Writing a private page")).toBeTruthy();
   // A phone standing up never covers the editor.
   act(() => {
     expect(native.receive({ v: 1, type: "posture", tent: true })).toBe(false);
@@ -162,7 +162,7 @@ it("follows the iPhone app: places, the phone standing up, and shared words", as
   });
   const editor = await screen.findByDisplayValue("Words from another app");
   expect(editor).toBeTruthy();
-  expect(screen.getByText("Writing in My journal")).toBeTruthy();
+  expect(screen.getByText("Writing a private page")).toBeTruthy();
   await waitFor(() => expect(sent(post, "share-received")).toEqual([{ v: 1, type: "share-received", id: "share-1" }]));
 });
 
