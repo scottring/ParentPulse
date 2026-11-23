@@ -1,5 +1,6 @@
 "use client";
-import type { ReactNode, RefObject } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { MoreHorizontal } from "lucide-react";
 import type { Book } from "@/lib/relish/model";
 import { bookPages, type BookPage } from "@/lib/relish/pages";
 import {
@@ -262,38 +263,38 @@ function GoingRow({
     <div className={`ha-row ${leaving ? "is-fading" : ""}`}>
       <Illustration name={underWayArt(item)} size={76} className="ha-row-art" />
       <span className="ha-row-words">
+        <RowTitle
+          title={item.title}
+          verb={`${item.detail ? ` · ${item.detail}` : ""}: ${item.kind === "habit" && item.label === "Mark today" ? "Mark today" : "Keep going"}`}
+          busy={busy}
+          onOpen={() => onResume(item)}
+        />
+        <Progress book={book} item={item} />
         {/* Unfinished things are only yours until they're kept or shared. */}
         <Whose
           label={ONLY_YOU}
           extra={`${item.kind === "draft" ? "draft" : "in progress"}${idle ? ` · ${idle}` : ""}${leaving ? ` · ${leaving}` : ""}`}
         />
-        <span className="ha-row-title">{item.title}</span>
-        <Progress book={book} item={item} />
       </span>
-      <span className="ha-row-actions">
-        <button type="button" className="ha-link" disabled={busy} onClick={() => onResume(item)}>
-          <span className="ui-sr-only">
-            {item.title}
-            {item.detail ? ` · ${item.detail}` : ""}:{" "}
-          </span>
-          {item.kind === "habit" && item.label === "Mark today" ? "Mark today" : "Keep going"}
-        </button>
-        {idle && onDiscard && (
-          <ConfirmDelete
-            label="Let it go"
-            icon={false}
-            ariaLabel={`Let ${item.title} go`}
-            question={
-              item.kind === "draft" ? "Let this draft go?" : "Let this go without keeping it?"
-            }
-            detail="It’s removed for good. This can’t be undone."
-            yes="Yes, let it go"
-            busy={busy}
-            className="ha-link ha-link-quiet"
-            onConfirm={() => onDiscard(item)}
-          />
-        )}
-      </span>
+      {idle && onDiscard && (
+        <span className="ha-row-actions">
+          <RowMenu title={item.title}>
+            <ConfirmDelete
+              label="Let it go"
+              icon={false}
+              ariaLabel={`Let ${item.title} go`}
+              question={
+                item.kind === "draft" ? "Let this draft go?" : "Let this go without keeping it?"
+              }
+              detail="It’s removed for good. This can’t be undone."
+              yes="Yes, let it go"
+              busy={busy}
+              className="ha-menu-item"
+              onConfirm={() => onDiscard(item)}
+            />
+          </RowMenu>
+        </span>
+      )}
     </div>
   );
 }
@@ -375,6 +376,7 @@ function Welcome({
   line,
   art,
   kicker,
+  invite,
   headingRef,
 }: {
   owner: string;
@@ -382,6 +384,8 @@ function Welcome({
   line: string;
   art: IllustrationName;
   kicker: string;
+  /** Today's one suggestion, a small invitation under the greeting. */
+  invite?: ReactNode;
   headingRef: RefObject<HTMLHeadingElement | null>;
 }) {
   return (
@@ -392,6 +396,7 @@ function Welcome({
           {first ? `Welcome, ${owner}.` : `Welcome back, ${owner}.`}
         </h1>
         {line && <p className="ha-welcome-line">{line}</p>}
+        {invite}
       </div>
       <Illustration name={art} size={380} eager className="ha-welcome-art" />
     </section>
@@ -517,8 +522,8 @@ function OneHome({
         ? `${newLine} this week.`
         : waiting
           ? `${waiting.charAt(0).toUpperCase()}${waiting.slice(1)}.`
-          : pages.length || shown.length
-            ? "Here’s what’s been kept lately, and a few things to do next."
+          : pages.length || shown.length || going.length
+            ? ""
             : "Your journal is ready for its first entry.";
   return (
     <main className="rp-place ha-home" aria-labelledby="ha-title">
@@ -528,6 +533,22 @@ function OneHome({
         line={line}
         art="welcome"
         kicker={longDate(now)}
+        invite={
+          suggestion && status && status.state !== "done" && status.state !== "going" ? (
+            <p className="ha-invite">
+              <span className="ha-invite-label">{status.state === "draft" ? "Still open" : "For today"}</span>
+              <button
+                type="button"
+                className="ha-invite-go"
+                disabled={busy}
+                onClick={() => onNudge(suggestion.action, suggestion.id)}
+              >
+                {status.state === "draft" ? "Keep writing: " : ""}
+                {suggestion.text}
+              </button>
+            </p>
+          ) : undefined
+        }
         headingRef={headingRef}
       />
       {(due || habit || asking) && (
@@ -594,39 +615,41 @@ function OneHome({
           <div className="ha-row">
             <Illustration name="jot" size={76} className="ha-row-art" />
             <span className="ha-row-words">
+              <RowTitle
+                title={
+                  draft.draft.title.trim() ||
+                  (draft.draft.text.trim() ? `“${firstWords(draft.draft.text, 60)}”` : "Your unfinished page")
+                }
+                quote={!draft.draft.title.trim()}
+                verb=": Keep writing"
+                busy={busy}
+                onOpen={() => onResume(draft)}
+              />
+              {draft.draft.title.trim() && draft.draft.text.trim() && (
+                <span className="ha-row-detail">{firstWords(draft.draft.text, 90)}</span>
+              )}
               <Whose
                 label={whoSees(`draft:${draft.draft.id}`)}
-                extra={draft.draft.audience === "family" ? "draft for the family journal" : "draft"}
+                extra={`${draft.draft.audience === "family" ? "draft for the family journal" : "draft"} · saved ${savedWhen(draft.draft.updatedAt)}${idleLine(draft) ? ` · ${idleLine(draft)}` : ""}${leavingLine(draft) ? ` · ${leavingLine(draft)}` : ""}`}
               />
-              <span className="ha-row-title ha-row-quote">
-                {draft.draft.title.trim() ||
-                  (draft.draft.text.trim() ? `“${firstWords(draft.draft.text, 60)}”` : "Your unfinished page")}
-              </span>
-              <span className="ha-row-detail">
-                Saved {savedWhen(draft.draft.updatedAt)}
-                {idleLine(draft) && ` · ${idleLine(draft)}`}
-                {leavingLine(draft) && ` · ${leavingLine(draft)}`}
-              </span>
             </span>
-            <span className="ha-row-actions">
-              <button type="button" className="ha-link" disabled={busy} onClick={() => onResume(draft)}>
-                <span className="ui-sr-only">{draft.draft.title.trim() || "Your draft"}: </span>
-                Keep writing
-              </button>
-              {idleLine(draft) && onDiscard && (
-                <ConfirmDelete
-                  label="Let it go"
-                  icon={false}
-                  ariaLabel="Let this draft go"
-                  question="Let this draft go?"
-                  detail="It’s removed for good. This can’t be undone."
-                  yes="Yes, let it go"
-                  busy={busy}
-                  className="ha-link ha-link-quiet"
-                  onConfirm={() => onDiscard(draft)}
-                />
-              )}
-            </span>
+            {idleLine(draft) && onDiscard && (
+              <span className="ha-row-actions">
+                <RowMenu title={draft.draft.title.trim() || "this draft"}>
+                  <ConfirmDelete
+                    label="Let it go"
+                    icon={false}
+                    ariaLabel="Let this draft go"
+                    question="Let this draft go?"
+                    detail="It’s removed for good. This can’t be undone."
+                    yes="Yes, let it go"
+                    busy={busy}
+                    className="ha-menu-item"
+                    onConfirm={() => onDiscard(draft)}
+                  />
+                </RowMenu>
+              </span>
+            )}
           </div>
         )}
         {lately.map((x) =>
@@ -645,40 +668,42 @@ function OneHome({
             <div key={x.page.id} className="ha-row">
               <Illustration name={pageArt(x.page)} size={76} className="ha-row-art" />
               <span className="ha-row-words">
+                <RowTitle
+                  title={x.page.title}
+                  verb={x.page.record ? ": See it" : ": Read it"}
+                  busy={busy}
+                  onOpen={() => onPage(x.page.id)}
+                />
+                {x.page.text.trim() && x.page.text.trim() !== x.page.title.trim() && (
+                  <span className="ha-row-detail">{firstWords(x.page.text, 90)}</span>
+                )}
                 <Whose
                   label={whoSees(x.page.id)}
                   extra={`${x.page.record ? "played" : "kept"} ${when(x.page.date)}`}
                 />
-                <span className="ha-row-title">{x.page.title}</span>
-                {x.page.record && x.page.text && (
-                  <span className="ha-row-detail">{firstWords(x.page.text, 70)}</span>
-                )}
-              </span>
-              <span className="ha-row-actions">
-                <button type="button" className="ha-link" disabled={busy} onClick={() => onPage(x.page.id)}>
-                  <span className="ui-sr-only">{x.page.title}: </span>
-                  {x.page.record ? "See it" : "Read it"}
-                </button>
               </span>
             </div>
           ) : (
             <div key={x.page.id} className="ha-row">
               <Illustration name={x.page.art ?? "your-book"} size={76} className="ha-row-art" />
               <span className="ha-row-words">
-                <Whose label={whoSees(x.page.id, EVERYONE)} />
-                <span className="ha-row-title">
-                  {x.page.kind === "game" ? firstWords(x.page.text, 70).replace(/\.$/, "") : x.page.title || x.page.label}
-                </span>
-                <span className="ha-row-detail">
-                  {x.page.kind === "game" ? "" : `${x.page.mine ? "You" : x.page.byName} · `}
-                  {when(x.page.date) === "today" ? "Today" : shortDate(x.page.date)}
-                </span>
-              </span>
-              <span className="ha-row-actions">
-                <button type="button" className="ha-link" disabled={busy} onClick={onFamily}>
-                  <span className="ui-sr-only">{x.page.title || x.page.label}: </span>
-                  See it
-                </button>
+                <RowTitle
+                  title={
+                    x.page.kind === "game"
+                      ? firstWords(x.page.text, 70).replace(/\.$/, "")
+                      : x.page.title || x.page.label
+                  }
+                  verb=": See it"
+                  busy={busy}
+                  onOpen={onFamily}
+                />
+                {x.page.kind !== "game" && x.page.title && x.page.text.trim() && (
+                  <span className="ha-row-detail">{firstWords(x.page.text, 90)}</span>
+                )}
+                <Whose
+                  label={whoSees(x.page.id, EVERYONE)}
+                  extra={`${x.page.kind === "game" ? "" : `${x.page.mine ? "You" : x.page.byName} · `}${when(x.page.date) === "today" ? "today" : shortDate(x.page.date)}`}
+                />
               </span>
             </div>
           ),
@@ -702,19 +727,6 @@ function OneHome({
           line="Only you see it"
           busy={busy}
           onOpen={onWrite}
-          extra={
-            suggestion && status && status.state !== "done" && status.state !== "going" ? (
-              <button
-                type="button"
-                className="ha-choice-try"
-                disabled={busy}
-                onClick={() => onNudge(suggestion.action, suggestion.id)}
-              >
-                {status.state === "draft" ? "Keep writing: " : "Or try: "}
-                {suggestion.text.replace(/^Write down /, "").replace(/\.$/, "")}
-              </button>
-            ) : undefined
-          }
         />
         {onWriteFamily && (
           <Choice
@@ -747,6 +759,73 @@ function OneHome({
         />
       </section>
     </main>
+  );
+}
+
+/**
+ * A Lately row's title is the way in (Keep writing, Read it, See it); screen
+ * readers hear the verb after the title.
+ */
+function RowTitle({
+  title,
+  verb,
+  quote = false,
+  busy,
+  onOpen,
+}: {
+  title: string;
+  verb: string;
+  quote?: boolean;
+  busy: boolean;
+  onOpen: () => void;
+}) {
+  return (
+    <button type="button" className="ha-row-open" disabled={busy} onClick={onOpen}>
+      <span className={`ha-row-title ${quote ? "ha-row-quote" : ""}`}>{title}</span>
+      <span className="ui-sr-only">{verb}</span>
+    </button>
+  );
+}
+
+/**
+ * "Let it go" lives behind a small ⋯ menu, so an unfinished thought doesn't
+ * greet you with a choice about abandoning it (2026-11-23).
+ */
+function RowMenu({ title, children }: { title: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLSpanElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => {
+      if (!box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      button.current?.focus();
+    };
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("pointerdown", away);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [open]);
+  return (
+    <span className="ha-menu" ref={box}>
+      <button
+        ref={button}
+        type="button"
+        className="ha-menu-btn"
+        aria-expanded={open}
+        aria-label={`More for ${title}`}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <MoreHorizontal size={20} aria-hidden="true" />
+      </button>
+      {open && <span className="ha-menu-pop">{children}</span>}
+    </span>
   );
 }
 

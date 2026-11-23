@@ -199,7 +199,7 @@ it("Home's Lately labels each item with who can see it, as the journal does", ()
   // Rows from the spine and from branches, each saying who can see it.
   const kinds = Array.from(document.querySelectorAll(".ha-lately .ha-row .ha-whose")).map((w) => w.textContent);
   expect(kinds.some((k) => k?.startsWith("Only you"))).toBe(true);
-  expect(kinds.some((k) => k === "Everyone")).toBe(true);
+  expect(kinds.some((k) => k?.startsWith("Everyone · "))).toBe(true);
   expect(kinds.some((k) => /Only me|Family journal/.test(k || ""))).toBe(false);
   expect(lately.getByText("The blanket-fort expedition").closest(".ha-row")!.textContent).toMatch(/Only you · kept/);
   expect(lately.getByText("The drive to Grandma June’s").closest(".ha-row")!.textContent).toMatch(/Everyone/);

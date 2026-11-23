@@ -369,6 +369,25 @@ it("starting a new round from the grid warns it ends the paused one", () => {
   const sheet = screen.getByRole("dialog", { name: "Same page?" });
   expect(within(sheet).getByText("This ends your unfinished round of Same page?.")).toBeTruthy();
 });
+it("Home tucks Let it go behind a ⋯ menu on a draft left for days, and asks before removing it", async () => {
+  const written = writeJournalPage(
+    { ...emptyBook("Robin"), profile: { kind: "adult" } },
+    { ...newJournalDraft(), text: "Half a thought about Kit" },
+    0,
+    "draft",
+  );
+  const old = new Date(Date.now() - 5 * 86_400_000).toISOString();
+  const app = open({ ...written, journal: written.journal!.map((e) => ({ ...e, updatedAt: old })) });
+  fireEvent.click(screen.getByRole("button", { name: "Home" }));
+  const lately = screen.getByRole("region", { name: "Lately" });
+  // The row leads with the words and offers no Let it go until asked.
+  expect(within(lately).queryByRole("button", { name: /Let .* go/ })).toBeNull();
+  fireEvent.click(within(lately).getByRole("button", { name: "More for this draft" }));
+  fireEvent.click(within(lately).getByRole("button", { name: "Let this draft go" }));
+  expect(within(lately).getByText("Let this draft go?")).toBeTruthy();
+  fireEvent.click(within(lately).getByRole("button", { name: "Yes, let it go" }));
+  await waitFor(() => expect(app.stored().journal ?? []).toEqual([]));
+});
 it("continues an unfinished journal page from Home, and Activities leaves drafts to Journal", () => {
   const book = writeJournalPage(
     { ...emptyBook("Robin"), profile: { kind: "adult" } },
@@ -381,7 +400,7 @@ it("continues an unfinished journal page from Home, and Activities leaves drafts
   fireEvent.click(screen.getByRole("button", { name: "Home" }));
   const lately = screen.getByRole("region", { name: "Lately" });
   expect(within(lately).getByText(/Kit asked about the moon/)).toBeTruthy();
-  expect(within(lately).getByText("Only you · draft")).toBeTruthy();
+  expect(within(lately).getByText(/^Only you · draft · saved/)).toBeTruthy();
   fireEvent.click(within(lately).getByRole("button", { name: /Keep writing/ }));
   expect(
     (screen.getByRole("textbox", { name: "Your journal entry" }) as HTMLTextAreaElement).value,
