@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, ImagePlus, X } from "lucide-react";
 import { PHOTO_LIMIT, type Photo, type PhotoAccess } from "@/lib/relish/photos";
+import { cameraEnv, usesNativeCamera } from "@/lib/relish/camera";
+import CameraSheet from "./CameraSheet";
 
 export function PhotoImage({
   photo,
@@ -91,7 +93,16 @@ export function PhotoPicker({
   const upload = useRef<HTMLInputElement>(null),
     camera = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [shooting, setShooting] = useState(false);
+  // After a photo from the camera sheet is added, focus goes back to its button.
+  const shootButton = useRef<HTMLButtonElement>(null),
+    refocus = useRef(false);
+  useEffect(() => {
+    if (busy || !refocus.current) return;
+    refocus.current = false;
+    shootButton.current?.focus();
+  }, [busy]);
   const alive = useRef(true),
     working = useRef(false);
   useEffect(() => {
@@ -137,10 +148,15 @@ export function PhotoPicker({
           <ImagePlus size={20} /> Add a photo
         </button>
         <button
+          ref={shootButton}
           type="button"
           className="lb-secondary"
           disabled={unavailable}
-          onClick={() => camera.current?.click()}
+          onClick={() => {
+            // Phones open their own camera; computers get the camera sheet.
+            if (usesNativeCamera(cameraEnv())) camera.current?.click();
+            else setShooting(true);
+          }}
         >
           <Camera size={20} /> Take a photo
         </button>
@@ -175,6 +191,16 @@ export function PhotoPicker({
           e.target.value = "";
         }}
       />
+      {shooting && (
+        <CameraSheet
+          onPhoto={(file) => {
+            refocus.current = true;
+            void add(file);
+          }}
+          onChooseFile={() => upload.current?.click()}
+          onClose={() => setShooting(false)}
+        />
+      )}
       {error && (
         <p className="lb-error" role="alert">
           {error}

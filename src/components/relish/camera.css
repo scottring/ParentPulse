@@ -1,0 +1,77 @@
+/* ── Take a photo on a computer: the ShareSheet modal, with a camera ───── */
+.lb-app.rp-shell .rc-cam {
+  width: min(100%, 560px);
+}
+.lb-app.rp-shell .rc-cam [hidden] {
+  display: none !important;
+}
+.lb-app.rp-shell .rc-cam-frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  max-height: 56vh;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #2f3729;
+}
+.lb-app.rp-shell .rc-cam-frame video,
+.lb-app.rp-shell .rc-cam-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.lb-app.rp-shell .rc-cam-status {
+  position: absolute;
+  margin: 0;
+  padding: 20px;
+  color: #f6f4ed;
+  text-align: center;
+  font: 400 17px/1.4 var(--serif);
+}
+.lb-app.rp-shell .rc-cam-choose {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--ink);
+  font: 600 15px/1.2 var(--sans);
+}
+.lb-app.rp-shell .rc-cam-choose select {
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1.5px solid var(--ui-olive-line);
+  border-radius: var(--ui-radius-sm);
+  background: var(--card);
+  color: var(--ink);
+  font: 400 16px/1.2 var(--sans);
+}
+.lb-app.rp-shell .rc-cam-hint {
+  margin: -4px 0 0;
+  color: var(--ink);
+  font: 400 15px/1.4 var(--serif);
+}
+.lb-app.rp-shell .rc-cam-row {
+  display: flex;
+  gap: 10px;
+}
+.lb-app.rp-shell .rc-cam-row > * {
+  flex: 1;
+  min-height: 52px;
+}
+.lb-app.rp-shell .rc-cam-row .lb-secondary {
+  border-radius: 999px;
+  font-size: 17px;
+}
+.lb-app.rp-shell .rc-cam-file {
+  align-self: center;
+  margin: -6px 0 -4px;
+}
+@media (max-width: 640px) {
+  .lb-app.rp-shell .rc-cam-hint {
+    font-size: 14px;
+  }
+  .lb-app.rp-shell .rc-cam-row {
+    flex-direction: column-reverse;
+  }
+}
