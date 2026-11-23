@@ -1534,3 +1534,37 @@
 .lb-app.rp-shell img:is(.ha-welcome-art, .ha-feature-art, .ha-choice-art, .ha-row-art, .ha-card-art, .ha-done-art, .ha-game-art, .ha-habit-art) {
   mix-blend-mode: normal;
 }
+
+/* "Let it go?" asked in a Home row (2026-11-23): the question takes its own
+   full-width line under the row instead of squeezing the words beside it. */
+.lb-app.rp-shell .ha-row:has(.lb-delete-confirm) {
+  flex-wrap: wrap;
+}
+.lb-app.rp-shell .ha-row-actions:has(.lb-delete-confirm) {
+  flex: 1 1 100%;
+  width: 100%;
+  justify-content: flex-end;
+  gap: 8px 14px;
+  margin-top: 0;
+  white-space: normal;
+}
+.lb-app.rp-shell .ha-row-actions .lb-delete-confirm {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  min-height: 0;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: #f6e7e1;
+  color: var(--ui-ink);
+  font: 400 15px/1.45 var(--sans);
+  text-decoration: none;
+}
+.lb-app.rp-shell .ha-row-actions .lb-delete-confirm > span {
+  flex: 1 1 100%;
+}
+.lb-app.rp-shell .ha-row-actions .lb-delete-confirm .lb-text {
+  min-height: 44px;
+}
