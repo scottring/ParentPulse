@@ -660,7 +660,7 @@ it("Start over drops a saved sort", async () => {
   await waitFor(() => expect(toolsOf(app.stored()).runs).toBeUndefined());
   expect(screen.queryByText(/Picking up where you left off/)).toBeNull();
 });
-it("Home's one writing suggestion under Write: a started one says Keep writing and reopens its draft", async () => {
+it("Home's one suggestion under the greeting: a started one says Keep writing and reopens its draft", async () => {
   const today = new Date();
   const draft = {
     id: "laugh",
@@ -678,8 +678,9 @@ it("Home's one writing suggestion under Write: a started one says Keep writing a
     suggestion: { day: todayKey(today), id: "made-you-laugh", journalId: "laugh" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Home" }));
-  const todo = await screen.findByRole("region", { name: "What would you like to do?" });
-  const line = within(todo).getByRole("button", { name: /^Keep writing: .*made you laugh/ });
+  await screen.findByRole("region", { name: "What would you like to do?" });
+  const line = screen.getByRole("button", { name: /^Keep writing: .*made you laugh/ });
+  expect(line.closest(".ha-welcome")).toBeTruthy();
   // The draft also leads Lately, as Only you.
   const lately = screen.getByRole("region", { name: "Lately" });
   expect(within(lately).getByText(/Sam wore rain boots on his hands\./)).toBeTruthy();
@@ -688,14 +689,16 @@ it("Home's one writing suggestion under Write: a started one says Keep writing a
     (screen.getByRole("textbox", { name: "Your journal entry" }) as HTMLTextAreaElement).value,
   ).toBe("Sam wore rain boots on his hands.");
 });
-it("Or try: on Home notes the suggestion and opens one page, never a second blank one", async () => {
+it("For today: on Home notes the suggestion and opens one page, never a second blank one", async () => {
   const app = open({
     ...adult(),
     suggestion: { day: todayKey(), id: "made-you-laugh" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Home" }));
-  const todo = await screen.findByRole("region", { name: "What would you like to do?" });
-  fireEvent.click(within(todo).getByRole("button", { name: /^Or try: .*made you laugh/ }));
+  await screen.findByRole("region", { name: "What would you like to do?" });
+  const invite = screen.getByRole("button", { name: /^Write down one thing .*made you laugh/ });
+  expect(invite.closest(".ha-invite")!.textContent).toMatch(/^For today/);
+  fireEvent.click(invite);
   await waitFor(() => expect(app.stored().suggestion?.journalId).toBeTruthy());
   expect(app.stored().suggestion).toMatchObject({ day: todayKey(), id: "made-you-laugh" });
 });

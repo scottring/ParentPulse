@@ -42,9 +42,8 @@ export const nudgeTemplates: Template[] = [
     id: "best-weirdest",
     audiences: adult,
     time: "About 2 minutes",
-    withName:
-      "At dinner, ask {name}: what was the best part of today, and the weirdest?",
-    text: "At dinner, ask: what was the best part of today, and the weirdest?",
+    withName: "At dinner tonight, ask {name}, “What was the best part of today? And the weirdest?”",
+    text: "At dinner tonight, ask, “What was the best part of today? And the weirdest?”",
     why: "Two questions, no follow-up needed. Jot down whatever comes back.",
     cta: "Jot down the answer",
     action: { kind: "journal" },

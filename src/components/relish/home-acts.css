@@ -1535,36 +1535,183 @@
   mix-blend-mode: normal;
 }
 
-/* "Let it go?" asked in a Home row (2026-11-23): the question takes its own
-   full-width line under the row instead of squeezing the words beside it. */
-.lb-app.rp-shell .ha-row:has(.lb-delete-confirm) {
-  flex-wrap: wrap;
+/* ── Home, 2026-11-23 review: entries lead Lately ─────────────────────────
+   The title comes first and is the way in; who can see it and when sit
+   underneath, small. "Let it go" waits behind a ⋯ menu. Today's one
+   suggestion sits under the greeting as an invitation. */
+.lb-app.rp-shell .ha-welcome-words {
+  max-width: 720px;
 }
-.lb-app.rp-shell .ha-row-actions:has(.lb-delete-confirm) {
-  flex: 1 1 100%;
+.lb-app.rp-shell .ha-invite {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin: 14px 0 0;
+  padding: 2px 0 2px 16px;
+  border-left: 3px solid var(--ui-olive-line);
+}
+.lb-app.rp-shell .ha-invite-label {
+  color: var(--ui-muted);
+  font: 600 12px/1.5 var(--sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.lb-app.rp-shell .ha-invite-go {
+  min-height: 44px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--ui-ink);
+  font: italic 400 clamp(19px, 2vw, 23px) / 1.4 var(--serif);
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: var(--ui-olive-line);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 5px;
+  cursor: pointer;
+}
+.lb-app.rp-shell .ha-invite-go:not(:disabled):hover {
+  text-decoration-color: currentColor;
+}
+.lb-app.rp-shell .ha-invite-go:focus-visible,
+.lb-app.rp-shell .ha-row-open:focus-visible,
+.lb-app.rp-shell .ha-menu-btn:focus-visible {
+  outline: 3px solid var(--ui-olive-line);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+.lb-app.rp-shell .ha-row-open {
+  align-self: flex-start;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ui-ink);
+  text-align: left;
+  cursor: pointer;
+}
+.lb-app.rp-shell .ha-row-open:not(:disabled):hover .ha-row-title {
+  text-decoration: underline;
+  text-decoration-color: var(--ui-olive-line);
+  text-underline-offset: 4px;
+}
+/* The whole card opens it, not just the words. */
+.lb-app.rp-shell .ha-lately .ha-row:has(.ha-row-open) {
+  position: relative;
+}
+.lb-app.rp-shell .ha-lately .ha-row-open::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+}
+.lb-app.rp-shell .ha-lately .ha-row-detail {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.lb-app.rp-shell .ha-lately .ha-row-words .ha-whose {
+  margin: 6px 0 0;
+  padding: 1px 8px;
+  font-weight: 500;
+  color: var(--ui-ink-soft);
+}
+.lb-app.rp-shell .ha-lately .ha-row-actions {
+  position: relative;
+  z-index: 2;
+  align-self: flex-start;
+}
+.lb-app.rp-shell .ha-menu {
+  position: relative;
+  display: inline-flex;
+}
+.lb-app.rp-shell .ha-menu-btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ui-ink-soft);
+  cursor: pointer;
+}
+.lb-app.rp-shell .ha-menu-btn:hover,
+.lb-app.rp-shell .ha-menu-btn[aria-expanded="true"] {
+  background: #efe9da;
+}
+.lb-app.rp-shell .ha-menu-pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 30;
+  display: block;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 48px));
+  padding: 6px;
+  border: 1px solid #e2e0d4;
+  border-radius: 14px;
+  background: var(--ui-card);
+  box-shadow: 0 14px 30px rgba(48, 56, 44, 0.16);
+}
+.lb-app.rp-shell .ha-menu-pop .ha-menu-item.lb-delete {
+  display: block;
   width: 100%;
-  justify-content: flex-end;
-  gap: 8px 14px;
-  margin-top: 0;
-  white-space: normal;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--ui-ink);
+  font: 400 16px/1.4 var(--sans);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
 }
-.lb-app.rp-shell .ha-row-actions .lb-delete-confirm {
-  flex: 1 1 100%;
+.lb-app.rp-shell .ha-menu-pop .ha-menu-item.lb-delete:hover {
+  background: #f6e7e1;
+}
+.lb-app.rp-shell .ha-menu-pop .lb-delete-confirm {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 16px;
-  min-height: 0;
-  padding: 10px 14px;
-  border-radius: 14px;
+  gap: 2px 16px;
+  width: min(300px, calc(100vw - 64px));
+  padding: 8px 10px;
+  border-radius: 10px;
   background: #f6e7e1;
   color: var(--ui-ink);
   font: 400 15px/1.45 var(--sans);
-  text-decoration: none;
+  white-space: normal;
 }
-.lb-app.rp-shell .ha-row-actions .lb-delete-confirm > span {
+.lb-app.rp-shell .ha-menu-pop .lb-delete-confirm > span {
   flex: 1 1 100%;
 }
-.lb-app.rp-shell .ha-row-actions .lb-delete-confirm .lb-text {
+.lb-app.rp-shell .ha-menu-pop .lb-delete-confirm .lb-text {
   min-height: 44px;
+}
+@media (max-width: 600px) {
+  .lb-app.rp-shell .ha-invite {
+    margin-top: 8px;
+    padding-left: 12px;
+  }
+  .lb-app.rp-shell .ha-invite-go {
+    font-size: 17px;
+  }
+  .lb-app.rp-shell .ha-lately .ha-row-actions {
+    width: auto;
+    margin-top: 0;
+    flex: none;
+  }
+  .lb-app.rp-shell .ha-lately .ha-row {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+  }
+  .lb-app.rp-shell .ha-lately .ha-row-words {
+    flex: 1;
+    flex-basis: auto;
+  }
 }
